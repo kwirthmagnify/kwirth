@@ -23,8 +23,8 @@ import { ExtensionCard, extensionRowCells, EXTENSION_ROW_COLUMNS } from './Exten
     Lo propio de cada tipo entra por descriptor, nunca copiando esto.
 */
 
-// Lo minimo que el generico necesita de cualquier entrada instalada o de catalogo. Cada tipo tiene su
-// forma; el generico solo mira esto y deja el resto al descriptor.
+// The minimum the generic dialog needs from any installed or catalogue entry. Each type has its own
+// shape; the generic dialog only looks at this and leaves the rest to the descriptor.
 interface IMinimalEntry {
     /*
         Opcional porque no todo lo instalado la tiene: un conector de IdP bundled viene dentro de Kwirth y
@@ -50,13 +50,13 @@ interface IExtensionManagerDialogProps<TInstalled extends IMinimalEntry, TEntry 
     onRestartRequired?: (extension: string, action: ERestartAction) => void
 }
 
-/** Lo minimo para juzgar un requisito: que hay instalado de ese tipo y con que version. */
+/** The minimum for judging a requirement: what is installed of that type and with which version. */
 interface IVersionedRef {
     id: string
     version: string
 }
 
-/** Un plugin instalado, que es lo que ofrece el selector de plugins. */
+/** An installed plugin, which is what the plugin selector offers. */
 interface IInstalledPluginRef {
     id: string
     displayName?: string
@@ -76,27 +76,27 @@ const PluginMultiSelect: React.FC<{
     error?: string
     onChange: (pluginIds: string[]) => void
 }> = ({ plugins, selected, tooltip, emptyLabel, error, onChange }) => {
-    // Mientras el desplegable esta abierto NO hay tooltip: se pinta encima de la lista y tapa las primeras
-    // opciones. Con el titulo vacio, MUI no lo muestra — mas simple que controlarlo con `open`.
+    // While the dropdown is open there is NO tooltip: it draws over the list and covers the first
+    // options. With an empty title, MUI does not show it — simpler than controlling it with `open`.
     const [abierto, setAbierto] = useState(false)
-    // Con varios seleccionados el valor no cabe, asi que el tooltip lo lleva entero: el desplegable es de
-    // ancho FIJO y lo que sobra se recorta.
+    // With several selected the value does not fit, so the tooltip carries it whole: the dropdown is of
+    // FIXED width and what overflows is clipped.
     const titulo = error || (selected.length > 0 ? <><b>{selected.join(', ')}</b><br />{tooltip}</> : tooltip)
     return (
     <Tooltip title={abierto ? '' : titulo} disableInteractive>
         <Select multiple size='small' displayEmpty value={selected} error={Boolean(error)}
             onOpen={() => setAbierto(true)} onClose={() => setAbierto(false)}
             onChange={e => onChange(e.target.value as string[])}
-            // El texto de vacio se pinta, no se deja en blanco: "no lo usa nadie" es el estado por
-            // defecto y es justo lo que explica que una extension recien instalada "no haga nada".
+            // The empty text is drawn, not left blank: "nobody uses it" is the default state and is
+            // exactly what explains why a freshly installed extension "does nothing".
             renderValue={sel => (sel as string[]).length === 0
                 ? <em style={{ fontSize: '0.7rem', opacity: 0.5 }}>{emptyLabel}</em>
                 : (sel as string[]).join(', ')}
-            // ⚠️ Ancho FIJO, no minWidth: con minWidth el desplegable crece con cada plugin concedido y
-            // descuadra la tarjeta — y las tarjetas de una rejilla no cambian de tamaño por su contenido.
+            // ⚠️ FIXED width, not minWidth: with minWidth the dropdown grows with every granted plugin and
+            // throws the card out of line — and the cards of a grid do not change size with their content.
             sx={{
-                // flexShrink 0: sin el, encoge cuando el chip vecino es mas ancho ('12 tools' vs '3 tools')
-                // y las tarjetas dejan de alinear entre si.
+                // flexShrink 0: without it, it shrinks when the neighbouring chip is wider ('12 tools' vs
+                // '3 tools') and the cards stop aligning with each other.
                 height: 22, fontSize: '0.7rem', width: 110, minWidth: 110, maxWidth: 110, flexShrink: 0,
                 '& .MuiSelect-select': { py: 0, px: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
             }}>
@@ -137,7 +137,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const [error, setError] = useState<string | undefined>()
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    // Selector de plugins: la lista de plugins se pide UNA vez para todo el diálogo, no una por tarjeta.
+    // Plugin selector: the plugin list is asked for ONCE for the whole dialog, not once per card.
     const [crossInstalled, setCrossInstalled] = useState<Record<string, IVersionedRef[]>>({})
     const [plugins, setPlugins] = useState<IInstalledPluginRef[]>([])
     const [pluginSel, setPluginSel] = useState<Record<string, string[]>>({})
@@ -166,9 +166,9 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         }
     }
 
-    // refresh: el back cachea cada manifest 5 minutos, asi que refrescar tiene que pedir explicitamente que
-    // lo invalide. Sin esto el boton no refresca nada y una extension recien publicada no aparece hasta que
-    // vence el TTL.
+    // refresh: the back end caches each manifest for 5 minutes, so refreshing has to ask explicitly for it
+    // to be invalidated. Without this the button refreshes nothing and a freshly published extension does
+    // not appear until the TTL expires.
     const fetchManifest = async (refresh = false) => {
         setError(undefined)
         setLoadingManifest(true)
@@ -205,7 +205,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         setCrossInstalled(resultados)
     }
 
-    /** Un requisito se cumple si esta instalado y con version suficiente. */
+    /** A requirement is met when it is installed and with a sufficient version. */
     const requirementMet = (req: IExtensionRequirement): boolean => {
         const lista: IVersionedRef[] = req.extensionType === d.extensionType
             ? installed.filter(e => e.version).map(e => ({ id: d.keyOf(e), version: e.version! }))
@@ -214,11 +214,11 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         return Boolean(encontrado) && (encontrado!.version === req.minVersion || versionGreaterThan(encontrado!.version, req.minVersion))
     }
 
-    /** Las dependencias en texto, para los tooltips: 'plugin log ≥0.5.0, sender email ≥0.1.0'. */
+    /** The dependencies as text, for the tooltips: 'plugin log ≥0.5.0, sender email ≥0.1.0'. */
     const dependencyList = (deps: IExtensionRequirement[]): string =>
         deps.map(r => `${r.extensionType} ${r.id} ≥${r.minVersion}`).join(', ')
 
-    /** Lo que falta para poder instalar esa entrada, ya redactado para el tooltip. */
+    /** What is missing before that entry can be installed, already worded for the tooltip. */
     const requirementsBlocking = (entry: TEntry): string | undefined => {
         const faltan = (entry.requires ?? []).filter(r => !requirementMet(r))
         return faltan.length === 0 ? undefined : `Requires: ${dependencyList(faltan)}`
@@ -249,8 +249,8 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
             setPluginSelError(e => { const { [key]: _quitado, ...resto } = e; return resto })
         }
         catch (err) {
-            // Se deshace: dejar la UI diciendo que esta guardado cuando el back no lo guardo es peor que
-            // el propio fallo — quien lo cambio se iria creyendo que el cambio esta puesto.
+            // It is undone: leaving the UI saying it is saved when the back end did not save it is worse
+            // than the failure itself — whoever changed it would walk away believing the change is in place.
             setPluginSel(s => ({ ...s, [key]: anterior }))
             setPluginSelError(e => ({ ...e, [key]: `Could not save: ${err}` }))
         }
@@ -272,7 +272,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
 
     useEffect(() => { loadInstalled(); fetchManifest(); loadPluginSelector() }, [])
 
-    // ── catalogo agrupado por clave, versiones de mas nueva a mas vieja ─────────
+    // ── catalogue grouped by key, versions from newest to oldest ───────────────
     const grouped = available.reduce((acc, e) => {
         const k = d.keyOf(e)
         ;(acc[k] ||= []).push(e)
@@ -319,7 +319,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         return newest.version && versionGreaterThan(newest.version, entry.version) ? newest : undefined
     }
 
-    /** Por que no se puede actualizar algo instalado: su procedencia, o lo que diga su tipo. */
+    /** Why something installed cannot be updated: its provenance, or whatever its type says. */
     const updateBlocked = (entry: TInstalled): string | undefined =>
         notUpdatableReason(d.toModel(entry).installedFrom) ?? d.updateBlockedReason?.(entry)
 
@@ -437,14 +437,14 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
             }
             d.onUninstalled?.(entry)
             await loadInstalled()
-            // Quitarla tampoco es inmediato: lo que se engancha al arrancar sigue montado hasta reiniciar.
+            // Removing it is not immediate either: what is hooked in at startup stays mounted until a restart.
             if (entry.requiresRestart) props.onRestartRequired?.(key, ERestartAction.UNINSTALL)
         }
         catch (err) { setError(`Failed to uninstall ${d.toModel(entry).name}: ${err}`) }
         finally { setUninstallingKey(undefined) }
     }
 
-    // ── chips y acciones por seccion ────────────────────────────────────────────
+    // ── chips and actions per section ──────────────────────────────────────────
     const TypeIcon = d.icon
 
     const chipIcon = (icon?: EChipIcon): React.ReactElement | undefined => {
@@ -499,8 +499,8 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
 
     const availableStatusChips = (key: string, entry: TEntry): React.ReactNode[] => {
         const chips = [...(d.extraChips?.(entry, EManagerSection.AVAILABLE) ?? [])]
-        // Que necesita y que aprovecha, con el detalle en el tooltip: en la tarjeta no cabe la lista, pero
-        // sin el numero no hay forma de saber que una extension arrastra a otras.
+        // What it needs and what it takes advantage of, with the detail in the tooltip: the list does not
+        // fit on the card, but without the number there is no way to know an extension drags others along.
         if (entry.requires?.length) chips.push({ label: `Requires ${entry.requires.length}`, variant: 'outlined', tooltip: `Requires: ${dependencyList(entry.requires)}` })
         if (entry.uses?.length) chips.push({ label: `Uses ${entry.uses.length}`, variant: 'outlined', tooltip: `Uses: ${dependencyList(entry.uses)}` })
         if (isDevInstalled(key)) chips.push({ label: 'dev active', variant: 'outlined', color: 'warning' })
@@ -511,8 +511,8 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const installedActions = (entry: TInstalled): IExtensionAction[] => {
         const actions = [...(d.actions?.(entry, EManagerSection.INSTALLED) ?? [])]
         if (d.renderConfigDialog) {
-            // Visible y deshabilitado con el motivo, nunca escondido: una extension sin configuracion
-            // tiene que DECIR que no la tiene, no dejar el hueco donde estaria la rueda de las demas.
+            // Visible and disabled with the reason, never hidden: an extension with no configuration has
+            // to SAY it has none, not leave the gap where everybody else's gear would be.
             const verdict = d.canConfigure?.(entry) ?? { allowed: true }
             actions.push({
                 icon: <Settings fontSize='small' />,
@@ -563,9 +563,9 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
             ...(d.actions?.(entry, EManagerSection.AVAILABLE) ?? []),
             {
                 icon: busy ? <CircularProgress size={16} /> : isUpgrade ? <Upgrade fontSize='small' /> : <Download fontSize='small' />,
-                // ⚠️ A una extension de DEV no se le puede decir "desinstala primero": no se desinstala,
-                // se quita de kwirth-dev.json. El consejo generico mandaba al usuario a pulsar una papelera
-                // que esta deshabilitada. Lo traia ThemeManagerDialog y lo hereda el generico al migrarlo.
+                // ⚠️ A DEV extension cannot be told to "uninstall first": it is not uninstalled, it is
+                // removed from kwirth-dev.json. The generic advice sent the user to press a bin that is
+                // disabled. ThemeManagerDialog carried this and the generic dialog inherits it on migration.
                 tooltip: isDevInstalled(key) ? 'A dev version is already loaded'
                     : isUpgrade ? `Update to v${entry.version}`
                         : already ? (updateBlocked(current!)

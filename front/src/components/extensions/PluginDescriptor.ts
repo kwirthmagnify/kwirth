@@ -48,11 +48,11 @@ interface IInstalledPlugin {
     marketplaceId?: string
     marketplaceLabel?: string
     requiresRestart?: boolean
-    /** El plugin declara que acepta configuracion de instalacion. Sin esto, no hay rueda dentada. */
+    /** The plugin declares that it accepts installation configuration. Without it, there is no gear. */
     configSchema?: IConfigFieldDef[]
 }
 
-/** Lo que el descriptor necesita de la aplicacion: cargar y descargar el front del canal en caliente. */
+/** What the descriptor needs from the application: loading and unloading the channel's front end hot. */
 interface IPluginDescriptorDeps {
     onPluginLoaded: (id: string) => void
     onPluginUnloaded: (id: string) => void
@@ -65,7 +65,7 @@ const toModel = (e: IInstalledPlugin | IPluginManifestEntry): IExtensionCardMode
     website: e.website,
     installedFrom: (e as IInstalledPlugin).installedFrom,
     marketplaceLabel: e.marketplaceLabel,
-    // El icono que trae la extension: nombre del set curado o un SVG propio. Lo resuelve el generico.
+    // The icon the extension brings: a name from the curated set or an SVG of its own. The generic dialog resolves it.
     iconName: e.icon
 })
 
@@ -92,8 +92,8 @@ const makePluginDescriptor = (deps: IPluginDescriptorDeps): IExtensionManagerDes
     toModel,
     canUninstall,
 
-    // La rueda dentada, viva solo en los plugins que declaran configuracion. En los demas se queda
-    // deshabilitada diciendo por que: antes salia activa en todos y abria un editor que no hacia nada.
+    // The gear, alive only on the plugins that declare configuration. On the rest it stays disabled
+    // saying why: it used to come out active on all of them and opened an editor that did nothing.
     canConfigure: p => (p.configSchema?.length ?? 0) > 0
         ? { allowed: true }
         : { allowed: false, reason: 'This plugin takes no installation config' },
@@ -105,7 +105,7 @@ const makePluginDescriptor = (deps: IPluginDescriptorDeps): IExtensionManagerDes
         onClose
     }),
 
-    // El canal se carga y se descarga en caliente: sin esto habria que recargar la pagina para usar un
+    // The channel is loaded and unloaded hot: without this the page would have to be reloaded to use a
     // plugin recien instalado.
     onInstalled: meta => deps.onPluginLoaded(meta.id),
     onUninstalled: p => deps.onPluginUnloaded(p.id)

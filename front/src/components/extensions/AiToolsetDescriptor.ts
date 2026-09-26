@@ -23,11 +23,11 @@ interface IAiToolsetEntry {
     marketplaceLabel?: string
     installedFrom?: string
     requiresRestart?: boolean
-    /** Solo en lo instalado: cuantas tools trae, para el chip. Lo rellena el catalogo del back. */
+    /** Installed only: how many tools it brings, for the chip. The back end's catalogue fills it in. */
     toolCount?: number
 }
 
-/** Lo que el descriptor necesita de la aplicacion para leer y guardar las concesiones. */
+/** What the descriptor needs from the application in order to read and save the grants. */
 interface IAiToolsetDescriptorDeps {
     loadGrants: () => Promise<Record<string, string[]>>
     saveGrants: (toolsetId: string, pluginIds: string[]) => Promise<void>
@@ -42,8 +42,8 @@ const toModel = (e: IAiToolsetEntry): IExtensionCardModel => ({
     marketplaceLabel: e.marketplaceLabel
 })
 
-// Un toolset built-in del core no se instala ni se desinstala: viene dentro. Y uno de dev lo gobierna
-// kwirth-dev.json, no el diálogo.
+// A core built-in toolset is neither installed nor uninstalled: it comes inside. And a dev one is
+// governed by kwirth-dev.json, not by the dialog.
 const canUninstall = (e: IAiToolsetEntry): IExtensionVerdict => {
     if (e.installedFrom === 'dev') return { allowed: false, reason: 'Dev toolsets cannot be uninstalled' }
     if (e.installedFrom === 'bundled') return { allowed: false, reason: 'Built-in toolsets cannot be uninstalled' }
@@ -55,9 +55,9 @@ const makeAiToolsetDescriptor = (deps: IAiToolsetDescriptorDeps): IExtensionMana
     extensionType: EExtensionType.AITOOLSET,
     title: 'Manage AI toolsets',
     noun: { singular: 'AI toolset', plural: 'AI toolsets' },
-    // La guia del tipo ya existe (CL9 2026-09-16), asi que el dialogo lleva su boton de ayuda (regla 7).
-    // Apunta a la seccion del manager, no al principio de la pagina: quien abre la ayuda DESDE el dialogo
-    // quiere lo que esta viendo, no la introduccion al concepto.
+    // The type's guide already exists (CL9 2026-09-16), so the dialog carries its help button (rule 7).
+    // It points at the manager's section and not at the top of the page: whoever opens the help FROM the
+    // dialog wants what they are looking at, not the introduction to the concept.
     helpSection: 'guide/extensions/aitoolsets/index?id=the-ai-toolsets-manager',
     icon: Construction,
     endpoints: {

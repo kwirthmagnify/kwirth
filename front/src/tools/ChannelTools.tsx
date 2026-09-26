@@ -44,8 +44,8 @@ const tipoRenderizable = (type: unknown): boolean => {
 const iconoUtilizable = (icono: unknown): boolean =>
     React.isValidElement(icono) && tipoRenderizable((icono as React.ReactElement).type)
 
-// El aviso se da UNA VEZ por canal: esto se pinta en cada render de la home y de las pestañas, y una
-// traza por fotograma esconde justo lo que hay que leer.
+// The warning is given ONCE per channel: this is drawn on every render of the home and the tabs, and one
+// trace per frame hides precisely what needs reading.
 const yaAvisados = new Set<string>()
 const avisar = (channelId: string|undefined, icono: unknown): void => {
     const id = channelId ?? '(unknown)'

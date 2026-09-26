@@ -16,7 +16,7 @@ import { SessionContext, SessionContextType } from '../../model/SessionContext'
     configurando una version que ya no esta instalada.
 */
 
-/** Lo que el core le pasa a la UI de la extension: con esto habla con su propio back. */
+/** What the core passes to the extension's UI: with this it talks to its own back end. */
 interface IExtensionConfigDialogProps {
     onClose: () => void
     backendUrl: string
@@ -29,11 +29,11 @@ interface ILoadedExtensionFront {
 
 interface IConfigFrontDialogProps {
     extensionId: string
-    /** Donde deja su UI la extension al cargarse: '__kwirth_providers__', '__kwirth_senders__'… */
+    /** Where the extension leaves its UI on loading: '__kwirth_providers__', '__kwirth_senders__'… */
     globalName: string
-    /** Ruta del front.js, relativa al backendUrl: '/core/providers/<id>/front'. */
+    /** The front.js route, relative to backendUrl: '/core/providers/<id>/front'. */
     frontPath: string
-    /** Como se llama este tipo en el mensaje de error, en singular. */
+    /** What this type is called in the error message, in the singular. */
     noun: string
     onClose: () => void
 }

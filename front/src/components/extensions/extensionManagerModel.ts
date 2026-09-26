@@ -19,7 +19,7 @@ export enum EManagerSection {
     AVAILABLE = 'available'
 }
 
-/** Lo que el generico necesita saber de una entrada para pintarla, venga de donde venga. */
+/** What the generic dialog needs to know about an entry in order to draw it, wherever it comes from. */
 export interface IExtensionCardModel {
     name: string                 // ya resuelto: displayName || name || id. UN SOLO SITIO.
     version: string
@@ -47,15 +47,15 @@ export interface IExtensionCardModel {
     no los pinta, y asi no necesita importar iconos ni ser un .tsx.
 */
 export enum EChipIcon {
-    /** Marca de "esto es lo que esta puesto ahora": el tema activo, la homepage activa. */
+    /** A mark for "this is what is set right now": the active theme, the active homepage. */
     ACTIVE = 'active',
-    /** Viene de un fichero suelto del disco. */
+    /** It comes from a loose file on disk. */
     FILE = 'file',
-    /** El icono del propio tipo de extension, el que declara el descriptor. */
+    /** The extension type's own icon, the one the descriptor declares. */
     TYPE = 'type'
 }
 
-/** Un chip DECLARADO. El generico lo pinta; el tipo solo dice que quiere decir. */
+/** A DECLARED chip. The generic dialog draws it; the type only says what it means. */
 export interface IExtensionChip {
     label: string
     color?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error'
@@ -65,14 +65,14 @@ export interface IExtensionChip {
 }
 
 /**
- * El icono de un tipo de extension: el COMPONENTE, no un elemento ya montado.
+ * An extension type's icon: the COMPONENT, not an already mounted element.
  *
- * Asi el generico decide el tamaño segun donde lo pinte (tarjeta, fila, chip de procedencia) y el
- * descriptor se queda sin JSX.
+ * That way the generic dialog decides the size according to where it draws it (card, row, provenance
+ * chip) and the descriptor is left without JSX.
  */
 export type TExtensionIcon = ComponentType<{ fontSize?: 'inherit' | 'small' | 'medium' | 'large' }>
 
-/** Una accion propia de un tipo, mas alla de instalar/desinstalar/configurar. */
+/** An action of a type's own, beyond install/uninstall/configure. */
 export interface IExtensionAction {
     icon: ReactNode
     tooltip: string
@@ -82,10 +82,10 @@ export interface IExtensionAction {
 }
 
 /**
- * Si una accion se puede hacer sobre una entrada, y por que no.
+ * Whether an action can be performed on an entry, and why not.
  *
- * El motivo no es un adorno: la regla de UI del proyecto es que un control se queda visible y
- * deshabilitado, nunca escondido, asi que quien lo ve necesita leer por que no puede pulsarlo.
+ * The reason is no ornament: the project's UI rule is that a control stays visible and disabled, never
+ * hidden, so whoever sees it needs to read why they cannot press it.
  */
 export interface IExtensionVerdict {
     allowed: boolean
@@ -109,22 +109,23 @@ export interface IExtensionVerdict {
     tiene UN tema— y es el descriptor quien lo da la vuelta, que para eso conoce su formato.
 */
 export interface IPluginSelectorSpec<TInstalled> {
-    /** Que significa el control, para el tooltip: 'Plugins using this theme'… */
+    /** What the control means, for the tooltip: 'Plugins using this theme'… */
     tooltip: string
-    /** Que poner cuando no hay ninguno. Por defecto 'No plugin'. */
+    /** What to put when there is none. 'No plugin' by default. */
     emptyLabel?: string
     /** Clave de entrada → ids de plugin asociados. */
     load: () => Promise<Record<string, string[]>>
-    /** Persistir la nueva seleccion de ESA entrada. Si lanza, el generico deshace y enseña el motivo. */
+    /** Persist THAT entry's new selection. If it throws, the generic dialog undoes it and shows the reason. */
     save: (entry: TInstalled, pluginIds: string[]) => Promise<void>
 }
 
 /**
- * Una dependencia entre extensiones, tal y como viene en el manifest.
+ * A dependency between extensions, exactly as it comes in the manifest.
  *
- * `requires` es obligatoria —sin ella la extension no funciona, asi que no se deja instalar— y `uses` es
- * opcional: si esta, se aprovecha. Las declaraba cualquier extension, pero solo las miraban plugins y
- * providers, cada uno con su copia. Ahora las entiende el generico para los ONCE tipos.
+ * `requires` is mandatory — without it the extension does not work, so installing is refused — and `uses`
+ * is optional: if it is there, it is taken advantage of. Any extension declared them, but only plugins
+ * and providers looked at them, each with its own copy. Now the generic dialog understands them for all
+ * ELEVEN types.
  */
 export interface IExtensionRequirement {
     extensionType: EExtensionType
@@ -145,9 +146,9 @@ export interface IExtensionRequirement {
 */
 export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     extensionType: EExtensionType
-    /** Titulo del diálogo, p.ej. 'Manage AI toolsets'. */
+    /** The dialog's title, e.g. 'Manage AI toolsets'. */
     title: string
-    /** Como se llama una de estas en singular y plural, para los textos del generico. */
+    /** What one of these is called in singular and plural, for the generic dialog's texts. */
     noun: { singular: string, plural: string }
     /*
         Seccion de la guia para el boton de ayuda (regla 7). OPCIONAL a proposito: un tipo recien creado
@@ -155,10 +156,10 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
         existe es peor que no tenerlo. Sin seccion, el generico pinta el titulo sin ayuda.
     */
     helpSection?: string
-    /** Icono del tipo, el que se pinta cuando la entrada no trae uno propio. */
+    /** The type's icon, the one drawn when the entry carries none of its own. */
     icon: TExtensionIcon
 
-    /** Rutas del back. El generico no las adivina: IdP, por ejemplo, no cuelga de /core/<plural>. */
+    /** The back end's routes. The generic dialog does not guess them: IdP, for one, does not hang off /core/<plural>. */
     endpoints: {
         installed: string
         install: string
@@ -167,9 +168,9 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     }
 
     /**
-     * Que dice el boton de desinstalar cuando SE PUEDE. Por defecto 'Uninstall'.
+     * What the uninstall button says when it CAN be pressed. 'Uninstall' by default.
      *
-     * Lo necesita `pack`: quitarlo se lleva por delante todas las extensiones que trajo, y eso hay que
+     * `pack` needs it: removing one takes with it every extension it brought, and that has to be
      * avisarlo ANTES de pulsar, no despues.
      */
     uninstallTooltip?: string
@@ -186,22 +187,22 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     toModel: (entry: TInstalled | TEntry) => IExtensionCardModel
     canUninstall: (entry: TInstalled) => IExtensionVerdict
 
-    /** Datos extra que el tipo necesita y el generico desconoce (las instancias de IdP, los plugins de themes). */
+    /** Extra data the type needs and the generic dialog knows nothing about (IdP's instances, themes' plugins). */
     loadExtraData?: () => Promise<void>
 
-    /** Si devuelve un numero, el generico pinta el chip 'N configs'. */
+    /** If it returns a number, the generic dialog draws the 'N configs' chip. */
     configCount?: (entry: TInstalled) => number | undefined
-    /** Si existe, el generico pinta el engranaje y monta esto al pulsarlo. */
+    /** If it exists, the generic dialog draws the gear and mounts this on pressing it. */
     renderConfigDialog?: (entry: TInstalled, onClose: () => void) => ReactNode
     /**
-     * Si ESTA entrada tiene configuracion. Sin esto, el engranaje sale vivo en todas las del tipo.
+     * Whether THIS entry has configuration. Without it, the gear comes out alive on every entry of the type.
      *
-     * Que el TIPO se configure no quiere decir que se configuren todas sus extensiones: un provider se
-     * configura si trae front propio o declara schema, un plugin o un login si declaran configSchema, y
-     * una homepage solo la activa que traiga SetupDialog.
+     * That the TYPE is configurable does not mean all of its extensions are: a provider is configurable
+     * when it brings its own front end or declares a schema, a plugin or a login when they declare a
+     * configSchema, and a homepage only the active one that brings a SetupDialog.
      *
-     * El engranaje se queda VISIBLE y deshabilitado con el motivo. Esconderlo deja a quien mira
-     * preguntandose si esa extension se configurara en otro sitio.
+     * The gear stays VISIBLE and disabled with the reason. Hiding it leaves whoever looks wondering
+     * whether that extension is configured somewhere else.
      */
     canConfigure?: (entry: TInstalled) => IExtensionVerdict
 
@@ -213,28 +214,28 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
         del chip 'Kwirth', que no es mas que el icono del tipo.
     */
     extraChips?: (entry: TInstalled | TEntry, section: EManagerSection) => IExtensionChip[]
-    /** Acciones propias: abrir la guia, abrir la pagina de login… */
+    /** Actions of its own: open the guide, open the login page… */
     actions?: (entry: TInstalled | TEntry, section: EManagerSection) => IExtensionAction[]
 
     /**
-     * El selector de plugins de lo instalado, a la izquierda de los botones de accion. Es UN sitio en la
-     * tarjeta y en la fila, no dos maquetaciones distintas.
+     * The plugin selector of what is installed, to the left of the action buttons. It is ONE place on the
+     * card and on the row, not two different layouts.
      */
     pluginSelector?: IPluginSelectorSpec<TInstalled>
 
-    /** Si devuelve un motivo, instalar queda deshabilitado y el motivo va al tooltip (dependencias sin cumplir). */
+    /** If it returns a reason, installing is disabled and the reason goes to the tooltip (unmet dependencies). */
     installBlockedReason?: (entry: TEntry) => string | undefined
 
     /**
-     * Lo mismo para ACTUALIZAR: si devuelve un motivo, el boton de update queda deshabilitado con el.
+     * The same for UPDATING: if it returns a reason, the update button is disabled with it.
      *
-     * Casi ningun tipo lo necesita —actualizar es instalar encima—, pero un pack no es una extension mas:
-     * su instalacion tambien rechaza si cualquiera de sus miembros esta puesto, asi que reemplazarlo
-     * significa actualizarlos todos y eso el back no lo hace.
+     * Hardly any type needs it — updating is installing on top — but a pack is not just another extension:
+     * its installation also refuses when any of its members is already in place, so replacing it means
+     * updating them all, and the back end does not do that.
      */
     updateBlockedReason?: (entry: TInstalled) => string | undefined
 
-    /** Efectos del alta/baja: un pack carga el front de cada extension que trae. */
+    /** Side effects of install/uninstall: a pack loads the front end of every extension it brings. */
     onInstalled?: (meta: TInstalled) => void
     onUninstalled?: (entry: TInstalled) => void
 }

@@ -73,7 +73,7 @@ function ResizableDialogImpl(
         }
     }))
 
-    // Crea un clon estático del contenido para el Drag
+    // Creates a static clone of the content for the Drag
     const createSnapshot = () => {
         if (contentRef.current && snapshotRef.current) {
             snapshotRef.current.innerHTML = contentRef.current.innerHTML

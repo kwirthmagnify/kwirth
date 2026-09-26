@@ -24,8 +24,8 @@ export enum ERestartAction {
     UPDATE = 'update'
 }
 
-// El nombre va en el mensaje a propósito: instalando o quitando varias seguidas, un "this extension"
-// no dice cuál de ellas es la que deja el servidor a medias.
+// The name goes in the message on purpose: when installing or removing several in a row, a "this
+// extension" does not say which of them is the one leaving the server half-done.
 export const restartNotice = (extension: string, action: ERestartAction): string => {
     switch (action) {
         case ERestartAction.INSTALL:

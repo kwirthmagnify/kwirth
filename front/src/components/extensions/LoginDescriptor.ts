@@ -84,7 +84,7 @@ const loginDescriptor: IExtensionManagerDescriptor<IInstalledLogin, ILoginManife
     toModel,
     canUninstall,
 
-    // Solo en lo instalado: una pagina de login que todavia no esta instalada no se puede abrir.
+    // Installed only: a login page that is not installed yet cannot be opened.
     actions: (e, section): IExtensionAction[] => section === EManagerSection.INSTALLED
         ? [{
             icon: React.createElement(Launch, { fontSize: 'small' }),
@@ -94,7 +94,7 @@ const loginDescriptor: IExtensionManagerDescriptor<IInstalledLogin, ILoginManife
           }]
         : [],
 
-    // El engranaje es de la TARJETA: solo esta vivo en los logins que declaran configuracion.
+    // The gear belongs to the CARD: it is only alive on the logins that declare configuration.
     canConfigure: l => (l.configSchema?.length ?? 0) > 0
         ? { allowed: true }
         : { allowed: false, reason: 'This login extension has no settings' },

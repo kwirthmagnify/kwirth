@@ -27,11 +27,11 @@ interface IIdpInstance {
 }
 
 interface IIdpConfigDialogProps {
-    /** El conector al que pertenece: de el salen el nombre y los campos del formulario. */
+    /** The connector it belongs to: the name and the form's fields come from it. */
     connectorId: string
     connectorLabel: string
     schema: IConfigFieldDef[]
-    /** La instancia guardada, si ya existe. Sin ella se esta creando. */
+    /** The stored instance, if it already exists. Without it, one is being created. */
     existing?: IIdpInstance
     onClose: () => void
 }
@@ -104,8 +104,8 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
                 value={valor ?? ''}
                 onChange={e => setCampo(f.name, f.type === 'number' ? Number(e.target.value) : e.target.value)}
                 slotProps={{
-                    // Sin esto el navegador rellena 'tenant' y 'secret' con el usuario y la contraseña
-                    // con los que se entro a Kwirth.
+                    // Without this the browser fills 'tenant' and 'secret' with the username and password
+                    // Kwirth was logged into with.
                     htmlInput: { autoComplete: esSecreto ? 'new-password' : 'off' },
                     ...(esSecreto ? { input: {
                         endAdornment: (

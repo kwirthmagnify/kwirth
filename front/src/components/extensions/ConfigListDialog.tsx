@@ -34,11 +34,11 @@ import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addP
     configuraciones ya guardadas: webhooks enseña ahi la URL de ingesta con su token.
 */
 
-// Una configuracion es lo que diga su schema: el core no conoce los campos de cada extension.
+// A configuration is whatever its schema says: the core does not know each extension's fields.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TConfigValues = Record<string, any>
 
-/** Lo que recibe el panel propio del tipo. */
+/** What the type's own panel receives. */
 interface IPerConfigPanelProps {
     basePath: string
     configName: string
@@ -53,9 +53,9 @@ interface IConfigListDialogProps {
         el front ni mantener una lista aparte de quien la tiene.
     */
     preferredHelpSection?: string
-    /** Ruta del back de ESA extension, p.ej. '/core/webhooks/jira'. */
+    /** THAT extension's back-end route, e.g. '/core/webhooks/jira'. */
     basePath: string
-    /** Nombre del fichero al exportar, sin extension. Sin esto no se ofrece exportar ni importar. */
+    /** The file's name on export, without an extension. Without it neither export nor import is offered. */
     exportName?: string
     onClose: () => void
     perConfigPanel?: React.ComponentType<IPerConfigPanelProps>
@@ -71,21 +71,22 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
 
     const [showForm, setShowForm] = useState(false)
     const [editingName, setEditingName] = useState<string | undefined>()
-    // El nombre con el que la configuracion esta guardada AHORA. Es lo que distingue renombrar (hay
-    // original y cambia) de clonar (no hay original), y sin el un clon borraria a su fuente.
+    // The name the configuration is stored under RIGHT NOW. It is what tells renaming (there is an
+    // original and it changes) from cloning (there is no original), and without it a clone would delete
+    // its source.
     const [originalName, setOriginalName] = useState<string | undefined>()
     const [values, setValues] = useState<TConfigValues>({})
     const [saving, setSaving] = useState(false)
     const [deleting, setDeleting] = useState<string | undefined>()
     const [revealed, setRevealed] = useState<Set<string>>(new Set())
 
-    // Los campos COMUNES de la extension, que no son de ninguna configuracion en concreto.
+    // The extension's COMMON fields, which belong to no configuration in particular.
     const [base, setBase] = useState<TConfigValues>({})
     const [baseOpen, setBaseOpen] = useState(false)
     const [savingBase, setSavingBase] = useState(false)
     const [ayuda, setAyuda] = useState(props.helpSection)
 
-    // Exportar e importar: que configuraciones entran, y si va tambien la base.
+    // Export and import: which configurations go in, and whether the base goes too.
     const [exportOpen, setExportOpen] = useState(false)
     const [exportSel, setExportSel] = useState<Set<string>>(new Set())
     const [exportBase, setExportBase] = useState(true)
@@ -103,7 +104,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
                 fetch(`${backendUrl}${props.basePath}/schema`, addGetAuthorization(accessString))
             ])
             if (!configsRes.ok) throw new Error(`HTTP ${configsRes.status}`)
-            // El documento trae las configuraciones y, al mismo nivel, los campos comunes.
+            // The document carries the configurations and, at the same level, the common fields.
             const { configs: guardadas, ...comunes } = await configsRes.json()
             setConfigs(Array.isArray(guardadas) ? guardadas : [])
             setBase(comunes)
@@ -132,7 +133,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         comprobar()
     }, [backendUrl, props.preferredHelpSection])
 
-    /** Los campos comunes, que son de la extension y no de cada configuracion. */
+    /** The common fields, which belong to the extension and not to each configuration. */
     const camposComunes = schema.filter(f => f.common)
 
     /*
@@ -146,7 +147,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
             const comunes: TConfigValues = {}
             for (const f of camposComunes) {
                 const v = base[f.name]
-                // un booleano se guarda siempre, tambien apagado (ver buildPayload)
+                // a boolean is always saved, turned off too (see buildPayload)
                 if (f.type === 'boolean') { comunes[f.name] = Boolean(v); continue }
                 if (v === undefined || v === '') continue
                 if (f.type === 'number') comunes[f.name] = Number(v)
@@ -166,7 +167,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         return v !== undefined && v !== '' && v !== false
     })
 
-    // ── llevarse las configuraciones a otro Kwirth ──────────────────────────────
+    // ── taking the configurations to another Kwirth ────────────────────────────
     const exportar = () => {
         const elegidas = configs.filter(c => exportSel.has(c.name))
         const comunes = exportBase ? base : {}
@@ -300,7 +301,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
             const nuevoNombre = payload.name as string
             const res = await fetch(`${backendUrl}${props.basePath}/configs`, addPostAuthorization(accessString, JSON.stringify(payload)))
             if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
-            // Renombrar es crear con el nombre nuevo y quitar el viejo: el back guarda por nombre.
+            // Renaming is creating under the new name and removing the old one: the back end stores by name.
             if (originalName && originalName !== nuevoNombre) {
                 await fetch(`${backendUrl}${props.basePath}/configs/${encodeURIComponent(originalName)}`, addDeleteAuthorization(accessString))
             }

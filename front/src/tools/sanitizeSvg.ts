@@ -27,7 +27,7 @@ const ALLOWED_ATTRIBUTES = new Set([
 
 const MAX_LENGTH = 8000
 
-/** Reconstruye un elemento dejando solo lo permitido. Devuelve undefined si el elemento no vale. */
+/** Rebuilds an element keeping only what is allowed. Returns undefined when the element will not do. */
 const cleanElement = (source: Element, doc: Document): Element | undefined => {
     const name = source.tagName.toLowerCase()
     if (!ALLOWED_ELEMENTS.has(name)) return undefined
@@ -36,8 +36,8 @@ const cleanElement = (source: Element, doc: Document): Element | undefined => {
     for (const attribute of Array.from(source.attributes)) {
         const attributeName = attribute.name.toLowerCase()
         if (!ALLOWED_ATTRIBUTES.has(attributeName)) continue
-        // Ni siquiera en un atributo permitido: un valor con url(...) o javascript: no dibuja nada
-        // legitimo en un icono y si puede referenciar algo externo.
+        // Not even in an allowed attribute: a value with url(...) or javascript: draws nothing legitimate
+        // in an icon and can reference something external.
         const value = attribute.value
         if (/url\s*\(|javascript:|data:/i.test(value)) continue
         target.setAttribute(attributeName, value)
@@ -48,15 +48,15 @@ const cleanElement = (source: Element, doc: Document): Element | undefined => {
         if (cleanChild) target.appendChild(cleanChild)
     }
 
-    // El texto solo tiene sentido dentro de <title> (accesibilidad); en el resto se descarta.
+    // Text only makes sense inside <title> (accessibility); everywhere else it is discarded.
     if (name === 'title' && source.textContent) target.textContent = source.textContent
 
     return target
 }
 
 /**
- * Devuelve el SVG saneado listo para inyectar, o undefined si la entrada no es un SVG utilizable.
- * Nunca lanza: un icono malformado es un icono que no se pinta, no un error de la aplicacion.
+ * Returns the sanitised SVG ready to inject, or undefined when the input is not a usable SVG.
+ * It never throws: a malformed icon is an icon that is not drawn, not an application error.
  */
 export const sanitizeSvg = (raw: string | undefined): string | undefined => {
     if (!raw) return undefined
@@ -75,7 +75,7 @@ export const sanitizeSvg = (raw: string | undefined): string | undefined => {
         const clean = cleanElement(root, output)
         if (!clean) return undefined
 
-        // Tamaño impuesto por nosotros: el icono tiene que encajar en la tarjeta, no decidir su tamaño.
+        // A size imposed by us: the icon has to fit the card, not decide its size.
         clean.setAttribute('width', '24')
         clean.setAttribute('height', '24')
         if (!clean.getAttribute('viewBox')) clean.setAttribute('viewBox', '0 0 24 24')

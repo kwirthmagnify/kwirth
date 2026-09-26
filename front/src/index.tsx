@@ -55,7 +55,7 @@ if (typeof window !== 'undefined' && window.ResizeObserver && !(window as unknow
         constructor(cb: ResizeObserverCallback) {
             let raf = 0
             super((entries, observer) => {
-                // se descarta la medida anterior si llega otra antes del siguiente fotograma
+                // the previous measurement is discarded if another arrives before the next frame
                 cancelAnimationFrame(raf)
                 raf = requestAnimationFrame(() => cb(entries, observer))
             })

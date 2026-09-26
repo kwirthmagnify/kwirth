@@ -104,9 +104,9 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const [magnifyBoxHeight, setMagnifyBoxHeight] = useState(0)
     const magnifyBoxRef = useRef<HTMLDivElement | null>(null)
     const fileManagerRef = useRef<IFileManagerHandle>(null)
-    // Ref propio para el mensaje "canal no arrancado": su return es previo al layout
-    // principal (magnifyBoxRef no monta ahí), así que se mide con su propio ref para
-    // poder centrarlo VERTICALMENTE en el alto disponible.
+    // Its own ref for the "channel not started" message: its return comes before the main layout
+    // (magnifyBoxRef does not mount there), so it is measured with a ref of its own in order to centre
+    // it VERTICALLY in the available height.
     const emptyRef = useRef<HTMLDivElement | null>(null)
     const [emptyTop, setEmptyTop] = useState(0)
 

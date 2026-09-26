@@ -12,8 +12,9 @@ import { TChannelConstructor } from '../../channels/IChannel'
 import { resolveRemoteChannelHost } from '../../tools/ChannelResolution'
 import { getChannelIconSafe } from '../../tools/ChannelTools'
 
-// Indicador de canal remoto en el desplegable: 'R' en círculo. Verde = operativo (su Kwirth in-cluster
-// está conectado y se puede delegar); gris = no operativo (no hay host conectado, el ADD solo avisará).
+// Remote channel indicator in the dropdown: an 'R' in a circle. Green = operational (its in-cluster
+// Kwirth is connected and can be delegated to); grey = not operational (no host connected, the ADD will
+// merely warn).
 const RemoteBadge: React.FC<{ operative: boolean }> = ({ operative }) => (
     <Tooltip title={operative
         ? 'Remote channel — hosted by this cluster\'s in-cluster Kwirth (connected)'
@@ -108,8 +109,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     const [podFilter, setPodFilter] = useState('')
     const [containerFilter, setContainerFilter] = useState('')
 
-    // Views que no seleccionan recursos: con ellas los desplegables de namespace/controller/pod/
-    // container no pintan nada que elegir.
+    // Views that select no resources: with them the namespace/controller/pod/container dropdowns draw
+    // nothing to choose from.
     const noResourceView = view === EInstanceConfigView.CLUSTER || view === EInstanceConfigView.NONE
 
     const loadAllNamespaces = async (cluster:Cluster) => {
@@ -206,8 +207,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             setPods([])
             setAllContainers([])
             setContainers([])
-            // Un canal no autonomo no puede arrancar con esta view: se deselecciona en vez de dejar
-            // al usuario con un ADD que el back rechazaria sin explicar gran cosa.
+            // A non-self-contained channel cannot start with this view: it is deselected rather than
+            // leaving the user with an ADD the back end would reject without explaining much.
             if (!isAutonomous(props.backChannels.find(c => c.id === channel))) setChannel('')
             return
         }
@@ -264,8 +265,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         const channelId = event.target.value as EInstanceMessageChannel
         setChannel(channelId)
 
-        // Un canal autonomo no arranca con una view de recurso, asi que se le pone 'none' y no se le
-        // pide que adivine. Si ya estaba en 'cluster' se respeta: ahi tambien cabe.
+        // A self-contained channel does not start with a resource view, so it is given 'none' and not
+        // asked to guess. If it was already on 'cluster' that is respected: it fits there too.
         const elegido = props.backChannels.find(c => c.id === channelId)
         if (isAutonomous(elegido) && view !== EInstanceConfigView.CLUSTER) setView(EInstanceConfigView.NONE)
     }
@@ -327,8 +328,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 if (cluster.name === 'inElectron') return getIconFromKind('IconK8sElectron', size)
                 return getIconFromKind('', size)
             case EClusterType.NONE:
-                // Un Kwirth que no observa infraestructura: ni pods ni contenedores. El icono neutro es
-                // deliberado, porque los otros dos dirian que hay algo detras que no hay.
+                // A Kwirth that observes no infrastructure: no pods, no containers. The neutral icon is
+                // deliberate, because the other two would say there is something behind it that is not there.
                 return getIconFromKind('', size)
         }
     }
@@ -344,8 +345,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         let v = props.resourceSelected!.view as EInstanceConfigView
         setView(v)
 
-        // Restaurar una pestaña de canal autonomo no debe consultar el cluster: no hay recursos que
-        // repoblar, y la peticion fallaria para quien no tenga permiso de listar namespaces.
+        // Restoring a self-contained channel's tab must not query the cluster: there are no resources to
+        // repopulate, and the request would fail for anyone without permission to list namespaces.
         if (v === EInstanceConfigView.NONE) return
 
         let alln=await (await fetch(`${c.url}/config/namespace`, addGetAuthorization(c.accessString))).json()

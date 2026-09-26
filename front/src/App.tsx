@@ -128,9 +128,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             MuiPaper: {
                 styleOverrides: {
                     root: ({ theme }) => ({
-                        // Eliminamos el overlay blanco de elevación en modo oscuro
+                        // We remove the white elevation overlay in dark mode
                         backgroundImage: 'none !important', 
-                        // Si es modo oscuro, usamos tu gris oscuro de las cards
+                        // In dark mode we use our own dark grey from the cards
                         backgroundColor: theme.palette.mode === 'dark' 
                             ? theme.palette.grey[900] 
                             : theme.palette.background.paper,
@@ -637,7 +637,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             .then(r => r.json())
             .then(async (plugins: { id: string }[]) => {
                 const arranque = plugins.find(p => p.id === user?.startChannel)
-                // Sin canal de arranque no hay nada que priorizar: se cargan todos a la vez, como siempre.
+                // With no startup channel there is nothing to prioritise: they all load at once, as always.
                 if (arranque) await loadPluginFront(arranque.id)
                 await Promise.all(plugins.filter(p => p.id !== arranque?.id).map(p => loadPluginFront(p.id)))
             })
@@ -683,15 +683,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             .catch(err => console.log(`[homepages] failed to load installed homepages: ${err}`))
 
         // check for extension updates, unless the user turned the check off in settings.
-        // Se espera a que carguen los settings: en modo web se leen con un fetch, así que
-        // sin el await se evaluaría el flag sobre los valores por defecto.
+        // We wait for the settings to load: in web mode they are read with a fetch, so without the await
+        // the flag would be evaluated against the default values.
         const checkExtensionUpdates = async () => {
             await settingsLoaded
             if (userSettingsRef.current?.checkExtensionUpdates === false) return
-            // El catalogo lo resuelve el back (/core/marketplace/<tipo>): ya viene filtrado por tipo y con la
-            // precedencia de marketplaces aplicada. Eso importa aqui: si un marketplace privado publica su
-            // propio 'log', hay que comparar contra SUS versiones y no contra las del 'log' publico.
-            // idp connectors no cuelgan de /core, tienen su propio router.
+            // The back end resolves the catalogue (/core/marketplace/<type>): it arrives already filtered
+            // by type and with the marketplace precedence applied. That matters here: if a private
+            // marketplace publishes its own 'log', the comparison has to be against ITS versions and not
+            // against the public 'log'. idp connectors do not hang off /core, they have their own router.
             const ENDPOINTS: Record<string, string> = {
                 [EExtensionType.PLUGIN]:   `${backendUrl}/core/plugins`,
                 [EExtensionType.SENDER]:   `${backendUrl}/core/senders`,
@@ -704,11 +704,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 [EExtensionType.DOCS]:     `${backendUrl}/core/docs`,
                 [EExtensionType.IDP]:      `${backendUrl}/idp/connectors`,
             }
-            // Entrar por una extension de login es una puerta ESTRECHA: el usuario aterriza en la pagina de
-            // un login concreto y va derecho a su canal, sin marketplace y normalmente sin mas Kwirth que ese.
-            // Listarle ahi que hay version nueva del tema corporativo o de un sender no le sirve de nada, asi
-            // que el aviso se limita a lo suyo: el propio login y el plugin al que le redirige (si redirige).
-            // El canal de arranque ES el id del plugin (ver el poll de /core/plugins/<channelId>/version).
+            // Coming in through a login extension is a NARROW door: the user lands on a specific login's
+            // page and goes straight to its channel, with no marketplace and usually with no Kwirth beyond
+            // that one. Listing there that there is a new version of the corporate theme or of a sender is
+            // of no use to them, so the notice is limited to what is theirs: the login itself and the
+            // plugin it redirects to (if it redirects). The startup channel IS the plugin's id (see the
+            // poll of /core/plugins/<channelId>/version).
             const relevantForLoginExt = (type: EExtensionType, id: string): boolean => {
                 if (!loginExtSlug) return true
                 switch (type) {
@@ -721,7 +722,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
             }
             try {
-                // con un login de extension solo se consultan los dos tipos que pueden salir en el aviso
+                // with a login extension only the two types that can appear in the notice are queried
                 const types = loginExtSlug ? [EExtensionType.LOGIN, EExtensionType.PLUGIN] : Object.values(EExtensionType)
                 const [catalogs, installeds] = await Promise.all([
                     Promise.all(types.map(t => fetch(`${backendUrl}/core/marketplace/${t}`, addGetAuthorization(accessString)).then(r => r.ok ? r.json() : []).catch(() => []))),
@@ -731,11 +732,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 types.forEach((type, i) => {
                     const catalog: IMarketplaceEntry[] = catalogs[i]
                     const installed: { id: string, version: string, installedFrom?: string }[] = installeds[i]
-                    // un endpoint que no devuelva array no debe tumbar el chequeo de los demas tipos
+                    // an endpoint that does not return an array must not bring down the check of the other types
                     if (!Array.isArray(catalog) || !Array.isArray(installed)) return
                     for (const inst of installed) {
                         if (inst.installedFrom === 'dev') continue
-                        // los conectores bundled (idp) no traen version y no son actualizables
+                        // bundled connectors (idp) carry no version and are not updatable
                         if (!inst.version) continue
                         if (!relevantForLoginExt(type, inst.id)) continue
                         const latest = catalog.filter(m => m.id === inst.id).map(m => m.version).sort((a, b) => versionGreaterThan(a, b) ? -1 : 1)[0]
@@ -782,8 +783,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 const response = await fetch(`${backendUrl}/managekwirth/previouslog`, addGetAuthorization(accessString))
                 if (!response.ok) return
                 const previous = await response.json() as IPreviousLogNotice
-                // sin reinicio no hay nada que contar; con reinicio SI, aunque la salida fuera limpia:
-                // el core no se reinicia solo por gusto, y el log de antes es lo unico que lo explica
+                // with no restart there is nothing to tell; with a restart there IS, even when the exit was
+                // clean: the core does not restart for the fun of it, and the previous log is the only
+                // thing that explains it
                 if (!previous.restarted) return
                 const seenKey = 'kwirth.previouslog.notified'
                 const stamp = previous.termination?.finishedAt ?? ''
@@ -853,9 +855,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const srcCluster = clusters.find(c => c.home)
         if (!srcCluster) return   // el cluster home aún no está listo; el effect re-corre al cambiar clusters
         if (!frontChannels.has(user.startChannel)) {
-            // el channel (p.ej. de un plugin) todavía no está registrado: esperamos a que cargue
-            // (el effect re-corre en cada setFrontChannels). Solo nos rendimos → home cuando la carga
-            // de plugins ya terminó y el channel sigue sin existir (startChannel inválido / sin acceso).
+            // the channel (a plugin's, say) is not registered yet: we wait for it to load (the effect
+            // re-runs on every setFrontChannels). We only give up → home once the plugin loading has
+            // finished and the channel still does not exist (an invalid startChannel, or no access).
             if (pluginsLoaded) { autoStartedRef.current = true; setAutoStartPending(false) }
             return
         }
@@ -1180,9 +1182,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
         if (newTab.channel.requirements.multiCluster) {
             newTab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, home: !!c.home, id: c.id }))
-            // Federación multi-cluster: abre un WS por cluster (por nombre), lo arranca (START con SU accessKey) y
-            // entrega mensajes por onMessage(uid). Gestiona reconexión (backoff 10s, START fresco → snapshot nuevo
-            // → el canal re-mergea). El WS crudo NO se expone; el canal usa send(uid)/close(). Sin id → DOWN + aviso.
+            // Multi-cluster federation: it opens one WS per cluster (by name), starts it (START with ITS
+            // accessKey) and delivers messages through onMessage(uid). It handles reconnection (a 10s
+            // backoff, a fresh START → a new snapshot → the channel re-merges). The raw WS is NOT exposed;
+            // the channel uses send(uid)/close(). With no id → DOWN + a warning.
             newTab.channelObject.openRemoteChannels = (clusterNames: string[], instanceConfig: any, handlers) => {
                 interface IRemoteConn { clusterId: string; ws?: WebSocket; closed: boolean; retry?: ReturnType<typeof setInterval>; instanceId?: string }
                 const conns: IRemoteConn[] = []
@@ -1199,9 +1202,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     ws.onmessage = (ev) => {
                         try {
                             const m = JSON.parse(ev.data)
-                            // El back asigna el instance en la respuesta al START; lo guardamos por conexión para
-                            // poder ENVIAR comandos (accept/assign/remediate) que referencien un instance válido en
-                            // ESE cluster (si no, el back responde "Instance not found for command").
+                            // The back end assigns the instance in the reply to the START; we keep it per
+                            // connection so commands (accept/assign/remediate) can be SENT referencing an
+                            // instance valid in THAT cluster (otherwise the back end answers "Instance not
+                            // found for command").
                             if (m?.action === EInstanceMessageAction.START && m?.flow === EInstanceMessageFlow.RESPONSE && m?.instance) conn.instanceId = m.instance
                             handlers.onMessage(conn.clusterId, m)
                         } catch { /* no-JSON: ignora */ }
@@ -1227,8 +1231,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 return {
                     send: (clusterId: string, msg: any) => {
                         const c = conns.find(x => x.clusterId === clusterId)
-                        // El comando debe llevar el instance QUE ESTE cluster asignó a su conexión DATA (no el del
-                        // home): el back busca el instance por id y si no coincide descarta el comando.
+                        // The command must carry the instance THIS cluster assigned to its DATA connection
+                        // (not the home one's): the back end looks the instance up by id and discards the
+                        // command when it does not match.
                         if (c?.ws && c.ws.readyState === WebSocket.OPEN) c.ws.send(JSON.stringify({ ...msg, instance: c.instanceId ?? msg.instance }))
                     },
                     close: () => {
@@ -1330,10 +1335,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             if (newTab.channel.requirements.webSocket) newTab.channelObject.webSocket = newTab.ws
             if (newTab && (newTab.channelStarted || start)) {
                 // *********************************************************************************************
-                // *** REVISAR IMPACTO EN OTROS CANALES Y ENTORNOS DE EJECUCIÓN ANTES DE DAR POR BUENO.    ***
-                // *** Guardamos contra settings.config/instanceConfig === undefined para NO machacar lo    ***
-                // *** que initChannel dejó. Sin esto, el auto-start con start=true (p.ej. enforcement de   ***
-                // *** login / fullscreen) pasa settings={config:undefined} y pisa el config a undefined,   ***
+                // *** REVIEW THE IMPACT ON OTHER CHANNELS AND EXECUTION ENVIRONMENTS BEFORE ACCEPTING.    ***
+                // *** We guard against settings.config/instanceConfig === undefined so as NOT to trash     ***
+                // *** what initChannel left. Without this, auto-start with start=true (login/fullscreen    ***
+                // *** enforcement, say) passes settings={config:undefined} and overwrites config with      ***
                 // *** rompiendo canales cuyo startChannel lee config (montag: config.selectedSessionId).   ***
                 // *** Antes esto era incondicional: `channelObject.config = settings.config`.              ***
                 // *** PENDIENTE verificar: tab normal, desktop/ELECTRON, in-cluster, remote, restore tabs. ***
@@ -2201,8 +2206,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (ok && user) writeLoggedUserSettings(user)
     }
 
-    // el dialogo ya ha persistido en /core/settings y nos devuelve los valores efectivos;
-    // aqui solo se refresca la copia en memoria que consume ManageClusters
+    // the dialog has already persisted to /core/settings and returns the effective values to us;
+    // here we only refresh the in-memory copy ManageClusters consumes
     const onSettingsKwirthClosed = (savedSettings:IKwirthSettings|undefined) => {
         setShowSettingsKwirth(false)
         if (!savedSettings?.metricsInterval) return
@@ -2332,8 +2337,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
     }
 
-    // SSO handoff: al volver del IdP el back redirige con ?sso=<code> (o ?ssoerror=<motivo>).
-    // Canjeamos el codigo (un solo uso) por el ILoginResponse y arrancamos la sesion.
+    // SSO handoff: on coming back from the IdP the back end redirects with ?sso=<code> (or
+    // ?ssoerror=<reason>). We exchange the code (single use) for the ILoginResponse and start the session.
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
         const sso = params.get('sso')
@@ -2345,7 +2350,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const remaining = params.toString()
         window.history.replaceState({}, '', window.location.pathname + (remaining ? '?' + remaining : ''))
         if (ssoerror) {
-            // motivos que emite el back en el callback del IdP (AuthApi); mensaje legible por cada uno
+            // reasons the back end emits in the IdP's callback (AuthApi); a readable message for each one
             const ssoErrorMessages: Record<string, string> = {
                 unverified: 'Your email address is not verified by the identity provider.',
                 notfound: 'This account is not authorized to access Kwirth.',

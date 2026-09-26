@@ -118,14 +118,14 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
         if (result && result.status === 200) setChangingPassword(true)
     }
 
-    // si no llegan metodos (back antiguo) mantenemos el formulario user/pass por compatibilidad
+    // if no methods arrive (an older back end) we keep the user/pass form for compatibility
     const hasPassword = props.methods.length === 0 || props.methods.some(m => m.kind === EAuthMethodKind.PASSWORD)
     const redirectMethods = props.methods.filter(m => m.kind === EAuthMethodKind.REDIRECT)
     const onClickIdp = (method:IAuthMethod) => {
         if (!method.startUrl) return
-        // el redirect al IdP tarda unos ms; deshabilitamos los botones para que no se puedan pulsar mientras tanto
+        // the redirect to the IdP takes a few ms; we disable the buttons so they cannot be pressed meanwhile
         setRedirecting(true)
-        // el front aporta a dónde volver (su propia URL); el back solo la respeta si es localhost o mismo-origen
+        // the front end supplies where to come back to (its own URL); the back end only honours it when it is localhost or same-origin
         const returnTo = window.location.origin + window.location.pathname
         window.location.href = `${backendUrl}${method.startUrl}?returnTo=${encodeURIComponent(returnTo)}`
     }

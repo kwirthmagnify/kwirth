@@ -579,7 +579,7 @@ const containerRef = useRef<HTMLDivElement>(null)
             channelObject: contentExternalData.content.externalChannelObject!,
             onEnd: () => props.onClose(props.id)
         }
-        // we need this ref for getting focus statis con terms. We need this for capturing keys ONLUY for terminal in focus (due to global keyboard listeners)
+        // we need this ref for getting focus status with terms. We need this for capturing keys ONLY for the terminal in focus (due to global keyboard listeners)
         return channelProps.channelObject.channelId==='ops'?
             <div ref={containerRef}>
                 <ChannelTabContent {...channelProps}/>
@@ -740,7 +740,7 @@ export const ANSI_MAP: Record<string, string> = {
     'Enter':      '\r',
     'Escape':     '\x1b',
 
-    // F1 - F12 (Varían según el terminal, estos son los comunes de xterm)
+    // F1 - F12 (they vary by terminal; these are xterm's common ones)
     'F1':  '\x1bOP',
     'F2':  '\x1bOQ',
     'F3':  '\x1bOR',
@@ -773,14 +773,14 @@ export const getComplexCode = (e: KeyboardEvent): string | null => {
     }
     if (F5_F12[key]) return `\x1b[${F5_F12[key]};${modifier}~`
 
-    // 5. Mapeo para Flechas y navegación
+    // 5. Mapping for arrows and navigation
     const Nav: Record<string, string> = {
         'ArrowUp': 'A', 'ArrowDown': 'B', 'ArrowRight': 'C', 'ArrowLeft': 'D',
         'Home': 'H', 'End': 'F'
     };
     if (Nav[key]) return `\x1b[1;${modifier}${Nav[key]}`
 
-    // 6. Mapeo para Edición (Insert, Delete, etc.)
+    // 6. Mapping for editing (Insert, Delete, and so on)
     const Edit: Record<string, number> = { 'Insert': 2, 'Delete': 3, 'PageUp': 5, 'PageDown': 6 }
     if (Edit[key]) return `\x1b[${Edit[key]};${modifier}~`
 

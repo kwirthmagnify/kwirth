@@ -15,28 +15,29 @@ const PLUGIN_SOURCE_PREFIX = 'plugin:'
 const hostingPluginOf = (installedFrom?: string): string | undefined =>
     installedFrom?.startsWith(PLUGIN_SOURCE_PREFIX) ? installedFrom.substring(PLUGIN_SOURCE_PREFIX.length) : undefined
 
-// El marketplace publico no tiene id ni label propios: en el catalogo se representa con label undefined.
-// Pero una extension YA INSTALADA necesita constancia de que vino de EL y no de una url pegada a mano, asi
-// que al instalar se graba este label. Sin esto, lo instalado del publico se veia como 'descargado de una
-// url suelta': icono de consola y sin chip.
+// The public marketplace has neither an id nor a label of its own: in the catalogue it is represented by
+// an undefined label. But an ALREADY INSTALLED extension needs a record that it came from IT and not from
+// a hand-pasted url, so this label is recorded on install. Without it, what was installed from the public
+// one looked like 'downloaded from a loose url': a console icon and no chip.
 export const PUBLIC_MARKETPLACE_LABEL = 'Kwirth'
 
-// Indicador de procedencia en las tarjetas del catalogo: que marketplace sirve esa extension.
-// No es decorativo. Con la precedencia por id, un marketplace privado puede publicar su propio 'log' y
-// tapar al publico, asi que esto es lo unico que distingue CUAL de los dos estas viendo.
+// Provenance indicator on the catalogue's cards: which marketplace serves that extension.
+// It is not decorative. With precedence by id, a private marketplace can publish its own 'log' and hide
+// the public one, so this is the only thing that tells WHICH of the two you are looking at.
 //
-// label undefined = viene del marketplace publico OSS.
+// an undefined label = it comes from the public OSS marketplace.
 interface IMarketplaceBadgeProps {
     label?: string
-    // Procedencia real de una extension YA INSTALADA. Solo la tienen las tarjetas de instalados.
+    // Real provenance of an ALREADY INSTALLED extension. Only the installed cards have it.
     installedFrom?: string
 }
 
-// Se pinta SIEMPRE, tambien para el publico. Marcar solo las privadas dejaba a las publicas sin ningun
-// indicador, y no habia forma de distinguir "viene del marketplace publico" de "no se ha marcado" —
-// sobre todo en dialogos cuya tarjeta ya lleva un candado como icono, que se lee como 'privado'.
-// Algo mas pequeño que el 'small' de MUI. Se exporta para que TODOS los chips de una tarjeta de extension
-// usen el mismo tamaño: mezclar tamaños en la misma fila se ve desordenado.
+// It is ALWAYS drawn, for the public one too. Marking only the private ones left the public ones with no
+// indicator at all, and there was no way to tell "it comes from the public marketplace" from "it has not
+// been marked" — especially in dialogs whose card already carries a padlock as its icon, which reads as
+// 'private'.
+// Something smaller than MUI's 'small'. It is exported so that ALL the chips on an extension card use the
+// same size: mixing sizes on the same row looks untidy.
 const compactChip = { height: 20, fontSize: '0.68rem', '& .MuiChip-label': { px: 0.9 } }
 const compact = compactChip
 
@@ -50,26 +51,27 @@ const compact = compactChip
     Antes la URL se enseñaba recortada en un chip aparte, que ademas de ocupar la fila entera duplicaba
     lo que ya dice el badge cuando la extension SI viene de un catalogo.
 */
-// ⚠️ La procedencia se GUARDA al instalar, no se deduce. Antes se miraba la URL de descarga, y eso dejo
-// de valer: el manifest y los paquetes viven en servidores distintos, asi que la url del tgz apunta al
-// registro y no dice nada del marketplace. Ademas, con precedencia por id, dos marketplaces pueden servir
-// la misma extension y hay que saber cual instalo el usuario, no cual gana hoy.
+// ⚠️ Provenance is STORED on install, not deduced. The download URL used to be looked at, and that stopped
+// working: the manifest and the packages live on different servers, so the tgz's url points at the
+// registry and says nothing about the marketplace. Besides, with precedence by id, two marketplaces can
+// serve the same extension and what matters is which one the user installed, not which one wins today.
 //
-// Por eso un label presente MANDA: significa que consta de donde vino. La heuristica de la url solo se
-// aplica cuando no consta nada, que es el caso de una url pegada a mano o de lo instalado antes de esto.
+// That is why a label being present RULES: it means where it came from is on record. The url heuristic is
+// applied only when nothing is on record, which is the case of a hand-pasted url or of what was installed
+// before this.
 const comesFromNoMarketplace = (label?: string, installedFrom?: string): boolean =>
     !label && (installedFrom === 'dev' || installedFrom === 'local' || isPlainUrl(installedFrom))
 
-// Una URL de descarga directa. El marketplace publico se sirve desde el repo de kwirthmagnify, asi que
-// esa sí es procedencia conocida y no entra aqui.
+// A direct download URL. The public marketplace is served from kwirthmagnify's repo, so that one is known
+// provenance and does not come in here.
 const isPlainUrl = (installedFrom?: string): boolean =>
     Boolean(installedFrom)
     && /^https?:\/\//i.test(installedFrom!)
     && !installedFrom!.includes('github.com/kwirthmagnify')
 
 const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceBadgeProps) => {
-    // Lo que publica un plugin lleva el nombre de SU plugin: es lo unico que dice de donde ha salido, y
-    // es donde hay que ir para instalarlo, actualizarlo o quitarlo.
+    // What a plugin publishes carries ITS plugin's name: it is the only thing that says where it came
+    // from, and it is where one has to go to install, update or remove it.
     const hostingPlugin = hostingPluginOf(props.installedFrom)
     if (hostingPlugin) {
         return (
@@ -81,8 +83,8 @@ const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceB
 
     if (comesFromNoMarketplace(props.label, props.installedFrom)) return null
 
-    // Lo que viene DENTRO de Kwirth no lo sirve el marketplace publico. Etiquetarlo 'Kwirth' anunciaba
-    // como OSS publica a una extension de pago cargada en el bundle.
+    // What comes INSIDE Kwirth is not served by the public marketplace. Labelling it 'Kwirth' announced a
+    // paid extension loaded in the bundle as public OSS.
     if (!props.label && props.installedFrom === 'bundled') {
         return (
             <Tooltip title='Shipped inside this Kwirth image — it does not come from any marketplace'>
@@ -91,8 +93,8 @@ const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceB
         )
     }
 
-    // El publico: sin label en el catalogo, con PUBLIC_MARKETPLACE_LABEL una vez instalado. Perfilado, no
-    // relleno, para que se distinga de un privado de un vistazo.
+    // The public one: with no label in the catalogue, with PUBLIC_MARKETPLACE_LABEL once installed.
+    // Outlined, not filled, so it is told from a private one at a glance.
     if (!props.label || props.label === PUBLIC_MARKETPLACE_LABEL) {
         return (
             <Tooltip title='Served by the public Kwirth marketplace'>
@@ -100,7 +102,7 @@ const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceB
             </Tooltip>
         )
     }
-    // relleno, no perfilado: el chip 'dev' de estos dialogos ya es naranja perfilado y se confundirian
+    // filled, not outlined: the 'dev' chip of these dialogs is already outlined orange and they would be confused
     return (
         <Tooltip title={`Served by the '${props.label}' marketplace, which takes precedence over the public Kwirth one`}>
             <Chip label={props.label} size='small' color='warning' sx={compact} />
@@ -114,8 +116,8 @@ const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceB
     local). Antes estaba duplicado en linea en los 10 dialogos de gestion de extensiones.
 */
 const MarketplaceSourceIcon: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceBadgeProps) => {
-    // Viene de un plugin: el icono es el de una extension, no el de un origen de descarga — porque no
-    // se ha descargado de ningun sitio, lo publica algo que ya esta instalado.
+    // It comes from a plugin: the icon is an extension's, not a download origin's — because it has not
+    // been downloaded from anywhere, it is published by something already installed.
     const hostingPlugin = hostingPluginOf(props.installedFrom)
     if (hostingPlugin) {
         return (
@@ -125,8 +127,9 @@ const MarketplaceSourceIcon: React.FC<IMarketplaceBadgeProps> = (props: IMarketp
         )
     }
 
-    // La CONSOLA es de dev y solo de dev. Un fichero local y una url pegada a mano tampoco vienen de un
-    // marketplace, pero no son lo mismo: cada uno lleva su icono, o el de dev deja de significar dev.
+    // The CONSOLE belongs to dev and to dev alone. A local file and a hand-pasted url do not come from a
+    // marketplace either, but they are not the same thing: each carries its own icon, or dev's stops
+    // meaning dev.
     if (comesFromNoMarketplace(props.label, props.installedFrom)) {
         const [title, icon] = props.installedFrom === 'dev'
             ? ['Loaded from disk (kwirth-dev.json) — it does not come from any marketplace', <Terminal fontSize='small' />]

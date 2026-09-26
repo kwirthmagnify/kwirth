@@ -48,7 +48,7 @@ interface IInstalledWebhook {
     installedFrom?: string
     marketplaceId?: string
     marketplaceLabel?: string
-    /** Las configuraciones que tiene puestas. Su numero es el chip de la tarjeta. */
+    /** The configurations it has in place. Their number is the card's chip. */
     configNames: string[]
     hasFront?: boolean
     requiresRestart?: boolean
@@ -87,8 +87,8 @@ const webhookDescriptor: IExtensionManagerDescriptor<IInstalledWebhook, IWebhook
     toModel,
     canUninstall,
 
-    // El chip 'N configs': cuantas entradas tiene abiertas ese webhook. Un webhook sin configuraciones no
-    // recibe nada, y eso se lee de un vistazo.
+    // The 'N configs' chip: how many entries that webhook has open. A webhook with no configurations
+    // receives nothing, and that reads at a glance.
     configCount: w => w.configNames.length,
 
     renderConfigDialog: (w, onClose) => React.createElement(ConfigListDialog, {

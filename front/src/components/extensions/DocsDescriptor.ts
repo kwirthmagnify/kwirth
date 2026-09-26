@@ -15,7 +15,7 @@ import { EManagerSection, IExtensionAction, IExtensionManagerDescriptor, IExtens
     Lo demas que aporta el tipo: abrir la documentacion en otra pestaña.
 */
 
-// El id es el de la extension documentada; el par con targetType es lo que la identifica.
+// The id is that of the documented extension; the pair with targetType is what identifies it.
 interface IDocsManifestEntry {
     marketplaceId?: string
     marketplaceLabel?: string
@@ -32,9 +32,9 @@ interface IDocsManifestEntry {
 interface IDocsMeta {
     id: string
     targetType: string
-    // 'name' es el nombre del PAQUETE (npm) y 'displayName' el humano, igual que en los otros diez tipos.
-    // Mientras las docs solo venian de dev, el tgz metia el nombre humano en 'name' y colaba; en cuanto
-    // una se instala desde un registro, 'name' es el scope y hay que pintar 'displayName'.
+    // 'name' is the PACKAGE's name (npm) and 'displayName' the human one, as in the other ten types.
+    // While docs only came from dev, the tgz put the human name in 'name' and got away with it; as soon
+    // as one is installed from a registry, 'name' is the scope and 'displayName' is what has to be drawn.
     name: string
     displayName?: string
     version: string
@@ -56,16 +56,16 @@ const toModel = (e: IDocsMeta | IDocsManifestEntry): IExtensionCardModel => ({
 })
 
 const canUninstall = (d: IDocsMeta): IExtensionVerdict => {
-    // La documentacion del core viene DENTRO de la imagen: no hay nada que borrar, y si se borrara Kwirth
-    // se quedaria sin ayuda.
+    // The core's documentation comes INSIDE the image: there is nothing to delete, and were it deleted
+    // Kwirth would be left with no help.
     if (d.installedFrom === 'bundled') return { allowed: false, reason: 'Bundled documentation cannot be uninstalled' }
     if (d.installedFrom === 'dev') return { allowed: false, reason: 'Dev documentation cannot be uninstalled' }
     return { allowed: true }
 }
 
 /**
- * Factoria porque abrir la documentacion necesita la direccion del back: se sirve desde el propio Kwirth,
- * no desde una web externa.
+ * A factory because opening the documentation needs the back end's address: it is served from Kwirth
+ * itself, not from an external site.
  */
 const makeDocsDescriptor = (backendUrl: string): IExtensionManagerDescriptor<IDocsMeta, IDocsManifestEntry> => ({
     extensionType: EExtensionType.DOCS,

@@ -19,7 +19,7 @@ const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) =>
     const [keepAliveInterval, setKeepAliveInterval] = useState<number>(props.settings? props.settings.keepAliveInterval : 60)
     const [selectedTheme, setSelectedTheme] = useState<string>(props.activeThemeName ?? '')
     const [selectedHomepage, setSelectedHomepage] = useState<string>(props.activeHomepageId ?? '')
-    // undefined en settings guardados de antes de existir el campo: se considera activado
+    // undefined in settings saved before the field existed: it counts as enabled
     const [checkExtensionUpdates, setCheckExtensionUpdates] = useState<boolean>(props.settings?.checkExtensionUpdates !== false)
     const { backendUrl } = useContext(SessionContext) as SessionContextType
 

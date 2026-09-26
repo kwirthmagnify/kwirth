@@ -27,8 +27,8 @@ const TruncatedText: React.FC<{
     const medir = useCallback(() => {
         const el = ref.current
         if (!el) return
-        // Una linea se pasa a lo ANCHO y varias a lo ALTO (el clamp de -webkit-box), asi que se miran las
-        // dos: 1px de margen para no marcar recorte por un redondeo del navegador.
+        // A single line overflows in WIDTH and several in HEIGHT (-webkit-box's clamp), so both are
+        // looked at: a 1px margin so a browser rounding does not flag a truncation.
         setRecortado(el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1)
     }, [])
 
@@ -48,8 +48,8 @@ const TruncatedText: React.FC<{
     )
 
     if (!recortado) return texto
-    // El tooltip respeta los saltos de linea del texto: una descripcion de varias frases se lee mejor asi
-    // que en un parrafo corrido.
+    // The tooltip honours the text's line breaks: a description of several sentences reads better that
+    // way than as a running paragraph.
     return <Tooltip title={text} slotProps={{ tooltip: { sx: { whiteSpace: 'pre-wrap', maxWidth: 420 } } }}>{texto}</Tooltip>
 }
 

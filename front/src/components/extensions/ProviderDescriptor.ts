@@ -45,11 +45,11 @@ interface IInstalledProvider {
     installedFrom?: string
     marketplaceId?: string
     marketplaceLabel?: string
-    /** Las configuraciones que lleva el provider. Su numero es el chip de la tarjeta. */
+    /** The configurations the provider carries. Their number is the card's chip. */
     configNames?: string[]
-    /** Trae su propia UI de configuracion en front.js. */
+    /** It brings its own configuration UI in front.js. */
     hasFront?: boolean
-    /** Declara un schema, y entonces el formulario lo pinta el core. */
+    /** It declares a schema, and then the core draws the form. */
     hasSchema?: boolean
     /*
         Sabe comprobar su propia configuracion: expone '/test' en su configRouter, y el core lo detecta
@@ -57,16 +57,16 @@ interface IInstalledProvider {
         valen en el momento de escribirlas, en vez de descubrirlo cuando el provider no trae nada.
     */
     hasTest?: boolean
-    /** Provider del core (events, metrics): viene dentro de Kwirth, no es una extension. */
+    /** A core provider (events, metrics): it comes inside Kwirth, it is not an extension. */
     core?: boolean
     /**
-     * PLUVIDER: no es un provider sino un plugin que ademas produce y expone su informacion
-     * in-process. Se sirve en la misma lista para que quien CONSUME providers no tenga que saber que
-     * existen dos clases, pero aqui no pinta nada: no se instala ni se desinstala por separado, va y
-     * viene con su plugin.
+     * PLUVIDER: not a provider but a plugin that also produces and exposes its information in-process.
+     * It is served in the same list so whoever CONSUMES providers need not know two classes exist, but
+     * here it has no part to play: it is neither installed nor uninstalled separately, it comes and goes
+     * with its plugin.
      */
     pluvider?: boolean
-    /** id del plugin que aloja el pluvider (el 'agora' de 'plugin:agora'). Solo en pluviders. */
+    /** id of the plugin hosting the pluvider (the 'agora' of 'plugin:agora'). Pluviders only. */
     hostedBy?: string
     requiresRestart?: boolean
 }
@@ -88,8 +88,8 @@ const toModel = (e: IInstalledProvider | IProviderManifestEntry): IExtensionCard
 })
 
 const canUninstall = (p: IInstalledProvider): IExtensionVerdict => {
-    // Un pluvider se lista aqui como AYUDA —para que se vea a que se puede uno suscribir— pero no es
-    // una extension instalada: viene y se va con su plugin.
+    // A pluvider is listed here as a HELP — so it can be seen what one may subscribe to — but it is not
+    // an installed extension: it comes and goes with its plugin.
     if (p.pluvider) return { allowed: false, reason: `Provided by the '${p.hostedBy}' plugin — uninstall that plugin instead` }
     if (p.installedFrom === 'dev') return { allowed: false, reason: 'Dev providers cannot be uninstalled' }
     if (p.installedFrom?.startsWith('pack:')) return { allowed: false, reason: 'Installed via pack — uninstall the pack instead' }
@@ -114,14 +114,14 @@ const providerDescriptor: IExtensionManagerDescriptor<IInstalledProvider, IProvi
     toModel,
     canUninstall,
 
-    // Los providers del core no son extensiones: pintarlos aqui invita a intentar quitarlos.
+    // Core providers are not extensions: drawing them here invites trying to remove them.
     //
-    // Los PLUVIDERS si se pintan, a proposito: quien entra aqui viene a ver a que productores puede
-    // suscribirse, y dejarlos fuera obligaria a saber de antemano que existen. Lo que no se puede es
-    // gestionarlos desde aqui, y de eso se encargan canUninstall y canConfigure.
+    // PLUVIDERS are drawn, on purpose: whoever comes here comes to see which producers they can subscribe
+    // to, and leaving them out would require knowing beforehand that they exist. What cannot be done is
+    // managing them from here, and canUninstall and canConfigure take care of that.
     filterInstalled: p => !p.core,
 
-    // Un pluvider no lleva configuraciones propias: si necesita alguna, la lleva su plugin.
+    // A pluvider carries no configurations of its own: if it needs any, its plugin carries them.
     configCount: p => p.pluvider ? undefined : p.configNames?.length,
 
     /*
@@ -137,9 +137,9 @@ const providerDescriptor: IExtensionManagerDescriptor<IInstalledProvider, IProvi
         }]
         : [],
 
-    // Hay providers que no se configuran de ninguna de las dos formas —ni traen front ni declaran
-    // schema— y para esos la rueda no lleva a ningun sitio. Un pluvider nunca se configura aqui: su
-    // configuracion, si la necesita, es la de su plugin.
+    // There are providers that are configured in neither way — they bring no front end and declare no
+    // schema — and for those the gear leads nowhere. A pluvider is never configured here: its
+    // configuration, if it needs one, is its plugin's.
     canConfigure: p => p.pluvider
         ? { allowed: false, reason: `Configured from the '${p.hostedBy}' plugin, if it needs any configuration` }
         : (p.hasFront || p.hasSchema)
@@ -147,8 +147,8 @@ const providerDescriptor: IExtensionManagerDescriptor<IInstalledProvider, IProvi
             : { allowed: false, reason: 'No configuration available' },
 
     renderConfigDialog: (p, onClose) => p.hasFront
-        // Lo pinta la extension, no el core: el provider trae su propia UI porque sus configuraciones no
-        // caben en un formulario plano (varias con nombre, listas, pruebas de conexion…).
+        // The extension draws it, not the core: the provider brings its own UI because its configurations
+        // do not fit in a flat form (several of them with names, lists, connection tests…).
         ? React.createElement(ConfigFrontDialog, {
             extensionId: p.id,
             globalName: '__kwirth_providers__',
@@ -161,7 +161,7 @@ const providerDescriptor: IExtensionManagerDescriptor<IInstalledProvider, IProvi
             helpSection: HELP,
             schemaEndpoint: `/core/providers/${p.id}/schema`,
             endpoint: `/core/providers/${p.id}/config`,
-            // El test lo sirve el PROPIO provider en su configRouter, que el core monta en otro prefijo
+            // The test is served by the provider ITSELF in its configRouter, which the core mounts under another prefix
             ...(p.hasTest ? { testEndpoint: `/core/providerconfig/${p.id}/test` } : {}),
             emptyText: 'This provider has no configurable options.',
             onClose

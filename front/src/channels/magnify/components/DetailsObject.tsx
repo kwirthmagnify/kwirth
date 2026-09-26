@@ -55,7 +55,7 @@ function formatAgeCompact(duracion:{ days: number, hours: number, minutes: numbe
         partes.push(`${minutes}m`);
     }
 
-    // Devolver la cadena (unir las dos primeras partes para mantener la compacidad)
+    // Return the string (joining the first two parts to keep it compact)
     return partes.slice(0, 2).join('')
 }    
 
@@ -114,7 +114,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
         let obj = JSON.parse(JSON.stringify(srcobj))
         if (src.includes('|') && src.includes(':')) {  
             // xxx|yyyy:clave 
-            // merge los items de xxx y los de yyy que tengan el mismo valor de clave y deja el resultado en xxx
+            // merges the items of xxx and those of yyy sharing the same key value, leaving the result in xxx
             let key = src.split(':')[1]
             let parts = src.split(':')[0].split('|')
             let keys=[]
@@ -129,7 +129,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                 }
             }
             _.set(obj, parts[0], result)
-            //se cambia el src a xxx que es donde estan los datos mergeados
+            // src is switched to xxx, which is where the merged data is
             src=parts[0]
         }
 

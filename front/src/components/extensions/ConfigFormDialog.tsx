@@ -29,7 +29,7 @@ import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '
 interface IConfigFormDialogProps {
     /** Titulo completo, p.ej. 'Configure — Corporate login'. */
     title: string
-    /** Seccion de la guia para el boton de ayuda. */
+    /** The guide's section for the help button. */
     helpSection?: string
     /*
         El formulario, de una de las dos formas en que los tipos lo tienen:
@@ -38,7 +38,7 @@ interface IConfigFormDialogProps {
     */
     schema?: IConfigFieldDef[]
     schemaEndpoint?: string
-    /** Ruta del back, relativa al backendUrl: GET para leer y PUT para guardar. */
+    /** The back-end route, relative to backendUrl: GET to read and PUT to save. */
     endpoint: string
     /*
         Ruta de comprobacion, si la extension sabe probar su configuracion (GET, responde {ok, message}).
@@ -46,7 +46,7 @@ interface IConfigFormDialogProps {
         esperar a que el provider falle en silencio media hora despues.
     */
     testEndpoint?: string
-    /** Que decir cuando la extension no tiene nada configurable. */
+    /** What to say when the extension has nothing configurable. */
     emptyText?: string
     onClose: () => void
 }
@@ -60,7 +60,7 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const [schema, setSchema] = useState<IConfigFieldDef[]>(props.schema ?? [])
     const [values, setValues] = useState<Record<string, string>>({})
-    // Lo que se cargo del back, para saber si el formulario esta tocado (y no probar lo que no esta guardado)
+    // What was loaded from the back end, to know whether the form is dirty (and not test what is unsaved)
     const [loaded, setLoaded] = useState<Record<string, string>>({})
     const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
     const [saving, setSaving] = useState(false)
@@ -76,7 +76,7 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
                     ? fetch(`${backendUrl}${props.schemaEndpoint}`, addGetAuthorization(accessString)).catch(() => undefined)
                     : Promise.resolve(undefined)
             ])
-            // Sin configuracion guardada todavia el formulario sale con los defaults del schema.
+            // With no configuration saved yet the form comes out with the schema's defaults.
             const cfg: Record<string, unknown> = cfgRes?.ok ? await cfgRes.json() : {}
             const campos = schemaRes?.ok ? await schemaRes.json() as IConfigFieldDef[] : (props.schema ?? [])
             setSchema(campos)
@@ -92,7 +92,7 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
         cargar()
     }, [backendUrl, accessString, props.endpoint, props.schemaEndpoint, props.schema])
 
-    // Lo que el formulario tiene AHORA, en el formato que espera la extension. Lo usan guardar y probar.
+    // What the form holds RIGHT NOW, in the format the extension expects. Saving and testing both use it.
     const buildBody = (): Record<string, unknown> => {
         const body: Record<string, unknown> = {}
         for (const field of schema) {
@@ -122,7 +122,7 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
         finally { setSaving(false) }
     }
 
-    // ¿Hay algo escrito que no este guardado? Entonces la prueba no corresponde a lo que se ve.
+    // Is there anything typed that is not saved? Then the test does not correspond to what is on screen.
     const dirty = (): boolean => Object.keys({ ...loaded, ...values }).some(k => (values[k] ?? '') !== (loaded[k] ?? ''))
 
     /*
@@ -151,8 +151,8 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
                 }
                 res = await fetch(`${backendUrl}${props.testEndpoint}`, addGetAuthorization(accessString))
             }
-            // La extension responde 200 con {ok, message} incluso al fallar, para que su mensaje llegue
-            // entero en vez de convertirse en un error HTTP sin detalle.
+            // The extension answers 200 with {ok, message} even on failure, so its message arrives whole
+            // rather than turning into an HTTP error with no detail.
             const body = await res.json().catch(() => undefined) as ITestOutcome | undefined
             if (body && typeof body.ok === 'boolean') setTestOutcome({ ok: body.ok, message: body.message || (body.ok ? 'Connection OK' : 'Test failed') })
             else setTestOutcome({ ok: false, message: `The extension did not answer the test (HTTP ${res.status})` })
@@ -162,7 +162,7 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
     }
 
     const field = (f: IConfigFieldDef) => {
-        // Un booleano es un interruptor, no un campo de texto con 'true' dentro.
+        // A boolean is a switch, not a text field with 'true' inside.
         if (f.type === 'boolean') {
             return (
                 <FormControlLabel key={f.name} label={f.label}

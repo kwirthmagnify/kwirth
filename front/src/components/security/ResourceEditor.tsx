@@ -104,8 +104,9 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
         setSelectedResource(res)
     }
 
-    // Opciones de la select = catálogo completo servido por GET /core/scopes (built-in del core + legacy
-    // ops/trivy + scopes declarados por los plugins vía getScopeCatalog). Ya no hay enum en el front.
+    // The select's options = the complete catalogue served by GET /core/scopes (the core's built-ins +
+    // legacy ops/trivy + the scopes plugins declare through getScopeCatalog). There is no enum in the
+    // front end any more.
     const scopeOptions: IExtensionScope[] = props.scopeCatalog ?? []
     const filteredScopeOptions = scopeFilter.trim()
         ? scopeOptions.filter(o => scopes.includes(o.scope) || (o.scope + ' ' + o.label).toLowerCase().includes(scopeFilter.trim().toLowerCase()))

@@ -12,8 +12,9 @@ import { SxProps, Theme } from '@mui/material'
     página de la extensión está a un clic en el icono de enlace externo.
 */
 
-// Altura FIJA, no minima: con un minimo, una tarjeta que crece estira toda su fila del grid y deja a las
-// vecinas con un hueco muerto. Todas miden lo mismo, en las dos secciones y en los once tipos.
+// FIXED height, not minimum: with a minimum, a card that grows stretches its whole row of the grid and
+// leaves its neighbours with dead space. They all measure the same, in both sections and across all
+// eleven types.
 export const EXTENSION_CARD_HEIGHT = 140
 
 export const extensionCardSx: SxProps<Theme> = {
@@ -28,15 +29,15 @@ export const extensionCardSx: SxProps<Theme> = {
     borderRadius: 1.5
 }
 
-// Una dependencia declarada NO es decorativa: si no está instalada, el botón de instalar se deshabilita.
-// Pero pintarla como una fila de chips hacía crecer la tarjeta, y solo la sufren 42 entradas de plugins —
-// providers, senders y el resto no declaran ninguna. Se resume en un chip y el detalle va en su tooltip.
+// A declared dependency is NOT decorative: when it is not installed, the install button is disabled. But
+// drawing it as a row of chips made the card grow, and only 42 plugin entries suffer it — providers,
+// senders and the rest declare none. It is summarised in one chip and the detail goes in its tooltip.
 export const dependencyList = (deps: { extensionType: string, id: string, minVersion: string }[]): string =>
     deps.map(d => `${d.extensionType} ${d.id} ≥${d.minVersion}`).join(', ')
 
-// El nombre, SIEMPRE en una línea. Las vistas de lista ya lo recortaban; las tarjetas no, así que un
-// displayName largo envolvía a dos líneas y empujaba la fila de abajo (procedencia y acciones) fuera de la
-// altura fija. Necesita minWidth 0: en un flex, el hijo no baja de su contenido si no se le dice.
+// The name, ALWAYS on one line. The list views already clipped it; the cards did not, so a long
+// displayName wrapped onto two lines and pushed the bottom row (provenance and actions) outside the fixed
+// height. It needs minWidth 0: in a flex, the child does not shrink below its content unless told to.
 export const extensionCardTitleSx: SxProps<Theme> = {
     flex: 1,
     minWidth: 0,
@@ -45,7 +46,7 @@ export const extensionCardTitleSx: SxProps<Theme> = {
     whiteSpace: 'nowrap'
 }
 
-// Elipsis a las N líneas. Sin esto, la descripción manda sobre la altura de toda la fila.
+// An ellipsis at N lines. Without this, the description rules the height of the whole row.
 const clampSx = (lineas: number): SxProps<Theme> => ({
     mt: 0.5,
     display: '-webkit-box',
@@ -55,7 +56,7 @@ const clampSx = (lineas: number): SxProps<Theme> => ({
     textOverflow: 'ellipsis'
 })
 
-/** Lo normal: dos líneas para la descripción. */
+/** The usual: two lines for the description. */
 export const extensionCardDescriptionSx = clampSx(2)
 
 /*

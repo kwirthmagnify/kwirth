@@ -40,8 +40,8 @@ interface ILoginConfig {
     startContainer?: string
     allowedIdps?: string[]
     hasBackground?: boolean
-    // La extension se instalo a medias: la pagina funciona pero le falta algo. Llega como codigo, no como
-    // detalle, porque esta pagina se sirve SIN autenticar.
+    // The extension was installed halfway: the page works but something is missing. It arrives as a code
+    // and not as detail, because this page is served WITHOUT authentication.
     problem?: string
     autoUser?: string
     autoPassword?: string

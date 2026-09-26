@@ -11,7 +11,7 @@ import { SessionContext, SessionContextType } from '../../model/SessionContext'
 const MetricsIcon = <BarChart/>
 
 const MetricsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
-    // el dialogo se monta dentro del SessionContext.Provider de App, de donde sale la url de la guia
+    // the dialog is mounted inside App's SessionContext.Provider, which is where the guide's url comes from
     const { backendUrl } = useContext(SessionContext) as SessionContextType
     let metricsInstanceConfig:MetricsInstanceConfig = props.setupConfig?.channelInstanceConfig || new MetricsInstanceConfig()
     let metricsConfig:MetricsConfig = props.setupConfig?.channelConfig || new MetricsConfig()

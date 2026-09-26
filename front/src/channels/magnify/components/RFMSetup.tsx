@@ -351,7 +351,7 @@ const rfmSetup = (
     //Workload ***************************************************************************
         // Pod ***************************************************************************
 
-            // common section for showing Pods information con ContentDetail
+            // common section for showing Pods information with ContentDetail
             let podsItem = podsSection.items.find(item => item.name === 'pods')
             if (podsItem) {
                 podsItem.invoke = (rootObj, port) => { 

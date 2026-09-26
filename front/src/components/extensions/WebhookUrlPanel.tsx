@@ -48,7 +48,7 @@ const WebhookUrlPanel: React.FC<IPerConfigPanelProps> = ({ basePath, configName 
 
     if (!url) return null
 
-    // El back devuelve la ruta; la direccion completa es la suya. Es lo que hay que pegar fuera de Kwirth.
+    // The back end returns the path; the full address is its own. It is what has to be pasted outside Kwirth.
     const completa = url.startsWith('http') ? url : `${backendUrl}${url}`
 
     const copiar = () => {

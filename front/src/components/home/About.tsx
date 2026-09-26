@@ -37,10 +37,11 @@ const About: React.FC<IAboutProps> = (props:IAboutProps) => {
     const preRef = useRef<HTMLPreElement | null>(null)
     const [previousLog, setPreviousLog] = useState<IPreviousContainerLog|undefined>(undefined)
     const [showPreviousLog, setShowPreviousLog] = useState(false)
-    // La sesion ya viaja por contexto (y el About se abre desde dos sitios): pedirla por props obligaria
-    // a que los dos llamantes la tuvieran a mano, y el de las preferencias del canal no la tiene.
+    // The session already travels through context (and the About is opened from two places): asking for
+    // it through props would require both callers to have it at hand, and the channel preferences one
+    // does not.
     const session = useContext(SessionContext) as SessionContextType
-    // el log del core lleva trazas internas: sin scope 'admin' no se pide, y el back tampoco lo sirve
+    // the core's log carries internal traces: without the 'admin' scope it is not asked for, and the back end does not serve it either
     const isAdmin = session?.user ? parseResources(session.user.accessKey.resources).some(r => r.scopes.split(',').includes('admin')) : false
     useKeyboard(props.onClose)
 

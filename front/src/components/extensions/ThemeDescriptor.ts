@@ -49,14 +49,14 @@ interface IInstalledTheme {
     requiresRestart?: boolean
 }
 
-/** Lo que el descriptor necesita de la aplicacion: que tema esta activo y quien lo usa. */
+/** What the descriptor needs from the application: which theme is active and who uses it. */
 interface IThemeDescriptorDeps {
     activeThemeName: string | undefined
     assignments: Record<string, string>
     onAssignmentsChange: (a: Record<string, string>) => void
     onThemeLoad: (id: string) => void
     onThemeUnload: (id: string) => void
-    /** Guardar el mapa entero de asignaciones. Lo hace quien tiene la sesion, no el descriptor. */
+    /** Saving the whole assignment map. Whoever holds the session does it, not the descriptor. */
     saveAssignments: (a: Record<string, string>) => Promise<void>
 }
 
@@ -76,8 +76,8 @@ const canUninstall = (t: IInstalledTheme): IExtensionVerdict => {
 }
 
 /**
- * El descriptor es una FACTORIA porque necesita estado de la aplicacion (que tema esta activo, quien lo
- * usa). El de `aitoolset` no lo necesita y por eso es una constante.
+ * The descriptor is a FACTORY because it needs application state (which theme is active, who uses it).
+ * `aitoolset`'s does not need it, and that is why it is a constant.
  */
 const makeThemeDescriptor = (deps: IThemeDescriptorDeps): IExtensionManagerDescriptor<IInstalledTheme, IThemeManifestEntry> => ({
     extensionType: EExtensionType.THEME,
@@ -95,7 +95,7 @@ const makeThemeDescriptor = (deps: IThemeDescriptorDeps): IExtensionManagerDescr
     toModel,
     canUninstall,
 
-    // El tema que se esta usando de verdad. Es lo primero que se busca al abrir esta pantalla.
+    // The theme that is really in use. It is the first thing one looks for on opening this screen.
     extraChips: (e, section): IExtensionChip[] =>
         section === EManagerSection.INSTALLED && deps.activeThemeName === e.id
             ? [{ label: 'active', color: 'primary', icon: EChipIcon.ACTIVE }]
@@ -103,8 +103,8 @@ const makeThemeDescriptor = (deps: IThemeDescriptorDeps): IExtensionManagerDescr
 
     pluginSelector: {
         tooltip: 'Plugins using this theme',
-        // Las asignaciones vienen del back al reves de como se pintan —plugin → tema, porque un plugin
-        // solo puede tener UNO— asi que aqui se le da la vuelta: tema → plugins que lo usan.
+        // The assignments come from the back end the other way round from how they are drawn — plugin →
+        // theme, because a plugin can only have ONE — so here they are flipped: theme → plugins using it.
         load: async () => {
             const porTema: Record<string, string[]> = {}
             for (const [pluginId, themeId] of Object.entries(deps.assignments)) {
@@ -113,7 +113,7 @@ const makeThemeDescriptor = (deps: IThemeDescriptorDeps): IExtensionManagerDescr
             return porTema
         },
         save: async (theme, pluginIds) => {
-            // Se reconstruye el mapa entero: asignarle este tema a un plugin implica quitarle el que
+            // The whole map is rebuilt: assigning this theme to a plugin implies taking away the one
             // tuviera, porque solo puede haber uno.
             const next: Record<string, string> = {}
             for (const [pid, tid] of Object.entries(deps.assignments)) {
@@ -125,8 +125,8 @@ const makeThemeDescriptor = (deps: IThemeDescriptorDeps): IExtensionManagerDescr
         }
     },
 
-    // El front del tema se carga y se descarga en caliente: sin esto habria que recargar la pagina para
-    // ver un tema recien instalado.
+    // The theme's front end is loaded and unloaded hot: without this the page would have to be reloaded
+    // to see a freshly installed theme.
     onInstalled: meta => deps.onThemeLoad(meta.id),
     onUninstalled: t => deps.onThemeUnload(t.id)
 })

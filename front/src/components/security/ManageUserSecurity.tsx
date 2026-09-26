@@ -30,7 +30,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
     const [idps, setIdps] = useState<{id:string, label:string}[]>([])
     const [scopeCatalog, setScopeCatalog] = useState<IExtensionScope[]>([])
 
-    // catálogo global de scopes RBAC (built-in + plugins), servido por el core → puebla el editor de recursos
+    // the global catalogue of RBAC scopes (built-in + plugins), served by the core → it populates the resource editor
     const getScopeCatalog = async () => {
         try {
             let response = await fetch(`${backendUrl}/core/scopes`, addGetAuthorization(accessString))
@@ -45,7 +45,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         setUsers(userList)
     }
 
-    // instancias de IdP habilitadas, para asignar un usuario a un IdP (binding IUser.idp)
+    // enabled IdP instances, for assigning a user to an IdP (the IUser.idp binding)
     const getIdps = async () => {
         try {
             let response = await fetch(`${backendUrl}/idp`, addGetAuthorization(accessString))

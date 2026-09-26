@@ -46,9 +46,9 @@ interface IInstalledSender {
     installedFrom?: string
     marketplaceId?: string
     marketplaceLabel?: string
-    /** Las configuraciones que tiene puestas. Su numero es el chip de la tarjeta. */
+    /** The configurations it has in place. Their number is the card's chip. */
     configNames: string[]
-    /** Trae su propia UI de configuracion en front.js. */
+    /** It brings its own configuration UI in front.js. */
     hasFront?: boolean
     requiresRestart?: boolean
 }
@@ -87,7 +87,7 @@ const senderDescriptor: IExtensionManagerDescriptor<IInstalledSender, ISenderMan
     toModel,
     canUninstall,
 
-    // Cuantos destinos tiene puestos ese sender. Uno sin configuraciones no manda nada a ningun sitio.
+    // How many destinations that sender has in place. One with no configurations sends nothing anywhere.
     configCount: s => s.configNames.length,
 
     renderConfigDialog: (s, onClose) => s.hasFront
@@ -101,8 +101,8 @@ const senderDescriptor: IExtensionManagerDescriptor<IInstalledSender, ISenderMan
         : React.createElement(ConfigListDialog, {
             title: `Configure: ${s.displayName ?? s.id}`,
             helpSection: HELP,
-            // Si el sender publica su propia pagina de referencia, la ayuda lleva alli; si no, a la
-            // general. Se comprueba de verdad, asi que publicarla la enlaza sola.
+            // If the sender publishes its own reference page, the help leads there; if not, to the
+            // general one. It is really checked, so publishing it links it by itself.
             preferredHelpSection: `guide/extensions/senders/${s.id}`,
             basePath: `/core/senders/${s.id}`,
             exportName: `sender-${s.id}`,

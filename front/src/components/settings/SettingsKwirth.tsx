@@ -15,8 +15,8 @@ enum ESettingsKwirthTab {
     REGISTRIES = 'registries'
 }
 
-// Fila editable: IMarketplace tal cual (el token ya viaja dentro de manifestAuth) mas el estado que solo
-// vive en la pantalla.
+// An editable row: IMarketplace as it is (the token already travels inside manifestAuth) plus the state
+// that lives only on screen.
 interface IMarketplaceRow extends IMarketplace {
     tokenRevealed?: boolean
     testing?: boolean
@@ -27,8 +27,8 @@ interface IPackageRegistryRow extends IPackageRegistry {
     revealed?: boolean
 }
 
-// Formato del fichero de export/import. 'version' permite evolucionarlo sin romper ficheros antiguos, y
-// 'credentialsIncluded' dice si los tokens/contraseñas viajan dentro o se vaciaron al exportar.
+// Format of the export/import file. 'version' allows it to evolve without breaking older files, and
+// 'credentialsIncluded' says whether the tokens and passwords travel inside or were emptied on export.
 interface IKwirthSettingsExportFile {
     kwirth: string
     version: number
@@ -39,19 +39,19 @@ interface IKwirthSettingsExportFile {
 const EXPORT_KIND = 'kwirth-settings'
 const EXPORT_VERSION = 1
 
-// Un item de la lista de export/import. La clave lleva el tipo delante para que un marketplace y un
-// registro con el mismo id no se pisen en el mismo Set.
+// An item of the export/import list. The key carries the type up front so a marketplace and a registry
+// with the same id do not collide in the same Set.
 interface ISelectableItem {
     key: string
     label: string
     detail: string
-    /** Bloque en el que se agrupa. Los ajustes del core van juntos; las extensiones, por tipo. */
+    /** The block it is grouped into. The core's settings go together; extensions, by type. */
     group: string
 }
 
 const GROUP_GENERAL = 'General'
 
-// Nombre de bloque por tipo de extension. En plural, que es como se llaman en el resto de la UI.
+// Block name per extension type. In the plural, which is how they are named in the rest of the UI.
 const groupOf = (type: EExtensionType): string => {
     switch (type) {
         case EExtensionType.PLUGIN: return 'Plugins'
@@ -73,7 +73,7 @@ const GENERAL_KEY = 'general'
 const marketplaceKey = (id: string) => `marketplace:${id}`
 const registryKey = (id: string) => `registry:${id}`
 
-// Lo que se puede elegir de unos settings, sirvan de origen el formulario o un fichero importado.
+// What can be chosen from a set of settings, whether the source is the form or an imported file.
 const settingsItems = (settings: IKwirthSettings): ISelectableItem[] => [
     ...(settings.metricsInterval === undefined ? [] : [{
         key: GENERAL_KEY,
@@ -133,7 +133,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const importFileRef = React.useRef<HTMLInputElement>(null)
     const { backendUrl } = useContext(SessionContext) as SessionContextType
 
-    // el dialogo se busca sus propios datos: pide a Kwirth los valores efectivos que rigen ahora mismo
+    // the dialog fetches its own data: it asks Kwirth for the effective values that rule right now
     useEffect(() => {
         const load = async () => {
             try {
@@ -148,8 +148,8 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 setMarketplaces((settings.marketplaces ?? []).map(m => ({ ...m })))
                 setRegistries((settings.packageRegistries ?? []).map(r => ({ ...r })))
 
-                // Que extensiones pueden aportar configuracion. Si esto falla no se rompe la pantalla:
-                // los ajustes se siguen pudiendo editar y exportar, solo que sin la parte de extensiones.
+                // Which extensions can contribute configuration. If this fails the screen does not break:
+                // the settings can still be edited and exported, only without the extensions part.
                 const ext = await fetch(`${props.clusterUrl}/core/config-bundle/exportable`, addGetAuthorization(props.accessString))
                 if (ext.ok) setExtensions(await ext.json() as IExportableEntry[])
             }
@@ -167,14 +167,14 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         setMarketplaces(prev => prev.map((m, i) => i === index ? { ...m, ...patch } : m))
     }
 
-    // manifestAuth es un objeto anidado: hay que reconstruirlo entero para no perder el resto de campos
-    // (el token entre ellos) al tocar uno solo.
+    // manifestAuth is a nested object: it has to be rebuilt whole so the other fields (the token among
+    // them) are not lost when touching a single one.
     const patchManifestAuth = (index: number, patch: Partial<IMarketplace['manifestAuth']>) => {
         const current = marketplaces[index].manifestAuth
         patchRow(index, { manifestAuth: { type: current?.type ?? EManifestAuthType.NONE, ...current, ...patch } })
     }
 
-    // El ojo solo alterna entre puntos y texto: el valor guardado ya esta en el campo desde el GET.
+    // The eye only toggles between dots and text: the stored value has been in the field since the GET.
     const toggleToken = (index: number) => patchRow(index, { tokenRevealed: !marketplaces[index].tokenRevealed })
 
     const addRow = () => {
@@ -200,9 +200,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         }])
     }
 
-    // La prueba la hace el BACK: si el manifest esta detras de un token privado, el navegador no puede
-    // leerlo. Comprueba la lectura del manifest y su token; la contraseña del registro de paquetes no se
-    // valida aqui, porque solo entra en juego al descargar un paquete.
+    // The test is done by the BACK END: if the manifest sits behind a private token, the browser cannot
+    // read it. It checks reading the manifest and its token; the package registry's password is not
+    // validated here, because it only comes into play when downloading a package.
     const testRow = async (index: number) => {
         const row = marketplaces[index]
         patchRow(index, { testing: true, testResult: undefined })
@@ -256,8 +256,8 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const exportableExtensionKeys = (): string[] =>
         extensions.filter(e => e.status === EBundleEntryStatus.AVAILABLE).map(e => bundleEntryKey(e.type, e.id))
 
-    // Se exporta lo que hay EN EL FORMULARIO, no lo guardado: lo que ves es lo que te llevas, incluidos los
-    // cambios que aun no has aceptado. Y se exporta SOLO lo marcado, item a item.
+    // What is exported is what is IN THE FORM, not what is stored: what you see is what you take with
+    // you, including the changes you have not accepted yet. And ONLY what is ticked, item by item.
     const doExport = async () => {
         const chosenMarketplaces = marketplaces.filter(m => exportSelected.has(marketplaceKey(m.id)))
         const chosenRegistries = registries.filter(r => exportSelected.has(registryKey(r.id)))
@@ -321,9 +321,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         setExportOpen(false)
     }
 
-    // El back entiende un secreto vacio como 'borralo'. Un fichero exportado SIN credenciales no debe por
-    // tanto tumbar las que ya hay: si la entrada importada no trae secreto y ya existia una con ese id, se
-    // conserva el que estuviera en el formulario. Para un id nuevo no hay nada que conservar.
+    // The back end reads an empty secret as 'delete it'. A file exported WITHOUT credentials must
+    // therefore not take down the ones already there: if the imported entry carries no secret and one
+    // with that id already existed, whatever was in the form is kept. For a new id there is nothing to keep.
     const mergeMarketplace = (incoming: IMarketplace, current?: IMarketplaceRow): IMarketplaceRow => {
         const token = incoming.manifestAuth?.token ?? current?.manifestAuth?.token
         return {
@@ -341,7 +341,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         }
     }
 
-    // Leer el fichero NO importa nada todavia: abre la lista para que elijas que entra. Se premarca todo.
+    // Reading the file imports NOTHING yet: it opens the list so you can choose what goes in. Everything is pre-ticked.
     const openImport = async (file: File) => {
         setError(''); setImportResult(undefined)
         try {
@@ -354,8 +354,8 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             */
             if (parsed?.kind === CONFIG_BUNDLE_KIND) {
                 const bundle = parsed as unknown as IConfigBundle
-                // La vista previa la calcula el BACK: es quien sabe que extensiones hay aqui y cuales
-                // pueden recibir lo que trae el fichero.
+                // The preview is computed by the BACK END: it is what knows which extensions are here and
+                // which of them can receive what the file brings.
                 const response = await fetch(`${props.clusterUrl}/core/config-bundle/preview`,
                     addPostAuthorization(props.accessString, JSON.stringify(bundle)))
                 if (!response.ok) {
@@ -369,7 +369,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 setImportData(bundle.core.settings
                     ? { kwirth: EXPORT_KIND, version: EXPORT_VERSION, credentialsIncluded: bundle.meta.includesCredentials, settings: bundle.core.settings as IKwirthSettings }
                     : undefined)
-                // Se premarca lo que se puede aplicar; lo que no, ni se puede marcar.
+                // What can be applied is pre-ticked; what cannot, cannot even be ticked.
                 setImportSelected(new Set([
                     ...(bundle.core.settings ? settingsItems(bundle.core.settings as IKwirthSettings).map(i => i.key) : []),
                     ...previa.filter(p => p.status !== EBundleEntryStatus.NOT_INSTALLED
@@ -393,8 +393,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         }
     }
 
-    // Importar NO guarda: deja el formulario cargado para que lo revises y decidas con OK o Cancel. Fusiona
-    // por id —mismo id lo reemplaza, id nuevo se añade— para no perder marketplaces que el fichero no trae.
+    // Importing does NOT save: it leaves the form loaded so you can review it and decide with OK or
+    // Cancel. It merges by id — the same id replaces it, a new id is added — so marketplaces the file does
+    // not carry are not lost.
     const doImport = () => {
         /*
             Las extensiones no se aplican aqui. Se apuntan y se mandan al pulsar OK, junto con los
@@ -451,8 +452,8 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const ok = async () => {
         setError('')
         try {
-            // se envia lo que hay en el formulario, secretos incluidos: el back los desvia a su almacen
-            // cifrado. Un campo vacio significa borrar el secreto guardado, asi que se manda tal cual.
+            // what is in the form is sent, secrets included: the back end diverts them to its encrypted
+            // store. An empty field means deleting the stored secret, so it is sent exactly as it is.
             const cleaned = marketplaces.map(m => ({
                 id: m.id,
                 url: m.url.trim(),
@@ -611,10 +612,10 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         )
     }
 
-    // La misma lista marcable sirve para elegir que se exporta y que se importa. 'note' solo lo usa el
-    // import, para avisar de que ese id ya existe y va a reemplazar al que hay.
-    // `disabled` deja items VISIBLES pero no marcables: una extension que no puede exportar se enseña
-    // con su motivo, porque una lista corta sin explicacion es peor que un hueco declarado.
+    // The same tickable list serves for choosing what is exported and what is imported. 'note' is used
+    // only by the import, to warn that the id already exists and is about to replace the one there.
+    // `disabled` leaves items VISIBLE but not tickable: an extension that cannot export is shown with its
+    // reason, because a short list with no explanation is worse than a declared gap.
     /*
         La lista de seleccion, por BLOQUES: los ajustes del core en uno, y las extensiones agrupadas por
         tipo. Plana era ilegible en cuanto pasaban de una docena — un sender, un IdP y un plugin no se
@@ -636,8 +637,8 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             setSelected(next)
         }
 
-        // Se respeta el orden en que llegan los items: el bloque general primero, y las extensiones
-        // en el orden en que las devuelve el back.
+        // The order the items arrive in is respected: the general block first, and the extensions in the
+        // order the back end returns them.
         const bloques: { nombre: string, items: ISelectableItem[] }[] = []
         for (const item of items) {
             const ultimo = bloques.find(b => b.nombre === item.group)
@@ -681,8 +682,8 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
 
     const formItems = (): ISelectableItem[] => settingsItems({ metricsInterval, marketplaces, packageRegistries: registries })
 
-    // El almacen comun de IA no pertenece a ninguna extension —lo comparten varias—, asi que es una
-    // entrada propia, al mismo nivel que los ajustes.
+    // The common AI store belongs to no extension — several share it — so it is an entry of its own, at
+    // the same level as the settings.
     const sharedAiItem: ISelectableItem = {
         key: CORE_SHARED_AI_KEY,
         group: GROUP_GENERAL,
@@ -707,13 +708,13 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         }))
     ]
 
-    // Lo que el fichero trae pero aqui no se puede aplicar: se ve, no se marca.
+    // What the file brings but cannot be applied here: it is seen, not ticked.
     const notApplicable = (item: ISelectableItem): boolean => {
         const p = importPreview.find(e => bundleEntryKey(e.type, e.id) === item.key)
         return p !== undefined && p.status !== EBundleEntryStatus.AVAILABLE && p.status !== EBundleEntryStatus.VERSION_DIFFERS
     }
 
-    // Y lo que no se puede exportar, igual.
+    // And the same for what cannot be exported.
     const notExportable = (item: ISelectableItem): boolean => {
         const e = extensions.find(x => bundleEntryKey(x.type, x.id) === item.key)
         return e !== undefined && e.status !== EBundleEntryStatus.AVAILABLE

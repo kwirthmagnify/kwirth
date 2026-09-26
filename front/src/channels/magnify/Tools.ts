@@ -56,7 +56,7 @@ function objectSearch(obj: any, text: string, matchCase: boolean): string[] {
                         `${currentPath}[${key}]` : 
                         (currentPath ? `${currentPath}.${key}` : key);
 
-                    // --- CAMBIO AQUÍ: Validar si la LLAVE coincide ---
+                    // --- CHANGE HERE: validate whether the KEY matches ---
                     const keyToCompare = matchCase ? key : key.toLowerCase();
                     if (keyToCompare.includes(searchTerm)) {
                         paths.push(newPath);
@@ -77,7 +77,7 @@ function objectSearch(obj: any, text: string, matchCase: boolean): string[] {
 
     search(obj, "");
 
-    // Usamos Set para evitar duplicados si una llave y su valor coinciden
+    // We use a Set to avoid duplicates when a key and its value coincide
     return [...new Set(paths)].filter(p => p !== "");
 }
 
@@ -152,7 +152,7 @@ function convertSizeToBytes(fileSizeString: string): number {
             break
     }
 
-    // 3. Calcular el resultado final
+    // 3. Compute the final result
     return value * multiplier
 }
 

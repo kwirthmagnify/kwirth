@@ -17,7 +17,7 @@ import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionVerdict } f
     veredicto que lo contemple.
 */
 
-/** Una extension que trae el pack dentro. */
+/** An extension the pack brings inside. */
 interface IPackExtensionRef {
     extensionType: string
     id: string
@@ -33,7 +33,7 @@ interface IPackManifestEntry {
     description: string
     website?: string
     url: string
-    /** Que tipos trae, segun el catalogo: lo de dentro no se conoce hasta instalarlo. */
+    /** Which types it brings, according to the catalogue: what is inside is unknown until it is installed. */
     extensionTypes?: string[]
 }
 
@@ -50,7 +50,7 @@ interface IInstalledPack {
     requiresRestart?: boolean
 }
 
-/** Lo que el descriptor necesita de la aplicacion: cargar y descargar el front de cada miembro. */
+/** What the descriptor needs from the application: loading and unloading each member's front end. */
 interface IPackDescriptorDeps {
     onPluginLoad: (id: string) => void
     onPluginUnload: (id: string) => void
@@ -60,7 +60,7 @@ interface IPackDescriptorDeps {
     onHomepageUnload: (id: string) => void
 }
 
-/** '2 plugins, 1 theme': que trae el pack, agrupado por tipo. */
+/** '2 plugins, 1 theme': what the pack brings, grouped by type. */
 const membersSummary = (extensions: IPackExtensionRef[]): string => {
     const counts: Record<string, number> = {}
     for (const e of extensions) counts[e.extensionType] = (counts[e.extensionType] ?? 0) + 1
@@ -85,10 +85,10 @@ const toModel = (e: IInstalledPack | IPackManifestEntry): IExtensionCardModel =>
         : ((e as IPackManifestEntry).extensionTypes?.length ? `Includes: ${(e as IPackManifestEntry).extensionTypes!.join(', ')}` : undefined)
 })
 
-// Un pack se quita entero, venga de donde venga: no hay packs de dev ni packs instalados por otro pack.
+// A pack is removed whole, wherever it comes from: there are no dev packs and no packs installed by another pack.
 const canUninstall = (): IExtensionVerdict => ({ allowed: true })
 
-/** Recorre los miembros del pack aplicando a cada uno lo suyo segun su tipo. */
+/** Walks the pack's members applying to each one what is its own according to its type. */
 const forEachMember = (pack: IInstalledPack, deps: IPackDescriptorDeps, cargar: boolean) => {
     for (const ext of pack.extensions) {
         switch (ext.extensionType as EExtensionType) {
@@ -104,7 +104,7 @@ const forEachMember = (pack: IInstalledPack, deps: IPackDescriptorDeps, cargar: 
                 if (cargar) deps.onHomepageLoad(ext.id)
                 else deps.onHomepageUnload(ext.id)
                 break
-            // Los demas tipos no tienen front que cargar en caliente: el back ya los sirve.
+            // The remaining types have no front end to load hot: the back end already serves them.
         }
     }
 }
@@ -121,7 +121,7 @@ const makePackDescriptor = (deps: IPackDescriptorDeps): IExtensionManagerDescrip
         upload: '/core/packs/upload',
         remove: p => `/core/packs/${p.id}`
     },
-    // Quitar un pack se lleva por delante todo lo que trajo, y eso se avisa ANTES de pulsar.
+    // Removing a pack takes with it everything it brought, and that is warned about BEFORE pressing.
     uninstallTooltip: 'Uninstall pack (removes all member extensions)',
     /*
         El unico tipo que NO se actualiza instalando encima. Instalar un pack rechaza tambien si alguno de

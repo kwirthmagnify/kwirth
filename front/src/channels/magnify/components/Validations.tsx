@@ -343,7 +343,7 @@ const Validations: React.FC<IValidationsProps> = (props: IValidationsProps) => {
         const data: any = {};
         const { options, files, onNavigate } = props;
 
-        // Solo ejecutamos si la opción está habilitada
+        // We only run when the option is enabled
         if (options.node) data.node = validateNode(files)
         if (options.configMap) data.configMap = validateConfigMap(files)
         if (options.secret) data.secret = validateSecret(files)

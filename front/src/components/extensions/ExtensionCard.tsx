@@ -23,7 +23,7 @@ import { TruncatedText } from './TruncatedText'
 interface IExtensionViewProps {
     model: IExtensionCardModel
     fallbackIcon: React.ReactNode
-    /** Presente solo en el catalogo: convierte la version en un Select (regla 3). */
+    /** Present in the catalogue only: it turns the version into a Select (rule 3). */
     versions?: string[]
     onVersionChange?: (v: string) => void
     /*
@@ -39,7 +39,7 @@ interface IExtensionViewProps {
     */
     chips?: React.ReactNode[]
     statusChips?: React.ReactNode[]
-    /** Control propio del tipo (un Select, un switch…), justo antes de los botones. */
+    /** A control of the type's own (a Select, a switch…), just before the buttons. */
     inlineControl?: React.ReactNode
     actions: IExtensionAction[]
 }
@@ -51,11 +51,11 @@ interface IExtensionViewProps {
 */
 const TITLE_ROW_HEIGHT = 30
 
-/** Una linea con elipsis, para nombres y subtitulos. */
+/** A single line with an ellipsis, for names and subtitles. */
 const ONE_LINE_SX = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
 
-// Fondo de la tarjeta: un degradado derivado del nombre, para que cada extension sea reconocible de un
-// vistazo sin depender de que traiga icono. Los diez lo hacian ya, cada uno con su variante.
+// The card's background: a gradient derived from the name, so each extension is recognisable at a glance
+// without depending on it bringing an icon. All ten did it already, each with its own variant.
 const gradientFor = (name: string, dark: boolean): string => {
     let hash = 0
     for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
@@ -70,8 +70,8 @@ const VersionControl: React.FC<{ version: string, versions?: string[], onChange?
             {versions.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.75rem' }}>{v}</MenuItem>)}
         </Select>
     }
-    // Sin version no hay chip: no todo lo instalado la tiene —un conector de IdP bundled viene dentro de
-    // Kwirth— y un chip que solo dice 'v' es peor que no ponerlo.
+    // With no version there is no chip: not everything installed has one — a bundled IdP connector comes
+    // inside Kwirth — and a chip that only says 'v' is worse than no chip at all.
     if (!version) return null
     return <Chip label={`v${version}`} size='small' sx={{ ...compactChip, minWidth: 62 }} />
 }
@@ -91,7 +91,7 @@ const ActionButtons: React.FC<{ actions: IExtensionAction[] }> = ({ actions }) =
     ))}
 </>)
 
-/** Vista de tarjeta. Altura fija (extensionCardSx): una que crece estira toda su fila del grid. */
+/** Card view. Fixed height (extensionCardSx): one that grows stretches its whole row of the grid. */
 const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, versions, onVersionChange, chips, statusChips, inlineControl, actions }) => {
     const theme = useTheme()
     return (
@@ -168,7 +168,7 @@ const extensionRowCells = (
     </Box>
 ]
 
-/** Columnas del grid de la vista de lista. Debe casar con extensionRowCells. */
+/** Columns of the list view's grid. It must match extensionRowCells. */
 const EXTENSION_ROW_COLUMNS = 'auto 1fr auto auto auto auto auto'
 
 export { ExtensionCard, extensionRowCells, EXTENSION_ROW_COLUMNS }

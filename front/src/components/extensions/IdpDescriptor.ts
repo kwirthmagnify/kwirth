@@ -25,7 +25,7 @@ interface IIdpConnector {
     label: string
     kind: string
     schema: IConfigFieldDef[]
-    /** false en los bundled y los de dev: vienen dentro y no se desinstalan. */
+    /** false on the bundled and dev ones: they come inside and are not uninstalled. */
     installed: boolean
     version?: string
     installedFrom?: string
@@ -48,7 +48,7 @@ interface IIdpConnectorManifestEntry {
     marketplaceLabel?: string
 }
 
-/** Lo que el descriptor necesita de la aplicacion: leer los IdP configurados (va autenticado). */
+/** What the descriptor needs from the application: reading the configured IdPs (it goes authenticated). */
 interface IIdpDescriptorDeps {
     loadInstances: () => Promise<IIdpInstance[]>
 }
@@ -64,11 +64,11 @@ let instancias: Record<string, IIdpInstance> = {}
 const toModel = (e: IIdpConnector | IIdpConnectorManifestEntry): IExtensionCardModel => {
     const conector = e as IIdpConnector
     return {
-        // Un conector se presenta por su LABEL, que es el nombre con el que se le conoce ('Microsoft
-        // Entra ID'); el del catalogo todavia no esta instalado y solo tiene el del paquete.
+        // A connector presents itself by its LABEL, which is the name it is known by ('Microsoft Entra
+        // ID'); the catalogue's one is not installed yet and only has the package's.
         name: conector.label || (e as IIdpConnectorManifestEntry).displayName || (e as IIdpConnectorManifestEntry).name || e.id,
         version: e.version ?? '',
-        // Sin descripcion se dice al menos QUE es: su id y de que tipo (oidc, saml…).
+        // With no description, at least WHAT it is gets said: its id and its type (oidc, saml…).
         description: e.description || (conector.kind ? `${e.id} · ${conector.kind}` : ''),
         website: e.website,
         installedFrom: conector.installedFrom,
@@ -127,8 +127,8 @@ const makeIdpDescriptor = (deps: IIdpDescriptorDeps): IExtensionManagerDescripto
         return [{ label: 'not configured', variant: 'outlined', color: 'warning' }]
     },
 
-    // Un conector sin campos no tiene nada que rellenar; el resto siempre se puede configurar, tenga ya
-    // instancia o no — crearla ES configurarlo.
+    // A connector with no fields has nothing to fill in; the rest can always be configured, whether they
+    // already have an instance or not — creating one IS configuring it.
     canConfigure: c => c.schema.length > 0
         ? { allowed: true }
         : { allowed: false, reason: 'This connector has no configurable options' },

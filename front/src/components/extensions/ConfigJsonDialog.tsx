@@ -17,13 +17,13 @@ import { addGetAuthorization, addPutAuthorization } from '../../tools/Authorizat
     campos, pero es lo que distingue un plugin configurable de uno que no lo es.
 */
 interface IConfigJsonDialogProps {
-    /** Titulo del diálogo, ya redactado por quien lo abre. */
+    /** The dialog's title, already worded by whoever opens it. */
     title: string
-    /** Que es esta configuracion, en una linea, para quien la ve por primera vez. */
+    /** What this configuration is, in one line, for whoever sees it for the first time. */
     hint: string
-    /** Ruta del back, relativa al backendUrl: GET para leer y PUT para guardar. */
+    /** The back-end route, relative to backendUrl: GET to read and PUT to save. */
     endpoint: string
-    /** Nombre del fichero al exportar, sin extension. */
+    /** The file's name on export, without an extension. */
     exportName: string
     onClose: () => void
 }
@@ -53,8 +53,8 @@ const ConfigJsonDialog: React.FC<IConfigJsonDialogProps> = ({ title, hint, endpo
         let parsed: unknown
         try { parsed = JSON.parse(texto || '{}') }
         catch (err) {
-            // Se avisa ANTES de mandarlo: un JSON roto guardado deja al plugin sin configuracion y el
-            // fallo aparece mucho despues, al arrancar.
+            // It warns BEFORE sending: a broken JSON once saved leaves the plugin with no configuration
+            // and the failure shows up much later, at startup.
             setError(`Invalid JSON: ${err}`)
             return
         }

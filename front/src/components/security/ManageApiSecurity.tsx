@@ -33,7 +33,7 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
         setKeys(data)
     }
 
-    // catálogo global de scopes RBAC (built-in + plugins), servido por el core → puebla el editor de recursos
+    // the global catalogue of RBAC scopes (built-in + plugins), served by the core → it populates the resource editor
     const getScopeCatalog = async () => {
         try {
             let response = await fetch(`${backendUrl}/core/scopes`, addGetAuthorization(accessString))

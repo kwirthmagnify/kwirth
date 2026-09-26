@@ -44,7 +44,7 @@ interface IInstalledHomepage {
     requiresRestart?: boolean
 }
 
-/** Lo que el descriptor necesita de la aplicacion. */
+/** What the descriptor needs from the application. */
 interface IHomepageDescriptorDeps {
     activeHomepageId: string | undefined
     onActivate: (id: string | undefined, config: Record<string, unknown>) => void
@@ -52,14 +52,14 @@ interface IHomepageDescriptorDeps {
     onHomepageUnload: (id: string) => void
 }
 
-/** Las props del dialogo que trae la propia homepage. */
+/** The props of the dialog the homepage itself brings. */
 interface IHomepageSetupProps {
     config: Record<string, unknown>
     onSave: (cfg: Record<string, unknown>) => void
     onClose: () => void
 }
 
-/** El front de una homepage instalada, que el core carga en una global. */
+/** An installed homepage's front end, which the core loads into a global. */
 interface ILoadedHomepage {
     SetupDialog?: React.ComponentType<IHomepageSetupProps>
     defaultConfig?: Record<string, unknown>
@@ -68,7 +68,7 @@ interface ILoadedHomepage {
 const loadedHomepage = (id: string): ILoadedHomepage | undefined =>
     (window as unknown as { __kwirth_homepages__?: Record<string, ILoadedHomepage> }).__kwirth_homepages__?.[id]
 
-/** La configuracion guardada de una homepage, o la que ella misma propone por defecto. */
+/** A homepage's stored configuration, or the one it proposes itself by default. */
 const savedConfig = (id: string): Record<string, unknown> => {
     try {
         const saved = localStorage.getItem(`kwirth.homepage.config.${id}`)
@@ -137,8 +137,8 @@ const makeHomepageDescriptor = (deps: IHomepageDescriptorDeps): IExtensionManage
 
     onInstalled: meta => deps.onHomepageLoad(meta.id),
     onUninstalled: h => {
-        // Si se desinstala la que estaba puesta, hay que DESACTIVARLA: si no, Kwirth se queda apuntando a
-        // una homepage que ya no existe y la pantalla de inicio se queda en blanco.
+        // If the one that was set gets uninstalled, it has to be DEACTIVATED: otherwise Kwirth is left
+        // pointing at a homepage that no longer exists and the start screen goes blank.
         if (deps.activeHomepageId === h.id) deps.onActivate(undefined, {})
         deps.onHomepageUnload(h.id)
     }

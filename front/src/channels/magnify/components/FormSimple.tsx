@@ -10,12 +10,12 @@ interface IFormSimpleProps {
 }
 
 const FormSimple: React.FC<IFormSimpleProps> = (props: IFormSimpleProps) => {
-    // Usamos estado en lugar de ref para que la UI reaccione automáticamente a los cambios
+    // We use state instead of a ref so the UI reacts to changes on its own
     const [formData, setFormData] = useState<any>(null)
     const [asyncResults, setAsyncResults] = useState<{ [key: string]: any }>({})
     const [filterTexts, setFilterTexts] = useState<{ [key: string]: string }>({})
 
-    // Sincronizar el estado interno cuando el modelo de las props cambie o se cargue
+    // Synchronise the internal state when the props' model changes or loads
     useEffect(() => {
         if (props.model) {
             const clonedData = objectClone(props.model)
@@ -24,7 +24,7 @@ const FormSimple: React.FC<IFormSimpleProps> = (props: IFormSimpleProps) => {
             // Disparar acciones asíncronas si existen
             Object.keys(clonedData).forEach(key => {
                 const item = clonedData[key]
-                // Verificamos que exista la acción asíncrona en el modelo original
+                // We check that the asynchronous action exists in the original model
                 if (item && typeof item === 'object' && item.text && typeof props.model[key]?.asyncAction === 'function') {
                     props.model[key].asyncAction().then((result: any) => {
                         setAsyncResults(prev => ({ ...prev, [key]: result }))
@@ -57,7 +57,7 @@ const FormSimple: React.FC<IFormSimpleProps> = (props: IFormSimpleProps) => {
         }
     }
 
-    // Si el modelo aún no existe, no renderizamos nada para evitar errores de Object.keys
+    // If the model does not exist yet, we render nothing so as to avoid Object.keys errors
     if (!formData) return null
 
     return (
