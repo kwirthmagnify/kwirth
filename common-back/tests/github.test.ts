@@ -4,7 +4,7 @@ import { githubIdentityFromToken } from '../src/github'
 
 const API = 'https://api.github.com'
 
-// enruta el fetch mock por path del recurso GitHub
+// routes the fetch mock by the GitHub resource path
 function mockGithub(user: any, emails: any, opts: { emailsFail?: boolean } = {}) {
     global.fetch = (async (url: any) => {
         const u = String(url)

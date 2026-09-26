@@ -1,7 +1,7 @@
 import { TConfigFieldType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 
-/** @deprecated usa TConfigFieldType, comun a todas las extensiones. */
+/** @deprecated use TConfigFieldType, common to every extension. */
 export type LoginFieldType = TConfigFieldType
 
-/** Campo de configuracion de un login. Es el contrato comun IConfigFieldDef, sin nada propio. */
+/** A login's configuration field. It is the common contract IConfigFieldDef, with nothing of its own. */
 export type ILoginFieldDef = IConfigFieldDef

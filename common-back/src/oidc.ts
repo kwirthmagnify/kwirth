@@ -14,15 +14,15 @@ import { IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpIdentity 
     a mano con jose (firma vía JWKS + iss contra el tid del token).
 */
 
-// opciones de mapeo/validación para conectores OIDC no estándar (Entra, etc.)
+// mapping/validation options for non-standard OIDC connectors (Entra and the like)
 export interface IOidcCallbackOptions {
-    emailClaims?: string[]      // orden de fallback para el email (default ['email'])
-    assumeVerified?: boolean    // tratar el email como verificado si el IdP no emite email_verified
-    multiTenant?: boolean       // validar el iss contra el tid del token (Entra organizations/common)
-    allowedTenants?: string[]   // (opcional) whitelist de tenants (GUIDs) permitidos en multiTenant
+    emailClaims?: string[]      // fallback order for the email (default ['email'])
+    assumeVerified?: boolean    // treat the email as verified when the IdP does not emit email_verified
+    multiTenant?: boolean       // validate iss against the token's tid (Entra organizations/common)
+    allowedTenants?: string[]   // (optional) allowlist of tenants (GUIDs) permitted under multiTenant
 }
 
-// esquema de config estándar de un IdP OIDC (clientSecret es 'password' → se enmascara en la UI)
+// standard config schema of an OIDC IdP (clientSecret is 'password' → masked in the UI)
 export function oidcConfigSchema(): IIdpConfigFieldDef[] {
     return [
         { name: 'clientId', label: 'Client ID', type: 'text', required: true },
@@ -45,7 +45,7 @@ async function makeClient(config: Record<string, unknown>, redirectUri: string, 
     return { issuer, client }
 }
 
-// mapea los claims del id_token a la identidad de Kwirth (fallback de email + verified asumido)
+// maps the id_token claims to Kwirth's identity (email fallback + assumed verified)
 export function mapOidcIdentity(claims: Record<string, unknown>, opts?: IOidcCallbackOptions): IIdpIdentity {
     const emailClaims = opts?.emailClaims ?? ['email']
     let email = ''
@@ -64,7 +64,7 @@ export function mapOidcIdentity(claims: Record<string, unknown>, opts?: IOidcCal
     }
 }
 
-// ¿el tenant (tid) está permitido? (allowlist vacía = cualquier tenant)
+// is the tenant (tid) allowed? (an empty allowlist means any tenant)
 export function tenantAllowed(tid: string | undefined, allowed?: string[]): boolean {
     if (!allowed || allowed.length === 0) return true
     if (!tid) return false
@@ -88,9 +88,10 @@ export async function oidcHandleCallback(config: Record<string, unknown>, ctx: I
     const { issuer, client } = await makeClient(config, ctx.redirectUri, defaultIssuer)
 
     if (opts?.multiTenant) {
-        // openid-client valida el iss de forma LITERAL y en multi-tenant el issuer descubierto lleva el
-        // placeholder {tenantid}; hacemos el intercambio crudo (grant, sin validar id_token) y validamos
-        // el id_token a mano con jose: firma (JWKS del issuer) + iss contra el tid concreto del token.
+        // openid-client validates iss LITERALLY, and in multi-tenant the discovered issuer carries the
+        // {tenantid} placeholder; so we do the raw exchange (grant, without validating the id_token) and
+        // validate the id_token by hand with jose: signature (the issuer's JWKS) + iss against the
+        // token's concrete tid.
         const tokenSet = await client.grant({
             grant_type: 'authorization_code',
             code: ctx.code,
@@ -98,7 +99,7 @@ export async function oidcHandleCallback(config: Record<string, unknown>, ctx: I
             code_verifier: ctx.codeVerifier
         })
         if (!tokenSet.id_token) throw new Error('OIDC multi-tenant: token response has no id_token')
-        const tid = tokenSet.claims().tid as string | undefined   // sin verificar; solo para conocer el tenant
+        const tid = tokenSet.claims().tid as string | undefined   // unverified; only to learn the tenant
         if (!tid) throw new Error('OIDC multi-tenant: id_token has no tid claim')
         if (!tenantAllowed(tid, opts.allowedTenants)) throw new Error(`OIDC multi-tenant: tenant '${tid}' not allowed`)
         const jwksUri = issuer.metadata.jwks_uri
@@ -112,8 +113,8 @@ export async function oidcHandleCallback(config: Record<string, unknown>, ctx: I
         return mapOidcIdentity(payload as Record<string, unknown>, opts)
     }
 
-    // single-tenant: pasamos los params crudos del callback (incluyen iss para RFC 9207 y state); el state
-    // ya lo valida el core, pero openid-client exige checks.state si el param state viene presente.
+    // single-tenant: we pass the callback's raw params (they include iss for RFC 9207, and state); the
+    // core already validates state, but openid-client demands checks.state when the param is present.
     const params = ctx.params ?? { code: ctx.code }
     const checks: Record<string, unknown> = { code_verifier: ctx.codeVerifier }
     if (params.state !== undefined) checks.state = params.state

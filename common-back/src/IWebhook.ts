@@ -3,30 +3,31 @@ import { IExtension } from './IExtension'
 
 export { IWebhookEvent, IWebhookConfig, IWebhookAccess, IWebhookConsumer, IWebhookStoredConfig }
 
-/** @deprecated usa TConfigFieldType, comun a todas las extensiones. */
+/** @deprecated use TConfigFieldType, common to every extension. */
 export type WebhookFieldType = TConfigFieldType
 
-/** Campo de configuracion de un webhook. Es el contrato comun IConfigFieldDef, sin nada propio. */
+/** A webhook's configuration field. It is the common contract IConfigFieldDef, with nothing of its own. */
 export type IWebhookFieldDef = IConfigFieldDef
 
-/** @deprecated usa IExtensionNodeMeta, comun a todas las extensiones. */
+/** @deprecated use IExtensionNodeMeta, common to every extension. */
 export type IWebhookNodeMeta = IExtensionNodeMeta
 
 export interface IWebhook extends IExtension {
     readonly id: string
-    // Verifica autenticidad a partir del cuerpo CRUDO + headers + la config resuelta (con secretos).
-    // LA AUTH LA IMPLEMENTA CADA WEBHOOK: el core es agnóstico. Jira compara headers.authorization con
-    // config.apiKey; GitHub calcula un HMAC sobre rawBody con config.hmacSecret; cada artefacto decide.
+    // Verifies authenticity from the RAW body + headers + the resolved config (secrets included).
+    // EACH WEBHOOK IMPLEMENTS ITS OWN AUTH: the core is agnostic. Jira compares headers.authorization
+    // with config.apiKey; GitHub computes an HMAC over rawBody with config.hmacSecret; each one decides.
     verify(rawBody: Buffer, headers: Record<string, string | string[] | undefined>, config: IWebhookConfig): boolean
-    // Parsea el cuerpo crudo en el evento normalizado (tras pasar verify). El artefacto NO conoce su `configName`
-    // (lo resuelve el core por el token de la URL) → lo omite; el receptor lo estampa antes de entregar.
+    // Parses the raw body into the normalised event (after passing verify). The artifact does NOT know
+    // its `configName` (the core resolves it from the URL token) → it omits it; the receiver stamps it
+    // in before delivering.
     parse(rawBody: Buffer, headers: Record<string, string | string[] | undefined>): Omit<IWebhookEvent, 'configName'> | null
     addConfig(config: IWebhookConfig): void
     removeConfig(name: string): void
     hasConfig(name: string): boolean
     getConfigNames(): string[]
-    // El artefacto declara SUS propios campos de config (apiKey, secreto HMAC, etc.); el core los
-    // renderiza genéricamente y los almacena, sin conocer su significado.
+    // The artifact declares ITS OWN config fields (apiKey, HMAC secret, and so on); the core renders
+    // them generically and stores them, without knowing what they mean.
     getConfigSchema?(): IWebhookFieldDef[]
     getNodeMeta?(): IWebhookNodeMeta
     startWebhook?(access: IWebhookAccess): Promise<void>

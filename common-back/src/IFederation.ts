@@ -1,13 +1,14 @@
 import { IInstanceMessage } from '@kwirthmagnify/kwirth-common'
 
-// Tipos de la federación multi-cluster del lado BACK (back-a-back por WebSocket). Son COPIA propia del
-// back: el front tiene sus equivalentes en common-front (IClusterEndpoint/ERemoteConnState/... para SU
-// federación, p.ej. la vista landscape de Excubitor). No se unifican: hay canales que federan por el front
-// y otros por el back, y no existe una forma única de federar. Estos viven aquí porque los consume el back.
+// Types for BACK-side multi-cluster federation (back-to-back over WebSocket). They are the back end's
+// OWN COPY: the front end has its equivalents in common-front (IClusterEndpoint/ERemoteConnState/... for
+// ITS federation, such as Excubitor's landscape view). They are not unified: some channels federate
+// through the front end and others through the back, and there is no single way to federate. These live
+// here because the back end is what consumes them.
 
-// Endpoint de un cluster remoto al que un back abre una conexión federada. Sale de la lista de clusters
-// del perfil del usuario ({name, url, accessString}); el core la lee con readUserStore. 'id' (uid del
-// cluster remoto) es opcional: puede no estar resuelto todavía.
+// Endpoint of a remote cluster a back end opens a federated connection to. It comes from the cluster
+// list in the user's profile ({name, url, accessString}); the core reads it with readUserStore. 'id'
+// (the remote cluster's uid) is optional: it may not be resolved yet.
 export interface IClusterEndpoint {
     name: string
     url: string
@@ -15,26 +16,27 @@ export interface IClusterEndpoint {
     id?: string
 }
 
-// Estado de una conexión remota gestionada por el core. Nunca string literals.
-// Progresión al establecerse: DOWN → RECONNECTING (buscando socket) → HANDSHAKING (socket abierto, pidiendo
-// instance al canal remoto) → CONNECTED (socket + instance = operativo). CONNECTED es el ÚNICO estado en el
-// que un comando llega de verdad al canal remoto.
+// State of a remote connection managed by the core. Never string literals.
+// Progression as it comes up: DOWN → RECONNECTING (looking for a socket) → HANDSHAKING (socket open,
+// asking the remote channel for an instance) → CONNECTED (socket + instance = operational). CONNECTED is
+// the ONLY state in which a command actually reaches the remote channel.
 export enum ERemoteConnState {
-    CONNECTED = 'connected',         // socket abierto Y instance válido capturado → operativo
-    HANDSHAKING = 'handshaking',     // socket abierto pero SIN instance aún (canal remoto arrancando / re-handshake)
-    RECONNECTING = 'reconnecting',   // sin socket, reintentando con backoff
-    DOWN = 'down'                    // conexión cerrada / nunca establecida (terminal o sin credenciales)
+    CONNECTED = 'connected',         // socket open AND a valid instance captured → operational
+    HANDSHAKING = 'handshaking',     // socket open but with NO instance yet (remote channel starting / re-handshake)
+    RECONNECTING = 'reconnecting',   // no socket, retrying with backoff
+    DOWN = 'down'                    // connection closed / never established (terminal or no credentials)
 }
 
-// Callbacks que el plugin registra para consumir UNA conexión remota (versión singular: 1 bot = 1 sala =
-// 1 cluster remoto = 1 handle; el plugin abre N conexiones y guarda N handles). El WS crudo NO se expone.
+// Callbacks the plugin registers to consume ONE remote connection (the singular version: 1 bot = 1 room
+// = 1 remote cluster = 1 handle; the plugin opens N connections and keeps N handles). The raw WS is NOT
+// exposed.
 export interface IRemoteChannelHandlers {
     onMessage: (msg: IInstanceMessage) => void
     onState: (state: ERemoteConnState) => void
 }
 
-// Handle gestionado que devuelve openRemoteChannel: el WS crudo NO se expone (se reemplaza en reconexión).
+// Managed handle returned by openRemoteChannel: the raw WS is NOT exposed (it is replaced on reconnect).
 export interface IRemoteChannelHandle {
-    send: (msg: IInstanceMessage) => void   // enruta al WS vivo (rellena el instance capturado en el START)
-    close: () => void                       // cierra la conexión y detiene los reintentos
+    send: (msg: IInstanceMessage) => void   // routes to the live WS (fills in the instance captured at START)
+    close: () => void                       // closes the connection and stops the retries
 }

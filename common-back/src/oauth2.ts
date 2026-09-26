@@ -23,7 +23,7 @@ interface IOAuth2TokenResponse {
     error_description?: string
 }
 
-// esquema base de un IdP OAuth2 (el conector añade sus URLs si aplica; clientSecret 'password' → se enmascara)
+// base schema of an OAuth2 IdP (the connector adds its URLs where applicable; clientSecret 'password' → masked)
 export function oauth2ConfigSchema(): IIdpConfigFieldDef[] {
     return [
         { name: 'clientId', label: 'Client ID', type: 'text', required: true },
@@ -47,7 +47,7 @@ export function oauth2BuildAuthorizationUrl(config: Record<string, unknown>, ctx
     return url.toString()
 }
 
-// intercambia el 'code' por access_token (back-channel) y delega el userinfo en fetchIdentity(accessToken).
+// exchanges the 'code' for an access_token (back-channel) and delegates userinfo to fetchIdentity(accessToken).
 export async function oauth2HandleCallback(
     config: Record<string, unknown>,
     ctx: IIdpCallbackContext,
@@ -62,7 +62,7 @@ export async function oauth2HandleCallback(
     body.set('redirect_uri', ctx.redirectUri)
     if (ep.usePkce) body.set('code_verifier', ctx.codeVerifier)
 
-    // Accept: application/json → algunos IdP (GitHub) devuelven form-urlencoded sin esta cabecera
+    // Accept: application/json → some IdPs (GitHub) return form-urlencoded without this header
     const res = await fetch(ep.tokenEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },

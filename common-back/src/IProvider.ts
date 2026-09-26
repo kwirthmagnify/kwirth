@@ -48,9 +48,9 @@ export interface IProviderHandle {
 }
 
 /**
- * Persistencia que el core inyecta al provider (mismo mecanismo que reciben los canales).
- * El booleano 'secret' decide el destino: true -> Secret de Kubernetes, false -> ConfigMap.
- * Las variantes 'Common' escriben en el almacen compartido entre extensiones.
+ * Persistence the core injects into the provider (the same mechanism channels receive).
+ * The 'secret' boolean decides the destination: true -> Kubernetes Secret, false -> ConfigMap.
+ * The 'Common' variants write to the store shared between extensions.
  */
 export interface IProviderStorage {
     writeStorage(id: string, secret: boolean, data: any): Promise<void>
@@ -60,9 +60,9 @@ export interface IProviderStorage {
 }
 
 /**
- * Un campo del payload de suscripcion, descrito para que un consumidor pueda pintar un formulario
- * en vez de exigir JSON a mano. Solo tiene sentido declararlos cuando el payload es plano; si es
- * anidado (p.ej. otel, con 'spaces'), basta con 'usage' y 'example'.
+ * A field of the subscription payload, described so a consumer can draw a form instead of demanding
+ * hand-written JSON. Declaring them only makes sense when the payload is flat; when it is nested
+ * (otel, for instance, with 'spaces'), 'usage' and 'example' are enough.
  */
 export interface IProviderSubscriptionField {
     name: string
@@ -72,25 +72,25 @@ export interface IProviderSubscriptionField {
 }
 
 /**
- * Ayuda que un provider publica sobre COMO SUSCRIBIRSE a el, es decir sobre el argumento 'data' de
- * addSubscriber. No confundir con el 'schema' que un provider exporta desde su back.js, que
- * describe la configuracion del propio provider (configure/configRouter).
+ * Help a provider publishes about HOW TO SUBSCRIBE to it, that is, about the 'data' argument of
+ * addSubscriber. Not to be confused with the 'schema' a provider exports from its back.js, which
+ * describes the provider's own configuration (configure/configRouter).
  *
- * La consume provider-debug para explicarle al usuario que escribir, pero cualquier canal que
- * ofrezca elegir provider puede usarla.
+ * provider-debug consumes it to explain to the user what to write, but any channel that offers a
+ * choice of provider can use it.
  */
 export interface IProviderSubscriptionHelp {
-    /** Como se usa, en prosa: que entrega, que hace falta para recibir algo, gotchas. */
+    /** How it is used, in prose: what it delivers, what it takes to receive anything, gotchas. */
     usage: string
-    /** Payload de ejemplo, listo para pasar tal cual a addSubscriber. */
+    /** Example payload, ready to pass to addSubscriber as it is. */
     example: Record<string, unknown>
-    /** Descripcion campo a campo. Opcional: solo para payloads planos. */
+    /** Field-by-field description. Optional: only for flat payloads. */
     fields?: IProviderSubscriptionField[]
 }
 
 /**
- * Un campo de la configuracion del PROPIO provider (no de la suscripcion). Es el contrato comun
- * IConfigFieldDef, el mismo que usan senders, webhooks, idps y logins.
+ * A field of the provider's OWN configuration (not of the subscription). It is the common contract
+ * IConfigFieldDef, the same one senders, webhooks, idps and logins use.
  */
 export type IProviderFieldDef = IConfigFieldDef
 
@@ -104,47 +104,48 @@ export interface IProviderRequirements {
 }
 
 /**
- * Lo que un provider sabe contar de si mismo.
+ * What a provider can tell about itself.
  *
- * Existe para que kwirth pueda decir si algo esta siendo consumido o esta emitiendo para nadie, que
- * es de las pocas preguntas que NADIE puede responder desde fuera: cada provider guarda sus
- * suscriptores en su propia estructura y hasta ahora no habia forma de preguntarselo.
+ * It exists so kwirth can say whether something is being consumed or emitting to nobody, which is one
+ * of the few questions NOBODY can answer from the outside: each provider keeps its subscribers in its
+ * own structure, and until now there was no way to ask it.
  *
- * ⚠️ Solo el NUMERO, no quienes son: 'IProviderSubscriber' es una interfaz de un solo metodo y no
- * lleva identidad, asi que un provider no tiene con que identificarlos. Dibujar el grafo de quien
- * consume a quien pedira ampliar ese contrato, y es una decision aparte.
+ * ⚠️ Only the NUMBER, not who they are: 'IProviderSubscriber' is a single-method interface and carries
+ * no identity, so a provider has nothing to identify them with. Drawing the graph of who consumes whom
+ * will require widening that contract, and that is a separate decision.
  */
 export interface IProviderStats {
-    /** Cuantos suscriptores tiene AHORA. Cero significa que esta emitiendo para nadie. */
+    /** How many subscribers it has RIGHT NOW. Zero means it is emitting to nobody. */
     subscribers: number
     /**
-     * ENTREGAS hechas desde que el provider arranco: una por cada vez que se llama a
-     * processProviderEvent, no una por evento producido. OPCIONAL: quien no lo lleve se muestra como
-     * "no informa", igual que el resto.
+     * DELIVERIES made since the provider started: one per call to processProviderEvent, not one per
+     * event produced. OPTIONAL: whoever does not keep it is shown as "not reported", like the rest.
      *
-     * Se cuentan entregas y no eventos a proposito. Un provider que produce mil eventos y los filtra
-     * todos no esta moviendo nada, y el numero util para quien opera es el trabajo que SE HACE. Ademas
-     * el sitio donde incrementar es inequivoco —justo donde ya se llama al suscriptor—, y eso hace que
-     * cablearlo en dieciseis providers no dependa de interpretar el codigo de cada uno.
+     * Deliveries are counted instead of events on purpose. A provider that produces a thousand events
+     * and filters them all out is moving nothing, and the number that is useful to whoever operates is
+     * the work that ACTUALLY HAPPENS. Besides, the place to increment is unambiguous — right where the
+     * subscriber is already called — and that means wiring it in sixteen providers does not depend on
+     * interpreting each one's code.
      *
-     * Es un ACUMULADO, no una tasa: quien lo lea resta dos lecturas y divide por el tiempo. El provider
-     * no debe saber nada de ventanas ni de medias — eso obligaria a guardar historia en el camino
-     * caliente, que es justo lo que no puede pasar.
+     * It is a RUNNING TOTAL, not a rate: whoever reads it subtracts two readings and divides by time.
+     * The provider must know nothing about windows or averages — that would force keeping history in
+     * the hot path, which is exactly what must not happen.
      *
-     * ⚠️ El incremento va JUNTO a la llamada al suscriptor, y es un entero. Nada
-     * de timestamps por evento, nada de arrays que crezcan, nada de objetos nuevos: lo que duele en
-     * Node no es el contador, es la basura que genera.
+     * ⚠️ The increment goes RIGHT NEXT to the subscriber call, and it is an integer. No per-event
+     * timestamps, no growing arrays, no new objects: what hurts in Node is not the counter, it is the
+     * garbage it generates.
      */
     events?: number
-    /** Errores al entregar, con el mismo criterio: acumulado y barato. */
+    /** Delivery errors, under the same criterion: a running total, and cheap. */
     errors?: number
 }
 
 /*
-    ⚠️ NO hay 'bytes'. Contarlos obligaria a medir cada evento —serializarlo o recorrerlo— y eso ya no es
-    un entero: es trabajo proporcional al tamaño del dato, en el camino caliente y para todos, mire
-    alguien la pantalla o no. Un provider que reciba el tamaño ya hecho (porque le llego por HTTP, por
-    ejemplo) puede exponerlo por su cuenta; lo que no se hace es pedirselo a todos.
+    ⚠️ There is NO 'bytes'. Counting them would mean measuring every event — serialising it or walking
+    it — and that is no longer an integer: it is work proportional to the size of the data, in the hot
+    path and for everyone, whether anyone is looking at the screen or not. A provider that receives the
+    size already computed (because it arrived over HTTP, say) can expose it on its own; what is not done
+    is demanding it from everybody.
 */
 
 /**
@@ -159,41 +160,40 @@ export interface IProvider extends IExtension {
     removeSubscriber(c: IProviderSubscriber): Promise<void>
     updateSubscription?(c: IProviderSubscriber, data: any): Promise<void>
     /**
-     * @deprecated El core deja de alimentar este metodo: un provider es dueño de su propia
-     * configuracion y la sirve por 'configRouter'. Se mantiene por compatibilidad con providers
-     * de terceros que aun usen la config gestionada por el core.
+     * @deprecated The core no longer feeds this method: a provider owns its own configuration and
+     * serves it through 'configRouter'. It is kept for compatibility with third-party providers that
+     * still use the core-managed config.
      */
     configure?(config: Record<string, unknown>): void
     /**
-     * Ayuda de suscripcion. OPCIONAL: quien escriba un provider la añade si quiere. Sin ella el
-     * consumidor sigue funcionando, simplemente no tiene nada que enseñarle al usuario sobre que
-     * payload escribir.
+     * Subscription help. OPTIONAL: whoever writes a provider adds it if they want to. Without it the
+     * consumer keeps working, it simply has nothing to show the user about which payload to write.
      */
     getSubscriptionHelp?(): IProviderSubscriptionHelp
     /**
-     * Nombres de las configuraciones que el provider tiene definidas (equivalente a
-     * ISender.getConfigNames). OPCIONAL: solo tiene sentido en un provider que sea dueño de su
-     * configuracion. El gestor de extensiones lo usa para mostrar cuantas hay en la tarjeta, igual
-     * que hace con los senders. No expone valores, solo nombres.
+     * Names of the configurations the provider has defined (the equivalent of
+     * ISender.getConfigNames). OPTIONAL: it only makes sense on a provider that owns its
+     * configuration. The extension manager uses it to show how many there are on the card, just as it
+     * does with senders. It exposes no values, only names.
      */
     getConfigNames?(): string[]
     /**
-     * Schema de configuracion del propio provider, con el que kwirth pinta un formulario generico.
-     * Es la forma ESTANDAR de declararlo, la misma que ISender.getConfigSchema e IWebhook.
+     * Configuration schema of the provider itself, which kwirth uses to draw a generic form.
+     * This is the STANDARD way to declare it, the same as ISender.getConfigSchema and IWebhook.
      *
-     * Un provider al que nadie se suscribe y que no expone router NO se instancia nunca, asi que en
-     * ese caso no hay a quien preguntarselo: para esos, exporta ademas una constante 'schema' con el
-     * mismo array desde el back.js, que el core lee al instalar sin instanciar nada.
+     * A provider nobody subscribes to and that exposes no router is NEVER instantiated, so in that
+     * case there is nobody to ask: for those, also export a 'schema' constant with the same array from
+     * the back.js, which the core reads at install time without instantiating anything.
      */
     getConfigSchema?(): IProviderFieldDef[]
     /**
-     * Que sabe el provider de si mismo ahora mismo. OPCIONAL, como el resto de este bloque: quien no
-     * lo implemente se muestra como "no informa", que es distinto de cero — un cero seria una
-     * afirmacion que nadie puede sostener.
+     * What the provider knows about itself right now. OPTIONAL, like the rest of this block: whoever
+     * does not implement it is shown as "not reported", which is different from zero — a zero would be
+     * a claim nobody can back up.
      *
-     * ⚠️ Tiene que ser BARATO: devuelve lo que ya tienes, no lo calcules. Se llama cuando alguien
-     * abre una pantalla de estado, pero un provider no sabe con que frecuencia, y recorrer
-     * estructuras aqui convierte una consulta en trabajo para todos.
+     * ⚠️ It has to be CHEAP: return what you already have, do not compute it. It is called when
+     * somebody opens a status screen, but a provider does not know how often, and walking structures
+     * here turns a query into work for everyone.
      */
     getStats?(): IProviderStats
     /**
@@ -245,22 +245,22 @@ export interface IProvider extends IExtension {
     router: any
     routerAlias: string | undefined
     /**
-     * El provider quiere el cuerpo de las peticiones de su router publico EN CRUDO (Buffer), sin que
-     * el bodyParser global del core lo toque.
+     * The provider wants the body of the requests to its public router RAW (a Buffer), untouched by
+     * the core's global bodyParser.
      *
-     * Hace falta para todo lo que no sea JSON plano: ndjson, msgpack, protobuf, o verificar una firma
-     * sobre los bytes exactos que llegaron. Sin esto, una extension que INGIERE recibe el cuerpo ya
-     * parseado —y con el limite del parser global—, que es justo lo que el core resolvio para los
-     * webhooks montandolos por delante.
+     * Needed for anything that is not plain JSON: ndjson, msgpack, protobuf, or verifying a signature
+     * over the exact bytes that arrived. Without this, an extension that INGESTS receives the body
+     * already parsed — and with the global parser's limit — which is exactly what the core solved for
+     * webhooks by mounting them in front.
      *
-     * Por defecto es false: los providers que hoy leen 'req.body' como objeto siguen igual.
+     * It defaults to false: providers that read 'req.body' as an object today are unaffected.
      */
     readonly rawBody?: boolean
     /**
-     * Router de gestion del provider (su propia configuracion). El core lo monta SIEMPRE detras de
-     * validacion de accessKey, igual que hace con los endpoints de un canal, en la ruta
-     * '/core/providerconfig/<providerId>'. Es una via distinta de 'router', que es publica y puede
-     * recibir trafico externo (OTLP, POSTs de terceros) y por tanto no puede exigir accessKey.
+     * The provider's management router (its own configuration). The core ALWAYS mounts it behind
+     * accessKey validation, just as it does with a channel's endpoints, at the route
+     * '/core/providerconfig/<providerId>'. It is a separate path from 'router', which is public and may
+     * receive external traffic (OTLP, third-party POSTs) and therefore cannot demand an accessKey.
      */
     configRouter?: any
     apiKeyApi: any | undefined

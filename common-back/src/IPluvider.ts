@@ -1,40 +1,40 @@
 import { IProviderSubscriber, IProviderSubscriptionHelp } from './IProvider'
 
 /**
- * Lo que el gestor de extensiones y provider-debug enseñan de un pluvider. El consumidor de un
- * pluvider es OTRO EQUIPO, asi que hace falta algo que mostrar sin leerse el codigo.
+ * What the extension manager and provider-debug show about a pluvider. The consumer of a pluvider is
+ * ANOTHER TEAM, so there has to be something to show without reading the code.
  */
 export interface IPluviderData {
-    /** Que produce, en una linea. */
+    /** What it produces, in one line. */
     description: string
-    /** Nombre del tipo del evento que emite (p.ej. 'IAgoraAlert'), para orientar al consumidor. */
+    /** Name of the type of event it emits (e.g. 'IAgoraAlert'), to orient the consumer. */
     eventTypeName?: string
 }
 
 /**
- * Un plugin que ADEMAS produce: expone in-process la informacion que ya genera, para que otros
- * plugins se suscriban a ella. No es una segunda extension empaquetada dentro del plugin: lo
- * implementa la MISMA clase del canal, sobre la misma instancia y los mismos datos.
+ * A plugin that ALSO produces: it exposes in-process the information it already generates, so other
+ * plugins can subscribe to it. It is not a second extension packaged inside the plugin: it is
+ * implemented by the channel's SAME class, on the same instance and the same data.
  *
- * NO extiende IProvider a proposito. Un pluvider no pasa por la maquinaria de providers —no se mete
- * en 'clusterInfo.providers', que es lo que recorren los bucles que montan routers, escriben
- * 'apiKeyApi' o marcan 'started'—, asi que no tiene 'id', 'router', 'routerAlias', 'providesRouter',
- * 'requiresApiKeyApi' ni 'apiKeyApi'.
+ * It does NOT extend IProvider, on purpose. A pluvider does not go through the provider machinery — it
+ * is not put into 'clusterInfo.providers', which is what the loops that mount routers, write
+ * 'apiKeyApi' or set 'started' walk over — so it has no 'id', 'router', 'routerAlias',
+ * 'providesRouter', 'requiresApiKeyApi' or 'apiKeyApi'.
  *
- * El id tampoco lo escribe el autor: lo compone el core como '<PLUVIDER_ID_PREFIX><channelId>', para
- * que nadie se equivoque con el prefijo.
+ * Nor does the author write the id: the core composes it as '<PLUVIDER_ID_PREFIX><channelId>', so
+ * nobody gets the prefix wrong.
  *
- * 'TSub' es la forma del filtro de suscripcion. Como en los providers, cada pluvider decide si
- * filtra y con que forma; si no filtra, se deja el generico sin especificar.
+ * 'TSub' is the shape of the subscription filter. As with providers, each pluvider decides whether it
+ * filters and with what shape; if it does not filter, the generic is left unspecified.
  *
- * Ejemplo:
+ * Example:
  *
  *   class AgoraChannel implements IChannel, IPluvider<IAgoraAlertSubscription> { … }
  */
 export interface IPluvider<TSub = unknown> {
     /**
-     * Metadatos del pluvider. Su PRESENCIA es la declaracion: un canal que implementa este metodo se
-     * ofrece como productor, y el core lo registra. No hay flags ni deteccion por duck-typing.
+     * The pluvider's metadata. Its PRESENCE is the declaration: a channel implementing this method
+     * offers itself as a producer, and the core registers it. No flags, no duck-typing detection.
      */
     getPluviderData(): IPluviderData
 
@@ -43,16 +43,16 @@ export interface IPluvider<TSub = unknown> {
     updateSubscription?(c: IProviderSubscriber, data: TSub): Promise<void>
 
     /**
-     * Arranca la produccion. El core lo llama en la fase de pluviders, es decir ANTES de
-     * 'startChannel()': el trabajo de fondo vive en este lado y el front se engancha despues.
+     * Starts production. The core calls it in the pluviders phase, that is BEFORE 'startChannel()':
+     * the background work lives on this side and the front end hooks in afterwards.
      */
     startProvider(): Promise<void>
     stopProvider(): Promise<void>
 
     /**
-     * Obligatorio, a diferencia del homonimo de IProvider, que es opcional. Un provider suele
-     * consumirlo quien lo escribio; un pluvider lo consume gente de fuera, y sin esto no tiene como
-     * saber que escribir en la suscripcion ni que va a recibir.
+     * Mandatory, unlike its namesake on IProvider, which is optional. A provider is usually consumed
+     * by whoever wrote it; a pluvider is consumed by outsiders, and without this they have no way of
+     * knowing what to write in the subscription or what they are going to receive.
      */
     getSubscriptionHelp(): IProviderSubscriptionHelp
 }

@@ -34,9 +34,9 @@ async function ghGet<T>(base: string, resource: string, accessToken: string): Pr
 export async function githubIdentityFromToken(apiBaseUrl: string, accessToken: string): Promise<IIdpIdentity> {
     const base = apiBaseUrl.replace(/\/+$/, '')
     const user = await ghGet<IGithubUser>(base, '/user', accessToken)
-    // /user/emails puede fallar si falta el scope user:email; en ese caso caemos al email público
+    // /user/emails can fail when the user:email scope is missing; in that case we fall back to the public email
     const emails = await ghGet<IGithubEmail[]>(base, '/user/emails', accessToken).catch(() => [] as IGithubEmail[])
-    // preferimos el email primary; si no, el primero verificado; si no, el primero que haya
+    // we prefer the primary email; failing that, the first verified one; failing that, the first there is
     const chosen = emails.find(e => e.primary) ?? emails.find(e => e.verified) ?? emails[0]
     return {
         email: chosen?.email ?? user.email ?? '',

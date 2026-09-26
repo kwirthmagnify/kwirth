@@ -7,7 +7,7 @@ export interface IChannel extends IExtension {
     readonly requirements: IBackChannelRequirements
     getChannelData(): BackChannelData
     getChannelScopeLevel(scope: string): number
-    // Catálogo de scopes RBAC que declara la extensión (para validar/gestionar permisos). Opcional.
+    // Catalogue of RBAC scopes the extension declares (to validate and manage permissions). Optional.
     getScopeCatalog?(): IExtensionScope[]
 
     startChannel(): Promise<void>

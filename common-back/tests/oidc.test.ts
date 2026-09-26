@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mapOidcIdentity, tenantAllowed } from '../src/oidc'
 
-// ---- mapOidcIdentity (C1: mapeo de claims con fallback de email y verified asumido) ----
+// ---- mapOidcIdentity (C1: claim mapping with email fallback and assumed verified) ----
 
 test('mapOidcIdentity: comportamiento por defecto (sin opts) = email + email_verified', () => {
     const id = mapOidcIdentity({ email: 'a@b.com', email_verified: true, name: 'Alice', sub: '123' })
@@ -46,7 +46,7 @@ test('mapOidcIdentity: name/sub opcionales y sub a string', () => {
     assert.equal(id.sub, '42')
 })
 
-// ---- tenantAllowed (C2: whitelist de tenants para multi-tenant) ----
+// ---- tenantAllowed (C2: tenant allowlist for multi-tenant) ----
 
 test('tenantAllowed: sin allowlist → cualquier tenant permitido', () => {
     assert.equal(tenantAllowed('any-tid'), true)

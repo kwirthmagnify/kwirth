@@ -1,11 +1,11 @@
-// Runner de tests unitarios de common-back (mismo patrón que back/tests/run.mjs).
+// Unit test runner for common-back (the same pattern as back/tests/run.mjs).
 //
-// Bundlea cada tests/**/*.test.ts con esbuild (TS→ESM, externalizando deps pesadas) a tests/.out/
-// y los ejecuta con el runner nativo `node --test`. Cero dependencias de test nuevas.
+// It bundles each tests/**/*.test.ts with esbuild (TS→ESM, externalising heavy deps) into tests/.out/
+// and runs them with the native `node --test` runner. No new test dependencies at all.
 //
-//   npm test            → ejecuta toda la suite
+//   npm test            → runs the whole suite
 //
-// Los tests importan directamente de ../src (no se duplica código).
+// The tests import straight from ../src (no code is duplicated).
 
 import esbuild from 'esbuild'
 import { readdirSync, mkdirSync, rmSync, existsSync } from 'fs'
@@ -42,8 +42,8 @@ await esbuild.build({
     outdir: OUT_DIR,
     outbase: TEST_DIR,
     outExtension: { '.js': '.mjs' },
-    // deps pesadas externalizadas: los tests de oauth2/github solo tocan src puro (IIdpConnector),
-    // pero si algún test importara el index se externalizan igual.
+    // heavy deps externalised: the oauth2/github tests only touch pure src (IIdpConnector), but they
+    // are externalised anyway in case some test imports the index.
     external: [
         '@kubernetes/client-node', '@kwirthmagnify/kwirth-common', 'express', 'js-yaml', 'openid-client', 'jose'
     ],

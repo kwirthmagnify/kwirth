@@ -112,9 +112,9 @@ export function createCrdInformer(clusterInfo: any, apiGroup: string, apiVersion
     return createInformer(clusterInfo, path, listFunction, handlers)
 }
 
-/** Informer genérico para CUALQUIER recurso (core o grupo): el llamante aporta el `watchPath` (p.ej.
- *  '/api/v1/services', '/apis/networking.k8s.io/v1/ingresses') y la `listFn` que devuelve {items}.
- *  Reutilizado por createCrdInformer y por consumidores de recursos core (p.ej. exposure). */
+/** Generic informer for ANY resource (core or group): the caller supplies the `watchPath` (e.g.
+ *  '/api/v1/services', '/apis/networking.k8s.io/v1/ingresses') and the `listFn` that returns {items}.
+ *  Reused by createCrdInformer and by consumers of core resources (exposure, for instance). */
 export function createInformer(clusterInfo: any, watchPath: string, listFn: () => Promise<{ items: any[] }>, handlers: ICrdInformerHandlers): any {
     const informer = k8s.makeInformer(clusterInfo.kubeConfig, watchPath, listFn)
     if (handlers.onAdd)    informer.on('add',    handlers.onAdd)

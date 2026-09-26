@@ -17,14 +17,14 @@ export enum EIdpConnectorKind {
     OAUTH2 = 'oauth2'
 }
 
-/** @deprecated usa TConfigFieldType, comun a todas las extensiones. */
+/** @deprecated use TConfigFieldType, common to every extension. */
 export type IdpFieldType = TConfigFieldType
 
-// campo del schema de configuracion (para generar el formulario en el front, con secretos 'password').
-// Es el contrato comun IConfigFieldDef, sin nada propio.
+// config schema field (used to generate the form in the front end, with secrets as 'password').
+// It is the common contract IConfigFieldDef, with nothing of its own.
 export type IIdpConfigFieldDef = IConfigFieldDef
 
-// identidad verificada que el conector extrae del IdP tras el callback
+// verified identity the connector extracts from the IdP after the callback
 export interface IIdpIdentity {
     email: string
     emailVerified: boolean
@@ -32,19 +32,19 @@ export interface IIdpIdentity {
     sub?: string
 }
 
-// contexto que el core pasa al conector para construir la URL de autorizacion
+// context the core passes to the connector to build the authorization URL
 export interface IIdpAuthContext {
     redirectUri: string
     state: string
     codeChallenge: string
 }
 
-// contexto que el core pasa al conector para procesar el callback
+// context the core passes to the connector to process the callback
 export interface IIdpCallbackContext {
     code: string
     codeVerifier: string
     redirectUri: string
-    params?: Record<string, string>   // query params crudos del callback (code, state, iss, ...) para RFC 9207
+    params?: Record<string, string>   // raw callback query params (code, state, iss, ...) for RFC 9207
 }
 
 export interface IIdpConnector extends IExtension {
@@ -56,7 +56,7 @@ export interface IIdpConnector extends IExtension {
     handleCallback(config: Record<string, unknown>, ctx: IIdpCallbackContext): Promise<IIdpIdentity>
 }
 
-// instancia de IdP configurada (persistida en el Secret kwirth-idps). IUser.idp === IIdpInstanceConfig.id
+// a configured IdP instance (persisted in the kwirth-idps Secret). IUser.idp === IIdpInstanceConfig.id
 export interface IIdpInstanceConfig {
     id: string
     connectorId: string

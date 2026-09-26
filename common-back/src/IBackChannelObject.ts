@@ -1,8 +1,8 @@
 import { ISenderAccess, IWebhookAccess, IUserInfo, IInstanceConfig } from '@kwirthmagnify/kwirth-common'
 import { IClusterEndpoint, IRemoteChannelHandlers, IRemoteChannelHandle } from './IFederation'
 
-// Objeto que el CORE inyecta al back de un canal (storage, logging, catálogo de usuarios, config de
-// instalación, senders). Es un contrato del lado BACK, por eso vive en common-back (no en common).
+// The object the CORE injects into a channel's back end (storage, logging, user catalogue, install
+// config, senders). It is a BACK-side contract, which is why it lives in common-back (not in common).
 export interface IBackChannelObject {
     writeStorage?(id: string, secret: boolean, data: any): Promise<void>
     readStorage?(id: string, secret: boolean): Promise<any>
@@ -12,24 +12,26 @@ export interface IBackChannelObject {
     logTrace?(message: unknown): void
     logWarning?(message: unknown): void
     logError?(message: unknown): void
-    // Catálogo SANEADO de usuarios Kwirth (subset IUserInfo, sin secretos). Lo provee el core;
-    // los plugins lo consumen (p.ej. resolución de ownership / picker). Read-only.
+    // SANITISED catalogue of Kwirth users (an IUserInfo subset, no secrets). The core provides it;
+    // plugins consume it (for ownership resolution or a picker, say). Read-only.
     getUsers?(): Promise<IUserInfo[]>
-    // Config de instalación del plugin (JSON genérico), por id de plugin. La persiste el core (ConfigMap,
-    // editable desde el plugin manager) y la consume el back del plugin. Read-only. Genérica como providers.
+    // The plugin's install config (generic JSON), by plugin id. The core persists it (a ConfigMap,
+    // editable from the plugin manager) and the plugin's back end consumes it. Read-only. Generic, as
+    // with providers.
     getPluginConfig?(pluginId: string): Promise<Record<string, unknown>>
     senders?: ISenderAccess
-    // Ingesta de webhooks (contraparte inbound de senders): el consumidor se suscribe a los eventos
-    // dirigidos a su target vía subscribe(); el core le entrega los ya verificados y parseados.
+    // Webhook ingestion (the inbound counterpart of senders): the consumer subscribes through
+    // subscribe() to the events aimed at its target; the core hands over the verified and parsed ones.
     webhooks?: IWebhookAccess
-    // Federación multi-cluster back-a-back: abre un WS CLIENTE hacia un cluster remoto (endpoint), lo
-    // arranca (START con SU accessKey, protocolo plano sin challenge) y entrega los frames por
-    // handlers.onMessage. Gestiona la reconexión con backoff y captura el instance del START (para poder
-    // enviar comandos referenciando un instance válido en ESE cluster). El WS crudo NO se expone: el
-    // plugin usa el handle (send/close). Primitiva del FRAMEWORK, la implementa el core (no el plugin).
+    // Back-to-back multi-cluster federation: opens a CLIENT WS towards a remote cluster (endpoint),
+    // starts it (START with ITS accessKey, plain protocol with no challenge) and delivers the frames
+    // through handlers.onMessage. It handles reconnection with backoff and captures the instance from
+    // the START (so commands can reference an instance valid in THAT cluster). The raw WS is NOT
+    // exposed: the plugin uses the handle (send/close). A FRAMEWORK primitive, implemented by the core
+    // and not by the plugin.
     openRemoteChannel?(endpoint: IClusterEndpoint, config: IInstanceConfig, handlers: IRemoteChannelHandlers): IRemoteChannelHandle
-    // Lee el store de PERFIL de un usuario (ConfigMap kwirth-store-<userId>, clave '<group>-<key>') y
-    // devuelve el valor ya parseado (el store guarda JSON stringificado; esto hace el JSON.parse). Ej.:
-    // readUserStore(userId, 'clusters', 'list') → IClusterEndpoint[]. Clave inexistente → undefined. Read-only.
+    // Reads a user's PROFILE store (ConfigMap kwirth-store-<userId>, key '<group>-<key>') and returns
+    // the value already parsed (the store keeps stringified JSON; this does the JSON.parse). E.g.:
+    // readUserStore(userId, 'clusters', 'list') → IClusterEndpoint[]. Missing key → undefined. Read-only.
     readUserStore?(userId: string, group: string, key: string): Promise<unknown>
 }

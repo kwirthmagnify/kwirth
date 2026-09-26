@@ -3,13 +3,13 @@ import { IExtension, IExtensionLogger } from './IExtension'
 
 export { ISenderMessage, ISenderConfig, ISenderAccess, ISenderStoredConfig, ISenderResult }
 
-/** @deprecated usa TConfigFieldType, comun a todas las extensiones. */
+/** @deprecated use TConfigFieldType, common to every extension. */
 export type SenderFieldType = TConfigFieldType
 
-/** Campo de configuracion de un sender. Es el contrato comun IConfigFieldDef, sin nada propio. */
+/** A sender's configuration field. It is the common contract IConfigFieldDef, with nothing of its own. */
 export type ISenderFieldDef = IConfigFieldDef
 
-/** @deprecated usa IExtensionNodeMeta, comun a todas las extensiones. */
+/** @deprecated use IExtensionNodeMeta, common to every extension. */
 export type ISenderNodeMeta = IExtensionNodeMeta
 
 export interface ISender extends IExtension {
@@ -35,14 +35,15 @@ export interface ISender extends IExtension {
      */
     setLogger?(logger: IExtensionLogger): void
     /*
-        OPCIONAL: entrega un LOTE de una vez. Para un destino de log (Datadog, Elastic, Loki) mandar linea
-        a linea es inviable: sus APIs aceptan arrays y cobran por peticion. Quien lo implemente recibe el
-        lote entero y decide como partirlo; quien no, sigue recibiendo mensajes de uno en uno y no se
-        entera de que esto existe.
+        OPTIONAL: delivers a BATCH in one go. For a log destination (Datadog, Elastic, Loki) sending line
+        by line is unworkable: their APIs take arrays and charge per request. Whoever implements it gets
+        the whole batch and decides how to split it; whoever does not keeps receiving messages one at a
+        time and never learns this exists.
     */
     sendBatch?(configName: string, messages: ISenderMessage[]): Promise<ISenderResult | void>
-    // OPCIONAL (H3b-recon): consulta el estado actual de una entidad externa creada por este sender (p.ej. un
-    // ticket → su status). Permite reconciliar estados perdidos. Undefined si no aplica / no se pudo resolver.
+    // OPTIONAL (H3b-recon): queries the current state of an external entity created by this sender (a
+    // ticket → its status, say). It allows lost states to be reconciled. Undefined when it does not
+    // apply or could not be resolved.
     fetchStatus?(configName: string, externalId: string): Promise<string | undefined>
     evalFilter?(configName: string, message: ISenderMessage, forward: () => Promise<void>): Promise<void>
     startSender(senders: ISenderAccess): Promise<void>
