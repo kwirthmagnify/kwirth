@@ -16,9 +16,9 @@ export interface IHomepageMeta {
     description: string
     website?: string
     installedFrom?: string
-    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
-    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
-    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
+    // the package registry, which is another server, and with precedence by id two marketplaces can
+    // serve the same extension. Absent = it came from no marketplace (dev, a file or a loose url).
     marketplaceId?: string
     marketplaceLabel?: string
     frontStored?: boolean
@@ -150,10 +150,10 @@ export class HomepageManager {
             }
 
             const index = (await this.configMaps.read('kwirth-homepages-index', []) as IHomepageMeta[]) || []
-            // Instalado es lo que diga installedIds, no el indice: uno de dev esta cargado sin figurar ahi.
+            // Installed is what installedIds says, not the index: a dev one is loaded without appearing there.
             assertInstallable('Homepage', meta.id, this.installedIds.includes(meta.id) ? (index.find(t => t.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
 
-            // Una version nueva no puede heredar el front cacheado de la anterior
+            // A new version cannot inherit the previous one's cached front end
             dropCachedExtensionFiles('homepage', meta.id)
 
             const frontJs = fs.readFileSync(frontPath, 'utf-8')
@@ -202,8 +202,8 @@ export class HomepageManager {
         this.installedIds = this.installedIds.filter(i => i !== id)
         await this.configMaps.write('kwirth-homepages-index', index.filter(t => t.id !== id))
         await this.configMaps.write(`kwirth-homepage-${id}`, null)
-        // Se sigue borrando la clave del preview aunque la funcionalidad ya no exista: puede haber
-        // quedado escrita por una instalacion anterior, y desinstalar tiene que dejarlo todo limpio.
+        // The preview's key is still deleted even though the feature no longer exists: it may have been
+        // left written by an earlier installation, and uninstalling has to leave everything clean.
         await this.configMaps.write(`kwirth-homepage-${id}-preview`, null)
         dropCachedExtensionFiles('homepage', id)
         logInfo(ELogComponent.CORE, `Homepage '${id}' uninstalled`)

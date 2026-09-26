@@ -1,13 +1,14 @@
-// Catálogo de scopes RBAC del core: built-in del propio Kwirth + los que declara cada canal registrado
-// vía getScopeCatalog(). Sirve para (a) poblar el editor de seguridad y (b) validar que los scopes de un
-// user/API key son conocidos al guardarlos.
+// The core's catalogue of RBAC scopes: Kwirth's own built-ins + those every registered channel declares
+// through getScopeCatalog(). It serves to (a) populate the security editor and (b) validate that a
+// user's/API key's scopes are known when storing them.
 //
-// FOLLOW-UP: los built-in están hoy DUPLICADOS con el enum del front (ResourceEditor). Unificar en `common`
-// (una sola lista IExtensionScope compartida front+back) y consumir el endpoint /core/scopes desde el front.
+// FOLLOW-UP: the built-ins are today DUPLICATED with the front end's enum (ResourceEditor). Unify them in
+// `common` (a single IExtensionScope list shared front+back) and consume the /core/scopes endpoint from the
+// front end.
 import { IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { TChannelConstructor } from '../channels/IChannel'
 
-// Scopes generales del core (no de plugin). Descripciones alineadas con la doc de AccessKey.
+// The core's general scopes (not a plugin's). The descriptions are aligned with AccessKey's documentation.
 export const CORE_BUILTIN_SCOPES: IExtensionScope[] = [
     { scope: 'cluster',   label: 'cluster',   description: 'Full access — admin level, can do everything' },
     { scope: 'admin',     label: 'admin',     description: 'Administration (users, security, API keys)' },
@@ -21,7 +22,7 @@ export const CORE_BUILTIN_SCOPES: IExtensionScope[] = [
     { scope: 'none',      label: 'none',      description: 'No permission' }
 ]
 
-/** Catálogo completo: built-in del core + los declarados por los canales registrados vía getScopeCatalog(). Dedup. */
+/** The complete catalogue: the core's built-ins + those declared by the registered channels through getScopeCatalog(). Deduplicated. */
 export const buildScopeCatalog = (registeredChannels: Map<string, TChannelConstructor>): IExtensionScope[] => {
     const seen = new Set<string>()
     const out: IExtensionScope[] = []
@@ -29,8 +30,9 @@ export const buildScopeCatalog = (registeredChannels: Map<string, TChannelConstr
     CORE_BUILTIN_SCOPES.forEach(add)
     for (const Ctor of registeredChannels.values()) {
         try {
-            // instancia throwaway solo para leer el catálogo (dato estático); el constructor de un canal
-            // suele ser ligero (el trabajo pesado va en startChannel). Si requiere contexto y falla, se ignora.
+            // a throwaway instance merely to read the catalogue (static data); a channel's constructor is
+            // usually light (the heavy work goes in startChannel). Should it require context and fail, it
+            // is ignored.
             const inst = new (Ctor as unknown as new (a?: unknown, b?: unknown) => { getScopeCatalog?: () => IExtensionScope[] })(undefined, undefined)
             for (const s of inst.getScopeCatalog?.() ?? []) add(s)
         }
@@ -39,11 +41,11 @@ export const buildScopeCatalog = (registeredChannels: Map<string, TChannelConstr
     return out
 }
 
-/** Conjunto de scopes válidos, para validar al guardar users/API keys. */
+/** The set of valid scopes, for validating when storing users/API keys. */
 export const validScopeSet = (registeredChannels: Map<string, TChannelConstructor>): Set<string> =>
     new Set(buildScopeCatalog(registeredChannels).map(s => s.scope))
 
-/** Devuelve los scopes NO reconocidos presentes en un string de resources (`scopes:ns:groups:pods:containers;…`). */
+/** Returns the UNRECOGNISED scopes present in a resources string (`scopes:ns:groups:pods:containers;…`). */
 export const unknownScopesIn = (resources: string, valid: Set<string>): string[] => {
     const bad: string[] = []
     for (const resource of (resources || '').split(';')) {

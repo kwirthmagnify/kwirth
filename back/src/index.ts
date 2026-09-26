@@ -120,9 +120,9 @@ const fs = require('fs')
 // Expose shared packages as Node globals so plugins can use them without bundling
 ;(global as any).__kwirth_back__ = { kwirthCommon: _kwirthCommon, kwirthCommonBack: _kwirthCommonBack, kwirthCommonAi: _kwirthCommonAi, kwirthCommonAiBack: _kwirthCommonAiBack, kwirthCommonSql: _kwirthCommonSql, express }
 
-// common-sql: servicio de almacenamiento relacional. Se fija la conexión al servidor SQL al arranque
-// (env KWIRTH_SQL_*; override por secret/front -> fase posterior). Es lazy: no conecta hasta que un
-// consumidor llame ensureDb(), así que no falla el arranque aunque el SQL no esté disponible todavía.
+// common-sql: the relational storage service. The connection to the SQL server is pinned at startup
+// (the KWIRTH_SQL_* env; an override through secret/front end -> a later phase). It is lazy: it does not
+// connect until a consumer calls ensureDb(), so startup does not fail even when SQL is not available yet.
 const _sqlServer: ISqlServer = {
     id: 'default',
     name: 'default',
@@ -180,10 +180,10 @@ const envAuth = process.env.AUTH || 'kwirth'  // kwirth | kubeconfig | b2c | ent
 const envMasterKey = process.env.MASTERKEY || 'Kwirth4Ever'
 const envForward = (process.env.FORWARD || 'true').toLowerCase() === 'true'
 const envPort = +(process?.env?.PORT || '3883')
-// Tope del cuerpo de una peticion. Configurable porque quien ingiere log sabe cuanto agrupa su
-// recolector, y 8 MB es un punto de partida razonable, no una verdad.
+// Ceiling on a request's body. Configurable because whoever ingests logs knows how much their collector
+// batches, and 8 MB is a reasonable starting point, not a truth.
 const envBodyLimit = process.env.BODYLIMIT || '8mb'
-// Cuanto se mantiene abierta una conexion ociosa, en milisegundos (ver createHttpServers)
+// How long an idle connection is kept open, in milliseconds (see createHttpServers)
 const envKeepAliveMs = +(process.env.KEEPALIVE || '65000')
 
 /*
@@ -219,7 +219,7 @@ const registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
 registeredProviders.set('metrics', MetricsProvider)
 
-// registry de conectores de IdP (bundled se registran en codigo; dev via loadDevIdps; instalables en EPIC G)
+// registry of IdP connectors (bundled ones are registered in code; dev ones through loadDevIdps; installable ones in EPIC G)
 const registeredIdps = new Map<string, TIdpConnectorConstructor>()
 let idpManager: IdpManager | undefined
 
@@ -451,12 +451,13 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
                 break
         }
 
-        // Las credenciales de descarga se registran AQUI, en cuanto hay almacenamiento, y no al montar las
-        // rutas. El arranque es prepareRunningInstance() -> startRunningInstance() -> setUpRoutes(), y es
-        // prepareRunningInstance quien rehidrata las extensiones instaladas: si esto se configura en
-        // setUpRoutes, packageHeaders() sale por su `if (!deps) return {}` y esas descargas van ANONIMAS.
-        // Contra un registro privado eso es un 401 al arrancar, mientras instalar lo mismo desde la UI —ya
-        // con las rutas montadas— funciona. Paso de verdad con las docs de service-flow en el Nexus.
+        // The download credentials are registered HERE, as soon as there is storage, and not when the
+        // routes are mounted. Startup is prepareRunningInstance() -> startRunningInstance() ->
+        // setUpRoutes(), and it is prepareRunningInstance that rehydrates the installed extensions: if
+        // this is configured in setUpRoutes, packageHeaders() leaves through its `if (!deps) return {}`
+        // and those downloads go ANONYMOUS. Against a private registry that is a 401 at startup, while
+        // installing the same thing from the UI — with the routes already mounted — works. It really
+        // happened with service-flow's docs on the Nexus.
         configurePackageRegistries(configMaps, secrets)
 
         let runningInstance:IRunningInstance = {
@@ -1271,16 +1272,16 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         let userApi:UserApi = new UserApi(ri.secrets, apiKeyApi, () => validScopeSet(registeredChannels))
         riRouter.use(`/user`, userApi.router)
 
-        // Configuracion persistida del propio Kwirth. Aplica el intervalo de metricas al provider vivo
-        // y lo refleja en kwirthData, que es lo que /config/info sirve al front.
+        // Kwirth's own persisted configuration. It applies the metrics interval to the live provider and
+        // reflects it in kwirthData, which is what /config/info serves to the front end.
         const applyKwirthSettings = (settings: IKwirthSettings) => {
             const interval = SettingsApi.resolveMetricsInterval(settings)
             ri.kwirthData.metricsInterval = interval
             const metricsProvider = ri.clusterInfo.providers.find(p => p.id === 'metrics') as MetricsProvider|undefined
             if (!metricsProvider) return
             metricsProvider.metricsInterval = interval
-            // si el provider ya estaba temporizando, hay que reiniciarlo para que tome el nuevo intervalo;
-            // si aun no ha arrancado, basta con dejar el campo puesto (startProvider lo lee de ahi)
+            // if the provider was already ticking, it has to be restarted so it takes the new interval;
+            // if it has not started yet, setting the field is enough (startProvider reads it from there)
             if (metricsProvider.metricsIntervalRef !== undefined) {
                 metricsProvider.stopMetricsInterval()
                 metricsProvider.startMetricsInterval(interval)
@@ -1294,15 +1295,16 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         }
         riRouter.use(`/core/settings`, settingsResult.router)
 
-        // Resolucion de marketplaces: el back descarga los manifests (publico + los configurados),
-        // filtra por tipo y aplica la precedencia, para que la regla exista en un solo sitio.
+        // Marketplace resolution: the back end downloads the manifests (the public one + the configured
+        // ones), filters by type and applies the precedence, so the rule exists in a single place.
         let marketplaceManager = new MarketplaceManager(ri.configMaps, ri.secrets)
-        // configurePackageRegistries() ya se llamo en createRunningInstance(): tiene que estar puesto antes
-        // de que prepareRunningInstance() rehidrate nada, y esto corre despues.
+        // configurePackageRegistries() has already been called in createRunningInstance(): it has to be in
+        // place before prepareRunningInstance() rehydrates anything, and this runs afterwards.
         let marketplaceApi = new MarketplaceApi(marketplaceManager, apiKeyApi)
         riRouter.use(`/core/marketplace`, marketplaceApi.router)
-        // Catálogo global de scopes RBAC (built-in del core + los que declaran los canales): lo consume el
-        // editor de seguridad. Admin-gated. Vive en /core por ser vocabulario transversal (no de user/key).
+        // The global catalogue of RBAC scopes (the core's built-ins + those the channels declare): the
+        // security editor consumes it. Admin-gated. It lives under /core because it is cross-cutting
+        // vocabulary (it belongs to neither user nor key).
         riRouter.get(`/core/scopes`, (req: Request, res: Response) => {
             if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
             res.json(buildScopeCatalog(registeredChannels))
@@ -1392,16 +1394,17 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             logWarning(ELogComponent.CORE, `Provider '${m.consumerId}' consumes '${m.providerId}', which is not installed`)
                         }
                         activeRI.channels.set(id, channelInstance)
-                        // Instalacion en caliente: si el plugin recien instalado ademas produce, queda
-                        // registrado como pluvider antes de arrancar el canal.
+                        // Hot installation: if the freshly installed plugin also produces, it is
+                        // registered as a pluvider before the channel is started.
                         if (isPluvider(channelInstance)) {
                             const pluvId = pluviderId(id)
                             activeRI.clusterInfo.pluviders.set(pluvId, channelInstance)
                             logInfo(ELogComponent.CORE, `Channel '${id}' is also a pluvider, registered as '${pluvId}': ${channelInstance.getPluviderData().description}`)
-                            // El plugin recien instalado puede llamarse igual que un provider que ya
-                            // estaba. No se rechaza —son direccionables por separado— pero se avisa.
+                            // The freshly installed plugin may have the same name as a provider that was
+                            // already there. It is not rejected — they are addressable separately — but a
+                            // warning is issued.
                             warnNameCollisions([pluvId], [...registeredProviders.keys()], `installing plugin '${id}'`)
-                            // Mismo orden que en el arranque: la produccion se levanta antes que el canal.
+                            // The same order as at startup: production is brought up before the channel.
                             try {
                                 await channelInstance.startProvider()
                                 logInfo(ELogComponent.CORE, `Pluvider '${pluvId}' started`)
@@ -1467,9 +1470,9 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                 const activeRI = runningInstances.find(r => r.active)
                 if (activeRI) {
                     activeRI.channels.delete(id)
-                    // Simetrico al alta: si el plugin producia, se para su produccion antes de sacarlo
-                    // del registro. Los suscriptores dejan de recibir, que es lo que toca — su plugin
-                    // ya no esta.
+                    // Symmetric to registration: if the plugin was producing, its production is stopped
+                    // before taking it out of the registry. Subscribers stop receiving, which is what
+                    // should happen — their plugin is gone.
                     const pluvId = pluviderId(id)
                     const pluv = activeRI.clusterInfo.pluviders.get(pluvId)
                     if (pluv) {
@@ -1485,8 +1488,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             riRouter.use(`/core/plugins`, pluginApi.router)
         }
         if (providerManager) {
-            // El getter se evalua en cada peticion (no se congela el array): los providers se arrancan
-            // y se paran en caliente al instalar o desinstalar plugins.
+            // The getter is evaluated on every request (the array is not frozen): providers are started
+            // and stopped hot when plugins are installed or uninstalled.
             let providerApi = new ProviderApi(providerManager, registeredProviders, apiKeyApi, {}, () => ri.clusterInfo.providers, () => ri.clusterInfo.pluviders,
                 async (pluginId: string) => (await pluginManager?.listInstalled())?.find(p => p.id === pluginId))
             riRouter.use(`/core/providers`, providerApi.router)
@@ -1539,9 +1542,9 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                 {
                     readSettings: () => SettingsApi.read(ri.configMaps),
                     writeSettings: async (data: unknown) => { await ri.configMaps.write('kwirth.settings', data) },
-                    // El almacen comun de IA: los modelos en configmap y los proveedores en secret, tal
-                    // y como los guarda AiConfigApi. Los proveedores llevan claves, asi que solo salen
-                    // si se han pedido credenciales.
+                    // The common AI store: the models in a configmap and the providers in a secret,
+                    // exactly as AiConfigApi stores them. The providers carry keys, so they only come out
+                    // when credentials have been asked for.
                     readSharedAi: async (includeCredentials: boolean) => {
                         const llmsRaw = await ri.configMaps.read('kwirth-store-common-' + STORAGE_KEY_LLMS)
                         const llms = llmsRaw ? JSON.parse(llmsRaw as string) : []
@@ -1620,10 +1623,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
 
 const processHttpChannelRequest = async (channel: IChannel, endpointName:string, aka:ApiKeyApi, req:Request, res:Response, requiresAccessKey:boolean) : Promise<void> => {
     try {
-        // Un endpoint declarado ANONIMO no puede exigir cabecera: lo cargan cosas que el navegador pide
-        // por URL (un <iframe src>, una imagen, una descarga directa), y esas no pueden mandar
-        // Authorization. Antes se pedia la clave siempre, asi que 'requiresAccessKey: false' no servia
-        // para nada: el router se saltaba su propia validacion y aqui se rechazaba igual con un 403.
+        // An endpoint declared ANONYMOUS cannot demand a header: it is loaded by things the browser asks
+        // for by URL (an <iframe src>, an image, a direct download), and those cannot send an
+        // Authorization. The key used to be demanded always, so 'requiresAccessKey: false' was good for
+        // nothing: the router skipped its own validation and here it was rejected with a 403 all the same.
         if (!requiresAccessKey) {
             channel.endpointRequest(endpointName, req, res, undefined)
             return
@@ -1634,8 +1637,8 @@ const processHttpChannelRequest = async (channel: IChannel, endpointName:string,
             channel.endpointRequest(endpointName, req, res, accessKey)
         }
         else {
-            // getKey YA ha respondido (403). Aqui solo se registra: volver a responder lanzaba
-            // ERR_HTTP_HEADERS_SENT, que acababa en el catch intentando un tercer envio.
+            // getKey has ALREADY answered (403). Here it is only logged: answering again threw
+            // ERR_HTTP_HEADERS_SENT, which ended up in the catch attempting a third send.
             logError(ELogComponent.CORE, 'Could not get accessKey processing an HTTP channel request')
         }
     }
@@ -1769,9 +1772,9 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     const newInstance = createChannelInstance(ChannelClass, ri.clusterInfo, ri.backChannelObject, id)
                     if (newInstance) {
                         ri.channels.set(id, newInstance)
-                        // La instancia se acaba de sustituir, asi que el registro de pluviders apunta a la
-                        // vieja: hay que rehacerlo ANTES de startChannel, o el core seguiria sirviendo lo
-                        // que decia el codigo anterior. El porque, en providers/Pluvider.ts.
+                        // The instance has just been replaced, so the pluvider registry points at the old
+                        // one: it has to be redone BEFORE startChannel, or the core would go on serving
+                        // what the previous code said. The why is in providers/Pluvider.ts.
                         void rebindPluvider(ri.clusterInfo.pluviders, pluviderId(id), newInstance)
                         // Re-run startChannel so the fresh instance re-subscribes to providers (events/metrics),
                         // re-arms its timers and reloads its config — otherwise a hot-reload leaves the new
@@ -1818,10 +1821,10 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     }
                     else {
                         runningInstance.channels.set(channelId, channelInstance!)
-                        // Un canal que ademas produce (pluvider) queda registrado aqui, para que
-                        // cualquier otro canal pueda suscribirse a el por su id compuesto. Un canal
-                        // anunciado como REMOTE no pasa por aqui: no se instancia en este Kwirth, asi
-                        // que tampoco hay pluvider al que suscribirse.
+                        // A channel that also produces (a pluvider) is registered here, so any other
+                        // channel can subscribe to it by its composed id. A channel announced as REMOTE
+                        // does not come through here: it is not instantiated in this Kwirth, so there is
+                        // no pluvider to subscribe to either.
                         if (isPluvider(channelInstance)) {
                             const pluvId = pluviderId(channelId)
                             localClusterInfo.pluviders.set(pluvId, channelInstance)
@@ -1908,9 +1911,9 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 
         // Auto-instantiate providers with providesRouter=true so their config endpoints and listeners
         // are available even before any plugin requires them.
-        // Tambien los que exponen 'configRouter': un provider dueño de su configuracion debe poder
-        // configurarse ANTES de que exista el primer suscriptor (que es justo cuando el usuario crea
-        // sus conexiones desde el dialogo). Sin esto no habria instancia viva a la que hablarle.
+        // Those exposing a 'configRouter' too: a provider that owns its configuration must be
+        // configurable BEFORE the first subscriber exists (which is exactly when the user creates their
+        // connections from the dialog). Without this there would be no live instance to talk to.
         for (const [provId, providerConstructor] of registeredProviders) {
             if (localClusterInfo.providers.find(p => p.id === provId)) continue
             try {
@@ -1945,8 +1948,8 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             logWarning(ELogComponent.CORE, `Provider '${m.consumerId}' consumes '${m.providerId}', which is not installed`)
         }
 
-        // Fase de PLUVIDERS: entre la de providers (arriba) y la de canales, que ocurre despues en
-        // startRunningInstance(). El detalle y el porque del orden, en providers/Pluvider.ts.
+        // The PLUVIDERS phase: between the providers' (above) and the channels', which happens later in
+        // startRunningInstance(). The detail and the reason for the order are in providers/Pluvider.ts.
         await startPluviders(localClusterInfo.pluviders)
 
         /*
@@ -1962,9 +1965,9 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             (provId, err) => providerLogger(provId).error(`Failed while wiring up to the providers it consumes: ${err}`))
         if (wired > 0) logInfo(ELogComponent.CORE, `Wired ${wired} provider(s) that consume other providers`)
 
-        // Tercer momento del aviso de coincidencia de nombres: cada arranque. Los otros dos son al
-        // instalar el plugin y al instalar el provider, porque cualquiera de los dos puede llegar el
-        // segundo y el usuario tiene que enterarse igual.
+        // The third moment of the name-clash warning: every startup. The other two are on installing the
+        // plugin and on installing the provider, because either of the two can arrive second and the user
+        // has to find out just the same.
         warnNameCollisions([...localClusterInfo.pluviders.keys()], [...registeredProviders.keys()], 'at startup')
     }
     catch (err) {
@@ -2024,9 +2027,9 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             if (bundledExtensionsPath) await aiToolsetManager.installBundled(bundledExtensionsPath)
             await aiToolsetManager.loadAll()
             aiToolsetManager.loadDevAiToolsets()
-            // DESPUES de cargar: el registro es memoria, asi que las concesiones hay que volver a
-            // aplicarlas en cada arranque o todo quedaria concedido a nadie — seguro, pero dejaria de
-            // funcionar lo que el admin configuro.
+            // AFTER loading: the registry is memory, so the grants have to be applied again on every
+            // startup or everything would end up granted to nobody — safe, but what the admin
+            // configured would stop working.
             await aiToolsetManager.applyGrants()
         }
 
@@ -2088,8 +2091,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                     return undefined
                 }
             },
-            // Catálogo SANEADO de usuarios Kwirth para los plugins (subset IUserInfo; nunca password/
-            // accessKey/resources). Decodifica el secret kwirth-users. Read-only, tolerante a fallo.
+            // SANITISED catalogue of Kwirth users for the plugins (an IUserInfo subset; never
+            // password/accessKey/resources). It decodes the kwirth-users secret. Read-only, failure-tolerant.
             getUsers: async (): Promise<IUserInfo[]> => {
                 try {
                     const raw = await IdentityService.readUsers(runningInstance.secrets)
@@ -2106,20 +2109,21 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                 }
                 catch { return [] }
             },
-            // Config de instalación del plugin (JSON genérico) desde su ConfigMap (editable en el
-            // plugin manager). El plugin pasa su propio id. Read-only, tolerante a fallo.
+            // The plugin's install config (generic JSON) from its ConfigMap (editable in the plugin
+            // manager). The plugin passes its own id. Read-only, failure-tolerant.
             getPluginConfig: async (pluginId: string): Promise<Record<string, unknown>> => {
                 try { return (await pluginManager?.getConfig(pluginId)) ?? {} }
                 catch { return {} }
             },
             senders: senderManager,
             webhooks: webhookManager,
-            // Federación back-a-back (framework): abre un WS cliente hacia un cluster remoto y lo gestiona
-            // (START con SU accessKey, reconexión con backoff, captura del instance). El WS crudo no se
-            // expone; el plugin usa el handle. La implementación vive en tools/RemoteChannel.
+            // Back-to-back federation (framework): it opens a client WS towards a remote cluster and
+            // manages it (START with ITS accessKey, reconnection with backoff, capture of the instance).
+            // The raw WS is not exposed; the plugin uses the handle. The implementation lives in
+            // tools/RemoteChannel.
             openRemoteChannel: (endpoint, config, handlers) => openRemoteChannel(endpoint, config, handlers, (m) => logError(ELogComponent.CHANNEL, m), (m) => logInfo(ELogComponent.CHANNEL, m)),
-            // Lee el store de PERFIL de un usuario (ConfigMap kwirth-store-<userId>, clave '<group>-<key>')
-            // y devuelve el valor ya parseado (el store guarda cada valor JSON-stringificado). Read-only,
+            // Reads a user's PROFILE store (ConfigMap kwirth-store-<userId>, key '<group>-<key>') and
+            // returns the value already parsed (the store keeps each value JSON-stringified). Read-only,
             // tolerante a fallo. Ej.: readUserStore(userId, 'clusters', 'list') → IClusterEndpoint[].
             readUserStore: async (userId: string, group: string, key: string): Promise<unknown> => {
                 try {
@@ -2162,7 +2166,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             y por eso readPreviousContainerLog() nunca lanza.
         */
         if (localKwirthData.inCluster && process.env.HOSTNAME) {
-            // Cuantas lineas, de los settings de Kwirth (o de PREVIOUSLOGLINES, o 1000)
+            // How many lines, from Kwirth's settings (or from PREVIOUSLOGLINES, or 1000)
             const lineas = SettingsApi.resolvePreviousLogLines(await SettingsApi.read(runningInstance.configMaps))
             await readPreviousContainerLog(runningInstance.clusterInfo.coreApi, localKwirthData.namespace, process.env.HOSTNAME, lineas)
         }
@@ -2521,10 +2525,11 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
         httpServer.keepAliveTimeout = envKeepAliveMs
         httpServer.headersTimeout = envKeepAliveMs + 5000
         logInfo(ELogComponent.CORE, 'Creating WS server...')
-        // perMessageDeflate: comprime los mensajes grandes del WS (p.ej. snapshots de findings de Defender
-        // que pueden pesar MB). El navegador negocia la extensión automáticamente (front sin cambios).
-        // `threshold` evita comprimir los mensajes pequeños de control; los ajustes de contexto/concurrencia
-        // son los recomendados por `ws` para no fragmentar memoria con varias conexiones.
+        // perMessageDeflate: it compresses the WS's large messages (snapshots of Defender findings that
+        // can weigh megabytes, for instance). The browser negotiates the extension automatically (no
+        // change in the front end). `threshold` avoids compressing the small control messages; the
+        // context and concurrency settings are the ones `ws` recommends so memory is not fragmented with
+        // several connections.
         wsServer = new WebSocketServer({
             server: httpServer,
             skipUTF8Validation: true,
@@ -2679,8 +2684,8 @@ const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthD
         }
 
         if (envExitLog && runningEnv.isK8s && kwirthData.inCluster) {
-            // Mismo motivo que arriba: en el log seguro es DONDE se mira el post-mortem, y guardar el
-            // Error en crudo dejaba un '{}' dentro del ConfigMap.
+            // The same reason as above: the safe log is WHERE the post-mortem is looked at, and storing
+            // the Error raw left a '{}' inside the ConfigMap.
             let entry = {
                 timestamp: new Date().toISOString(),
                 reason: reason ? describeFailure(reason) : undefined,
@@ -2919,9 +2924,9 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
             break
     }
 
-    // Receptor de webhooks (tipo de extensión 'webhook'): cuerpo CRUDO (para verificación de firma del
-    // proveedor) montado ANTES del bodyParser.json global, para que el body no llegue ya parseado.
-    // Ruta: {envRootPath}/webhook/<provider>/<token>. Sin accessKey (auténtica el propio webhook.verify).
+    // Webhook receiver (the 'webhook' extension type): the RAW body (for verifying the provider's
+    // signature) mounted BEFORE the global bodyParser.json, so the body does not arrive already parsed.
+    // Route: {envRootPath}/webhook/<provider>/<token>. No accessKey (webhook.verify authenticates it itself).
     const webhookRouter = express.Router()
     webhookRouter.all('/:provider/:token', (req: Request, res: Response) => {
         handleInbound(webhookManager, req.params.provider, req.params.token, req.body as Buffer, req.headers)
@@ -3020,8 +3025,8 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
             break
         case EExecutionEnvironment.DOCKER:
         case EExecutionEnvironment.ECS:
-            // ECS sigue el mismo camino que un contenedor suelto: lo que cambia entre ambos son las
-            // capacidades, y esas ya vienen resueltas antes de llegar aqui.
+            // ECS follows the same path as a standalone container: what differs between the two are the
+            // capabilities, and those arrive already resolved before reaching here.
             await launchDocker(envContext, kwirthData, app)
             break
         case EExecutionEnvironment.KUBERNETES:

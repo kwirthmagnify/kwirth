@@ -13,49 +13,49 @@ export interface IProviderApiCallbacks {
 }
 
 /**
- * Lo que este endpoint sabe de un provider ademas de su metadato de instalacion. Es informacion de
- * RUNTIME: si esta vivo y como suscribirse a el. Se sirve desde aqui a proposito, para que exista
- * un unico sitio que consultar (y un unico sitio que tocar cuando el contrato se estandarice).
+ * What this endpoint knows about a provider beyond its installation metadata. It is RUNTIME
+ * information: whether it is alive and how to subscribe to it. It is served from here on purpose, so
+ * that there is a single place to consult (and a single place to touch when the contract is standardised).
  */
 export interface IProviderRuntimeInfo {
-    /** true si el provider esta instanciado y arrancado en esta running instance */
+    /** true when the provider is instantiated and started in this running instance */
     running?: boolean
     /**
-     * true si el provider sabe comprobar su propia configuracion: expone '/test' en su configRouter.
-     * Con esto el gestor le pinta un boton de prueba junto al formulario, para que el usuario sepa si
-     * las credenciales que acaba de escribir valen, en vez de descubrirlo cuando la extension falla en
-     * silencio. Antes, cada extension que lo queria se lo montaba por su cuenta.
+     * true when the provider knows how to check its own configuration: it exposes '/test' in its
+     * configRouter. With this the manager draws it a test button beside the form, so the user learns
+     * whether the credentials just typed are good instead of finding out when the extension fails
+     * silently. Before, every extension that wanted it built it on its own.
      */
     hasTest?: boolean
-    /** true para los providers que el core registra en codigo, no instalados como extension */
+    /** true for the providers the core registers in code, not installed as an extension */
     core?: boolean
-    /** lo que el provider publica sobre como suscribirse a el; ausente si no lo implementa */
+    /** what the provider publishes about how to subscribe to it; absent when it does not implement it */
     subscriptionHelp?: IProviderSubscriptionHelp
     /**
-     * nombres de las configuraciones que el provider tiene definidas; ausente si no publica
-     * getConfigNames(). Solo nombres, nunca valores: alimenta el contador de la tarjeta igual que
-     * 'configNames' hace en los senders.
+     * names of the configurations the provider has defined; absent when it does not publish
+     * getConfigNames(). Names only, never values: it feeds the card's counter just as 'configNames'
+     * does in the senders.
      */
     configNames?: string[]
     /**
-     * true si no es un provider sino un PLUVIDER: un plugin que ademas produce y expone su
-     * informacion in-process.
+     * true when it is not a provider but a PLUVIDER: a plugin that also produces and exposes its
+     * information in-process.
      *
-     * Quien CONSUME providers no necesita mirar este campo: un pluvider se lista, se suscribe y
-     * entrega eventos igual que un provider, y esa transparencia es justo la gracia. El campo existe
-     * para quien GESTIONA extensiones, que si tiene que distinguirlos — un pluvider no se instala ni
-     * se desinstala por separado: va y viene con su plugin.
+     * Whoever CONSUMES providers need not look at this field: a pluvider is listed, subscribed to and
+     * delivers events just like a provider, and that transparency is precisely the point. The field
+     * exists for whoever MANAGES extensions, who does have to tell them apart — a pluvider is not
+     * installed or uninstalled separately: it comes and goes with its plugin.
      */
     pluvider?: boolean
-    /** id del canal que aloja el pluvider (el 'agora' de 'plugin:agora'). Solo en pluviders. */
+    /** id of the channel hosting the pluvider (the 'agora' in 'plugin:agora'). Pluviders only. */
     hostedBy?: string
 }
 
 export type TProviderApiEntry = IProviderMeta & IProviderRuntimeInfo
 
 /**
- * Lo que un pluvider hereda del plugin que lo aloja. No se nombra ni se versiona aparte: va dentro de
- * su plugin y se actualiza cuando se actualiza el.
+ * What a pluvider inherits from the plugin hosting it. It is not named or versioned separately: it
+ * goes inside its plugin and is updated when the plugin is.
  */
 export interface IPluviderHostInfo {
     name?: string
@@ -86,8 +86,8 @@ export class ProviderApi {
     }
 
     /**
-     * getSubscriptionHelp() es OPCIONAL en IProvider: no implementarlo no es un error, y un provider
-     * mal escrito que reviente al pedirsela no puede tumbar el listado de todos los demas.
+     * getSubscriptionHelp() is OPTIONAL in IProvider: not implementing it is not an error, and a badly
+     * written provider that blows up when asked for it must not take down everybody else's listing.
      */
     private subscriptionHelpOf(provider: { getSubscriptionHelp?(): IProviderSubscriptionHelp }, id: string): IProviderSubscriptionHelp | undefined {
         if (typeof provider.getSubscriptionHelp !== 'function') return undefined
@@ -102,9 +102,9 @@ export class ProviderApi {
     }
 
     /**
-     * Un pluvider no tiene metadato de instalacion —no se instala: viene con su plugin—, asi que lo
-     * unico que puede describirlo es su getPluviderData(). Se lee igual de a la defensiva que la
-     * ayuda de suscripcion: un plugin mal escrito no puede tumbar el listado de nadie.
+     * A pluvider has no installation metadata — it is not installed: it comes with its plugin — so the
+     * only thing that can describe it is its getPluviderData(). It is read just as defensively as the
+     * subscription help: a badly written plugin must not take down anybody's listing.
      */
     private pluviderDescriptionOf(pluvider: TPluviderChannel, id: string): string {
         try {
@@ -116,8 +116,8 @@ export class ProviderApi {
     }
 
     /**
-     * getConfigNames() es OPCIONAL igual que getSubscriptionHelp: no implementarlo no es un error, y un
-     * provider que reviente al pedirselo no puede tumbar el listado de todos los demas.
+     * getConfigNames() is OPTIONAL just like getSubscriptionHelp: not implementing it is not an error,
+     * and a provider that blows up when asked for it must not take down everybody else's listing.
      */
     private configNamesOf(provider: IProvider): string[] | undefined {
         if (typeof provider.getConfigNames !== 'function') return undefined
@@ -131,12 +131,12 @@ export class ProviderApi {
     }
 
     /**
-     * ¿Sabe este provider comprobar su configuracion? Se mira si su configRouter tiene la ruta '/test',
-     * en vez de pedirle que lo declare: el endpoint es la unica fuente que no puede mentir, y asi un
-     * provider que lo añada mañana no tiene que tocar tambien su package.json ni su build.
+     * Does this provider know how to check its configuration? Its configRouter is inspected for the
+     * '/test' route rather than being asked to declare it: the endpoint is the only source that cannot
+     * lie, and this way a provider that adds it tomorrow need not touch its package.json and its build too.
      *
-     * Se lee `stack`, que es interno de express pero estable, y a la defensiva: un provider sin
-     * configRouter, o una version de express que lo cambie, deja el boton oculto y nada mas.
+     * `stack` is read, which is internal to express but stable, and defensively: a provider with no
+     * configRouter, or a version of express that changes it, leaves the button hidden and nothing more.
      */
     private configTestOf(provider: IProvider): boolean {
         const stack = (provider.configRouter as unknown as { stack?: Array<{ route?: { path?: string } }> } | undefined)?.stack
@@ -145,9 +145,9 @@ export class ProviderApi {
     }
 
     /**
-     * getConfigSchema() es la forma ESTANDAR de que un provider declare su configuracion, la misma
-     * que ISender e IWebhook. Es OPCIONAL, y un provider que reviente al pedirsela no puede tumbar el
-     * listado de todos los demas.
+     * getConfigSchema() is the STANDARD way for a provider to declare its configuration, the same one
+     * as ISender and IWebhook. It is OPTIONAL, and a provider that blows up when asked for it must not
+     * take down everybody else's listing.
      */
     private configSchemaOf(provider: IProvider): IProviderFieldDef[] | undefined {
         if (typeof provider.getConfigSchema !== 'function') return undefined
@@ -166,11 +166,11 @@ export class ProviderApi {
                 const entries = new Map<string, TProviderApiEntry>()
                 for (const meta of await this.providerManager.listInstalled()) entries.set(meta.id, { ...meta })
 
-                // Los providers de core ('events', 'metrics') se registran en codigo y NO se instalan
-                // como extension, asi que listInstalled() no los conoce. Se añaden desde el registro
-                // para que este endpoint sea la vista completa.
-                // TODO: cuando events y metrics se externalicen como providers de verdad, este bloque
-                // sobra: apareceran en listInstalled() como cualquier otro.
+                // The core providers ('events', 'metrics') are registered in code and are NOT installed
+                // as an extension, so listInstalled() does not know them. They are added from the
+                // registry so that this endpoint is the complete view.
+                // TODO: once events and metrics are externalised as real providers this block is
+                // surplus: they will show up in listInstalled() like any other.
                 for (const id of this.registeredProviders.keys()) {
                     if (!entries.has(id)) entries.set(id, { id, name: id, version: 'core', description: '', core: true })
                 }
@@ -180,25 +180,25 @@ export class ProviderApi {
                     entry.running = true
                     entry.subscriptionHelp = this.subscriptionHelpOf(provider, provider.id)
                     entry.configNames = this.configNamesOf(provider)
-                    // Un provider que declara su schema por metodo tambien tiene configuracion que
-                    // ofrecer, aunque no exportara la constante 'schema' que se lee al instalarlo.
+                    // A provider declaring its schema through a method also has configuration to
+                    // offer, even though it did not export the 'schema' constant read when installing it.
                     if (this.configSchemaOf(provider)) entry.hasSchema = true
                     if (this.configTestOf(provider)) entry.hasTest = true
                     entries.set(provider.id, entry)
                 }
 
                 /*
-                    Los PLUVIDERS se sirven en esta misma lista, y a proposito: quien consume
-                    providers —provider-debug, o cualquier plugin que quiera suscribirse— no tiene por
-                    que saber que existen dos clases de productor. Pide '/core/providers', elige uno y
-                    se suscribe; el prefijo del id ya lo resuelve el core por dentro.
+                    The PLUVIDERS are served in this very list, and on purpose: whoever consumes
+                    providers — provider-debug, or any plugin wanting to subscribe — has no reason to
+                    know that two kinds of producer exist. It asks for '/core/providers', picks one and
+                    subscribes; the id's prefix is already resolved by the core internally.
 
-                    Van marcados con 'pluvider' para el unico que si necesita distinguirlos: el gestor
-                    de extensiones, porque un pluvider no se instala ni se desinstala por separado.
+                    They are marked with 'pluvider' for the only one that does need to tell them apart:
+                    the extension manager, because a pluvider is not installed or uninstalled separately.
                 */
                 for (const [pluvId, pluv] of this.getPluviders()) {
-                    // El nombre y la version son los de SU PLUGIN: un pluvider no se nombra ni se
-                    // versiona aparte, va dentro del plugin que lo publica.
+                    // The name and the version are THOSE OF ITS PLUGIN: a pluvider is not named or
+                    // versioned separately, it goes inside the plugin publishing it.
                     const hostedBy = pluvId.substring(pluvId.indexOf(':') + 1)
                     const host = await this.getPluginInfo(hostedBy)
                     entries.set(pluvId, {
@@ -210,11 +210,11 @@ export class ProviderApi {
                         pluvider: true,
                         hostedBy,
                         /*
-                            Procedencia: no viene de ningun marketplace, viene de un plugin. Se marca con
-                            la misma convencion que ya usa 'pack:<id>', para que el front la reconozca sin
-                            inventar un campo nuevo. Sin esto caeria en el fallback y se anunciaria como
-                            servida por el marketplace PUBLICO, que es falso — y con un plugin de pago,
-                            ademas, lo anunciaria como OSS.
+                            Provenance: it comes from no marketplace, it comes from a plugin. It is
+                            marked with the same convention 'pack:<id>' already uses, so the front end
+                            recognises it without inventing a new field. Without this it would fall into
+                            the fallback and be announced as served by the PUBLIC marketplace, which is
+                            false — and with a paid plugin it would, on top of that, announce it as OSS.
                         */
                         installedFrom: pluvId,
                         running: true,
@@ -231,15 +231,15 @@ export class ProviderApi {
         this.router.post('/install', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                // 'upgrade' es el permiso EXPLICITO para pisar una instalacion existente. Sin el, el
-                // manager rechaza una id ya instalada, que es el comportamiento de siempre.
+                // 'upgrade' is the EXPLICIT permission to overwrite an existing installation. Without
+                // it the manager rejects an already installed id, which is the behaviour of always.
                 const { url, marketplaceId, marketplaceLabel, upgrade } = req.body
                 if (!url) return void res.status(400).json({ error: 'url required' })
                 const meta = await this.providerManager.install(url, this.registeredProviders, undefined, marketplaceId, marketplaceLabel, upgrade === true)
                 this.callbacks.onProviderInstalled?.(meta.id)
                 logInfo(ELogComponent.CORE, `Provider installed via API: ${meta.id} v${meta.version}`)
-                // La otra direccion del aviso: el provider recien instalado puede llamarse igual que un
-                // plugin que ya publica como pluvider. Se avisa, no se rechaza.
+                // The other direction of the warning: the freshly installed provider may be named the
+                // same as a plugin already publishing as a pluvider. It is warned about, not rejected.
                 warnNameCollisions([...this.getPluviders().keys()], [meta.id], `installing provider '${meta.id}'`)
                 res.json(meta)
             } catch (err) {
@@ -255,7 +255,7 @@ export class ProviderApi {
                 const meta = await this.providerManager.installFromBuffer(req.body, this.registeredProviders)
                 this.callbacks.onProviderInstalled?.(meta.id)
                 logInfo(ELogComponent.CORE, `Provider installed via upload: ${meta.id} v${meta.version}`)
-                // Subir el tgz a mano instala igual que hacerlo desde el marketplace: mismo aviso.
+                // Uploading the tgz by hand installs just as doing it from the marketplace does: the same warning.
                 warnNameCollisions([...this.getPluviders().keys()], [meta.id], `installing provider '${meta.id}'`)
                 res.json(meta)
             } catch (err) {
@@ -283,9 +283,9 @@ export class ProviderApi {
         })
 
         this.router.get('/:id/schema', async (req: Request, res: Response) => {
-            // Se le pregunta primero al provider VIVO, que es la via estandar. Si no hay instancia
-            // -- un provider sin router al que nadie se ha suscrito no se instancia nunca -- se cae al
-            // array 'schema' que el core extrajo de su back.js al instalarlo.
+            // The LIVE provider is asked first, which is the standard route. When there is no instance
+            // -- a provider with no router that nobody has subscribed to is never instantiated -- it
+            // falls back to the 'schema' array the core extracted from its back.js on installing it.
             const running = this.getRunningProviders().find(p => p.id === req.params.id)
             const schema = (running ? this.configSchemaOf(running) : undefined) ?? await this.providerManager.getSchemaAsync(req.params.id)
             if (!schema) return void res.status(404).json({ error: 'No schema' })

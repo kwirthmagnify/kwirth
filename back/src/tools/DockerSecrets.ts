@@ -3,7 +3,7 @@ import { ISecrets } from './ISecrets'
 import fs from 'fs'
 
 export class DockerSecrets implements ISecrets {
-    // Escribe en disco: no hay techo de objeto como el de un ConfigMap/Secret de Kubernetes.
+    // It writes to disk: there is no per-object ceiling like a Kubernetes ConfigMap/Secret's.
     public storeLimit = (): number | undefined => undefined
 
     path:string

@@ -26,7 +26,7 @@ import { combine, pluginInstallConfig, providerInstallConfig, senderConfigs, web
         tiene algo que exportar desde el primer dia, sin que su autor haga nada.
 */
 
-/** Lo minimo que se necesita de cualquier meta de extension. */
+/** The minimum needed from any extension's metadata. */
 interface IMetaLike {
     id: string
     displayName?: string
@@ -50,7 +50,7 @@ export interface IExtensionRefSources {
         el; lo que no se puede es preguntarle por lo suyo.
     */
     channels: Map<string, IChannel>
-    /** Y los providers vivos. Mismo criterio. */
+    /** And the live providers. The same criterion. */
     providers: IProvider[]
 }
 
@@ -68,13 +68,13 @@ export const buildExtensionRefs = async (src: IExtensionRefSources): Promise<IEx
         })
     }
 
-    // Plugins: su configuracion de instalacion la guarda el core; lo demas, su canal, si esta vivo.
+    // Plugins: the core stores their installation configuration; the rest is their channel's, when it is alive.
     for (const meta of await src.pluginManager.listInstalled()) {
         añadir(EExtensionType.PLUGIN, meta as IMetaLike,
             combine(pluginInstallConfig(src.pluginManager, meta.id), src.channels.get(meta.id)))
     }
 
-    // Providers: igual, con su instancia si algun canal la requirio.
+    // Providers: the same, with their instance when some channel required it.
     for (const meta of await src.providerManager.listInstalled()) {
         añadir(EExtensionType.PROVIDER, meta as IMetaLike,
             combine(providerInstallConfig(src.providerManager, meta.id), src.providers.find(p => p.id === meta.id)))
@@ -100,15 +100,15 @@ export const buildExtensionRefs = async (src: IExtensionRefSources): Promise<IEx
         no puede enumerarlas —solo recibe una como parametro al autenticar—, asi que aqui el
         interlocutor es enteramente del core.
     */
-    // `listConnectors` y no el indice de instalados: el indice solo tiene los que llegaron por tgz, y
-    // en dev los conectores se registran en memoria sin pasar por el. Lo que cuenta es cual esta
-    // REGISTRADO, que es a quien se le puede pedir el esquema.
+    // `listConnectors` and not the index of installed ones: the index only has those that arrived through
+    // a tgz, and in dev connectors are registered in memory without going through it. What counts is which
+    // one is REGISTERED, which is the one that can be asked for its schema.
     for (const info of src.idpManager.listConnectors()) {
         añadir(EExtensionType.IDP, { id: info.id, displayName: info.label, version: info.version, marketplaceLabel: info.marketplaceLabel },
             idpInstances(src.idpManager, info.id))
     }
 
-    // Toolsets: lo que viaja son sus concesiones. Tampoco hay objeto al que preguntar: son solo back.
+    // Toolsets: what travels is their grants. There is no object to ask here either: they are back end only.
     for (const meta of await src.aiToolsetManager.listInstalled()) {
         añadir(EExtensionType.AITOOLSET, meta as IMetaLike, toolsetGrants(src.aiToolsetManager, meta.id))
     }

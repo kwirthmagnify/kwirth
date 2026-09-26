@@ -4,15 +4,15 @@ import path from 'path'
 import * as tar from 'tar'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 
-// El directorio de extensiones bundled es COMPARTIDO: contiene tgz de cualquier tipo (plugins, logins,
-// docs, idps...). Cada manager tiene que quedarse solo con los suyos, y el unico campo que dice de que
-// tipo es un tgz es extensionType, que emiten todos los build.mjs.
+// The bundled extensions directory is SHARED: it holds tgz files of every type (plugins, logins, docs,
+// idps...). Every manager has to keep only its own, and the only field saying what type a tgz is is
+// extensionType, which every build.mjs emits.
 //
-// Sin este filtro pasaban dos cosas: DocsManager instalaba como documentacion cualquier tgz que llevara
-// targetType (un login bundled lo lleva, asi que acababa duplicado como doc), y PluginManager/IdpManager
-// intentaban instalar TODOS los tgz del directorio, apoyandose en que el fallo posterior los descartara.
+// Without this filter two things happened: DocsManager installed as documentation any tgz carrying a
+// targetType (a bundled login carries one, so it ended up duplicated as docs), and PluginManager/IdpManager
+// attempted ALL of the directory's tgz files, leaning on the later failure to discard them.
 
-/** Lee el extensionType declarado dentro de un tgz. undefined si no lo declara o no se puede leer. */
+/** Reads the extensionType declared inside a tgz. undefined when it does not declare it or it cannot be read. */
 export const peekExtensionType = async (tgzPath: string): Promise<string|undefined> => {
     const peekDir = path.join(os.tmpdir(), `kwirth-type-peek-${path.basename(tgzPath, '.tgz')}-${Date.now()}`)
     try {
@@ -30,7 +30,7 @@ export const peekExtensionType = async (tgzPath: string): Promise<string|undefin
     }
 }
 
-/** Los tgz de un directorio bundled que son del tipo pedido, con su ruta absoluta. */
+/** The tgz files of a bundled directory that are of the requested type, with their absolute path. */
 export const listBundledOfType = async (dir: string, extensionType: EExtensionType): Promise<string[]> => {
     if (!fs.existsSync(dir)) return []
     const files = fs.readdirSync(dir).filter(f => f.endsWith('.tgz')).map(f => path.join(dir, f))

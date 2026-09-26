@@ -12,9 +12,9 @@ import { assertInstallable } from './ExtensionInstallGuard'
 export interface IDocsMeta {
     id: string
     targetType: string
-    // 'name' es el nombre del PAQUETE y 'displayName' el humano, como en los otros diez tipos. Mientras
-    // las docs solo se cargaban de dev, el tgz metia el nombre humano en 'name' y nadie noto la falta;
-    // publicada en un registro, 'name' es el scope npm y el que se pinta es 'displayName'.
+    // 'name' is the PACKAGE's name and 'displayName' the human one, as in the other ten types. While the
+    // docs were only loaded from dev, the tgz put the human name in 'name' and nobody noticed what was
+    // missing; published to a registry, 'name' is the npm scope and the one that gets drawn is 'displayName'.
     name: string
     displayName?: string
     version: string
@@ -22,19 +22,20 @@ export interface IDocsMeta {
     icon?: string
     website?: string
     installedFrom?: string
-    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
-    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
-    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
+    // the package registry, which is another server, and with precedence by id two marketplaces can
+    // serve the same extension. Absent = it came from no marketplace (dev, a file or a loose url).
     marketplaceId?: string
     marketplaceLabel?: string
 }
 
-// Que sobra en el indice cuando se relee kwirth-dev.json. Solo se reconcilia lo marcado 'dev': lo bundled,
-// lo de un pack y lo instalado desde marketplace, URL o fichero se queda donde esta.
+// What is surplus in the index when kwirth-dev.json is re-read. Only what is marked 'dev' is reconciled:
+// what is bundled, what comes from a pack and what was installed from a marketplace, a URL or a file stays
+// where it is.
 //
-// La identidad de unas docs es el par (targetType, id), pero la clave del fichero de dev es solo una
-// etiqueta. Asi que la entrada se salva si se acaba de instalar, o si su id coincide con una etiqueta
-// declarada — lo segundo cubre las declaradas que hoy no se pueden instalar por no estar construidas.
+// The identity of a set of docs is the pair (targetType, id), but the dev file's key is only a label. So
+// the entry is saved when it has just been installed, or when its id matches a declared label — the latter
+// covers the declared ones that cannot be installed today for not having been built.
 export const staleDevDocs = (index: IDocsMeta[], declaredLabels: Set<string>, installedPairs: Set<string>): IDocsMeta[] =>
     index.filter(d => d.installedFrom === 'dev'
         && !installedPairs.has(`${d.targetType}/${d.id}`)
@@ -93,9 +94,9 @@ export class DocsManager {
                 if (!meta.targetType) throw new Error(`Invalid docs bundle: missing targetType in package.json`)
 
                 const index = (await this.configMaps.read('kwirth-docs-index', []) as IDocsMeta[]) || []
-                // La identidad de unos docs es el par (targetType, id), no el id solo.
-                // Su carpeta de destino se borra entera antes de extraer, asi que aqui no hay huerfanos
-                // que limpiar: lo que queda en disco es exactamente lo que trae el paquete.
+                // The identity of a set of docs is the pair (targetType, id), not the id alone.
+                // Its destination folder is deleted whole before extracting, so there are no orphans to
+                // clean up here: what stays on disk is exactly what the package carries.
                 if (installedFrom !== 'bundled' && installedFrom !== 'dev')
                     assertInstallable('Docs', `${meta.targetType}/${meta.id}`, index.find(d => d.targetType === meta.targetType && d.id === meta.id), meta.version, upgrade)
 
@@ -143,8 +144,8 @@ export class DocsManager {
         await this._doUninstall(targetType, id, index)
     }
 
-    // Al desinstalar el pack se borran sus miembros sin pasar por el guard de bundled/dev: el pack es
-    // el dueño de lo que instalo.
+    // On uninstalling the pack its members are deleted without going through the bundled/dev guard: the
+    // pack owns what it installed.
     async uninstallFromPack(targetType: string, id: string): Promise<void> {
         const index = (await this.configMaps.read('kwirth-docs-index', []) as IDocsMeta[]) || []
         await this._doUninstall(targetType, id, index)
@@ -160,9 +161,9 @@ export class DocsManager {
     }
 
     async installBundled(dir: string): Promise<void> {
-        // Solo los tgz que se declaran 'docs'. Antes se recorrian TODOS los del directorio compartido y la
-        // unica defensa era que install() exigiera targetType: un login bundled lo llevaba, asi que pasaba
-        // el filtro y acababa instalado tambien como documentacion bajo docsPath/login/<id>.
+        // Only the tgz files declaring themselves 'docs'. ALL of those in the shared directory used to be
+        // walked and the only defence was install() demanding targetType: a bundled login carried it, so
+        // it passed the filter and ended up installed as documentation too, under docsPath/login/<id>.
         for (const filePath of await listBundledOfType(dir, EExtensionType.DOCS)) {
             const file = path.basename(filePath)
             let bundleId: string | undefined
@@ -236,14 +237,14 @@ export class DocsManager {
         }
     }
 
-    // kwirth-dev.json es DECLARATIVO: lo que figura aqui queda instalado y lo que se quita del fichero se
-    // desinstala. Una documentacion de dev es una instalacion REAL —entra en el indice y se despliega bajo
-    // docsPath—, asi que borrar la linea solo dejaba de reinstalarla: la entrada sobrevivia y el manager la
-    // seguia dando por instalada. Y no habia forma de quitarla desde la UI, porque el guard de uninstall
-    // rechaza precisamente lo marcado 'dev'.
+    // kwirth-dev.json is DECLARATIVE: what is listed here stays installed and what is removed from the
+    // file gets uninstalled. A set of dev docs is a REAL installation — it enters the index and is deployed
+    // under docsPath — so deleting the line merely stopped it being reinstalled: the entry survived and the
+    // manager went on considering it installed. And there was no way of removing it from the UI, because
+    // uninstall's guard rejects precisely what is marked 'dev'.
     //
-    // Solo se reconcilia lo marcado 'dev'. Lo instalado desde un marketplace, una URL, un fichero o un pack
-    // no se toca.
+    // Only what is marked 'dev' is reconciled. What was installed from a marketplace, a URL, a file or a
+    // pack is not touched.
     loadDevDocs(): void {
         const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
         if (!fs.existsSync(devConfigPath)) return

@@ -96,30 +96,30 @@ class MagnifyChannel implements IChannel {
     /*
 
         abstract class BaseChannel implements IChannel {
-            // 1. Constructor forzado para todos
+            // 1. A constructor forced on everybody
             constructor(
                 protected clusterInfo: ClusterInfo, 
                 protected kwirthData: KwirthData
             ) {}
 
-            // 2. Función COMÚN con implementación por defecto
-            // Si a la clase hija le vale este código, no tiene que escribir nada.
+            // 2. A COMMON function with a default implementation
+            // If this code will do for the child class, it need write nothing.
             containsConnection(webSocket: WebSocket): boolean {
                 this.log.info('Running the common verification logic...');
-                // Supongamos una lógica estándar que sirva para casi todos
+                // Suppose a standard logic that works for nearly all of them
                 return true; 
             }
 
-            // 3. Método que el hijo PUEDE sobrescribir opcionalmente
+            // 3. A method the child MAY optionally override
             removeConnection(webSocket: WebSocket): void {
                 this.log.info('Connection removed the standard way');
             }
 
-            // 4. Métodos que el hijo DEBE implementar sí o sí
+            // 4. Methods the child MUST implement no matter what
             abstract getChannelData(): BackChannelData;
             abstract processEvent(type: string, obj: any): void;
             
-            // ... el resto de métodos de IChannel marcados como abstract
+            // ... the rest of IChannel's methods marked as abstract
         }
 
     */

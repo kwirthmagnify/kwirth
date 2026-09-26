@@ -12,16 +12,16 @@ import { ELogComponent } from '../tools/Logging'
 
 const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex')
 
-// verifica la contraseña entrante (sha256) contra el valor almacenado (plain heredado o bcrypt moderno)
-// devuelve { valid, migrate, firstLogin }
-// migrate=true → el valor almacenado era texto plano; hay que re-hashear y guardar
-// firstLogin=true → admin con contraseña por defecto sin cambiar
+// verifies the incoming password (sha256) against the stored value (a legacy plain one or a modern bcrypt)
+// returns { valid, migrate, firstLogin }
+// migrate=true → the stored value was plain text; it has to be re-hashed and saved
+// firstLogin=true → an admin whose default password has not been changed
 const verifyPassword = async (incoming: string, stored: string, userId: string) => {
     if (stored.startsWith('$2b$')) {
         const valid = await bcrypt.compare(incoming, stored)
         return { valid, migrate: false, firstLogin: false }
     }
-    // valor heredado en texto plano: el front ya envía sha256, así que comparamos sha256(stored)
+    // a legacy plain-text value: the front end already sends sha256, so we compare sha256(stored)
     const valid = sha256(stored) === incoming
     const firstLogin = valid && userId === 'admin' && stored === 'password'
     return { valid, migrate: valid, firstLogin }
@@ -88,11 +88,11 @@ export class LoginApi {
 
         // change password
         //
-        // Sin try/catch a proposito, igual que el login de arriba: el guard es el unico responsable de
-        // lo inesperado. El catch que habia aqui registraba el error y salia SIN responder, asi que la
-        // peticion se quedaba colgada para siempre — y, al resolver la promesa con normalidad, tampoco
-        // dejaba actuar al guard. Justo en el flujo del primer arranque, donde al admin se le fuerza a
-        // cambiar la contraseña por defecto.
+        // Without a try/catch on purpose, just like the login above: the guard is the only one
+        // responsible for the unexpected. The catch that used to be here logged the error and returned
+        // WITHOUT answering, so the request hung forever — and, by resolving the promise normally, it
+        // did not let the guard act either. Right in the first-startup flow, where the admin is forced
+        // to change the default password.
         this.router.post('/password', async (req:Request,res:Response) => {
             guard(LoginApi.semaphore.use ( async () => {
                 let users = await IdentityService.readUsers(this.secrets)

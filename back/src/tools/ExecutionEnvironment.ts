@@ -95,13 +95,13 @@ const detectExecutionEnvironment = (): EExecutionEnvironment|undefined => {
     'existe' se inyecta para poder probar esto sin depender de la maquina donde corran los tests.
 */
 const hasKubeconfigSource = (existe: (ruta:string) => boolean = fs.existsSync): boolean => {
-    // KUBECONFIG admite varias rutas; basta con que una exista.
+    // KUBECONFIG admits several paths; one existing is enough.
     const kubeconfig = process.env.KUBECONFIG
     if (kubeconfig) return kubeconfig.split(path.delimiter).some(ruta => ruta.length > 0 && existe(ruta))
 
     if (existe(path.join(os.homedir(), '.kube', 'config'))) return true
 
-    // Dentro de un pod la credencial la monta el propio kubelet, y no hay fichero de kubeconfig.
+    // Inside a pod the kubelet itself mounts the credential, and there is no kubeconfig file.
     if (existe('/var/run/secrets/kubernetes.io/serviceaccount/token')) return true
 
     return false
@@ -180,8 +180,8 @@ const resolveEnvironmentCapabilities = async (executionEnvironment:EExecutionEnv
 
     let kubernetes:boolean
     if (executionEnvironment === EExecutionEnvironment.KUBERNETES) {
-        // Dentro del cluster (o apuntando a uno) Kubernetes no es opcional: si falla es un error, no una
-        // degradacion, y hacerlo opcional aqui solo serviria para esconderlo.
+        // Inside the cluster (or pointing at one) Kubernetes is not optional: a failure is an error and
+        // not a degradation, and making it optional here would only serve to hide it.
         kubernetes = true
         reasons.push('Kubernetes API: yes (running as a Kubernetes workload)')
     }

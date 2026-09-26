@@ -7,15 +7,15 @@ import { Request, Response } from 'express'
 import { AppsV1Api, BatchV1Api, CoreV1Api, V1Pod, V1ReplicaSet } from '@kubernetes/client-node'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 
-// Lo minimo que hace falta de un objeto de kubernetes para identificarlo: no se tipa cada V1XxxList
-// porque lo unico que se usa es el nombre y el namespace.
+// The minimum needed from a kubernetes object in order to identify it: every V1XxxList is not typed
+// because the only things used are the name and the namespace.
 interface IListedResource {
     metadata?: { name?: string, namespace?: string }
 }
 
-// Un tipo de controller y como pedirlo. El apiGroup viaja SOLO para poder decirlo en el log: cuando falta
-// un permiso, saber que 'Job' vive en 'batch' es la diferencia entre arreglarlo en un minuto y no saber
-// por donde empezar.
+// A controller type and how to ask for it. The apiGroup travels ONLY so it can be said in the log: when a
+// permission is missing, knowing that 'Job' lives in 'batch' is the difference between fixing it in a
+// minute and not knowing where to start.
 interface IControllerSource {
     kind: string
     apiGroup: string
@@ -126,8 +126,8 @@ export class AuthorizationManagement {
         return false
     }
     
-    // comprueba si el accessKey del header incluye un scope concreto (p.ej. 'admin') en alguno de sus
-    // resources. Debe usarse DESPUÉS de validKey (que garantiza que el key es válido/no manipulado).
+    // checks whether the header's accessKey includes a particular scope ('admin', for instance) in any of
+    // its resources. It must be used AFTER validKey (which guarantees the key is valid/untampered).
     public static hasScope = (req:Request, scope:string): boolean => {
         if (!req.headers.authorization) return false
         try {
@@ -680,7 +680,7 @@ export class AuthorizationManagement {
     //     return [...new Set(result)]
     // }
 
-// 1. Nueva función de lógica pura (sin llamadas a API) para filtrar contenedores de un objeto Pod ya cargado
+// 1. A new pure-logic function (no API calls) for filtering the containers of an already loaded Pod object
 
     public static filterAllowedContainersFromPod(pod: V1Pod, accessKey: AccessKey): string[] {
         const result: string[] = []

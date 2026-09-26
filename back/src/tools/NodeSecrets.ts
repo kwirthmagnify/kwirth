@@ -9,7 +9,7 @@ const IV_LEN = 12
 const TAG_LEN = 16
 
 export class NodeSecrets implements ISecrets {
-    // Escribe en disco: no hay techo de objeto como el de un ConfigMap/Secret de Kubernetes.
+    // It writes to disk: there is no per-object ceiling like a Kubernetes ConfigMap/Secret's.
     public storeLimit = (): number | undefined => undefined
 
     private dir: string
@@ -18,7 +18,7 @@ export class NodeSecrets implements ISecrets {
     constructor(baseDir?: string, masterKey: string = 'Kwirth4Ever') {
         this.dir = baseDir ? path.join(baseDir, 'secrets') : path.join(os.homedir(), '.kwirth', 'secrets')
         fs.mkdirSync(this.dir, { recursive: true })
-        // deriva una clave de 32 bytes a partir de masterKey
+        // derives a 32-byte key from masterKey
         this.key = crypto.createHash('sha256').update(masterKey).digest()
     }
 

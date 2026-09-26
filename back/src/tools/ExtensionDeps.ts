@@ -12,8 +12,8 @@ export interface IInstalledIndex {
     idp: IInstalledRef[]
     login: IInstalledRef[]
     webhook: IInstalledRef[]
-    // La documentacion se identifica por (targetType, id), pero como dependencia basta el id: quien
-    // depende de una guia depende de la de SU extension, y ahi el par no aporta nada.
+    // Documentation is identified by (targetType, id), but as a dependency the id is enough: whoever
+    // depends on a guide depends on ITS OWN extension's, and there the pair adds nothing.
     docs: IInstalledRef[]
     aitoolset: IInstalledRef[]
 }

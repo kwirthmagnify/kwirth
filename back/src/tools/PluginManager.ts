@@ -14,18 +14,18 @@ import { assertInstallable } from './ExtensionInstallGuard'
 
 export interface IPluginMeta {
     id: string
-    /** El nombre del PAQUETE: con scope y todo, '@iriaoperae/kwirth-plugin-montag'. */
+    /** The PACKAGE's name: scope and all, '@iriaoperae/kwirth-plugin-montag'. */
     name: string
-    /** El nombre HUMANO, que es el que se enseña. */
+    /** The HUMAN name, which is the one that gets shown. */
     displayName?: string
     version: string
     description: string
     icon?: string
     website?: string
     installedFrom?: string
-    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
-    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
-    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
+    // the package registry, which is another server, and with precedence by id two marketplaces can
+    // serve the same extension. Absent = it came from no marketplace (dev, a file or a loose url).
     marketplaceId?: string
     marketplaceLabel?: string
     backStored?: boolean
@@ -33,11 +33,12 @@ export interface IPluginMeta {
     requiresRestart?: boolean
     requiresExtension?: string[]
     /*
-        El plugin DECLARA que acepta configuracion de instalacion, y con que campos.
+        The plugin DECLARES that it accepts installation configuration, and with which fields.
 
-        Sin esto el gestor no tenia forma de saberlo —la configuracion es JSON libre, la lee el plugin en
-        runtime— y enseñaba la rueda dentada en TODOS, incluidos los que no leen ninguna configuracion:
-        se abria un editor que no servia para nada. Un plugin que no lo declara no tiene rueda.
+        Without this the manager had no way of knowing — the configuration is free-form JSON, read by the
+        plugin at runtime — and showed the cogwheel on ALL of them, including those that read no
+        configuration at all: an editor opened that was good for nothing. A plugin that does not declare
+        it has no cogwheel.
     */
     configSchema?: IConfigFieldDef[]
 }
@@ -54,7 +55,7 @@ export class PluginManager {
     private installedIds: string[] = []
     private cachedIndex: IPluginMeta[] = []
     private devPlugins = new Map<string, IDevPlugin>()
-    // ruta vigilada por id, para poder hacer fs.unwatchFile al desregistrar
+    // the path watched, by id, so that fs.unwatchFile can be called on unregistering
     private devWatchers = new Map<string, string>()
     onDevPluginReloaded?: (id: string, ChannelClass: TChannelConstructor) => void
 
@@ -115,9 +116,9 @@ export class PluginManager {
         try {
             const pkg = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
             meta.name = pkg.name ?? id
-            // Sin esto un plugin de dev se enseñaba con el nombre del paquete —scope incluido— porque el
-            // front cae en `name` cuando no hay displayName. Los instalados desde un tgz no lo notaban:
-            // su meta ES el package.json entero y el displayName venia dentro.
+            // Without this a dev plugin was shown with the package's name — scope included — because the
+            // front end falls back to `name` when there is no displayName. The ones installed from a tgz
+            // did not notice: their metadata IS the whole package.json and the displayName came inside it.
             meta.displayName = pkg.displayName
             meta.version = pkg.version ?? 'dev'
             meta.description = pkg.description ?? ''
@@ -131,11 +132,11 @@ export class PluginManager {
 
         this.reloadDevBack(id, backPath, registeredChannels)
 
-        // Se vigila por POLLING, igual que ProviderManager, y nunca con fs.watch: un build limpio
-        // borra dist/ entero antes de regenerarlo, y un fs.watch sobre un fichero o directorio que
-        // desaparece emite un 'error' ASINCRONO que el try/catch no ve y que, sin listener, node
-        // convierte en uncaughtException y se lleva el core por delante. watchFile tolera que la
-        // ruta se vaya y vuelva. mtimeMs 0 = no existe ahora mismo: se ignora.
+        // It is watched by POLLING, just as ProviderManager does, and never with fs.watch: a clean build
+        // deletes the whole dist/ before regenerating it, and an fs.watch over a file or directory that
+        // disappears emits an ASYNCHRONOUS 'error' the try/catch does not see and which, with no listener,
+        // node turns into an uncaughtException that takes the core down with it. watchFile tolerates the
+        // path going away and coming back. mtimeMs 0 = it does not exist right now: it is ignored.
         fs.watchFile(backPath, { persistent: false, interval: 500 }, (curr, prev) => {
             if (curr.mtimeMs !== prev.mtimeMs && curr.mtimeMs !== 0) {
                 logInfo(ELogComponent.CORE, `[dev] Extension '${id}' back.js changed — hot-reloading`)
@@ -250,12 +251,13 @@ export class PluginManager {
             const meta: IPluginMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
 
             const index = (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || []
-            // Instalado es lo que diga installedIds, no el indice: uno de dev esta cargado sin figurar ahi.
-            // Se le pasa igual al guardian, sin version, y este rechaza actualizar lo que no sabe de donde viene.
+            // Installed is what installedIds says, not the index: a dev one is loaded without appearing there.
+            // It is handed to the guard all the same, with no version, and the guard refuses to update what
+            // it does not know the origin of.
             assertInstallable('Plugin', meta.id, this.installedIds.includes(meta.id) ? (index.find(p => p.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
-            // Una version nueva no puede heredar el js cacheado de la anterior
+            // A new version cannot inherit the previous one's cached js
             dropCachedExtensionFiles('plugin', meta.id)
 
             meta.marketplaceId = marketplaceId
@@ -277,8 +279,9 @@ export class PluginManager {
             const backEntry: Record<string, unknown> = { meta }
             if (meta.backStored) { backEntry.code = backCompressed; backEntry.compressed = true }
             await this.configMaps.write(`kwirth-plugin-${meta.id}-back`, backEntry)
-            // null y no saltarse la escritura: actualizando, si el front de antes cabia y el de ahora no,
-            // saltarla dejaria ahi el codigo VIEJO. Lo instalado tiene que ser lo que trae el paquete.
+            // null and not skipping the write: when updating, if the previous front end fitted and the
+            // current one does not, skipping it would leave the OLD code there. What is installed has to
+            // be what the package carries.
             await this.configMaps.write(`kwirth-plugin-${meta.id}-front`, meta.frontStored ? { code: frontCompressed, compressed: true } : null)
 
             const existingIdx = index.findIndex(p => p.id === meta.id)
@@ -321,8 +324,8 @@ export class PluginManager {
     }
 
     private async _doUninstall(id: string, registeredChannels: Map<string, TChannelConstructor>, index: IPluginMeta[]): Promise<void> {
-        // La cache de /tmp no lleva version en el nombre: si no se borra aqui, reinstalar servirira
-        // el js de la instalacion anterior mientras el pod siga vivo.
+        // The /tmp cache does not carry the version in its name: unless it is deleted here, reinstalling
+        // will serve the previous installation's js as long as the pod stays alive.
         dropCachedExtensionFiles('plugin', id)
         registeredChannels.delete(id)
         this.installedIds = this.installedIds.filter(i => i !== id)
@@ -340,9 +343,10 @@ export class PluginManager {
         logInfo(ELogComponent.CORE, `Plugin '${id}' uninstalled`)
     }
 
-    // Configuración de instalación por plugin (JSON genérico), persistida en ConfigMap. La edita el
-    // plugin manager (front) y la consumen el back del plugin (IBackChannelObject.getPluginConfig) y
-    // el front (GET /plugins/:id/config). Mismo patrón que ProviderManager.get/saveConfig.
+    // Per-plugin installation configuration (generic JSON), persisted in a ConfigMap. The plugin manager
+    // (front end) edits it and it is consumed by the plugin's back end
+    // (IBackChannelObject.getPluginConfig) and by the front end (GET /plugins/:id/config). The same
+    // pattern as ProviderManager.get/saveConfig.
     async getConfig(id: string): Promise<Record<string, unknown>> {
         const data = await this.configMaps.read(`kwirth-plugin-${id}-config`, {})
         return (data ?? {}) as Record<string, unknown>
@@ -416,8 +420,8 @@ export class PluginManager {
         }
     }
 
-    // El directorio bundled es compartido con las demas extensiones: hay que quedarse solo con los tgz
-    // que se declaran 'plugin', en vez de intentar instalar todos y dejar que fallen.
+    // The bundled directory is shared with the other extensions: only the tgz files declaring
+    // themselves 'plugin' are to be kept, rather than attempting all of them and letting them fail.
     async installBundled(dir: string, registeredChannels: Map<string, TChannelConstructor>, licenseManager?: LicenseManager): Promise<void> {
         for (const filePath of await listBundledOfType(dir, EExtensionType.PLUGIN)) {
             const file = path.basename(filePath)

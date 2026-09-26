@@ -7,11 +7,11 @@ export class KubernetesConfigMaps implements IConfigMaps {
     namespace:string
 
     /*
-        El tope lo pone Kubernetes, no nosotros: un ConfigMap no pasa de ~1 MiB por objeto (es lo que etcd
-        admite por clave). Se deja margen sobre ese MiB porque el limite es del OBJETO ENTERO —metadatos,
-        configuracion y el propio JSON incluidos—, no del valor grande que se le mete dentro.
+        The ceiling is Kubernetes', not ours: a ConfigMap does not go beyond ~1 MiB per object (that is
+        what etcd admits per key). Room is left below that MiB because the limit belongs to the WHOLE
+        OBJECT — metadata, configuration and the JSON itself included — not to the big value put inside it.
 
-        Los almacenamientos de fichero devuelven `undefined`: escriben en disco y no tienen este techo.
+        The file storages return `undefined`: they write to disk and do not have this ceiling.
     */
     public storeLimit = (): number | undefined => 800 * 1024
 
@@ -31,9 +31,9 @@ export class KubernetesConfigMaps implements IConfigMaps {
             }
             return {}
         }
-        // Escritura optimista: se lee el resourceVersion y se hace replace. Si otro escritor se cuela
-        // entremedias, kubernetes devuelve 409 Conflict; en ese caso se reintenta releyendo la version,
-        // que es justo lo que pide el error ('apply your changes to the latest version').
+        // An optimistic write: the resourceVersion is read and a replace is done. Should another writer
+        // slip in between, kubernetes returns a 409 Conflict; in that case it is retried by re-reading the
+        // version, which is exactly what the error asks for ('apply your changes to the latest version').
         const MAX_ATTEMPTS = 3
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {

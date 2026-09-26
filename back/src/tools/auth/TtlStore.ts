@@ -1,9 +1,9 @@
 /*
-    Store en memoria de un solo uso con expiracion (TTL). Usado por AuthApi para:
-      - state + PKCE code_verifier del flujo OIDC (TTL ~10 min)
-      - codigo de handoff que canjea el front por el ILoginResponse (TTL ~60 s)
-    'take' devuelve y BORRA la entrada (anti-replay); si expiro devuelve undefined.
-    El reloj es inyectable para poder testear la expiracion de forma determinista.
+    A single-use in-memory store with expiry (TTL). Used by AuthApi for:
+      - the OIDC flow's state + PKCE code_verifier (TTL ~10 min)
+      - the handoff code the front end exchanges for the ILoginResponse (TTL ~60 s)
+    'take' returns and DELETES the entry (anti-replay); when it has expired it returns undefined.
+    The clock is injectable so that expiry can be tested deterministically.
 */
 interface ITtlEntry<T> {
     value: T
@@ -24,7 +24,7 @@ class TtlStore<T> {
         this.map.set(key, { value, createdAt: this.now() })
     }
 
-    // devuelve y borra (un solo uso); undefined si no existe o expiro
+    // returns and deletes (single use); undefined when it does not exist or has expired
     take(key: string): T | undefined {
         const entry = this.map.get(key)
         if (!entry) return undefined
@@ -33,7 +33,7 @@ class TtlStore<T> {
         return entry.value
     }
 
-    // barrido de entradas caducadas
+    // a sweep of expired entries
     purge(): void {
         const t = this.now()
         for (const [key, entry] of this.map) {

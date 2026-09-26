@@ -8,13 +8,13 @@ import path from 'path'
 import https from 'https'
 import http from 'http'
 
-// De donde se bajan los paquetes NO es el marketplace: el manifest solo los lista, y la url de cada
-// entrada puede apuntar a cualquier sitio. El marketplace publico ya lo demuestra — manifests en GitHub,
-// tarballs en npmjs. Asi que las credenciales de descarga se eligen casando la URL del tarball contra
-// los registros configurados.
+// Where packages are downloaded from is NOT the marketplace: the manifest merely lists them, and each
+// entry's url can point anywhere. The public marketplace already proves it — manifests on GitHub, tarballs
+// on npmjs. So the download credentials are chosen by matching the tarball's URL against the configured
+// registries.
 
-// Normaliza para comparar: sin barra final, host en minusculas. La ruta SI distingue mayusculas — el
-// repo del Nexus se llama '031-299-IriaOperae' y no es lo mismo escrito de otra forma.
+// Normalises for comparison: no trailing slash, the host in lower case. The path IS case sensitive — the
+// Nexus repo is called '031-299-IriaOperae' and it is not the same written any other way.
 const normalize = (url: string): string => {
     const trimmed = url.trim().replace(/\/+$/, '')
     try {
@@ -24,9 +24,9 @@ const normalize = (url: string): string => {
     catch { return trimmed }
 }
 
-// El registro que sirve esta URL. Gana el prefijo MAS LARGO que case, para que una regla especifica
-// ('.../repository/privado') pueda ganarle a una general ('https://nexus.example'). Los deshabilitados
-// no cuentan: apagar un registro tiene que dejar de inyectar su credencial, no solo ocultarlo.
+// The registry serving this URL. The LONGEST matching prefix wins, so that a specific rule
+// ('.../repository/private') can beat a general one ('https://nexus.example'). Disabled ones do not count:
+// switching a registry off has to stop injecting its credential, not merely hide it.
 export const matchRegistry = (url: string, registries: IPackageRegistry[]): IPackageRegistry|undefined => {
     const target = normalize(url)
     let best: IPackageRegistry|undefined
@@ -48,10 +48,10 @@ export const basicHeader = (username: string|undefined, password: string|undefin
 export const bearerHeader = (token: string|undefined): THeaders =>
     ({ Authorization: `Bearer ${token ?? ''}` })
 
-// La cabecera que toca segun el tipo. Un registro sin credenciales no añade ninguna.
+// The header that applies according to the type. A registry with no credentials adds none.
 //
-// ⚠️ Bearer y Basic NO son intercambiables aunque el token parezca una credencial codificada: contra el
-// endpoint npm del Nexus, el mismo user token da 200 como Bearer y 401 como Basic.
+// ⚠️ Bearer and Basic are NOT interchangeable even though the token looks like an encoded credential:
+// against Nexus's npm endpoint, the same user token gives a 200 as Bearer and a 401 as Basic.
 export const authHeader = (auth: IPackageRegistry['auth'], secret: string|undefined): THeaders => {
     switch (auth?.type) {
         case EPackageRegistryAuthType.BASIC:
@@ -63,8 +63,8 @@ export const authHeader = (auth: IPackageRegistry['auth'], secret: string|undefi
     }
 }
 
-// Los ocho managers que instalan extensiones solo reciben configMaps en su constructor, asi que en vez
-// de enhebrar settings y secretos por ocho constructores se configura esto una vez al arrancar.
+// The eight managers that install extensions only receive configMaps in their constructor, so rather than
+// threading settings and secrets through eight constructors this is configured once at startup.
 interface IRegistryDeps {
     configMaps: IConfigMaps
     secrets: ISecrets
@@ -75,11 +75,11 @@ export const configurePackageRegistries = (configMaps: IConfigMaps, secrets: ISe
     deps = { configMaps, secrets }
 }
 
-// Cabeceras con las que bajar un tarball. Sin registro que case, o sin credenciales, se baja anonimo:
-// la mayoria de los paquetes son publicos.
+// The headers a tarball is downloaded with. With no matching registry, or no credentials, it is downloaded
+// anonymously: most packages are public.
 //
-// Los settings se releen en cada descarga a proposito: son pocas y esporadicas, y asi cambiar la
-// credencial en la UI surte efecto sin reiniciar el core ni invalidar cache alguna.
+// The settings are re-read on every download on purpose: downloads are few and sporadic, and this way
+// changing the credential in the UI takes effect without restarting the core or invalidating any cache.
 export const packageHeaders = async (url: string): Promise<THeaders> => {
     if (!deps) return {}
     const settings = await SettingsApi.read(deps.configMaps)
@@ -88,12 +88,12 @@ export const packageHeaders = async (url: string): Promise<THeaders> => {
     return authHeader(registry.auth, await SettingsApi.getRegistryPassword(deps.secrets, registry.id))
 }
 
-// Descarga un fichero siguiendo redirects. Antes vivia copiada ocho veces, una por manager, y ninguna
-// mandaba credenciales.
+// Downloads a file following redirects. It used to live copied eight times, one per manager, and none of
+// them sent credentials.
 //
-// ⚠️ Las cabeceras de autenticacion NO cruzan a otro host. Un Nexus responde a la descarga con un
-// redirect a un almacenamiento con URL prefirmada: reenviar ahi el Authorization filtraria la credencial
-// a un tercero y ademas suele romper la peticion, porque esos endpoints rechazan la doble autenticacion.
+// ⚠️ Authentication headers do NOT cross to another host. A Nexus answers the download with a redirect to a
+// storage with a presigned URL: forwarding the Authorization there would leak the credential to a third
+// party and, on top of that, usually breaks the request, because those endpoints reject double authentication.
 export const downloadFile = (url: string, destPath: string, headers: THeaders = {}): Promise<void> => {
     const download = (current: string, carried: THeaders, hops: number): Promise<void> => new Promise((resolve, reject) => {
         if (hops > 5) { reject(new Error(`Too many redirects downloading ${url}`)); return }
@@ -121,24 +121,26 @@ export const downloadFile = (url: string, destPath: string, headers: THeaders = 
     return download(url, headers, 0)
 }
 
-// Lee un fichero de un tarball ya extraido, mirando en los DOS sitios donde puede estar: un tgz hecho
-// con `npm publish` lo mete todo dentro de 'package/', y los que armamos a mano (docs, logins) llevan las
-// entradas en la raiz.
+// Reads a file from an already extracted tarball, looking in BOTH places where it can be: a tgz made with
+// `npm publish` puts everything inside 'package/', and the ones we build by hand (docs, logins) carry the
+// entries at the root.
 //
-// ⚠️ El install() de cada manager ya probaba las dos rutas, pero la RECUPERACION no, y ahi es donde duele:
-// un back.js que no cabe en el ConfigMap no se guarda, asi que se vuelve a bajar del origen EN CADA
-// ARRANQUE. Mirando solo la raiz, la extension se instala bien y desaparece al primer reinicio. Lo canto
-// el provider 'trivy' (15,8 MB de bundle) con un ENOENT sobre /tmp/kwirth-provider-trivy-src-*/back.js.
+// ⚠️ Every manager's install() already tried both paths, but the RECOVERY did not, and that is where it
+// hurts: a back.js that does not fit in the ConfigMap is not stored, so it is downloaded from the origin
+// again ON EVERY STARTUP. Looking only at the root, the extension installs fine and disappears on the
+// first restart. The 'trivy' provider (a 15.8 MB bundle) gave it away with an ENOENT on
+// /tmp/kwirth-provider-trivy-src-*/back.js.
 /*
-    Cache en /tmp del js que se baja del origen.
+    A /tmp cache of the js downloaded from the origin.
 
-    Un back que no cabe en el ConfigMap no se guarda, asi que hay que volver a bajarlo. Sin cache eso es
-    un tarball entero POR ARRANQUE (914 KB en el provider 'trivy') y, si el registro no responde justo en
-    ese momento, la extension no carga.
+    A back end that does not fit in the ConfigMap is not stored, so it has to be downloaded again. Without
+    a cache that is a whole tarball PER STARTUP (914 KB in the 'trivy' provider) and, should the registry
+    not answer at that very moment, the extension does not load.
 
-    ⚠️ Y hay que INVALIDARLA al instalar y al desinstalar. La cache no lleva la version en el nombre —a
-    proposito, porque quien la lee al arrancar solo sabe el id— asi que sin borrarla una actualizacion
-    seguiria cargando el back VIEJO mientras el pod siga vivo, y /tmp sobrevive a reiniciar el proceso.
+    ⚠️ And it has to be INVALIDATED on installing and on uninstalling. The cache does not carry the version
+    in its name — on purpose, because whoever reads it at startup only knows the id — so without deleting
+    it an update would go on loading the OLD back end as long as the pod stays alive, and /tmp survives a
+    restart of the process.
 */
 const CACHEABLE_FILES = ['back.js', 'front.js']
 

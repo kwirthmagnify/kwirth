@@ -16,7 +16,7 @@ const IDPS_SECRET = 'kwirth-idps'
 const CONNECTORS_INDEX = 'kwirth-idp-connectors-index'
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 
-// info publica de un tipo de conector (para la UI de gestion)
+// public information about a connector type (for the management UI)
 interface IIdpConnectorInfo {
     id: string
     label: string
@@ -25,19 +25,19 @@ interface IIdpConnectorInfo {
     installed: boolean          // false = bundled/dev registrado en codigo; true = instalado en runtime
     version?: string
     installedFrom?: string      // 'dev' | 'bundled' | 'local' | URL de origen
-    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
-    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
-    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
+    // the package registry, which is another server, and with precedence by id two marketplaces can
+    // serve the same extension. Absent = it came from no marketplace (dev, a file or a loose url).
     marketplaceId?: string
     marketplaceLabel?: string
     website?: string
     description?: string
-    // Hace falta en la LISTA, no solo al instalar: al desinstalar hay que poder avisar de que el
-    // conector sigue enganchado hasta que se reinicie el core.
+    // It is needed in the LIST, not only when installing: on uninstalling one has to be able to warn
+    // that the connector stays hooked in until the core is restarted.
     requiresRestart?: boolean
 }
 
-// metadatos de un conector INSTALADO (persistidos en configmap; el codigo back.js va aparte)
+// metadata of an INSTALLED connector (persisted in a configmap; the back.js code goes separately)
 interface IIdpConnectorMeta {
     id: string
     name: string
@@ -46,9 +46,9 @@ interface IIdpConnectorMeta {
     description?: string
     website?: string
     installedFrom?: string
-    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
-    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
-    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
+    // the package registry, which is another server, and with precedence by id two marketplaces can
+    // serve the same extension. Absent = it came from no marketplace (dev, a file or a loose url).
     marketplaceId?: string
     marketplaceLabel?: string
     backStored?: boolean
@@ -57,12 +57,12 @@ interface IIdpConnectorMeta {
 }
 
 /*
-    Gestiona los conectores de IdP (registry) y las instancias configuradas.
-    - Conectores: bundled (registerConnector en arranque), dev (loadDevIdps) e instalables (EPIC G).
-    - Instancias: se persisten TODAS en un unico Secret 'kwirth-idps' (incluye secretos como clientSecret).
-    Espejo del patron de ProviderManager, pero la config va a Secret (no ConfigMap) y en un unico documento.
+    Manages the IdP connectors (the registry) and the configured instances.
+    - Connectors: bundled (registerConnector at startup), dev (loadDevIdps) and installable (EPIC G).
+    - Instances: ALL of them are persisted in a single Secret 'kwirth-idps' (it holds secrets such as clientSecret).
+    A mirror of ProviderManager's pattern, but the config goes to a Secret (not a ConfigMap) and in a single document.
 */
-// Lo que se sabe de un conector en runtime, para cruzarlo con su clase al listarlos en la UI.
+// What is known about a connector at runtime, for crossing it with its class when listing them in the UI.
 interface IConnectorRuntimeMeta {
     version?: string
     requiresRestart?: boolean
@@ -78,7 +78,7 @@ export class IdpManager {
     private configMaps: IConfigMaps
     private registeredIdps: Map<string, TIdpConnectorConstructor>
     private installedConnectorIds = new Set<string>()
-    // meta por conector (version/origen/website) para la UI, cruzada en listConnectors; poblada en init/install/loadDevIdps
+    // metadata per connector (version/origin/website) for the UI, crossed in listConnectors; populated in init/install/loadDevIdps
     private connectorMeta = new Map<string, IConnectorRuntimeMeta>()
 
     constructor(secrets: ISecrets, configMaps: IConfigMaps, registeredIdps: Map<string, TIdpConnectorConstructor>) {
@@ -87,7 +87,7 @@ export class IdpManager {
         this.registeredIdps = registeredIdps
     }
 
-    // ---------------- conectores (tipos) ----------------
+    // ---------------- connectors (types) ----------------
 
     registerConnector(connectorId: string, ctor: TIdpConnectorConstructor, installed = false): void {
         this.registeredIdps.set(connectorId, ctor)
@@ -133,9 +133,9 @@ export class IdpManager {
         return c ? c.getConfigSchema() : undefined
     }
 
-    // ---------------- conectores instalables (tgz), espejo de ProviderManager ----------------
+    // ---------------- installable connectors (tgz), a mirror of ProviderManager ----------------
 
-    // carga el índice de conectores instalados (solo marca ids; el código se carga en loadAll)
+    // loads the index of installed connectors (it only marks ids; the code is loaded in loadAll)
     async init(): Promise<void> {
         const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
         for (const m of index) {
@@ -148,8 +148,8 @@ export class IdpManager {
         return (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
     }
 
-    // instala un conector desde un tgz (URL http(s), file:// o ruta local). El back.js se guarda
-    // comprimido en configmap y se registra en registeredIdps.
+    // installs a connector from a tgz (an http(s) URL, file:// or a local path). The back.js is stored
+    // compressed in a configmap and registered in registeredIdps.
     async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string, upgrade?: boolean): Promise<IIdpConnectorMeta> {
         const tmpTgz = path.join(os.tmpdir(), `kwirth-idp-${Date.now()}.tgz`)
         let tmpDir = path.join(os.tmpdir(), `kwirth-idp-extract-${Date.now()}`)
@@ -168,7 +168,7 @@ export class IdpManager {
             let metaPath = path.join(tmpDir, 'package.json')
             let backPath = path.join(tmpDir, 'back.js')
             if (!fs.existsSync(metaPath) || !fs.existsSync(backPath)) {
-                // formato npm (carpeta 'package' al nivel superior)
+                // the npm format (a 'package' folder at the top level)
                 tmpDir = path.join(tmpDir, 'package')
                 metaPath = path.join(tmpDir, 'package.json')
                 backPath = path.join(tmpDir, 'back.js')
@@ -191,12 +191,12 @@ export class IdpManager {
             }
             const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
             /*
-                Este era el unico de los once que dejaba pisar una instalacion sin pedir permiso —el hueco
-                donde los demas tienen su guardian estaba literalmente vacio, con un comentario—. Ahora
-                sigue la misma regla que el resto: reemplazar se pide, y solo hacia adelante.
+                This was the only one of the eleven that let an installation be overwritten without asking
+                permission — the gap where the others have their guard was literally empty, with a comment
+                in it. Now it follows the same rule as the rest: replacing is asked for, and only forwards.
 
-                Lo bundled y lo de dev quedan fuera, como en logins y docs: se reinstalan en cada arranque
-                y no pasan por aqui a actualizar nada.
+                What is bundled and what comes from dev are left out, as in logins and docs: they are
+                reinstalled on every startup and do not come through here to update anything.
             */
             if (installedFrom !== 'bundled' && installedFrom !== 'dev')
                 assertInstallable('IdP connector', meta.id, this.installedConnectorIds.has(meta.id) ? (index.find(m => m.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
@@ -206,8 +206,9 @@ export class IdpManager {
             if (!meta.backStored) logError(ELogComponent.AUTH, `IdP connector '${meta.id}' back.js (${Math.round(backCompressed.length / 1024)}KB) exceeds configmap limit`)
 
             await this.configMaps.write(`kwirth-idp-connector-${meta.id}-meta`, meta)
-            // null y no saltarse la escritura: actualizando, si el back de antes cabia y el de ahora no,
-            // saltarla dejaria ahi el codigo VIEJO. Lo instalado tiene que ser lo que trae el paquete.
+            // null and not skipping the write: when updating, if the previous back end fitted and the
+            // current one does not, skipping it would leave the OLD code there. What is installed has to
+            // be what the package carries.
             await this.configMaps.write(`kwirth-idp-connector-${meta.id}-back`, meta.backStored ? { code: backCompressed, compressed: true } : null)
 
             const existing = index.findIndex(m => m.id === meta.id)
@@ -238,9 +239,9 @@ export class IdpManager {
         }
     }
 
-    // instala conectores bundled desde un directorio de tgz (tools/scripts/fetch-bundled.mjs los deja ahí)
-    // El directorio bundled es compartido: sin filtrar por tipo se intentaba instalar como conector IdP
-    // cualquier tgz, apoyandose en que el fallo posterior lo descartara.
+    // installs bundled connectors from a directory of tgz files (tools/scripts/fetch-bundled.mjs leaves them there)
+    // The bundled directory is shared: without filtering by type any tgz was attempted as an IdP
+    // connector, leaning on the later failure to discard it.
     async installBundled(dir: string): Promise<void> {
         for (const filePath of await listBundledOfType(dir, EExtensionType.IDP)) {
             const file = path.basename(filePath)
@@ -271,14 +272,14 @@ export class IdpManager {
         await this.configMaps.write(CONNECTORS_INDEX, index.filter(m => m.id !== connectorId))
         await this.configMaps.write(`kwirth-idp-connector-${connectorId}-meta`, null)
         await this.configMaps.write(`kwirth-idp-connector-${connectorId}-back`, null)
-        // borra las instancias que dependian de este conector: dejarlas huerfanas haria que el login las
-        // ofreciera y fallaran con 'connector not available'
+        // deletes the instances that depended on this connector: leaving them orphaned would have the
+        // login offer them and have them fail with 'connector not available'
         const orphans = (await this.listInstances()).filter(i => i.connectorId === connectorId)
         for (const inst of orphans) await this.deleteInstance(inst.id)
         logInfo(ELogComponent.AUTH, `IdP connector '${connectorId}' uninstalled${orphans.length ? ` (removed ${orphans.length} instance(s))` : ''}`)
     }
 
-    // carga (registra) todos los conectores instalados desde configmap (en arranque)
+    // loads (registers) every installed connector from the configmap (at startup)
     async loadAll(): Promise<void> {
         const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
         for (const meta of index) {
@@ -298,7 +299,7 @@ export class IdpManager {
         }
     }
 
-    // evalúa el back.js del conector (que referencia el global __kwirth_back__) y registra su clase
+    // evaluates the connector's back.js (which references the __kwirth_back__ global) and registers its class
     private loadBackConnector(connectorId: string, backJs: string): void {
         try {
             const { createRequire } = require('module')
@@ -323,8 +324,8 @@ export class IdpManager {
 
     // ---------------- instancias (Secret kwirth-idps) ----------------
 
-    // el Secret 'kwirth-idps' guarda UNA CLAVE POR INSTANCIA (writeKey/readAllKeys hacen el
-    // base64/JSON por clave; los valores de un Secret de K8s deben ser strings, no objetos).
+    // the 'kwirth-idps' Secret stores ONE KEY PER INSTANCE (writeKey/readAllKeys do the base64/JSON per
+    // key; the values of a K8s Secret must be strings, not objects).
     private async readRecord(): Promise<Record<string, IIdpInstanceConfig>> {
         try {
             const rec = await this.secrets.readAllKeys(IDPS_SECRET)
@@ -372,7 +373,7 @@ export class IdpManager {
 
     // ---------------- dev (kwirth-dev.json) ----------------
 
-    // reemplaza ${VAR} por process.env.VAR en strings, recursivamente (para no meter secretos en el json)
+    // replaces ${VAR} with process.env.VAR in strings, recursively (so as not to put secrets in the json)
     static interpolateEnvDeep(value: unknown): unknown {
         if (typeof value === 'string') {
             return value.replace(/\$\{([^}]+)\}/g, (_m, name: string) => process.env[name] ?? '')
@@ -388,7 +389,7 @@ export class IdpManager {
         return value
     }
 
-    // carga conectores en dev desde kwirth-dev.json → idps: { id: distPath }
+    // loads connectors in dev from kwirth-dev.json → idps: { id: distPath }
     loadDevIdps(): void {
         const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
         if (!fs.existsSync(devConfigPath)) return
@@ -429,7 +430,7 @@ export class IdpManager {
         }
     }
 
-    // precarga instancias en el Secret desde kwirth-dev.json → idpConfigs (con interpolacion ${ENV})
+    // preloads instances into the Secret from kwirth-dev.json → idpConfigs (with ${ENV} interpolation)
     async loadDevIdpConfigs(): Promise<void> {
         const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
         if (!fs.existsSync(devConfigPath)) return
@@ -437,11 +438,11 @@ export class IdpManager {
             const raw = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8'))
             const configs: Record<string, IIdpInstanceConfig> = raw.idpConfigs ?? {}
             for (const [id, cfg] of Object.entries(configs)) {
-                // seed solo-si-no-existe: NO pisar una instancia ya configurada (UI o seed previo)
+                // seed only-if-absent: do NOT overwrite an already configured instance (from the UI or a previous seed)
                 if (await this.getInstance(id)) continue
                 const interpolated = IdpManager.interpolateEnvDeep(cfg) as IIdpInstanceConfig
                 interpolated.id = id
-                // no sembrar instancias sin config real (p.ej. faltan las env vars → todo vacío)
+                // do not seed instances with no real config (missing env vars, for instance → everything empty)
                 const hasValues = Object.values(interpolated.config || {}).some(v => v !== '' && v !== null && v !== undefined)
                 if (!hasValues) continue
                 await this.saveInstance(interpolated)

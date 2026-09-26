@@ -40,7 +40,7 @@ export class ApiKeyApi {
         this.router.route('/')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, this))) return
-                // gestión de API keys es operación administrativa: exige scope 'admin'
+                // managing API keys is an administrative operation: it demands the 'admin' scope
                 if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
                 next()
             })
@@ -192,9 +192,9 @@ export class ApiKeyApi {
         try {
             const storedKeys = await this.configMaps.read('kwirth.keys', []) as ApiKey[]
             const cleanKeys = AuthorizationManagement.cleanApiKeys(storedKeys)
-            // Solo se escribe si de verdad ha caducado alguna. refreshKeys se llama desde validKey, o sea
-            // en el camino de autenticacion: escribir el configmap en cada peticion es un coste inutil y,
-            // con peticiones concurrentes, provoca conflictos 409 al pisarse las escrituras entre si.
+            // It is only written when one has really expired. refreshKeys is called from validKey, that
+            // is, on the authentication path: writing the configmap on every request is a useless cost
+            // and, with concurrent requests, causes 409 conflicts as the writes overwrite each other.
             if (cleanKeys.length !== (storedKeys?.length ?? 0)) await this.configMaps.write('kwirth.keys', cleanKeys)
             this.apiKeys = cleanKeys
         }

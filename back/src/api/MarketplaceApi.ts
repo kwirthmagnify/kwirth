@@ -5,8 +5,8 @@ import { ApiKeyApi } from './ApiKeyApi'
 import { MarketplaceManager } from '../tools/MarketplaceManager'
 import { ELogComponent, logError } from '../tools/Logging'
 
-// Cuerpo de la prueba de alcance: el marketplace tal como esta en el formulario, mas el token en claro
-// si el usuario acaba de escribirlo (si no lo manda, se usa el ya guardado).
+// The reachability test's body: the marketplace exactly as it stands in the form, plus the token in the
+// clear when the user has just typed it (when it is not sent, the stored one is used).
 interface IMarketplaceTestRequest {
     marketplace: IMarketplace
     token?: string
@@ -24,8 +24,8 @@ export class MarketplaceApi {
     }
 
     private initializeRoutes() {
-        // Prueba de alcance de un manifest. Tiene que hacerla el back: si el manifest esta detras de un
-        // token privado, el navegador no lo puede leer (ni tiene el token, ni habria CORS).
+        // A manifest's reachability test. The back end has to do it: should the manifest be behind a
+        // private token, the browser cannot read it (it neither has the token, nor would there be CORS).
         this.router.route('/test')
             .all( async (req:Request, res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
@@ -44,8 +44,8 @@ export class MarketplaceApi {
                 }
             })
 
-        // Listar extensiones disponibles no es administrativo: lo consume cualquier dialogo de gestion,
-        // asi que basta con una key valida. Registrar marketplaces si es admin, y eso vive en SettingsApi.
+        // Listing available extensions is not administrative: any management dialog consumes it, so a
+        // valid key is enough. Registering marketplaces IS an admin matter, and that lives in SettingsApi.
         this.router.route('/:extensionType')
             .all( async (req:Request, res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return

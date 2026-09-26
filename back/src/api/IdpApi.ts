@@ -23,7 +23,7 @@ export class IdpApi {
 
         this.router.use(async (req: Request, res: Response, next) => {
             if (!(await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
-            // gestión de IdPs es operación administrativa: exige scope 'admin'
+            // managing IdPs is an administrative operation: it demands the 'admin' scope
             if (!AuthorizationManagement.hasScope(req, 'admin')) {
                 res.status(403).json({ error: 'admin scope required' })
                 return
@@ -36,12 +36,12 @@ export class IdpApi {
             res.status(200).json(this.idpManager.listConnectors())
         })
 
-        // instalar conector desde URL (marketplace / tgz)
+        // installs a connector from a URL (marketplace / tgz)
         this.router.post('/connectors/install', async (req: Request, res: Response) => {
             try {
                 const url = String(req.body?.url || '').trim()
-                // 'upgrade' es el permiso EXPLICITO para pisar una instalacion existente. Sin el, el
-                // manager rechaza una id ya instalada, que es el comportamiento de siempre.
+                // 'upgrade' is the EXPLICIT permission to overwrite an existing installation. Without
+                // it the manager rejects an already installed id, which is the behaviour of always.
                 const { marketplaceId, marketplaceLabel, upgrade } = req.body ?? {}
                 if (!url) { res.status(400).json({ error: 'url is required' }); return }
                 const meta = await this.idpManager.install(url, undefined, marketplaceId, marketplaceLabel, upgrade === true)
@@ -53,7 +53,7 @@ export class IdpApi {
             }
         })
 
-        // instalar conector desde fichero local (tgz subido como octet-stream)
+        // installs a connector from a local file (a tgz uploaded as octet-stream)
         this.router.post('/connectors/upload', express.raw({ type: () => true, limit: '15mb' }), async (req: Request, res: Response) => {
             try {
                 const meta = await this.idpManager.installFromBuffer(req.body as Buffer)
@@ -77,7 +77,7 @@ export class IdpApi {
             }
         })
 
-        // export / import de la config completa (admin)
+        // export / import of the complete config (admin)
         this.router.get('/export', async (_req: Request, res: Response) => {
             res.status(200).json(await this.idpManager.exportConfig())
         })
@@ -98,7 +98,7 @@ export class IdpApi {
             res.status(200).json(instances.map(i => this.mask(i)))
         })
 
-        // obtener una instancia (enmascarada)
+        // gets an instance (masked)
         this.router.get('/:id', async (req: Request, res: Response) => {
             const inst = await this.idpManager.getInstance(req.params.id)
             if (!inst) {
@@ -124,7 +124,7 @@ export class IdpApi {
         return schema.filter(f => f.type === 'password').map(f => f.name)
     }
 
-    // devuelve una copia con los campos password enmascarados (si tienen valor)
+    // returns a copy with the password fields masked (when they have a value)
     private mask(inst: IIdpInstanceConfig): IIdpInstanceConfig {
         const fields = this.passwordFields(inst.connectorId)
         const config: Record<string, unknown> = { ...inst.config }
@@ -142,7 +142,7 @@ export class IdpApi {
                 res.status(400).json({ error: 'id and connectorId are required' })
                 return
             }
-            // merge de secretos: si un campo password llega enmascarado, conservar el almacenado
+            // a merge of secrets: when a password field arrives masked, the stored one is kept
             const existing = await this.idpManager.getInstance(incoming.id)
             const fields = this.passwordFields(incoming.connectorId)
             const config: Record<string, unknown> = { ...(incoming.config || {}) }

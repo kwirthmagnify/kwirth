@@ -20,7 +20,7 @@
     en silencio un fallo del core creyendo que era de un plugin.
 */
 
-// `/tmp/kwirth-<tipo>-<id>-back.js`, que es como el core deja el back de una extension para requerirlo
+// `/tmp/kwirth-<type>-<id>-back.js`, which is how the core leaves an extension's back end in order to require it
 const EXTENSION_BACK_FILE = /kwirth-(plugin|provider|sender|webhook|aitoolset|idp|login|homepage|theme|irq)-([A-Za-z0-9._-]+?)-(back|front)\.js/
 
 export interface IFailureOrigin {
@@ -35,7 +35,7 @@ export interface IFailureOrigin {
 */
 export const failureOrigin = (value: unknown): IFailureOrigin|undefined => {
     const stack = value instanceof Error ? value.stack : undefined
-    // Un rechazo con un valor que no es Error no trae stack, y sin stack no hay a quien atribuir
+    // A rejection with a value that is not an Error carries no stack, and with no stack there is nobody to attribute it to
     if (!stack) return undefined
     const found = stack.match(EXTENSION_BACK_FILE)
     return found ? { kind: found[1], id: found[2] } : undefined

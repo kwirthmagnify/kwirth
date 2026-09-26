@@ -10,10 +10,10 @@ import { IConfigMaps } from '../IConfigMap'
 */
 export class IdentityService {
 
-    // lee el secret de usuarios (con el fallback histórico 'kwirth.users') y lo devuelve
-    // RE-INDEXADO por el id real del usuario (decodificado de cada valor), no por la clave del
-    // Secret. La clave del data de un Secret de K8s no admite '@' (emails), así que se guarda como
-    // base64url(id) (ver writeUsers); aquí deshacemos ese detalle para que los callers usen users[id].
+    // reads the users secret (with the historical 'kwirth.users' fallback) and returns it RE-INDEXED by
+    // the user's real id (decoded from each value), not by the Secret's key. The key of a K8s Secret's
+    // data does not admit '@' (emails), so it is stored as base64url(id) (see writeUsers); here we undo
+    // that detail so that callers use users[id].
     static readUsers = async (secrets: ISecrets): Promise<{ [username:string]:string } | undefined> => {
         let raw:{ [key:string]:string }
         try {
@@ -41,8 +41,8 @@ export class IdentityService {
         return users
     }
 
-    // persiste el mapa de usuarios en el secret usando base64url(id) como clave del data
-    // (charset válido para claves de Secret de K8s), con el valor = base64(JSON(user)) intacto.
+    // persists the users map into the secret using base64url(id) as the data's key (a charset valid for
+    // K8s Secret keys), with the value = base64(JSON(user)) untouched.
     static writeUsers = async (secrets: ISecrets, users: { [username:string]:string }): Promise<void> => {
         const data:{ [key:string]:string } = {}
         for (const [id, value] of Object.entries(users)) {
@@ -51,7 +51,7 @@ export class IdentityService {
         await secrets.write('kwirth-users', data)
     }
 
-    // localiza y deserializa un usuario por su id (username = email en usuarios IdP)
+    // locates and deserialises a user by their id (username = email in IdP users)
     static findUser = (users: { [username:string]:string }, id: string): IUser | undefined => {
         if (!users[id]) return undefined
         try {
@@ -63,7 +63,7 @@ export class IdentityService {
         }
     }
 
-    // crea y persiste un AccessKey 'permanent' (24h) para el usuario, y refresca la cache de apiKeyApi
+    // creates and persists a 'permanent' AccessKey (24h) for the user, and refreshes apiKeyApi's cache
     static createApiKey = async (user: IUser, ip: string, configMaps: IConfigMaps, apiKeyApi: ApiKeyApi): Promise<ApiKey | undefined> => {
         try {
             let apiKey:ApiKey = {

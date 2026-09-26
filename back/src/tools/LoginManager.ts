@@ -18,9 +18,9 @@ export interface ILoginMeta {
     description: string
     website?: string
     installedFrom?: string
-    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
-    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
-    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
+    // the package registry, which is another server, and with precedence by id two marketplaces can
+    // serve the same extension. Absent = it came from no marketplace (dev, a file or a loose url).
     marketplaceId?: string
     marketplaceLabel?: string
     requiresRestart?: boolean
@@ -52,17 +52,17 @@ export interface ILoginConfig {
     autoPassword?: string
 }
 
-// El tope no es nuestro: un ConfigMap de Kubernetes no pasa de ~1 MiB por objeto, y el fondo viaja dentro
-// en base64. Se conserva como respaldo para cuando el almacenamiento no declara el suyo.
+// The ceiling is not ours: a Kubernetes ConfigMap does not go beyond ~1 MiB per object, and the background
+// travels inside it in base64. It is kept as a fallback for when the storage does not declare its own.
 export const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 
-/** Cual de los dos fondos se guardo. Nunca comparar contra literales sueltos. */
+/** Which of the two backgrounds was stored. Never compare against loose literals. */
 export enum EBackgroundQuality {
     HI = 'hi',
     STANDARD = 'standard'
 }
 
-/** El fondo elegido para guardar, o el problema que impide guardar ninguno. */
+/** The background chosen for storing, or the problem preventing any from being stored. */
 export interface IBackgroundPick {
     backgroundB64?: string
     quality?: EBackgroundQuality
@@ -70,16 +70,16 @@ export interface IBackgroundPick {
 }
 
 /*
-    Cual de los dos fondos se guarda, sabiendo lo que admite el almacenamiento.
+    Which of the two backgrounds gets stored, knowing what the storage admits.
 
-    Un login puede traer DOS imagenes: `background-hi.png` (la buena) y `background.png` (la que cabe en
-    cualquier sitio). Cual se usa no lo decide el login: lo decide donde va a guardarse. Con ConfigMaps de
-    Kubernetes hay ~1 MiB por objeto; con almacenamiento en fichero —desktop, docker, KWIRTH_STORE— no hay
-    ese techo, y ahi la buena entra sin problema. Por eso `limit` puede ser `undefined`: significa que cabe
-    todo, no que no se sepa.
+    A login can carry TWO images: `background-hi.png` (the good one) and `background.png` (the one that
+    fits anywhere). Which one is used is not the login's decision: it is decided by where it is going to be
+    stored. With Kubernetes ConfigMaps there is ~1 MiB per object; with file storage — desktop, docker,
+    KWIRTH_STORE — there is no such ceiling, and there the good one fits without trouble. That is why
+    `limit` can be `undefined`: it means everything fits, not that it is unknown.
 
-    Sin fondo no hay problema: un login puede no traer ninguno. El problema es traerlo y que no quepa,
-    porque entonces la pagina sale distinta de como su autor la diseño.
+    With no background there is no problem: a login may carry none. The problem is carrying one that does
+    not fit, because then the page comes out different from how its author designed it.
 */
 export const pickBackground = (hiB64: string|undefined, stdB64: string|undefined, limit: number|undefined): IBackgroundPick => {
     const cabe = (b64: string) => limit === undefined || b64.length <= limit
@@ -89,12 +89,12 @@ export const pickBackground = (hiB64: string|undefined, stdB64: string|undefined
     return {}
 }
 
-// Que le pasa al fondo de un login, o undefined si nada. Se mantiene para quien solo tiene UNA imagen.
+// What happens to a login's background, or undefined when nothing does. It is kept for whoever has only ONE image.
 export const backgroundProblem = (backgroundB64: string|undefined, limit: number|undefined = CONFIGMAP_SIZE_LIMIT): string|undefined =>
     pickBackground(undefined, backgroundB64, limit).problem
 
-// Lo que se guarda de un login instalado. `problem` marca que se instalo A MEDIAS: la extension funciona
-// pero le falta algo, y la pagina de login lo dice para que quien la vea pueda avisar al administrador.
+// What is stored about an installed login. `problem` marks that it was installed HALFWAY: the extension
+// works but something is missing, and the login page says so, so that whoever sees it can tell the administrator.
 interface ILoginPayload {
     meta: ILoginMeta
     config: ILoginConfig
@@ -103,10 +103,11 @@ interface ILoginPayload {
     problem?: string
 }
 
-// Que sobra en el indice cuando se relee kwirth-dev.json. Solo se reconcilia lo marcado 'dev': lo bundled,
-// lo de un pack y lo instalado desde marketplace, URL o fichero se queda donde esta, que es instalado de
-// verdad. Vale tanto el id que trae el tgz como la clave del fichero de dev, para que un login declarado
-// pero todavia sin construir no pierda su sitio por no haberse podido instalar hoy.
+// What is surplus in the index when kwirth-dev.json is re-read. Only what is marked 'dev' is reconciled:
+// what is bundled, what comes from a pack and what was installed from a marketplace, a URL or a file stays
+// where it is, because it is really installed. Both the id the tgz carries and the dev file's key will do,
+// so that a login that is declared but not yet built does not lose its place for not having been
+// installable today.
 export const staleDevLogins = (index: ILoginMeta[], declared: Set<string>): ILoginMeta[] =>
     index.filter(m => m.installedFrom === 'dev' && !declared.has(m.id))
 
@@ -177,10 +178,10 @@ export class LoginManager {
             }
 
             /*
-                El payload se escribe ENTERO mas abajo, asi que actualizar no deja nada de la version
-                anterior: si la nueva no trae fondo, el documento nuevo no lo lleva y el viejo desaparece
-                con el. Es lo que se quiere —lo instalado es lo que trae el paquete—, y conviene no
-                cambiar esa escritura por una parcial.
+                The payload is written WHOLE further down, so updating leaves nothing of the previous
+                version: if the new one carries no background, the new document does not have it and the
+                old one disappears with it. That is what is wanted — what is installed is what the package
+                carries — and it is better not to change that write for a partial one.
             */
             if (installedFrom !== 'bundled' && installedFrom !== 'dev')
                 assertInstallable('Login extension', meta.id, this.cachedIndex.find(m => m.id === meta.id), meta.version, upgrade)
@@ -188,8 +189,8 @@ export class LoginManager {
             const loginJsonPath = path.join(base, 'login.json')
             const loginConfig: ILoginConfig = fs.existsSync(loginJsonPath) ? JSON.parse(fs.readFileSync(loginJsonPath, 'utf-8')) : {}
 
-            // Dos imagenes posibles: la buena y la que cabe en cualquier sitio. Cual se guarda lo decide
-            // el ALMACENAMIENTO (ver pickBackground), no el login.
+            // Two possible images: the good one and the one that fits anywhere. Which gets stored is
+            // decided by the STORAGE (see pickBackground), not by the login.
             const leer = (nombre: string) => {
                 const p = path.join(base, nombre)
                 return fs.existsSync(p) ? fs.readFileSync(p).toString('base64') : undefined
@@ -199,17 +200,17 @@ export class LoginManager {
 
             const payload: ILoginPayload = { meta, config: loginConfig }
             if (elegido.problem) {
-                // Antes esto era SOLO una linea de log: el login salia sin fondo y nadie se enteraba. Paso
-                // de verdad con un login instalado desde el marketplace. Ahora queda anotado en el propio
-                // login, para que su pagina pueda avisar a quien la vea.
+                // This used to be ONLY a log line: the login came out with no background and nobody found
+                // out. It really happened with a login installed from the marketplace. Now it is noted on
+                // the login itself, so that its page can warn whoever sees it.
                 logInfo(ELogComponent.CORE, `Login '${meta.id}': no background fits in ${limit} bytes; none will be stored`)
                 payload.problem = elegido.problem
             }
             else if (elegido.backgroundB64) {
                 payload.background = elegido.backgroundB64
                 payload.backgroundQuality = elegido.quality
-                // Se dice cual se guardo: con dos imagenes en juego, saber que se sirve la normal —y por
-                // que— evita buscar el fallo en la imagen o en el navegador.
+                // Which one was stored is stated: with two images in play, knowing that the normal one is
+                // being served — and why — saves looking for the fault in the image or in the browser.
                 logInfo(ELogComponent.CORE, `Login '${meta.id}': stored '${elegido.quality}' background` +
                     (elegido.quality === EBackgroundQuality.STANDARD && limit !== undefined ? ` (the hi-res one does not fit in ${limit} bytes)` : ''))
             }
@@ -258,14 +259,14 @@ export class LoginManager {
         }
     }
 
-    // kwirth-dev.json es DECLARATIVO: lo que figura aqui queda instalado y lo que se quita del fichero se
-    // desinstala. Hace falta decirlo porque un login de dev es una instalacion REAL —se escribe en
-    // ConfigMaps, que es de donde se sirve la pantalla de login antes de autenticar a nadie—, asi que
-    // borrar la linea solo dejaba de reinstalarlo: la entrada sobrevivia en el indice y el manager lo
-    // seguia dando por instalado para siempre.
+    // kwirth-dev.json is DECLARATIVE: what is listed here stays installed and what is removed from the
+    // file gets uninstalled. It is worth saying because a dev login is a REAL installation — it is written
+    // into ConfigMaps, which is where the login screen is served from before authenticating anybody — so
+    // deleting the line merely stopped it being reinstalled: the entry survived in the index and the
+    // manager went on considering it installed forever.
     //
-    // Solo se reconcilia lo marcado 'dev'. Lo instalado desde un marketplace, una URL, un fichero o un
-    // pack no se toca: eso es instalado de verdad y se mantiene.
+    // Only what is marked 'dev' is reconciled. What was installed from a marketplace, a URL, a file or a
+    // pack is not touched: that is really installed and is kept.
     loadDevLogins(): void {
         const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
         if (!fs.existsSync(devConfigPath)) return
@@ -277,8 +278,8 @@ export class LoginManager {
             logError(ELogComponent.CORE, `Failed to load kwirth-dev.json logins: ${err}`)
             return
         }
-        // Secuencial a proposito: cada install hace leer-indice / anadir / escribir-indice, y en paralelo
-        // se pisan entre ellos y se pierden entradas.
+        // Sequential on purpose: every install does read-index / add / write-index, and in parallel they
+        // overwrite each other and entries are lost.
         ;(async () => {
             const declared = new Set<string>()
             for (const [id, tgzPath] of Object.entries(loginsMap)) {
@@ -351,7 +352,7 @@ export class LoginManager {
             const dev = this.devLogins.get(id)
             if (dev) hasBackground = await this.tgzHasBackground(dev.tgzPath)
         }
-        // el problema viaja a una pagina SIN autenticar, asi que va como codigo, no como detalle interno
+        // the problem travels to a page served WITHOUT authentication, so it goes as a code, not as internal detail
         return { ...data.config, hasBackground, ...(data.problem && !hasBackground ? { problem: data.problem } : {}) }
     }
 
@@ -382,9 +383,9 @@ export class LoginManager {
             try {
                 fs.mkdirSync(tmpDir, { recursive: true })
                 await tar.x({ file: dev.tgzPath, cwd: tmpDir, filter: (p: string) => p.endsWith('background.png') || p.endsWith('background-hi.png') })
-                // En dev el fondo NO pasa por el almacenamiento: se sirve del tgz, asi que no hay techo
-                // que respetar y gana siempre la buena. Es tambien lo que se quiere al desarrollar un
-                // login: verlo como se vera donde quepa.
+                // In dev the background does NOT go through the storage: it is served from the tgz, so
+                // there is no ceiling to honour and the good one always wins. It is also what one wants
+                // when developing a login: seeing it as it will look wherever it fits.
                 const candidates = ['background-hi.png', 'background.png'].flatMap(n => [path.join(tmpDir, n), path.join(tmpDir, 'package', n)])
                 const found = candidates.find(p => fs.existsSync(p))
                 return found ? fs.readFileSync(found) : undefined

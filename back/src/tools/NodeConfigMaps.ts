@@ -4,7 +4,7 @@ import path from 'path'
 import os from 'os'
 
 export class NodeConfigMaps implements IConfigMaps {
-    // Escribe en disco: no hay techo de objeto como el de un ConfigMap/Secret de Kubernetes.
+    // It writes to disk: there is no per-object ceiling like a Kubernetes ConfigMap/Secret's.
     public storeLimit = (): number | undefined => undefined
 
     private dir: string

@@ -1,11 +1,11 @@
-// Registro central de rutas HTTP de extensiones (control de endpoints del core). Las extensiones (channels,
-// providers, login extensions) montan routers en el Express del core; el namespace de ALIAS es plano, así que
-// dos extensiones pueden reclamar el mismo path (p.ej. dos providers con alias 'events') y machacarse en
-// SILENCIO (Express es first-match-wins). Este registro centraliza la decisión: valida colisiones exactas y
-// prefijos reservados del core, y permite consultar qué hay registrado.
+// The central registry of extensions' HTTP routes (the core's endpoint control). Extensions (channels,
+// providers, login extensions) mount routers on the core's Express; the ALIAS namespace is flat, so two
+// extensions can claim the same path (two providers with the alias 'events', for instance) and overwrite
+// each other in SILENCE (Express is first-match-wins). This registry centralises the decision: it validates
+// exact collisions and the core's reserved prefixes, and allows querying what is registered.
 //
-// Es PURO (sin Express ni logging): SOLO decide y registra; el caller es quien monta en Express (si ok) y
-// loguea el rechazo. Así queda unit-testable y desacoplado.
+// It is PURE (no Express, no logging): it ONLY decides and registers; the caller is the one that mounts on
+// Express (when it is ok) and logs the rejection. That way it stays unit-testable and decoupled.
 
 export enum ERouteOwnerKind {
     CORE = 'core',
@@ -30,13 +30,13 @@ export class RouteRegistry {
     private routes = new Map<string, IRegisteredRoute>()
     private reserved: string[] = []
 
-    /** Normaliza un path para comparar/registrar: quita barra(s) final(es); cadena vacía → '/'. */
+    /** Normalises a path for comparing/registering: it strips trailing slash(es); an empty string → '/'. */
     private norm(p: string): string {
         const n = p.replace(/\/+$/, '')
         return n === '' ? '/' : n
     }
 
-    /** Reserva un prefijo del core: ninguna extensión podrá montar ahí (ni el exacto ni nada por debajo). */
+    /** Reserves a core prefix: no extension will be able to mount there (neither the exact one nor anything below it). */
     reserve(path: string): void {
         const n = this.norm(path)
         if (!this.reserved.includes(n)) this.reserved.push(n)
@@ -47,9 +47,9 @@ export class RouteRegistry {
     }
 
     /**
-     * Decide si `path` puede registrarse para (ownerKind, ownerId) y, si procede, lo registra. NO monta en
-     * Express (eso lo hace el caller cuando el resultado es ok). Determinista: colisión exacta → duplicate;
-     * bajo un prefijo reservado (y no es el propio core) → reserved.
+     * Decides whether `path` can be registered for (ownerKind, ownerId) and, when appropriate, registers it.
+     * It does NOT mount on Express (the caller does that when the result is ok). Deterministic: an exact
+     * collision → duplicate; under a reserved prefix (and not being the core itself) → reserved.
      */
     tryRegister(path: string, ownerKind: ERouteOwnerKind, ownerId: string): TRegisterResult {
         const n = this.norm(path)
@@ -60,7 +60,7 @@ export class RouteRegistry {
         return { ok: true }
     }
 
-    /** Snapshot de lo registrado (para diagnóstico / log). */
+    /** A snapshot of what is registered (for diagnostics / the log). */
     list(): IRegisteredRoute[] {
         return [...this.routes.values()]
     }

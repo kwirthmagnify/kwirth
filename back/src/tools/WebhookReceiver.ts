@@ -7,9 +7,9 @@ export interface IWebhookResponse {
     body?: unknown
 }
 
-// Procesa un callback entrante con el cuerpo CRUDO (rawBody) ya disponible. Flujo:
-//   resolve(token) → verify (auth propia del artefacto) → parse → deliver al consumidor por target.
-// No lanza: siempre devuelve un status HTTP. La auth NO la conoce el core — la decide el webhook.verify().
+// Processes an incoming callback with the RAW body (rawBody) already available. The flow:
+//   resolve(token) → verify (the artefact's own auth) → parse → deliver to the consumer by target.
+// It never throws: it always returns an HTTP status. The core does NOT know the auth — webhook.verify() decides it.
 export const handleInbound = async (
     manager: WebhookManager | undefined,
     provider: string,
@@ -21,7 +21,7 @@ export const handleInbound = async (
 
     const res = manager.resolve(token)
     if (!res) return { status: 404, body: { ok: false } }
-    // El token es autoritativo para el enrutado; el segmento <provider> debe coincidir (legibilidad + defensa).
+    // The token is authoritative for the routing; the <provider> segment has to match (readability + defence).
     if (provider && provider !== res.webhookId) return { status: 404, body: { ok: false } }
 
     const webhook = manager.getWebhook(res.webhookId)
@@ -45,9 +45,9 @@ export const handleInbound = async (
     }
     if (!parsed) return { status: 400, body: { ok: false } }
 
-    // El receptor estampa el `configName` (lo resuelve el token; el artefacto no lo conoce).
+    // The receiver stamps the `configName` (the token resolves it; the artefact does not know it).
     const event: IWebhookEvent = { ...parsed, configName: res.configName }
-    // Ack rápido; deliver aísla las excepciones de cada consumidor. Entrega por par estricto (webhookId, configName).
+    // A quick ack; deliver isolates each consumer's exceptions. Delivery is by strict pair (webhookId, configName).
     manager.deliver(res.webhookId, res.configName, event)
     return { status: 200, body: { ok: true } }
 }

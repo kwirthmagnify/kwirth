@@ -27,7 +27,7 @@ export const isPluvider = (c: IChannel): c is TPluviderChannel =>
 */
 export const pluviderId = (channelId: string): string => PLUVIDER_ID_PREFIX + channelId
 
-/* Si un id de suscripcion apunta a un pluvider ('plugin:agora') o a un provider ('events'). */
+/* Whether a subscription id points at a pluvider ('plugin:agora') or at a provider ('events'). */
 export const isPluviderId = (id: string): boolean => id.startsWith(PLUVIDER_ID_PREFIX)
 
 /*

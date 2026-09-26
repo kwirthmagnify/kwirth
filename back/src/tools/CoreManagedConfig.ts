@@ -27,7 +27,7 @@ import { IdpManager } from './IdpManager'
     Ver `plans/config-portability/PRD.md`.
 */
 
-/** Une lo que sabe el core y lo que sabe la extension en un unico interlocutor. */
+/** Joins what the core knows and what the extension knows into a single interlocutor. */
 export const combine = (core: IExtension, own: IExtension | undefined): IExtension => {
     if (!own?.exportConfig && !own?.importConfig) return core
     return {
@@ -118,7 +118,7 @@ export const senderConfigs = (manager: SenderManager, id: string): IExtension =>
     }
 })
 
-/** Lo mismo para un webhook, con el mismo cuidado con los secretos. */
+/** The same for a webhook, with the same care over the secrets. */
 export const webhookConfigs = (manager: WebhookManager, id: string): IExtension => ({
     exportConfig: async (options) => {
         const configs = manager.getConfigs(id)
@@ -172,7 +172,7 @@ export const idpInstances = (manager: IdpManager, connectorId: string): IExtensi
                 ...i,
                 config: Object.fromEntries(Object.entries(i.config).map(([k, v]) => [k, secretos.includes(k) ? '' : v]))
             })),
-            // Sin esquema no se sabe que vaciar, asi que se avisa en vez de suponer.
+            // With no schema it is not known what to empty, so it is warned about rather than assumed.
             schemaKnown: schema !== undefined
         }
     },

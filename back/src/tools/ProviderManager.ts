@@ -11,8 +11,8 @@ import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHea
 import { assertInstallable } from './ExtensionInstallGuard'
 
 /**
- * @deprecated usa IProviderFieldDef de kwirth-common-back, que es el contrato comun a todas las
- * extensiones. Se mantiene el nombre porque es el que viaja en la respuesta de '/core/providers/:id/schema'.
+ * @deprecated use IProviderFieldDef from kwirth-common-back, which is the contract common to every
+ * extension. The name is kept because it is the one travelling in '/core/providers/:id/schema''s response.
  */
 export type IProviderSchemaField = IProviderFieldDef
 
@@ -24,9 +24,9 @@ export interface IProviderMeta {
     description: string
     website?: string
     installedFrom?: string
-    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
-    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
-    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
+    // the package registry, which is another server, and with precedence by id two marketplaces can
+    // serve the same extension. Absent = it came from no marketplace (dev, a file or a loose url).
     marketplaceId?: string
     marketplaceLabel?: string
     backStored?: boolean
@@ -105,8 +105,8 @@ export class ProviderManager {
 
         this.reloadDevBack(id, backPath, registeredProviders)
 
-        // mtimeMs 0 = el fichero no existe ahora mismo (un build limpio borra dist antes de
-        // regenerarlo): se ignora, en vez de intentar recargarlo y loguear un ENOENT enganoso.
+        // mtimeMs 0 = the file does not exist right now (a clean build deletes dist before regenerating
+        // it): it is ignored, instead of attempting to reload it and logging a misleading ENOENT.
         fs.watchFile(backPath, { persistent: false, interval: 500 }, (curr, prev) => {
             if (curr.mtimeMs !== prev.mtimeMs && curr.mtimeMs !== 0) {
                 logInfo(ELogComponent.CORE, `[dev] Provider '${id}' back.js changed — hot-reloading`)
@@ -134,8 +134,9 @@ export class ProviderManager {
     }
 
     private async fetchJsFromSource(meta: IProviderMeta): Promise<string | undefined> {
-        // Se cachea en /tmp, como plugin, sender y webhook: sin esto se baja el tarball entero en CADA
-        // arranque, y el provider se queda fuera si el registro no responde justo en ese momento.
+        // It is cached in /tmp, as plugin, sender and webhook do: without this the whole tarball is
+        // downloaded on EVERY startup, and the provider is left out should the registry not answer at
+        // that very moment.
         const cacheFile = cachedExtensionFile('provider', meta.id, 'back.js')
         if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
         if (!meta.installedFrom || meta.installedFrom === 'local') {
@@ -174,8 +175,9 @@ export class ProviderManager {
                 return dev.meta
             }
         })
-        // Un provider de dev SUSTITUYE al instalado con su mismo id, no se suma a el: sin el filtro
-        // sale duplicado en '/core/providers' y en el gestor. Mismo patron que plugin, theme y login.
+        // A dev provider REPLACES the installed one with its same id, it does not add to it: without the
+        // filter it comes out duplicated in '/core/providers' and in the manager. The same pattern as
+        // plugin, theme and login.
         const devIds = new Set(devMetas.map(m => m.id))
         return [...stored.filter(m => !devIds.has(m.id)), ...devMetas]
     }
@@ -212,11 +214,11 @@ export class ProviderManager {
             const meta: IProviderMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
 
             const index = (await this.configMaps.read('kwirth-providers-index', []) as IProviderMeta[]) || []
-            // Instalado es lo que diga installedIds, no el indice: uno de dev esta cargado sin figurar ahi.
+            // Installed is what installedIds says, not the index: a dev one is loaded without appearing there.
             assertInstallable('Provider', meta.id, this.installedIds.includes(meta.id) ? (index.find(p => p.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
-            // Una version nueva no puede heredar el js cacheado de la anterior
+            // A new version cannot inherit the previous one's cached js
             dropCachedExtensionFiles('provider', meta.id)
 
             meta.marketplaceId = marketplaceId
@@ -242,10 +244,11 @@ export class ProviderManager {
             }
 
             /*
-                null y no saltarse la escritura. Actualizando, una clave que no se toca se queda con el
-                contenido de la version ANTERIOR: el front de antes si el de ahora no cabe —o si la nueva
-                version ya no trae front—, y lo mismo con el back. Lo instalado tiene que ser exactamente
-                lo que trae el paquete, no la suma de lo que fueron trayendo sus versiones.
+                null and not skipping the write. When updating, a key that is not touched keeps the
+                PREVIOUS version's content: the old front end if the current one does not fit — or if the
+                new version no longer carries a front end — and the same with the back end. What is
+                installed has to be exactly what the package carries, not the sum of what its versions
+                have been carrying along the way.
             */
             await this.configMaps.write(`kwirth-provider-${meta.id}-front`, frontEntry)
 
@@ -272,8 +275,9 @@ export class ProviderManager {
                     meta.hasSchema = true
                 }
             } catch {}
-            // Fuera del try y con null: si la version nueva ya no declara esquema, el de la anterior
-            // seguiria ahi y la UI pintaria un formulario que el provider ya no entiende.
+            // Outside the try and with null: should the new version no longer declare a schema, the
+            // previous one's would still be there and the UI would draw a form the provider no longer
+            // understands.
             await this.configMaps.write(`kwirth-provider-${meta.id}-schema`, schema)
 
             logInfo(ELogComponent.CORE, `Provider '${meta.id}' v${meta.version} installed`)
@@ -308,8 +312,8 @@ export class ProviderManager {
     }
 
     private async _doUninstall(id: string, registeredProviders: Map<string, TProviderConstructor>, index: IProviderMeta[]): Promise<void> {
-        // La cache de /tmp no lleva version en el nombre: si no se borra aqui, reinstalar servirira
-        // el js de la instalacion anterior mientras el pod siga vivo.
+        // The /tmp cache does not carry the version in its name: unless it is deleted here,
+        // reinstalling will serve the previous installation's js as long as the pod stays alive.
         dropCachedExtensionFiles('provider', id)
         const dev = this.devProviders.get(id)
         if (dev) fs.unwatchFile(path.join(dev.distPath, 'back.js'))

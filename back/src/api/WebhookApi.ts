@@ -29,8 +29,8 @@ export class WebhookApi {
         this.router.post('/install', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                // 'upgrade' es el permiso EXPLICITO para pisar una instalacion existente. Sin el, el
-                // manager rechaza una id ya instalada, que es el comportamiento de siempre.
+                // 'upgrade' is the EXPLICIT permission to overwrite an existing installation. Without
+                // it the manager rejects an already installed id, which is the behaviour of always.
                 const { url, marketplaceId, marketplaceLabel, upgrade } = req.body
                 if (!url) return void res.status(400).json({ error: 'url required' })
                 const meta = await this.webhookManager.install(url, undefined, marketplaceId, marketplaceLabel, upgrade === true)
@@ -167,7 +167,7 @@ export class WebhookApi {
             }
         })
 
-        // Específico de webhook: la URL pública (con token opaco) que el usuario pega en el proveedor.
+        // Webhook specific: the public URL (with an opaque token) the user pastes into the provider.
         this.router.get('/:id/configs/:name/url', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             const url = this.webhookManager.getUrl(req.params.id, req.params.name)
@@ -175,7 +175,7 @@ export class WebhookApi {
             res.json({ url })
         })
 
-        // Rota el token → nueva URL (invalida la anterior configurada en el proveedor).
+        // Rotates the token → a new URL (it invalidates the previous one configured in the provider).
         this.router.post('/:id/configs/:name/rotate', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {

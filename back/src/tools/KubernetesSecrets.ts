@@ -4,8 +4,8 @@ import { ELogComponent, logError, logWarning } from './Logging'
 
 export class KubernetesSecrets implements ISecrets {
     /*
-        Mismo techo que un ConfigMap: un Secret de Kubernetes tampoco pasa de ~1 MiB por objeto, con
-        margen para el resto del documento.
+        The same ceiling as a ConfigMap: a Kubernetes Secret does not go beyond ~1 MiB per object either,
+        with room for the rest of the document.
     */
     public storeLimit = (): number | undefined => 800 * 1024
 
@@ -17,8 +17,8 @@ export class KubernetesSecrets implements ISecrets {
         this.namespace=namespace
     }
 
-    // Misma escritura optimista con reintento que KubernetesConfigMaps: un escritor concurrente deja el
-    // resourceVersion obsoleto y kubernetes responde 409 Conflict, que se resuelve releyendo.
+    // The same optimistic write with a retry as KubernetesConfigMaps: a concurrent writer leaves the
+    // resourceVersion stale and kubernetes answers a 409 Conflict, which is resolved by re-reading.
     public write = async (name:string, content:{}) => {
         const MAX_ATTEMPTS = 3
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {

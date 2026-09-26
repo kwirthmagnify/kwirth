@@ -29,15 +29,15 @@ export interface IPreviousContainerTermination {
 }
 
 export interface IPreviousContainerLog {
-    // el contenedor reinicio dentro de este pod: solo entonces hay un log anterior que pedir
+    // the container restarted within this pod: only then is there a previous log to ask for
     restarted: boolean
-    // la salida anterior NO fue limpia (exit code distinto de 0, OOMKilled...). Es lo que dispara el aviso
+    // the previous exit was NOT clean (an exit code other than 0, OOMKilled...). It is what fires the warning
     abnormal: boolean
     restartCount: number
     container?: string
     termination?: IPreviousContainerTermination
     lines: string[]
-    // por que no se pudo leer cuando SI se esperaba poder (log rotado, permisos, api caida)
+    // why it could not be read when it WAS expected to be readable (a rotated log, permissions, the api down)
     unavailableReason?: string
 }
 
@@ -47,8 +47,8 @@ let previousContainerLog: IPreviousContainerLog = NOTHING
 
 export const getPreviousContainerLog = (): IPreviousContainerLog => previousContainerLog
 
-// Cuantas lineas se piden. Configurable porque 1000 es un numero razonable, no una verdad: un core que
-// escupe mucho en el arranque necesita mas para que la causa no se quede fuera de la ventana.
+// How many lines are asked for. Configurable because 1000 is a reasonable number, not a truth: a core that
+// spews a lot at startup needs more so that the cause does not fall outside the window.
 export const resolvePreviousLogLines = (): number => {
     const fromEnv = Number(process.env.PREVIOUSLOGLINES)
     if (!isNaN(fromEnv) && fromEnv > 0) return Math.floor(fromEnv)
@@ -95,7 +95,7 @@ export const readPreviousContainerLog = async (coreApi: CoreV1Api, namespace: st
             startedAt: asIso(terminated.startedAt),
             finishedAt: asIso(terminated.finishedAt),
         }
-        // exit 0 tras un reinicio es una parada ordenada (un SIGTERM atendido); cualquier otra cosa no lo es
+        // an exit 0 after a restart is an orderly stop (a SIGTERM attended to); anything else is not
         const abnormal = terminated.exitCode !== 0
 
         const result: IPreviousContainerLog = {
@@ -109,15 +109,15 @@ export const readPreviousContainerLog = async (coreApi: CoreV1Api, namespace: st
 
         const tailLines = lines && lines > 0 ? Math.floor(lines) : resolvePreviousLogLines()
         try {
-            // Mismo camino que usa MagnifyChannel para leer log de un pod, mas 'previous'
+            // The same route MagnifyChannel uses in order to read a pod's log, plus 'previous'
             const log = await coreApi.readNamespacedPodLog({ name: podName, namespace, container: status.name, previous: true, tailLines })
             result.lines = String(log ?? '').split('\n')
-            // un log que acaba en \n deja una ultima linea vacia que no aporta nada
+            // a log ending in \n leaves a last empty line that adds nothing
             if (result.lines.length > 0 && result.lines[result.lines.length - 1] === '') result.lines.pop()
         }
         catch (err) {
-            // El reinicio es un hecho (lo dice el estado del pod), pero el log puede no estar ya: el
-            // kubelet lo rota, y con varios reinicios seguidos solo guarda el ultimo.
+            // The restart is a fact (the pod's state says so), but the log may no longer be there: the
+            // kubelet rotates it, and with several restarts in a row it only keeps the last one.
             result.unavailableReason = err instanceof Error ? err.message : String(err)
             logWarning(ELogComponent.CORE, `Previous container log is not available: ${result.unavailableReason}`)
         }
@@ -128,7 +128,7 @@ export const readPreviousContainerLog = async (coreApi: CoreV1Api, namespace: st
         return previousContainerLog
     }
     catch (err) {
-        // Leer esto es un extra de diagnostico: que falle NO puede estropear el arranque del core.
+        // Reading this is a diagnostic extra: its failing must NOT spoil the core's startup.
         previousContainerLog = { ...NOTHING, unavailableReason: err instanceof Error ? err.message : String(err) }
         logWarning(ELogComponent.CORE, `Could not check the previous container: ${previousContainerLog.unavailableReason}`)
         return previousContainerLog

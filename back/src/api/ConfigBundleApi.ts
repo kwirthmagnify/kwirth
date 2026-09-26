@@ -27,7 +27,7 @@ export class ConfigBundleApi {
     }
 
     private addRoutes(): void {
-        // Que hay para exportar y en que estado esta cada cosa: lo que pinta el dialogo de export.
+        // What there is to export and what state each thing is in: what the export dialog draws.
         this.router.get('/exportable', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
@@ -42,7 +42,7 @@ export class ConfigBundleApi {
         this.router.get('/export', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                // `include` llega como lista separada por comas; sin el, entra todo lo disponible.
+                // `include` arrives as a comma-separated list; without it, everything available goes in.
                 const include = typeof req.query.include === 'string' && req.query.include.length > 0
                     ? req.query.include.split(',')
                     : undefined
@@ -59,7 +59,7 @@ export class ConfigBundleApi {
             }
         })
 
-        // Que haria el import, sin hacerlo. Lo que se ve aqui es lo que va a pasar.
+        // What the import would do, without doing it. What is seen here is what is going to happen.
         this.router.post('/preview', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             const problema = validateBundle(req.body)
@@ -75,8 +75,8 @@ export class ConfigBundleApi {
 
         this.router.post('/import', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
-            // El fichero es editable a mano —y eso es deseable—, asi que lo que llega no es de fiar.
-            // El envoltorio se valida aqui; el contenido de cada extension lo valida ella.
+            // The file is editable by hand — and that is desirable — so what arrives is not to be
+            // trusted. The wrapper is validated here; each extension validates its own content.
             const problema = validateBundle(req.body?.bundle)
             if (problema) return void res.status(400).json({ error: problema })
             try {

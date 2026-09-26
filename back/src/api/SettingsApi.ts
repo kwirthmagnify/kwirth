@@ -12,13 +12,13 @@ const REGISTRY_KEY = 'kwirth.registry.credentials'         // contraseña de des
 const DEFAULT_METRICS_INTERVAL = 15
 const DEFAULT_PREVIOUS_LOG_LINES = 1000
 
-// Los secretos viajan dentro de manifestAuth.token / auth.password, como cualquier otro campo: el GET
-// los devuelve y el PUT los acepta. Lo que cambia es donde se guardan en reposo — nunca en el configmap
-// de settings, siempre en ISecrets (cifrado en filesystem, RBAC en k8s).
+// Secrets travel inside manifestAuth.token / auth.password, like any other field: the GET returns them
+// and the PUT accepts them. What changes is where they are stored at rest — never in the settings
+// configmap, always in ISecrets (encrypted on the filesystem, RBAC in k8s).
 //
-// Son dos listas independientes y dos almacenes de secretos distintos, porque leer un manifest y bajar
-// un paquete son dos servidores: el marketplace publico tiene los manifests en GitHub y los tarballs en
-// npmjs, y un mismo manifest privado puede listar paquetes alojados en varios registros.
+// They are two independent lists and two different secret stores, because reading a manifest and
+// downloading a package are two servers: the public marketplace has its manifests on GitHub and its
+// tarballs on npmjs, and one private manifest can list packages hosted in several registries.
 
 export class SettingsApi {
     public router = express.Router()
@@ -45,12 +45,12 @@ export class SettingsApi {
         return undefined
     }
 
-    // Lectura sin router, para que el arranque pueda hidratar antes de que existan rutas.
+    // A read with no router, so that startup can hydrate before any routes exist.
     public static async read(configMaps: IConfigMaps): Promise<IKwirthSettings> {
         return (await configMaps.read(SETTINGS_KEY, {})) as IKwirthSettings ?? {}
     }
 
-    // Valor efectivo del intervalo de metricas: lo guardado gana, luego METRICSINTERVAL, luego el default.
+    // The metrics interval's effective value: what is stored wins, then METRICSINTERVAL, then the default.
     public static resolveMetricsInterval(settings: IKwirthSettings): number {
         if (settings.metricsInterval && settings.metricsInterval > 0) return settings.metricsInterval
         const fromEnv = Number(process.env.METRICSINTERVAL)
@@ -71,12 +71,12 @@ export class SettingsApi {
         return DEFAULT_PREVIOUS_LOG_LINES
     }
 
-    // Contraseña de un registro de paquetes, para quien tenga que descargar un tarball suyo. Solo back.
+    // A package registry's password, for whoever has to download a tarball of its. Back end only.
     public static async getRegistryPassword(secrets: ISecrets, registryId: string): Promise<string|undefined> {
         return SettingsApi.readSecret(secrets, REGISTRY_KEY, registryId)
     }
 
-    // Token de lectura del manifest (p.ej. PRIVATE-TOKEN de un GitLab privado). Solo back.
+    // The manifest's read token (a private GitLab's PRIVATE-TOKEN, for instance). Back end only.
     public static async getManifestToken(secrets: ISecrets, marketplaceId: string): Promise<string|undefined> {
         return SettingsApi.readSecret(secrets, TOKENS_KEY, marketplaceId)
     }
@@ -87,7 +87,7 @@ export class SettingsApi {
         return typeof value === 'string' && value !== '' ? value : undefined
     }
 
-    // Valida la lista de marketplaces. Devuelve el mensaje del primer fallo, o undefined si esta bien.
+    // Validates the list of marketplaces. Returns the first failure's message, or undefined when it is fine.
     public static validateMarketplaces(marketplaces: unknown): string|undefined {
         if (!Array.isArray(marketplaces)) return 'marketplaces must be an array'
         const seen = new Set<string>()
@@ -106,7 +106,7 @@ export class SettingsApi {
         return undefined
     }
 
-    // Valida la lista de registros de paquetes. Devuelve el primer fallo, o undefined si esta bien.
+    // Validates the list of package registries. Returns the first failure, or undefined when it is fine.
     public static validatePackageRegistries(registries: unknown): string|undefined {
         if (!Array.isArray(registries)) return 'packageRegistries must be an array'
         const seen = new Set<string>()
@@ -128,16 +128,16 @@ export class SettingsApi {
         return undefined
     }
 
-    // Separa los secretos de la config: devuelve los marketplaces listos para el configmap y, aparte, lo
-    // que hay que persistir en ISecrets. Un secreto ausente (undefined) conserva el guardado; uno vacio
-    // ('') lo borra, que es lo que significa que el usuario haya vaciado el campo en el formulario.
+    // Separates the secrets from the config: it returns the marketplaces ready for the configmap and,
+    // apart from them, what has to be persisted in ISecrets. An absent secret (undefined) keeps the
+    // stored one; an empty one ('') deletes it, which is what the user having emptied the form's field means.
     private splitCredentials(incoming: IMarketplace[]): { clean: IMarketplace[], tokens: Map<string, string|null> } {
         const tokens = new Map<string, string|null>()
         const clean: IMarketplace[] = incoming.map(m => {
             if (m.manifestAuth?.token !== undefined) tokens.set(m.id, m.manifestAuth.token === '' ? null : m.manifestAuth.token)
             const cleaned: IMarketplace = { id: m.id, url: m.url, label: m.label, enabled: m.enabled }
             if (m.manifestAuth) {
-                // el username del Basic no es secreto: va en el configmap junto al tipo
+                // the Basic username is not a secret: it goes in the configmap alongside the type
                 cleaned.manifestAuth = { type: m.manifestAuth.type, ...(m.manifestAuth.username ? { username: m.manifestAuth.username } : {}) }
             }
             return cleaned
@@ -145,9 +145,9 @@ export class SettingsApi {
         return { clean, tokens }
     }
 
-    // Lo mismo para los registros de paquetes: el secreto fuera del configmap, el usuario dentro. Segun el
-    // tipo el secreto es la contraseña (BASIC) o el token (BEARER), pero solo aplica uno a la vez, asi que
-    // comparten ranura en el almacen: un registro, un secreto.
+    // The same for the package registries: the secret outside the configmap, the user inside it.
+    // Depending on the type the secret is the password (BASIC) or the token (BEARER), but only one
+    // applies at a time, so they share a slot in the store: one registry, one secret.
     private splitRegistryCredentials(incoming: IPackageRegistry[]): { clean: IPackageRegistry[], secrets: Map<string, string|null> } {
         const secrets = new Map<string, string|null>()
         const clean: IPackageRegistry[] = incoming.map(r => {
@@ -162,8 +162,8 @@ export class SettingsApi {
         return { clean, secrets }
     }
 
-    // Rellena cada marketplace con su secreto guardado. Viajan al front como cualquier otro campo: el
-    // formulario los pre-rellena enmascarados y el ojo los revela, sin endpoint aparte.
+    // Fills every marketplace with its stored secret. They travel to the front end like any other field:
+    // the form pre-fills them masked and the eye reveals them, with no separate endpoint.
     private async withSecrets(settings: IKwirthSettings): Promise<IKwirthSettings> {
         if (!settings.marketplaces?.length && !settings.packageRegistries?.length) return settings
         const [tokens, passwords] = await Promise.all([
@@ -194,14 +194,14 @@ export class SettingsApi {
         this.router.route('/')
             .all( async (req:Request, res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
-                // configurar Kwirth es operacion administrativa: exige scope 'admin'
+                // configuring Kwirth is an administrative operation: it demands the 'admin' scope
                 if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
                 next()
             })
             .get( async (_req:Request, res:Response) => {
                 try {
                     const stored = await SettingsApi.read(this.configMaps)
-                    // se devuelven los valores efectivos, no los crudos, para que el front muestre lo que rige
+                    // the effective values are returned, not the raw ones, so the front end shows what actually rules
                     const hydrated = await this.withSecrets(stored)
                     res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(stored), previousLogLines: SettingsApi.resolvePreviousLogLines(stored) })
                 }
@@ -226,7 +226,7 @@ export class SettingsApi {
                         if (problem) { res.status(400).json({ error: problem }); return }
                     }
 
-                    // merge sobre lo guardado: un PUT parcial no debe borrar ajustes que no envia
+                    // a merge over what is stored: a partial PUT must not delete settings it does not send
                     const stored = await SettingsApi.read(this.configMaps)
                     const merged: IKwirthSettings = { ...stored, ...incoming }
                     if (incoming.metricsInterval !== undefined) merged.metricsInterval = +incoming.metricsInterval
@@ -235,7 +235,7 @@ export class SettingsApi {
                         const { clean, tokens } = this.splitCredentials(incoming.marketplaces)
                         merged.marketplaces = clean
                         for (const [id, token] of tokens) await this.secrets.writeKey(TOKENS_KEY, id, token)
-                        // un marketplace eliminado se lleva su token con el
+                        // a deleted marketplace takes its token with it
                         const removed = (stored.marketplaces ?? []).filter(old => !clean.some(m => m.id === old.id))
                         for (const old of removed) await this.secrets.writeKey(TOKENS_KEY, old.id, null)
                     }

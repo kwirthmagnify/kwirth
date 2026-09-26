@@ -15,7 +15,7 @@ export class UserApi {
     static semaphore: Semaphore = new Semaphore(1)
     public router = express.Router()
 
-    // delega en IdentityService: re-indexa por id real y gestiona la codificación base64url de la clave
+    // it delegates to IdentityService: it re-indexes by real id and handles the key's base64url encoding
     readUsersSecret = async (secrets: ISecrets) => {
         return IdentityService.readUsers(secrets)
     }
@@ -27,7 +27,7 @@ export class UserApi {
         this.router.route('/')
             .all( async (req:Request,res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
-                // gestión de usuarios es operación administrativa: exige scope 'admin'
+                // managing users is an administrative operation: it demands the 'admin' scope
                 if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
                 next()
             })

@@ -5,15 +5,15 @@ import { ELogComponent, logError, logInfo } from '../tools/Logging'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 
-// API del tipo `aitoolset` (plan: plans/ai-tools/PLAN.md, S1).
+// API of the `aitoolset` type (plan: plans/ai-tools/PLAN.md, S1).
 //
-// Dos listados distintos a proposito:
-//   GET /            → lo INSTALADO (metadatos del manager), que es lo que pinta el manager dialog
-//   GET /catalog     → lo REGISTRADO y utilizable (built-in + instalado), que es lo que necesita el
-//                      selector de tools para ofrecer toolsets y marcar sus tools
+// Two different listings, on purpose:
+//   GET /            → what is INSTALLED (the manager's metadata), which is what the manager dialog draws
+//   GET /catalog     → what is REGISTERED and usable (built-in + installed), which is what the tool
+//                      selector needs in order to offer toolsets and mark their tools
 //
-// No es lo mismo: un built-in no esta "instalado" —no se instala ni se desinstala— pero si esta
-// disponible; y un instalado cuyo back.js no cargo esta en el indice y NO esta disponible.
+// They are not the same: a built-in is not "installed" — it is neither installed nor uninstalled — but it
+// is available; and an installed one whose back.js did not load is in the index and is NOT available.
 export class AiToolsetApi {
     router: Router
     private manager: AiToolsetManager
@@ -27,9 +27,9 @@ export class AiToolsetApi {
     }
 
     private addRoutes(): void {
-        // Se enriquece con toolCount desde el REGISTRO, no desde el indice: el indice dice lo que se
-        // instalo y el registro lo que de verdad se cargo. Si un back.js fallo al cargar, la tarjeta lo
-        // enseña sin contador en vez de mentir con el numero que traia el paquete.
+        // It is enriched with toolCount from the REGISTRY, not from the index: the index says what was
+        // installed and the registry what really loaded. Should a back.js have failed to load, the card
+        // shows it with no counter instead of lying with the number the package carried.
         this.router.get('/', async (_req: Request, res: Response) => {
             try {
                 const metas = await this.manager.listInstalled()
@@ -40,8 +40,9 @@ export class AiToolsetApi {
             }
         })
 
-        // El catalogo lleva las FICHAS (IAiToolsetInfo): nombre, descripcion, efecto y sensibilidad de
-        // cada tool. Nunca el inputSchema ni el execute — eso es del back y no tiene por que viajar.
+        // The catalogue carries the CARDS (IAiToolsetInfo): every tool's name, description, effect and
+        // sensitivity. Never the inputSchema or the execute — those belong to the back end and have no
+        // reason to travel.
         this.router.get('/catalog', async (_req: Request, res: Response) => {
             try {
                 res.json(listToolsetInfos().map(t => ({ ...t, builtIn: isBuiltInToolsetId(t.id) })))
@@ -51,17 +52,17 @@ export class AiToolsetApi {
             }
         })
 
-        // ── Concesiones: que plugins pueden usar cada toolset ───────────────────────────────────────
+        // ── Grants: which plugins may use each toolset ──────────────────────────────────────────────
         //
-        // El mapa entero de una lectura: la pregunta que hay que poder responder rapido es "¿quien puede
-        // escribir en el cluster por IA?", y esa se contesta mirando quien tiene concedido k8s-ops.
+        // The whole map in one read: the question one has to be able to answer fast is "who can write to
+        // the cluster through AI?", and that is answered by looking at who has been granted k8s-ops.
         this.router.get('/grants', async (_req: Request, res: Response) => {
             try { res.json(await this.manager.listGrants()) }
             catch (err) { res.status(500).json({ error: String(err) }) }
         })
 
-        // Conceder es un acto de ADMIN, no de cualquiera con una key valida: da acceso a tools que tocan
-        // el cluster. Es la unica ruta de este API que exige scope de admin.
+        // Granting is an ADMIN act, not one for anybody with a valid key: it gives access to tools that
+        // touch the cluster. It is the only route of this API demanding the admin scope.
         this.router.put('/grants/:id', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
@@ -78,8 +79,8 @@ export class AiToolsetApi {
         this.router.post('/install', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                // 'upgrade' es el permiso EXPLICITO para pisar una instalacion existente. Sin el, el
-                // manager rechaza una id ya instalada, que es el comportamiento de siempre.
+                // 'upgrade' is the EXPLICIT permission to overwrite an existing installation. Without
+                // it the manager rejects an already installed id, which is the behaviour of always.
                 const { url, marketplaceId, marketplaceLabel, upgrade } = req.body
                 if (!url) return void res.status(400).json({ error: 'url required' })
                 const meta = await this.manager.install(url, undefined, marketplaceId, marketplaceLabel, upgrade === true)

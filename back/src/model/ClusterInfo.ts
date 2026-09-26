@@ -23,23 +23,23 @@ export interface IPendingWebsocket {
 }
 
 /**
- * Una suscripcion VIVA, tal y como el core la intermedio: quien produce y quien consume.
+ * A LIVE subscription, exactly as the core brokered it: who produces and who consumes.
  *
- * El core es el unico sitio donde esta informacion existe completa. Un provider guarda sus
- * suscriptores, pero 'IProviderSubscriber' es una interfaz de un solo metodo y no lleva identidad, asi
- * que el provider sabe CUANTOS tiene y no QUIENES son. Aqui, en cambio, la suscripcion pasa con el
- * canal delante — y con eso se puede dibujar el grafo sin pedirle nada a nadie.
+ * The core is the only place where this information exists in full. A provider stores its subscribers,
+ * but 'IProviderSubscriber' is a single-method interface and carries no identity, so the provider knows
+ * HOW MANY it has and not WHO they are. Here, on the other hand, the subscription goes through with the
+ * channel in front — and with that the graph can be drawn without asking anybody for anything.
  */
 export interface ISubscription {
-    /** Quien produce: un provider ('events') o un pluvider ('plugin:agora'). */
+    /** Who produces: a provider ('events') or a pluvider ('plugin:agora'). */
     providerId: string
     /**
-     * Quien consume: el id del canal ('agora'), o el de un provider con su prefijo
-     * ('provider:aws') cuando quien consume es otro provider. Se llama 'consumerId' y no
-     * 'channelId' desde que dejo de poder ser solo un canal — ver providers/Consumer.ts.
+     * Who consumes: the channel's id ('agora'), or a provider's with its prefix ('provider:aws') when
+     * the consumer is another provider. It is called 'consumerId' and not 'channelId' ever since it
+     * stopped being able to be only a channel — see providers/Consumer.ts.
      */
     consumerId: string
-    /** Desde cuando, para poder decir cuanto lleva algo sin consumidores. */
+    /** Since when, so it can be said how long something has gone without consumers. */
     since: number
 }
 
@@ -67,9 +67,9 @@ export interface ISubscription {
 export interface IProviderHandle {
     readonly id: string
     /*
-        Devuelve lo que devuelva el productor —normalmente una promesa—, en vez de tragarselo: un
-        provider que falla al dar de alta a un suscriptor deja un unhandled rejection, y eso tumba el
-        core. Quien consume providers ajenos lo envuelve en Promise.resolve().catch().
+        Returns whatever the producer returns — normally a promise — instead of swallowing it: a
+        provider that fails when registering a subscriber leaves an unhandled rejection, and that takes
+        the core down. Whoever consumes other people's providers wraps it in Promise.resolve().catch().
     */
     subscribe(subscriber: IProviderSubscriber, data?: any): unknown
     updateSubscription(subscriber: IProviderSubscriber, data?: any): unknown
@@ -121,23 +121,24 @@ export class ClusterInfo {
     public token: string|undefined   // needed just for connecting to kubelet and extract metrics
     public providers!: IProvider[]
     /*
-        Registro de PLUVIDERS: canales que ademas producen. Separado de 'providers' a proposito — ver
-        el porque en providers/Pluvider.ts. La clave es el id compuesto ('plugin:<channelId>').
+        The PLUVIDER registry: channels that also produce. Kept apart from 'providers' on purpose — the
+        why of it is in providers/Pluvider.ts. The key is the composite id ('plugin:<channelId>').
     */
     public pluviders: Map<string, TPluviderChannel> = new Map()
     public senders?: ISenderAccess
     public webhooks?: IWebhookAccess
     /*
-        Quien consume a quien, registrado aqui porque aqui es donde se sabe.
+        Who consumes whom, recorded here because here is where it is known.
 
-        Se escribe al suscribirse y al darse de baja —cuando alguien abre o cierra un canal—, nunca por
-        evento: no esta en el camino caliente y no cuesta nada mantenerlo.
+        It is written on subscribing and on unsubscribing — when somebody opens or closes a channel —
+        never per event: it is not in the hot path and keeping it costs nothing.
 
-        ⚠️ NO es la verdad absoluta: quien llame a 'provider.addSubscriber()' directamente, sin pasar
-        por aqui, no aparece. Lo hace provider-debug con su propio proxy, a proposito. Por eso esto
-        convive con 'IProvider.getStats()', que da el TOTAL que el provider reconoce: si el total es
-        mayor que lo registrado aqui, hay consumidores que este mapa no conoce, y quien lo pinte debe
-        decirlo en vez de dar a entender que estan todos.
+        ⚠️ It is NOT the absolute truth: whoever calls 'provider.addSubscriber()' directly, without
+        coming through here, does not appear. provider-debug does so with a proxy of its own, on
+        purpose. That is why this lives alongside 'IProvider.getStats()', which gives the TOTAL the
+        provider acknowledges: should the total be greater than what is recorded here, there are
+        consumers this map does not know about, and whoever draws it must say so instead of implying
+        they are all there.
     */
     private subscriptions: ISubscriptionEntry[] = []
 
@@ -147,13 +148,12 @@ export class ClusterInfo {
     public flavour: string ='unknown'
 
     /*
-        Un id con prefijo ('plugin:agora') apunta a un pluvider y se resuelve contra su registro; sin
-        prefijo, a un provider y el camino es el de siempre.
+        A prefixed id ('plugin:agora') points at a pluvider and is resolved against its registry;
+        without a prefix, at a provider, and the route is the usual one.
 
-        La ausencia se trata distinto en cada caso: un provider declarado en 'requirements' que no
-        esta registrado es una mala configuracion (error), mientras que un pluvider ausente es un
-        escenario legitimo —su plugin puede no estar instalado— y el consumidor sigue funcionando sin
-        el (warning).
+        Absence is treated differently in each case: a provider declared in 'requirements' that is not
+        registered is a misconfiguration (an error), whereas an absent pluvider is a legitimate scenario
+        — its plugin may not be installed — and the consumer goes on working without it (a warning).
     */
     addSubscriber = (providerId: string, c:IChannel, data:any) => {
         const log = providerLogger(providerId)
@@ -307,11 +307,11 @@ export class ClusterInfo {
     getSubscriptions = (): ISubscription[] =>
         this.subscriptions.map(({ providerId, consumerId, since }) => ({ providerId, consumerId, since }))
 
-    // Kubernetes no tiene nombre de cluster: los gestionados dejan pistas en labels/providerID del
-    // nodo, y k3s no deja ninguna (k3d solo la deja en el nombre de sus contenedores). Precedencia:
-    //   1. KWIRTH_CLUSTER_NAME — el operador manda, ninguna heurística lo pisa
-    //   2. heurística por flavour sobre el nodo control-plane
-    //   3. uid del namespace kube-system — identidad garantizada aunque no sea legible
+    // Kubernetes has no cluster name: the managed ones leave clues in the node's labels/providerID, and
+    // k3s leaves none (k3d only leaves it in the name of its containers). Precedence:
+    //   1. KWIRTH_CLUSTER_NAME — the operator rules, no heuristic overrides it
+    //   2. a heuristic by flavour over the control-plane node
+    //   3. the kube-system namespace's uid — a guaranteed identity even if it is not readable
     setKubernetesClusterName = async() => {
         try {
             if (this.name !== '') return
@@ -321,8 +321,8 @@ export class ClusterInfo {
             const resp = await this.coreApi.listNode()
             const nodes = resp.items ?? []
             if (nodes.length > 0) {
-                // Las pistas del flavour (y en k3s el mejor candidato a nombre) están en el
-                // control-plane; items[0] puede ser un agente cualquiera
+                // The flavour's clues (and, in k3s, the best candidate for a name) are on the
+                // control-plane; items[0] can be any agent at all
                 const controlPlane = nodes.find(n => n.metadata?.labels && (
                     'node-role.kubernetes.io/control-plane' in n.metadata.labels ||
                     'node-role.kubernetes.io/master' in n.metadata.labels))
@@ -341,14 +341,14 @@ export class ClusterInfo {
         }
     }
 
-    // Nombre publicado por el flavour del cluster ('' si ese flavour no publica ninguno)
+    // The name published by the cluster's flavour ('' when that flavour publishes none)
     private detectClusterName = (node: V1Node, nodes: V1Node[]): string => {
         const labels = node.metadata?.labels ?? {}
         const annotations = node.metadata?.annotations ?? {}
 
         if (labels['kubernetes.azure.com/cluster']) {
             this.flavour = 'aks'
-            // el label trae el resource group del nodo por delante (MC_<rg>_<cluster>_<region>)
+            // the label carries the node's resource group in front (MC_<rg>_<cluster>_<region>)
             let name = labels['kubernetes.azure.com/cluster']
             const rg = labels['kubernetes.azure.com/network-resourcegroup']
             if (rg && name.startsWith(rg+'_')) name = name.substring(rg.length+1)
@@ -367,7 +367,7 @@ export class ClusterInfo {
                     logWarning(ELogComponent.CORE, 'Node last-applied-configuration is not parseable, falling back to eksctl label')
                 }
             }
-            // eksctl etiqueta los nodos que crea, pero no necesariamente todos los del cluster
+            // eksctl labels the nodes it creates, but not necessarily every node in the cluster
             const eksctlNode = nodes.find(n => n.metadata?.labels?.['alpha.eksctl.io/cluster-name'])
             return eksctlNode?.metadata?.labels?.['alpha.eksctl.io/cluster-name'] ?? ''
         }
@@ -383,10 +383,10 @@ export class ClusterInfo {
         if (annotations['k3s.io/hostname']) {
             const hostname = annotations['k3s.io/hostname'].toLocaleLowerCase()
             this.flavour = hostname.startsWith('k3d') ? 'k3d' : 'k3s'
-            // k3d nombra sus nodos '<cluster>-server-N' / '<cluster>-agent-N', así que el nombre del
-            // cluster sale de recortar por el separador. Un k3s de verdad usa el hostname de la
-            // máquina, que no lleva separador ni nombre de cluster: lo mejor que hay es el hostname
-            // del control-plane (y si no vale, el operador tiene KWIRTH_CLUSTER_NAME)
+            // k3d names its nodes '<cluster>-server-N' / '<cluster>-agent-N', so the cluster's name
+            // comes from trimming at the separator. A real k3s uses the machine's hostname, which
+            // carries neither separator nor cluster name: the best there is is the control-plane's
+            // hostname (and should that not do, the operator has KWIRTH_CLUSTER_NAME)
             if (this.flavour !== 'k3d') return hostname
             let cut = hostname.indexOf('-agent-')
             if (cut < 0) cut = hostname.indexOf('-server-')
@@ -396,7 +396,7 @@ export class ClusterInfo {
         return ''
     }
 
-    // Identidad del cluster: uid del namespace kube-system (único y estable entre reinicios)
+    // The cluster's identity: the kube-system namespace's uid (unique and stable across restarts)
     private getClusterUid = async (): Promise<string> => {
         if (this.id !== '') return this.id
         try {

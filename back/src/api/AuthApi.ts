@@ -9,7 +9,7 @@ import { IdentityService } from '../tools/auth/IdentityService'
 import { TtlStore } from '../tools/auth/TtlStore'
 import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
 
-// contexto de la running instance activa (para leer usuarios y emitir AccessKey)
+// the active running instance's context (for reading users and issuing an AccessKey)
 interface IAuthContext {
     secrets: ISecrets
     configMaps: IConfigMaps
@@ -52,8 +52,9 @@ export class AuthApi {
         this.initRoutes()
     }
 
-    // valida la URL de retorno que aporta el front: solo se acepta si es localhost (dev) o mismo
-    // origen que el back (prod). Evita open-redirect que filtraría el código de handoff (→ AccessKey).
+    // validates the return URL the front end supplies: it is accepted only when it is localhost (dev) or
+    // the same origin as the back end (prod). It prevents an open redirect that would leak the handoff
+    // code (→ AccessKey).
     private allowedReturnTo(returnTo: string | undefined, req: Request): string | undefined {
         if (!returnTo) return undefined
         try {
@@ -82,8 +83,8 @@ export class AuthApi {
     }
 
     private initRoutes() {
-        // metodos de autenticacion disponibles. 'auth' se mantiene por compatibilidad con el
-        // front actual (lee auth.auth) hasta que consuma 'methods'.
+        // the available authentication methods. 'auth' is kept for compatibility with the current front
+        // end (it reads auth.auth) until it consumes 'methods'.
         this.router.get('/method', async (_req: Request, res: Response) => {
             try {
                 const methods: IAuthMethod[] = []
@@ -94,8 +95,9 @@ export class AuthApi {
                 if (idpManager) {
                     const instances = await idpManager.getEnabledInstances()
                     for (const inst of instances) {
-                        // no ofrecer un metodo cuyo conector no esta cargado (desinstalado, quitado de dev, o fallo
-                        // al cargar): el login lo mostraria y al pulsarlo daria 'connector not available'
+                        // do not offer a method whose connector is not loaded (uninstalled, removed from
+                        // dev, or a failure on loading): the login would show it and pressing it would
+                        // give 'connector not available'
                         if (!idpManager.getConnector(inst.connectorId)) {
                             logWarning(ELogComponent.AUTH, `Skipping login method '${inst.id}': connector '${inst.connectorId}' not available`)
                             continue
@@ -111,7 +113,7 @@ export class AuthApi {
             }
         })
 
-        // inicio del flujo: redirige al IdP
+        // the flow's start: it redirects to the IdP
         this.router.get('/:instanceId/start', async (req: Request, res: Response) => {
             const idpManager = this.getIdpManager()
             if (!idpManager) {
@@ -146,11 +148,12 @@ export class AuthApi {
             }
         })
 
-        // callback del IdP: valida identidad, aplica el gate y emite el AccessKey
+        // the IdP's callback: it validates the identity, applies the gate and issues the AccessKey
         this.router.get('/:instanceId/callback', async (req: Request, res: Response) => {
             const instanceId = req.params.instanceId
-            // handoff final al SPA. Empieza como fallback (front servido por el back) y se actualiza
-            // al returnTo aportado por el front (validado) una vez recuperado el state.
+            // the final handoff to the SPA. It starts as a fallback (the front end served by the back
+            // end) and is updated to the returnTo the front end supplied (validated) once the state has
+            // been recovered.
             let front = `${this.baseUrl(req)}/front`
             const fail = (reason: string) => res.redirect(`${front}${front.includes('?') ? '&' : '?'}ssoerror=${reason}`)
 
@@ -175,7 +178,7 @@ export class AuthApi {
             let identity
             try {
                 const redirectUri = `${this.baseUrl(req)}/core/auth/${instanceId}/callback`
-                // params crudos del callback (code, state, iss, ...) para que el conector cumpla RFC 9207
+                // the callback's raw params (code, state, iss, ...) so that the connector complies with RFC 9207
                 const params: Record<string, string> = {}
                 for (const [k, v] of Object.entries(req.query)) if (typeof v === 'string') params[k] = v
                 identity = await connector.handleCallback(inst.config, { code, codeVerifier: entry.codeVerifier, redirectUri, params })
@@ -218,7 +221,7 @@ export class AuthApi {
             res.redirect(`${front}${front.includes('?') ? '&' : '?'}sso=${handoffCode}`)
         })
 
-        // el front canjea el codigo de handoff por el ILoginResponse
+        // the front end exchanges the handoff code for the ILoginResponse
         this.router.post('/exchange', (req: Request, res: Response) => {
             const code = String(req.body?.code || '')
             const response = this.handoffStore.take(code)

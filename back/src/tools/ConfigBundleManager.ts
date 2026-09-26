@@ -7,24 +7,25 @@ import {
 import { ELogComponent, logInfo, logWarning } from './Logging'
 
 /*
-    Portabilidad de configuracion: llevarse la configuracion de un Kwirth a otro.
+    Configuration portability: taking one Kwirth's configuration to another.
 
-    ESTE FICHERO NO ENTIENDE LO QUE TRANSPORTA, y es a proposito. Los plugins con back propio guardan su
-    configuracion donde quieren —Excubitor y Agora en su propio Postgres, y ahi conviven sus reglas y
-    sus salas (configuracion) con sus findings y sus mensajes (datos de trabajo, que NO deben viajar)—.
-    Solo la extension sabe cual es cual, asi que el core se limita a:
+    THIS FILE DOES NOT UNDERSTAND WHAT IT CARRIES, and that is on purpose. Plugins with a back end of
+    their own store their configuration wherever they like — Excubitor and Agora in their own Postgres,
+    and there their rules and their rooms (configuration) live alongside their findings and their
+    messages (working data, which must NOT travel). Only the extension knows which is which, so the core
+    confines itself to:
 
-      - preguntar a quien pueda responder (`IExtension.exportConfig`)
-      - meter lo que le den en un fichero, sin mirarlo
-      - en el otro extremo, localizar al destinatario y entregarle su parte (`importConfig`)
+      - asking whoever can answer (`IExtension.exportConfig`)
+      - putting what they give it into a file, without looking at it
+      - at the other end, locating the recipient and handing it its part (`importConfig`)
 
-    Lo que el core SI aporta por su cuenta es lo suyo: los ajustes globales y el almacen comun de IA,
-    que no pertenece a ninguna extension.
+    What the core DOES contribute on its own account is its own: the global settings and the common AI
+    store, which belongs to no extension.
 
-    Ver `plans/config-portability/PRD.md` y `PLAN.md`.
+    See `plans/config-portability/PRD.md` and `PLAN.md`.
 */
 
-/** Una extension candidata, con su instancia viva si es que la hay. */
+/** A candidate extension, with its live instance should there be one. */
 export interface IExtensionRef {
     type: EExtensionType
     id: string
@@ -32,19 +33,19 @@ export interface IExtensionRef {
     version?: string
     marketplace?: string
     /*
-        Sin instancia no hay a quien preguntar. Pasa de verdad: de los canales solo se instancian los
-        requeridos, y nunca los anunciados como REMOTE, asi que un plugin instalado puede no tener
-        ninguna. No se crea una temporal a proposito — un constructor de canal abre informers y
-        conexiones, y despertar medio plugin para leerle una configuracion es un efecto secundario
-        desproporcionado y dificil de deshacer.
+        With no instance there is nobody to ask. It really happens: of the channels, only the required
+        ones are instantiated, and never those announced as REMOTE, so an installed plugin may have none.
+        A temporary one is not created, on purpose — a channel's constructor opens informers and
+        connections, and waking half a plugin up in order to read a configuration off it is a
+        disproportionate side effect and hard to undo.
     */
     instance?: IExtension
 }
 
-/** De donde salen las extensiones vivas. Inyectado para que esto se pueda testear sin medio core. */
+/** Where the live extensions come from. Injected so this can be tested without half a core. */
 export type TExtensionSource = () => Promise<IExtensionRef[]>
 
-/** Lo que el core aporta de su parte. Inyectado por el mismo motivo. */
+/** What the core contributes on its own account. Injected for the same reason. */
 export interface ICorePortableConfig {
     readSettings: () => Promise<unknown>
     writeSettings: (data: unknown) => Promise<void>
@@ -53,7 +54,7 @@ export interface ICorePortableConfig {
 }
 
 export interface IExportRequest {
-    /** Claves a incluir. Si no se pasa, entra todo lo disponible. */
+    /** The keys to include. When it is not passed, everything available goes in. */
     include?: string[]
     includeCredentials: boolean
     source?: string
@@ -61,11 +62,11 @@ export interface IExportRequest {
 
 export interface IImportRequest {
     bundle: IConfigBundle
-    /** Claves a aplicar. Si no se pasa, se aplica todo lo aplicable. */
+    /** The keys to apply. When it is not passed, everything applicable is applied. */
     include?: string[]
 }
 
-/** El estado de una entrada del bundle a la hora de exportar. */
+/** The state of a bundle entry at export time. */
 export const exportStatusOf = (ref: IExtensionRef): EBundleEntryStatus => {
     if (!ref.instance) return EBundleEntryStatus.NOT_INSTANTIATED
     if (!ref.instance.exportConfig) return EBundleEntryStatus.NOT_SUPPORTED
@@ -73,10 +74,10 @@ export const exportStatusOf = (ref: IExtensionRef): EBundleEntryStatus => {
 }
 
 /*
-    El estado de una entrada del bundle a la hora de importar. El orden de las comprobaciones importa:
-    "no instalada" tiene que ganar a "no soporta", porque son dos mensajes distintos para el usuario
-    —instalar algo, o esperar a que su autor adopte el contrato— y confundirlos manda a buscar donde no
-    es. La diferencia de version no impide nada: avisa.
+    The state of a bundle entry at import time. The order of the checks matters: "not installed" has to
+    beat "does not support", because they are two different messages for the user — install something, or
+    wait for its author to adopt the contract — and confusing them sends one looking in the wrong place.
+    A difference in version prevents nothing: it warns.
 */
 export const importStatusOf = (entry: IConfigBundleEntry, ref: IExtensionRef | undefined): EBundleEntryStatus => {
     if (!ref) return EBundleEntryStatus.NOT_INSTALLED
@@ -86,13 +87,13 @@ export const importStatusOf = (entry: IConfigBundleEntry, ref: IExtensionRef | u
     return EBundleEntryStatus.AVAILABLE
 }
 
-/** Un bundle que no sea de Kwirth, o de un formato que no sabemos leer, se rechaza ANTES de tocar nada. */
+/** A bundle that is not Kwirth's, or of a format we cannot read, is rejected BEFORE anything is touched. */
 export const validateBundle = (data: unknown): string | undefined => {
     if (!data || typeof data !== 'object') return 'not an object'
     const b = data as Partial<IConfigBundle>
     if (b.kind !== CONFIG_BUNDLE_KIND) return `not a Kwirth configuration bundle (kind: ${String(b.kind)})`
     if (typeof b.formatVersion !== 'number') return 'missing formatVersion'
-    // Un formato mas nuevo no se intenta adivinar: se dice que no se sabe leer, que es informacion util.
+    // A newer format is not guessed at: it is stated that it cannot be read, which is useful information.
     if (b.formatVersion > CONFIG_BUNDLE_FORMAT_VERSION) {
         return `bundle format ${b.formatVersion} is newer than supported (${CONFIG_BUNDLE_FORMAT_VERSION}); upgrade Kwirth to read it`
     }
@@ -112,7 +113,7 @@ export class ConfigBundleManager {
         this.kwirthVersion = kwirthVersion
     }
 
-    /** Que hay para exportar y en que estado esta cada cosa. Es lo que pinta el dialogo. */
+    /** What there is to export and what state each thing is in. It is what the dialog draws. */
     async listExportable(): Promise<IExportableEntry[]> {
         const refs = await this.extensionSource()
         return refs.map(ref => ({
@@ -135,8 +136,8 @@ export class ConfigBundleManager {
                 exportedAt: new Date().toISOString(),
                 kwirthVersion: this.kwirthVersion,
                 source: request.source,
-                // El fichero declara si lleva secretos. Quien lo guarda en su carpeta de descargas
-                // merece poder saberlo sin leerse el JSON entero.
+                // The file declares whether it carries secrets. Whoever stores it in their downloads
+                // folder deserves to be able to know it without reading the whole JSON.
                 includesCredentials: request.includeCredentials
             },
             core: {},
@@ -161,8 +162,8 @@ export class ConfigBundleManager {
                 })
             }
             catch (err) {
-                // Que una extension falle no puede llevarse por delante el export entero: se deja fuera
-                // y se dice en el log. El diálogo ya avisó de que podía no estar todo.
+                // An extension failing must not take the whole export down with it: it is left out and
+                // said in the log. The dialog already warned that not everything might be there.
                 logWarning(ELogComponent.CORE, `Config export: '${key}' failed and was left out: ${err}`)
             }
         }
@@ -172,7 +173,7 @@ export class ConfigBundleManager {
         return bundle
     }
 
-    /** Que pasaria con cada entrada del bundle. No toca nada. */
+    /** What would happen with each bundle entry. It touches nothing. */
     async preview(bundle: IConfigBundle): Promise<IImportPreviewEntry[]> {
         const refs = await this.extensionSource()
         const porClave = new Map(refs.map(r => [bundleEntryKey(r.type, r.id), r]))
@@ -213,9 +214,10 @@ export class ConfigBundleManager {
             const ref = porClave.get(key)
             const status = importStatusOf(entry, ref)
 
-            // No instalada, sin instancia o sin el metodo: se avisa y se ignora. El core NO instala
-            // nada — instalar significaria alcanzar un marketplace, resolver licencias y esperar
-            // arranques en medio de un import, y eso es un proceso fragil dentro de otro.
+            // Not installed, with no instance or without the method: it is warned about and ignored. The
+            // core installs NOTHING — installing would mean reaching a marketplace, resolving licences
+            // and waiting for startups in the middle of an import, and that is a fragile process inside
+            // another one.
             if (status === EBundleEntryStatus.NOT_INSTALLED || status === EBundleEntryStatus.NOT_INSTANTIATED || status === EBundleEntryStatus.NOT_SUPPORTED) {
                 logWarning(ELogComponent.CORE, `Config import: '${key}' skipped (${status})`)
                 entries.push({ type: entry.type, id: entry.id, status })
@@ -227,7 +229,7 @@ export class ConfigBundleManager {
                 entries.push({ type: entry.type, id: entry.id, status, result })
             }
             catch (err) {
-                // Una entrada que revienta no detiene a las demas: ese es el contrato con el usuario.
+                // An entry that blows up does not stop the rest: that is the contract with the user.
                 logWarning(ELogComponent.CORE, `Config import: '${key}' failed: ${err}`)
                 entries.push({ type: entry.type, id: entry.id, status, error: String(err) })
             }

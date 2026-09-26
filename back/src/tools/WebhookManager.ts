@@ -18,9 +18,9 @@ export interface IWebhookMeta {
     description: string
     website?: string
     installedFrom?: string
-    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
-    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
-    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
+    // the package registry, which is another server, and with precedence by id two marketplaces can
+    // serve the same extension. Absent = it came from no marketplace (dev, a file or a loose url).
     marketplaceId?: string
     marketplaceLabel?: string
     backStored?: boolean
@@ -38,7 +38,7 @@ interface IDevWebhook {
     meta: IWebhookMeta
 }
 
-// Resultado de resolver un token entrante → a qué webhook/config/consumidor corresponde.
+// The result of resolving an incoming token → which webhook/config/consumer it belongs to.
 export interface IWebhookResolution {
     webhookId: string
     configName: string
@@ -51,16 +51,16 @@ export class WebhookManager implements IWebhookAccess {
     private registeredWebhooks = new Map<string, TWebhookConstructor>()
     private instances = new Map<string, IWebhook>()
     private devWebhooks = new Map<string, IDevWebhook>()
-    // ruta vigilada por id, para poder hacer fs.unwatchFile al desregistrar
+    // the path watched, by id, so that fs.unwatchFile can be called on unregistering
     private devWatchers = new Map<string, string>()
     private configStore = new Map<string, Map<string, IWebhookConfig>>()
     private installedIds: string[] = []
     private installedMetas = new Map<string, IWebhookMeta>()
     private cachedIndex: IWebhookMeta[] = []
-    // Registro de tokens: token ↔ (webhookId, configName). El token enruta el callback entrante.
+    // The token registry: token ↔ (webhookId, configName). The token routes the incoming callback.
     private tokenByConfig = new Map<string, string>()        // `${id}:${name}` → token
     private configByToken = new Map<string, { webhookId: string; configName: string }>()
-    // Consumidores suscritos por webhookId (modelo provider-like: te suscribes a un webhook y recibes SUS eventos).
+    // Consumers subscribed by webhookId (a provider-like model: you subscribe to a webhook and receive ITS events).
     private subscribers = new Map<string, Set<IWebhookConsumer>>()
 
     constructor(configMaps: IConfigMaps, urlBase: string = '/webhook') {
@@ -210,11 +210,12 @@ export class WebhookManager implements IWebhookAccess {
         this.devWebhooks.set(id, { distPath: absPath, meta })
         this.reloadDevBack(id, backPath)
 
-        // Se vigila por POLLING, igual que ProviderManager, y nunca con fs.watch: un build limpio
-        // borra dist/back.js antes de regenerarlo, y un fs.watch sobre un fichero que desaparece
-        // emite un 'error' ASINCRONO que el try/catch no ve y que, sin listener, node convierte en
-        // uncaughtException y se lleva el core por delante. watchFile tolera que el fichero se vaya
-        // y vuelva. mtimeMs 0 = no existe ahora mismo: se ignora en vez de intentar recargarlo.
+        // It is watched by POLLING, just as ProviderManager does, and never with fs.watch: a clean
+        // build deletes dist/back.js before regenerating it, and an fs.watch over a file that
+        // disappears emits an ASYNCHRONOUS 'error' the try/catch does not see and which, with no
+        // listener, node turns into an uncaughtException that takes the core down with it. watchFile
+        // tolerates the file going away and coming back. mtimeMs 0 = it does not exist right now: it is
+        // ignored instead of attempting to reload it.
         fs.watchFile(backPath, { persistent: false, interval: 500 }, (curr, prev) => {
             if (curr.mtimeMs !== prev.mtimeMs && curr.mtimeMs !== 0) {
                 logInfo(ELogComponent.CORE, `[dev] Webhook '${id}' back.js changed — hot-reloading`)
@@ -313,11 +314,11 @@ export class WebhookManager implements IWebhookAccess {
             const meta: IWebhookMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
 
             const index = (await this.configMaps.read('kwirth-webhooks-index', []) as IWebhookMeta[]) || []
-            // Instalado es lo que diga installedIds, no el indice: uno de dev esta cargado sin figurar ahi.
+            // Installed is what installedIds says, not the index: a dev one is loaded without appearing there.
             assertInstallable('Webhook', meta.id, this.installedIds.includes(meta.id) ? (index.find(w => w.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
-            // Una version nueva no puede heredar el js cacheado de la anterior
+            // A new version cannot inherit the previous one's cached js
             dropCachedExtensionFiles('webhook', meta.id)
 
             meta.marketplaceId = marketplaceId
@@ -392,8 +393,8 @@ export class WebhookManager implements IWebhookAccess {
     }
 
     private async _doUninstall(id: string): Promise<void> {
-        // La cache de /tmp no lleva version en el nombre: si no se borra aqui, reinstalar servirira
-        // el js de la instalacion anterior mientras el pod siga vivo.
+        // The /tmp cache does not carry the version in its name: unless it is deleted here,
+        // reinstalling will serve the previous installation's js as long as the pod stays alive.
         dropCachedExtensionFiles('webhook', id)
         this.instances.delete(id)
         this.registeredWebhooks.delete(id)
@@ -429,8 +430,9 @@ export class WebhookManager implements IWebhookAccess {
                 return dev.meta
             }
         })
-        // Un webhook de dev SUSTITUYE al instalado con su mismo id, no se suma a el: sin el filtro
-        // sale duplicado en '/core/webhooks' y en el gestor. Mismo patron que plugin, theme y login.
+        // A dev webhook REPLACES the installed one with its same id, it does not add to it: without the
+        // filter it comes out duplicated in '/core/webhooks' and in the manager. The same pattern as
+        // plugin, theme and login.
         const devIds = new Set(devMetas.map(m => m.id))
         return [...stored.filter(m => !devIds.has(m.id)), ...devMetas].map(meta => ({
             ...meta,
@@ -514,7 +516,7 @@ export class WebhookManager implements IWebhookAccess {
         )
     }
 
-    // Resuelve un token entrante → webhook/config. Undefined si el token no existe.
+    // Resolves an incoming token → webhook/config. Undefined when the token does not exist.
     resolve(token: string): IWebhookResolution | undefined {
         const ref = this.configByToken.get(token)
         if (!ref) return undefined
@@ -525,8 +527,9 @@ export class WebhookManager implements IWebhookAccess {
 
     // ── IWebhookAccess (inyectado en consumidores) ────────────────────────────────
 
-    // Suscripción por par estricto (webhookId, configName): recibes SOLO los eventos de ESA config. Los webhooks
-    // son generales de Kwirth (varias configs/consumidores del mismo tipo) → cada consumidor fija su instancia.
+    // A subscription by strict pair (webhookId, configName): you receive ONLY THAT config's events.
+    // Webhooks are general to Kwirth (several configs/consumers of the same type) → every consumer pins
+    // its own instance.
     subscribe(webhookId: string, configName: string, consumer: IWebhookConsumer): void {
         const key = this.configKey(webhookId, configName)
         if (!this.subscribers.has(key)) this.subscribers.set(key, new Set())
@@ -537,7 +540,7 @@ export class WebhookManager implements IWebhookAccess {
         this.subscribers.get(this.configKey(webhookId, configName))?.delete(consumer)
     }
 
-    // Entrega un evento verificado+parseado a los consumidores suscritos a ESA config (par webhookId+configName).
+    // Delivers a verified and parsed event to the consumers subscribed to THAT config (the pair webhookId+configName).
     deliver(webhookId: string, configName: string, event: IWebhookEvent): void {
         const consumers = this.subscribers.get(this.configKey(webhookId, configName))
         if (!consumers || consumers.size === 0) {
@@ -551,8 +554,9 @@ export class WebhookManager implements IWebhookAccess {
         }
     }
 
-    // Lista los webhooks INSTALADOS (npm + dev), con sus configs desde el configStore (fuente autoritativa) — NO
-    // desde `instances`, que se pueblan de forma lazy (un webhook sin callbacks aún no está instanciado y no saldría).
+    // Lists the INSTALLED webhooks (npm + dev), with their configs from the configStore (the
+    // authoritative source) — NOT from `instances`, which are populated lazily (a webhook with no
+    // callbacks is not instantiated yet and would not show up).
     listWebhooks(): Array<{ id: string; configNames: string[] }> {
         const ids = new Set<string>([...this.installedIds, ...this.devWebhooks.keys(), ...this.configStore.keys()])
         return Array.from(ids).map(id => ({

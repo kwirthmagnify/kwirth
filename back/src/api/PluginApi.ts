@@ -38,8 +38,8 @@ export class PluginApi {
         this.router.post('/install', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                // 'upgrade' es el permiso EXPLICITO para pisar una instalacion existente. Sin el, el
-                // manager rechaza una id ya instalada, que es el comportamiento de siempre.
+                // 'upgrade' is the EXPLICIT permission to overwrite an existing installation. Without
+                // it the manager rejects an already installed id, which is the behaviour of always.
                 const { url, marketplaceId, marketplaceLabel, upgrade } = req.body
                 if (!url) return void res.status(400).json({ error: 'url required' })
                 const meta = await this.pluginManager.install(url, this.registeredChannels, undefined, marketplaceId, marketplaceLabel, upgrade === true)
@@ -104,7 +104,7 @@ export class PluginApi {
             }
         })
 
-        // Config de instalación del plugin (JSON genérico). Mismo patrón que ProviderApi.
+        // The plugin's installation config (generic JSON). The same pattern as ProviderApi.
         this.router.get('/:id/config', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             res.json(await this.pluginManager.getConfig(req.params.id))

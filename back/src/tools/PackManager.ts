@@ -8,8 +8,8 @@ export interface IPackExtensionRef {
     extensionType: EExtensionType
     id: string
     tgz: string
-    // Solo para extensionType 'docs': la documentacion no se identifica por id, sino por el par
-    // (targetType, id), porque el id es el de la extension documentada y puede repetirse entre tipos.
+    // For extensionType 'docs' only: documentation is not identified by id but by the pair
+    // (targetType, id), because the id is that of the documented extension and can repeat across types.
     targetType?: string
 }
 

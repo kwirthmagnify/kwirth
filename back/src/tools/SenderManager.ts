@@ -17,9 +17,9 @@ export interface ISenderMeta {
     description: string
     website?: string
     installedFrom?: string
-    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al
-    // registro de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden
-    // servir la misma extension. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
+    // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
+    // the package registry, which is another server, and with precedence by id two marketplaces can
+    // serve the same extension. Absent = it came from no marketplace (dev, a file or a loose url).
     marketplaceId?: string
     marketplaceLabel?: string
     backStored?: boolean
@@ -28,9 +28,9 @@ export interface ISenderMeta {
     requiresExtension?: string[]
 }
 
-// 'export type' y no 'export': son interfaces. Reexportarlas como valores hace que el bundler
-// emita un import de runtime contra kwirth-common-back (que es CJS) y reviente al cargarlo desde
-// ESM. WebhookManager ya lo hacia asi.
+// 'export type' and not 'export': they are interfaces. Re-exporting them as values makes the bundler
+// emit a runtime import against kwirth-common-back (which is CJS) and blow up when loading it from
+// ESM. WebhookManager was already doing it this way.
 export type { ISenderConfig, ISenderMessage }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
@@ -41,8 +41,8 @@ interface IDevSender {
 }
 
 /*
-    'setLogger' ya esta en el contrato publicado (ISender), pero el paquete que npm sirve todavia no lo
-    trae. Se declara aqui para no bloquear el core; en cuanto la version nueva este instalada, sobra.
+    'setLogger' is already in the published contract (ISender), but the package npm serves does not carry
+    it yet. It is declared here so as not to block the core; as soon as the new version is installed it is surplus.
 */
 interface ISenderWithLogger {
     setLogger?: (logger: IComponentLogger) => void
@@ -53,7 +53,7 @@ export class SenderManager implements ISenderAccess {
     private registeredSenders = new Map<string, TSenderConstructor>()
     private instances = new Map<string, ISender>()
     private devSenders = new Map<string, IDevSender>()
-    // ruta vigilada por id, para poder hacer fs.unwatchFile al desregistrar
+    // the path watched, by id, so that fs.unwatchFile can be called on unregistering
     private devWatchers = new Map<string, string>()
     private configStore = new Map<string, Map<string, ISenderConfig>>()
     private commonFieldStore = new Map<string, Record<string, unknown>>()
@@ -223,11 +223,12 @@ export class SenderManager implements ISenderAccess {
         this.devSenders.set(id, { distPath: absPath, meta })
         this.reloadDevBack(id, backPath)
 
-        // Se vigila por POLLING, igual que ProviderManager, y nunca con fs.watch: un build limpio
-        // borra dist/back.js antes de regenerarlo, y un fs.watch sobre un fichero que desaparece
-        // emite un 'error' ASINCRONO que el try/catch no ve y que, sin listener, node convierte en
-        // uncaughtException y se lleva el core por delante. watchFile tolera que el fichero se vaya
-        // y vuelva. mtimeMs 0 = no existe ahora mismo: se ignora en vez de intentar recargarlo.
+        // It is watched by POLLING, just as ProviderManager does, and never with fs.watch: a clean
+        // build deletes dist/back.js before regenerating it, and an fs.watch over a file that
+        // disappears emits an ASYNCHRONOUS 'error' the try/catch does not see and which, with no
+        // listener, node turns into an uncaughtException that takes the core down with it. watchFile
+        // tolerates the file going away and coming back. mtimeMs 0 = it does not exist right now: it is
+        // ignored instead of attempting to reload it.
         fs.watchFile(backPath, { persistent: false, interval: 500 }, (curr, prev) => {
             if (curr.mtimeMs !== prev.mtimeMs && curr.mtimeMs !== 0) {
                 logInfo(ELogComponent.CORE, `[dev] Sender '${id}' back.js changed — hot-reloading`)
@@ -327,11 +328,11 @@ export class SenderManager implements ISenderAccess {
             const meta: ISenderMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
 
             const index = (await this.configMaps.read('kwirth-senders-index', []) as ISenderMeta[]) || []
-            // Instalado es lo que diga installedIds, no el indice: uno de dev esta cargado sin figurar ahi.
+            // Installed is what installedIds says, not the index: a dev one is loaded without appearing there.
             assertInstallable('Sender', meta.id, this.installedIds.includes(meta.id) ? (index.find(s => s.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
 
             meta.installedFrom = installedFrom ?? tarGzUrl
-            // Una version nueva no puede heredar el js cacheado de la anterior
+            // A new version cannot inherit the previous one's cached js
             dropCachedExtensionFiles('sender', meta.id)
 
             meta.marketplaceId = marketplaceId
@@ -359,10 +360,11 @@ export class SenderManager implements ISenderAccess {
             }
 
             /*
-                null y no saltarse la escritura. Actualizando, una clave que no se toca se queda con el
-                contenido de la version ANTERIOR: el front de antes si el de ahora no cabe —o si la nueva
-                version ya no trae front—, y lo mismo con el back. Lo instalado tiene que ser exactamente
-                lo que trae el paquete, no la suma de lo que fueron trayendo sus versiones.
+                null and not skipping the write. When updating, a key that is not touched keeps the
+                PREVIOUS version's content: the old front end if the current one does not fit — or if the
+                new version no longer carries a front end — and the same with the back end. What is
+                installed has to be exactly what the package carries, not the sum of what its versions
+                have been carrying along the way.
             */
             await this.configMaps.write(`kwirth-sender-${meta.id}-front`, frontEntry)
 
@@ -407,8 +409,8 @@ export class SenderManager implements ISenderAccess {
     }
 
     private async _doUninstall(id: string): Promise<void> {
-        // La cache de /tmp no lleva version en el nombre: si no se borra aqui, reinstalar servirira
-        // el js de la instalacion anterior mientras el pod siga vivo.
+        // The /tmp cache does not carry the version in its name: unless it is deleted here,
+        // reinstalling will serve the previous installation's js as long as the pod stays alive.
         dropCachedExtensionFiles('sender', id)
         this.instances.delete(id)
         this.registeredSenders.delete(id)
@@ -443,12 +445,13 @@ export class SenderManager implements ISenderAccess {
             }
         })
         /*
-            Un sender registrado en dev SUSTITUYE al instalado con su mismo id, no se suma a el. Sin
-            este filtro el mismo sender sale DOS veces —lo normal en un entorno de desarrollo, donde
-            esta instalado y ademas montado desde su dist— y el duplicado viaja tal cual por
-            GET /core/senders a todos sus consumidores: el gestor de senders y cualquier extension
-            que liste senders. Es el mismo patron que ya usan plugin, theme, login, homepage y
-            aitoolset; aqui faltaba. Manda el de dev, que es el que getSender() acaba resolviendo.
+            A sender registered in dev REPLACES the installed one with its same id, it does not add to
+            it. Without this filter the same sender comes out TWICE — the normal thing in a development
+            environment, where it is installed and also mounted from its dist — and the duplicate travels
+            as it is through GET /core/senders to all of its consumers: the sender manager and any
+            extension listing senders. It is the same pattern plugin, theme, login, homepage and
+            aitoolset already use; here it was missing. The dev one rules, which is the one getSender()
+            ends up resolving.
         */
         const devIds = new Set(devMetas.map(m => m.id))
         return [...stored.filter(m => !devIds.has(m.id)), ...devMetas].map(meta => ({
@@ -503,14 +506,14 @@ export class SenderManager implements ISenderAccess {
         instance.startSender(this).catch(err => logError(ELogComponent.CORE, `Sender '${id}' startSender error: ${err}`))
         this.instances.set(id, instance)
         /*
-            Una instancia RECIEN creada no sabe nada: sus configuraciones se cargaron en la instancia
-            anterior, al arrancar el core. Y aqui se llega no solo la primera vez, sino cada vez que se
-            recarga un sender montado desde dev —el rebuild tira la instancia para coger el codigo
-            nuevo—, asi que sin esto un rebuild deja al sender SIN configuraciones.
+            A FRESHLY created instance knows nothing: its configurations were loaded into the previous
+            instance, when the core started. And this is reached not only the first time, but every time
+            a sender mounted from dev is reloaded — the rebuild throws the instance away in order to pick
+            up the new code — so without this a rebuild leaves the sender WITHOUT configurations.
 
-            El sintoma engañaba: la lista de /core/senders las seguia mostrando —esa sale del almacen
-            del core, no de la instancia— y solo al enviar aparecia "has no config", como si se hubieran
-            borrado solas.
+            The symptom was misleading: /core/senders' list went on showing them — that one comes from
+            the core's store, not from the instance — and only on sending did "has no config" appear, as
+            if they had deleted themselves.
         */
         const guardadas = this.configStore.get(id)
         if (guardadas) {
@@ -632,15 +635,14 @@ export class SenderManager implements ISenderAccess {
     }
 
     /*
-        Entrega un LOTE por una sola llamada al sender.
+        Delivers a BATCH through a single call to the sender.
 
-        Un `send` por linea convierte el reenvio de log en una fila de idas y venidas a la red, y las APIs
-        de los destinos (Datadog, Elastic, Loki) aceptan arrays y cobran por peticion. Con el lote, el
-        `await` sigue significando "estas N lineas entregadas", que es lo que permite al llamante contar lo
-        enviado.
+        One `send` per line turns log forwarding into a queue of round trips over the network, and the
+        destinations' APIs (Datadog, Elastic, Loki) accept arrays and charge per request. With the batch,
+        the `await` still means "these N lines delivered", which is what lets the caller count what was sent.
 
-        ⚠️ Si el sender NO implementa sendBatch se entrega mensaje a mensaje, en orden. Es mas lento pero
-        correcto, y es lo que permite que el contrato sea opcional: ningun sender existente se rompe.
+        ⚠️ When the sender does NOT implement sendBatch, delivery is message by message, in order. It is
+        slower but correct, and it is what allows the contract to be optional: no existing sender breaks.
     */
     async sendBatch(senderId: string, configName: string, messages: ISenderMessage[]): Promise<ISenderResult | void> {
         if (messages.length === 0) return
@@ -655,8 +657,8 @@ export class SenderManager implements ISenderAccess {
         }
         try {
             if (typeof sender.sendBatch === 'function') return await sender.sendBatch(configName, messages)
-            // Sin soporte de lote: uno a uno, y el primer fallo NO cancela el resto — cada linea se
-            // entrega por su cuenta, igual que si el llamante hubiera hecho N sends.
+            // With no batch support: one by one, and the first failure does NOT cancel the rest — every
+            // line is delivered on its own, exactly as if the caller had done N sends.
             for (const message of messages) {
                 try { await sender.send(configName, message) }
                 catch (err) { logError(ELogComponent.CORE, `Sender '${senderId}' send error (within batch): ${err}`) }
@@ -667,8 +669,9 @@ export class SenderManager implements ISenderAccess {
         }
     }
 
-    // H3b-recon: consulta el estado actual de una entidad externa (p.ej. un ticket) vía el sender. Undefined si
-    // el sender no lo soporta, no existe, no tiene la config, o falla. Contraparte de pull del webhook (push).
+    // H3b-recon: queries an external entity's current state (a ticket, for instance) through the sender.
+    // Undefined when the sender does not support it, does not exist, does not have the config, or fails.
+    // The pull counterpart of the webhook (push).
     async fetchStatus(senderId: string, configName: string, externalId: string): Promise<string | undefined> {
         const sender = this.getSender(senderId)
         if (!sender || !sender.fetchStatus || !sender.hasConfig(configName)) return undefined

@@ -11,11 +11,11 @@ import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
 
-// Manager del tipo de extension `aitoolset` (plan: plans/ai-tools/PLAN.md, S1).
+// Manager of the `aitoolset` extension type (plan: plans/ai-tools/PLAN.md, S1).
 //
-// Un aitoolset es SOLO back: un back.js que exporta la definicion de un toolset. No tiene front propio
-// —el selector y el dialogo de configuracion son del core, compartidos por todos— asi que aqui no hay
-// nada del front.js que si manejan plugins, providers, senders y webhooks.
+// An aitoolset is back end ONLY: a back.js exporting a toolset's definition. It has no front end of its
+// own — the selector and the configuration dialog belong to the core and are shared by all of them — so
+// there is nothing here of the front.js that plugins, providers, senders and webhooks do handle.
 
 export interface IAiToolsetMeta {
     id: string
@@ -25,8 +25,8 @@ export interface IAiToolsetMeta {
     description: string
     website?: string
     installedFrom?: string
-    // De que marketplace vino. Se GUARDA al instalar, no se deduce: la url del tarball apunta al registro
-    // de paquetes, que es otro servidor, y con precedencia por id dos marketplaces pueden servir el mismo
+    // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
+    // the package registry, which is another server, and with precedence by id two marketplaces can serve the same
     // id. Ausente = no vino de ningun marketplace (dev, fichero o url suelta).
     marketplaceId?: string
     marketplaceLabel?: string
@@ -56,10 +56,10 @@ interface IDevAiToolset {
     meta: IAiToolsetMeta
 }
 
-// Que sobra en el indice cuando se relee kwirth-dev.json. Solo se reconcilia lo marcado 'dev': lo
-// instalado desde marketplace, url o fichero se queda donde esta, que es instalado de verdad.
-// Funcion pura y exportada a proposito: es la logica que merece test, y probarla no deberia exigir
-// levantar un manager entero.
+// What is surplus in the index when kwirth-dev.json is re-read. Only what is marked 'dev' is reconciled:
+// whatever was installed from a marketplace, a url or a file stays where it is, because it is really
+// installed. A pure function, exported on purpose: it is the logic that deserves a test, and testing it
+// should not require bringing up a whole manager.
 export const staleDevAiToolsets = (index: IAiToolsetMeta[], declared: Set<string>): IAiToolsetMeta[] =>
     index.filter(m => m.installedFrom === 'dev' && !declared.has(m.id))
 
@@ -78,17 +78,17 @@ export class AiToolsetManager {
 
     // ── Concesiones ─────────────────────────────────────────────────────────────
 
-    /** El mapa completo, tal y como esta guardado. */
+    /** The complete map, exactly as it is stored. */
     async listGrants(): Promise<TToolsetGrants> {
         return ((await this.configMaps.read(GRANTS_KEY, {})) as TToolsetGrants) || {}
     }
 
     /**
-     * Vuelca las concesiones guardadas al registro.
+     * Dumps the stored grants into the registry.
      *
-     * Hay que llamarlo DESPUES de cargar los toolsets: el registro es memoria, asi que en cada arranque
-     * las concesiones hay que volver a ponerlas o todo quedaria concedido a nadie — que es seguro, pero
-     * dejaria de funcionar lo que el admin configuro.
+     * It has to be called AFTER loading the toolsets: the registry is memory, so on every startup the
+     * grants have to be put back or everything would end up granted to nobody — which is safe, but what
+     * the admin configured would stop working.
      */
     async applyGrants(): Promise<void> {
         const grants = await this.listGrants()
@@ -100,12 +100,12 @@ export class AiToolsetManager {
     }
 
     /**
-     * Devuelve al registro la concesion que `unregisterToolset` se lleva por delante al REEMPLAZAR un
-     * toolset. Lo persistido es la verdad: la instalacion no toca el ConfigMap de concesiones.
+     * Gives back to the registry the grant `unregisterToolset` takes away when REPLACING a toolset. What
+     * is persisted is the truth: installation does not touch the grants ConfigMap.
      *
-     * Solo repone lo que YA estaba guardado —instalar sigue sin conceder nada a nadie— y solo si el
-     * toolset quedo registrado: un id que no llego a registrarse (el paquete y el modulo dicen ids
-     * distintos) no debe dejar una concesion huerfana detras.
+     * It only restores what was ALREADY stored — installing still grants nothing to nobody — and only
+     * when the toolset ended up registered: an id that never got registered (the package and the module
+     * say different ids) must not leave an orphaned grant behind.
      */
     private async restoreGrants(toolsetId: string): Promise<void> {
         if (!getToolset(toolsetId)) return
@@ -115,13 +115,14 @@ export class AiToolsetManager {
         logInfo(ELogComponent.CORE, `AI toolset '${toolsetId}' grants restored after reinstall: ${plugins.join(', ')}`)
     }
 
-    /** Concede un toolset a una lista de plugins (reemplaza la anterior) y lo persiste. */
+    /** Grants a toolset to a list of plugins (replacing the previous one) and persists it. */
     async setGrants(toolsetId: string, pluginIds: string[]): Promise<string[]> {
         if (!getToolset(toolsetId)) throw new Error(`AI toolset '${toolsetId}' is not registered`)
 
         const grants = await this.listGrants()
-        // Una lista vacia se GUARDA como vacia en vez de borrar la entrada: "se lo hemos quitado a todos"
-        // y "nunca se toco" se ven igual en el ConfigMap, pero no significan lo mismo al auditar.
+        // An empty list is STORED as empty rather than deleting the entry: "we took it away from
+        // everybody" and "it was never touched" look the same in the ConfigMap, but they do not mean the
+        // same thing when auditing.
         grants[toolsetId] = [...new Set(pluginIds)]
         await this.configMaps.write(GRANTS_KEY, grants)
         setToolsetGrants(toolsetId, grants[toolsetId])
@@ -144,11 +145,12 @@ export class AiToolsetManager {
     // ── Carga ───────────────────────────────────────────────────────────────────
 
     /**
-     * Carga un back.js y da de alta su toolset.
+     * Loads a back.js and registers its toolset.
      *
-     * El modulo solo EXPORTA su definicion; quien la registra es esto. Si el modulo se auto-registrara,
-     * el alta seria un efecto secundario del import: el orden de carga pasaria a importar, un modulo
-     * ajeno podria dar de alta lo que quisiera, y al desinstalar habria que adivinar que registro.
+     * The module only EXPORTS its definition; what registers it is this. Were the module to register
+     * itself, registration would be a side effect of the import: load order would start to matter, a
+     * foreign module could register whatever it liked, and on uninstalling one would have to guess what
+     * it registered.
      */
     private loadBackToolset(id: string, backJs: string): boolean {
         const tmpPath = path.join(os.tmpdir(), `kwirth-aitoolset-${id}-back.js`)
@@ -162,9 +164,9 @@ export class AiToolsetManager {
                 logError(ELogComponent.CORE, `AI toolset '${id}' back.js exports no toolset definition`)
                 return false
             }
-            // El id del paquete y el del toolset que exporta tienen que ser el mismo. Si divergen, el
-            // indice diria una cosa y el registro otra: desinstalar dejaria el toolset vivo y el catalogo
-            // mostraria algo que no existe.
+            // The package's id and that of the toolset it exports have to be the same. If they diverge,
+            // the index would say one thing and the registry another: uninstalling would leave the
+            // toolset alive and the catalogue would show something that does not exist.
             if (toolset.id !== id) {
                 logError(ELogComponent.CORE, `AI toolset package '${id}' exports a toolset with id '${toolset.id}' — refusing to register`)
                 return false
@@ -199,7 +201,7 @@ export class AiToolsetManager {
         }
     }
 
-    /** Al arrancar: registra todos los toolsets instalados. */
+    /** At startup: registers every installed toolset. */
     async loadAll(): Promise<void> {
         for (const meta of this.cachedIndex) {
             if (meta.installedFrom === 'dev') continue      // los lleva loadDevAiToolsets()
@@ -231,9 +233,8 @@ export class AiToolsetManager {
 
         const isLocalPath = tarGzUrl.startsWith('file://') || (!tarGzUrl.startsWith('http://') && !tarGzUrl.startsWith('https://'))
         const localPath = tarGzUrl.startsWith('file://') ? new URL(tarGzUrl).pathname.replace(/^\/([A-Za-z]:)/, '$1') : tarGzUrl
-        // En dev se apunta directamente a la carpeta dist —como hacen los plugins en kwirth-dev.json— para
-        // no tener que empaquetar un tgz en cada build. Desde un marketplace o un fichero subido siempre es
-        // un tarball.
+        // In dev it points straight at the dist folder — as plugins do in kwirth-dev.json — so a tgz need
+        // not be packaged on every build. From a marketplace or an uploaded file it is always a tarball.
         const isLocalDir = isLocalPath && fs.existsSync(localPath) && fs.statSync(localPath).isDirectory()
 
         try {
@@ -258,12 +259,12 @@ export class AiToolsetManager {
 
             const meta: IAiToolsetMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
 
-            // Se rechaza ANTES de tocar nada: un id reservado del core no se puede ocupar, y enterarse
-            // despues de haber escrito el indice dejaria una entrada que no se puede registrar nunca.
+            // It is rejected BEFORE touching anything: a reserved core id cannot be taken, and finding
+            // out after having written the index would leave an entry that can never be registered.
             if (isBuiltInToolsetId(meta.id))
                 throw new Error(`AI toolset id '${meta.id}' is reserved by a built-in toolset`)
             const index = (await this.configMaps.read(INDEX_KEY, []) as IAiToolsetMeta[]) || []
-            // Instalado es lo que diga el registro en vivo, no el indice: uno de dev esta cargado sin figurar ahi.
+            // Installed is what the live registry says, not the index: a dev one is loaded without appearing there.
             if (installedFrom !== 'dev' && installedFrom !== 'bundled')
                 assertInstallable('AI toolset', meta.id, getToolset(meta.id) ? (index.find(t => t.id === meta.id) ?? {}) : undefined, meta.version, upgrade)
 
@@ -294,25 +295,26 @@ export class AiToolsetManager {
             await this.configMaps.write(INDEX_KEY, index)
             this.cachedIndex = index
 
-            // Reinstalar sobre algo ya registrado (dev, o una version nueva) tiene que reemplazar, no
-            // chocar: registerToolset revienta si el id esta ocupado, asi que se retira primero.
+            // Reinstalling over something already registered (a dev one, or a new version) has to
+            // replace and not clash: registerToolset blows up when the id is taken, so it is removed first.
             unregisterToolset(meta.id)
             this.loadBackToolset(meta.id, backJs)
-            // ⚠️ `unregisterToolset` se lleva la concesion con el toolset, y al DESINSTALAR eso es lo
-            // correcto. Reinstalar no: actualizar un toolset —o releer el dist de un dev en cada arranque—
-            // no puede revocarle en silencio a los plugins lo que el admin les dio. El sintoma sin esto es
-            // de los caros, porque las dos mitades se contradicen: la tarjeta sigue enseñando a quien esta
-            // concedido (vive en el ConfigMap, que instalar no toca) mientras el runtime responde SIN
-            // CONCEDER y el bot se queda sin tools hasta el siguiente arranque.
+            // ⚠️ `unregisterToolset` takes the grant away with the toolset, and on UNINSTALLING that is
+            // the right thing. On reinstalling it is not: updating a toolset — or re-reading a dev one's
+            // dist on every startup — must not silently revoke from the plugins what the admin gave them.
+            // Without this the symptom is one of the expensive ones, because the two halves contradict
+            // each other: the card goes on showing who it is granted to (that lives in the ConfigMap,
+            // which installing does not touch) while the runtime answers NOT GRANTED and the bot is left
+            // without tools until the next startup.
             await this.restoreGrants(meta.id)
 
             logInfo(ELogComponent.CORE, `AI toolset '${meta.id}' v${meta.version} installed`)
             return meta
         }
         finally {
-            // ⚠️ SOLO se borra lo que hemos creado nosotros. Con una instalacion desde carpeta (dev),
-            // tmpDir es el dist DE VERDAD del toolset: borrarlo aqui se llevaria por delante el build del
-            // usuario en cada arranque del core.
+            // ⚠️ ONLY what we created ourselves is deleted. With an installation from a folder (dev),
+            // tmpDir is the toolset's REAL dist: deleting it here would take the user's build down on
+            // every startup of the core.
             if (!isLocalDir) fs.rmSync(tmpDir, { recursive: true, force: true })
             if (fs.existsSync(tmpTgz)) fs.rmSync(tmpTgz)
         }
@@ -332,8 +334,8 @@ export class AiToolsetManager {
     async uninstall(id: string): Promise<void> {
         if (isBuiltInToolsetId(id)) throw new Error(`AI toolset '${id}' is built-in and cannot be uninstalled`)
 
-        // Tambien la concesion GUARDADA: unregisterToolset limpia la del registro (memoria), pero si la
-        // persistida sobreviviera, reinstalar el toolset resucitaria permisos que nadie volvio a conceder.
+        // The STORED grant too: unregisterToolset clears the registry's one (memory), but were the
+        // persisted one to survive, reinstalling the toolset would resurrect permissions nobody granted again.
         const grants = await this.listGrants()
         if (grants[id]) {
             delete grants[id]
@@ -353,8 +355,8 @@ export class AiToolsetManager {
     }
 
     async installBundled(bundledDir: string): Promise<void> {
-        // El directorio bundled es COMPARTIDO por todos los tipos: hay que filtrar por extensionType, no
-        // tragarse todos los .tgz que haya. listBundledOfType mira dentro de cada uno.
+        // The bundled directory is SHARED by every type: it has to be filtered by extensionType rather
+        // than swallowing every .tgz there is. listBundledOfType looks inside each one.
         for (const full of await listBundledOfType(bundledDir, EExtensionType.AITOOLSET)) {
             const file = path.basename(full)
             try {
@@ -371,10 +373,10 @@ export class AiToolsetManager {
 
     // ── Dev ─────────────────────────────────────────────────────────────────────
 
-    // kwirth-dev.json es DECLARATIVO: lo que figura aqui queda instalado y lo que se quita del fichero se
-    // desinstala. Hace falta decirlo porque un toolset de dev es una instalacion REAL —se escribe en
-    // ConfigMaps—, asi que borrar la linea solo dejaba de reinstalarlo: la entrada sobrevivia en el
-    // indice y el manager lo seguia dando por instalado para siempre.
+    // kwirth-dev.json is DECLARATIVE: what is listed here stays installed and what is removed from the
+    // file gets uninstalled. It is worth saying because a dev toolset is a REAL installation — it is
+    // written into ConfigMaps — so deleting the line merely stopped it being reinstalled: the entry
+    // survived in the index and the manager went on considering it installed forever.
     loadDevAiToolsets(): void {
         const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
         if (!fs.existsSync(devConfigPath)) return
