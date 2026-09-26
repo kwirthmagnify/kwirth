@@ -13,11 +13,11 @@
 import { test, expect, Page } from '@playwright/test'
 import { login, dismissOpenDialogs, assertFrontCompiles, pickCombo } from './helpers'
 
-// El cuello de botella es recargar la SPA, no Playwright: una sola sesion para todo el fichero.
+// The bottleneck is reloading the SPA, not Playwright: a single session for the whole file.
 test.describe.configure({ mode: 'serial' })
 
-// Orden y posicion de los desplegables del dialogo ADD. Se mantienen montados siempre (se deshabilitan,
-// no se desmontan), asi que los indices son estables sea cual sea la view elegida.
+// Order and position of the ADD dialog's dropdowns. They stay mounted at all times (they are disabled,
+// not unmounted), so the indices are stable whichever view is chosen.
 const COMBO_CLUSTER = 0
 const COMBO_VIEW = 1
 const COMBO_NAMESPACE = 2
@@ -54,7 +54,7 @@ test.beforeAll(async ({ browser }) => {
 })
 
 test.afterAll(async () => {
-    // Se cancela el dialogo: este fichero no debe dejar nada creado.
+    // The dialog is cancelled: this file must leave nothing created.
     await dismissOpenDialogs(page).catch(() => {})
     await page.close()
 })
@@ -63,13 +63,13 @@ test('the View dropdown offers the five resource views plus none', async () => {
     await openAddDialog(page)
     const names = await viewOptionNames(page)
 
-    // Las cinco de siempre tienen que seguir estando: quitar una romperia todos los canales.
+    // The usual five have to still be there: removing one would break every channel.
     expect(names).toContain('cluster')
     expect(names).toContain('namespace')
     expect(names).toContain('controller')
     expect(names).toContain('pod')
     expect(names).toContain('container')
-    // Y la nueva, para canales que no necesitan el cluster.
+    // And the new one, for channels that do not need the cluster.
     expect(names).toContain('none')
     expect(names).toHaveLength(6)
 })
@@ -85,8 +85,8 @@ test('the cluster view disables the namespace dropdown', async () => {
 })
 
 test('the none view disables the namespace dropdown too', async () => {
-    // Misma razon que en 'cluster': no hay recursos que elegir. Es lo que evita que el usuario crea
-    // que tiene que seleccionar algo.
+    // The same reason as in 'cluster': there are no resources to choose. It is what stops the user from
+    // believing they have to select something.
     await pickCombo(page, COMBO_VIEW, 'none')
     expect(await isComboDisabled(page, COMBO_NAMESPACE)).toBe(true)
 })
@@ -147,8 +147,8 @@ test('with the none view, channels that need the cluster are not selectable', as
 })
 
 test('with the cluster view, only cluster-capable channels are selectable', async () => {
-    // Contraprueba de lo anterior: la view 'cluster' sigue ofreciendo canales, asi que el gate nuevo
-    // no se ha llevado por delante el comportamiento anterior.
+    // The counter-check of the above: the 'cluster' view still offers channels, so the new gate has not
+    // taken the previous behaviour down with it.
     await pickCombo(page, COMBO_VIEW, 'cluster')
 
     const count = await page.getByRole('combobox').count()
@@ -180,7 +180,7 @@ test('the filter field of a dropdown keeps the focus while you type', async () =
 
     const filter = page.getByPlaceholder('Filter...')
     await expect(filter).toBeVisible()
-    // el foco lo tiene el campo nada mas abrir, sin pinchar en el
+    // the field has focus as soon as it opens, without clicking on it
     await expect(filter).toBeFocused()
 
     await page.keyboard.type('kube', { delay: 60 })
@@ -188,14 +188,15 @@ test('the filter field of a dropdown keeps the focus while you type', async () =
     await expect(filter).toHaveValue('kube')
     await expect(filter).toBeFocused()
 
-    // y filtra: lo que queda listado contiene lo tecleado
-    // MUI cuela un option vacio (solo un espacio de ancho cero) como hueco del valor sin elegir; no es
-    // un namespace, asi que fuera antes de comprobar nada. trim() no lo quita: U+200B no es espacio.
+    // and it filters: what stays listed contains what was typed
+    // MUI slips in an empty option (just a zero-width space) as the slot for the unchosen value; it is
+    // not a namespace, so out it goes before checking anything. trim() does not remove it: U+200B is not
+    // a space.
     const listed = (await page.getByRole('option').allInnerTexts()).map(t => t.replace(/​/g, '').trim()).filter(t => t !== '')
     expect(listed.length, 'el filtro no deberia dejar la lista vacia en un cluster con namespaces de sistema').toBeGreaterThan(0)
     expect(listed.filter(n => !n.toLowerCase().includes('kube')), `listados sin 'kube': ${listed.join(', ')}`).toHaveLength(0)
 
-    // Escape cierra el desplegable aunque el foco siga en el campo
+    // Escape closes the dropdown even while focus stays in the field
     await page.keyboard.press('Escape')
     await expect(filter).not.toBeVisible()
 })
@@ -228,8 +229,8 @@ test('a resource view only offers channels that support per-resource invocation'
 })
 
 test('the cluster view also offers autonomous channels', async () => {
-    // 'cluster' ya ofrecia los cluster-wide; lo que faltaba es que un canal autonomo cupiese tambien,
-    // porque si no necesita nada del cluster tampoco le estorba que la view lo sea.
+    // 'cluster' already offered the cluster-wide ones; what was missing is that a self-contained channel
+    // should fit too, because if it needs nothing from the cluster, the view being cluster does not hurt it.
     await pickCombo(page, COMBO_VIEW, 'cluster')
 
     const count = await page.getByRole('combobox').count()

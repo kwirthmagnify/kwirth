@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test'
 import { login, dismissOpenDialogs } from './helpers'
 
-// Verifica el endpoint de resolucion de marketplaces (/core/marketplace/:extensionType) contra el back
-// real: que descarga los manifests, filtra por tipo y estampa la procedencia. Se reutiliza la sesion del
-// navegador capturando la cabecera Authorization de una llamada que la app ya hace, en vez de manejar
-// credenciales en el test.
+// Verifies the marketplace resolution endpoint (/core/marketplace/:extensionType) against the real back
+// end: that it downloads the manifests, filters by type and stamps the provenance. The browser's session
+// is reused by capturing the Authorization header of a call the app already makes, rather than handling
+// credentials in the test.
 //
-// NO destructivo: solo lee.
+// NON-destructive: it only reads.
 
 interface IEntry { extensionType: string; targetType?: string; id: string; version: string; url: string; marketplaceId?: string }
 
@@ -14,8 +14,8 @@ interface IMarketplace { id: string; label: string; url: string; enabled: boolea
 
 interface ISession { auth: string; backend: string }
 
-// El front habla con el back por URL absoluta, no por el dev server, asi que hay que quedarse tambien
-// con el origen: un fetch relativo lo atenderia CRA devolviendo index.html con 200.
+// The front end talks to the back end through an absolute URL and not through the dev server, so the
+// origin has to be kept as well: a relative fetch would be served by CRA returning index.html with 200.
 async function captureSession(page: import('@playwright/test').Page): Promise<ISession> {
     const found: ISession = { auth: '', backend: '' }
     page.on('request', req => {
@@ -53,19 +53,19 @@ test('resuelve el marketplace publico y devuelve solo entradas del tipo pedido',
     const list = plugins.body as IEntry[]
     expect(list.length).toBeGreaterThan(0)
 
-    // todas del tipo pedido, ninguna de otro
+    // all of the requested type, none of another
     expect(list.every(e => e.extensionType === 'plugin')).toBe(true)
 
-    // La procedencia tiene que ser coherente con lo que este configurado en ESTE Kwirth: sin
-    // marketplaceId = publico, y con marketplaceId = uno de los privados registrados. No se puede dar
-    // por hecho que no hay privados: en cuanto se registra uno, el catalogo trae entradas suyas.
+    // The provenance has to be consistent with what is configured in THIS Kwirth: no marketplaceId =
+    // public, and with a marketplaceId = one of the registered private ones. It cannot be assumed that
+    // there are no private ones: as soon as one is registered, the catalogue carries entries of its own.
     const registered = (await configuredMarketplaces(page, s)).map(m => m.id)
     const stamped = [...new Set(list.map(e => e.marketplaceId).filter(id => id !== undefined))]
     for (const id of stamped) {
         expect(registered, `la entrada dice venir de '${id}', que no esta registrado`).toContain(id)
     }
 
-    // el catalogo publico sigue llegando entero, con su historico de versiones
+    // the public catalogue still arrives whole, with its version history
     const log = list.filter(e => e.id === 'log')
     expect(log.length).toBeGreaterThan(1)
     expect(log.every(e => e.url.includes('kwirth-plugin-log'))).toBe(true)
@@ -80,12 +80,12 @@ test('la documentacion se identifica por el par (targetType, id)', async ({ page
     const list = res.body as IEntry[]
     test.skip(list.length === 0, 'no hay ninguna documentacion publicada en los marketplaces de este Kwirth')
 
-    // el id de una guia es el de la extension documentada, asi que sin targetType no se sabe de quien es
+    // a guide's id is that of the documented extension, so without targetType there is no telling whose it is
     for (const e of list) {
         expect(e.targetType, `la entrada docs '${e.id}' no dice a que tipo de extension documenta`).toBeTruthy()
     }
 
-    // y el par tiene que ser unico por marketplace: dos entradas iguales serian dos versiones de la misma
+    // and the pair has to be unique per marketplace: two identical entries would be two versions of the same one
     const pairs = list.map(e => `${e.targetType}/${e.id}@${e.version}`)
     expect(new Set(pairs).size, 'hay guias duplicadas en el catalogo').toBe(pairs.length)
 })

@@ -1,15 +1,15 @@
 import { test, expect } from '@playwright/test'
 import { login, clickMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from './helpers'
 
-// Captura de la imagen de la guía para "Kwirth settings" (docs/_media/guide). Tema oscuro.
+// Screenshot of the guide's image for "Kwirth settings" (docs/_media/guide). Dark theme.
 // Ejecutar a mano: playwright test capture-kwirth-settings.spec.ts
-// No destructivo: solo abre el diálogo y lo cierra con Cancel, no guarda nada.
+// Non-destructive: it only opens the dialog and closes it with Cancel, saving nothing.
 
-// Las capturas van a la documentacion VIVA: ver GUIDE_MEDIA en helpers.ts.
+// The screenshots go to the LIVE documentation: see GUIDE_MEDIA in helpers.ts.
 const MEDIA = GUIDE_MEDIA
 
 test('capture kwirth-settings (dark)', async ({ page }) => {
-    // mismo encuadre que la imagen que sustituye, para no romper el ritmo visual de la guía
+    // the same framing as the image it replaces, so the guide's visual rhythm is not broken
     await page.setViewportSize({ width: 1600, height: 900 })
     await page.addInitScript(() => { try { localStorage.setItem('kwirth.mode', 'dark') } catch { /* */ } })
     await login(page)
@@ -19,11 +19,11 @@ test('capture kwirth-settings (dark)', async ({ page }) => {
     const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth settings' })
     await dialog.waitFor()
 
-    // esperar a que el diálogo termine de leer los settings: si no, se captura el spinner
+    // wait until the dialog has finished reading the settings: otherwise the spinner is captured
     await expect(dialog.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: 10000 })
     await page.waitForTimeout(1500)
 
-    // página completa, con el diálogo en contexto sobre la app: es el encuadre de la imagen que sustituye
+    // the full page, with the dialog in context over the app: it is the framing of the image it replaces
     await page.screenshot({ path: `${MEDIA}/admin-kwirth-settings.png` })
 
     await dialog.getByRole('button', { name: 'Cancel' }).click()

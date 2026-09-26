@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test'
 import { login, clickMenuItem, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
-// Verifica que cada dialog del core que lleva HelpButton invoca window.open (popup) con el deep-link
-// correcto a su sección de la guía. Se intercepta window.open para que el test no dependa de que el
-// servidor de la guía esté levantado, y para verificar exactamente el contrato:
-//   1) al pulsar 'help' se invoca window.open,
-//   2) con la URL de deep-link (…/#/<section>?id=<anchor>), y
-//   3) con features de POPUP y target estable 'kwirth-guide'.
+// Verifies that every core dialog carrying a HelpButton invokes window.open (a popup) with the right
+// deep link to its section of the guide. window.open is intercepted so the test does not depend on the
+// guide's server being up, and so the contract is verified exactly:
+//   1) pressing 'help' invokes window.open,
+//   2) with the deep-link URL (…/#/<section>?id=<anchor>), and
+//   3) with POPUP features and a stable target of 'kwirth-guide'.
 
 interface IHelpOpen { url: string; target: string; features: string }
 
@@ -21,7 +21,7 @@ interface ICase {
 test('help button: dialogs del menú principal invocan window.open en su sección de la guía', async ({ page }) => {
     await login(page)
 
-    // Cerrar cualquier dialog auto-abierto al login (ej. auto-start channel del perfil admin)
+    // Close any dialog auto-opened at login (an admin profile's auto-start channel, for instance)
     await dismissOpenDialogs(page)
 
     await page.evaluate(() => {
@@ -70,12 +70,12 @@ test('help button: dialogs del menú principal invocan window.open en su secció
         await page.waitForTimeout(400)
     }
 
-    // Navegar a blank para liberar el WebSocket antes del teardown (evita cuelgue de Playwright en SPA)
+    // Navigate to blank to release the WebSocket before the teardown (it stops Playwright hanging on the SPA)
     await page.goto('about:blank')
 })
 
-// El manager tenia ayuda, pero el dialogo donde de verdad se configura la extension —que es donde surge
-// la duda— no la tenia. Se comprueba en senders, que es donde se detecto.
+// The manager had help, but the dialog where the extension is really configured — which is where the
+// doubt arises — did not. It is checked on senders, which is where it was spotted.
 test('help button: el dialogo de configuracion de un sender tambien lleva ayuda', async ({ page }) => {
     await login(page)
     await dismissOpenDialogs(page)
@@ -95,7 +95,7 @@ test('help button: el dialogo de configuracion de un sender tambien lleva ayuda'
     const manager = page.getByRole('dialog').filter({ hasText: 'Manage senders' })
     await manager.waitFor()
 
-    // el engranaje del primer sender instalado abre su dialogo de configuracion
+    // the first installed sender's gear opens its configuration dialog
     const gear = manager.getByRole('button', { name: 'Configure' }).first()
     test.skip(await gear.count() === 0, 'no hay ningun sender instalado que configurar')
     await gear.click()
@@ -110,11 +110,11 @@ test('help button: el dialogo de configuracion de un sender tambien lleva ayuda'
     await help.click()
     await expect.poll(async () => (await readOpens()).length, { timeout: 5_000 }).toBeGreaterThan(before)
 
-    // Aqui solo se comprueba que el dialogo LLEVA ayuda y que apunta a la guia de senders. A que pagina
-    // exactamente depende del sender: desde que cada uno enlaza su propia referencia, exigir la general
-    // hacia que este test pasara o fallara segun cual fuese el primer sender instalado — parecia flaky y
-    // era una asercion caducada. Las dos ramas —pagina propia y caida a la general— las cubre
-    // sender-help.spec.ts, que las fuerza a proposito.
+    // All that is checked here is that the dialog CARRIES help and that it points at the senders guide.
+    // Which page exactly depends on the sender: ever since each one links its own reference, demanding
+    // the general page made this test pass or fail depending on which sender happened to be installed
+    // first — it looked flaky and it was a stale assertion. Both branches — its own page and the fallback
+    // to the general one — are covered by sender-help.spec.ts, which forces them on purpose.
     const last = (await readOpens()).at(-1)!
     expect(last.url).toContain('guide/extensions/senders/')
     expect(last.url).toContain('/#/')

@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
-// Regresion de la migracion de los manager dialogs: antes cada uno bajaba su manifest de GitHub por su
-// cuenta, ahora todos consumen /core/marketplace/<tipo> del back. Verifica que siguen listando catalogo.
+// Regression for the manager dialogs' migration: each one used to download its manifest from GitHub on
+// its own, and now they all consume /core/marketplace/<type> from the back end. It verifies they still
+// list a catalogue.
 //
-// NO destructivo: solo abre dialogos y los cierra, no instala ni desinstala nada.
+// NON-destructive: it only opens dialogs and closes them, installing and uninstalling nothing.
 
 const CASES: { menu: string; dialog: RegExp }[] = [
     { menu: 'Plugins',    dialog: /Manage (channel )?plugins/i },
@@ -17,14 +18,14 @@ const CASES: { menu: string; dialog: RegExp }[] = [
     { menu: 'Packs',            dialog: /Manage extension packs/i },
     { menu: 'Webhooks',         dialog: /Manage webhooks/i },
     { menu: 'Identity providers', dialog: /Identity providers/i },
-    // Los que ya sirve ExtensionManagerDialog. Entran aqui para que la regresion del catalogo cubra
-    // tambien al generico, que es quien acabara sirviendo a los demas.
+    // The ones ExtensionManagerDialog already serves. They come in here so the catalogue regression
+    // covers the generic dialog too, which is what will end up serving the rest.
     { menu: 'AI toolsets', dialog: /Manage AI toolsets/i }
 ]
 
 test('los manager dialogs siguen listando catalogo tras pasar por el back', async ({ page }) => {
-    // si algun dialogo fallara al resolver, el back devolveria [] y el dialogo saldria vacio en silencio,
-    // asi que se vigila tambien que no aparezca un error de carga
+    // if a dialog failed to resolve, the back end would return [] and the dialog would come out empty in
+    // silence, so a load error not appearing is watched for as well
     const failures: string[] = []
 
     await login(page)
@@ -35,18 +36,19 @@ test('los manager dialogs siguen listando catalogo tras pasar por el back', asyn
         const dialog = page.getByRole('dialog').filter({ hasText: c.dialog })
         await dialog.waitFor({ timeout: 10000 })
 
-        // El catalogo tarda: el dialogo no solo pinta lo instalado, tambien resuelve los manifests
-        // remotos (publico + privados) antes de tener tarjetas que enseñar. 15s bastaban con la maquina
-        // ociosa y flakeaban con ella cargada, y un rojo que depende de eso no es señal de nada. Se subio
-        // otra vez a 60s el 2026-09-16: con seis dialogos en la misma corrida (entro el generico) el de
-        // senders se paso de 40s con la maquina cargada.
-        // ⚠️ Se mira el BOTON de instalar, no un chip 'v0.0.0': ese chip es de lo INSTALADO — en el
-        // catalogo la version va en un Select. Buscarlo daba por bueno un catalogo vacio siempre que
-        // hubiera algo instalado, y se cayo con packs, que en un entorno puede no tener nada puesto.
-        // ⚠️ isVisible() NO espera, por mucho timeout que se le pase: devuelve el estado de ESE instante
-        // y el timeout es decorativo. Con once diálogos en fila, los ultimos se preguntaban con la
-        // maquina cargada y respondian que no habia catalogo cuando lo que faltaba era un pintado.
-        // waitFor si espera, que es lo que el 60000 de aqui decia querer decir.
+        // The catalogue takes a while: the dialog does not only draw what is installed, it also resolves
+        // the remote manifests (public + private) before it has cards to show. 15s was enough on an idle
+        // machine and flaked on a loaded one, and a red that depends on that signals nothing. It was
+        // raised back to 60s on 2026-09-16: with six dialogs in the same run (the generic one joined),
+        // the senders one went past 40s on a loaded machine.
+        // ⚠️ The install BUTTON is what is looked at, not a 'v0.0.0' chip: that chip belongs to what is
+        // INSTALLED — in the catalogue the version goes in a Select. Looking for it passed an empty
+        // catalogue as good whenever something was installed, and it fell over with packs, which in some
+        // environments may have nothing set up.
+        // ⚠️ isVisible() does NOT wait, however large a timeout it is given: it returns the state at THAT
+        // instant and the timeout is decorative. With eleven dialogs in a row, the last ones were asked
+        // on a loaded machine and answered that there was no catalogue when what was missing was a paint.
+        // waitFor does wait, which is what the 60000 here meant to say.
         const hasEntries = await dialog.locator('span[aria-label$="nstall"] button').first()
             .waitFor({ state: 'visible', timeout: 60000 }).then(() => true).catch(() => false)
         if (!hasEntries) failures.push(`${c.menu}: no catalog entries`)

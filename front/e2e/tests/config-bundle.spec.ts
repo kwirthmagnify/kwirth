@@ -73,8 +73,8 @@ test.describe('portabilidad de configuracion', () => {
         expect(Array.isArray(entradas)).toBe(true)
         expect(entradas.length).toBeGreaterThan(0)
 
-        // Todo lo instalado se lista, implemente el contrato o no: quien mira el dialogo tiene que ver
-        // su plugin y por que no entra, no encontrarse una lista corta sin explicacion.
+        // Everything installed is listed, whether it implements the contract or not: whoever looks at the
+        // dialog has to see their plugin and why it does not go in, not find a short list with no explanation.
         for (const e of entradas) {
             expect(['available', 'not-supported', 'not-instantiated']).toContain(e.status)
         }
@@ -120,7 +120,7 @@ test.describe('portabilidad de configuracion', () => {
 
         const previa = r.body as { type: string, id: string, status: string }[]
         expect(previa.length).toBe(b.extensions.length)
-        // Es un bundle de este mismo Kwirth: todo lo que exporto puede volver a entrar.
+        // It is a bundle from this same Kwirth: everything it exported can go back in.
         for (const p of previa) expect(p.status).toBe('available')
     })
 
@@ -138,8 +138,8 @@ test.describe('portabilidad de configuracion', () => {
     })
 
     test('exportar e importar sobre el mismo Kwirth no cambia nada', async () => {
-        // El criterio de aceptacion central: es lo que permite reimportar sin miedo. Se hace solo sobre
-        // censor —devolviendole lo que acaba de dar—, nunca sobre los ajustes globales del usuario.
+        // The central acceptance criterion: it is what makes re-importing fearless. It is done on censor
+        // alone — giving it back what it just handed over — never on the user's global settings.
         const antes = (await api(page, s, `/core/config-bundle/export?include=${CENSOR}`)).body as IBundle
 
         const r = await api(page, s, '/core/config-bundle/import', { method: 'POST', body: { bundle: antes, include: [CENSOR] } })

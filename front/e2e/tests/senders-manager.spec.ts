@@ -40,7 +40,7 @@ test.describe('gestor generico de extensiones: senders', () => {
         page = await browser.newPage()
         await login(page)
         await dismissOpenDialogs(page)
-        // El endpoint va autenticado: se escucha la respuesta que pide el propio diálogo al abrirse.
+        // The endpoint is authenticated: the response the dialog itself asks for on opening is listened to.
         const respuesta = page.waitForResponse(r => r.url().endsWith('/core/senders'), { timeout: 60000 })
         await clickExtensionMenuItem(page, 'Senders')
         await page.getByRole('dialog').filter({ hasText: DIALOG }).waitFor({ timeout: 40000 })
@@ -87,7 +87,7 @@ test.describe('gestor generico de extensiones: senders', () => {
     })
 
     test('el chip cuenta los destinos que tiene puestos cada sender', async () => {
-        // Un sender sin configuraciones no manda nada a ningun sitio, y eso se lee de un vistazo.
+        // A sender with no configurations sends nothing anywhere, and that reads at a glance.
         const conConfigs = senders.filter(s => s.configNames.length > 0)
         expect(conConfigs.length, 'ningun sender tiene configuraciones en este entorno').toBeGreaterThan(0)
 
@@ -106,12 +106,12 @@ test.describe('gestor generico de extensiones: senders', () => {
         const cfg = page.getByRole('dialog').filter({ hasText: `Configure: ${nombreDe(conVarios!)}` })
         await expect(cfg).toBeVisible({ timeout: 20000 })
 
-        // Cada destino, por su nombre: es lo que distingue este diálogo de un formulario suelto.
+        // Each destination, by its name: it is what tells this dialog from a loose form.
         for (const nombre of conVarios!.configNames) {
             await expect(cfg.getByText(nombre, { exact: true }).first(), `falta el destino '${nombre}'`).toBeVisible()
         }
 
-        // Y se pueden llevar a otro Kwirth. NO se pulsa Export: el fichero lleva las credenciales.
+        // And they can be taken to another Kwirth. Export is NOT pressed: the file carries the credentials.
         await expect(cfg.getByRole('button', { name: 'Export' })).toBeEnabled()
         await expect(cfg.getByRole('button', { name: 'Import' })).toBeVisible()
         await cfg.getByRole('button', { name: 'Close' }).click()
@@ -151,7 +151,7 @@ test.describe('gestor generico de extensiones: senders', () => {
         test.skip(!conFront, 'ningun sender con front propio en este entorno')
 
         await gearDe(nombreDe(conFront!)).click()
-        // ⚠️ .MuiDialog-root y no getByRole: con dos diálogos apilados MUI marca aria-hidden el de debajo.
+        // ⚠️ .MuiDialog-root and not getByRole: with two stacked dialogs MUI marks the lower one aria-hidden.
         await expect(page.locator('.MuiDialog-root'), 'no se abrio la UI del sender').toHaveCount(2, { timeout: 30000 })
         await expect(page.getByText(`Configure: ${nombreDe(conFront!)}`), 'se abrio la lista del core en vez de su UI').toHaveCount(0)
         await dismissOpenDialogs(page)

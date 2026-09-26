@@ -3,7 +3,7 @@ import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 test.use({ trace: 'off', screenshot: 'off', video: 'off' })
 
-// ── 1. LoginDialog abre desde el menu ─────────────────────────────────────────
+// ── 1. LoginDialog opens from the menu ────────────────────────────────────────
 test('login extensions: menu item opens LoginDialog', async ({ page }) => {
     await login(page)
     await dismissOpenDialogs(page)
@@ -18,19 +18,19 @@ test('login extensions: menu item opens LoginDialog', async ({ page }) => {
     await page.goto('about:blank')
 })
 
-// Cargar la pagina de una extension de login no es instantaneo: el core sirve su front y su fondo, y el
-// navegador los pinta. 5s bastaban en una maquina ociosa y flakeaban en una cargada — y un rojo que
-// depende de lo ocupado que este el equipo no es senal de nada, solo tapa los de verdad.
+// Loading a login extension's page is not instantaneous: the core serves its front end and its
+// background, and the browser paints them. 5s was enough on an idle machine and flaked on a busy one —
+// and a red that depends on how loaded the box is signals nothing, it only masks the real ones.
 const LOGIN_EXT_TIMEOUT = 20_000
 
-// ── 2. LoginExtensionPage renderiza con ?loginExt= ────────────────────────────
+// ── 2. LoginExtensionPage renders with ?loginExt= ─────────────────────────────
 test('login extensions: ?loginExt=magnify renders custom login page', async ({ page }) => {
     await page.goto('/?loginExt=magnify')
 
-    // La página de login estándar es un Dialog MUI; la de extensión es un overlay fixed sin role=dialog
+    // The standard login page is a MUI Dialog; the extension one is a fixed overlay with no role=dialog
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 }).catch(() => {})
 
-    // Tiene los campos de usuario y contraseña
+    // It has the user and password fields
     await expect(page.getByLabel(/user/i)).toBeVisible({ timeout: LOGIN_EXT_TIMEOUT })
     await expect(page.getByLabel(/password/i).first()).toBeVisible()
 
@@ -46,8 +46,8 @@ test('login extensions: ?loginExt=magnify renders custom login page', async ({ p
     fondo. Sin esto, un fallo ahi se ve como una pagina de color plano, que es facil confundir con diseño.
 */
 test('login extensions: el fondo se sirve como imagen y la pagina lo usa', async ({ page }) => {
-    // Se escucha la peticion que hace el NAVEGADOR: el back vive en otro puerto, y pedirlo por API contra
-    // el baseURL del e2e devuelve el index.html de la SPA, que pasaria por «responde 200».
+    // The request the BROWSER makes is listened to: the back end lives on another port, and asking for it
+    // through the API against the e2e's baseURL returns the SPA's index.html, which would pass as "200".
     const respuesta = page.waitForResponse(r => /\/logins\/[^/]+\/background/.test(r.url()), { timeout: 20000 })
 
     await page.goto('/?loginExt=magnify')
@@ -58,14 +58,14 @@ test('login extensions: el fondo se sirve como imagen y la pagina lo usa', async
     expect(res.headers()['content-type'] ?? '', 'lo que devuelve no es una imagen').toContain('image')
     expect((await res.body()).length, 'el fondo llega vacio').toBeGreaterThan(1000)
 
-    // la pagina lo pone como background-image, no como <img>
+    // the page sets it as a background-image, not as an <img>
     const conFondo = page.locator('[style*="background-image"]').first()
     await expect(conFondo, 'la pagina no pinta ningun fondo').toBeVisible()
 
     await page.goto('about:blank')
 })
 
-// ── 3. LoginExtensionPage tiene los botones correctos ─────────────────────────
+// ── 3. LoginExtensionPage has the right buttons ───────────────────────────────
 test('login extensions: extension page has Login and Change password buttons', async ({ page }) => {
     await page.goto('/?loginExt=magnify')
 
@@ -74,15 +74,15 @@ test('login extensions: extension page has Login and Change password buttons', a
     const loginBtn = page.getByRole('button', { name: /^login$/i })
     const changePwdBtn = page.getByRole('button', { name: /change password/i })
 
-    // Botones presentes (disabled hasta que se rellenan los campos)
+    // Buttons present (disabled until the fields are filled in)
     await expect(loginBtn).toBeVisible()
     await expect(changePwdBtn).toBeVisible()
 
-    // Deshabilitados con campos vacíos
+    // Disabled with empty fields
     await expect(loginBtn).toBeDisabled()
     await expect(changePwdBtn).toBeDisabled()
 
-    // Habilitados al rellenar user + password
+    // Enabled once user + password are filled in
     await page.getByLabel(/user/i).fill('admin')
     await page.getByLabel(/password/i).first().fill('asd')
     await expect(loginBtn).toBeEnabled()
@@ -91,7 +91,7 @@ test('login extensions: extension page has Login and Change password buttons', a
     await page.goto('about:blank')
 })
 
-// ── 4. LoginExtensionPage muestra error con credenciales incorrectas ───────────
+// ── 4. LoginExtensionPage shows an error with wrong credentials ───────────────
 test('login extensions: wrong credentials show error', async ({ page }) => {
     await page.goto('/?loginExt=magnify')
 
@@ -114,13 +114,13 @@ test('login extensions: anonymous login shows config button', async ({ page }) =
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
 
-    // La extensión anonymous debe aparecer en la lista.
-    // .first(): el diálogo lista DOS veces lo que está instalado y ademas publicado — una en 'Installed
-    // logins' y otra en 'Available logins'. Sin acotar, Playwright lo rechaza por strict mode. Aquí solo
-    // se comprueba que la extensión figura, y con la primera basta.
+    // The anonymous extension must appear in the list.
+    // .first(): the dialog lists TWICE whatever is installed and also published — once under 'Installed
+    // logins' and once under 'Available logins'. Unscoped, Playwright rejects it under strict mode. Here
+    // all that is checked is that the extension is there, and the first one is enough.
     await expect(dialog.getByText('Anonymous', { exact: true }).first()).toBeVisible({ timeout: 5000 })
 
-    // Debe haber al menos un botón de configuración (⚙)
+    // There must be at least one configuration button (⚙)
     const settingsBtn = dialog.getByRole('button', { name: 'Configure' }).first()
     await expect(settingsBtn).toBeVisible()
 
@@ -137,11 +137,11 @@ test('login extensions: anonymous config dialog has scope select and resource fi
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
 
-    // Abre el config dialog de anonymous
+    // Opens anonymous's config dialog
     const settingsBtn = dialog.getByRole('button', { name: 'Configure' }).first()
     await settingsBtn.click()
 
-    // El Login Manager se cierra; aparece el config dialog (es el único dialog)
+    // The Login Manager closes; the config dialog appears (it is the only dialog)
     const configDialog = page.getByRole('dialog', { name: /configure/i })
     await expect(configDialog).toBeVisible({ timeout: 5000 })
     await expect(configDialog.getByText(/configure/i)).toBeVisible()
@@ -152,7 +152,7 @@ test('login extensions: anonymous config dialog has scope select and resource fi
     await expect(configDialog.getByLabel(/scope/i)).toBeVisible()
     await expect(configDialog.getByRole('textbox', { name: /namespace/i })).toBeVisible()
 
-    // Scope es un select con opciones correctas
+    // Scope is a select with the right options
     const scopeSelect = configDialog.getByLabel(/scope/i)
     await scopeSelect.click()
     const listbox = page.getByRole('listbox')
@@ -166,15 +166,15 @@ test('login extensions: anonymous config dialog has scope select and resource fi
     await page.goto('about:blank')
 })
 
-// ── 7. Anonymous login: depende de si el auto-login está configurado ───────────
+// ── 7. Anonymous login: it depends on whether auto-login is configured ────────
 //
-// El login 'anonymous' solo entra solo si tiene autoUser Y autoPassword en su configuración. Sin ellos
-// no puede autenticar a nadie, y en vez de romperse cae al formulario de siempre — que es lo sensato,
-// y lo que hace en un Kwirth recién instalado.
+// The 'anonymous' login only logs in by itself when it has autoUser AND autoPassword in its
+// configuration. Without them it cannot authenticate anybody, and rather than breaking it falls back to
+// the usual form — which is the sensible thing, and what it does on a freshly installed Kwirth.
 //
-// Este test daba por hecho que estaba configurado, así que fallaba en cualquier entorno donde no lo
-// estuviera (aceptado en rojo el 2026-09-04 sin diagnosticar, diagnosticado en el CL9 del 2026-09-06).
-// Ahora comprueba la rama que corresponda: lo que NUNCA vale es quedarse en blanco.
+// This test assumed it was configured, so it failed in any environment where it was not (accepted red
+// on 2026-09-04 without diagnosis, diagnosed in the CL9 of 2026-09-06). It now checks whichever branch
+// applies: what is NEVER acceptable is ending up blank.
 test('login extensions: ?loginExt=anonymous entra solo, o muestra el formulario si no está configurado', async ({ page }) => {
     await page.goto('/?loginExt=anonymous')
 
@@ -186,12 +186,12 @@ test('login extensions: ?loginExt=anonymous entra solo, o muestra el formulario 
     const autoLoginReady = Boolean(config.autoUser && config.autoPassword)
 
     if (autoLoginReady) {
-        // configurado: entra solo, así que spinner o error — nunca el formulario
+        // configured: it logs in by itself, so a spinner or an error — never the form
         await expect(page.getByRole('progressbar').or(page.getByText(/error|invalid|denied|connect/i))).toBeVisible({ timeout: 5000 })
         await expect(page.getByLabel(/user/i)).not.toBeVisible()
     }
     else {
-        // sin configurar: el formulario de siempre, operativo
+        // unconfigured: the usual form, operational
         await expect(page.getByLabel(/user/i).first()).toBeVisible({ timeout: 5000 })
         await expect(page.getByRole('button', { name: /login|ok/i }).first()).toBeVisible()
     }
@@ -199,11 +199,11 @@ test('login extensions: ?loginExt=anonymous entra solo, o muestra el formulario 
     await page.goto('about:blank')
 })
 
-// ── 5. Boton de abrir la pagina del login desde su tarjeta ────────────────────
+// ── 5. Button that opens the login's page from its card ───────────────────────
 //
-// La direccion no se escribe a mano en ningun sitio: es la misma por la que ha entrado quien mira, mas
-// ?loginExt=<id>. El test lo comprueba contra el id REAL de la tarjeta, no contra un literal, porque lo
-// que esta en juego es justo eso — que el enlace lleve al login de ESA tarjeta.
+// The address is not written by hand anywhere: it is the same one the viewer came in through, plus
+// ?loginExt=<id>. The test checks it against the card's REAL id and not against a literal, because that
+// is precisely what is at stake — that the link leads to THAT card's login.
 test('login extensions: la tarjeta abre su pagina de login en otra pestaña', async ({ page, context }) => {
     await login(page)
     await dismissOpenDialogs(page)
@@ -216,7 +216,7 @@ test('login extensions: la tarjeta abre su pagina de login en otra pestaña', as
     const count = await openButtons.count()
     if (count === 0) test.skip(true, 'no hay ningun login instalado en esta instancia')
 
-    // el id de la tarjeta: el enlace tiene que apuntar a ESE login
+    // the card's id: the link has to point at THAT login
     const popupPromise = context.waitForEvent('page')
     await openButtons.first().click()
     const popup = await popupPromise
@@ -226,7 +226,7 @@ test('login extensions: la tarjeta abre su pagina de login en otra pestaña', as
     expect(url.origin).toBe(new URL(page.url()).origin)
     expect(url.searchParams.get('loginExt')).toBeTruthy()
 
-    // y la pagina que sale es la del login de extension, no el dialogo estandar
+    // and the page that comes up is the extension login's, not the standard dialog
     await expect(popup.getByLabel(/user/i).first()).toBeVisible({ timeout: 8000 })
 
     await popup.close()

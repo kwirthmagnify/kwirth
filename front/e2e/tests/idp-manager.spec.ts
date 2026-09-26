@@ -79,7 +79,7 @@ test.describe('gestor generico de extensiones: idp', () => {
         const apagados = await dialog().getByText('disabled', { exact: true }).count()
         const sinConfigurar = await dialog().getByText('not configured', { exact: true }).count()
 
-        // Uno por tarjeta, ni mas ni menos: son estados excluyentes.
+        // One per card, no more and no less: they are mutually exclusive states.
         expect(encendidos + apagados + sinConfigurar, 'hay conectores sin chip de estado, o con dos')
             .toBe(conectores.length)
         expect(encendidos + apagados, 'todos salen sin configurar: las instancias no llegaron al pintar')
@@ -96,15 +96,15 @@ test.describe('gestor generico de extensiones: idp', () => {
     })
 
     test('un conector sin version no enseña un chip de version vacio', async () => {
-        // Los bundled no traen version. El chip generico pinta 'v' + numero, y sin numero quedaba una 'v'
-        // suelta que no dice nada.
+        // Bundled ones carry no version. The generic chip draws 'v' + number, and with no number a lone
+        // 'v' was left that says nothing.
         const sinVersion = conectores.filter(c => !c.version)
         test.skip(sinVersion.length === 0, 'todos los conectores de este entorno traen version')
         await expect(dialog().getByText('v', { exact: true })).toHaveCount(0)
     })
 
     test('la configuracion de un conector abre SU formulario, con el interruptor de encendido', async () => {
-        // Se abre y se cierra con Cancel: no se guarda nada, que esto es por donde entra la gente.
+        // It is opened and closed with Cancel: nothing is saved, since this is how people get in.
         const conCampos = conectores.find(c => (c.schema?.length ?? 0) > 0)
         test.skip(!conCampos, 'ningun conector con campos configurables')
 
@@ -114,7 +114,7 @@ test.describe('gestor generico de extensiones: idp', () => {
 
         const cfg = page.getByRole('dialog').filter({ hasText: `Configure: ${conCampos!.label}` })
         await expect(cfg).toBeVisible({ timeout: 20000 })
-        // El interruptor es lo que permite dejar un IdP preparado y encenderlo el dia del corte.
+        // The switch is what allows leaving an IdP ready and turning it on the day of the cutover.
         await expect(cfg.getByText('Enabled', { exact: true })).toBeVisible()
         await cfg.getByRole('button', { name: /cancel/i }).click()
     })

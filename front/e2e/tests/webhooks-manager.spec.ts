@@ -28,8 +28,8 @@ test('webhooks: el chip de configs cuenta las que hay, y la URL solo sale en las
     const dialog = page.getByRole('dialog').filter({ hasText: /Manage webhooks/i })
     await dialog.waitFor({ timeout: 40000 })
 
-    // De partida, lo que haya: el chip cuenta configuraciones, asi que se parte de lo que exista y se
-    // comprueba el INCREMENTO. Asi el test no depende de un entorno limpio.
+    // To begin with, whatever is there: the chip counts configurations, so we start from what exists and
+    // check the INCREMENT. That way the test does not depend on a clean environment.
     const chip = dialog.getByText(/^\d+ configs?$/)
     const inicial = await chip.count() === 0 ? 0 : Number((await chip.first().textContent())!.replace(/\D/g, ''))
 
@@ -37,7 +37,7 @@ test('webhooks: el chip de configs cuenta las que hay, y la URL solo sale en las
     const cfg = page.getByRole('dialog').filter({ hasText: /^Configure:/ })
     await expect(cfg).toBeVisible()
 
-    // ── una configuracion nueva, sin guardar, no tiene URL ────────────────────────────────────────────
+    // ── a new configuration, unsaved, has no URL ─────────────────────────────────────────────────────
     await cfg.getByRole('button', { name: 'New', exact: true }).click()
     await expect(cfg.getByText('Webhook URL'), 'una config sin guardar no puede tener token').toHaveCount(0)
 
@@ -48,7 +48,7 @@ test('webhooks: el chip de configs cuenta las que hay, y la URL solo sale en las
     // ── guardada: ahora si ─────────────────────────────────────────────────────────────────────────
     await expect(cfg.getByText('Webhook URL')).toBeVisible({ timeout: 15000 })
 
-    // ── y una segunda, para que el chip tenga que CONTAR ─────────────────────────────────────────────
+    // ── and a second one, so the chip has to COUNT ───────────────────────────────────────────────────
     await cfg.getByRole('button', { name: 'New', exact: true }).click()
     await cfg.getByRole('textbox', { name: 'Name *', exact: true }).fill(CFG2)
     await cfg.getByLabel(/API key/i).fill('e2e-secret-2')
@@ -57,10 +57,10 @@ test('webhooks: el chip de configs cuenta las que hay, y la URL solo sale en las
 
     await cfg.getByRole('button', { name: 'Close', exact: true }).click()
 
-    // El chip se relee al cerrar la configuracion: si no, seguiria diciendo lo de antes y mentiria.
+    // The chip is re-read on closing the configuration: otherwise it would keep saying the old thing and lie.
     await expect(chip.first()).toHaveText(`${inicial + 2} configs`, { timeout: 15000 })
 
-    // ── limpieza: se borran las dos y el chip tiene que volver a lo que habia ────────────────────────
+    // ── cleanup: both are deleted and the chip has to go back to what was there ─────────────────────
     await dialog.getByRole('button', { name: 'Configure' }).first().click()
     await expect(cfg).toBeVisible()
     for (const name of [CFG2, CFG1]) {

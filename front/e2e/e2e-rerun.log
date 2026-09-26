@@ -1,0 +1,177 @@
+=============== aitoolsets-manager ===============
+
+Running 9 tests using 1 worker
+
+
+
+(node:30364) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[1/9] tests\aitoolsets-manager.spec.ts:47:9 › gestor generico de extensiones: aitoolsets › el tipo aitoolset tiene su entrada de menu y abre el gestor generico
+[2/9] tests\aitoolsets-manager.spec.ts:54:9 › gestor generico de extensiones: aitoolsets › lo instalado sale con su version y el numero REAL de tools
+[3/9] tests\aitoolsets-manager.spec.ts:64:9 › gestor generico de extensiones: aitoolsets › el catalogo publico sirve el toolset y no deja reinstalarlo
+[4/9] tests\aitoolsets-manager.spec.ts:83:9 › gestor generico de extensiones: aitoolsets › el veredicto de canUninstall se ve y bloquea el boton
+[5/9] tests\aitoolsets-manager.spec.ts:90:9 › gestor generico de extensiones: aitoolsets › un tipo sin dialogo de configuracion no enseña engranaje
+[6/9] tests\aitoolsets-manager.spec.ts:97:9 › gestor generico de extensiones: aitoolsets › los dos filtros son independientes: el de instalados no toca el catalogo
+[7/9] tests\aitoolsets-manager.spec.ts:110:9 › gestor generico de extensiones: aitoolsets › la vista de lista enseña lo mismo que la de tarjetas
+[8/9] tests\aitoolsets-manager.spec.ts:121:9 › gestor generico de extensiones: aitoolsets › en la lista, las columnas de filas distintas quedan alineadas
+[9/9] tests\aitoolsets-manager.spec.ts:146:9 › gestor generico de extensiones: aitoolsets › todos los chips de una tarjeta miden lo mismo
+
+(node:10708) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[10/9] (retries) tests\aitoolsets-manager.spec.ts:47:9 › gestor generico de extensiones: aitoolsets › el tipo aitoolset tiene su entrada de menu y abre el gestor generico (retry #1)
+[11/9] (retries) tests\aitoolsets-manager.spec.ts:54:9 › gestor generico de extensiones: aitoolsets › lo instalado sale con su version y el numero REAL de tools (retry #1)
+[12/9] (retries) tests\aitoolsets-manager.spec.ts:64:9 › gestor generico de extensiones: aitoolsets › el catalogo publico sirve el toolset y no deja reinstalarlo (retry #1)
+  1) tests\aitoolsets-manager.spec.ts:64:9 › gestor generico de extensiones: aitoolsets › el catalogo publico sirve el toolset y no deja reinstalarlo 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: /Manage AI toolsets/i }).getByText('dev active').first()
+    Expected: visible
+    Timeout: 40000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 40000ms
+      - waiting for getByRole('dialog').filter({ hasText: /Manage AI toolsets/i }).getByText('dev active').first()
+
+
+      72 |         // primero" porque no se desinstala — se quita de kwirth-dev.json. Lo traia ThemeManagerDialog y lo
+      73 |         // heredo el generico al migrarlo, asi que aqui se aceptan los dos motivos.
+    > 74 |         await expect(dialog().getByText('dev active').first()).toBeVisible({ timeout: 40000 })
+         |                                                                ^
+      75 |         const yaInstalados = dialog().locator('span[aria-label^="Already installed"] button, span[aria-label^="A dev version"] button')
+      76 |         expect(await yaInstalados.count(), 'ningun toolset del catalogo consta como instalado').toBeGreaterThan(0)
+      77 |         for (let i = 0; i < await yaInstalados.count(); i++) await expect(yaInstalados.nth(i)).toBeDisabled()
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\aitoolsets-manager.spec.ts:74:64
+
+    Error Context: test-results\aitoolsets-manager-gestor--cdf85-lset-y-no-deja-reinstalarlo\error-context.md
+
+    Error Context: test-results\aitoolsets-manager-gestor--cdf85-lset-y-no-deja-reinstalarlo\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: /Manage AI toolsets/i }).getByText('dev active').first()
+    Expected: visible
+    Timeout: 40000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 40000ms
+      - waiting for getByRole('dialog').filter({ hasText: /Manage AI toolsets/i }).getByText('dev active').first()
+
+
+      72 |         // primero" porque no se desinstala — se quita de kwirth-dev.json. Lo traia ThemeManagerDialog y lo
+      73 |         // heredo el generico al migrarlo, asi que aqui se aceptan los dos motivos.
+    > 74 |         await expect(dialog().getByText('dev active').first()).toBeVisible({ timeout: 40000 })
+         |                                                                ^
+      75 |         const yaInstalados = dialog().locator('span[aria-label^="Already installed"] button, span[aria-label^="A dev version"] button')
+      76 |         expect(await yaInstalados.count(), 'ningun toolset del catalogo consta como instalado').toBeGreaterThan(0)
+      77 |         for (let i = 0; i < await yaInstalados.count(); i++) await expect(yaInstalados.nth(i)).toBeDisabled()
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\aitoolsets-manager.spec.ts:74:64
+
+    Error Context: test-results\aitoolsets-manager-gestor--cdf85-lset-y-no-deja-reinstalarlo-retry1\error-context.md
+
+    Error Context: test-results\aitoolsets-manager-gestor--cdf85-lset-y-no-deja-reinstalarlo-retry1\error-context.md
+
+
+[13/9] (retries) tests\aitoolsets-manager.spec.ts:83:9 › gestor generico de extensiones: aitoolsets › el veredicto de canUninstall se ve y bloquea el boton (retry #1)
+[14/9] (retries) tests\aitoolsets-manager.spec.ts:90:9 › gestor generico de extensiones: aitoolsets › un tipo sin dialogo de configuracion no enseña engranaje (retry #1)
+[15/9] (retries) tests\aitoolsets-manager.spec.ts:97:9 › gestor generico de extensiones: aitoolsets › los dos filtros son independientes: el de instalados no toca el catalogo (retry #1)
+[16/9] (retries) tests\aitoolsets-manager.spec.ts:110:9 › gestor generico de extensiones: aitoolsets › la vista de lista enseña lo mismo que la de tarjetas (retry #1)
+[17/9] (retries) tests\aitoolsets-manager.spec.ts:121:9 › gestor generico de extensiones: aitoolsets › en la lista, las columnas de filas distintas quedan alineadas (retry #1)
+[18/9] (retries) tests\aitoolsets-manager.spec.ts:146:9 › gestor generico de extensiones: aitoolsets › todos los chips de una tarjeta miden lo mismo (retry #1)
+  1 failed
+    tests\aitoolsets-manager.spec.ts:64:9 › gestor generico de extensiones: aitoolsets › el catalogo publico sirve el toolset y no deja reinstalarlo 
+  6 did not run
+  2 passed (2.5m)
+--- fin aitoolsets-manager ---
+=============== config-bundle ===============
+
+Running 9 tests using 1 worker
+
+
+(node:9268) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/9] tests\config-bundle.spec.ts:68:9 › portabilidad de configuracion › lo exportable se lista con el estado de cada entrada
+[2/9] tests\config-bundle.spec.ts:83:9 › portabilidad de configuracion › censor implementa el contrato y esta disponible
+[3/9] tests\config-bundle.spec.ts:90:9 › portabilidad de configuracion › el export produce un bundle valido, y sin credenciales por defecto
+[4/9] tests\config-bundle.spec.ts:104:9 › portabilidad de configuracion › el fichero declara si lleva credenciales, para quien lo guarde
+[5/9] tests\config-bundle.spec.ts:109:9 › portabilidad de configuracion › el include manda: se puede exportar una sola extension
+[6/9] tests\config-bundle.spec.ts:116:9 › portabilidad de configuracion › la vista previa dice que pasaria con cada entrada
+[7/9] tests\config-bundle.spec.ts:127:9 › portabilidad de configuracion › un fichero que no es un bundle se rechaza ANTES de tocar nada
+[8/9] tests\config-bundle.spec.ts:133:9 › portabilidad de configuracion › un formato mas nuevo se rechaza diciendo que hay que actualizar
+[9/9] tests\config-bundle.spec.ts:140:9 › portabilidad de configuracion › exportar e importar sobre el mismo Kwirth no cambia nada
+
+
+(node:32668) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[10/9] (retries) tests\config-bundle.spec.ts:68:9 › portabilidad de configuracion › lo exportable se lista con el estado de cada entrada (retry #1)
+[11/9] (retries) tests\config-bundle.spec.ts:83:9 › portabilidad de configuracion › censor implementa el contrato y esta disponible (retry #1)
+  1) tests\config-bundle.spec.ts:83:9 › portabilidad de configuracion › censor implementa el contrato y esta disponible 
+
+    Error: censor deberia estar instalado en el dev
+
+    expect(received).toBeTruthy()
+
+    Received: undefined
+
+      84 |         const entradas = (await api(page, s, '/core/config-bundle/exportable')).body as IExportableEntry[]
+      85 |         const censor = entradas.find(e => `${e.type}/${e.id}` === CENSOR)
+    > 86 |         expect(censor, 'censor deberia estar instalado en el dev').toBeTruthy()
+         |                                                                    ^
+      87 |         expect(censor!.status).toBe('available')
+      88 |     })
+      89 |
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\config-bundle.spec.ts:86:68
+
+    Error Context: test-results\config-bundle-portabilidad-dc6d8--contrato-y-esta-disponible\error-context.md
+
+    Error Context: test-results\config-bundle-portabilidad-dc6d8--contrato-y-esta-disponible\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: censor deberia estar instalado en el dev
+
+    expect(received).toBeTruthy()
+
+    Received: undefined
+
+      84 |         const entradas = (await api(page, s, '/core/config-bundle/exportable')).body as IExportableEntry[]
+      85 |         const censor = entradas.find(e => `${e.type}/${e.id}` === CENSOR)
+    > 86 |         expect(censor, 'censor deberia estar instalado en el dev').toBeTruthy()
+         |                                                                    ^
+      87 |         expect(censor!.status).toBe('available')
+      88 |     })
+      89 |
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\config-bundle.spec.ts:86:68
+
+    Error Context: test-results\config-bundle-portabilidad-dc6d8--contrato-y-esta-disponible-retry1\error-context.md
+
+    Error Context: test-results\config-bundle-portabilidad-dc6d8--contrato-y-esta-disponible-retry1\error-context.md
+
+
+[12/9] (retries) tests\config-bundle.spec.ts:90:9 › portabilidad de configuracion › el export produce un bundle valido, y sin credenciales por defecto (retry #1)
+[13/9] (retries) tests\config-bundle.spec.ts:104:9 › portabilidad de configuracion › el fichero declara si lleva credenciales, para quien lo guarde (retry #1)
+[14/9] (retries) tests\config-bundle.spec.ts:109:9 › portabilidad de configuracion › el include manda: se puede exportar una sola extension (retry #1)
+[15/9] (retries) tests\config-bundle.spec.ts:116:9 › portabilidad de configuracion › la vista previa dice que pasaria con cada entrada (retry #1)
+[16/9] (retries) tests\config-bundle.spec.ts:127:9 › portabilidad de configuracion › un fichero que no es un bundle se rechaza ANTES de tocar nada (retry #1)
+[17/9] (retries) tests\config-bundle.spec.ts:133:9 › portabilidad de configuracion › un formato mas nuevo se rechaza diciendo que hay que actualizar (retry #1)
+[18/9] (retries) tests\config-bundle.spec.ts:140:9 › portabilidad de configuracion › exportar e importar sobre el mismo Kwirth no cambia nada (retry #1)
+  1 failed
+    tests\config-bundle.spec.ts:83:9 › portabilidad de configuracion › censor implementa el contrato y esta disponible 
+  7 did not run
+  1 passed (1.0m)
+--- fin config-bundle ---
+=============== kwirth-settings-portability ===============
+
+Running 5 tests using 1 worker
+
+
+(node:36684) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/5] tests\kwirth-settings-portability.spec.ts:61:5 › Kwirth settings: el export baja un fichero con la forma esperada y SIN credenciales por defecto

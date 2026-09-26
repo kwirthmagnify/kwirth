@@ -1,10 +1,10 @@
 import { test } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from './helpers'
 
-// Captura de las imágenes de la guía de webhooks (docs/_media/guide). Tema oscuro.
-// Ejecutar a mano: playwright test capture-webhooks.spec.ts. Requiere el dev con el dev webhook jira.
+// Screenshots of the webhooks guide's images (docs/_media/guide). Dark theme.
+// Run by hand: playwright test capture-webhooks.spec.ts. It needs the dev environment with the jira dev webhook.
 
-// Las capturas van a la documentacion VIVA: ver GUIDE_MEDIA en helpers.ts.
+// The screenshots go to the LIVE documentation: see GUIDE_MEDIA in helpers.ts.
 const MEDIA = GUIDE_MEDIA
 const CFG = 'default'
 
@@ -13,13 +13,13 @@ test('capture manage-webhooks + webhook-config (dark)', async ({ page }) => {
     await login(page)
     await clickExtensionMenuItem(page, 'Webhooks')
 
-    // 1) Diálogo "Manage webhooks" con el webhook instalado.
+    // 1) The "Manage webhooks" dialog with the webhook installed.
     const manageDialog = page.getByRole('dialog').filter({ hasText: 'Manage webhooks' })
     await manageDialog.waitFor()
     await page.waitForTimeout(600)
     await manageDialog.screenshot({ path: `${MEDIA}/manage-webhooks.png` })
 
-    // 2) Form de config con la Webhook URL (token) visible.
+    // 2) The config form with the Webhook URL (token) visible.
     await page.getByRole('button', { name: 'Configure' }).first().click()
     const cfgDialog = page.getByRole('dialog').filter({ hasText: 'Configure: Jira Webhook' })
     await cfgDialog.waitFor()

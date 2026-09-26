@@ -1,34 +1,36 @@
 import { test, expect, Page } from '@playwright/test'
 import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
 
-// Verifica la UX acordada para el campo secreto de un marketplace: el valor guardado VUELVE al
-// formulario ya relleno y enmascarado, y el ojo lo revela. Antes el back solo decia si existia
-// (hasPassword/hasToken), el campo salia vacio con la etiqueta 'already set' y el ojo no ensenaba nada.
+// Verifies the agreed UX for a marketplace's secret field: the stored value COMES BACK to the form
+// already filled in and masked, and the eye reveals it. Before, the back end only said whether it
+// existed (hasPassword/hasToken), the field came out empty labelled 'already set' and the eye showed
+// nothing.
 //
-// ─── POR QUE ESTE TEST ES TAN DESCONFIADO ────────────────────────────────────────────────────────
-// Una version anterior escribio su token de prueba ENCIMA del marketplace real del usuario y le dejo
-// el catalogo privado sin autenticar durante un rato.
+// ─── WHY THIS TEST IS SO SUSPICIOUS ──────────────────────────────────────────────────────────────
+// An earlier version wrote its test token OVER the user's real marketplace and left their private
+// catalogue unauthenticated for a while.
 //
-// La causa: getByLabel casa por SUBSTRING, no por igualdad. 'Token' casa tambien el checkbox 'Manifest
-// needs a token', que en el DOM va ANTES del campo, asi que con N filas hay 2N coincidencias y el
-// .nth(i) por fila apunta a otra cosa: con una fila guardada y otra nueva, .nth(1) es el campo Token de
-// la PRIMERA fila. De ahi que el token de prueba acabara en el marketplace del usuario.
+// The cause: getByLabel matches by SUBSTRING, not by equality. 'Token' also matches the 'Manifest needs
+// a token' checkbox, which comes BEFORE the field in the DOM, so with N rows there are 2N matches and
+// the per-row .nth(i) points at something else: with one saved row and one new one, .nth(1) is the
+// FIRST row's Token field. Hence the test token ending up in the user's marketplace.
 //
-// Por eso ahora, y hay que mantenerlo asi:
-//   1. TODOS los getByLabel llevan { exact: true } — sin eso los indices por fila no significan nada;
-//   2. snapshot COMPLETO de los settings por API antes de tocar nada, y restauracion literal al final;
-//   3. no se escribe en una fila hasta comprobar que esta VACIA (una fila con datos no es la nueva);
-//   4. se asserta explicitamente que las filas preexistentes salen intactas, justo tras guardar.
+// That is why now, and it has to stay this way:
+//   1. ALL getByLabel calls carry { exact: true } — without that the per-row indices mean nothing;
+//   2. a COMPLETE snapshot of the settings through the API before touching anything, and a literal
+//      restoration at the end;
+//   3. nothing is written into a row until it is checked to be EMPTY (a row with data is not the new one);
+//   4. it is explicitly asserted that the pre-existing rows come out intact, right after saving.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 const TEST_LABEL = 'e2e-secret-check'
 const TEST_URL = 'https://e2e-secret-check.invalid/manifest.json'
-// Un marketplace ya SOLO guarda el token del manifest. La credencial para descargar el paquete se
-// mudo a los registros de paquetes, porque manifest y paquetes son servidores distintos: la cubre
+// A marketplace now stores ONLY the manifest's token. The credential for downloading the package moved
+// to the package registries, because manifest and packages are different servers: it is covered by
 // package-registries.spec.ts.
 const TEST_TOKEN = 'glpat-e2e-t0ken'
 
-/** El DOM de Kwirth es compartido: sin acotar al dialogo, getByLabel alcanza workspaces y tabs. */
+/** Kwirth's DOM is shared: unscoped to the dialog, getByLabel reaches workspaces and tabs. */
 const dlg = (page: Page) => page.locator('[role="dialog"]').last()
 
 interface ISession { auth: string; backend: string }
@@ -48,7 +50,7 @@ async function captureSession(page: Page): Promise<ISession> {
     return found
 }
 
-/** Los settings tal cual los sirve el back, secretos incluidos. Se usan para snapshot y restauracion. */
+/** The settings exactly as the back end serves them, secrets included. Used for snapshot and restoration. */
 async function readSettings(page: Page, s: ISession): Promise<Record<string, unknown>> {
     return await page.evaluate(async ([backend, a]) =>
         await (await fetch(`${backend}/core/settings`, { headers: { Authorization: a } })).json(),
@@ -65,7 +67,7 @@ async function writeMarketplaces(page: Page, s: ISession, marketplaces: unknown)
     }, [s.backend, s.auth, marketplaces] as [string, string, unknown])
 }
 
-/** Huella comparable de un marketplace, para detectar si el test le ha tocado algo. */
+/** A comparable fingerprint of a marketplace, to detect whether the test touched anything of it. */
 const fingerprint = (m: Record<string, any>) =>
     JSON.stringify({ id: m.id, label: m.label, url: m.url, enabled: m.enabled, auth: m.auth, manifestAuth: m.manifestAuth })
 
@@ -82,7 +84,7 @@ async function saveSettings(page: Page) {
     await page.locator('[role="dialog"]').waitFor({ state: 'hidden', timeout: 10000 })
 }
 
-// Cada fila aporta exactamente un campo de cada etiqueta, asi que el indice del 'Name' identifica la fila.
+// Each row contributes exactly one field per label, so the index of 'Name' identifies the row.
 async function rowIndexOf(page: Page, label: string): Promise<number> {
     const names = dlg(page).getByLabel('Name', { exact: true })
     for (let i = 0; i < await names.count(); i++) {
@@ -94,17 +96,17 @@ async function rowIndexOf(page: Page, label: string): Promise<number> {
 test('el secreto de un marketplace vuelve relleno y enmascarado, y el ojo lo revela', async ({ page }) => {
     const s = await captureSession(page)
 
-    // SNAPSHOT: lo que habia antes de tocar nada. Se restaura literalmente en el finally.
+    // SNAPSHOT: what was there before touching anything. It is restored literally in the finally.
     const original = await readSettings(page, s)
     const originalMkps = (original.marketplaces ?? []) as Record<string, any>[]
     const originalPrints = originalMkps.map(fingerprint)
 
     try {
-        // --- crear la fila de prueba con sus dos secretos ---
+        // --- create the test row with its two secrets ---
         await openMarketplaces(page)
 
-        // esperar a que el dialogo haya pintado las filas YA guardadas antes de contar: si se cuenta
-        // demasiado pronto, el indice de la fila nueva cae sobre una existente y se sobrescribe
+        // wait until the dialog has drawn the ALREADY saved rows before counting: counting too early
+        // lands the new row's index on an existing one and overwrites it
         await expect(dlg(page).getByLabel('Manifest URL', { exact: true })).toHaveCount(originalMkps.length)
 
         await page.getByRole('button', { name: 'Add marketplace' }).click()
@@ -112,8 +114,8 @@ test('el secreto de un marketplace vuelve relleno y enmascarado, y el ojo lo rev
 
         const i = originalMkps.length   // la fila recien anadida es la ultima
 
-        // GUARDA: la fila destino tiene que estar vacia. Si trae datos, no es la nueva y escribir ahi
-        // destruiria un marketplace del usuario.
+        // GUARD: the target row has to be empty. If it carries data it is not the new one, and writing
+        // there would destroy a marketplace of the user's.
         expect(await dlg(page).getByLabel('Name', { exact: true }).nth(i).inputValue(), 'la fila destino no esta vacia').toBe('')
         expect(await dlg(page).getByLabel('Manifest URL', { exact: true }).nth(i).inputValue(), 'la fila destino no esta vacia').toBe('')
 
@@ -124,7 +126,7 @@ test('el secreto de un marketplace vuelve relleno y enmascarado, y el ojo lo rev
 
         await saveSettings(page)
 
-        // --- lo primero tras guardar: comprobar que no se ha tocado nada ajeno ---
+        // --- first thing after saving: check that nothing of anybody else's was touched ---
         const afterSave = (await readSettings(page, s)).marketplaces as Record<string, any>[]
         for (const before of originalMkps) {
             const now = afterSave.find(m => m.id === before.id)
@@ -132,22 +134,22 @@ test('el secreto de un marketplace vuelve relleno y enmascarado, y el ojo lo rev
             expect(fingerprint(now!), `el test ha modificado el marketplace '${before.label}'`).toBe(fingerprint(before))
         }
 
-        // --- reabrir: el dialogo relee del back, asi que esto es persistencia real ---
+        // --- reopen: the dialog re-reads from the back end, so this is real persistence ---
         await openMarketplaces(page)
         const j = await rowIndexOf(page, TEST_LABEL)
         expect(j, 'la fila de prueba deberia haberse guardado').toBeGreaterThanOrEqual(0)
 
         const token = dlg(page).getByLabel('Token', { exact: true }).nth(j)
 
-        // 1. el secreto VUELVE, relleno (antes el campo salia vacio)
+        // 1. the secret COMES BACK, filled in (the field used to come out empty)
         await expect(token).toHaveValue(TEST_TOKEN)
 
         // 2. y enmascarado
         await expect(token).toHaveAttribute('type', 'password')
 
-        // 3. el ojo lo revela — y sin ir al back, que ya no hay endpoint de revelado.
-        // El ojo vive en el adorno del propio campo, asi que se busca desde el input y no por indice
-        // global: contar ojos de todas las filas es fragil.
+        // 3. the eye reveals it — and without going to the back end, since there is no reveal endpoint
+        // any more. The eye lives in the field's own adornment, so it is looked up from the input and
+        // not by a global index: counting eyes across every row is fragile.
         const eyeOf = (field: typeof token) => field.locator('xpath=..').getByRole('button')
         const requests: string[] = []
         page.on('request', r => requests.push(r.url()))
@@ -162,18 +164,18 @@ test('el secreto de un marketplace vuelve relleno y enmascarado, y el ojo lo rev
         await eyeOf(token).click()
         await expect(token).toHaveAttribute('type', 'password')
 
-        // 5. la etiqueta ya no miente con 'already set'
+        // 5. the label no longer lies with 'already set'
         await expect(dlg(page).getByLabel('Token (already set)', { exact: true })).toHaveCount(0)
 
         await dismissOpenDialogs(page)
     }
     finally {
-        // RESTAURACION: se reescribe el snapshot literal, no se "quita lo mio". Asi el entorno vuelve a
-        // como estaba aunque el test haya fallado a mitad o haya tocado algo que no debia.
+        // RESTORATION: the literal snapshot is rewritten, rather than "removing my own". That way the
+        // environment goes back to how it was even if the test failed halfway or touched what it should not.
         await writeMarketplaces(page, s, originalMkps)
     }
 
-    // --- y se comprueba que quedo restaurado, huella a huella ---
+    // --- and it is checked that it was restored, fingerprint by fingerprint ---
     const restored = (await readSettings(page, s)).marketplaces as Record<string, any>[]
     expect(restored.map(fingerprint), 'los marketplaces no han quedado como estaban').toEqual(originalPrints)
 })

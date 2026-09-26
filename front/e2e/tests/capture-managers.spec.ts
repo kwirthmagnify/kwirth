@@ -1,25 +1,25 @@
 import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs, GUIDE_MEDIA, capturePedida } from './helpers'
 
-// Regenera las capturas de los diálogos de gestión de extensiones para la guía (docs/_media/guide).
+// Regenerates the screenshots of the extension management dialogs for the guide (docs/_media/guide).
 // Ejecutar a mano: playwright test capture-managers.spec.ts
 //
-// ─── POR QUE DESACTIVA LOS MARKETPLACES PRIVADOS ─────────────────────────────────────────────────
-// La guía es PÚBLICA y el catálogo del entorno de desarrollo trae las extensiones de pago servidas por
-// el marketplace privado de la organización. Publicarlas en la documentación abierta seria filtrar el
-// catalogo comercial. Se desactivan mientras dura la captura — no se borran — y se restaura el
-// snapshot literal al terminar, pase lo que pase.
+// ─── WHY IT DISABLES THE PRIVATE MARKETPLACES ────────────────────────────────────────────────────
+// The guide is PUBLIC and the development environment's catalogue carries the paid extensions served by
+// the organisation's private marketplace. Publishing them in open documentation would be leaking the
+// commercial catalogue. They are disabled for as long as the capture lasts — not deleted — and the
+// literal snapshot is restored at the end, whatever happens.
 //
-// Ademas asi las imagenes muestran lo que ve un Kwirth recien instalado, que es de lo que habla la guia.
+// Besides, that way the images show what a freshly installed Kwirth sees, which is what the guide talks about.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-// Las capturas van a la documentacion VIVA, y CAPTURE_ONLY permite pedir una sola: ver helpers.ts.
+// The screenshots go to the LIVE documentation, and CAPTURE_ONLY allows asking for just one: see helpers.ts.
 const MEDIA = GUIDE_MEDIA
 const pedida = capturePedida
 
 interface ISession { auth: string; backend: string }
 
-/** Cada manager, con el nombre de su entrada de menú, el título de su diálogo y el fichero destino. */
+/** Each manager, with its menu entry's name, its dialog's title and the destination file. */
 const MANAGERS: { menu: string, title: RegExp, file: string }[] = [
     { menu: 'Plugins',        title: /Manage channel plugins/i, file: 'admin-plugins-manage.png' },
     { menu: 'Providers',      title: /Manage providers/i,   file: 'manage-providers.png' },
@@ -27,8 +27,8 @@ const MANAGERS: { menu: string, title: RegExp, file: string }[] = [
     { menu: 'Themes',         title: /Manage themes/i,      file: 'manage-themes.png' },
     { menu: 'Homepages',      title: /Manage homepages/i,   file: 'manage-homepages.png' },
     { menu: 'Identity providers', title: /identity provider/i, file: 'manage-idps.png' },
-    // El unico servido por el gestor GENERICO (ExtensionManagerDialog): la captura enseña que la UI es la
-    // misma que la de los demas, que es justo lo que promete la guia.
+    // The only one served by the GENERIC manager (ExtensionManagerDialog): the screenshot shows the UI is
+    // the same as everybody else's, which is exactly what the guide promises.
     { menu: 'AI toolsets',    title: /Manage AI toolsets/i, file: 'manage-aitoolsets.png' }
 ]
 
@@ -42,7 +42,7 @@ const MANAGERS: { menu: string, title: RegExp, file: string }[] = [
 */
 const RELABEL: Record<string, string> = { Santander: 'Acme Bank' }
 
-/** Reemplaza, en los nodos de TEXTO del documento, cada nombre de cliente por su alias de demo. */
+/** Replaces, in the document's TEXT nodes, each customer name with its demo alias. */
 const relabelCustomers = (pairs: Record<string, string>) => {
     const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
     const nodes: Text[] = []
@@ -89,13 +89,13 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
     const privatesOff = (original as Record<string, unknown>[]).map(m => ({ ...m, enabled: false }))
 
     try {
-        // No hace falta recargar: cada diálogo pide su catálogo al abrirse, y un marketplace
-        // deshabilitado se excluye de la resolución en el back.
+        // No reload is needed: each dialog asks for its catalogue on opening, and a disabled marketplace
+        // is excluded from the resolution on the back end.
         if (privatesOff.length) await writeMarketplaces(page, s, privatesOff)
 
-        // El menu de familias, que es la primera imagen de "Extending kwirth". Se regenera aqui porque
-        // CADA tipo de extension nuevo lo cambia, y hecha a mano se quedaba vieja sin que nadie lo notara:
-        // la que habia no tenia ni el tipo `aitoolset`.
+        // The families menu, which is the first image of "Extending kwirth". It is regenerated here
+        // because EVERY new extension type changes it, and done by hand it went stale with nobody
+        // noticing: the one that was there did not even have the `aitoolset` type.
         if (pedida('admin-manage-extensions.png')) {
             await dismissOpenDialogs(page)
             await page.locator('header button').first().click({ force: true })
@@ -110,20 +110,20 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
             await clickExtensionMenuItem(page, m.menu)
             const dialog = page.getByRole('dialog').filter({ hasText: m.title })
             await dialog.waitFor({ timeout: 10000 })
-            // dar tiempo a que resuelva el catalogo: si no, se captura el spinner
+            // give it time to resolve the catalogue: otherwise the spinner is captured
             await page.waitForTimeout(2500)
             await page.evaluate(relabelCustomers, RELABEL)
             await dialog.screenshot({ path: `${MEDIA}/${m.file}` })
 
-            // la vista de lista tambien va a la guia: es la mitad de la pantalla que mas derivaba
+            // the list view goes to the guide too: it is the half of the screen that drifted the most
             const listToggle = dialog.getByRole('button', { name: /list view/i }).first()
             if (await listToggle.count() > 0) {
                 await listToggle.click()
-                // El puntero se queda sobre el boton y MUI acaba pintando su tooltip ('List view') ENCIMA
-                // de la captura. Se aparta el raton y se le da tiempo a desaparecer antes de disparar.
+                // The pointer stays over the button and MUI ends up drawing its tooltip ('List view') ON
+                // TOP of the screenshot. The mouse is moved away and given time to vanish before shooting.
                 await page.mouse.move(0, 0)
                 await page.waitForTimeout(1200)
-                // Otra vez: cambiar de vista vuelve a montar las filas con los nombres reales.
+                // Again: switching views remounts the rows with the real names.
                 await page.evaluate(relabelCustomers, RELABEL)
                 await dialog.screenshot({ path: `${MEDIA}/${m.file.replace('.png', '-list.png')}` })
             }
@@ -134,7 +134,7 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
         if (privatesOff.length) await writeMarketplaces(page, s, original)
     }
 
-    // el entorno queda como estaba: los marketplaces vuelven con su enabled original
+    // the environment is left as it was: the marketplaces come back with their original enabled flag
     const restored = (await readSettings(page, s)).marketplaces ?? []
     expect(JSON.stringify(restored)).toBe(JSON.stringify(original))
 })

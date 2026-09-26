@@ -1,11 +1,11 @@
-// Round-trip de un provider creado DESDE el canal pinocchio: name / type / endpoint deben sobrevivir a
-// guardar → persistir en el almacen comun → releer al arrancar el canal.
+// Round trip of a provider created FROM the pinocchio channel: name / type / endpoint must survive
+// saving → persisting in the common store → being read back when the channel starts.
 //
-// Motivo: con el pinocchio anterior, el desplegable 'Type' no ofrecia 'openai-compat', asi que un provider
-// creado desde el canal se guardaba con el primer tipo de la lista ('google') y SIN Base URL — el name y el
-// type quedaban mal y el proveedor no se podia construir.
+// Why: with the previous pinocchio, the 'Type' dropdown did not offer 'openai-compat', so a provider
+// created from the channel was saved with the first type on the list ('google') and WITHOUT a Base URL —
+// the name and the type came out wrong and the provider could not be built.
 //
-// NO DESTRUCTIVO: usa un nombre con prefijo propio, y al terminar lo borra y comprueba que el resto de
+// NON-DESTRUCTIVE: it uses a name with its own prefix, and at the end deletes it and checks that the rest of
 // providers queda EXACTAMENTE como estaba.
 import { test, expect, Page } from '@playwright/test'
 import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
@@ -63,7 +63,7 @@ test.describe('pinocchio: round-trip de provider openai-compat', () => {
 
     test.afterAll(async () => { await page?.close() })
 
-    // 'AI providers' vive dentro del grupo PLEGABLE 'AI' del menu Config: hay que expandirlo primero.
+    // 'AI providers' lives inside the COLLAPSIBLE 'AI' group of the Config menu: it has to be expanded first.
     const openProviderDialog = async () => {
         await page.getByRole('button', { name: 'Config', exact: true }).click()
         await page.waitForTimeout(400)
@@ -77,8 +77,8 @@ test.describe('pinocchio: round-trip de provider openai-compat', () => {
     test('crear un provider openai-compat desde el canal guarda name, type y Base URL', async () => {
         const dlg = await openProviderDialog()
         await dlg.getByRole('button', { name: /^new$/i }).click()
-        // El tipo se elige ANTES del nombre: el dialogo autorellena el nombre con el tipo si esta vacio,
-        // y ademas el campo Base URL solo aparece cuando el tipo es openai-compat.
+        // The type is chosen BEFORE the name: the dialog autofills the name with the type when it is
+        // empty, and besides the Base URL field only appears when the type is openai-compat.
         await dlg.getByRole('combobox').first().click()
         await page.getByRole('option', { name: 'openai-compat', exact: true }).click()
         await dlg.getByLabel('Name', { exact: true }).fill(E2E_PROVIDER)
@@ -119,8 +119,8 @@ test.describe('pinocchio: round-trip de provider openai-compat', () => {
         const gone = await waitProviders(ps => !ps.some(p => p.name === E2E_PROVIDER))
         expect(gone, 'el provider de test no se ha borrado').toBe(true)
 
-        // identidad de cada provider preservada (el numero de modelos SI puede variar: el back los recarga
-        // del proveedor real en cada save)
+        // each provider's identity preserved (the number of models CAN vary: the back end reloads them
+        // from the real provider on every save)
         expect(providers.map(p => `${p.name}|${p.type ?? ''}|${p.endpoint ?? ''}`))
             .toEqual(before.map(p => `${p.name}|${p.type ?? ''}|${p.endpoint ?? ''}`))
     })

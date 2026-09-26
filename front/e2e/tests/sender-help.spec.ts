@@ -1,12 +1,13 @@
 import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
-// La ayuda del dialogo de configuracion de un sender lleva a la pagina de referencia DE ESE SENDER, que
-// es la que explica sus campos. Los que no la tienen —un sender de pago, o uno recien publicado— caen a
-// la pagina general de senders, nunca a un 404.
+// The help on a sender's configuration dialog leads to THAT SENDER's reference page, which is the one
+// explaining its fields. Those without one — a paid sender, or a freshly published one — fall back to
+// the general senders page, never to a 404.
 //
-// El front lo resuelve preguntando por el .md, no con una lista: asi, publicar la referencia de un sender
-// la enlaza sola. Este test comprueba las dos ramas contra los senders que hay instalados de verdad.
+// The front end resolves it by asking for the .md rather than with a list: that way, publishing a
+// sender's reference links it by itself. This test checks both branches against the senders that are
+// really installed.
 
 interface IHelpOpen { url: string }
 
@@ -23,15 +24,15 @@ async function captureOpens(page: Page) {
 const lastOpen = (page: Page) =>
     page.evaluate(() => (window as unknown as { __helpOpens: IHelpOpen[] }).__helpOpens.at(-1)?.url ?? '')
 
-/** Abre el Configure del sender indicado y devuelve la URL de guia que abre su boton de ayuda. */
+/** Opens the Configure of the given sender and returns the guide URL its help button opens. */
 async function helpUrlFor(page: Page, senderName: RegExp): Promise<string> {
     await dismissOpenDialogs(page)
     await clickExtensionMenuItem(page, 'Senders')
     const manager = page.getByRole('dialog').filter({ hasText: 'Manage senders' })
     await manager.waitFor()
 
-    // En vista de LISTA cada sender es una fila plana, asi que el ancestro con boton es justo esa fila.
-    // En tarjetas el texto queda varios divs por dentro de los botones y el localizador no los alcanza.
+    // In LIST view each sender is a flat row, so the ancestor with a button is exactly that row.
+    // In card view the text sits several divs inside the buttons and the locator does not reach them.
     await manager.getByRole('button', { name: /list view/i }).first().click()
     await page.waitForTimeout(600)
 
@@ -57,7 +58,7 @@ test('la ayuda de un sender lleva a SU pagina de referencia, y a la general si n
     expect(consoleUrl, 'debe abrir la referencia del propio sender').toContain('guide/extensions/senders/console')
     expect(consoleUrl, 'y no la general').not.toContain('senders/index')
 
-    // 'jira' es de pago y no publica referencia: cae a la pagina general, nunca a un 404
+    // 'jira' is paid and publishes no reference: it falls back to the general page, never to a 404
     await dismissOpenDialogs(page)
     const jiraUrl = await helpUrlFor(page, /^Jira Sender/)
     expect(jiraUrl, 'sin pagina propia se cae a la general').toContain('guide/extensions/senders/index')

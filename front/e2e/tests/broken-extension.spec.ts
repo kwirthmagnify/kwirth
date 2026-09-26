@@ -23,7 +23,7 @@ const romperIconoDeCanal = async (page: import('@playwright/test').Page): Promis
             configurable: true,
             get: () => new Proxy(almacen, {
                 set(destino: Record<string, unknown>, clave: string, valor: unknown) {
-                    // se estropea el PRIMERO que se registre, sea cual sea: lo que se prueba es el core
+                    // the FIRST one to register is broken, whichever it is: what is tested is the core
                     if (typeof valor === 'function' && !(window as unknown as { __roto__?: boolean }).__roto__) {
                         ;(window as unknown as { __roto__?: boolean }).__roto__ = true
                         ;(window as unknown as { __rotoId__?: string }).__rotoId__ = clave
@@ -31,7 +31,7 @@ const romperIconoDeCanal = async (page: import('@playwright/test').Page): Promis
                         const original = proto.getChannelIcon
                         proto.getChannelIcon = function () {
                             const elemento = original?.call(this) as Record<string, unknown>
-                            // un elemento valido cuyo `type` es un objeto pelado: el fallo exacto
+                            // a valid element whose `type` is a bare object: the exact failure
                             return { ...elemento, type: { esto: 'no es un componente' } }
                         }
                     }
@@ -53,12 +53,12 @@ test('una extension con el icono de canal roto no deja la aplicacion en blanco',
     await assertFrontCompiles(page)
     await page.waitForTimeout(3000)
 
-    // lo que importa: la aplicacion SIGUE AHI. Con el fallo, el body se quedaba vacio.
+    // what matters: the application IS STILL THERE. With the fault, the body was left empty.
     const texto = await page.locator('body').innerText()
     expect(texto.length, 'la pagina se ha quedado en blanco').toBeGreaterThan(20)
     expect(texto).toContain('Kwirth')
 
-    // y se dice de QUE extension se trata, que es lo que faltaba para poder arreglarlo
+    // and it says WHICH extension it is, which is what was missing in order to fix it
     const roto = await page.evaluate(() => (window as unknown as { __rotoId__?: string }).__rotoId__)
     if (roto) {
         expect(avisos.some(a => a.includes(roto) && a.includes('icon')),
@@ -72,7 +72,7 @@ test('el resto de la aplicacion sigue siendo usable', async ({ page }) => {
     await assertFrontCompiles(page)
     await page.waitForTimeout(3000)
 
-    // el selector de recursos responde: no es solo que se pinte algo, es que se puede trabajar
+    // the resource selector responds: it is not just that something is drawn, it is that you can work
     const combo = page.getByRole('combobox').first()
     await expect(combo).toBeVisible({ timeout: 15_000 })
     await combo.click()
@@ -86,8 +86,8 @@ test('el resto de la aplicacion sigue siendo usable', async ({ page }) => {
     clase, que asi vale tanto si la propiedad es de instancia como si es del prototipo— y se abre su
     pestaña por el camino normal.
 */
-// Un canal de CLUSTER que pinta nada mas añadirse: sin setup de por medio, el contenido —y por tanto
-// el boundary— se ve en cuanto se abre la pestaña.
+// A CLUSTER channel that draws as soon as it is added: with no setup in between, the content — and hence
+// the boundary — is visible the moment the tab opens.
 const CANAL_DE_PRUEBA = 'provider-debug'
 
 const romperContenidoDelCanal = async (page: import('@playwright/test').Page): Promise<void> => {
@@ -133,11 +133,11 @@ test('un canal que revienta al pintarse se lleva su pestaña, no la aplicacion',
     await page.waitForTimeout(2500)
     await dismissOpenDialogs(page)
 
-    // el mensaje del boundary, con el nombre del canal: sin eso no se sabe que desinstalar
+    // the boundary's message, with the channel's name: without it there is no telling what to uninstall
     const aviso = page.getByText('This channel stopped working')
     await expect(aviso).toBeVisible({ timeout: 15_000 })
     await expect(page.getByText('boom de prueba')).toBeVisible()
 
-    // y la aplicacion sigue entera alrededor
+    // and the application is still whole around it
     await expect(page.getByRole('combobox').first()).toBeVisible()
 })

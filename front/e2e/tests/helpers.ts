@@ -5,12 +5,12 @@ import path from 'path'
 export const USER = process.env.KWIRTH_E2E_USER ?? 'admin'
 export const PASS = process.env.KWIRTH_E2E_PASS ?? ''
 
-// El dev server de CRA tapa la página con un iframe cuando la compilación falla. Ese iframe significa
-// exactamente eso: **el front no compila**. No es un residuo que se pueda apartar — si se retira, los
-// tests siguen sobre un bundle que no es el que se quiere probar, y pueden acabar en verde.
+// CRA's dev server covers the page with an iframe when compilation fails. That iframe means exactly
+// that: **the front end does not compile**. It is not a leftover that can be brushed aside — remove it
+// and the tests carry on against a bundle that is not the one meant to be tested, and may end up green.
 //
-// Asi que se aborta, y con el texto del overlay, que es justo el diagnostico que hace falta: sin él, el
-// sintoma es un click que no llega porque "algo" lo intercepta.
+// So it aborts, and with the overlay's text, which is exactly the diagnosis needed: without it, the
+// symptom is a click that does not land because "something" intercepts it.
 export async function assertFrontCompiles(page: Page): Promise<void> {
     const overlay = page.locator('iframe#webpack-dev-server-client-overlay')
     if (await overlay.count() === 0) return
@@ -28,7 +28,7 @@ export async function login(page: Page, user = USER, pass = PASS): Promise<void>
     await page.waitForTimeout(1500)
 }
 
-/** Cierra cualquier dialog abierto (por auto-start u otras causas). */
+/** Closes any open dialog (from auto-start or other causes). */
 export async function dismissOpenDialogs(page: Page): Promise<void> {
     // Intentar Cancel, luego OK, luego Escape — en ese orden
     for (const name of ['CANCEL', 'OK', 'Close']) {
@@ -40,18 +40,18 @@ export async function dismissOpenDialogs(page: Page): Promise<void> {
     }
     await page.keyboard.press('Escape')
     await page.waitForTimeout(400)
-    // Esperar a que no quede ningún dialog visible
+    // Wait until no dialog is visible any more
     await page.locator('[role="dialog"]').waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {})
 }
 
-/** Abre el drawer hamburguesa usando locator CSS (no se bloquea por aria-hidden del backdrop). */
+/** Opens the hamburger drawer using a CSS locator (it is not blocked by the backdrop's aria-hidden). */
 export async function openMenu(page: Page): Promise<void> {
-    // Primer botón del AppBar (hamburguesa) — locator CSS evita el problema de aria-hidden con MUI Dialog
+    // First AppBar button (the hamburger) — a CSS locator avoids the aria-hidden problem with MUI Dialog
     await page.locator('header button').first().click({ force: true })
     await page.waitForTimeout(300)
 }
 
-/** Abre el drawer y clica un item de primer nivel. */
+/** Opens the drawer and clicks a top-level item. */
 export async function clickMenuItem(page: Page, label: string): Promise<void> {
     await dismissOpenDialogs(page)
     await openMenu(page)
@@ -59,7 +59,7 @@ export async function clickMenuItem(page: Page, label: string): Promise<void> {
     await page.waitForTimeout(400)
 }
 
-/** Abre el drawer, expande "Manage extensions" y clica un sub-item. */
+/** Opens the drawer, expands "Manage extensions" and clicks a sub-item. */
 export async function clickExtensionMenuItem(page: Page, label: string): Promise<void> {
     await dismissOpenDialogs(page)
     await openMenu(page)
@@ -69,9 +69,9 @@ export async function clickExtensionMenuItem(page: Page, label: string): Promise
     await page.waitForTimeout(400)
 }
 
-// --- Comboboxes del diálogo ADD (Cluster / View / … / Channel) --------------------------------------
-// El diálogo ADD monta sus selects en orden, y el ÚLTIMO es siempre el de canal (su posición depende de
-// la vista elegida), de ahí el pickLastCombo.
+// --- Comboboxes of the ADD dialog (Cluster / View / … / Channel) ------------------------------------
+// The ADD dialog mounts its selects in order, and the LAST one is always the channel's (its position
+// depends on the chosen view), hence pickLastCombo.
 export async function pickCombo(page: Page, idx: number, option: string): Promise<void> {
     await page.getByRole('combobox').nth(idx).click()
     await page.getByRole('listbox').waitFor({ state: 'visible', timeout: 5000 })
@@ -95,7 +95,7 @@ export async function pickLastCombo(page: Page, option: string): Promise<void> {
 */
 const DOCS = path.resolve(__dirname, '..', '..', '..', 'docs')
 
-/** La `docs/<x.y.z>` más alta que haya en el repo. */
+/** The highest `docs/<x.y.z>` there is in the repo. */
 export const liveDocsVersion = (): string =>
     readdirSync(DOCS, { withFileTypes: true })
         .filter(d => d.isDirectory() && /^\d+\.\d+\.\d+$/.test(d.name))
@@ -107,7 +107,7 @@ export const liveDocsVersion = (): string =>
         })
         .pop() ?? ''
 
-/** Carpeta de imágenes de la guía viva. Barras normales: se interpola en rutas de captura. */
+/** Image folder of the live guide. Forward slashes: it is interpolated into screenshot paths. */
 export const GUIDE_MEDIA = path.join(DOCS, liveDocsVersion(), '_media', 'guide').replace(/\\/g, '/')
 
 /*

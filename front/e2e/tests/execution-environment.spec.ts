@@ -14,8 +14,8 @@ import { login, assertFrontCompiles, dismissOpenDialogs } from './helpers'
 
 const BACK_URL = process.env.KWIRTH_E2E_BACK_URL ?? 'http://localhost:3883'
 
-// Los valores que puede tomar el entorno. Se listan aqui a proposito, en vez de importar el enum: si
-// alguien anade uno nuevo, este test lo obliga a pasar por aqui y decidir que significa para el e2e.
+// The values the environment can take. They are listed here on purpose rather than importing the enum:
+// if somebody adds a new one, this test forces them through here to decide what it means for the e2e.
 const ENTORNOS = ['kubernetes', 'docker', 'desktop', 'ecs']
 const FUENTES = ['kubernetes', 'docker', 'none']
 
@@ -50,8 +50,8 @@ test('la fuente de recursos se publica, y es una de las conocidas', async () => 
 
 test('healthz responde aunque Kwirth no sea una carga del cluster', async () => {
     const info = await leerInfo()
-    // El caso que importa: antes este endpoint solo se montaba con inCluster, y sin el un balanceador
-    // externo no puede saber si la instancia esta viva.
+    // The case that matters: this endpoint used to be mounted only with inCluster, and without it an
+    // external load balancer cannot tell whether the instance is alive.
     const contexto = await playwrightRequest.newContext({ baseURL: BACK_URL })
     try {
         const respuesta = await contexto.get('/healthz')
@@ -63,8 +63,8 @@ test('healthz responde aunque Kwirth no sea una carga del cluster', async () => 
 })
 
 test('el selector de recursos sigue pintandose tras el cambio de iconos', async ({ page }) => {
-    // Regresion: el icono del cluster se decidia por la primera letra del tipo, y con una fuente cuyo
-    // nombre no empieza por 'd' ni por 'k' la funcion no devolvia nada.
+    // Regression: the cluster's icon was decided by the type's first letter, and with a source whose
+    // name starts with neither 'd' nor 'k' the function returned nothing.
     await login(page)
     await assertFrontCompiles(page)
     await dismissOpenDialogs(page)

@@ -1,0 +1,709 @@
+
+Running 126 tests using 1 worker
+
+
+(node:35708) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/126] tests\about-previous-log.spec.ts:26:5 › el About pide el log del contenedor anterior y el core responde con su contrato
+[2/126] tests\about-previous-log.spec.ts:54:5 › el boton esta presente y su estado concuerda con lo que dice el core
+[3/126] tests\aitoolsets-manager.spec.ts:47:9 › gestor generico de extensiones: aitoolsets › el tipo aitoolset tiene su entrada de menu y abre el gestor generico
+[4/126] tests\aitoolsets-manager.spec.ts:54:9 › gestor generico de extensiones: aitoolsets › lo instalado sale con su version y el numero REAL de tools
+[5/126] tests\aitoolsets-manager.spec.ts:64:9 › gestor generico de extensiones: aitoolsets › el catalogo publico sirve el toolset y no deja reinstalarlo
+[6/126] tests\aitoolsets-manager.spec.ts:83:9 › gestor generico de extensiones: aitoolsets › el veredicto de canUninstall se ve y bloquea el boton
+[7/126] tests\aitoolsets-manager.spec.ts:90:9 › gestor generico de extensiones: aitoolsets › un tipo sin dialogo de configuracion no enseña engranaje
+[8/126] tests\aitoolsets-manager.spec.ts:97:9 › gestor generico de extensiones: aitoolsets › los dos filtros son independientes: el de instalados no toca el catalogo
+[9/126] tests\aitoolsets-manager.spec.ts:110:9 › gestor generico de extensiones: aitoolsets › la vista de lista enseña lo mismo que la de tarjetas
+[10/126] tests\aitoolsets-manager.spec.ts:121:9 › gestor generico de extensiones: aitoolsets › en la lista, las columnas de filas distintas quedan alineadas
+[11/126] tests\aitoolsets-manager.spec.ts:146:9 › gestor generico de extensiones: aitoolsets › todos los chips de una tarjeta miden lo mismo
+
+(node:1960) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[12/126] (retries) tests\aitoolsets-manager.spec.ts:47:9 › gestor generico de extensiones: aitoolsets › el tipo aitoolset tiene su entrada de menu y abre el gestor generico (retry #1)
+[13/126] (retries) tests\aitoolsets-manager.spec.ts:54:9 › gestor generico de extensiones: aitoolsets › lo instalado sale con su version y el numero REAL de tools (retry #1)
+  1) tests\aitoolsets-manager.spec.ts:54:9 › gestor generico de extensiones: aitoolsets › lo instalado sale con su version y el numero REAL de tools 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: /Manage AI toolsets/i }).getByText(/^v\d+\.\d+\.\d+$/).first()
+    Expected: visible
+    Timeout: 20000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 20000ms
+      - waiting for getByRole('dialog').filter({ hasText: /Manage AI toolsets/i }).getByText(/^v\d+\.\d+\.\d+$/).first()
+
+
+      56 |         // no cargue se veria SIN chip en vez de mentir con el numero que traia el manifest. Por eso se
+      57 |         // exige que haya chip y que el numero sea > 0.
+    > 58 |         await expect(dialog().getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 20000 })
+         |                                                                      ^
+      59 |         const chips = await dialog().getByText(/^\d+ tools?$/).allTextContents()
+      60 |         expect(chips.length, 'ningun toolset instalado enseña su contador de tools').toBeGreaterThan(0)
+      61 |         for (const c of chips) expect(Number(c.replace(/\D/g, '')), `contador vacio: ${c}`).toBeGreaterThan(0)
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\aitoolsets-manager.spec.ts:58:70
+
+    Error Context: test-results\aitoolsets-manager-gestor--4f63a-n-y-el-numero-REAL-de-tools\error-context.md
+
+    Error Context: test-results\aitoolsets-manager-gestor--4f63a-n-y-el-numero-REAL-de-tools\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: /Manage AI toolsets/i }).getByText(/^v\d+\.\d+\.\d+$/).first()
+    Expected: visible
+    Timeout: 20000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 20000ms
+      - waiting for getByRole('dialog').filter({ hasText: /Manage AI toolsets/i }).getByText(/^v\d+\.\d+\.\d+$/).first()
+
+
+      56 |         // no cargue se veria SIN chip en vez de mentir con el numero que traia el manifest. Por eso se
+      57 |         // exige que haya chip y que el numero sea > 0.
+    > 58 |         await expect(dialog().getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 20000 })
+         |                                                                      ^
+      59 |         const chips = await dialog().getByText(/^\d+ tools?$/).allTextContents()
+      60 |         expect(chips.length, 'ningun toolset instalado enseña su contador de tools').toBeGreaterThan(0)
+      61 |         for (const c of chips) expect(Number(c.replace(/\D/g, '')), `contador vacio: ${c}`).toBeGreaterThan(0)
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\aitoolsets-manager.spec.ts:58:70
+
+    Error Context: test-results\aitoolsets-manager-gestor--4f63a-n-y-el-numero-REAL-de-tools-retry1\error-context.md
+
+    Error Context: test-results\aitoolsets-manager-gestor--4f63a-n-y-el-numero-REAL-de-tools-retry1\error-context.md
+
+
+[14/126] (retries) tests\aitoolsets-manager.spec.ts:64:9 › gestor generico de extensiones: aitoolsets › el catalogo publico sirve el toolset y no deja reinstalarlo (retry #1)
+[15/126] (retries) tests\aitoolsets-manager.spec.ts:83:9 › gestor generico de extensiones: aitoolsets › el veredicto de canUninstall se ve y bloquea el boton (retry #1)
+[16/126] (retries) tests\aitoolsets-manager.spec.ts:90:9 › gestor generico de extensiones: aitoolsets › un tipo sin dialogo de configuracion no enseña engranaje (retry #1)
+[17/126] (retries) tests\aitoolsets-manager.spec.ts:97:9 › gestor generico de extensiones: aitoolsets › los dos filtros son independientes: el de instalados no toca el catalogo (retry #1)
+[18/126] (retries) tests\aitoolsets-manager.spec.ts:110:9 › gestor generico de extensiones: aitoolsets › la vista de lista enseña lo mismo que la de tarjetas (retry #1)
+[19/126] (retries) tests\aitoolsets-manager.spec.ts:121:9 › gestor generico de extensiones: aitoolsets › en la lista, las columnas de filas distintas quedan alineadas (retry #1)
+[20/126] (retries) tests\aitoolsets-manager.spec.ts:146:9 › gestor generico de extensiones: aitoolsets › todos los chips de una tarjeta miden lo mismo (retry #1)
+(node:36552) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[21/126] tests\broken-extension.spec.ts:47:5 › una extension con el icono de canal roto no deja la aplicacion en blanco
+[22/126] tests\broken-extension.spec.ts:69:5 › el resto de la aplicacion sigue siendo usable
+[23/126] tests\broken-extension.spec.ts:120:5 › un canal que revienta al pintarse se lleva su pestaña, no la aplicacion
+[24/126] tests\config-bundle.spec.ts:68:9 › portabilidad de configuracion › lo exportable se lista con el estado de cada entrada
+[25/126] tests\config-bundle.spec.ts:83:9 › portabilidad de configuracion › censor implementa el contrato y esta disponible
+[26/126] tests\config-bundle.spec.ts:90:9 › portabilidad de configuracion › el export produce un bundle valido, y sin credenciales por defecto
+[27/126] tests\config-bundle.spec.ts:104:9 › portabilidad de configuracion › el fichero declara si lleva credenciales, para quien lo guarde
+[28/126] tests\config-bundle.spec.ts:109:9 › portabilidad de configuracion › el include manda: se puede exportar una sola extension
+[29/126] tests\config-bundle.spec.ts:116:9 › portabilidad de configuracion › la vista previa dice que pasaria con cada entrada
+[30/126] tests\config-bundle.spec.ts:127:9 › portabilidad de configuracion › un fichero que no es un bundle se rechaza ANTES de tocar nada
+[31/126] tests\config-bundle.spec.ts:133:9 › portabilidad de configuracion › un formato mas nuevo se rechaza diciendo que hay que actualizar
+[32/126] tests\config-bundle.spec.ts:140:9 › portabilidad de configuracion › exportar e importar sobre el mismo Kwirth no cambia nada
+
+
+(node:33408) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33/126] (retries) tests\config-bundle.spec.ts:68:9 › portabilidad de configuracion › lo exportable se lista con el estado de cada entrada (retry #1)
+[34/126] (retries) tests\config-bundle.spec.ts:83:9 › portabilidad de configuracion › censor implementa el contrato y esta disponible (retry #1)
+  2) tests\config-bundle.spec.ts:83:9 › portabilidad de configuracion › censor implementa el contrato y esta disponible 
+
+    Error: censor deberia estar instalado en el dev
+
+    expect(received).toBeTruthy()
+
+    Received: undefined
+
+      84 |         const entradas = (await api(page, s, '/core/config-bundle/exportable')).body as IExportableEntry[]
+      85 |         const censor = entradas.find(e => `${e.type}/${e.id}` === CENSOR)
+    > 86 |         expect(censor, 'censor deberia estar instalado en el dev').toBeTruthy()
+         |                                                                    ^
+      87 |         expect(censor!.status).toBe('available')
+      88 |     })
+      89 |
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\config-bundle.spec.ts:86:68
+
+    Error Context: test-results\config-bundle-portabilidad-dc6d8--contrato-y-esta-disponible\error-context.md
+
+    Error Context: test-results\config-bundle-portabilidad-dc6d8--contrato-y-esta-disponible\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: censor deberia estar instalado en el dev
+
+    expect(received).toBeTruthy()
+
+    Received: undefined
+
+      84 |         const entradas = (await api(page, s, '/core/config-bundle/exportable')).body as IExportableEntry[]
+      85 |         const censor = entradas.find(e => `${e.type}/${e.id}` === CENSOR)
+    > 86 |         expect(censor, 'censor deberia estar instalado en el dev').toBeTruthy()
+         |                                                                    ^
+      87 |         expect(censor!.status).toBe('available')
+      88 |     })
+      89 |
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\config-bundle.spec.ts:86:68
+
+    Error Context: test-results\config-bundle-portabilidad-dc6d8--contrato-y-esta-disponible-retry1\error-context.md
+
+    Error Context: test-results\config-bundle-portabilidad-dc6d8--contrato-y-esta-disponible-retry1\error-context.md
+
+
+[35/126] (retries) tests\config-bundle.spec.ts:90:9 › portabilidad de configuracion › el export produce un bundle valido, y sin credenciales por defecto (retry #1)
+[36/126] (retries) tests\config-bundle.spec.ts:104:9 › portabilidad de configuracion › el fichero declara si lleva credenciales, para quien lo guarde (retry #1)
+[37/126] (retries) tests\config-bundle.spec.ts:109:9 › portabilidad de configuracion › el include manda: se puede exportar una sola extension (retry #1)
+[38/126] (retries) tests\config-bundle.spec.ts:116:9 › portabilidad de configuracion › la vista previa dice que pasaria con cada entrada (retry #1)
+[39/126] (retries) tests\config-bundle.spec.ts:127:9 › portabilidad de configuracion › un fichero que no es un bundle se rechaza ANTES de tocar nada (retry #1)
+[40/126] (retries) tests\config-bundle.spec.ts:133:9 › portabilidad de configuracion › un formato mas nuevo se rechaza diciendo que hay que actualizar (retry #1)
+[41/126] (retries) tests\config-bundle.spec.ts:140:9 › portabilidad de configuracion › exportar e importar sobre el mismo Kwirth no cambia nada (retry #1)
+
+(node:37188) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+
+(Use `node --trace-warnings ...` to show where the warning was created)
+[42/126] tests\execution-environment.spec.ts:41:5 › el entorno de ejecucion se publica, y es uno de los conocidos
+[43/126] tests\execution-environment.spec.ts:46:5 › la fuente de recursos se publica, y es una de las conocidas
+[44/126] tests\execution-environment.spec.ts:51:5 › healthz responde aunque Kwirth no sea una carga del cluster
+[45/126] tests\execution-environment.spec.ts:65:5 › el selector de recursos sigue pintandose tras el cambio de iconos
+[46/126] tests\extension-catalogs.spec.ts:25:5 › los manager dialogs siguen listando catalogo tras pasar por el back
+[47/126] tests\extension-catalogs.spec.ts:63:5 › el catalogo que llega al front viene resuelto por el back, no de GitHub
+[48/126] tests\extension-update.spec.ts:94:9 › boton de actualizar en las extensiones instaladas › cada plugin instalado tiene su update, y va justo antes de la papelera
+[49/126] tests\extension-update.spec.ts:108:9 › boton de actualizar en las extensiones instaladas › lo que no se puede actualizar lo dice, y esta deshabilitado
+[50/126] tests\extension-update.spec.ts:119:9 › boton de actualizar en las extensiones instaladas › en vista de lista sale el mismo boton que en tarjeta
+[51/126] tests\extension-update.spec.ts:133:9 › boton de actualizar en las extensiones instaladas › un sender instalado tambien lo tiene: es el mismo dialogo para los once tipos
+[52/126] tests\extension-update.spec.ts:141:9 › boton de actualizar en las extensiones instaladas › un pack dice que no se actualiza en sitio, en vez de ofrecerlo
+[53/126] tests\extension-update.spec.ts:151:9 › boton de actualizar en las extensiones instaladas › en el catalogo, algo ya instalado invita a elegir una version mas nueva
+[54/126] tests\help-popup.spec.ts:21:5 › help button: dialogs del menú principal invocan window.open en su sección de la guía
+[55/126] tests\help-popup.spec.ts:79:5 › help button: el dialogo de configuracion de un sender tambien lleva ayuda
+[56/126] tests\idp-manager.spec.ts:63:9 › gestor generico de extensiones: idp › los conectores instalados salen con su nombre, no con su id
+[57/126] tests\idp-manager.spec.ts:71:9 › gestor generico de extensiones: idp › 🔴 cada conector dice su estado, y no todos son "sin configurar"
+[58/126] tests\idp-manager.spec.ts:89:9 › gestor generico de extensiones: idp › un conector bundled o de dev no se desinstala, y dice por que
+[59/126] tests\idp-manager.spec.ts:98:9 › gestor generico de extensiones: idp › un conector sin version no enseña un chip de version vacio
+[60/126] tests\idp-manager.spec.ts:106:9 › gestor generico de extensiones: idp › la configuracion de un conector abre SU formulario, con el interruptor de encendido
+[61/126] tests\kwirth-settings-portability.spec.ts:61:5 › Kwirth settings: el export baja un fichero con la forma esperada y SIN credenciales por defecto
+
+(node:38600) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[62/126] (retries) tests\kwirth-settings-portability.spec.ts:61:5 › Kwirth settings: el export baja un fichero con la forma esperada y SIN credenciales por defecto (retry #1)
+  3) tests\kwirth-settings-portability.spec.ts:61:5 › Kwirth settings: el export baja un fichero con la forma esperada y SIN credenciales por defecto 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+
+
+      46 |     await page.getByRole('button', { name: 'Export' }).click()
+      47 |     const dialog = page.getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    > 48 |     await expect(dialog).toBeVisible()
+         |                          ^
+      49 |     // la lista sale con todo marcado: es lo que hace que el caso normal sea un solo clic
+      50 |     await expect(dialog.getByLabel('Select all')).toBeChecked()
+      51 |     if (withCredentials) await dialog.getByLabel('Include credentials').check()
+        at exportSettings (C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:48:26)
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:66:22
+
+    Error Context: test-results\kwirth-settings-portabilit-20086-IN-credenciales-por-defecto\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+
+
+      46 |     await page.getByRole('button', { name: 'Export' }).click()
+      47 |     const dialog = page.getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    > 48 |     await expect(dialog).toBeVisible()
+         |                          ^
+      49 |     // la lista sale con todo marcado: es lo que hace que el caso normal sea un solo clic
+      50 |     await expect(dialog.getByLabel('Select all')).toBeChecked()
+      51 |     if (withCredentials) await dialog.getByLabel('Include credentials').check()
+        at exportSettings (C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:48:26)
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:66:22
+
+    Error Context: test-results\kwirth-settings-portabilit-20086-IN-credenciales-por-defecto-retry1\error-context.md
+
+
+
+(node:12440) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[63/126] tests\kwirth-settings-portability.spec.ts:82:5 › Kwirth settings: marcar "Include credentials" lo deja anotado en el fichero
+
+(node:36052) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[64/126] (retries) tests\kwirth-settings-portability.spec.ts:82:5 › Kwirth settings: marcar "Include credentials" lo deja anotado en el fichero (retry #1)
+  4) tests\kwirth-settings-portability.spec.ts:82:5 › Kwirth settings: marcar "Include credentials" lo deja anotado en el fichero 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+
+
+      46 |     await page.getByRole('button', { name: 'Export' }).click()
+      47 |     const dialog = page.getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    > 48 |     await expect(dialog).toBeVisible()
+         |                          ^
+      49 |     // la lista sale con todo marcado: es lo que hace que el caso normal sea un solo clic
+      50 |     await expect(dialog.getByLabel('Select all')).toBeChecked()
+      51 |     if (withCredentials) await dialog.getByLabel('Include credentials').check()
+        at exportSettings (C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:48:26)
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:87:22
+
+    Error Context: test-results\kwirth-settings-portabilit-d52a2--deja-anotado-en-el-fichero\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+
+
+      46 |     await page.getByRole('button', { name: 'Export' }).click()
+      47 |     const dialog = page.getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    > 48 |     await expect(dialog).toBeVisible()
+         |                          ^
+      49 |     // la lista sale con todo marcado: es lo que hace que el caso normal sea un solo clic
+      50 |     await expect(dialog.getByLabel('Select all')).toBeChecked()
+      51 |     if (withCredentials) await dialog.getByLabel('Include credentials').check()
+        at exportSettings (C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:48:26)
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:87:22
+
+    Error Context: test-results\kwirth-settings-portabilit-d52a2--deja-anotado-en-el-fichero-retry1\error-context.md
+
+
+
+(node:32148) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[65/126] tests\kwirth-settings-portability.spec.ts:93:5 › Kwirth settings: el import carga el formulario pero NO guarda hasta aceptar
+
+(node:22164) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[66/126] (retries) tests\kwirth-settings-portability.spec.ts:93:5 › Kwirth settings: el import carga el formulario pero NO guarda hasta aceptar (retry #1)
+  5) tests\kwirth-settings-portability.spec.ts:93:5 › Kwirth settings: el import carga el formulario pero NO guarda hasta aceptar 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+
+
+      46 |     await page.getByRole('button', { name: 'Export' }).click()
+      47 |     const dialog = page.getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    > 48 |     await expect(dialog).toBeVisible()
+         |                          ^
+      49 |     // la lista sale con todo marcado: es lo que hace que el caso normal sea un solo clic
+      50 |     await expect(dialog.getByLabel('Select all')).toBeChecked()
+      51 |     if (withCredentials) await dialog.getByLabel('Include credentials').check()
+        at exportSettings (C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:48:26)
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:99:22
+
+    Error Context: test-results\kwirth-settings-portabilit-1fbe9-ero-NO-guarda-hasta-aceptar\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+
+
+      46 |     await page.getByRole('button', { name: 'Export' }).click()
+      47 |     const dialog = page.getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    > 48 |     await expect(dialog).toBeVisible()
+         |                          ^
+      49 |     // la lista sale con todo marcado: es lo que hace que el caso normal sea un solo clic
+      50 |     await expect(dialog.getByLabel('Select all')).toBeChecked()
+      51 |     if (withCredentials) await dialog.getByLabel('Include credentials').check()
+        at exportSettings (C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:48:26)
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:99:22
+
+    Error Context: test-results\kwirth-settings-portabilit-1fbe9-ero-NO-guarda-hasta-aceptar-retry1\error-context.md
+
+
+
+(node:27652) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[67/126] tests\kwirth-settings-portability.spec.ts:141:5 › Kwirth settings: el export se lleva SOLO lo marcado
+
+(node:18320) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[68/126] (retries) tests\kwirth-settings-portability.spec.ts:141:5 › Kwirth settings: el export se lleva SOLO lo marcado (retry #1)
+  6) tests\kwirth-settings-portability.spec.ts:141:5 › Kwirth settings: el export se lleva SOLO lo marcado 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+
+
+      46 |     await page.getByRole('button', { name: 'Export' }).click()
+      47 |     const dialog = page.getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    > 48 |     await expect(dialog).toBeVisible()
+         |                          ^
+      49 |     // la lista sale con todo marcado: es lo que hace que el caso normal sea un solo clic
+      50 |     await expect(dialog.getByLabel('Select all')).toBeChecked()
+      51 |     if (withCredentials) await dialog.getByLabel('Include credentials').check()
+        at exportSettings (C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:48:26)
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:147:25
+
+    Error Context: test-results\kwirth-settings-portabilit-29de6-rt-se-lleva-SOLO-lo-marcado\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+
+
+      46 |     await page.getByRole('button', { name: 'Export' }).click()
+      47 |     const dialog = page.getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    > 48 |     await expect(dialog).toBeVisible()
+         |                          ^
+      49 |     // la lista sale con todo marcado: es lo que hace que el caso normal sea un solo clic
+      50 |     await expect(dialog.getByLabel('Select all')).toBeChecked()
+      51 |     if (withCredentials) await dialog.getByLabel('Include credentials').check()
+        at exportSettings (C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:48:26)
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:147:25
+
+    Error Context: test-results\kwirth-settings-portabilit-29de6-rt-se-lleva-SOLO-lo-marcado-retry1\error-context.md
+
+
+
+
+(node:35924) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[69/126] tests\kwirth-settings-portability.spec.ts:159:5 › Kwirth settings: lo desmarcado en el import no entra en el formulario
+
+(node:16276) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[70/126] (retries) tests\kwirth-settings-portability.spec.ts:159:5 › Kwirth settings: lo desmarcado en el import no entra en el formulario (retry #1)
+  7) tests\kwirth-settings-portability.spec.ts:159:5 › Kwirth settings: lo desmarcado en el import no entra en el formulario 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+
+
+      46 |     await page.getByRole('button', { name: 'Export' }).click()
+      47 |     const dialog = page.getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    > 48 |     await expect(dialog).toBeVisible()
+         |                          ^
+      49 |     // la lista sale con todo marcado: es lo que hace que el caso normal sea un solo clic
+      50 |     await expect(dialog.getByLabel('Select all')).toBeChecked()
+      51 |     if (withCredentials) await dialog.getByLabel('Include credentials').check()
+        at exportSettings (C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:48:26)
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:164:22
+
+    Error Context: test-results\kwirth-settings-portabilit-0b7ae-t-no-entra-en-el-formulario\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+
+
+      46 |     await page.getByRole('button', { name: 'Export' }).click()
+      47 |     const dialog = page.getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
+    > 48 |     await expect(dialog).toBeVisible()
+         |                          ^
+      49 |     // la lista sale con todo marcado: es lo que hace que el caso normal sea un solo clic
+      50 |     await expect(dialog.getByLabel('Select all')).toBeChecked()
+      51 |     if (withCredentials) await dialog.getByLabel('Include credentials').check()
+        at exportSettings (C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:48:26)
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\kwirth-settings-portability.spec.ts:164:22
+
+    Error Context: test-results\kwirth-settings-portabilit-0b7ae-t-no-entra-en-el-formulario-retry1\error-context.md
+
+
+
+
+(node:25388) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[71/126] tests\kwirth-settings.spec.ts:26:5 › Kwirth settings: el intervalo de metricas se persiste y sobrevive a reabrir el dialogo
+[72/126] tests\kwirth-settings.spec.ts:60:5 › Kwirth settings: no deja guardar un intervalo no positivo
+[73/126] tests\logins-docs-manager.spec.ts:48:9 › gestores migrados al generico: logins y docs › logins: las dos secciones del generico con el nombre del tipo
+[74/126] tests\logins-docs-manager.spec.ts:55:9 › gestores migrados al generico: logins y docs › logins: cada instalado ofrece abrir SU pagina de login
+[75/126] tests\logins-docs-manager.spec.ts:74:9 › gestores migrados al generico: logins y docs › logins: el engranaje solo en los que declaran configuracion
+[76/126] tests\logins-docs-manager.spec.ts:88:9 › gestores migrados al generico: logins y docs › docs: la identidad es el PAR (targetType, id), no el id
+[77/126] tests\logins-docs-manager.spec.ts:106:9 › gestores migrados al generico: logins y docs › docs: lo que no se puede quitar lo dice y tiene el boton muerto
+[78/126] tests\marketplace-resolve.spec.ts:48:5 › resuelve el marketplace publico y devuelve solo entradas del tipo pedido
+[79/126] tests\marketplace-resolve.spec.ts:75:5 › la documentacion se identifica por el par (targetType, id)
+[80/126] tests\marketplace-resolve.spec.ts:93:5 › cada tipo de extension resuelve su propio manifest
+[81/126] tests\marketplace-resolve.spec.ts:105:5 › un tipo de extension inexistente da 400
+[82/126] tests\marketplace-resolve.spec.ts:111:5 › sin autorizacion no se resuelve nada
+[83/126] tests\marketplace-secrets.spec.ts:94:5 › el secreto de un marketplace vuelve relleno y enmascarado, y el ojo lo revela
+[84/126] tests\package-registries.spec.ts:59:5 › package registries: se anade, persiste con su secreto y se borra
+[85/126] tests\packs-manager.spec.ts:47:9 › gestor generico de extensiones: packs › el tipo pack abre el gestor generico con sus dos secciones
+[86/126] tests\packs-manager.spec.ts:52:9 › gestor generico de extensiones: packs › el catalogo dice QUE trae cada pack, no solo su nombre
+[87/126] tests\packs-manager.spec.ts:60:9 › gestor generico de extensiones: packs › instalar un pack instala lo que trae, y desinstalarlo se lo lleva
+[88/126] tests\packs-manager.spec.ts:106:9 › gestor generico de extensiones: packs › la linea de miembros tambien esta en la vista de lista
+[89/126] tests\pinocchio-ai-config.spec.ts:69:9 › pinocchio: AI config compartido de Kwirth › el back anuncia los MISMOS tipos de provider que el core
+[90/126] tests\pinocchio-ai-config.spec.ts:73:9 › pinocchio: AI config compartido de Kwirth › el canal recibe los providers y los LLMs del AI config de Kwirth
+[91/126] tests\pinocchio-ai-config.spec.ts:89:9 › pinocchio: AI config compartido de Kwirth › el dialogo de providers pinta cada provider con su tipo y su contador de modelos
+[92/126] tests\pinocchio-ai-config.spec.ts:103:9 › pinocchio: AI config compartido de Kwirth › el dialogo de providers ofrece Load models (lo resuelve el core)
+[93/126] tests\pinocchio-ai-config.spec.ts:111:9 › pinocchio: AI config compartido de Kwirth › el dialogo de LLMs lista los LLMs del AI config con su provider
+[94/126] tests\pinocchio-ai-provider-roundtrip.spec.ts:77:9 › pinocchio: round-trip de provider openai-compat › crear un provider openai-compat desde el canal guarda name, type y Base URL
+[95/126] tests\pinocchio-ai-provider-roundtrip.spec.ts:100:9 › pinocchio: round-trip de provider openai-compat › al releerlo, el dialogo pinta name, type y Base URL tal cual se guardaron
+[96/126] tests\pinocchio-ai-provider-roundtrip.spec.ts:112:9 › pinocchio: round-trip de provider openai-compat › limpieza: al borrarlo el resto de providers queda igual que antes
+[97/126] tests\pinocchio-help.spec.ts:62:9 › pinocchio: botones de ayuda de los dialogos › la cabecera del canal lleva ayuda al recorrido por la UI
+[98/126] tests\pinocchio-help.spec.ts:71:9 › pinocchio: botones de ayuda de los dialogos › el dialogo Clear lleva ayuda al recorrido por la UI
+[99/126] tests\pinocchio-help.spec.ts:81:9 › pinocchio: botones de ayuda de los dialogos › el dialogo Trigger Config lleva ayuda a Configurar triggers
+[100/126] tests\pinocchio-help.spec.ts:90:9 › pinocchio: botones de ayuda de los dialogos › el dialogo Import / Export lleva ayuda a su seccion
+[101/126] tests\pinocchio-help.spec.ts:99:9 › pinocchio: botones de ayuda de los dialogos › el Playground lleva ayuda a su seccion
+[102/126] tests\pinocchio-help.spec.ts:110:9 › pinocchio: botones de ayuda de los dialogos › la guia responde en la URL que abren los botones
+[103/126] tests\pinocchio-toolsets.spec.ts:152:9 › pinocchio: las tools salen del registro de toolsets › el catalogo que ofrece no esta vacio
+[104/126] tests\pinocchio-toolsets.spec.ts:160:9 › pinocchio: las tools salen del registro de toolsets › las tools que ofrece son las de los toolsets CONCEDIDOS
+[105/126] tests\pinocchio-toolsets.spec.ts:167:9 › pinocchio: las tools salen del registro de toolsets › NO ofrece las de los toolsets que no estan a su alcance
+[106/126] tests\plugins-manager.spec.ts:58:9 › gestor generico de extensiones: plugins › todos los plugins instalados se pintan, con su version
+[107/126] tests\plugins-manager.spec.ts:67:9 › gestor generico de extensiones: plugins › 🔴 la rueda dentada SOLO en los plugins que declaran configuracion
+[108/126] tests\plugins-manager.spec.ts:94:9 › gestor generico de extensiones: plugins › el catalogo dice que necesita y que aprovecha cada plugin
+[109/126] tests\plugins-manager.spec.ts:128:9 › gestor generico de extensiones: plugins › cada plugin se pinta con SU icono, no con el generico del tipo
+[110/126] tests\provider-config-test.spec.ts:37:5 › el provider que sabe probarse se anuncia con hasTest
+tests\provider-config-test.spec.ts:37:5 › el provider que sabe probarse se anuncia con hasTest
+providers con /test: azure, sugarless, aws
+
+[111/126] tests\provider-config-test.spec.ts:52:5 › su formulario saca el boton TEST, y un multiselect con checkbox
+[112/126] tests\provider-http-pull-push.spec.ts:65:9 › http-pull-push provider › the provider owns its config: dialog, persistence, secret split and auth
+[113/126] tests\providers-manager.spec.ts:70:9 › gestor generico de extensiones: providers › los providers de CORE no se pintan: no son extensiones
+[114/126] tests\providers-manager.spec.ts:95:9 › gestor generico de extensiones: providers › un pluvider se pinta, marcado, con el nombre y la version de SU plugin
+[115/126] tests\providers-manager.spec.ts:110:9 › gestor generico de extensiones: providers › un pluvider no se puede desinstalar ni configurar desde aqui, y dice por que
+[116/126] tests\providers-manager.spec.ts:125:9 › gestor generico de extensiones: providers › el chip de configs dice lo que dice el provider
+[117/126] tests\providers-manager.spec.ts:138:9 › gestor generico de extensiones: providers › un provider con front propio abre SU dialogo, no el formulario del core
+[118/126] tests\providers-manager.spec.ts:165:9 › gestor generico de extensiones: providers › un provider con schema se configura con el formulario del core
+[119/126] tests\providers-manager.spec.ts:178:9 › gestor generico de extensiones: providers › 🔴 el que no se configura de ninguna forma tiene la rueda muerta, y lo dice
+[120/126] tests\resource-selector-views.spec.ts:62:5 › the View dropdown offers the five resource views plus none
+[121/126] tests\resource-selector-views.spec.ts:77:5 › a resource view enables the namespace dropdown
+[122/126] tests\resource-selector-views.spec.ts:82:5 › the cluster view disables the namespace dropdown
+[123/126] tests\resource-selector-views.spec.ts:87:5 › the none view disables the namespace dropdown too
+[124/126] tests\resource-selector-views.spec.ts:94:5 › selecting the none view does not query the cluster
+[125/126] tests\resource-selector-views.spec.ts:116:5 › with the none view, channels that need the cluster are not selectable
+[126/126] tests\resource-selector-views.spec.ts:149:5 › with the cluster view, only cluster-capable channels are selectable
+[127/126] tests\resource-selector-views.spec.ts:169:5 › the filter field of a dropdown keeps the focus while you type
+[128/126] tests\resource-selector-views.spec.ts:203:5 › a resource view only offers channels that support per-resource invocation
+[129/126] tests\resource-selector-views.spec.ts:230:5 › the cluster view also offers autonomous channels
+[130/126] tests\sender-help.spec.ts:50:5 › la ayuda de un sender lleva a SU pagina de referencia, y a la general si no la tiene
+(node:22372) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[131/126] (retries) tests\sender-help.spec.ts:50:5 › la ayuda de un sender lleva a SU pagina de referencia, y a la general si no la tiene (retry #1)
+  8) tests\sender-help.spec.ts:50:5 › la ayuda de un sender lleva a SU pagina de referencia, y a la general si no la tiene 
+
+    Error: debe abrir la referencia del propio sender
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "guide/extensions/senders/console"
+    Received string:    "http://localhost:3883/core/docs/core/kwirth/#/guide/extensions/senders/index?id=managing-configuring-senders"
+
+      55 |     // 'console' tiene pagina propia: guide/extensions/senders/console
+      56 |     const consoleUrl = await helpUrlFor(page, /^Console Sender/)
+    > 57 |     expect(consoleUrl, 'debe abrir la referencia del propio sender').toContain('guide/extensions/senders/console')
+         |                                                                      ^
+      58 |     expect(consoleUrl, 'y no la general').not.toContain('senders/index')
+      59 |
+      60 |     // 'jira' es de pago y no publica referencia: cae a la pagina general, nunca a un 404
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\sender-help.spec.ts:57:70
+
+    Error Context: test-results\sender-help-la-ayuda-de-un-7435f-a-la-general-si-no-la-tiene\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: debe abrir la referencia del propio sender
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "guide/extensions/senders/console"
+    Received string:    "http://localhost:3883/core/docs/core/kwirth/#/guide/extensions/senders/index?id=managing-configuring-senders"
+
+      55 |     // 'console' tiene pagina propia: guide/extensions/senders/console
+      56 |     const consoleUrl = await helpUrlFor(page, /^Console Sender/)
+    > 57 |     expect(consoleUrl, 'debe abrir la referencia del propio sender').toContain('guide/extensions/senders/console')
+         |                                                                      ^
+      58 |     expect(consoleUrl, 'y no la general').not.toContain('senders/index')
+      59 |
+      60 |     // 'jira' es de pago y no publica referencia: cae a la pagina general, nunca a un 404
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\sender-help.spec.ts:57:70
+
+    Error Context: test-results\sender-help-la-ayuda-de-un-7435f-a-la-general-si-no-la-tiene-retry1\error-context.md
+
+
+
+(node:35380) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[132/126] tests\senders-manager.spec.ts:61:9 › gestor generico de extensiones: senders › todos los senders salen, con su nombre
+[133/126] tests\senders-manager.spec.ts:83:9 › gestor generico de extensiones: senders › ningun sender sale repetido, aunque este instalado y ademas montado desde dev
+[134/126] tests\senders-manager.spec.ts:89:9 › gestor generico de extensiones: senders › el chip cuenta los destinos que tiene puestos cada sender
+[135/126] tests\senders-manager.spec.ts:101:9 › gestor generico de extensiones: senders › la configuracion lista los destinos por nombre, y ofrece llevarselos
+[136/126] tests\senders-manager.spec.ts:120:9 › gestor generico de extensiones: senders › 🔴 la configuracion BASE existe cuando el sender la declara, y se abre aparte
+[137/126] tests\senders-manager.spec.ts:149:9 › gestor generico de extensiones: senders › un sender con su propia UI abre esa, no la lista del core
+[138/126] tests\settings-installed-lists.spec.ts:51:5 › un tema recien instalado sale en User settings sin volver a entrar
+[139/126] tests\webhooks-manager.spec.ts:23:5 › webhooks: el chip de configs cuenta las que hay, y la URL solo sale en las guardadas
+
+(node:8264) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[140/126] (retries) tests\webhooks-manager.spec.ts:23:5 › webhooks: el chip de configs cuenta las que hay, y la URL solo sale en las guardadas (retry #1)
+  9) tests\webhooks-manager.spec.ts:23:5 › webhooks: el chip de configs cuenta las que hay, y la URL solo sale en las guardadas 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  getByRole('dialog').filter({ hasText: /Manage webhooks/i }).getByText(/^\d+ configs?$/).first()
+    Expected: "6 configs"
+    Received: "4 configs"
+    Timeout:  15000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 15000ms
+      - waiting for getByRole('dialog').filter({ hasText: /Manage webhooks/i }).getByText(/^\d+ configs?$/).first()
+        32 × locator resolved to <span class="MuiChip-label MuiChip-labelSmall css-19m61dl-MuiChip-label">4 configs</span>
+           - unexpected value "4 configs"
+
+
+      59 |
+      60 |     // El chip se relee al cerrar la configuracion: si no, seguiria diciendo lo de antes y mentiria.
+    > 61 |     await expect(chip.first()).toHaveText(`${inicial + 2} configs`, { timeout: 15000 })
+         |                                ^
+      62 |
+      63 |     // ── limpieza: se borran las dos y el chip tiene que volver a lo que habia ────────────────────────
+      64 |     await dialog.getByRole('button', { name: 'Configure' }).first().click()
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\webhooks-manager.spec.ts:61:32
+
+    Error Context: test-results\webhooks-manager-webhooks--9562f--solo-sale-en-las-guardadas\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  getByRole('dialog').filter({ hasText: /Manage webhooks/i }).getByText(/^\d+ configs?$/).first()
+    Expected: "6 configs"
+    Received: "4 configs"
+    Timeout:  15000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 15000ms
+      - waiting for getByRole('dialog').filter({ hasText: /Manage webhooks/i }).getByText(/^\d+ configs?$/).first()
+        32 × locator resolved to <span class="MuiChip-label MuiChip-labelSmall css-19m61dl-MuiChip-label">4 configs</span>
+           - unexpected value "4 configs"
+
+
+      59 |
+      60 |     // El chip se relee al cerrar la configuracion: si no, seguiria diciendo lo de antes y mentiria.
+    > 61 |     await expect(chip.first()).toHaveText(`${inicial + 2} configs`, { timeout: 15000 })
+         |                                ^
+      62 |
+      63 |     // ── limpieza: se borran las dos y el chip tiene que volver a lo que habia ────────────────────────
+      64 |     await dialog.getByRole('button', { name: 'Configure' }).first().click()
+        at C:\github\aisdkvercel\kwirth\front\e2e\tests\webhooks-manager.spec.ts:61:32
+
+    Error Context: test-results\webhooks-manager-webhooks--9562f--solo-sale-en-las-guardadas-retry1\error-context.md
+
+
+
+(node:33676) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[141/126] tests\webhooks.spec.ts:10:5 › Manage webhooks: lists the jira webhook and a config mints a routable URL
+[142/126] tests\zz-selector-width.spec.ts:16:5 › el selector de plugins: ancho fijo y sin tooltip al desplegar
+
+(node:28816) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[143/126] tests\login-extensions.spec.ts:7:5 › login extensions: menu item opens LoginDialog
+[144/126] tests\login-extensions.spec.ts:27:5 › login extensions: ?loginExt=magnify renders custom login page
+[145/126] tests\login-extensions.spec.ts:48:5 › login extensions: el fondo se sirve como imagen y la pagina lo usa
+[146/126] tests\login-extensions.spec.ts:69:5 › login extensions: extension page has Login and Change password buttons
+[147/126] tests\login-extensions.spec.ts:95:5 › login extensions: wrong credentials show error
+[148/126] tests\login-extensions.spec.ts:109:5 › login extensions: anonymous login shows config button
+[149/126] tests\login-extensions.spec.ts:132:5 › login extensions: anonymous config dialog has scope select and resource fields
+[150/126] tests\login-extensions.spec.ts:178:5 › login extensions: ?loginExt=anonymous entra solo, o muestra el formulario si no está configurado
+[151/126] tests\login-extensions.spec.ts:207:5 › login extensions: la tarjeta abre su pagina de login en otra pestaña
+  9 failed
+    tests\aitoolsets-manager.spec.ts:54:9 › gestor generico de extensiones: aitoolsets › lo instalado sale con su version y el numero REAL de tools 
+    tests\config-bundle.spec.ts:83:9 › portabilidad de configuracion › censor implementa el contrato y esta disponible 
+    tests\kwirth-settings-portability.spec.ts:61:5 › Kwirth settings: el export baja un fichero con la forma esperada y SIN credenciales por defecto 
+    tests\kwirth-settings-portability.spec.ts:82:5 › Kwirth settings: marcar "Include credentials" lo deja anotado en el fichero 
+    tests\kwirth-settings-portability.spec.ts:93:5 › Kwirth settings: el import carga el formulario pero NO guarda hasta aceptar 
+    tests\kwirth-settings-portability.spec.ts:141:5 › Kwirth settings: el export se lleva SOLO lo marcado 
+    tests\kwirth-settings-portability.spec.ts:159:5 › Kwirth settings: lo desmarcado en el import no entra en el formulario 
+    tests\sender-help.spec.ts:50:5 › la ayuda de un sender lleva a SU pagina de referencia, y a la general si no la tiene 
+    tests\webhooks-manager.spec.ts:23:5 › webhooks: el chip de configs cuenta las que hay, y la URL solo sale en las guardadas 
+  5 skipped
+  14 did not run
+  98 passed (34.1m)

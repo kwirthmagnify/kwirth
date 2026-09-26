@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test'
 import { login, clickMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from './helpers'
 
-// Captura de la imagen de la guia para "After an unexpected restart" (guia de admin). Tema oscuro.
+// Screenshot of the guide's image for "After an unexpected restart" (the admin guide). Dark theme.
 // Ejecutar a mano: playwright test --config playwright.capture.config.ts capture-about-previous-log.spec.ts
-// No destructivo: abre el About, lo mira y lo cierra. No reinicia nada.
+// Non-destructive: it opens the About, looks at it and closes it. It restarts nothing.
 
 const MEDIA = GUIDE_MEDIA
 
 test('capture about previous container log (dark)', async ({ page }) => {
-    // mismo encuadre que el resto de capturas de la guia de admin
+    // the same framing as the rest of the admin guide's screenshots
     await page.setViewportSize({ width: 1600, height: 900 })
     await page.addInitScript(() => { try { localStorage.setItem('kwirth.mode', 'dark') } catch { /* */ } })
     await login(page)
@@ -18,8 +18,8 @@ test('capture about previous container log (dark)', async ({ page }) => {
     const dialog = page.getByRole('dialog').filter({ hasText: 'About Kwirth' })
     await dialog.waitFor()
 
-    // el boton nace deshabilitado y se resuelve cuando el core contesta: sin esperar se captura el estado
-    // intermedio, con el tooltip diciendo "Checking whether this container has restarted..."
+    // the button is born disabled and resolves when the core answers: without waiting, the intermediate
+    // state is captured, with the tooltip saying "Checking whether this container has restarted..."
     await expect(dialog.getByRole('button', { name: 'Previous container log' })).toHaveCount(1)
     await page.waitForTimeout(2000)
 

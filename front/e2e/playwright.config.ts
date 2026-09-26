@@ -12,17 +12,17 @@ catch { /* sin fichero → env/defaults */ }
 
 export default defineConfig({
     testDir: './tests',
-    // 'tests/private' son los e2e de los plugins de PAGO (iter, providers propios...). Tienen su propio
-    // ciclo y su propio cierre, y algunos escriben datos o regeneran capturas de SU repo: no deben
-    // colarse en una corrida del core. Para lanzarlos, se pide la ruta explicitamente:
+    // 'tests/private' are the e2e of the PAID plugins (iter, our own providers...). They have their own
+    // cycle and their own closing checklist, and some of them write data or regenerate screenshots of
+    // THEIR repo: they must not slip into a core run. To launch them, the path is asked for explicitly:
     //   playwright test tests/private/iter-editing.spec.ts
-    // Los 'capture-*' no verifican nada: SOBRESCRIBEN las imagenes de la guia en docs/_media. Dejarlos en
-    // la corrida por defecto ensucia el arbol con capturas que nadie ha mirado, cada vez que se lanzan los
-    // tests. Se piden a mano poniendo CAPTURES:
+    // The 'capture-*' ones verify nothing: they OVERWRITE the guide's images in docs/_media. Leaving them
+    // in the default run dirties the tree with screenshots nobody has looked at, every single time the
+    // tests are launched. They are asked for by hand by setting CAPTURES:
     //   CAPTURES=1 playwright test tests/capture-managers.spec.ts
     //
-    // Hace falta la variable: 'testIgnore' se aplica tambien cuando se nombra el fichero en la linea de
-    // comandos, asi que sin esto no habia NINGUNA forma de lanzarlas sin editar esta config.
+    // The variable is needed: 'testIgnore' applies even when the file is named on the command line, so
+    // without this there was NO way at all to launch them without editing this config.
     testIgnore: process.env.CAPTURES
         ? ['**/private/**']
         : ['**/private/**', '**/capture-*.spec.ts'],

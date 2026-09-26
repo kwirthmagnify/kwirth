@@ -1,4 +1,5 @@
-// Config auxiliar para lanzar a mano los specs 'capture-*' (el config por defecto los ignora a proposito:
-// sobrescriben las capturas de la guia). Uso: playwright test --config playwright.capture.config.ts <spec>
+// Auxiliary config for launching the 'capture-*' specs by hand (the default config ignores them on
+// purpose: they overwrite the guide's screenshots).
+// Usage: playwright test --config playwright.capture.config.ts <spec>
 import base from './playwright.config'
 export default { ...base, testIgnore: ['**/private/**'] }

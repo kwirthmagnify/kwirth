@@ -1,14 +1,14 @@
-// Pinocchio consume el AI config COMPARTIDO de Kwirth (menus AI Providers / AI Models): providers en
+// Pinocchio consumes Kwirth's SHARED AI config (the AI Providers / AI Models menus): providers in
 // 'kwirth-store-common-kwirth-ai-providers' y LLMs en 'kwirth-store-common-kwirth-ai-llms'. Este e2e
-// verifica ese contrato de punta a punta, sin escribir nada: solo abre dialogos y cancela.
+// verifies that contract end to end, writing nothing: it only opens dialogs and cancels.
 //
-// El caso que motivo el test: pinocchio mandaba su propia lista de tipos de provider hardcodeada, sin
-// 'openai-compat' ni 'anthropic'. Un provider openai-compat creado desde Kwirth se veia SIN tipo dentro
-// del canal, y no habia forma de crear uno nuevo desde ahi.
+// The case that prompted the test: pinocchio sent its own hardcoded list of provider types, with neither
+// 'openai-compat' nor 'anthropic'. An openai-compat provider created from Kwirth showed up WITHOUT a type
+// inside the channel, and there was no way to create a new one from there.
 import { test, expect, Page } from '@playwright/test'
 import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
 
-// Debe coincidir con PROVIDERS_AVAILABLE de @kwirthmagnify/kwirth-common-ai
+// It must match PROVIDERS_AVAILABLE from @kwirthmagnify/kwirth-common-ai
 const PROVIDERS_AVAILABLE = ['google', 'openai', 'openrouter', 'mistral', 'groq', 'deepseek', 'anthropic', 'openai-compat']
 
 interface IProviderSeen { name: string; type?: string; models: number }
@@ -52,7 +52,7 @@ test.describe('pinocchio: AI config compartido de Kwirth', () => {
 
     test.afterAll(async () => { await page?.close() })
 
-    // 'AI providers' y 'AI models' viven dentro del grupo PLEGABLE 'AI' del menu Config: hay que
+    // 'AI providers' and 'AI models' live inside the COLLAPSIBLE 'AI' group of the Config menu: it has to be
     // expandirlo antes de poder clicarlos.
     const openConfig = async (item: RegExp, group?: RegExp) => {
         await page.getByRole('button', { name: 'Config', exact: true }).click()
@@ -74,12 +74,12 @@ test.describe('pinocchio: AI config compartido de Kwirth', () => {
         expect(providers.length).toBeGreaterThan(0)
         expect(llms.length).toBeGreaterThan(0)
         for (const prov of providers) {
-            // un provider sin tipo reconocible no lo puede construir buildModel()
+            // buildModel() cannot build a provider with no recognisable type
             expect(PROVIDERS_AVAILABLE, `provider '${prov.name}'`).toContain(prov.type ?? prov.name)
             expect(prov.models, `provider '${prov.name}' sin modelos cargados`).toBeGreaterThan(0)
         }
-        // cada LLM apunta a un provider que existe y a un modelo de ESE provider: si no, el trigger
-        // fallaria en tiempo de ejecucion con 'Cannot build model'
+        // each LLM points at a provider that exists and at a model of THAT provider: otherwise the
+        // trigger would fail at run time with 'Cannot build model'
         for (const llm of llms) {
             expect(providers.map(p => p.name), `llm '${llm.id}'`).toContain(llm.provider)
             expect(llm.model, `llm '${llm.id}' sin modelo`).toBeTruthy()
@@ -92,7 +92,7 @@ test.describe('pinocchio: AI config compartido de Kwirth', () => {
         for (const prov of providers) {
             await dlg.getByText(prov.name, { exact: true }).first().click()
             await page.waitForTimeout(300)
-            // El combo 'Type' debe mostrar el tipo real (los legacy sin type caen al nombre)
+            // The 'Type' combo must show the real type (legacy ones with no type fall back to the name)
             const shown = (await dlg.getByRole('combobox').first().innerText()).trim()
             expect(shown, `provider '${prov.name}'`).toBe(prov.type ?? prov.name)
         }

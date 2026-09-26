@@ -40,7 +40,7 @@ test.describe('gestores migrados al generico: logins y docs', () => {
     const abrir = async (menu: string, titulo: RegExp) => {
         await clickExtensionMenuItem(page, menu)
         const dialog = page.getByRole('dialog').filter({ hasText: titulo })
-        // El catalogo lo resuelve el back contra los marketplaces remotos: no es instantaneo.
+        // The back end resolves the catalogue against the remote marketplaces: it is not instantaneous.
         await dialog.waitFor({ timeout: 40000 })
         return dialog
     }
@@ -53,8 +53,9 @@ test.describe('gestores migrados al generico: logins y docs', () => {
     })
 
     test('logins: cada instalado ofrece abrir SU pagina de login', async () => {
-        // Es la accion propia del tipo: sin ella, comprobar como quedo un login obligaria a cerrar sesion.
-        // Se comprueba que esta y que esta viva; NO se pulsa, porque abriria una pestaña de verdad.
+        // It is the type's own action: without it, checking how a login turned out would mean logging
+        // out. It is checked that it is there and that it is alive; it is NOT pressed, because it would
+        // open a real tab.
         const dialog = await abrir('Login extensions', LOGINS)
         await expect(dialog.getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
 
@@ -64,7 +65,7 @@ test.describe('gestores migrados al generico: logins y docs', () => {
         expect(await abrirPagina.count(), 'la accion no sale en TODOS los instalados').toBe(instalados)
         await expect(abrirPagina.first()).toBeEnabled()
 
-        // Y no se cuela en el catalogo: una pagina que no esta instalada no se puede abrir.
+        // And it does not slip into the catalogue: a page that is not installed cannot be opened.
         await dialog.getByPlaceholder('Filter…').first().fill('no-existe-este-login')
         await expect(dialog.getByText('No login extensions installed.')).toBeVisible()
         await expect(dialog.locator('span[aria-label="Open login page in new tab"] button')).toHaveCount(0)
@@ -72,12 +73,12 @@ test.describe('gestores migrados al generico: logins y docs', () => {
     })
 
     test('logins: el engranaje solo en los que declaran configuracion', async () => {
-        // canConfigure es de la TARJETA, no del tipo: un login sin configSchema no tiene nada que abrir.
+        // canConfigure belongs to the CARD and not to the type: a login with no configSchema has nothing to open.
         const dialog = await abrir('Login extensions', LOGINS)
         await expect(dialog.getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
 
-        // La rueda se queda visible y deshabilitada en los que no declaran nada (regla de UI del
-        // proyecto), asi que lo que distingue una tarjeta de otra es cuantas estan VIVAS.
+        // The gear stays visible and disabled on those that declare nothing (the project's UI rule), so
+        // what tells one card from another is how many are ALIVE.
         const vivas = await dialog.locator('button[aria-label="Configure"]:not([disabled])').count()
         const instalados = await dialog.locator('span[aria-label^="Uninstall"] button, span[aria-label^="Dev login"] button, span[aria-label^="Installed via pack"] button').count()
         expect(instalados, 'no hay logins instalados con los que comprobar nada').toBeGreaterThan(0)
@@ -86,13 +87,13 @@ test.describe('gestores migrados al generico: logins y docs', () => {
     })
 
     test('docs: la identidad es el PAR (targetType, id), no el id', async () => {
-        // La guia del core y la de un plugin pueden compartir id; si el generico agrupara por id, una
-        // taparia a la otra y el contador de tarjetas no cuadraria con lo que sirve el back.
+        // The core's guide and a plugin's can share an id; were the generic dialog to group by id, one
+        // would hide the other and the card counter would not match what the back end serves.
         const dialog = await abrir('Documentation', DOCS)
         await expect(dialog.getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
 
         const enPantalla = await dialog.locator('span[aria-label="Open in new tab"] button').count()
-        // El back no cuelga del dev server: en dev el front se sirve en :3000 y Kwirth en :3883.
+        // The back end does not hang off the dev server: in dev the front is served on :3000 and Kwirth on :3883.
         const delBack = await page.evaluate(async () => {
             const res = await fetch(`${window.location.origin.replace(':3000', ':3883')}/core/docs`)
             return res.ok ? ((await res.json()) as { targetType: string, id: string }[]).map(d => `${d.targetType}/${d.id}`) : []
@@ -119,8 +120,8 @@ test.describe('gestores migrados al generico: logins y docs', () => {
         const n = await bloqueado.count()
         for (let i = 0; i < n; i++) await expect(bloqueado.nth(i)).toBeDisabled()
 
-        // El chip de procedencia lo pinta ahora el generico para los once tipos: tiene que seguir saliendo
-        // en cada una de esas, que es justo lo que explica por que no se pueden quitar.
+        // The provenance chip is now drawn by the generic dialog for all eleven types: it has to keep
+        // showing up on each of those, which is exactly what explains why they cannot be removed.
         expect(await dialog.getByText(/^(dev|bundled)$/).count(), 'ninguna enseña de donde viene').toBeGreaterThanOrEqual(n)
         await dismissOpenDialogs(page)
     })

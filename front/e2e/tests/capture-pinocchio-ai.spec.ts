@@ -1,13 +1,13 @@
 import { test } from '@playwright/test'
 import { login, dismissOpenDialogs, pickCombo, pickLastCombo, GUIDE_MEDIA } from './helpers'
 
-// Captura de las imagenes de AI config de la guia (docs/_media/guide), desde el canal pinocchio. Tema
+// Screenshots of the guide's AI config images (docs/_media/guide), from the pinocchio channel. Theme
 // oscuro. Ejecutar a mano: playwright test capture-pinocchio-ai.spec.ts
 //
-// Requiere el dev con al menos un provider de tipo openai-compat en el AI config de Kwirth: la captura
-// del dialogo de providers documenta justo eso (Name / Type / Base URL / Load models).
+// It needs the dev environment with at least one openai-compat provider in Kwirth's AI config: the
+// screenshot of the providers dialog documents exactly that (Name / Type / Base URL / Load models).
 
-// Las capturas van a la documentacion VIVA: ver GUIDE_MEDIA en helpers.ts.
+// The screenshots go to the LIVE documentation: see GUIDE_MEDIA in helpers.ts.
 const MEDIA = GUIDE_MEDIA
 const COMPAT_PROVIDER = 'HUAWEI'
 
@@ -30,7 +30,7 @@ test('capture ai-provider-config + ai-llm-config (dark)', async ({ page }) => {
     await page.getByRole('menuitem', { name: /^Start$/ }).click()
     await page.waitForTimeout(4000)
 
-    // 1) Providers: con un openai-compat seleccionado, para que se vea Type + Base URL + Load models.
+    // 1) Providers: with an openai-compat selected, so Type + Base URL + Load models are visible.
     await page.getByRole('button', { name: 'Config', exact: true }).click()
     await page.getByRole('menuitem', { name: /^Provider$/ }).click()
     await page.waitForTimeout(1000)

@@ -1,6 +1,6 @@
-// Cada dialogo de Pinocchio con seccion de guia debe llevar su boton de ayuda (?), y ese boton debe
-// abrir LA SECCION QUE LE CORRESPONDE de la guia del plugin (regla de proyecto: dialog con ayuda →
-// HelpButton a su seccion). El test no comprueba solo que el boton existe: comprueba la URL que abre.
+// Every Pinocchio dialog with a guide section must carry its help button (?), and that button must open
+// THE SECTION THAT CORRESPONDS TO IT in the plugin's guide (project rule: a dialog with help → a
+// HelpButton to its section). The test does not only check that the button exists: it checks the URL it opens.
 import { test, expect, Page } from '@playwright/test'
 import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
 
@@ -10,8 +10,8 @@ test.describe.configure({ mode: 'serial' })
 
 test.describe('pinocchio: botones de ayuda de los dialogos', () => {
     let page: Page
-    // Base ABSOLUTA de la guia, tal como la construye el plugin con channelObject.clusterUrl. No vale una
-    // ruta relativa: el baseURL del e2e es el dev server del front, no el back de kwirth.
+    // ABSOLUTE base of the guide, exactly as the plugin builds it with channelObject.clusterUrl. A
+    // relative path will not do: the e2e's baseURL is the front's dev server, not kwirth's back end.
     let docsBase = ''
 
     test.beforeAll(async ({ browser }) => {
@@ -32,7 +32,7 @@ test.describe('pinocchio: botones de ayuda de los dialogos', () => {
 
     test.afterAll(async () => { await page?.close() })
 
-    // El HelpButton abre un popup con window.open: interceptamos la URL sin dejar que se abra.
+    // The HelpButton opens a popup with window.open: we intercept the URL without letting it open.
     const urlOpenedBy = async (help: ReturnType<Page['locator']>): Promise<string> => {
         await page.evaluate(() => {
             const w = window as unknown as { __helpUrl?: string, open: typeof window.open }
@@ -111,7 +111,7 @@ test.describe('pinocchio: botones de ayuda de los dialogos', () => {
         const res = await page.request.get(`${docsBase}/index.html`)
         expect(res.status(), 'la guia de pinocchio no esta instalada en el core').toBe(200)
         expect(await res.text()).toContain('Pinocchio — Guide')
-        // y las secciones a las que apuntan los botones existen como ficheros
+        // and the sections the buttons point at exist as files
         for (const s of ['user/02-ui-tour', 'user/04-triggers', 'user/05-findings', 'user/06-playground', 'user/07-import-export']) {
             const r = await page.request.get(`${docsBase}/${s}.md`)
             expect(r.status(), `seccion ${s} no servida`).toBe(200)

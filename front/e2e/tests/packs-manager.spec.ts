@@ -20,7 +20,7 @@ const DIALOG = /Manage extension packs/i
 
 test.describe.configure({ mode: 'serial' })
 
-/** Lo que trae un pack: 'Includes: 2 plugins, 1 theme' instalado, 'Includes: plugin, theme' en catalogo.
+/** What a pack brings: 'Includes: 2 plugins, 1 theme' when installed, 'Includes: plugin, theme' in the catalogue.
     El prefijo va en la comprobacion: sin el, la linea caia bajo una descripción recortada y se leia
     como su continuación. */
 const TIPOS = '(plugin|theme|homepage|sender|provider|webhook|login|docs|aitoolset|idp)'
@@ -50,9 +50,9 @@ test.describe('gestor generico de extensiones: packs', () => {
     })
 
     test('el catalogo dice QUE trae cada pack, no solo su nombre', async () => {
-        // Es la unica linea propia del tipo. Sin ella un pack es indistinguible de cualquier otra
-        // extension y no hay forma de saber que se instala al pulsar.
-        // ⚠️ En el catalogo la version va en un Select, no en el chip 'v0.0.0': se espera al boton.
+        // It is the only line the type has of its own. Without it a pack is indistinguishable from any
+        // other extension and there is no way to know what gets installed on pressing.
+        // ⚠️ In the catalogue the version goes in a Select, not in a 'v0.0.0' chip: the button is awaited.
         await expect(dialog().locator('span[aria-label="Install"] button').first()).toBeVisible({ timeout: 60000 })
         expect(await dialog().getByText(MIEMBROS).count(), 'ningun pack del catalogo dice que trae').toBeGreaterThan(0)
     })
@@ -65,15 +65,15 @@ test.describe('gestor generico de extensiones: packs', () => {
 
         await instalable.first().click()
 
-        // Instalado = el generico lo pinta arriba con SU aviso de desinstalar, no con el generico.
+        // Installed = the generic dialog draws it at the top with ITS OWN uninstall warning, not the generic one.
         const desinstalar = dialog().locator('span[aria-label="Uninstall pack (removes all member extensions)"] button')
         await expect(desinstalar).toHaveCount(1, { timeout: 90000 })
         expect(await dialog().locator('span[aria-label="Uninstall"] button').count(), 'usa el tooltip generico: no avisa de lo que borra').toBe(0)
 
-        // Y lo instalado cuenta lo que hay DENTRO, que es distinto de lo que promete el catalogo.
+        // And what is installed counts what is INSIDE, which differs from what the catalogue promises.
         await expect(dialog().getByText(/^Includes: \d+ \w+(s)?(, \d+ \w+(s)?)*$/).first()).toBeVisible()
 
-        // Los miembros estan instalados de verdad, no solo el pack: es lo que hacia dudar de migrarlo.
+        // The members really are installed, not just the pack: it is what made migrating it doubtful.
         const miembros = await page.evaluate(async () => {
             const base = window.location.origin.replace(':3000', ':3883')
             const packs = await (await fetch(`${base}/core/packs`)).json() as { extensions: { extensionType: string, id: string }[] }[]
@@ -90,7 +90,7 @@ test.describe('gestor generico de extensiones: packs', () => {
         expect(miembros.length, 'el pack instalado no declara ningun miembro').toBeGreaterThan(0)
         for (const m of miembros) expect(m.presente, `${m.extensionType} '${m.id}' no quedo instalado`).toBe(true)
 
-        // ── y ahora quitarlo, que es como se deja el entorno igual que estaba ────────────────────────
+        // ── and now removing it, which is how the environment is left as it was ─────────────────────
         await desinstalar.click()
         await expect(desinstalar).toHaveCount(0, { timeout: 90000 })
 
@@ -104,7 +104,7 @@ test.describe('gestor generico de extensiones: packs', () => {
     })
 
     test('la linea de miembros tambien esta en la vista de lista', async () => {
-        // Al migrar, el subtitulo hay que pintarlo en las DOS vistas: la de lista solo tenia nombre.
+        // On migrating, the subtitle has to be drawn in BOTH views: the list one only had a name.
         await dialog().getByRole('button', { name: 'List view' }).click()
         expect(await dialog().getByText(MIEMBROS).count(), 'la vista de lista pierde lo que trae el pack').toBeGreaterThan(0)
         await dialog().getByRole('button', { name: 'Card view' }).click()

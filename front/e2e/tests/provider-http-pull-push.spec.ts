@@ -38,7 +38,7 @@ const watchSession = (page: Page): ISession => {
     return session
 }
 
-// Ejecuta un fetch autenticado DESDE la pagina, con el accessKey de la sesion viva.
+// Runs an authenticated fetch FROM the page, with the live session's accessKey.
 const api = async (page: Page, session: ISession, method: string, body?: unknown) => {
     return await page.evaluate(async ({ method, body, path, bearer, backend }) => {
         const res = await fetch(`${backend}${path}`, {
@@ -66,15 +66,16 @@ test.describe('http-pull-push provider', () => {
         const session = watchSession(page)
         await login(page)
 
-        // ── snapshot de lo que hubiera antes ────────────────────────────────
+        // ── snapshot of whatever was there before ───────────────────────────
         await openProviderManager(page)
         expect(session.bearer, 'an authenticated request should have been captured by now').not.toBe('')
         const before = await api(page, session, 'GET')
 
-        // El provider monta su endpoint de config solo si esta CARGADO. Si no lo esta, la ruta no existe y
-        // el back devuelve la SPA, asi que el cuerpo no es JSON. Eso es estado del entorno, no un fallo del
-        // producto: un rojo que depende de si alguien instalo una extension no es señal, y encima tapa los
-        // rojos de verdad. Se instala desde el marketplace publico, o se declara en kwirth-dev.json.
+        // The provider mounts its config endpoint only when it is LOADED. When it is not, the route does
+        // not exist and the back end returns the SPA, so the body is not JSON. That is environment state
+        // and not a product failure: a red that depends on whether somebody installed an extension is no
+        // signal, and it masks the real reds. Install it from the public marketplace, or declare it in
+        // kwirth-dev.json.
         const loaded = before.status === 200 && before.text.trim().startsWith('[')
         test.skip(!loaded, "el provider 'http-pull-push' no esta cargado en este cluster (instalalo desde el marketplace)")
 
@@ -82,14 +83,14 @@ test.describe('http-pull-push provider', () => {
         expect(Array.isArray(original)).toBe(true)
 
         try {
-            // ── los endpoints de gestion exigen accessKey ───────────────────
+            // ── the management endpoints demand an accessKey ────────────────
             const anonymous = await page.evaluate(async ({ path, backend }) => {
                 const res = await fetch(`${backend}${path}`)
                 return res.status
             }, { path: CONFIG_PATH, backend: session.backend })
             expect(anonymous, 'without an accessKey the core must reject it').toBe(403)
 
-            // ── alta por API y comprobacion de que el provider la acepta ─────
+            // ── registration through the API, and a check that the provider accepts it ──
             const connection = {
                 name: `${PREFIX}quotes`,
                 enabled: true,
@@ -107,7 +108,7 @@ test.describe('http-pull-push provider', () => {
             const put = await api(page, session, 'PUT', [...original, connection])
             expect(put.status, put.text).toBe(200)
 
-            // ── se lee de vuelta completa, credencial incluida ───────────────
+            // ── it is read back whole, credential included ──────────────────
             const after = JSON.parse((await api(page, session, 'GET')).text)
             const saved = after.find((c: any) => c.name === `${PREFIX}quotes`)
             expect(saved, 'the connection must have been persisted').toBeTruthy()
@@ -117,21 +118,21 @@ test.describe('http-pull-push provider', () => {
             expect(saved.auth.username).toBe('e2e-user')
             expect(saved.auth.password, 'the credential is recomposed from the Secret on read').toBe('e2e-secret-value')
 
-            // ── validacion del lado servidor ─────────────────────────────────
+            // ── server-side validation ─────────────────────────────────────
             const invalid = await api(page, session, 'PUT', [...original, { ...connection, url: 'ftp://nope' }])
             expect(invalid.status, 'a bad url must be rejected by the back, not only by the dialog').toBe(400)
             expect(invalid.text).toContain('http')
 
-            // ── el dialogo propio del provider se abre desde la rueda ────────
+            // ── the provider's own dialog opens from the gear ───────────────
             await dismissOpenDialogs(page)
             await openProviderManager(page)
             const manager = page.getByRole('dialog').filter({ hasText: /Manage providers/i })
 
-            // el filtro deja una sola tarjeta, y con ella una sola rueda dentada
+            // the filter leaves a single card, and with it a single gear
             await manager.getByPlaceholder('Filter…').first().fill('http-pull-push')
             await page.waitForTimeout(500)
 
-            // la tarjeta cuenta las conexiones que el provider declara (getConfigNames)
+            // the card counts the connections the provider declares (getConfigNames)
             const expectedCount = original.length + 1
             await expect(
                 manager.getByText(`${expectedCount} config${expectedCount > 1 ? 's' : ''}`, { exact: true }),
@@ -145,28 +146,28 @@ test.describe('http-pull-push provider', () => {
             const dialog = page.getByRole('dialog').filter({ hasText: /HTTP Pull-Push Provider — Connections/i })
             await expect(dialog, 'the provider must render its own dialog, not the generic form').toBeVisible({ timeout: 15000 })
 
-            // sin nada seleccionado no hay formulario, y Clone no aplica
+            // with nothing selected there is no form, and Clone does not apply
             await expect(dialog.getByText('Select a connection to edit or click New.')).toBeVisible()
             await expect(dialog.getByRole('button', { name: 'Clone', exact: true })).toBeDisabled()
 
-            // la conexion creada antes por API aparece en la lista; al pulsarla se edita
+            // the connection created earlier through the API appears in the list; clicking it edits it
             await expect(dialog.getByText(`${PREFIX}quotes`)).toBeVisible({ timeout: 10000 })
             await dialog.getByText(`${PREFIX}quotes`).click()
             await expect(dialog.getByText(`Editing: ${PREFIX}quotes`)).toBeVisible()
 
-            // y sus valores se pintan en el detalle, con la credencial oculta
+            // and its values are drawn in the detail, with the credential hidden
             await expect(dialog.getByLabel('URL')).toHaveValue('https://api.example.com/quotes')
             await expect(dialog.getByLabel('Interval (s)')).toHaveValue('300')
             await expect(dialog.getByLabel('Username')).toHaveValue('e2e-user')
             const password = dialog.getByLabel('Password')
             await expect(password, 'a credential must be masked by default').toHaveAttribute('type', 'password')
 
-            // el ojo la revela
+            // the eye reveals it
             await dialog.getByLabel('Show').click()
             await expect(password).toHaveAttribute('type', 'text')
             await expect(password).toHaveValue('e2e-secret-value')
 
-            // ── Update persiste al momento, sin un Save global ──────────────
+            // ── Update persists immediately, with no global Save ───────────
             await dialog.getByLabel('Interval (s)').fill('600')
             await dialog.getByRole('button', { name: 'Update', exact: true }).click()
             await expect(dialog.getByText('Select a connection to edit or click New.')).toBeVisible({ timeout: 10000 })
@@ -174,7 +175,7 @@ test.describe('http-pull-push provider', () => {
             expect(afterUpdate.find((c: any) => c.name === `${PREFIX}quotes`).intervalSeconds,
                 'Update must persist on its own').toBe(600)
 
-            // ── New + Clone + Delete en la linea ────────────────────────────
+            // ── New + Clone + Delete on the row ────────────────────────────
             await dialog.getByRole('button', { name: 'New', exact: true }).click()
             await expect(dialog.getByText('New connection')).toBeVisible()
             await dialog.getByLabel('Connection name').fill(`${PREFIX}dup-src`)
@@ -184,7 +185,7 @@ test.describe('http-pull-push provider', () => {
 
             await dialog.getByText(`${PREFIX}dup-src`).click()
             await dialog.getByRole('button', { name: 'Clone', exact: true }).click()
-            // el clon llega con un nombre libre y hay que confirmarlo con Add
+            // the clone arrives with a free name and has to be confirmed with Add
             await expect(dialog.getByLabel('Connection name')).toHaveValue(`${PREFIX}dup-src-copy`)
             await dialog.getByRole('button', { name: 'Add', exact: true }).click()
             await expect(dialog.getByText(`${PREFIX}dup-src-copy`)).toBeVisible({ timeout: 10000 })
@@ -194,13 +195,13 @@ test.describe('http-pull-push provider', () => {
             expect(afterClone.find((c: any) => c.name === `${PREFIX}dup-src-copy`).url,
                 'the clone must copy the values, not just the name').toBe('https://api.example.com/one')
 
-            // borrar desde la propia linea (cada boton se identifica por su conexion)
+            // deleting from the row itself (each button is identified by its connection)
             await dialog.getByLabel(`Delete ${PREFIX}dup-src-copy`).click()
             await expect(dialog.getByText(`${PREFIX}dup-src-copy`)).toHaveCount(0, { timeout: 10000 })
             const afterDelete = JSON.parse((await api(page, session, 'GET')).text)
             expect(afterDelete.some((c: any) => c.name === `${PREFIX}dup-src-copy`)).toBe(false)
 
-            // ── el export ofrece decidir sobre las credenciales ─────────────
+            // ── the export offers a decision about the credentials ─────────
             await dialog.getByRole('button', { name: 'Export', exact: true }).click()
             const exportDialog = page.getByRole('dialog').filter({ hasText: /^Export connections/ })
             await expect(exportDialog).toBeVisible()
@@ -214,7 +215,7 @@ test.describe('http-pull-push provider', () => {
             await dialog.getByRole('button', { name: 'Close', exact: true }).click()
         }
         finally {
-            // ── restore: se deja exactamente lo que habia ────────────────────
+            // ── restore: exactly what was there is left behind ─────────────
             const restore = await api(page, session, 'PUT', original)
             expect(restore.status, 'the previous configuration must be restored').toBe(200)
         }

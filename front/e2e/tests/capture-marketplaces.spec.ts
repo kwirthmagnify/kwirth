@@ -1,25 +1,25 @@
 import { test, expect, Page } from '@playwright/test'
 import { login, clickMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from './helpers'
 
-// Captura de la imagen de la guía para la pestaña "Marketplaces" (docs/_media/guide). Tema oscuro.
+// Screenshot of the guide's image for the "Marketplaces" tab (docs/_media/guide). Dark theme.
 // Ejecutar a mano: playwright test capture-marketplaces.spec.ts
 //
 // ─── REDACCIÓN ───────────────────────────────────────────────────────────────────────────────────
-// La guía es PÚBLICA y el entorno de desarrollo tiene marketplaces privados reales: la URL del repo de
-// la organización y las credenciales que lo abren. Antes de capturar se sustituye lo que se ve por
-// valores de ejemplo, escribiendo en el formulario como lo haría una persona (setter nativo + evento
-// input, para que React se entere) — así la captura muestra la pantalla de verdad, no un montaje.
+// The guide is PUBLIC and the development environment has real private marketplaces: the URL of the
+// organisation's repo and the credentials that open it. Before capturing, what is on screen is replaced
+// with example values, typing into the form as a person would (native setter + input event, so that
+// React notices) — that way the screenshot shows the real screen, not a mock-up.
 //
-// NO destructivo: se cierra con **Cancel**, así que nada de esto se guarda. Lo redactado vive solo en el
-// estado del formulario mientras dura la captura.
+// NON-destructive: it closes with **Cancel**, so none of this is saved. What is redacted lives only in
+// the form's state for as long as the capture lasts.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-// Las capturas van a la documentacion VIVA: ver GUIDE_MEDIA en helpers.ts.
+// The screenshots go to the LIVE documentation: see GUIDE_MEDIA in helpers.ts.
 const MEDIA = GUIDE_MEDIA
 
 const dlg = (page: Page) => page.locator('[role="dialog"]').last()
 
-/** Valores de ejemplo con los que se sustituye lo real, fila a fila. */
+/** Example values the real ones are replaced with, row by row. */
 const SAMPLE = {
     label: 'acme-extensions',
     url: 'https://gitlab.acme.com/api/v4/projects/acme%2Fmarketplace/repository/files/manifest.json/raw?ref=main',
@@ -27,13 +27,13 @@ const SAMPLE = {
     token: 'glpat-ExampleTokenValue',
     user: 'acme-ci',
     password: 'example-password',
-    // El registro de paquetes es OTRO servidor que el manifest: por eso la captura enseña otro host.
+    // The package registry is a DIFFERENT server from the manifest: hence the screenshot showing another host.
     registryLabel: 'acme-nexus',
     registryUrl: 'https://nexus.acme.com/repository/acme-private',
     registryToken: 'example-registry-token'
 }
 
-/** Escribe en un input de React de forma que el componente registre el cambio. */
+/** Types into a React input in a way that makes the component register the change. */
 async function redact(page: Page, label: string, value: string) {
     const fields = dlg(page).getByLabel(label, { exact: true })
     for (let i = 0; i < await fields.count(); i++) {
@@ -46,7 +46,7 @@ async function redact(page: Page, label: string, value: string) {
 }
 
 test('capture marketplaces (dark, redactado)', async ({ page }) => {
-    // mismo encuadre que el resto de capturas de la guía, para no romper el ritmo visual
+    // the same framing as the rest of the guide's screenshots, so the visual rhythm is not broken
     await page.setViewportSize({ width: 1600, height: 900 })
     await page.addInitScript(() => { try { localStorage.setItem('kwirth.mode', 'dark') } catch { /* */ } })
     await login(page)
@@ -56,7 +56,7 @@ test('capture marketplaces (dark, redactado)', async ({ page }) => {
     const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth settings' })
     await dialog.waitFor()
 
-    // esperar a que termine de leer los settings: si no, se captura el spinner
+    // wait until it has finished reading the settings: otherwise the spinner is captured
     await expect(dlg(page).getByLabel('Cluster metrics read interval (seconds)', { exact: true })).toBeEnabled({ timeout: 10000 })
     await page.getByRole('tab', { name: 'Marketplaces' }).click()
     await page.waitForTimeout(800)
@@ -64,15 +64,15 @@ test('capture marketplaces (dark, redactado)', async ({ page }) => {
     const rows = await dlg(page).getByLabel('Manifest URL', { exact: true }).count()
     test.skip(rows === 0, 'no hay ningún marketplace registrado que capturar')
 
-    // Para que la imagen enseñe el caso completo, se marca el token del manifest. Es una ilustración, no
-    // la configuración real: nada de esto se guarda.
+    // So the image shows the complete case, the manifest token is ticked. It is an illustration, not the
+    // real configuration: none of this is saved.
     const manifestToken = dlg(page).getByLabel('Manifest needs a token', { exact: true }).first()
     if (!await manifestToken.isChecked()) await manifestToken.check()
     await page.waitForTimeout(300)
 
-    // Se preparan y redactan las DOS pestañas antes de capturar ninguna. El diálogo mantiene en el DOM
-    // los campos de la pestaña oculta, asi que el registro real seguiria ahi mientras se fotografia la
-    // otra: la comprobación de fuga mira todos los inputs, y con razon.
+    // BOTH tabs are prepared and redacted before any of them is captured. The dialog keeps the hidden
+    // tab's fields in the DOM, so the real registry would still be there while the other one is
+    // photographed: the leak check looks at every input, and rightly so.
     await page.getByRole('tab', { name: 'Package registries' }).click()
     await page.waitForTimeout(600)
     if (await dlg(page).getByLabel('Base URL', { exact: true }).count() === 0) {
@@ -87,8 +87,8 @@ test('capture marketplaces (dark, redactado)', async ({ page }) => {
     await page.getByRole('tab', { name: 'Marketplaces' }).click()
     await page.waitForTimeout(400)
 
-    // redactar TODO lo identificable antes de que exista ninguna imagen. 'Name', 'User', 'Password' y
-    // 'Token' se repiten en las dos pestañas, y redact() escribe en todas sus apariciones.
+    // redact EVERYTHING identifiable before any image exists. 'Name', 'User', 'Password' and 'Token'
+    // repeat across both tabs, and redact() writes into every one of their occurrences.
     await redact(page, 'Manifest URL', SAMPLE.url)
     await redact(page, 'Manifest user', SAMPLE.manifestUser)
     await redact(page, 'Name', SAMPLE.label)
@@ -97,7 +97,7 @@ test('capture marketplaces (dark, redactado)', async ({ page }) => {
     await redact(page, 'Password', SAMPLE.password)
     await page.waitForTimeout(400)
 
-    // comprobar la redacción ANTES de capturar: si algo real sobrevive, mejor fallar que publicarlo
+    // check the redaction BEFORE capturing: if anything real survives, better to fail than to publish it
     const leaked = await dlg(page).evaluate(el =>
         Array.from(el.querySelectorAll('input')).map(i => (i as HTMLInputElement).value).join(' | '))
     expect(leaked, 'ha quedado una URL real en la captura').not.toContain('plexus')
@@ -106,14 +106,14 @@ test('capture marketplaces (dark, redactado)', async ({ page }) => {
 
     await page.screenshot({ path: `${MEDIA}/admin-marketplaces.png` })
 
-    // y la pestaña de registros de paquetes, que es donde vive ahora la credencial de DESCARGA
+    // and the package registries tab, which is where the DOWNLOAD credential now lives
     await page.getByRole('tab', { name: 'Package registries' }).click()
     await page.waitForTimeout(600)
     await redact(page, 'Name', SAMPLE.registryLabel)
     await page.waitForTimeout(300)
     await page.screenshot({ path: `${MEDIA}/admin-package-registries.png` })
 
-    // Cancel: lo redactado NO se guarda
+    // Cancel: what was redacted is NOT saved
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await dismissOpenDialogs(page)
 })

@@ -1,12 +1,12 @@
 import { test, Page, Locator } from '@playwright/test'
 import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
 
-// Capturas de la guia de Pinocchio (plugins/pinocchio/docs/guide/images). Tema oscuro.
+// Screenshots for Pinocchio's guide (plugins/pinocchio/docs/guide/images). Dark theme.
 // Ejecutar a mano: playwright test --config playwright.capture.config.ts capture-pinocchio-guide.spec.ts
 //
-// NO DESTRUCTIVO: todos los dialogos se cierran con Cancel. Nada de OK, Save, Download ni Clear back —
-// la config de pinocchio del usuario no se toca. Los triggers de ejemplo se crean dentro del dialogo
-// (que trabaja sobre una copia local) y mueren con el Cancel.
+// NON-DESTRUCTIVE: every dialog is closed with Cancel. No OK, no Save, no Download, no Clear back —
+// the user's pinocchio config is not touched. The example triggers are created inside the dialog (which
+// works on a local copy) and die with the Cancel.
 
 const IMG = 'C:/github/aisdkvercel/kwirth/plugins/pinocchio/docs/guide/images'
 const PAUSE = 800   // margen para la animacion de los dialogos de MUI
@@ -14,8 +14,8 @@ const PAUSE = 800   // margen para la animacion de los dialogos de MUI
 test.use({ trace: 'off', screenshot: 'off', video: 'off' })
 test.setTimeout(240_000)
 
-// El menu Config tiene 'AI' como grupo PLEGABLE (providers/modelos dentro) y luego Trigger e
-// Import / Export sueltos. `group` expande el grupo antes de clicar la entrada.
+// The Config menu has 'AI' as a COLLAPSIBLE group (providers/models inside) and then Trigger and
+// Import / Export loose. `group` expands the group before clicking the entry.
 const openConfig = async (page: Page, item: RegExp, group?: RegExp) => {
     await page.getByRole('button', { name: 'Config', exact: true }).click()
     await page.waitForTimeout(400)
@@ -28,8 +28,8 @@ const openConfig = async (page: Page, item: RegExp, group?: RegExp) => {
     return page.getByRole('dialog').first()
 }
 
-// Los Select de MUI con InputLabel no responden a getByLabel (la etiqueta no queda asociada al
-// combobox), asi que localizamos el FormControl por el texto EXACTO de su label y clicamos su combo.
+// MUI Selects with an InputLabel do not respond to getByLabel (the label is not associated with the
+// combobox), so we locate the FormControl by the EXACT text of its label and click its combo.
 const pickByLabel = async (page: Page, scope: Locator, label: string, option: string) => {
     await scope.locator(`.MuiFormControl-root:has(> label:text-is("${label}")) [role="combobox"]`).first().click()
     await page.getByRole('listbox').waitFor({ state: 'visible', timeout: 5000 })
@@ -66,7 +66,7 @@ test('capturas de la guia de pinocchio (dark)', async ({ page }) => {
     await login(page)
     await dismissOpenDialogs(page)
 
-    // ── Abrir el canal ──────────────────────────────────────────────────────────────────────────────
+    // ── Open the channel ────────────────────────────────────────────────────────────────────────────
     await page.getByRole('button', { name: 'ADD', exact: true }).click({ force: true })
     await page.waitForTimeout(800)
     await pickCombo(page, 0, 'inCluster')
@@ -81,10 +81,10 @@ test('capturas de la guia de pinocchio (dark)', async ({ page }) => {
     console.log(`[capture] LLMs: ${llms.map(l => l.id).join(', ') || '(ninguno)'}`)
     console.log(`[capture] triggers: ${triggers.map(t => t.id).join(', ') || '(ninguno)'}`)
 
-    // 1) La pestaña del canal
+    // 1) The channel's tab
     await page.screenshot({ path: `${IMG}/ui-tab.png` })
 
-    // 2) El menú Config con el grupo 'AI' desplegado (plegado esconde providers y modelos)
+    // 2) The Config menu with the 'AI' group expanded (collapsed it hides providers and models)
     await page.getByRole('button', { name: 'Config', exact: true }).click()
     await page.waitForTimeout(400)
     await page.getByRole('menuitem', { name: /^AI$/ }).click()
@@ -93,7 +93,7 @@ test('capturas de la guia de pinocchio (dark)', async ({ page }) => {
     await page.keyboard.press('Escape')
     await page.waitForTimeout(500)
 
-    // 3) El diálogo Clear (¡sólo capturar, jamás pulsar Clear back!)
+    // 3) The Clear dialog (capture only, never press Clear back!)
     await page.getByRole('button', { name: 'Clear', exact: true }).click()
     await page.waitForTimeout(PAUSE)
     await page.screenshot({ path: `${IMG}/ui-clear-dialog.png` })
@@ -118,12 +118,12 @@ test('capturas de la guia de pinocchio (dark)', async ({ page }) => {
     await page.screenshot({ path: `${IMG}/import-export.png` })
     await cancel(page)
 
-    // 7) El editor de triggers. Creamos SIEMPRE un trigger de ejemplo dentro del dialogo (que trabaja
-    //    sobre una copia local): sale una captura didactica en vez del trigger real del dev, y muere con
-    //    el Cancel sin tocar la config del usuario.
+    // 7) The trigger editor. We ALWAYS create an example trigger inside the dialog (which works on a
+    //    local copy): the result is an instructive screenshot rather than the dev's real trigger, and it
+    //    dies with the Cancel without touching the user's config.
     const trgDlg = await openConfig(page, /^Trigger$/)
-    // Ojo: hay DOS inputs con placeholder 'Trigger id' — el de creacion (panel izquierdo) y el campo
-    // 'Trigger ID' del editor. El de creacion es el primero en el DOM.
+    // Careful: there are TWO inputs with the placeholder 'Trigger id' — the creation one (left panel)
+    // and the editor's 'Trigger ID' field. The creation one comes first in the DOM.
     await trgDlg.getByPlaceholder('Trigger id').first().fill('pss-deployments')
     await trgDlg.locator('button:has(svg[data-testid="AddIcon"])').first().click()
     await page.waitForTimeout(800)
@@ -144,8 +144,8 @@ test('capturas de la guia de pinocchio (dark)', async ({ page }) => {
     await page.waitForTimeout(600)
     await page.screenshot({ path: `${IMG}/triggers-dialog.png` })
 
-    // 7b) El selector de tools desplegado, con el catálogo y sus descripciones. Ojo: hay que apuntar al
-    //     combo 'Tools' por su label — el ultimo combobox del dialogo es el de 'Prompt type'.
+    // 7b) The tool selector expanded, with the catalogue and its descriptions. Careful: the 'Tools'
+    //     combo has to be targeted by its label — the dialog's last combobox is 'Prompt type'.
     await trgDlg.locator('.MuiFormControl-root:has(> label:text-is("Tools")) [role="combobox"]').first().click()
     await page.waitForTimeout(PAUSE)
     await page.screenshot({ path: `${IMG}/tool-selector.png` })
@@ -153,12 +153,12 @@ test('capturas de la guia de pinocchio (dark)', async ({ page }) => {
     await page.waitForTimeout(500)
     await cancel(page)
 
-    // 8) El Playground: pestañas LLM y Call. Se cierra con Cancel: no persiste estado ni historiales.
+    // 8) The Playground: the LLM and Call tabs. Closed with Cancel: it persists no state and no history.
     await page.getByRole('button', { name: 'Playground', exact: true }).click()
     await page.waitForTimeout(1500)
     const pg = page.getByRole('dialog').first()
 
-    // El payload es un Deployment: que el combo 'Artifact Kind' concuerde con el.
+    // The payload is a Deployment: the 'Artifact Kind' combo should agree with it.
     await pickByLabel(page, pg, 'Artifact Kind', 'Deployment')
     await pg.locator('textarea').first().fill(JSON.stringify({
         kind: 'Deployment',
@@ -170,8 +170,8 @@ test('capturas de la guia de pinocchio (dark)', async ({ page }) => {
 
     await pg.getByRole('tab', { name: 'Call' }).click()
     await page.waitForTimeout(PAUSE)
-    // El campo Prompt esta deshabilitado mientras 'Prompt type' sea 'artifact' (asi lo hace el plugin),
-    // asi que primero pasamos a 'jinja' para poder escribir la plantilla.
+    // The Prompt field is disabled while 'Prompt type' is 'artifact' (that is how the plugin does it),
+    // so we first switch to 'jinja' in order to be able to write the template.
     await pickByLabel(page, pg, 'Prompt type', 'jinja')
     const areas = pg.locator('textarea')
     await areas.nth(0).fill('Eres un auditor de seguridad de Kubernetes. Responde en español, con evidencia concreta del manifiesto.')
@@ -189,9 +189,9 @@ test('capturas de la guia de pinocchio (dark)', async ({ page }) => {
     await page.goto('about:blank')
 })
 
-// Ejecucion REAL en el Playground para capturar las pestañas IN y OUT con contenido. Gasta UNA llamada
-// al LLM configurado (steps=1, sin tools). No toca el cluster ni la config persistida: 'Apply Config'
-// solo fija el playgroundTrigger en memoria del back, y el dialogo se cierra con Cancel.
+// A REAL run in the Playground, to capture the IN and OUT tabs with content. It spends ONE call to the
+// configured LLM (steps=1, no tools). It touches neither the cluster nor the persisted config: 'Apply
+// Config' only sets the playgroundTrigger in the back end's memory, and the dialog closes with Cancel.
 test('capturas IN/OUT del playground con una ejecucion real (dark)', async ({ page }) => {
     let llms: { id: string }[] = []
     page.on('websocket', ws => ws.on('framereceived', f => {
@@ -220,7 +220,7 @@ test('capturas IN/OUT del playground con una ejecucion real (dark)', async ({ pa
     await page.waitForTimeout(1500)
     const pg = page.getByRole('dialog').first()
 
-    // Pestaña LLM: modelo barato, 1 paso, y el artefacto de ejemplo
+    // LLM tab: a cheap model, 1 step, and the example artifact
     await pickByLabel(page, pg, 'LLM', llms[0].id)
     await pg.locator('input[type="number"]').first().fill('1')
     await pickByLabel(page, pg, 'Artifact Kind', 'Deployment')
@@ -231,7 +231,7 @@ test('capturas IN/OUT del playground con una ejecucion real (dark)', async ({ pa
     }, null, 2))
     await page.waitForTimeout(400)
 
-    // Pestaña Call: sin tools, prompt jinja corto
+    // Call tab: no tools, a short jinja prompt
     await pg.getByRole('tab', { name: 'Call' }).click()
     await page.waitForTimeout(PAUSE)
     await pickByLabel(page, pg, 'Prompt type', 'jinja')
@@ -244,7 +244,7 @@ test('capturas IN/OUT del playground con una ejecucion real (dark)', async ({ pa
     await page.waitForTimeout(1500)
     await pg.getByRole('button', { name: /^fire$/i }).click()
 
-    // Esperar a que la respuesta del modelo llegue por el websocket
+    // Wait for the model's reply to arrive over the websocket
     await pg.getByRole('tab', { name: /^OUT \([1-9]/ }).waitFor({ timeout: 120_000 })
     await page.waitForTimeout(2000)
 

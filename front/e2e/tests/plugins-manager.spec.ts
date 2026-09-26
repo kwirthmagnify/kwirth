@@ -28,8 +28,9 @@ interface IPluginRef {
     configSchema?: unknown[]
 }
 
-// El nombre que se pinta, resuelto igual que en el descriptor: displayName, si no el del paquete, si no
-// el id. Un plugin de un registro privado tiene por 'name' el scope entero, asi que no vale usar el id.
+// The name that gets drawn, resolved as in the descriptor: displayName, failing that the package's,
+// failing that the id. A plugin from a private registry has the whole scope as its 'name', so using the
+// id will not do.
 const nombreDe = (p: IPluginRef) => p.displayName || p.name || p.id
 
 test.describe('gestor generico de extensiones: plugins', () => {
@@ -78,12 +79,12 @@ test.describe('gestor generico de extensiones: plugins', () => {
         const vivas = await dialog().locator('button[aria-label="Configure"]:not([disabled])').count()
         expect(vivas, `hay ${vivas} ruedas vivas y solo ${configurables.length} plugins declaran configuracion`).toBe(configurables.length)
 
-        // Y la que esta muerta tiene que DECIR por que, en vez de no responder sin mas.
+        // And the dead one has to SAY why, rather than simply not responding.
         if (configurables.length < delBack.length) {
             await expect(dialog().locator('span[aria-label="This plugin takes no installation config"] button').first()).toBeDisabled()
         }
 
-        // Si alguno la declara, la suya abre su editor.
+        // If any declares it, its own opens its editor.
         if (configurables.length > 0) {
             await dialog().locator('button[aria-label="Configure"]:not([disabled])').first().click()
             await expect(page.locator('.MuiDialog-root')).toHaveCount(2, { timeout: 15000 })
@@ -92,9 +93,9 @@ test.describe('gestor generico de extensiones: plugins', () => {
     })
 
     test('el catalogo dice que necesita y que aprovecha cada plugin', async () => {
-        // requires/uses los declara el manifest y los entiende el generico. El numero va en el chip y el
-        // detalle en el tooltip: en la tarjeta no cabe la lista, pero sin el numero no hay forma de saber
-        // que una extension arrastra a otras.
+        // requires/uses are declared by the manifest and understood by the generic dialog. The number
+        // goes in the chip and the detail in the tooltip: the list does not fit on the card, but without
+        // the number there is no way to know that an extension drags others along.
         await expect(dialog().locator('span[aria-label$="nstall"] button').first()).toBeVisible({ timeout: 60000 })
 
         /*
@@ -126,8 +127,9 @@ test.describe('gestor generico de extensiones: plugins', () => {
     })
 
     test('cada plugin se pinta con SU icono, no con el generico del tipo', async () => {
-        // El icono lo declara la extension (nombre del set curado o un SVG propio saneado) y lo resuelve
-        // el generico. Si se perdiera, todas las tarjetas saldrian con el icono de 'extension'.
+        // The icon is declared by the extension (a name from the curated set or a sanitised SVG of its
+        // own) and resolved by the generic dialog. Were it lost, every card would come out with the
+        // 'extension' icon.
         const conIcono = delBack.filter(p => p.icon)
         test.skip(conIcono.length === 0, 'ningun plugin declara icono en este entorno')
 

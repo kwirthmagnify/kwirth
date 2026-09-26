@@ -29,7 +29,7 @@ import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
 
 test.describe.configure({ mode: 'serial' })
 
-/** Lo que el test necesita ver. `k8s-ops` queda FUERA a propósito: es la mitad negativa de la prueba. */
+/** What the test needs to see. `k8s-ops` is deliberately LEFT OUT: it is the negative half of the test. */
 const NECESARIOS = ['k8s-describe', 'k8s-observability']
 const PINOCCHIO = 'pinocchio'
 
@@ -70,7 +70,7 @@ const escribirGrant = async (api: APIRequestContext, acc: IBackAccess, toolsetId
         headers: { authorization: acc.auth, 'content-type': 'application/json' },
         data: { plugins }
     })
-    // Conceder exige scope admin: si el usuario del e2e no lo tiene, mejor decirlo que dar 0 tools.
+    // Granting demands the admin scope: if the e2e's user lacks it, better to say so than to give 0 tools.
     expect(res.ok(), `no se pudo conceder '${toolsetId}' (${res.status()}): ¿el usuario del e2e es admin?`).toBeTruthy()
 }
 
@@ -78,10 +78,10 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
     let page: Page
     let herramientas: string[] = []
     let rotulo = ''
-    /** Lo que había antes de tocar nada, para dejarlo igual. */
+    /** What was there before touching anything, so it can be left the same. */
     let original: TGrants = {}
     let tocados: string[] = []
-    /** La autorizacion prestada, capturada en el login y valida toda la sesion. */
+    /** The borrowed authorization, captured at login and valid for the whole session. */
     let acceso: IBackAccess
 
     test.beforeAll(async ({ browser }) => {
@@ -91,7 +91,7 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
         await dismissOpenDialogs(page)
         expect(acceso.auth, 'no se pudo tomar prestada la autorizacion del front').not.toEqual('')
 
-        // ── la concesion, antes de abrir nada: el canal pide su lista de tools al arrancar ──
+        // ── the grant, before opening anything: the channel asks for its tool list on start ──
         original = await leerGrants(page.request, acceso)
         for (const id of NECESARIOS) {
             const actuales = original[id] ?? []
@@ -108,30 +108,30 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
         await page.getByRole('button', { name: 'ADD', exact: true }).click({ force: true })
         await page.waitForTimeout(1500)
 
-        // El canal tiene que ARRANCAR: la lista de tools se la pide al back al iniciarse.
+        // The channel has to START: it asks the back end for the tool list when it does.
         await page.locator('button:has(svg[data-testid="SettingsIcon"])').first().click()
         await page.getByRole('menuitem', { name: /^Start$/ }).click()
         await page.waitForTimeout(4000)
 
-        // Config → Triggers, que es donde vive el selector de tools
+        // Config → Triggers, which is where the tool selector lives
         await page.getByRole('button', { name: 'Config', exact: true }).click()
         await page.getByRole('menuitem', { name: /trigger/i }).click()
         await page.waitForTimeout(1500)
 
-        // ⚠️ El selector solo se habilita con un trigger Y una version elegidos: sin eso esta en gris y
-        // no pinta nada, que fue lo que despisto la primera vez. Se pincha el PRIMERO de cada lista para
-        // no depender de como se llamen los triggers de quien corra el test: son datos suyos.
+        // ⚠️ The selector is only enabled with a trigger AND a version chosen: without that it is greyed
+        // out and draws nothing, which is what misled the first time. The FIRST of each list is clicked so
+        // as not to depend on what the triggers of whoever runs the test are called: they are their data.
         const dialog = page.getByRole('dialog').first()
         const item = dialog.locator('.MuiListItemButton-root')
         await item.first().click({ force: true })
         await page.waitForTimeout(800)
-        // La lista de versiones aparece al elegir trigger: el segundo bloque de items es la primera version
+        // The version list appears on choosing a trigger: the second block of items is the first version
         await item.nth(1).click({ force: true })
         await page.waitForTimeout(800)
 
         rotulo = (await dialog.locator('.MuiFormControl-root').filter({ hasText: 'Tools' }).locator('.MuiSelect-select').first().textContent().catch(() => '')) ?? ''
 
-        // El catalogo esta DENTRO del desplegable: hay que abrirlo.
+        // The catalogue is INSIDE the dropdown: it has to be opened.
         await dialog.locator('.MuiFormControl-root').filter({ hasText: 'Tools' }).locator('.MuiSelect-select').first().click({ force: true })
         await page.waitForTimeout(800)
         herramientas = await page.locator('[role="listbox"] [role="option"]').allTextContents()
@@ -140,8 +140,8 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
     })
 
     test.afterAll(async () => {
-        // Las concesiones vuelven EXACTAMENTE a como estaban, aunque el test haya petado a medias: son
-        // config del usuario, no del test.
+        // The grants go back EXACTLY to how they were, even if the test blew up halfway: they are the
+        // user's config, not the test's.
         for (const id of tocados) {
             await escribirGrant(page.request, acceso, id, original[id] ?? []).catch(() => {})
         }
@@ -150,24 +150,26 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
     })
 
     test('el catalogo que ofrece no esta vacio', async () => {
-        // Dos causas distintas para el mismo sintoma, y el mensaje tiene que distinguirlas: sin registro no
-        // hay tools, y con registro pero sin concesion tampoco — pero se arreglan en sitios diferentes.
+        // Two different causes for the same symptom, and the message has to tell them apart: with no
+        // registry there are no tools, and with a registry but no grant there are none either — but they
+        // are fixed in different places.
         expect(herramientas.length, `no hay ninguna tool disponible: los toolsets ${NECESARIOS.join(', ')} estan instalados pero ¿llego la concesion a '${PINOCCHIO}'?`).toBeGreaterThan(0)
-        // Y el rotulo del selector existe (vacio si no hay ninguna marcada, 'all (N)' con autoTools)
+        // And the selector's label exists (empty when none is ticked, 'all (N)' with autoTools)
         expect(typeof rotulo).toBe('string')
     })
 
     test('las tools que ofrece son las de los toolsets CONCEDIDOS', async () => {
         const texto = herramientas.join(' ')
-        // De k8s-describe y de k8s-observability, los dos que el test se concede
+        // From k8s-describe and k8s-observability, the two the test grants itself
         expect(texto, 'falta describe_pod (k8s-describe)').toContain('describe_pod')
         expect(texto, 'falta get_pod_logs (k8s-observability)').toContain('get_pod_logs')
     })
 
     test('NO ofrece las de los toolsets que no estan a su alcance', async () => {
-        // `delete_pod` es de k8s-ops (escritura): puede estar INSTALADO, pero el test no se lo concede, y
-        // la resolucion filtra por concesion. `times_two` es de playground, que ni siquiera esta instalado.
-        // Con el camino viejo salian las dos, porque venian compiladas dentro del core junto a las demas.
+        // `delete_pod` belongs to k8s-ops (write): it may be INSTALLED, but the test does not grant it to
+        // itself, and resolution filters by grant. `times_two` belongs to playground, which is not even
+        // installed. Under the old path both showed up, because they came compiled inside the core along
+        // with the rest.
         const texto = herramientas.join(' ')
         expect(texto, 'delete_pod no deberia estar: k8s-ops no esta concedido a pinocchio').not.toContain('delete_pod')
         expect(texto, 'times_two no deberia estar: playground no esta instalado').not.toContain('times_two')

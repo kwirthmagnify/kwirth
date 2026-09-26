@@ -4,11 +4,11 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
 
-// Export/import de los Kwirth Settings.
+// Export/import of the Kwirth Settings.
 //
-// NO destructivo: el export solo descarga, y el import carga el FORMULARIO sin guardar — todos los tests
-// salen por Cancel, y el ultimo comprueba que lo importado no llego a persistirse. El marketplace de prueba
-// lleva un id propio con prefijo 'e2e-' para no poder colisionar con uno del usuario.
+// NON-destructive: the export only downloads, and the import loads the FORM without saving — every test
+// leaves through Cancel, and the last one checks that what was imported never got persisted. The test
+// marketplace carries its own id prefixed 'e2e-' so it cannot collide with one of the user's.
 
 const INTERVAL_LABEL = 'Cluster metrics read interval (seconds)'
 const IMPORTED_ID = 'e2e-import-marketplace'
@@ -26,8 +26,8 @@ interface IExportedSettings {
 }
 
 /**
- * Si algun campo del formulario tiene ese valor. Devuelve un booleano a proposito: volcar la lista de
- * valores metia tokens y contraseñas reales en el informe de Playwright cuando el assert fallaba.
+ * Whether any field of the form holds that value. It returns a boolean on purpose: dumping the list of
+ * values put real tokens and passwords into Playwright's report whenever the assert failed.
  */
 async function formHasValue(page: Page, value: string): Promise<boolean> {
     return page.locator('input').evaluateAll((els, v) => els.some(e => (e as HTMLInputElement).value === v), value)
@@ -39,14 +39,14 @@ async function openSettings(page: Page) {
 }
 
 /**
- * Pulsa Export, opera sobre el dialogo de seleccion y devuelve el JSON descargado. 'tweak' recibe el
- * dialogo abierto, ya con todo premarcado, para poder desmarcar items antes de exportar.
+ * Presses Export, works on the selection dialog and returns the downloaded JSON. 'tweak' receives the
+ * open dialog, already fully ticked, so items can be unticked before exporting.
  */
 async function exportSettings(page: Page, withCredentials: boolean, tweak?: (dialog: ReturnType<Page['getByRole']>) => Promise<void>): Promise<IExportedSettings> {
     await page.getByRole('button', { name: 'Export' }).click()
     const dialog = page.getByRole('dialog').filter({ hasText: 'Export Kwirth settings' })
     await expect(dialog).toBeVisible()
-    // la lista sale con todo marcado: es lo que hace que el caso normal sea un solo clic
+    // the list comes out fully ticked: it is what makes the normal case a single click
     await expect(dialog.getByLabel('Select all')).toBeChecked()
     if (withCredentials) await dialog.getByLabel('Include credentials').check()
     if (tweak) await tweak(dialog)
@@ -69,7 +69,7 @@ test('Kwirth settings: el export baja un fichero con la forma esperada y SIN cre
     expect(exported.version).toBe(1)
     expect(exported.credentialsIncluded).toBe(false)
     expect(Number(exported.settings.metricsInterval)).toBeGreaterThan(0)
-    // sin credenciales significa sin credenciales: ni un token ni una contraseña en todo el fichero
+    // without credentials means without credentials: not one token and not one password in the whole file
     for (const m of exported.settings.marketplaces ?? []) expect(m.manifestAuth?.token).toBeUndefined()
     for (const r of exported.settings.packageRegistries ?? []) {
         expect(r.auth?.token).toBeUndefined()
@@ -95,7 +95,7 @@ test('Kwirth settings: el import carga el formulario pero NO guarda hasta acepta
     await dismissOpenDialogs(page)
     await openSettings(page)
 
-    // el fichero se construye a partir de un export real, para probar tambien el viaje de ida y vuelta
+    // the file is built from a real export, so the round trip is exercised too
     const exported = await exportSettings(page, false)
     const marketplacesBefore = (exported.settings.marketplaces ?? []).length
     exported.settings.marketplaces = [
@@ -107,23 +107,23 @@ test('Kwirth settings: el import carga el formulario pero NO guarda hasta acepta
 
     await page.locator('input[type="file"]').setInputFiles(path)
 
-    // el fichero no entra solo: primero se elige que se importa, con todo premarcado
+    // the file does not go in by itself: first you choose what is imported, fully ticked
     const importDialog = page.getByRole('dialog').filter({ hasText: 'Import Kwirth settings' })
     await expect(importDialog).toBeVisible()
     await expect(importDialog.getByLabel('Select all')).toBeChecked()
     await expect(importDialog.getByText(IMPORTED_LABEL)).toBeVisible()
-    // lo que ya existe se avisa; el intervalo siempre esta puesto, asi que siempre lleva su aviso
+    // what already exists is warned about; the interval is always set, so it always carries its warning
     await expect(importDialog.getByText('overwrites the current value')).toBeVisible()
     await importDialog.getByRole('button', { name: 'Import' }).click()
 
     await expect(page.getByText('Nothing is saved until you press OK.')).toBeVisible()
 
-    // la fila importada esta en el formulario, junto a las que ya habia (fusion por id, no reemplazo)
+    // the imported row is in the form, alongside those that were already there (merge by id, not replacement)
     await page.getByRole('tab', { name: 'Marketplaces' }).click()
     expect(await formHasValue(page, IMPORTED_LABEL)).toBe(true)
     expect(await formHasValue(page, 'https://example.invalid/manifest.json')).toBe(true)
 
-    // Cancel: nada de esto debe haber llegado al back
+    // Cancel: none of this must have reached the back end
     await page.getByRole('button', { name: 'Cancel' }).click()
     await page.locator('[role="dialog"]').waitFor({ state: 'hidden', timeout: 5000 })
 
@@ -131,7 +131,7 @@ test('Kwirth settings: el import carga el formulario pero NO guarda hasta acepta
     await page.getByRole('tab', { name: 'Marketplaces' }).click()
     expect(await formHasValue(page, IMPORTED_LABEL)).toBe(false)
 
-    // y el resto de marketplaces del usuario sigue donde estaba
+    // and the user's other marketplaces are still where they were
     const after = await exportSettings(page, false)
     expect((after.settings.marketplaces ?? []).length).toBe(marketplacesBefore)
 
@@ -143,7 +143,7 @@ test('Kwirth settings: el export se lleva SOLO lo marcado', async ({ page }) => 
     await dismissOpenDialogs(page)
     await openSettings(page)
 
-    // desmarcar todo y quedarse con el intervalo: el fichero no debe traer ni marketplaces ni registries
+    // untick everything and keep the interval: the file must carry neither marketplaces nor registries
     const onlyGeneral = await exportSettings(page, false, async dialog => {
         await dialog.getByLabel('Select all').uncheck()
         await dialog.getByRole('checkbox').nth(1).check()   // el primero de la lista es el intervalo
@@ -173,7 +173,7 @@ test('Kwirth settings: lo desmarcado en el import no entra en el formulario', as
     const importDialog = page.getByRole('dialog').filter({ hasText: 'Import Kwirth settings' })
     await expect(importDialog).toBeVisible()
 
-    // se desmarca justo el marketplace nuevo, el resto entra
+    // precisely the new marketplace is unticked, the rest goes in
     await importDialog.locator('label').filter({ hasText: IMPORTED_LABEL }).getByRole('checkbox').uncheck()
     await importDialog.getByRole('button', { name: 'Import' }).click()
     await expect(page.getByText('Nothing is saved until you press OK.')).toBeVisible()

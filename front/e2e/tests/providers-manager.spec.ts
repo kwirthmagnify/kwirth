@@ -30,7 +30,7 @@ interface IProviderRef {
     hasFront?: boolean
     hasSchema?: boolean
     configNames?: string[]
-    /** PLUVIDER: un plugin que además produce. Se lista aquí, pero no se gestiona desde aquí. */
+    /** PLUVIDER: a plugin that also produces. It is listed here, but not managed from here. */
     pluvider?: boolean
     hostedBy?: string
 }
@@ -68,12 +68,12 @@ test.describe('gestor generico de extensiones: providers', () => {
         .locator('button[aria-label="Configure"]').first()
 
     test('los providers de CORE no se pintan: no son extensiones', async () => {
-        // events y metrics vienen dentro de Kwirth. Si salieran, la papelera invitaria a quitar algo que
-        // no se puede quitar, y el contador de instalados mentiria.
+        // events and metrics come inside Kwirth. Were they to show up, the bin would invite removing
+        // something that cannot be removed, and the installed counter would lie.
         const core = delBack.filter(p => p.core)
-        // Los PLUVIDERS tampoco cuentan como instalados: se pintan (quien entra aquí viene a ver a qué
-        // puede suscribirse) pero no se instalan ni se desinstalan — vienen y se van con su plugin, así
-        // que no aportan papelera.
+        // PLUVIDERS do not count as installed either: they are drawn (whoever comes here comes to see
+        // what they can subscribe to) but they are neither installed nor uninstalled — they come and go
+        // with their plugin, so they contribute no bin.
         const extensiones = delBack.filter(p => !p.core && !p.pluvider)
         expect(core.length, 'el back no devuelve ningun provider de core: el test no probaria nada').toBeGreaterThan(0)
 
@@ -100,16 +100,16 @@ test.describe('gestor generico de extensiones: providers', () => {
             const nombre = p.displayName ?? p.name ?? p.id
             await expect(dialog().getByText(nombre, { exact: true }).first(),
                 `'${p.id}' no aparece en el gestor`).toBeVisible({ timeout: 60000 })
-            // no se versiona aparte: lleva la version de su plugin, no una inventada
+            // it is not versioned separately: it carries its plugin's version, not an invented one
             expect(p.version, `'${p.id}' deberia traer la version de su plugin`).toMatch(/^\d+\.\d+\.\d+$/)
         }
-        // el chip que lo distingue de un provider instalado
+        // the chip that tells it apart from an installed provider
         await expect(dialog().getByText('pluvider', { exact: true }).first()).toBeVisible()
     })
 
     test('un pluvider no se puede desinstalar ni configurar desde aqui, y dice por que', async () => {
-        // La norma del proyecto es control VISIBLE y deshabilitado con su motivo, nunca escondido: quien
-        // lo ve tiene que poder leer por que no puede pulsarlo.
+        // The project's rule is a VISIBLE control, disabled with its reason, never hidden: whoever sees
+        // it has to be able to read why they cannot press it.
         const pluvider = delBack.find(p => p.pluvider)
         test.skip(!pluvider, 'ningun plugin publica como pluvider en este entorno')
 
@@ -123,8 +123,9 @@ test.describe('gestor generico de extensiones: providers', () => {
     })
 
     test('el chip de configs dice lo que dice el provider', async () => {
-        // El core no cuenta configuraciones de providers: las lleva cada uno. El chip solo repite lo que
-        // el provider declara, y por eso uno con varias conexiones dentro de una sola config pone 1.
+        // The core does not count providers' configurations: each one keeps its own. The chip merely
+        // repeats what the provider declares, which is why one with several connections inside a single
+        // config says 1.
         const conConfigs = delBack.filter(p => !p.core && (p.configNames?.length ?? 0) > 0)
         test.skip(conConfigs.length === 0, 'ningun provider tiene configuraciones en este entorno')
 
@@ -169,7 +170,7 @@ test.describe('gestor generico de extensiones: providers', () => {
         const nombre = conSchema!.displayName ?? conSchema!.id
         await gearDe(nombre).click()
 
-        // El formulario lo pinta el core a partir del schema del provider, y se titula con su nombre.
+        // The core draws the form from the provider's schema, and titles it with its name.
         const cfg = page.getByRole('dialog').filter({ hasText: `Configure: ${nombre}` })
         await expect(cfg).toBeVisible({ timeout: 20000 })
         await cfg.getByRole('button', { name: /cancel/i }).click()
@@ -183,8 +184,8 @@ test.describe('gestor generico de extensiones: providers', () => {
 
             La rueda NO desaparece — se queda visible y deshabilitada, que es la regla de UI del proyecto.
         */
-        // Un PLUVIDER tampoco se configura, pero su rueda dice otra cosa —remite a su plugin— así que
-        // tiene su propio test y no cuenta aquí.
+        // A PLUVIDER is not configured either, but its gear says something else — it points at its
+        // plugin — so it has its own test and does not count here.
         const sinNada = delBack.filter(p => !p.core && !p.pluvider && !p.hasFront && !p.hasSchema)
         test.skip(sinNada.length === 0, 'todos los providers de este entorno se configuran de alguna forma')
 

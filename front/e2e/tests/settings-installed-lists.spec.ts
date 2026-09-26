@@ -20,20 +20,20 @@ const THEMES_DIALOG = /Manage themes/i
 
 test.describe.configure({ mode: 'serial' })
 
-/** Los temas que ofrece el desplegable de User settings, sin contar 'Default'. */
+/** The themes the User settings dropdown offers, not counting 'Default'. */
 const themesInUserSettings = async (page: Page): Promise<string[]> => {
     await clickMenuItem(page, 'User settings')
     const dialog = page.getByRole('dialog').filter({ hasText: /Default settings to use when you work with Kwirth/i })
     await dialog.waitFor({ timeout: 15000 })
 
-    // ⚠️ El InputLabel de SettingsUser no esta asociado al Select (no lleva id/htmlFor), asi que el
-    // combobox no tiene nombre accesible y getByLabel('Theme') no lo encuentra. Se busca por su
-    // FormControl, que es quien contiene la etiqueta.
+    // ⚠️ SettingsUser's InputLabel is not associated with the Select (it carries no id/htmlFor), so the
+    // combobox has no accessible name and getByLabel('Theme') does not find it. It is looked up by its
+    // FormControl, which is what holds the label.
     await dialog.locator('.MuiFormControl-root').filter({ has: page.getByText('Theme', { exact: true }) }).getByRole('combobox').click()
     const opciones = (await page.getByRole('option').allTextContents()).filter(o => o !== 'Default')
     await page.keyboard.press('Escape')
 
-    // Cancel, no OK: abrir Settings para mirar no debe cambiar el tema de nadie
+    // Cancel, not OK: opening Settings to have a look must not change anybody's theme
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await dialog.waitFor({ state: 'hidden', timeout: 10000 })
     return opciones
@@ -42,7 +42,7 @@ const themesInUserSettings = async (page: Page): Promise<string[]> => {
 const abrirGestorTemas = async (page: Page) => {
     await clickExtensionMenuItem(page, 'Themes')
     const dialog = page.getByRole('dialog').filter({ hasText: THEMES_DIALOG })
-    // El catalogo lo resuelve el back contra los marketplaces remotos: con la maquina cargada no es rapido.
+    // The back end resolves the catalogue against the remote marketplaces: on a loaded machine it is not fast.
     await dialog.waitFor({ timeout: 40000 })
     await expect(dialog.getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
     return dialog
@@ -62,7 +62,7 @@ test('un tema recien instalado sale en User settings sin volver a entrar', async
     test.skip(disponibles === 0, 'no hay ningun tema del catalogo sin instalar en este entorno')
 
     await instalables.first().click()
-    // Instalado = aparece en la seccion de arriba. El gestor relee lo instalado antes de avisar a App.
+    // Installed = it appears in the section above. The manager re-reads what is installed before notifying App.
     await expect(async () => {
         expect(await dialog.locator('span[aria-label="Uninstall"] button').count()).toBeGreaterThan(0)
     }).toPass({ timeout: 60000 })
@@ -73,7 +73,7 @@ test('un tema recien instalado sale en User settings sin volver a entrar', async
     expect(nuevos.length, `User settings no vio el tema instalado (antes: ${antes.join(', ')} | despues: ${despues.join(', ')})`).toBe(1)
     const nuevo = nuevos[0]
 
-    // ── y ahora el otro lado: al quitarlo tiene que irse del desplegable ─────────────────────────────
+    // ── and now the other side: removing it has to take it out of the dropdown ──────────────────────
     dialog = await abrirGestorTemas(page)
     await dialog.getByPlaceholder('Filter…').first().fill(nuevo)
     const desinstalar = dialog.locator('span[aria-label="Uninstall"] button')

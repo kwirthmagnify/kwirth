@@ -32,8 +32,8 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
         await login(page)
         await dismissOpenDialogs(page)
         await clickExtensionMenuItem(page, 'AI toolsets')
-        // El catalogo no es instantaneo: el back resuelve los manifests remotos antes de responder, y con
-        // la maquina cargada eso pasa de largo de los timeouts cortos.
+        // The catalogue is not instantaneous: the back end resolves the remote manifests before
+        // answering, and on a loaded machine that runs well past short timeouts.
         await page.getByRole('dialog').filter({ hasText: DIALOG }).waitFor({ timeout: 40000 })
     })
 
@@ -56,15 +56,15 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
 
     test('el tipo aitoolset tiene su entrada de menu y abre el gestor generico', async () => {
         await expect(dialog()).toBeVisible()
-        // Las dos secciones del generico, con el nombre del tipo interpolado desde el descriptor
+        // The generic dialog's two sections, with the type's name interpolated from the descriptor
         await expect(dialog().getByText('Installed AI toolsets')).toBeVisible()
         await expect(dialog().getByText('Available AI toolsets')).toBeVisible()
     })
 
     test('lo instalado sale con su version y el numero REAL de tools', async () => {
-        // El contador no lo dice el paquete: lo cuenta el back sobre el REGISTRO, asi que un back.js que
-        // no cargue se veria SIN chip en vez de mentir con el numero que traia el manifest. Por eso se
-        // exige que haya chip y que el numero sea > 0.
+        // The counter is not stated by the package: the back end counts it over the REGISTRY, so a
+        // back.js that fails to load would show up WITHOUT a chip instead of lying with the number the
+        // manifest carried. Hence the requirement that there be a chip and that the number be > 0.
         await expect(dialog().getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 20000 })
         const chips = await dialog().getByText(/^\d+ tools?$/).allTextContents()
         expect(chips.length, 'ningun toolset instalado enseña su contador de tools').toBeGreaterThan(0)
@@ -72,15 +72,15 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
     })
 
     test('el catalogo publico sirve el toolset y no deja reinstalarlo', async () => {
-        // Esta en dev, asi que el catalogo tiene que decirlo y el boton de instalar tiene que estar muerto.
-        // ⚠️ El aria-label lo lleva el <span> que envuelve al IconButton (MUI no puede etiquetar un boton
-        // deshabilitado), asi que se busca por ahi y no por el nombre accesible del boton.
-        // Puede haber varios en el catalogo: unos instalados y otros no. Basta con que los que SI lo
-        // estan tengan el boton muerto — y que haya al menos uno, o el test no probaria nada.
+        // It is in dev, so the catalogue has to say so and the install button has to be dead.
+        // ⚠️ The aria-label is carried by the <span> wrapping the IconButton (MUI cannot label a disabled
+        // button), so it is looked up there and not by the button's accessible name.
+        // There may be several in the catalogue: some installed and some not. It is enough that those
+        // that ARE have a dead button — and that there be at least one, or the test would prove nothing.
         //
-        // ⚠️ El motivo distingue quien lo carga: a una extension de DEV no se le puede decir "desinstala
-        // primero" porque no se desinstala — se quita de kwirth-dev.json. Lo traia ThemeManagerDialog y lo
-        // heredo el generico al migrarlo, asi que aqui se aceptan los dos motivos.
+        // ⚠️ The reason distinguishes who loads it: a DEV extension cannot be told to "uninstall first"
+        // because it is not uninstalled — it is removed from kwirth-dev.json. ThemeManagerDialog carried
+        // this and the generic one inherited it on migration, so both reasons are accepted here.
         const yaInstalados = dialog().locator('span[aria-label^="Already installed"] button, span[aria-label^="A dev version"] button')
         // The catalogue is not instant: the back resolves the remote manifests before answering.
         await expect(yaInstalados.first()).toBeVisible({ timeout: 40000 })
@@ -95,9 +95,9 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
     })
 
     test('el veredicto de canUninstall se ve y bloquea el boton', async () => {
-        // Un toolset de dev lo gobierna kwirth-dev.json: desinstalarlo desde aqui dejaria el indice
-        // diciendo una cosa y el arranque volviendolo a poner. El descriptor lo prohibe y el generico
-        // tiene que enseñar el MOTIVO, no solo desactivar el boton.
+        // A dev toolset is governed by kwirth-dev.json: uninstalling it from here would leave the index
+        // saying one thing and startup putting it back. The descriptor forbids it and the generic dialog
+        // has to show the REASON, not merely disable the button.
         if (await anyDevLoaded()) {
             await expect(dialog().locator('span[aria-label="Dev toolsets cannot be uninstalled"] button').first()).toBeDisabled()
             return
@@ -112,8 +112,8 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
     })
 
     test('un tipo sin dialogo de configuracion no enseña engranaje', async () => {
-        // aitoolset no declara renderConfigDialog: el generico NO debe inventarse la accion. Si algun dia
-        // se le da configuracion, este test cae y hay que decidirlo a conciencia.
+        // aitoolset does not declare renderConfigDialog: the generic dialog must NOT invent the action.
+        // The day it is given configuration, this test falls and the decision has to be a deliberate one.
         await expect(dialog().locator('span[aria-label="Configure"]')).toHaveCount(0)
         await expect(dialog().getByText(/\d+ configs?$/)).toHaveCount(0)
     })
@@ -129,7 +129,7 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
 
         await filters.first().fill('no-existe-este-toolset')
         await expect(dialog().getByText('No AI toolsets installed.')).toBeVisible()
-        // el catalogo sigue entero: el filtro de arriba no es global
+        // the catalogue stays whole: the filter above is not a global one
         expect(await enCatalogo.count(), 'el filtro de instalados se ha llevado por delante el catalogo').toBe(antes)
 
         await filters.first().fill('')
@@ -148,20 +148,20 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
     })
 
     test('en la lista, las columnas de filas distintas quedan alineadas', async () => {
-        // La regla 6 del criterio de UI (plans/extension-managers-ui/PLAN.md) solo se puede comprobar con
-        // VARIAS filas: `extensionRowCells` devuelve celdas sueltas —no un contenedor por fila— justo para
-        // que compartan la rejilla. Con una sola fila cualquier maquetacion parece correcta, y por eso
-        // esto quedo anotado como pendiente hasta que hubo un segundo toolset en el catalogo.
+        // Rule 6 of the UI criteria (plans/extension-managers-ui/PLAN.md) can only be checked with
+        // SEVERAL rows: `extensionRowCells` returns loose cells — not one container per row — precisely
+        // so that they share the grid. With a single row any layout looks correct, and that is why this
+        // was noted as pending until there was a second toolset in the catalogue.
         //
-        // ⚠️ Se mide DENTRO del catalogo: lo instalado y lo disponible son dos rejillas distintas, y sus
-        // columnas no tienen por que coincidir entre si. Y las filas del catalogo traen distinto numero de
-        // chips ('dev active' solo en una), que es justo lo que descuadraria una maquetacion por fila.
+        // ⚠️ It is measured INSIDE the catalogue: installed and available are two different grids, and
+        // their columns need not agree with each other. And the catalogue's rows carry different numbers
+        // of chips ('dev active' on only one), which is exactly what a per-row layout would misalign.
         await dialog().getByRole('button', { name: 'List view' }).click()
         await expect(dialog().locator('.MuiSelect-select').first()).toBeVisible({ timeout: 40000 })
 
-        // ⚠️ Solo los Select de VERSION. En la seccion de instalados hay otro Select —el de concesion— que
-        // vive en otra columna: meterlos en el mismo saco hacia fallar la medida por comparar peras con
-        // manzanas. Se distinguen por su contenido, que es un numero de version.
+        // ⚠️ VERSION Selects only. In the installed section there is another Select — the grant one —
+        // living in a different column: lumping them together made the measurement fail by comparing
+        // apples with oranges. They are told apart by their content, which is a version number.
         const columnXs = await dialog().locator('.MuiSelect-select').evaluateAll(els => els
             .map(e => ({ version: (e.textContent ?? '').replace(/​/g, '').trim(), left: Math.round(e.getBoundingClientRect().left) }))
             .filter(c => /^\d+\.\d+\.\d+$/.test(c.version)))
@@ -173,9 +173,9 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
     })
 
     test('todos los chips de una tarjeta miden lo mismo', async () => {
-        // compactChip (MarketplaceBadge) es el tamaño comun de TODOS los chips de una tarjeta de
-        // extension. Se comprueba de verdad porque a ojo no se distingue: un chip con mas contraste
-        // parece mas grande aunque mida igual, y al reves un descuadre real pasa desapercibido.
+        // compactChip (MarketplaceBadge) is the common size of ALL the chips on an extension card. It is
+        // really checked because the eye cannot tell: a chip with more contrast looks bigger even at the
+        // same size, and conversely a real misalignment goes unnoticed.
         const chips: IChipSeen[] = await dialog().locator('.MuiChip-root').evaluateAll(els => els.map(el => ({
             text: (el.textContent ?? '').trim(),
             height: el.getBoundingClientRect().height,

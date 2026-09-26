@@ -1,24 +1,25 @@
 import { test, expect, Page } from '@playwright/test'
 import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
 
-// De donde se BAJAN los paquetes no es donde vive el manifest. El marketplace publico ya lo demuestra:
-// manifests en GitHub, tarballs en npmjs. Por eso los registros de paquetes son una lista aparte, y la
-// credencial se elige casando la URL del tarball contra el prefijo del registro.
+// Where packages are DOWNLOADED from is not where the manifest lives. The public marketplace already
+// proves it: manifests on GitHub, tarballs on npmjs. That is why package registries are a separate list,
+// and the credential is chosen by matching the tarball's URL against the registry's prefix.
 //
-// Esto cubre lo que el harness no puede: que la pestaña existe, que lo guardado sobrevive a reabrir —o
-// sea que viajo al back de verdad, no se quedo en el formulario— y que el secreto vuelve pre-rellenado.
+// This covers what the harness cannot: that the tab exists, that what was saved survives a reopen — that
+// is, it really travelled to the back end and did not stay in the form — and that the secret comes back
+// pre-filled.
 //
-// NO destructivo: se cuenta lo que hay, se anade un registro con prefijo propio e inventado, y se borra
-// al final pase lo que pase. El registro real del usuario no se toca en ningun momento.
+// NON-destructive: what is there is counted, a registry with its own made-up prefix is added, and it is
+// deleted at the end whatever happens. The user's real registry is never touched.
 
 const STAMP = Date.now()
 const LABEL = `e2e-registry-${STAMP}`
 const URL_PREFIX = `https://e2e-${STAMP}.invalid/repository/e2e`
 const URL_INPUT = 'input[placeholder="https://…/repository/my-repo"]'
 
-// La fila entera de un registro: la caja MAS INTERNA que contiene a la vez su URL y el check de
-// credenciales. Buscar 'el primer ancestro con un boton' no vale — se queda en la fila de arriba, que ya
-// trae el boton de borrar, y deja fuera la segunda mitad.
+// A registry's whole row: the INNERMOST box holding both its URL and the credentials checkbox. Looking
+// for 'the first ancestor with a button' does not work — it stops at the upper row, which already
+// carries the delete button, and leaves the second half out.
 const rowOf = (page: Page, url: string) => page.locator('div.MuiBox-root')
     .filter({ has: page.locator(`input[value="${url}"]`) })
     .filter({ hasText: 'Needs credentials' })
@@ -38,9 +39,9 @@ const save = async (page: Page) => {
     await page.locator('[role="dialog"]').waitFor({ state: 'hidden', timeout: 5000 })
 }
 
-// Borra CUALQUIER registro de e2e, no solo el de esta corrida. Si un fallo anterior dejo uno a medias, el
-// entorno del usuario se queda sucio y la corrida siguiente cuenta mal el punto de partida. Un test no
-// destructivo tiene que recoger tambien lo que dejo su propia version rota.
+// Deletes ANY e2e registry, not just this run's. If an earlier failure left one half-made, the user's
+// environment stays dirty and the next run miscounts the starting point. A non-destructive test has to
+// clean up after its own broken version too.
 const removeE2eRegistries = async (page: Page) => {
     await dismissOpenDialogs(page)
     await openRegistriesTab(page)
@@ -48,7 +49,7 @@ const removeE2eRegistries = async (page: Page) => {
     let removed = 0
     while (await leftovers.count() > 0 && removed < 10) {
         const url = await leftovers.first().inputValue()
-        // la papelera es el PRIMER boton de la fila; el ULTIMO es el ojo de revelar el secreto
+        // the bin is the FIRST button on the row; the LAST is the eye that reveals the secret
         await rowOf(page, url).locator('button').first().click()
         removed++
     }
@@ -74,19 +75,19 @@ test('package registries: se anade, persiste con su secreto y se borra', async (
         await newRow.getByLabel('Name').fill(LABEL)
         await newRow.getByLabel('Needs credentials').check()
 
-        // Por defecto Token (Bearer): un Nexus con user tokens acepta el token como Bearer y rechaza esa
-        // MISMA credencial como Basic, asi que el tipo por defecto importa.
+        // Token (Bearer) by default: a Nexus with user tokens accepts the token as Bearer and rejects
+        // that SAME credential as Basic, so the default type matters.
         await expect(newRow.getByLabel('Token')).toBeVisible()
         await expect(newRow.getByLabel('User')).toBeDisabled()   // el usuario no pinta nada en Bearer
         await newRow.getByLabel('Token').fill('e2e-token-value')
         await save(page)
 
-        // reabrir relee del back: comprueba persistencia real, no estado del formulario
+        // reopening re-reads from the back end: it checks real persistence, not form state
         await openRegistriesTab(page)
         await expect(page.locator(`input[value="${URL_PREFIX}"]`)).toHaveCount(1)
         expect(await rowOf(page, URL_PREFIX).getByLabel('Token').inputValue()).toBe('e2e-token-value')
 
-        // el esquema lo decide el TIPO, no la pinta del secreto: al pasar a Basic aparece usuario
+        // the schema is decided by the TYPE and not by the look of the secret: switching to Basic brings up a user
         await rowOf(page, URL_PREFIX).getByRole('combobox').click()
         await page.getByRole('option', { name: 'User and password (Basic)' }).click()
         const basic = rowOf(page, URL_PREFIX)
@@ -105,7 +106,7 @@ test('package registries: se anade, persiste con su secreto y se borra', async (
         await removeE2eRegistries(page)
     }
 
-    // el entorno queda como estaba: ni un registro de mas
+    // the environment is left as it was: not one registry more
     await openRegistriesTab(page)
     expect(await page.locator(URL_INPUT).count()).toBe(before)
     await dismissOpenDialogs(page)

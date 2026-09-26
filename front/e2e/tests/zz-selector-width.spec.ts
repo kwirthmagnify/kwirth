@@ -23,19 +23,19 @@ test('el selector de plugins: ancho fijo y sin tooltip al desplegar', async ({ p
     await dialog.waitFor({ timeout: 20000 })
     await page.waitForTimeout(1500)
 
-    // El ancho lo fija el Select (.MuiInputBase-root), no su hijo: el hijo mide su contenido.
-    // Y solo los de las tarjetas instaladas: el catálogo de abajo tiene sus propios Select de versión.
-    // ⚠️ El filtro NO puede anclarse con ^$: MUI mete un zero-width space al final del texto del Select,
-    // asi que '0.1.0' nunca casaria con /^\d+\.\d+\.\d+$/ y los de version se colaban en la medicion.
+    // The width is set by the Select (.MuiInputBase-root) and not by its child: the child measures its
+    // content. And only those on the installed cards: the catalogue below has its own version Selects.
+    // ⚠️ The filter can NOT be anchored with ^$: MUI puts a zero-width space at the end of the Select's
+    // text, so '0.1.0' would never match /^\d+\.\d+\.\d+$/ and the version ones slipped into the measurement.
     const selects = dialog.locator('.MuiInputBase-root:has(.MuiSelect-select)')
         .filter({ hasNotText: /\d+\.\d+\.\d+/ })
     expect(await selects.count(), 'no hay ningun selector en el dialogo').toBeGreaterThan(0)
 
-    // 1. todos miden lo mismo, lleven un plugin, tres o ninguno
+    // 1. they all measure the same, whether they carry one plugin, three or none
     const anchos = await selects.evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().width)))
     expect(new Set(anchos).size, `anchos distintos entre tarjetas: ${anchos.join(', ')}`).toBe(1)
 
-    // 2. y no crece aunque el texto no quepa (se inyecta en el DOM: no se concede nada)
+    // 2. and it does not grow even when the text does not fit (injected into the DOM: nothing is granted)
     const antes = anchos[0]
     await selects.first().locator('.MuiSelect-select')
         .evaluate(e => { e.textContent = 'agora, pinocchio, excubitor, montag, iter' })
@@ -43,11 +43,11 @@ test('el selector de plugins: ancho fijo y sin tooltip al desplegar', async ({ p
     const despues = Math.round(await selects.first().evaluate(e => e.getBoundingClientRect().width))
     expect(despues, `el selector creció de ${antes}px a ${despues}px`).toBe(antes)
 
-    // 3. lo que sobra se recorta
+    // 3. what overflows is clipped
     const recorte = await selects.first().locator('.MuiSelect-select').evaluate(e => getComputedStyle(e).textOverflow)
     expect(recorte).toBe('ellipsis')
 
-    // 4. al desplegar NO hay tooltip tapando la lista
+    // 4. on expanding there is NO tooltip covering the list
     await selects.first().click()
     await page.getByRole('listbox').waitFor({ timeout: 5000 })
     await page.waitForTimeout(900)   // el tooltip de MUI tarda en aparecer: hay que darle su oportunidad

@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test'
 import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
 
-// Verifica que "Kwirth Settings" persiste de verdad: lo que se guarda sigue ahi al reabrir el dialogo,
-// que es justo lo que NO ocurria antes (el valor vivia solo en memoria del provider).
+// Verifies that "Kwirth Settings" really persists: what is saved is still there on reopening the dialog,
+// which is exactly what did NOT happen before (the value lived only in the provider's memory).
 //
-// NO destructivo: se lee el valor actual, se prueba con otro, y se restaura al final.
+// NON-destructive: the current value is read, another one is tried, and it is restored at the end.
 
 const INTERVAL_LABEL = 'Cluster metrics read interval (seconds)'
 
-/** Abre el dialogo y espera a que termine de cargar sus datos (el campo se habilita al acabar). */
+/** Opens the dialog and waits until it has finished loading its data (the field enables when it is done). */
 async function openSettings(page: import('@playwright/test').Page) {
     await clickMenuItem(page, 'Kwirth Settings')
     const field = page.getByLabel(INTERVAL_LABEL)
@@ -27,31 +27,31 @@ test('Kwirth settings: el intervalo de metricas se persiste y sobrevive a reabri
     await login(page)
     await dismissOpenDialogs(page)
 
-    // snapshot del valor actual, para restaurarlo al final
+    // snapshot of the current value, to restore it at the end
     let field = await openSettings(page)
     const original = await field.inputValue()
     expect(Number(original)).toBeGreaterThan(0)
 
-    // un valor distinto del actual, para que el assert no pase por casualidad
+    // a value different from the current one, so the assert does not pass by chance
     const testValue = String(Number(original) === 37 ? 41 : 37)
 
     try {
         await field.fill(testValue)
         await saveSettings(page)
 
-        // reabrir: el dialogo relee del back, asi que esto comprueba persistencia real, no estado local
+        // reopen: the dialog re-reads from the back end, so this checks real persistence, not local state
         field = await openSettings(page)
         expect(await field.inputValue()).toBe(testValue)
         await dismissOpenDialogs(page)
     }
     finally {
-        // restaurar el valor que tenia el entorno
+        // restore the value the environment had
         const restore = await openSettings(page)
         await restore.fill(original)
         await saveSettings(page)
     }
 
-    // y confirmar que quedo restaurado
+    // and confirm that it was restored
     const after = await openSettings(page)
     expect(await after.inputValue()).toBe(original)
     await dismissOpenDialogs(page)
@@ -67,7 +67,7 @@ test('Kwirth settings: no deja guardar un intervalo no positivo', async ({ page 
     await field.fill('0')
     await expect(page.getByRole('button', { name: 'OK' })).toBeDisabled()
 
-    // se sale sin guardar; el valor del entorno queda intacto
+    // it exits without saving; the environment's value is left intact
     await dismissOpenDialogs(page)
     const reopened = await openSettings(page)
     expect(await reopened.inputValue()).toBe(original)

@@ -42,7 +42,7 @@ const ETIQUETAS_UPDATE = [
 
 const esUpdate = (etiqueta: string): boolean => ETIQUETAS_UPDATE.some(r => r.test(etiqueta))
 
-/** Las etiquetas de TODOS los botones del diálogo, en su orden de pintado. */
+/** The labels of ALL the dialog's buttons, in the order they are drawn. */
 const etiquetasDe = async (page: Page, dialogo: RegExp): Promise<string[]> => {
     const botones = page.getByRole('dialog').filter({ hasText: dialogo }).locator('button[aria-label]')
     const total = await botones.count()
@@ -107,17 +107,17 @@ test.describe('boton de actualizar en las extensiones instaladas', () => {
 
     test('lo que no se puede actualizar lo dice, y esta deshabilitado', async () => {
         const d = page.getByRole('dialog').filter({ hasText: /Manage channel plugins/i })
-        // 'Up to date' es el caso normal en un Kwirth al dia: el boton esta, se ve, y no se puede pulsar.
+        // 'Up to date' is the normal case on an up-to-date Kwirth: the button is there, visible, and cannot be pressed.
         const alDia = d.locator('button[aria-label^="Up to date (v"]')
         if (await alDia.count() > 0) await expect(alDia.first()).toBeDisabled()
 
-        // y lo de dev nunca se actualiza desde el catalogo: se cambia en kwirth-dev.json
+        // and what is in dev is never updated from the catalogue: it is changed in kwirth-dev.json
         const dev = d.locator('button[aria-label^="A dev version is loaded"]')
         if (await dev.count() > 0) await expect(dev.first()).toBeDisabled()
     })
 
     test('en vista de lista sale el mismo boton que en tarjeta', async () => {
-        // card y fila comparten el mismo ActionButtons, y esto es lo que lo mantiene asi
+        // card and row share the same ActionButtons, and this is what keeps it that way
         const d = page.getByRole('dialog').filter({ hasText: /Manage channel plugins/i })
         const enTarjeta = parejas(await etiquetasDe(page, /Manage channel plugins/i))
 
@@ -141,7 +141,7 @@ test.describe('boton de actualizar en las extensiones instaladas', () => {
     test('un pack dice que no se actualiza en sitio, en vez de ofrecerlo', async () => {
         const d = await abrir('Packs', /Manage extension packs/i)
         const boton = d.locator('button[aria-label^="Packs cannot be updated"]')
-        // Solo si hay algun pack instalado: sin packs no hay fila, y eso no es un fallo.
+        // Only when some pack is installed: with no packs there is no row, and that is not a failure.
         if (await boton.count() > 0) {
             await expect(boton.first()).toBeVisible()
             await expect(boton.first()).toBeDisabled()

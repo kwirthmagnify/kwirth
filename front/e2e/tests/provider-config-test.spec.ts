@@ -45,7 +45,7 @@ test('el provider que sabe probarse se anuncia con hasTest', async ({ page }) =>
     console.log(`providers con /test: ${conTest.map(p => p.id).join(', ') || '(ninguno)'}`)
 
     test.skip(conTest.length === 0, 'este entorno no tiene ningun provider que exponga /test')
-    // y el que lo anuncia tiene que poder configurarse por el formulario del core, o el boton no tendria donde salir
+    // and whoever announces it has to be configurable through the core's form, or the button would have nowhere to appear
     expect(conTest.some(p => p.hasSchema || p.hasFront)).toBeTruthy()
 })
 
@@ -62,9 +62,9 @@ test('su formulario saca el boton TEST, y un multiselect con checkbox', async ({
     const nombre = objetivo!.displayName ?? objetivo!.id
     const esquema = page.waitForResponse(r => r.url().includes(`/core/providers/${objetivo!.id}/schema`), { timeout: 20000 })
 
-    // la rueda dentada de ESA tarjeta
-    // La tarjeta no tiene clase ni testid propios: se sube al ancestro MAS CERCANO que contenga la rueda
-    // dentada, que es la tarjeta y no el dialogo entero (subir de mas abria la config de otro provider).
+    // THAT card's gear
+    // The card has neither a class nor a testid of its own: we climb to the NEAREST ancestor containing
+    // the gear, which is the card and not the whole dialog (climbing too far opened another provider's config).
     const rueda = page.getByText(nombre, { exact: false }).first()
         .locator('xpath=ancestor::div[.//*[@data-testid="SettingsIcon"]][1]')
         .locator('[data-testid="SettingsIcon"]').first()
@@ -73,17 +73,17 @@ test('su formulario saca el boton TEST, y un multiselect con checkbox', async ({
     const dialogo = page.locator('[role="dialog"]').filter({ hasText: /Configure/i })
     await expect(dialogo).toBeVisible({ timeout: 15000 })
 
-    // 1) el boton de prueba
+    // 1) the test button
     await expect(dialogo.getByTestId('config-test')).toHaveCount(1)
 
-    // 2) el multiselect, si el provider declara alguno
+    // 2) the multiselect, if the provider declares one
     const campos = await (await esquema).json() as IField[]
     const multi = campos.find(c => c.type === 'multiselect' && (c.options ?? []).length > 0)
     if (multi) {
         const combo = dialogo.getByRole('combobox').first()
         await expect(combo).toBeVisible()
         await combo.click()
-        // el desplegable abierto tiene que enseñar CHECKBOX en sus opciones: es lo que dice que se pueden marcar varias
+        // the open dropdown has to show CHECKBOXES on its options: that is what says several can be ticked
         const opciones = page.getByRole('option')
         await expect(opciones.first()).toBeVisible({ timeout: 10000 })
         expect(await page.locator('[role="option"] input[type="checkbox"]').count()).toBeGreaterThan(0)
@@ -96,6 +96,6 @@ test('su formulario saca el boton TEST, y un multiselect con checkbox', async ({
     }
     else console.log('el provider no declara ningun multiselect con opciones (¿sin credenciales guardadas?)')
 
-    // cerrar con el helper tolerante: el CANCEL concreto puede quedar tapado por restos del popover
+    // close with the tolerant helper: that particular CANCEL may be covered by leftovers of the popover
     await dismissOpenDialogs(page)
 })

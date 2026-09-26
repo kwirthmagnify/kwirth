@@ -11,11 +11,11 @@ import { login, clickExtensionMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from '
     el estado original al terminar.
 */
 
-// Las capturas van a la documentacion VIVA: ver GUIDE_MEDIA en helpers.ts.
+// The screenshots go to the LIVE documentation: see GUIDE_MEDIA in helpers.ts.
 const MEDIA = GUIDE_MEDIA
 const CONFIG_PATH = '/core/providerconfig/http-pull-push/configs'
 
-// Conexion de ejemplo para la captura: nombres y urls neutros, sin datos del entorno real.
+// Example connection for the screenshot: neutral names and urls, with no data from the real environment.
 const SAMPLE = [
     {
         name: 'stocks',
@@ -103,11 +103,11 @@ test('capture the http-pull-push connections dialog (dark)', async ({ page }) =>
         const dialog = page.getByRole('dialog').filter({ hasText: /HTTP Pull-Push Provider — Connections/i })
         await expect(dialog).toBeVisible({ timeout: 15000 })
 
-        // se abre una conexion para que la foto muestre el formulario, no el panel vacio
+        // a connection is opened so the shot shows the form, not the empty panel
         await dialog.getByText('stocks', { exact: true }).click()
         await expect(dialog.getByText('Editing: stocks')).toBeVisible()
 
-        // margen para que terminen las animaciones de MUI
+        // room for MUI's animations to finish
         await page.waitForTimeout(2500)
         await dialog.screenshot({ path: `${MEDIA}/provider-config-http-pull-push.png` })
     }
