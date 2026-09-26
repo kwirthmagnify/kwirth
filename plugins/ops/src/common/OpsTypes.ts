@@ -1,16 +1,16 @@
 import { IInstanceMessage, IExtensionScope } from "@kwirthmagnify/kwirth-common"
 
 // ─── Scopes de autorización (RBAC propio de Ops) ──────────────────────────────
-// Namespaced con 'ops$' (convención del proyecto). Definen la escalera de acceso del canal.
-// Solo se declaran los scopes REALMENTE enforced por el canal: GET (describe/get) y RESTART
-// (restart/restartpod/restartns). La shell interactiva no está gateada hoy (no hay ops$shell/execute).
+// Namespaced with 'ops$' (the project convention). They define the channel's access ladder.
+// Only the scopes the channel REALLY enforces are declared: GET (describe/get) and RESTART
+// (restart/restartpod/restartns). The interactive shell is not gated today (there is no ops$shell/execute).
 export enum EOpsScope {
     GET = 'ops$get',            // ver/describir recursos
     RESTART = 'ops$restart'     // reiniciar workloads (pods, contenedores, deployments)
 }
 
-// Catálogo de scopes que Ops declara (lo expone el canal vía getScopeCatalog() en front y back);
-// pobla el editor de seguridad (User/API) y sirve para validar permisos. Labels/descriptions en inglés.
+// Catalogue of scopes Ops declares (the channel exposes it through getScopeCatalog() in front and back);
+// it populates the security editor (User/API) and serves to validate permissions.
 export const OPS_SCOPES: IExtensionScope[] = [
     { scope: EOpsScope.GET,     label: 'Ops · Get',     description: 'View and describe resources' },
     { scope: EOpsScope.RESTART, label: 'Ops · Restart', description: 'Restart workloads (pods, containers, deployments)' }
