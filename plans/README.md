@@ -20,7 +20,7 @@ meses después — que es exactamente lo que pasaba antes de escribir este índi
 
 | plan | de qué va | qué queda |
 |---|---|---|
-| [ai-tools](ai-tools/PLAN.md) | las tools de IA como extensión instalable (`aitoolset`) | S4–S7 y retirar las 43 tools viejas de `common-ai` |
+| [ai-tools](ai-tools/PLAN.md) | las tools de IA como extensión instalable (`aitoolset`) | S4–S7; las 43 viejas ya retiradas de `common-ai` (2026-09-26) |
 | [icons](icons/PLAN.md) | aligerar el barrel de iconos | los dos que un sender pide por nombre, y el alias `/icons` en 26 `build.mjs` |
 | [provider-debug](provider-debug/PLAN.md) | canal para ver en crudo lo que emite un provider | la fase de front |
 | [sender-debug](sender-debug/PLAN.md) · [PRD](sender-debug/PRD.md) | canal para probar un sender a mano: elegir config, componer un mensaje y ver qué contestó | S1 en producción (`0.1.0`); queda el S2 de pulido. El duplicado de `listInstalled()` que cazó su e2e ya está arreglado en el core, en los **tres** managers que lo tenían |

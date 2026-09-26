@@ -1,9 +1,8 @@
 # Sistema de tools de IA — Plan
 
-> **ESTADO — VIVO** (última entrada: 2026-09-19). Hecho: S1–S3, el tipo de extensión `aitoolset`, las 43
+> **ESTADO — VIVO** (última entrada: 2026-09-26). Hecho: S1–S3, el tipo de extensión `aitoolset`, las 43
 > tools repartidas en ocho paquetes y **Agora migrado** al runtime de toolsets (`plugin/agora@0.1.55`,
-> QA validado 7/7). Pendiente: **S4–S7** y **retirar las 43 tools viejas** de `common-ai`, que siguen ahí
-> como red de seguridad.
+> QA validado 7/7) y **las 43 viejas ya retiradas** de `common-ai` (2026-09-26). Pendiente: **S4–S7**.
 > Registro de **por qué** se hizo así, no de cómo funciona hoy: para eso manda el código y la guía.
 > Si algo de aquí contradice lo que ves en el producto, gana el producto. El plan no se borra —
 > es append-only —, se marca.
@@ -745,3 +744,51 @@ instalados?"*), que estaba perfecto. Un e2e no puede depender de cómo tenga con
 corre: ahora **se concede lo que necesita y lo restaura** (snapshot del mapa por la API, tomándole
 prestada al front la autorización de su primera petición a `/core/`), y su mensaje distingue *no
 instalado* de *no concedido*.
+
+---
+
+## Paso 2, hecho: las 43 fuera de `common-ai` (2026-09-26)
+
+El catálogo compilado dentro del core desaparece. Se fueron `tools` (las 43, ~810 líneas),
+`toolInfoList`, `selectAgentToolNames` y `runAgent`: `back.ts` pasa de **1777 a 866 líneas** y su bundle
+de **131.909 a 35.959 bytes (−73 %)**, que es lo que las tools ocupaban en cada sitio al que viaja
+`common-ai`.
+
+**Antes de borrar se comprobó que no las usa nadie**, y se miraron las dos capas que importan: el
+código fuente, que se recompila, y el `dist` ya construido, que es lo que el core carga en runtime y que
+seguiría llamando al global aunque su fuente ya no lo haga. **1064 ficheros** de las **diez** familias de
+extensiones (plugins, providers, senders, webhooks, logins, idps, homepages, themes, packs, aitoolsets)
+más el back, el front y los `common-*`. Las únicas menciones eran **comentarios** de Agora explicando su
+propia migración.
+
+**Se conservan dos piezas, y por motivos distintos:**
+
+- `IAgentRunResult` — Agora extiende esa forma en `IBotAgentResult`. Se queda porque tiene consumidor.
+- `runWithToolContext` — `buildAgentTools` la sigue usando para envolver cada ejecución, que es la red
+  que permitía ejecutar tools escritas contra el contrato viejo (las que leen `ctx()`). Hoy los ocho
+  toolsets usan `execute(args, host)` y ninguno la necesita, pero retirarla es una decisión aparte:
+  afecta a cualquier toolset de terceros construido contra el contrato anterior. **Queda en el backlog**
+  de este plan, no en este paso.
+
+Se fueron con ellas cuatro imports huérfanos (`exec`, `promisify`, `tls`, `IAgent`) y el
+`agent.test.mjs` entero —10 casos que solo probaban el catálogo viejo—, así que `common-ai` baja de 46 a
+**35** tests, todos verdes, y el harness del back sigue en verde contra el build nuevo.
+
+⚠️ **Y un test más se fue, que dice algo del diseño**: el que comprobaba que una tool escrita contra el
+contrato VIEJO seguía corriendo por el camino nuevo. Lo ejercitaba con una de las 43 **de verdad**
+(`list_namespaces`), y no con una imitación, porque el accesor `ctx()` **no se exporta** — a propósito, para
+no entregarle el saco entero a un paquete de terceros. Sin las 43, esa red ya no se puede probar desde
+fuera: existe en el código y nadie puede verificarla. Es el argumento que faltaba para retirarla.
+
+⚠️ **El riesgo no vive en este repo.** El core publica todo `common-ai/back` en
+`global.__kwirth_back__`, así que un `dist` publicado **antes de S3** (agora ≤ 0.1.54) llamaría a
+`runAgent` desde el global y ahora no lo encontraría. En el monorepo no queda ninguno —verificado en los
+22 `dist/back.js`—, pero los tgz ya publicados en npm y en el Nexus sí: es el patrón del barrel de
+iconos, quitar un export rompe **lo construido**, no lo que se recompila.
+
+## Backlog de este plan
+
+- [ ] **Retirar `runWithToolContext` del camino de ejecución** (`buildAgentTools`) y, con él, el
+  `AsyncLocalStorage` y el contrato viejo `ctx()`. Hoy no lo necesita ninguno de los ocho toolsets, pero
+  es el último puente con las tools escritas a la antigua: quitarlo cierra S3 del todo y obliga a que
+  cualquier toolset de terceros use `execute(args, host)`.

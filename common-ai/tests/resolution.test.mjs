@@ -10,7 +10,7 @@ import assert from 'node:assert/strict'
 import back from '../dist/back.js'
 import * as iso from '../dist/index.js'
 
-const { registerToolset, unregisterToolset, resolveTools, buildAgentTools, tools: tools43 } = back
+const { registerToolset, unregisterToolset, resolveTools, buildAgentTools } = back
 const { EToolEffect, EToolSensitivity, ECapability } = iso
 
 const fakeTool = (name, over = {}) => ({
@@ -250,27 +250,14 @@ test('cada tool recibe el host de SU toolset, no el del vecino', async () => {
     limpiar('caps-k8s', 'caps-nada')
 })
 
-test('una tool escrita contra el contrato VIEJO tambien funciona por este camino', async () => {
-    // Today's 43 do not receive `host`: they read ctx() from a private AsyncLocalStorage. buildAgentTools
-    // wraps the run in runWithToolContext, and that is what allows S3's eight packages to be migrated one
-    // at a time instead of rewriting them all before the new path can be used.
-    //
-    // Tested with a REAL one (`list_namespaces`), not with an imitation: the context accessor is not
-    // exported — on purpose, so the whole bag is not handed to third-party packages — so a fake tool could
-    // not read it even if it wanted to, and the test would prove nothing.
-    registerToolset({
-        ...fakeToolset('viejo-ts'),
-        tools: [fakeTool('ala_antigua', { execute: async () => tools43.list_namespaces.execute({}, {}) })]
-    })
-
-    const res = await buildAgentTools({ activeToolsets: ['viejo-ts'], disabledTools: [] }, fakeContext())
-        .ala_antigua.execute({}, {})
-
-    assert.deepEqual(res.namespaces.map(n => n.name), ['default'])
-
-    limpiar('viejo-ts')
-})
-
+/*
+    A test used to live here proving that a tool written against the OLD contract still ran through this
+    path: buildAgentTools wraps every run in runWithToolContext, and that is what let S3 migrate the 43
+    one package at a time. It was removed on 2026-09-26 together with the 43 themselves — it ran a REAL
+    one (list_namespaces), and with them gone there is nothing honest left to test it with: the context
+    accessor is deliberately not exported, so a fake tool could not read it and the test would prove
+    nothing. The wrapper is still in place; see the backlog in plans/ai-tools/PLAN.md for retiring it.
+*/
 // ── how the tools are handed to the SDK ──────────────────────────────────────────────────────────────
 
 test('🔴 las tools que se le pasan al SDK NO son dinamicas', async () => {
