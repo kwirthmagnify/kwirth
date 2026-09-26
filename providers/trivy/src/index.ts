@@ -3,7 +3,7 @@ import { ITrivyAsset, ITrivySubscriptionData, ITrivyProviderEvent, ITrivyMeta, I
 
 const ALL_PLURALS = [TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_RBAC_PLURAL, TRIVY_API_CLUSTER_RBAC_PLURAL]
 
-// Ubicación de la versión de Trivy en el cluster (instalación estándar del trivy-operator).
+// Where the Trivy version lives in the cluster (a standard trivy-operator installation).
 const TRIVY_NS = 'trivy-system'
 const TRIVY_CONFIGMAP = 'trivy-operator-trivy-config'
 const TRIVY_OPERATOR_DEPLOY = 'trivy-operator'
@@ -73,20 +73,20 @@ export class TrivyProvider implements IProvider {
         const subData: ITrivySubscriptionData = { ...data, reportTypes }
         this.subscribers.set(c, subData)
         this.log.info(`subscriber added, total: ${this.subscribers.size}`)
-        // RC-1: sync de estado inicial. El provider es compartido y sus informers
-        // pueden haber entregado ya su LIST inicial a otros suscriptores; uno que
-        // llega tarde se quedaría sin estado. Por eso, en cada alta listamos los
-        // CRD actuales y los despachamos SOLO a este suscriptor. Proceso paralelo
-        // (no se hace await) para no bloquear el alta.
+        // RC-1: initial state sync. The provider is shared and its informers may
+        // already have delivered their initial LIST to other subscribers; one that
+        // arrives late would be left with no state. So on every registration we list
+        // the current CRDs and dispatch them ONLY to this subscriber. Done in parallel
+        // (no await) so registration is not blocked.
         //
-        // ⛔ Un fire-and-forget SIEMPRE lleva su catch: aqui no hay nadie esperando la promesa, asi que
-        // un fallo no se queda en este provider — se convierte en unhandled rejection y el core sale.
+        // ⛔ A fire-and-forget ALWAYS carries its catch: nobody is awaiting this promise, so a failure
+        // does not stay inside this provider — it becomes an unhandled rejection and the core exits.
         this.sendInitialState(c, reportTypes)
             .catch(err => this.log.error(`initial-state sync failed: ${err}`))
-        // Además, entregamos la versión de Trivy del cluster a este suscriptor. Se
-        // lee en cada alta (las suscripciones son infrecuentes) en vez de vigilar el
-        // configmap: la versión cambia 1-2 veces al año y el drift se detecta al
-        // comparar lo recibido con lo guardado en el consumidor.
+        // We also deliver the cluster's Trivy version to this subscriber. It is read
+        // on every registration (subscriptions are infrequent) rather than watching the
+        // configmap: the version changes once or twice a year, and drift shows up when
+        // comparing what arrives with what the consumer has stored.
         this.sendTrivyMeta(c)
             .catch(err => this.log.error(`trivy meta delivery failed: ${err}`))
     }
@@ -155,7 +155,7 @@ export class TrivyProvider implements IProvider {
         return createCrdInformer(this.clusterInfo, TRIVY_API_GROUP, TRIVY_API_VERSION, plural, handlers)
     }
 
-    /** Construye el evento del provider a partir del objeto CRD (informer o LIST). */
+    /** Builds the provider event from the CRD object (informer or LIST). */
     private buildProviderEvent = (plural: string, event: 'add' | 'update' | 'delete', obj: any): ITrivyProviderEvent => {
         const labels = obj.metadata?.labels ?? {}
         return {
@@ -169,9 +169,9 @@ export class TrivyProvider implements IProvider {
     }
 
     private processInformerEvent = (plural: string, event: 'add' | 'update' | 'delete', obj: any) => {
-        // Estilo EventsProvider: el provider reenvía el reporte que ya trae el objeto
-        // del informer (sin re-consultar la API) a todo suscriptor cuyo `reportTypes`
-        // incluya este plural. El filtrado por asset concreto lo hace el channel.
+        // EventsProvider style: the provider forwards the report the informer's object
+        // already carries (without re-querying the API) to every subscriber whose
+        // `reportTypes` includes this plural. Filtering by concrete asset is the channel's job.
         const providerEvent = this.buildProviderEvent(plural, event, obj)
         for (const [subscriber, subData] of this.subscribers) {
             if (!subData.reportTypes.includes(plural)) continue
@@ -181,10 +181,10 @@ export class TrivyProvider implements IProvider {
     }
 
     /**
-     * Sync de estado inicial para un suscriptor recién dado de alta (RC-1): lista
-     * los CRD actuales de los plurals que pidió y le despacha un 'add' por cada uno,
-     * SOLO a él. Es idempotente respecto a los 'add' que el informer pueda entregar
-     * (un reductor por reporte deduplica por id). Tolerante a fallos por plural.
+     * Initial state sync for a freshly registered subscriber (RC-1): it lists the
+     * current CRDs of the plurals it asked for and dispatches one 'add' per each,
+     * ONLY to it. It is idempotent with respect to the 'add's the informer may deliver
+     * (a per-report reducer deduplicates by id). Failure-tolerant per plural.
      */
     private sendInitialState = async (subscriber: IProviderSubscriber, reportTypes: string[]) => {
         for (const plural of reportTypes) {
@@ -202,10 +202,10 @@ export class TrivyProvider implements IProvider {
     }
 
     /**
-     * Lee la versión de Trivy del cluster y la empuja como evento "meta" SOLO a este
-     * suscriptor. La versión del scanner (configmap `trivy.tag`) rige el catálogo de
-     * checks; la del operator (tag de su imagen) es metadato. Tolerante a fallos: si
-     * Trivy no está instalado, se entrega un meta vacío.
+     * Reads the cluster's Trivy version and pushes it as a "meta" event ONLY to this
+     * subscriber. The scanner version (the `trivy.tag` configmap) governs the check
+     * catalogue; the operator's (its image tag) is metadata. Failure-tolerant: when
+     * Trivy is not installed, an empty meta is delivered.
      */
     private sendTrivyMeta = async (subscriber: IProviderSubscriber) => {
         const meta = await this.readTrivyMeta()
@@ -236,7 +236,7 @@ export class TrivyProvider implements IProvider {
     private parseImageTag = (image: string | undefined): string | undefined => {
         if (!image) return undefined
         const lastColon = image.lastIndexOf(':')
-        // evita confundir el ':' del puerto del registro con el del tag
+        // avoids confusing the registry port's ':' with the tag's
         if (lastColon < 0 || image.indexOf('/', lastColon) >= 0) return undefined
         return image.slice(lastColon + 1)
     }

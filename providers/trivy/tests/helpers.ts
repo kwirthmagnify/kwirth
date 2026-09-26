@@ -14,8 +14,8 @@ export interface IFakeSubscriber extends IProviderSubscriber {
     events: ICapturedEvent[]
 }
 
-// Suscriptor que solo apunta lo que recibe. `throwOnEvent` imita al que se cae al recibir (un ws cerrado,
-// por ejemplo): el provider no puede convertir eso en un unhandled rejection.
+// A subscriber that only records what it receives. `throwOnEvent` mimics one that falls over on receipt
+// (a closed ws, for instance): the provider must not turn that into an unhandled rejection.
 export const fakeSubscriber = (throwOnEvent = false): IFakeSubscriber => {
     const events: ICapturedEvent[] = []
     return {
@@ -28,11 +28,11 @@ export const fakeSubscriber = (throwOnEvent = false): IFakeSubscriber => {
 }
 
 export interface IFakeClusterOptions {
-    // CRDs que devuelve el LIST, por plural. Lo que no este aqui responde con lista vacia.
+    // CRDs the LIST returns, by plural. Anything not here answers with an empty list.
     items?: Record<string, any[]>
-    // el LIST de estos plurales falla, para ejercitar la tolerancia por tipo de reporte
+    // the LIST of these plurals fails, to exercise the per-report-type tolerance
     failingPlurals?: string[]
-    // Trivy no instalado: el configmap y el deployment del operator no existen
+    // Trivy not installed: the operator's configmap and deployment do not exist
     trivyMissing?: boolean
 }
 
@@ -68,8 +68,8 @@ export const fakeCluster = (options: IFakeClusterOptions = {}): IFakeCluster => 
     return { clusterInfo, listedPlurals }
 }
 
-// El alta lanza trabajo en paralelo a proposito (no se espera), asi que hay que dejar correr la cola de
-// microtareas antes de mirar lo que ha llegado.
+// Registration deliberately kicks off work in parallel (it is not awaited), so the microtask queue has
+// to be allowed to drain before looking at what arrived.
 export const settle = async (): Promise<void> => {
     for (let i = 0; i < 20; i++) await new Promise(resolve => setImmediate(resolve))
 }

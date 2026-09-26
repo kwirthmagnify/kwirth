@@ -73,9 +73,9 @@ test('el estado inicial se entrega SOLO al suscriptor que acaba de llegar', asyn
     await provider.addSubscriber(late, { reportTypes: [TRIVY_API_VULN_PLURAL] } as any)
     await settle()
 
-    // el que llega tarde recibe el estado actual...
+    // the one arriving late receives the current state...
     assert.equal(late.events.filter(e => e.event.eventKind !== ETrivyEventKind.META).length, 2)
-    // ...y al primero no le llega nada de rebote
+    // ...and nothing bounces back to the first one
     assert.equal(first.events.length, deliveredToFirst)
 })
 
@@ -125,11 +125,11 @@ test('un suscriptor que se cae al recibir NO deja un rechazo sin atender', async
     const { clusterInfo } = fakeCluster({ items: { [TRIVY_API_VULN_PLURAL]: [{ metadata: { name: 'r1' } }] } })
     const provider = new TrivyProvider(clusterInfo, {})
 
-    // el alta no puede propagar el fallo del suscriptor...
+    // registration must not propagate the subscriber's failure...
     await provider.addSubscriber(fakeSubscriber(true), {} as any)
     await settle()
 
-    // ...y el provider sigue sirviendo al siguiente que llegue
+    // ...and the provider keeps serving whoever comes next
     const healthy = fakeSubscriber()
     await provider.addSubscriber(healthy, {} as any)
     await settle()
@@ -144,7 +144,7 @@ test('el alta queda registrada aunque el sync inicial falle', async () => {
     await provider.addSubscriber(subscriber, {} as any)
     await settle()
 
-    // el meta se entrega igual: el fallo de un LIST no cancela el alta
+    // the meta is delivered all the same: a failing LIST does not cancel the registration
     assert.ok(subscriber.events.some(e => e.event?.eventKind === ETrivyEventKind.META))
     await provider.removeSubscriber(subscriber)
 })
