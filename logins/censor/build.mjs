@@ -21,27 +21,28 @@ copyFileSync(join(__dir, 'package.json'), join(distDir, 'package.json'))
 copyFileSync(join(__dir, 'login.json'), join(distDir, 'login.json'))
 
 /*
- * El fondo tiene un tope y no es nuestro: el core guarda el login instalado en un ConfigMap de
- * Kubernetes, que no pasa de ~1 MiB por objeto, y la imagen viaja dentro EN BASE64 (un tercio mas
- * grande). El core corta en 800 KB de base64, o sea 600 KB de PNG en crudo.
+ * The background has a ceiling and it is not ours: the core stores the installed login in a Kubernetes
+ * ConfigMap, which does not go beyond ~1 MiB per object, and the image travels inside IN BASE64 (a third
+ * bigger). The core cuts off at 800 KB of base64, that is 600 KB of raw PNG.
  *
- * Pasarse no rompe la instalacion, y eso es justo lo malo: el login se instala A MEDIAS —sin fondo—
- * y solo se nota al abrir la pagina. Mejor que reviente aqui.
+ * Going over does not break the install, and that is precisely the bad part: the login installs HALFWAY
+ * — with no background — and it only shows when the page is opened. Better it blows up here.
  *
- * Si no cabe: reencodear a paleta (PNG de 8 bits) antes que recortar el tamano. Un fondo de 1200x896
- * en truecolor con degradados baja de 1,9 MB a 430 KB sin diferencia apreciable.
+ * If it does not fit: re-encode to a palette (8-bit PNG) rather than cropping the size. A 1200x896
+ * truecolor background with gradients drops from 1.9 MB to 430 KB with no visible difference.
  */
 const CONFIGMAP_BACKGROUND_LIMIT = 600 * 1024
 
 /*
- * DOS fondos posibles, y solo uno tiene tope:
+ * TWO possible backgrounds, and only one has a ceiling:
  *
- *   · background.png    — el que tiene que caber EN CUALQUIER SITIO, incluido un ConfigMap de Kubernetes.
- *                         Si se pasa, el build falla: es el unico que garantiza que el login se ve bien
- *                         en cualquier instalacion.
- *   · background-hi.png — OPCIONAL y sin tope. Se usa cuando el almacenamiento lo admite (desktop, docker
- *                         o KWIRTH_STORE); donde no quepa, Kwirth se queda con el normal sin decir nada.
- *                         Que no quepa no es un fallo: es justo para lo que existe el otro.
+ *   · background.png    — the one that has to fit ANYWHERE, including a Kubernetes ConfigMap. If it
+ *                         goes over, the build fails: it is the only one that guarantees the login
+ *                         looks right in any installation.
+ *   · background-hi.png — OPTIONAL and with no ceiling. It is used when storage allows it (desktop,
+ *                         docker or KWIRTH_STORE); where it does not fit, Kwirth quietly keeps the
+ *                         normal one. Not fitting is not a failure: it is exactly what the other one
+ *                         exists for.
  */
 const bgSrc = join(__dir, 'background.png')
 if (existsSync(bgSrc)) {
