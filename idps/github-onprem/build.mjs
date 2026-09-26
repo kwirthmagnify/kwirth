@@ -3,8 +3,8 @@ import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
-// mapea los imports de @kwirthmagnify/kwirth-common(-back) al global del back (no se bundlean;
-// openid-client y demas lo provee el core), como el resto de extensiones de kwirth.
+// maps the @kwirthmagnify/kwirth-common(-back) imports onto the back-end global (they are not bundled;
+// openid-client and the rest are provided by the core), as with every other kwirth extension.
 const kwirthBackGlobalsPlugin = {
     name: 'kwirth-back-globals',
     setup(build) {
@@ -22,8 +22,8 @@ const kwirthBackGlobalsPlugin = {
     },
 }
 
-// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
-// El watch.mjs no lo lleva a proposito, para que guardar siga siendo instantaneo.
+// esbuild erases the types without looking at them: without this step the build would pass broken TS.
+// watch.mjs deliberately leaves it out, so that saving stays instantaneous.
 const TSC = 'node_modules/typescript/lib/tsc.js'
 if (fs.existsSync(TSC)) {
     try {
