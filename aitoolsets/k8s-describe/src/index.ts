@@ -25,14 +25,14 @@ const k8s = (host: IToolHost, toolName: string, args: Record<string, unknown> = 
     return host.k8s
 }
 
-/** Un fallo se devuelve como dato, no como excepción: el modelo tiene que poder leerlo y decidir. */
+/** A failure is returned as data, not as an exception: the model has to be able to read it and decide. */
 const failed = (err: unknown) => ({ error: err instanceof Error ? err.message : String(err) })
 
 type TAnyObject = Record<string, any>
 
 const CONTROLLER_KINDS = ['Deployment', 'StatefulSet', 'DaemonSet', 'ReplicaSet'] as const
 
-/** Un solo sitio para leer cualquier controlador: cuatro tipos, una llamada. */
+/** A single place to read any controller: four types, one call. */
 const readController = async (apps: TAnyObject, kind: string, name: string, namespace: string): Promise<TAnyObject> => {
     switch (kind) {
         case 'StatefulSet': return await apps.readNamespacedStatefulSet({ name, namespace })
@@ -42,12 +42,12 @@ const readController = async (apps: TAnyObject, kind: string, name: string, name
     }
 }
 
-/** El estado de un contenedor en marcha, con lo que hace falta para clasificar un fallo. */
+/** The state of a running container, with what it takes to classify a failure. */
 const containerStatus = (cs: TAnyObject) => ({
     name: cs.name,
     image: cs.image,
-    // image es la etiqueta; imageID el digest resuelto. La pareja delata una etiqueta mutable
-    // re-publicada con un build roto: mismo tag, distinto digest.
+    // image is the tag; imageID the resolved digest. The pair gives away a mutable tag republished with
+    // a broken build: same tag, different digest.
     imageID: cs.imageID,
     ready: cs.ready,
     restartCount: cs.restartCount,
@@ -70,7 +70,7 @@ const templateContainer = (ct: TAnyObject) => ({
     livenessProbe: !!ct.livenessProbe, readinessProbe: !!ct.readinessProbe
 })
 
-/** De dónde sale una variable de entorno que no trae el valor puesto a mano. */
+/** Where an environment variable whose value is not set by hand comes from. */
 const envSource = (e: TAnyObject): string | undefined =>
     e.valueFrom?.configMapKeyRef ? `configMap:${e.valueFrom.configMapKeyRef.name}/${e.valueFrom.configMapKeyRef.key}`
         : e.valueFrom?.secretKeyRef ? `secret:${e.valueFrom.secretKeyRef.name}/${e.valueFrom.secretKeyRef.key}`
@@ -110,8 +110,8 @@ const k8sDescribe: IAiToolset = {
                     const spec = pod.spec ?? {}
                     const status = pod.status ?? {}
 
-                    // Quién manda sobre el pod (pod → ReplicaSet → Deployment), resuelto aquí para que el
-                    // modelo pueda llamar a get_rollout_history sin tener que adivinar el nombre.
+                    // Who owns the pod (pod → ReplicaSet → Deployment), resolved here so the model can
+                    // call get_rollout_history without having to guess the name.
                     let controlledBy: { kind: string, name: string } | undefined
                     const podOwner = (pod.metadata?.ownerReferences ?? [])[0]
                     if (podOwner?.kind === 'ReplicaSet') {
@@ -126,8 +126,8 @@ const k8sDescribe: IAiToolset = {
                         controlledBy = { kind: podOwner.kind, name: podOwner.name }   // StatefulSet/DaemonSet/Job mandan directamente
                     }
 
-                    // Procedencia del código: anotaciones OCI estándar, con respaldo kwirth.io. Con esto el
-                    // modelo puede ir del pod al fuente que lo construyó.
+                    // Provenance of the code: standard OCI annotations, backed by kwirth.io. With this the
+                    // model can go from the pod to the source that built it.
                     const ann = pod.metadata?.annotations ?? {}
                     const sourceRepo = ann['org.opencontainers.image.source'] ?? ann['kwirth.io/source-repo']
                     const source = sourceRepo
@@ -159,7 +159,7 @@ const k8sDescribe: IAiToolset = {
                 const c = k8s(host, 'describe_service', { namespace, name })
                 try {
                     const svc: TAnyObject = await c.coreApi.readNamespacedService({ name, namespace })
-                    // Los endpoints son best-effort: que falten no puede ocultar la ficha del servicio.
+                    // The endpoints are best-effort: their absence must not hide the service's record.
                     const ep: TAnyObject | undefined = await c.coreApi.readNamespacedEndpoints({ name, namespace }).catch(() => undefined)
                     const address = (a: TAnyObject, ready: boolean, ports: TAnyObject[]) => ({
                         ip: a.ip, ready,
@@ -224,8 +224,8 @@ const k8sDescribe: IAiToolset = {
                     const status = obj.status ?? {}
                     const tpl = spec.template?.spec ?? {}
 
-                    // Un DaemonSet no tiene réplicas: tiene nodos donde toca correr. Se informan sus
-                    // contadores propios en vez de dejar el bloque a cero y parecer que está caído.
+                    // A DaemonSet has no replicas: it has nodes where it is meant to run. Its own counters
+                    // are reported instead of leaving the block at zero and looking as if it were down.
                     const replicas = kind === 'DaemonSet'
                         ? { desired: status.desiredNumberScheduled, current: status.currentNumberScheduled, ready: status.numberReady, available: status.numberAvailable, updated: status.updatedNumberScheduled }
                         : { desired: spec.replicas, ready: status.readyReplicas ?? 0, available: status.availableReplicas ?? 0, updated: status.updatedReplicas ?? 0 }
@@ -255,7 +255,7 @@ const k8sDescribe: IAiToolset = {
             execute: async ({ namespace }, host) => {
                 const c = k8s(host, 'get_space_data', { namespace })
                 try {
-                    // ns/quota/limits son best-effort: que falte el RBAC de uno no puede ocultar el resto.
+                    // ns/quota/limits are best-effort: missing RBAC for one must not hide the rest.
                     const [ns, p, d, s, cm, rq, lr] = await Promise.all([
                         c.coreApi.readNamespace({ name: namespace }).catch(() => undefined),
                         c.coreApi.listNamespacedPod({ namespace }),
@@ -290,7 +290,7 @@ const k8sDescribe: IAiToolset = {
             name: 'get_rollout_history',
             description: 'Returns the rollout history (revisions) of a Deployment via its ReplicaSets: per revision the image(s), replicas and pod-template summary (env with inline VALUES and their configMap/secret source, resources, command). Use to see WHAT CHANGED recently — a new image tag, a changed inline env value, a resource/command change — that may have broken the pods. Compare the newest revision against the previous one. NOTE: a change to a ConfigMap/Secret VALUE does NOT create a revision — use get_workload_config_refs for that.',
             effect: EToolEffect.READ,
-            // Las revisiones traen los `env` con sus valores en claro: es READ, pero enseña más que un describe.
+            // Revisions carry the `env` with their values in the clear: it is READ, but it shows more than a describe.
             sensitivity: EToolSensitivity.INTERNAL,
             inputSchema: z.object({
                 namespace: z.string().describe('Namespace of the deployment'),
@@ -303,8 +303,9 @@ const k8sDescribe: IAiToolset = {
                     const owned = (rsList.items ?? []).filter((rs: TAnyObject) =>
                         (rs.metadata?.ownerReferences ?? []).some((o: TAnyObject) => o.kind === 'Deployment' && o.name === name))
 
-                    // El env va con valor Y con procedencia: el valor para poder comparar revisiones, la
-                    // procedencia para saber cuáles hay que mirar aparte (esas no cambian de revisión).
+                    // The env goes with a value AND with provenance: the value so revisions can be
+                    // compared, the provenance to know which ones have to be looked at separately (those
+                    // do not change with a revision).
                     const container = (ct: TAnyObject) => ({
                         name: ct.name, image: ct.image, command: ct.command, args: ct.args, resources: ct.resources,
                         env: (ct.env ?? []).map((e: TAnyObject) => ({ name: e.name, value: e.value, from: envSource(e) }))

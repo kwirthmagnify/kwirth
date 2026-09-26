@@ -44,7 +44,7 @@ const run = async (name, args, resumen) => {
     return res
 }
 
-// Objetos reales del namespace: sin ellos no hay nada que describir.
+// Real objects from the namespace: without them there is nothing to describe.
 const [pods, deps, svcs, ings] = await Promise.all([
     coreApi.listNamespacedPod({ namespace: ns }),
     appsApi.listNamespacedDeployment({ namespace: ns }),
@@ -64,7 +64,7 @@ if (pod) {
         r => `fase=${r.phase} contenedores=${r.containers?.length} dueño=${r.controlledBy ? `${r.controlledBy.kind}/${r.controlledBy.name}` : '-'} fuente=${r.source?.repo ?? '-'}`)
     await run('get_pod_yaml', { namespace: ns, name: pod }, r => `kind=${r.kind ?? 'Pod'} uid=${String(r.metadata?.uid).slice(0, 8)}…`)
 
-    // Si el pod tiene dueño, se aprovecha para las de controlador: son las que de verdad importan.
+    // If the pod has an owner, it is used for the controller ones: those are what really matter.
     if (d.controlledBy?.kind === 'Deployment') {
         await run('get_rollout_history', { namespace: ns, name: d.controlledBy.name }, r => `revisiones=${r.revisionCount}`)
     }

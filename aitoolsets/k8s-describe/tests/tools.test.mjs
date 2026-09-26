@@ -56,20 +56,20 @@ const fakeHost = (over = {}) => {
     }
 }
 
-// ── el contrato ──────────────────────────────────────────────────────────────────────────────────────
+// ── the contract ─────────────────────────────────────────────────────────────────────────────────────
 
 test('declara sus doce tools, todas de lectura', () => {
     assert.equal(toolset.id, 'k8s-describe')
     assert.deepEqual(toolset.requires, [commonAi.ECapability.K8S])
     assert.equal(toolset.tools.length, 12)
-    // get_space_data vino de k8s-inventory el 2026-09-17: describir un namespace es de este paquete.
+    // get_space_data came over from k8s-inventory on 2026-09-17: describing a namespace belongs to this package.
     assert.ok(toolset.tools.find(t => t.name === 'get_space_data'))
     assert.deepEqual([...new Set(toolset.tools.map(t => t.effect))], [commonAi.EToolEffect.READ])
 })
 
 test('lo que enseña variables de entorno en claro NO es public', () => {
-    // Un manifest de pod o de controlador trae los env con sus valores; ahi es donde la gente mete
-    // contraseñas sin darse cuenta. Un Service o un Namespace no tienen ese problema.
+    // A pod or controller manifest carries the env with their values; that is where people put passwords
+    // without realising. A Service or a Namespace does not have that problem.
     const s = (n) => tool(n).sensitivity
     const { INTERNAL, PUBLIC } = commonAi.EToolSensitivity
 
@@ -90,8 +90,8 @@ test('sin cluster, la tool lo dice en vez de reventar por dentro', async () => {
 // ── describe_pod ─────────────────────────────────────────────────────────────────────────────────────
 
 test('resuelve quien manda de verdad: pod -> ReplicaSet -> Deployment', async () => {
-    // Sin este salto, el modelo recibiria el nombre del ReplicaSet y llamaria a get_rollout_history con
-    // un nombre que no existe como Deployment.
+    // Without this hop, the model would receive the ReplicaSet's name and would call get_rollout_history
+    // with a name that does not exist as a Deployment.
     const { host } = fakeHost()
     host.k8s.coreApi.readNamespacedPod = async () => ({
         metadata: { ownerReferences: [{ kind: 'ReplicaSet', name: 'api-7f66' }] }, spec: {}, status: {}
@@ -147,7 +147,7 @@ test('la procedencia del codigo sale de las anotaciones OCI, con respaldo kwirth
 })
 
 test('el estado de un contenedor conserva por que murio el anterior', async () => {
-    // exitCode 137 = OOMKilled. Es el dato que categoriza el fallo, y vive en lastState, no en state.
+    // exitCode 137 = OOMKilled. It is the datum that categorises the failure, and it lives in lastState, not in state.
     const { host } = fakeHost()
     host.k8s.coreApi.readNamespacedPod = async () => ({
         metadata: {}, spec: {},
@@ -169,7 +169,7 @@ test('el estado de un contenedor conserva por que murio el anterior', async () =
 // ── describe_service ─────────────────────────────────────────────────────────────────────────────────
 
 test('los endpoints distinguen los que sirven de los que no', async () => {
-    // Endpoints vacios o todos not-ready es LA respuesta a "por que no llega el trafico".
+    // Empty endpoints, or all of them not-ready, is THE answer to "why is no traffic arriving".
     const { host } = fakeHost()
     host.k8s.coreApi.readNamespacedService = async () => ({ spec: { type: 'ClusterIP', selector: { app: 'api' } }, status: {} })
     host.k8s.coreApi.readNamespacedEndpoints = async () => ({
@@ -214,7 +214,7 @@ test('cada kind se lee con su llamada', async () => {
 })
 
 test('un DaemonSet informa de sus contadores, no de replicas a cero', async () => {
-    // Un DaemonSet no tiene replicas: tiene nodos donde toca correr. Leer spec.replicas daria 0 y
+    // A DaemonSet has no replicas: it has nodes where it is meant to run. Reading spec.replicas would give 0 and
     // pareceria caido estando perfectamente.
     const { host } = fakeHost()
     host.k8s.appsApi.readNamespacedDaemonSet = async () => ({
@@ -258,8 +258,8 @@ test('solo cuenta los ReplicaSets de ESE deployment, y los ordena del mas nuevo 
 })
 
 test('el env de cada revision lleva el valor Y de donde sale', async () => {
-    // El valor, para poder comparar revisiones; la procedencia, para saber cual hay que mirar aparte
-    // (un cambio dentro de un ConfigMap no crea revision).
+    // The value, so revisions can be compared; the provenance, to know which one has to be looked at
+    // separately (a change inside a ConfigMap creates no revision).
     const { host } = fakeHost()
     host.k8s.appsApi.listNamespacedReplicaSet = async () => ({
         items: [{
@@ -313,7 +313,7 @@ test('toda invocacion deja traza con sus argumentos', async () => {
 // ── get_space_data (llegada desde k8s-inventory) ─────────────────────────────────────────────────────
 
 test('describir un namespace sobrevive a que falten quotas y limitranges', async () => {
-    // Suele ser falta de RBAC para ESOS recursos. Que no haya no puede ocultar el resto del namespace.
+    // It is usually missing RBAC for THOSE resources. Their absence must not hide the rest of the namespace.
     const { host } = fakeHost()
     host.k8s.coreApi.listNamespacedPod = async () => ({ items: [{ metadata: { name: 'api-1' }, status: { phase: 'Running', containerStatuses: [{ restartCount: 3 }] }, spec: {} }] })
     host.k8s.coreApi.listNamespacedConfigMap = async () => ({ items: [{ metadata: { name: 'conf' } }] })
