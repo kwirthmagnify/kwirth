@@ -17,8 +17,8 @@ const require = createRequire(import.meta.url)
 const commonAi = require('@kwirthmagnify/kwirth-common-ai')
 const commonAiBack = require('@kwirthmagnify/kwirth-common-ai/back')
 
-// El bundle del toolset resuelve los paquetes comunes contra el global del back del core: aqui se simula
-// ese global para poder cargarlo fuera de Kwirth. Es exactamente lo que hace el core al instalarlo.
+// The toolset's bundle resolves the common packages against the core's back-end global: that global is
+// simulated here so it can be loaded outside Kwirth. It is exactly what the core does on installing it.
 globalThis.__kwirth_back__ = { kwirthCommonAi: commonAi, kwirthCommonAiBack: commonAiBack }
 
 const toolset = require('./dist/back.js').default
@@ -31,7 +31,7 @@ const coreApi = kc.makeApiClient(CoreV1Api)
 const appsApi = kc.makeApiClient(AppsV1Api)
 const networkApi = kc.makeApiClient(NetworkingV1Api)
 
-// El core rellena esto desde su ClusterInfo; aqui se deriva del propio cluster para no depender de Kwirth.
+// The core fills this from its ClusterInfo; here it is derived from the cluster itself so as not to depend on Kwirth.
 const nodeList = await coreApi.listNode()
 const nodes = new Map(nodeList.items.map(n => [
     n.metadata?.name ?? '?',
@@ -88,7 +88,7 @@ for (const [name, args] of calls) {
     console.log(`${name.padEnd(26)} ${line}`)
 }
 
-// La octava necesita un deployment de verdad: se coge el primero que haya en el namespace de prueba.
+// The eighth needs a real deployment: the first one in the test namespace is taken.
 const deps = await appsApi.listNamespacedDeployment({ namespace: ns })
 const depName = deps.items[0]?.metadata?.name
 if (depName) {
@@ -103,16 +103,16 @@ else {
     failures++
 }
 
-// Que la traza llegue no es un detalle: es lo que permitira ver que tools llamo el modelo y con que.
+// The trace arriving is no detail: it is what will make it possible to see which tools the model called and with what.
 console.log(`\ntrazas recibidas: ${traced.length} (${traced.map(t => t.tool).join(', ')})`)
 
-// ── S2: la cadena de resolucion, con un toolset de verdad y el cluster de verdad ────────────────────
+// ── S2: the resolution chain, with a real toolset and the real cluster ──────────────────────────────
 //
-// El harness de common-ai prueba la precedencia con toolsets de pega. Aqui se comprueba con uno real y
-// datos reales, que es lo que el plan pide para cerrar S2: resolver, tapar, denegar y observar.
+// common-ai's harness tests precedence with fake toolsets. Here it is checked with a real one and real
+// data, which is what the plan asks for in order to close S2: resolve, shadow, deny and observe.
 console.log(`\n== S2: resolucion y precedencia ==`)
 
-// Un segundo toolset que trae un 'list_namespaces' PROPIO, solo para forzar el solape.
+// A second toolset carrying its OWN 'list_namespaces', purely to force the overlap.
 registerToolset({
     id: 'verify-shadow', version: '0.0.1', displayName: 'shadow', description: 'solo para verificar',
     requires: [],
@@ -134,7 +134,7 @@ mostrar('[k8s-inventory, verify-shadow]', { activeToolsets: ['k8s-inventory', 'v
 mostrar('[verify-shadow, k8s-inventory]', { activeToolsets: ['verify-shadow', 'k8s-inventory'], disabledTools: [] })
 mostrar('[k8s-inv, shadow] sin k8s-inv/list_namespaces', { activeToolsets: ['k8s-inventory', 'verify-shadow'], disabledTools: ['k8s-inventory/list_namespaces'] })
 
-// Y ahora, ejecutar por el camino unico con los dos ganchos puestos.
+// And now, running through the single path with both hooks in place.
 const observado = []
 const agentTools = buildAgentTools(
     { activeToolsets: ['k8s-inventory', 'verify-shadow'], disabledTools: [] },

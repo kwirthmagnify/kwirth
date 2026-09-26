@@ -17,7 +17,7 @@ const require = createRequire(import.meta.url)
 const commonAi = require('@kwirthmagnify/kwirth-common-ai')
 const commonAiBack = require('@kwirthmagnify/kwirth-common-ai/back')
 
-// El bundle resuelve los comunes contra el global del back del core; se simula para cargarlo suelto.
+// The bundle resolves the common packages against the core's back-end global; it is simulated to load it standalone.
 globalThis.__kwirth_back__ = { kwirthCommonAi: commonAi, kwirthCommonAiBack: commonAiBack }
 
 const toolset = require('../dist/back.js').default
@@ -27,7 +27,7 @@ const tool = (name) => {
     return t
 }
 
-/** Registra que metodo se llamo, para poder afirmar CUAL — no solo que devolvio algo. */
+/** Records which method was called, so WHICH one can be asserted — not merely that it returned something. */
 const fakeK8s = (over = {}) => {
     const calls = []
     const log = (name, ret) => (...args) => { calls.push({ name, args }); return Promise.resolve(ret) }
@@ -75,28 +75,28 @@ const fakeHost = (over = {}) => {
     return { host: { trace: (t, a) => traced.push({ tool: t, args: a }), k8s, ...over }, calls, traced }
 }
 
-// ── el contrato ──────────────────────────────────────────────────────────────────────────────────────
+// ── the contract ─────────────────────────────────────────────────────────────────────────────────────
 
 test('el toolset declara lo que necesita y sus siete tools', () => {
     assert.equal(toolset.id, 'k8s-inventory')
     assert.deepEqual(toolset.requires, [commonAi.ECapability.K8S])
     assert.equal(toolset.tools.length, 7)
-    // get_space_data se fue a k8s-describe el 2026-09-17: describe UN namespace, y eso es de aquel
-    // paquete. Si vuelve a aparecer aqui, es que alguien ha deshecho la decision sin querer.
+    // get_space_data went to k8s-describe on 2026-09-17: it describes ONE namespace, and that belongs to
+    // that package. If it shows up here again, somebody has undone the decision by accident.
     assert.equal(toolset.tools.find(t => t.name === 'get_space_data'), undefined)
-    // Ninguna escribe: es un inventario. Si alguna dejara de ser READ, este test lo para.
+    // None of them writes: it is an inventory. If one stopped being READ, this test stops it.
     assert.deepEqual([...new Set(toolset.tools.map(t => t.effect))], [commonAi.EToolEffect.READ])
 })
 
 test('enumerar los Secrets de un deployment es READ pero NO es public', () => {
-    // Los dos ejes son independientes: no cambia nada del cluster y aun asi revela mas que las demas.
+    // The two axes are independent: it changes nothing in the cluster and still reveals more than the rest.
     assert.equal(tool('get_workload_config_refs').sensitivity, commonAi.EToolSensitivity.INTERNAL)
     assert.equal(tool('list_namespaces').sensitivity, commonAi.EToolSensitivity.PUBLIC)
 })
 
 test('sin capability de cluster, la tool lo dice en vez de reventar por dentro', async () => {
-    // Es el caso de un host mal construido. El mensaje tiene que nombrar la tool y el motivo: un
-    // "cannot read properties of undefined" no le sirve a nadie.
+    // This is the case of a badly built host. The message has to name the tool and the reason: a
+    // "cannot read properties of undefined" is of use to nobody.
     const host = { trace: () => {} }
     await assert.rejects(() => tool('list_namespaces').execute({}, host), /list_namespaces.*cluster access/)
 })
@@ -110,7 +110,7 @@ test('toda invocacion deja traza, con sus argumentos', async () => {
     assert.deepEqual(traced[1].args, { namespace: 'kube-system' })
 })
 
-// ── el filtro de namespace ───────────────────────────────────────────────────────────────────────────
+// ── the namespace filter ─────────────────────────────────────────────────────────────────────────────
 
 test("'*' y omitir significan todos los namespaces; un nombre acota", async () => {
     const { host, calls } = fakeHost()
@@ -151,8 +151,8 @@ test('get_cluster_data convierte la memoria a GB y resume los nodos', async () =
 })
 
 test('un fallo del cluster vuelve como dato, no como excepcion', async () => {
-    // El resultado de una tool va al modelo: una excepcion cortaria la conversacion, un {error} lo deja
-    // decidir (reintentar, preguntar, seguir por otro lado).
+    // A tool's result goes to the model: an exception would cut the conversation short, an {error} lets
+    // it decide (retry, ask, carry on another way).
     const { host } = fakeHost()
     host.k8s.coreApi.listNamespace = async () => { throw new Error('403 forbidden') }
     assert.deepEqual(await tool('list_namespaces').execute({}, host), { error: '403 forbidden' })
@@ -184,8 +184,8 @@ test('las referencias a ConfigMap/Secret se deduplican juntando los motivos', as
 })
 
 test('lastModified sale de managedFields y se normaliza a ISO', async () => {
-    // ⚠️ managedFields[].time llega como Date. Ordenar Dates con el sort por defecto las compara como
-    // texto ('Apr' < 'Aug' < 'Dec') y devuelve la fecha equivocada; por eso se pasan a ISO ANTES.
+    // ⚠️ managedFields[].time arrives as a Date. Sorting Dates with the default sort compares them as
+    // text ('Apr' < 'Aug' < 'Dec') and returns the wrong date; hence converting them to ISO BEFORE.
     const { host } = fakeHost()
     host.k8s.appsApi.readNamespacedDeployment = async () => ({
         spec: { template: { spec: { volumes: [{ name: 'v', configMap: { name: 'cfg' } }] } } }

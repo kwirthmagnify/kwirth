@@ -21,15 +21,15 @@ import { ECapability, EToolEffect, EToolSensitivity } from '@kwirthmagnify/kwirt
     Todo es de solo lectura: ninguna tool de este toolset escribe en el cluster.
 */
 
-// El cluster se pide, no se asume: si el host no lo provisiona, la tool lo dice en vez de reventar por
-// dentro con un 'cannot read property of undefined'.
+// The cluster is asked for, not assumed: when the host does not provision it, the tool says so instead
+// of blowing up inside with a 'cannot read property of undefined'.
 const k8s = (host: IToolHost, toolName: string, args: Record<string, unknown> = {}) => {
     host.trace(toolName, args)
     if (!host.k8s) throw new Error(`[k8s-inventory] '${toolName}' needs cluster access and the host did not provide it`)
     return host.k8s
 }
 
-/** Un fallo de una tool se devuelve como dato, no como excepcion: el modelo tiene que poder leerlo. */
+/** A tool's failure is returned as data, not as an exception: the model has to be able to read it. */
 const failed = (err: unknown) => ({ error: err instanceof Error ? err.message : String(err) })
 
 interface IObjectMetaTimes {
@@ -37,9 +37,9 @@ interface IObjectMetaTimes {
     creationTimestamp?: Date | string
 }
 
-// ⚠️ `managedFields[].time` llega como Date con el cliente tipado. Se normaliza a ISO ANTES de ordenar:
-// ordenar Dates con el sort por defecto las compara como texto ('Apr' < 'Aug' < 'Dec') y da la fecha
-// equivocada. Con ISO, el orden lexicografico y el cronologico son el mismo.
+// ⚠️ `managedFields[].time` arrives as a Date with the typed client. It is normalised to ISO BEFORE
+// sorting: sorting Dates with the default sort compares them as text ('Apr' < 'Aug' < 'Dec') and gives
+// the wrong date. With ISO, lexicographic and chronological order are the same.
 const iso = (t: Date | string | undefined): string | undefined => {
     if (!t) return undefined
     const d = t instanceof Date ? t : new Date(t)
@@ -53,10 +53,10 @@ const lastModifiedOf = (meta: IObjectMetaTimes | undefined): string | undefined 
 
 interface IConfigRef { kind: 'ConfigMap' | 'Secret', name: string, via: string }
 
-/** El mismo objeto referenciado de varias formas: los motivos se juntan en una lista. */
+/** The same object referenced in several ways: the reasons are gathered into a list. */
 interface IMergedConfigRef { kind: 'ConfigMap' | 'Secret', name: string, via: string[] }
 
-// Las referencias a ConfigMap/Secret que consume un pod template: envFrom, env.valueFrom y volumenes.
+// The ConfigMap/Secret references a pod template consumes: envFrom, env.valueFrom and volumes.
 const configRefsOfPodSpec = (spec: Record<string, any> | undefined): IConfigRef[] => {
     const refs: IConfigRef[] = []
     const add = (kind: 'ConfigMap' | 'Secret', name: string | undefined, via: string) => { if (name) refs.push({ kind, name, via }) }
@@ -77,7 +77,7 @@ const configRefsOfPodSpec = (spec: Record<string, any> | undefined): IConfigRef[
     return refs
 }
 
-/** '*' y vacio significan lo mismo: todos los namespaces. */
+/** '*' and empty mean the same thing: every namespace. */
 const nsFilter = (namespace: unknown): string | undefined =>
     typeof namespace === 'string' && namespace && namespace !== '*' ? namespace : undefined
 
@@ -145,7 +145,7 @@ const k8sInventory: IAiToolset = {
             sensitivity: EToolSensitivity.PUBLIC,
             inputSchema: z.object({}),
             execute: async (_args, host) => {
-                // El mapa de nodos lo mantiene el core y lo presta la capability: no hay llamada al cluster.
+                // The node map is kept by the core and lent by the capability: there is no call to the cluster.
                 const c = k8s(host, 'get_node_data')
                 return { nodes: [...c.nodes.values()] }
             }
@@ -238,9 +238,10 @@ const k8sInventory: IAiToolset = {
         },
         {
             name: 'get_workload_config_refs',
-            // ⚠️ Es READ, pero NO es public: enumera los Secrets que consume un deployment. No devuelve su
-            // contenido —los nombres ya dicen bastante—, y esa es justo la distincion que este toolset
-            // viene a ejercitar: el eje del efecto y el de la sensibilidad son independientes.
+            // ⚠️ It is READ, but it is NOT public: it enumerates the Secrets a deployment consumes. It does
+            // not return their content — the names already say plenty — and that is precisely the
+            // distinction this toolset comes to exercise: the effect axis and the sensitivity axis are
+            // independent.
             description: 'Given a Deployment, lists the ConfigMaps and Secrets its pods consume (via envFrom, env valueFrom and volumes), each with its lastModified time and resourceVersion. Use it on a crash to find a config source that CHANGED WITHOUT A ROLLOUT: editing a ConfigMap/Secret value keeps the same env spec (no new revision) yet can break the pod — compare each reference lastModified against when the pods started crashing.',
             effect: EToolEffect.READ,
             sensitivity: EToolSensitivity.INTERNAL,
@@ -254,7 +255,7 @@ const k8sInventory: IAiToolset = {
                 const c = k8s(host, 'get_workload_config_refs', { namespace, name })
                 try {
                     const dep = await c.appsApi.readNamespacedDeployment({ name, namespace })
-                    // dedupe por kind+nombre, juntando los motivos (un objeto puede referenciarse de varias formas)
+                    // dedupe by kind+name, gathering the reasons (an object can be referenced in several ways)
                     const byKey = new Map<string, IMergedConfigRef>()
                     for (const r of configRefsOfPodSpec(dep.spec?.template?.spec as Record<string, any> | undefined)) {
                         const cur = byKey.get(`${r.kind}/${r.name}`) ?? { kind: r.kind, name: r.name, via: [] as string[] }
