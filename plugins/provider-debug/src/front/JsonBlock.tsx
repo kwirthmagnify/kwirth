@@ -63,19 +63,30 @@ export const JsonBlock: React.FC<IJsonBlockProps> = (props: IJsonBlockProps) => 
     }
 
     /** Serialises the event and trims it, so the cost of the cut is paid before tokenising. */
-    const serialize = (): { text: string, totalLines: number, trimmed: boolean } => {
+    const serialize = (): { text: string, full: string, totalLines: number, trimmed: boolean } => {
         let text: string
         try {
             text = JSON.stringify(props.value, null, 2) ?? String(props.value)
         }
         catch {
             // an event with circular references must not bring the tab down: that is exactly what we came to look at
-            return { text: '<unserializable event>', totalLines: 1, trimmed: false }
+            const unserializable = '<unserializable event>'
+            return { text: unserializable, full: unserializable, totalLines: 1, trimmed: false }
         }
 
         const lines = text.split('\n')
-        if (lines.length <= MAX_RENDERED_LINES) return { text, totalLines: lines.length, trimmed: false }
-        return { text: lines.slice(0, MAX_RENDERED_LINES).join('\n'), totalLines: lines.length, trimmed: true }
+        if (lines.length <= MAX_RENDERED_LINES) return { text, full: text, totalLines: lines.length, trimmed: false }
+        return { text: lines.slice(0, MAX_RENDERED_LINES).join('\n'), full: text, totalLines: lines.length, trimmed: true }
+    }
+
+    const occurrences = (haystack: string, needle: string): number => {
+        let count = 0
+        let at = haystack.indexOf(needle)
+        while (at >= 0) {
+            count++
+            at = haystack.indexOf(needle, at + needle.length)
+        }
+        return count
     }
 
     const render = (text: string): React.ReactNode[] => {
@@ -92,7 +103,26 @@ export const JsonBlock: React.FC<IJsonBlockProps> = (props: IJsonBlockProps) => 
         return nodes
     }
 
-    const { text, totalLines, trimmed } = serialize()
+    const { text, full, totalLines, trimmed } = serialize()
+
+    /*
+        Matches living past the cut. The search box counts over the WHOLE event, so without saying
+        this the counter would promise hits that are nowhere to be seen on screen, and jumping to one
+        of them would silently land on the card instead of on a highlight. Counting is two linear
+        scans and only runs when there is both a search and a cut.
+    */
+    const needle = (props.highlight ?? '').trim().toLowerCase()
+    const hiddenMatches = (trimmed && needle !== '')
+        ? occurrences(full.toLowerCase(), needle) - occurrences(text.toLowerCase(), needle)
+        : 0
+
+    const notice = (): string => {
+        const head = `Trimmed to the first ${MAX_RENDERED_LINES} of ${totalLines} lines.`
+        const tail = 'Use the copy button to get the whole object.'
+        if (hiddenMatches === 0) return `${head} ${tail}`
+        const hits = hiddenMatches === 1 ? '1 match falls' : `${hiddenMatches} matches fall`
+        return `${head} ${hits} past the cut and cannot be highlighted here. ${tail}`
+    }
 
     return (
         <>
@@ -100,8 +130,8 @@ export const JsonBlock: React.FC<IJsonBlockProps> = (props: IJsonBlockProps) => 
                 {render(text)}
             </Box>
             {trimmed &&
-                <Box sx={{ mt: 0.5, fontSize: '0.65rem', fontStyle: 'italic', color: 'text.secondary' }}>
-                    {`Trimmed to the first ${MAX_RENDERED_LINES} of ${totalLines} lines. Use the copy button to get the whole object.`}
+                <Box sx={{ mt: 0.5, fontSize: '0.65rem', fontStyle: 'italic', color: hiddenMatches > 0 ? 'warning.main' : 'text.secondary' }}>
+                    {notice()}
                 </Box>
             }
         </>

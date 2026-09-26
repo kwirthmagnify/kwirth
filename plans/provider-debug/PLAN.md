@@ -101,12 +101,16 @@ Plugin de canal para inspeccionar qué emite realmente un provider. Público, op
    - El aviso no miente: el botón de copiar serializa desde el evento, no desde el texto pintado.
    - Descartado hacerlo configurable: no se pidió y `maxEvents` ya es la única perilla del diálogo.
 
+10. **El aviso de recorte cuenta las coincidencias que quedan fuera.** El buscador mira el evento
+   COMPLETO, así que tras el tope podía anunciar coincidencias invisibles y el salto aterrizaba en
+   la tarjeta en vez de en un resaltado: parecía que el buscador mentía. Ahora el pie lo dice
+   —*«N matches fall past the cut and cannot be highlighted here»*— y se tiñe de color de aviso.
+   - Se eligió **avisar** en vez de contar solo sobre lo pintado: esa alternativa era más barata
+     pero mentía sobre el evento, que es justo lo que este canal no puede permitirse.
+   - Contar son dos pasadas lineales y solo corren si hay búsqueda **y** recorte.
+
 ### Pendiente
 
-10. **El buscador cuenta sobre el JSON completo**, así que puede anunciar coincidencias que caen
-   pasado el recorte y no se resaltan en pantalla; el salto a la coincidencia degrada entonces a
-   centrar la tarjeta. Opciones: contar solo sobre lo pintado (barato, pero miente sobre el evento)
-   o indicar cuántas quedan fuera (honesto, algo más de trabajo).
 11. Autoscroll con anclaje al fondo.
 12. Plantillas de payload por provider conocido — el matiz de `events` (sin `kinds` no entrega
    nada) es justo lo que hace falta que la UI enseñe sola.

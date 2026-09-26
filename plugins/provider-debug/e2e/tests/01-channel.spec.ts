@@ -318,6 +318,31 @@ test('each event can be copied without collapsing its card', async () => {
     await expect(page.getByText('"metricsInterval"').first()).toBeVisible()
 })
 
+test('the notice warns about matches that fall past the cut', async () => {
+    /*
+        Se busca un termino que SOLO exista pasada la linea 1000, calculado desde el objeto entero
+        que da el boton de copiar: asi el caso es real y no depende de que claves tenga el cluster.
+        Si no hubiera ninguno (todas las claves del final ya salen antes), no hay caso que probar.
+    */
+    const full = await page.evaluate(() => navigator.clipboard.readText())
+    const lines = full.split('\n')
+    const keyOf = (line: string): string | undefined => (line.match(/^\s*"([^"]+)"\s*:/) ?? [])[1]
+    const early = new Set(lines.slice(0, 1000).map(keyOf).filter(Boolean))
+    const term = lines.slice(1000).map(keyOf).find(k => k !== undefined && !early.has(k))
+    test.skip(term === undefined, 'este evento no tiene ninguna clave exclusiva de mas alla de la linea 1000')
+
+    await page.getByLabel('Search events').fill(term!)
+
+    const notice = page.getByText(/^Trimmed to the first \d+ of \d+ lines/)
+    await expect(notice).toBeVisible()
+    await expect(notice).toContainText(/\d+ match(es)? falls? past the cut and cannot be highlighted here/)
+    await expect(notice).toContainText('Use the copy button to get the whole object')
+
+    // y sin busqueda el aviso vuelve a ser el corto, sin hablar de coincidencias
+    await page.getByRole('button', { name: 'Clear search' }).click()
+    await expect(notice).not.toContainText('past the cut')
+})
+
 test('expanding a card is not animated', async () => {
     // Un evento puede traer miles de lineas: animar el despliegue lo deja ilegible mientras crece.
     // MUI vuelca el timeout del Collapse a transition-duration, asi que es asertable de verdad.

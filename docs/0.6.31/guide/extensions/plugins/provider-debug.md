@@ -74,7 +74,9 @@ A single `metrics` event on a modest cluster already runs to some eight thousand
 
 The cut is only about what is painted. The **copy** button always yields the **complete** object, because it serialises the event itself rather than the text on screen — so the way to read a huge event end to end is to copy it and paste it into your editor.
 
-One consequence worth knowing: the search counter counts over the **whole** event, so it can report matches that fall past the cut and are therefore not highlighted on screen.
+**The note also keeps the search box honest.** Searching looks inside the whole event, not just the painted part, so it can find matches that live past the cut and cannot be highlighted anywhere on screen. When that happens the note says how many and turns to the warning colour — in the capture above, a search for `usageNanoCores` matches 111 times beyond line 1000. Without that line the search would look broken: it would claim hits you could not find, and jumping to one of them lands on the card rather than on a highlight.
+
+If every match falls inside the painted part, the note stays grey and says nothing about matches.
 
 ### Searching
 

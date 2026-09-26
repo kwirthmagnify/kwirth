@@ -76,11 +76,15 @@ test('capture', async ({ page }) => {
     await page.waitForTimeout(1200)
     await page.screenshot({ path: `${MEDIA}/channel-provider-debug-view.png` })
 
-    // 3) el aviso de recorte al final de un evento largo. Se limpia la busqueda antes para que la
-    // captura no lleve resaltados de la anterior.
-    await page.getByRole('button', { name: 'Clear search' }).click()
+    /*
+        3) El aviso de recorte al final de un evento largo, en su variante mas informativa: con una
+        busqueda cuyas coincidencias caen fuera del corte. Se ASERTA antes de capturar, porque una
+        captura por si sola no comprueba nada y esta ilustra justo esa frase en la guia.
+    */
+    await page.getByLabel('Search events').fill('usageNanoCores')
     const notice = page.getByText(/^Trimmed to the first \d+ of \d+ lines/)
     await expect(notice).toBeVisible()
+    await expect(notice).toContainText(/\d+ match(es)? falls? past the cut/)
     await notice.scrollIntoViewIfNeeded()
     await page.mouse.move(800, 700)
     await page.waitForTimeout(900)
