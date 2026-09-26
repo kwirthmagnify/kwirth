@@ -21,9 +21,9 @@ export interface IAsset {
     podNamespace: string
     podName: string
     containerName: string
-    // Nombre del recurso dueño del reporte de Trivy (el workload: ReplicaSet, o el
-    // propio pod si no tiene controlador). Es lo que casa con `resource.name` que
-    // estampa el provider, sin necesidad de prefijos.
+    // Name of the resource that owns the Trivy report (the workload: a ReplicaSet, or
+    // the pod itself when it has no controller). It is what matches the `resource.name`
+    // the provider stamps, with no need for prefixes.
     workloadName: string
 }
 
@@ -61,18 +61,18 @@ class TrivyChannel {
     getScopeCatalog = (): IExtensionScope[] => TRIVY_SCOPES   // RBAC: scopes que declara Trivy (validar/gestionar)
 
     startChannel = async (): Promise<void> => {
-        // El provider reenvía todos los reportes de estos tipos; el filtrado por
-        // asset concreto lo hace este channel en processProviderEvent.
+        // The provider forwards every report of these types; filtering by concrete
+        // asset is done by this channel in processProviderEvent.
         this.clusterInfo.addSubscriber('trivy', this, { reportTypes: ALL_PLURALS })
     }
 
     processProviderEvent(providerId: string, obj: any): void {
         if (providerId !== 'trivy') return
         const pe = obj as ITrivyProviderEvent
-        // El provider manda pe.podName = `resource.name` (el workload dueño del
-        // reporte, p.ej. el ReplicaSet), no el pod real. Casamos por igualdad
-        // exacta contra el workload resuelto del asset. Los config-audit no llevan
-        // contenedor.
+        // The provider sends pe.podName = `resource.name` (the workload that owns the
+        // report, a ReplicaSet for instance), not the real pod. We match by exact
+        // equality against the asset's resolved workload. config-audit reports carry
+        // no container.
         const isAudit = pe.plural === TRIVY_API_AUDIT_PLURAL
         for (const socket of this.webSockets) {
             for (const instance of socket.instances) {
@@ -306,8 +306,8 @@ class TrivyChannel {
         }
     }
 
-    // Resuelve el nombre del workload dueño del pod (= `resource.name` de Trivy):
-    // el controlador (ReplicaSet…) si lo hay, o el propio pod si es un pod suelto.
+    // Resolves the name of the workload that owns the pod (= Trivy's `resource.name`):
+    // the controller (a ReplicaSet…) when there is one, or the pod itself when it stands alone.
     private resolveWorkloadName = async (namespace: string, podName: string): Promise<string> => {
         try {
             const podData = await this.clusterInfo.coreApi.readNamespacedPod({ name: podName, namespace })
