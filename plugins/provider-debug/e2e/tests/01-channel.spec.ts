@@ -185,7 +185,9 @@ test('the generated form writes into the payload', async () => {
 
 test('a provider without help says so instead of leaving the user guessing', async () => {
     await openSetup()
-    await selectProvider('otel')
+    // 'business' es hoy el unico provider vivo que NO publica getSubscriptionHelp (antes se usaba
+    // 'otel', que ya no esta instalado). Si algun dia lo publica, hay que elegir otro sin ayuda.
+    await selectProvider('business')
 
     await expect(page.getByText(/does not publish subscription help/)).toBeVisible()
     await closeSetup()
@@ -236,7 +238,7 @@ test('a provider that is not running is reported instead of failing silently', a
 
 test('a malformed subscription payload blocks the dialog instead of reaching the back', async () => {
     await openSetup()
-    await selectProvider('otel')
+    await selectProvider('business')
     await openJsonTab()
     await page.getByLabel('Subscription payload (JSON)').fill('{ not json')
 
@@ -273,6 +275,25 @@ test('each event is collapsed behind a summary and expands to its raw JSON', asy
     await page.locator('button[aria-label="Expand event"]').first().click()
 
     await expect(page.getByText('"metricsInterval"').first()).toBeVisible()
+})
+
+test('a rendered event never goes past the line cap', async () => {
+    // Invariante: da igual lo gordo que sea el evento, nunca se pintan mas de 1000 lineas. El test
+    // NO exige que este evento concreto se recorte (depende del cluster); si se recorta, comprueba
+    // ademas que el aviso es coherente con lo pintado.
+    const painted = await page.locator('pre').first().evaluate(el => (el.textContent ?? '').split('\n').length)
+    console.log('DIAG lineas pintadas en la tarjeta:', painted)
+    expect(painted).toBeLessThanOrEqual(1000)
+
+    const notice = page.getByText(/^Trimmed to the first \d+ of \d+ lines/)
+    if (!await notice.isVisible().catch(() => false)) return
+
+    const parts = (await notice.textContent() ?? '').match(/first (\d+) of (\d+)/)
+    expect(parts).not.toBeNull()
+    expect(Number(parts![1])).toBe(1000)
+    expect(Number(parts![2])).toBeGreaterThan(1000)
+    expect(painted).toBe(1000)
+    await expect(notice).toContainText('Use the copy button to get the whole object')
 })
 
 test('each event can be copied without collapsing its card', async () => {

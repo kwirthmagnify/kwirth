@@ -3,7 +3,7 @@ import { readdirSync } from 'fs'
 import path from 'path'
 import { login, openChannelPicker, openTabMenu } from './helpers'
 
-// Capturas para la guía (docs/0.5.287/_media/guide/). Tema OSCURO y 1600x900, como el resto.
+// Capturas para la guía (docs/<versión viva>/_media/guide/). Tema OSCURO y 1600x900, como el resto.
 // No entra en el suite normal (fichero zz-, se lanza a mano). Trazas y vídeo apagados: la SPA deja
 // el websocket abierto y el teardown de Playwright se queda colgado con ellos activos.
 test.use({ trace: 'off', screenshot: 'off', video: 'off' })
@@ -75,6 +75,16 @@ test('capture', async ({ page }) => {
     await page.mouse.move(800, 700)
     await page.waitForTimeout(1200)
     await page.screenshot({ path: `${MEDIA}/channel-provider-debug-view.png` })
+
+    // 3) el aviso de recorte al final de un evento largo. Se limpia la busqueda antes para que la
+    // captura no lleve resaltados de la anterior.
+    await page.getByRole('button', { name: 'Clear search' }).click()
+    const notice = page.getByText(/^Trimmed to the first \d+ of \d+ lines/)
+    await expect(notice).toBeVisible()
+    await notice.scrollIntoViewIfNeeded()
+    await page.mouse.move(800, 700)
+    await page.waitForTimeout(900)
+    await page.screenshot({ path: `${MEDIA}/channel-provider-debug-trimmed.png` })
 
     // la SPA mantiene el websocket vivo; sin esto el teardown se cuelga
     await page.goto('about:blank')

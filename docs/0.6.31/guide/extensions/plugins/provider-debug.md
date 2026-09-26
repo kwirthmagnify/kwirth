@@ -64,6 +64,18 @@ Each event is one collapsed card: **timestamp · provider · top-level keys**. E
 
 Cards open and close **without animation**, and a collapsed card renders nothing at all. That is deliberate: a single event can carry thousands of lines, and animating that much content makes it unreadable while it grows.
 
+### Long events are trimmed
+
+For the same reason, an expanded card paints **at most 1000 lines**. Past that the dump stops and a small note tells you how many lines the event really has:
+
+![An event trimmed at 1000 lines](../../../_media/guide/channel-provider-debug-trimmed.png)
+
+A single `metrics` event on a modest cluster already runs to some eight thousand lines, so this is the common case rather than the exception.
+
+The cut is only about what is painted. The **copy** button always yields the **complete** object, because it serialises the event itself rather than the text on screen — so the way to read a huge event end to end is to copy it and paste it into your editor.
+
+One consequence worth knowing: the search counter counts over the **whole** event, so it can report matches that fall past the cut and are therefore not highlighted on screen.
+
 ### Searching
 
 Type in the search box and the counter tells you how many events contain that text — it looks inside the whole event, not just the summary. **↑ / ↓** (or **Enter** / **Shift+Enter**) walk the matches, wrapping around at the ends.

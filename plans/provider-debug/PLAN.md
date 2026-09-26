@@ -93,13 +93,25 @@ Plugin de canal para inspeccionar qué emite realmente un provider. Público, op
    - La expansión pasa a ser controlada y por **referencia al evento**, no por índice (buffer
      circular).
 
+9. **Tope de 1000 líneas al pintar un evento**, con aviso al pie diciendo cuántas hay en total y
+   que el botón de copiar da el objeto entero. Un evento de `metrics` de un cluster modesto ronda
+   las **8000 líneas**: pintarlas todas obliga a tokenizar el JSON completo y montar miles de
+   `<span>` por tarjeta, para que nadie lea la línea 4000 bajando a rueda.
+   - El corte va **antes de tokenizar**, así se paga una vez y no por token.
+   - El aviso no miente: el botón de copiar serializa desde el evento, no desde el texto pintado.
+   - Descartado hacerlo configurable: no se pidió y `maxEvents` ya es la única perilla del diálogo.
+
 ### Pendiente
 
-9. Autoscroll con anclaje al fondo.
-10. Plantillas de payload por provider conocido — el matiz de `events` (sin `kinds` no entrega
+10. **El buscador cuenta sobre el JSON completo**, así que puede anunciar coincidencias que caen
+   pasado el recorte y no se resaltan en pantalla; el salto a la coincidencia degrada entonces a
+   centrar la tarjeta. Opciones: contar solo sobre lo pintado (barato, pero miente sobre el evento)
+   o indicar cuántas quedan fuera (honesto, algo más de trabajo).
+11. Autoscroll con anclaje al fondo.
+12. Plantillas de payload por provider conocido — el matiz de `events` (sin `kinds` no entrega
    nada) es justo lo que hace falta que la UI enseñe sola.
-11. `modifiable: true` para cambiar de provider sin parar y rearrancar la instancia.
-12. Export del buffer a JSON.
+13. `modifiable: true` para cambiar de provider sin parar y rearrancar la instancia.
+14. Export del buffer a JSON.
 
 ### Nota de mantenimiento
 

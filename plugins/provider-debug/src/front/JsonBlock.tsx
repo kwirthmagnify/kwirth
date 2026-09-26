@@ -3,17 +3,24 @@ import { Box, useTheme } from '@mui/material'
 
 interface IJsonBlockProps {
     value: unknown
-    /** texto a resaltar en vídeo inverso; vacío o ausente = sin resaltado */
+    /** text to highlight in inverse video; empty or absent means no highlighting */
     highlight?: string
 }
 
-// Un token por captura: cadena (con o sin ':' detrás, que la convierte en clave), literal o número.
+// One token per capture: string (with or without a trailing ':', which makes it a key), literal or number.
 const TOKEN = /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g
 
 /**
- * Volcado JSON con coloreado por tipo. Deliberadamente sin CodeMirror: aquí solo hay que LEER el
- * evento, y un <pre> pesa mucho menos que un editor por cada entrada del buffer. Los colores salen
- * de la paleta MUI, así que siguen al tema claro/oscuro sin tocar nada.
+ * Upper bound of lines painted per event. A single metrics event carries thousands of lines, and
+ * tokenising and mounting all of them costs a lot while nobody reads line 4000 by scrolling. The
+ * copy button is unaffected: it always yields the WHOLE object, which is what the notice points at.
+ */
+const MAX_RENDERED_LINES = 1000
+
+/**
+ * JSON dump coloured by type. Deliberately without CodeMirror: here the event only has to be READ,
+ * and a <pre> weighs far less than an editor per buffer entry. Colours come from the MUI palette,
+ * so they follow the light/dark theme with no extra work.
  */
 export const JsonBlock: React.FC<IJsonBlockProps> = (props: IJsonBlockProps) => {
     const theme = useTheme()
@@ -25,10 +32,10 @@ export const JsonBlock: React.FC<IJsonBlockProps> = (props: IJsonBlockProps) => 
     }
 
     /**
-     * Parte un trozo de texto por el término buscado y pinta las coincidencias en vídeo inverso,
-     * conservando el color del token en lo que no casa. El resaltado se aplica DENTRO de cada
-     * token, así que una búsqueda que cruce la frontera de dos tokens (p.ej. `": 15`) no se marca:
-     * lo normal es buscar una palabra, y a cambio no hay que re-tokenizar el JSON entero.
+     * Splits a chunk of text on the searched term and paints the matches in inverse video, keeping
+     * the token colour on whatever does not match. Highlighting is applied INSIDE each token, so a
+     * search crossing a token boundary (e.g. `": 15`) is not marked: searching a single word is the
+     * normal case, and in exchange the whole JSON does not have to be re-tokenised.
      */
     const paint = (text: string, color: string | undefined, keyBase: string): React.ReactNode[] => {
         const needle = (props.highlight ?? '').trim()
@@ -42,8 +49,8 @@ export const JsonBlock: React.FC<IJsonBlockProps> = (props: IJsonBlockProps) => 
         while (at >= 0) {
             if (at > from) nodes.push(<span key={`${keyBase}-${from}`} style={color ? { color } : undefined}>{text.slice(from, at)}</span>)
             nodes.push(
-                // el marcador permite que el buscador centre la COINCIDENCIA y no la tarjeta: con un
-                // JSON de miles de líneas, centrar la tarjeta deja el resultado fuera de pantalla
+                // the marker lets the search box centre the MATCH instead of the card: with a JSON of
+                // thousands of lines, centring the card leaves the result off screen
                 <span key={`${keyBase}-h${at}`} data-pd-hit='1' style={{ backgroundColor: theme.palette.text.primary, color: theme.palette.background.paper }}>
                     {text.slice(at, at + needle.length)}
                 </span>
@@ -55,16 +62,23 @@ export const JsonBlock: React.FC<IJsonBlockProps> = (props: IJsonBlockProps) => 
         return nodes
     }
 
-    const render = (): React.ReactNode[] => {
+    /** Serialises the event and trims it, so the cost of the cut is paid before tokenising. */
+    const serialize = (): { text: string, totalLines: number, trimmed: boolean } => {
         let text: string
         try {
             text = JSON.stringify(props.value, null, 2) ?? String(props.value)
         }
         catch {
-            // un evento con referencias cíclicas no debe tumbar la pestaña: es justo lo que venimos a ver
-            return [<span key='err'>{'<unserializable event>'}</span>]
+            // an event with circular references must not bring the tab down: that is exactly what we came to look at
+            return { text: '<unserializable event>', totalLines: 1, trimmed: false }
         }
 
+        const lines = text.split('\n')
+        if (lines.length <= MAX_RENDERED_LINES) return { text, totalLines: lines.length, trimmed: false }
+        return { text: lines.slice(0, MAX_RENDERED_LINES).join('\n'), totalLines: lines.length, trimmed: true }
+    }
+
+    const render = (text: string): React.ReactNode[] => {
         const nodes: React.ReactNode[] = []
         let last = 0
         let match: RegExpExecArray | null
@@ -78,9 +92,18 @@ export const JsonBlock: React.FC<IJsonBlockProps> = (props: IJsonBlockProps) => 
         return nodes
     }
 
+    const { text, totalLines, trimmed } = serialize()
+
     return (
-        <Box component='pre' sx={{ m: 0, fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all', overflowX: 'auto' }}>
-            {render()}
-        </Box>
+        <>
+            <Box component='pre' sx={{ m: 0, fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all', overflowX: 'auto' }}>
+                {render(text)}
+            </Box>
+            {trimmed &&
+                <Box sx={{ mt: 0.5, fontSize: '0.65rem', fontStyle: 'italic', color: 'text.secondary' }}>
+                    {`Trimmed to the first ${MAX_RENDERED_LINES} of ${totalLines} lines. Use the copy button to get the whole object.`}
+                </Box>
+            }
+        </>
     )
 }
