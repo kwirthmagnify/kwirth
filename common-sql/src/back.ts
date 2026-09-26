@@ -15,6 +15,54 @@ import { ISqlServer } from './index'
 export { default as knex } from 'knex'
 export type { Knex } from 'knex'
 
+/*
+    Dónde escribe esta librería. Por defecto la consola, y el consumidor le pasa el suyo con
+    setSqlLogger() — el mismo patrón que setLogger() en providers y canales.
+
+    Hace falta porque knex trae su PROPIO logger, que escribe directo a console. Sus mensajes salían
+    sueltos, sin hora, sin nivel y sin decir de qué extensión eran: un "Acquire connection error" a secas
+    en mitad del log, indistinguible de una traza cualquiera y sin forma de filtrarlo.
+*/
+export interface ISqlLogger {
+    info(message: unknown): void
+    warning(message: unknown): void
+    error(message: unknown): void
+}
+
+let log: ISqlLogger = {
+    info: (message: unknown) => console.log(`[sql] ${message}`),
+    warning: (message: unknown) => console.warn(`[sql] ${message}`),
+    error: (message: unknown) => console.error(`[sql] ${message}`)
+}
+
+export const setSqlLogger = (logger: ISqlLogger): void => { log = logger }
+
+/*
+    Un error de base de datos, en una línea y DICIENDO ALGO.
+
+    🔴 El caso que obliga a esto: cuando el host resuelve a varias direcciones, Node las prueba todas y, si
+    fallan todas, lanza un **AggregateError** cuyo `toString()` es literalmente "AggregateError". Las causas
+    reales —ECONNREFUSED, a qué dirección y a qué puerto— viven dentro de `.errors` y nadie las mira. El
+    resultado es un log que dice que algo falló y ni una pista de qué, justo cuando más falta hace: con la
+    base de datos caída, TODA llamada falla a la vez y todas dicen lo mismo.
+*/
+const oneLine = (err: unknown): string => {
+    const e = err as { code?: string, address?: string, port?: number, message?: string } | undefined
+    if (!e) return String(err)
+    const where = e.address ? ` ${e.address}${e.port ? ':' + e.port : ''}` : ''
+    return e.code ? `${e.code}${where}` : (e.message ?? String(err))
+}
+
+export const describeError = (err: unknown): string => {
+    const causes = (err as { errors?: unknown[] })?.errors
+    if (Array.isArray(causes) && causes.length > 0) {
+        // Deduplicado: probar seis direcciones y fallar en todas no son seis noticias, es una.
+        const seen = [...new Set(causes.map(oneLine))]
+        return `${(err as Error)?.name ?? 'AggregateError'}: ${seen.join(' · ')}`
+    }
+    return oneLine(err)
+}
+
 /** Dimensión del pool de conexiones de un consumidor. Cada extensión pasa la suya en ensureDb. */
 export interface IPoolOptions {
     min?: number                 // conexiones mantenidas CALIENTES siempre (>0 evita crear conexión en cada query)
@@ -51,7 +99,18 @@ const knexForDb = (dbName: string, pool?: IPoolOptions): Knex => {
             ...(s.ssl ? { ssl: { rejectUnauthorized: false } } : {})
         },
         pool: { ...POOL_DEFAULT, ...(pool ?? {}) },
-        acquireConnectionTimeout: 5000
+        acquireConnectionTimeout: 5000,
+        /*
+            El logger de knex, redirigido al nuestro. Sin esto escribe a console por su cuenta y sus
+            mensajes salen sin hora, sin nivel y sin dueño — y pasados por describeError además DICEN qué
+            pasó, en vez de un "AggregateError" pelado.
+        */
+        log: {
+            warn: (message: unknown) => log.warning(describeError(message)),
+            error: (message: unknown) => log.error(describeError(message)),
+            deprecate: (message: unknown) => log.warning(describeError(message)),
+            debug: (message: unknown) => log.info(describeError(message))
+        }
     })
 }
 
