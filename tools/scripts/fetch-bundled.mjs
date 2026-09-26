@@ -5,10 +5,13 @@
  * Local path entries (relative, or not starting with http) are resolved relative
  * to the manifest file's directory and copied into the output directory.
  *
- * Usage: node scripts/fetch-bundled.mjs <manifest-path> <output-dir>
- * Example (Electron):  node scripts/fetch-bundled.mjs ../back/kwirth-bundled.json electron/bundled
- * Example (Tauri):     node scripts/fetch-bundled.mjs ../back/kwirth-bundled.json tauri/resources/bundled
- * Example (Docker):    node scripts/fetch-bundled.mjs kwirth-bundled.json /usr/kwirth/bundled
+ * Usage: node tools/scripts/fetch-bundled.mjs <manifest-path> <output-dir>
+ * Example (Electron):  node ../tools/scripts/fetch-bundled.mjs ../back/kwirth-bundled.json bundled
+ * Example (Tauri):     node ../tools/scripts/fetch-bundled.mjs ../back/kwirth-bundled.json resources/bundled
+ * Example (Docker):    node fetch-bundled.mjs kwirth-bundled.json /usr/kwirth/bundled
+ *
+ * El de Docker no lleva ruta a proposito: el build copia este fichero DENTRO de docker/ y la imagen
+ * lo ejecuta desde ahi (ver docker/build-image.mjs y el COPY del Dockerfile).
  */
 
 import { createWriteStream, mkdirSync, existsSync, writeFileSync, copyFileSync } from 'fs'

@@ -27,7 +27,7 @@ copy ..\electron\kwirth-transparent.png src-tauri\resources\kwirth-transparent.p
 call npx @tauri-apps/cli icon src-tauri\icons\source.png
 
 echo [tauri-build-windows] Downloading bundled extensions...
-node ..\scripts\fetch-bundled.mjs ..\back\kwirth-bundled.json src-tauri\resources\bundled
+node ..\tools\scripts\fetch-bundled.mjs ..\back\kwirth-bundled.json src-tauri\resources\bundled
 
 echo [tauri-build-windows] Building kwirth-backend sidecar (Windows x64)...
 copy back-bundle-pkg.json ..\back\bundle\package.json

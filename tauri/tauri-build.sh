@@ -37,7 +37,7 @@ cp ../electron/kwirth-transparent.png src-tauri/resources/kwirth-transparent.png
 npx @tauri-apps/cli icon src-tauri/icons/source.png
 
 echo "[tauri-build] Downloading bundled extensions..."
-node ../scripts/fetch-bundled.mjs ../back/kwirth-bundled.json src-tauri/resources/bundled
+node ../tools/scripts/fetch-bundled.mjs ../back/kwirth-bundled.json src-tauri/resources/bundled
 
 echo "[tauri-build] Detecting platform..."
 UNAME=$(uname -s)

@@ -238,7 +238,7 @@ export class IdpManager {
         }
     }
 
-    // instala conectores bundled desde un directorio de tgz (fetch-bundled.mjs los deja ahí)
+    // instala conectores bundled desde un directorio de tgz (tools/scripts/fetch-bundled.mjs los deja ahí)
     // El directorio bundled es compartido: sin filtrar por tipo se intentaba instalar como conector IdP
     // cualquier tgz, apoyandose en que el fallo posterior lo descartara.
     async installBundled(dir: string): Promise<void> {

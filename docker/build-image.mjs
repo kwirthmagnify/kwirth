@@ -15,7 +15,7 @@ const root = join(__dirname, '..')
 const tag = process.argv[2] ?? 'kwirth'
 
 const manifestSrc = join(root, 'back', 'kwirth-bundled.json')
-const scriptSrc   = join(root, 'scripts', 'fetch-bundled.mjs')
+const scriptSrc   = join(root, 'tools', 'scripts', 'fetch-bundled.mjs')
 const manifestDst = join(__dirname, 'kwirth-bundled.json')
 const scriptDst   = join(__dirname, 'fetch-bundled.mjs')
 

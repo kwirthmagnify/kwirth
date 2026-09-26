@@ -244,7 +244,7 @@ Ese mismo artefacto se puede cargar de **3 formas distintas** (no confundir):
 | Situación | Declaración | Carga | Uso |
 |---|---|---|---|
 | **Dev** | `kwirth-dev.json` → `idps: { id: distPath }` (gitignored) | `IdpManager.loadDevIdps` + `watch.mjs` hot-reload | desarrollo local |
-| **Bundled** | `kwirth-bundled.json` → `idps: { id: url }` + `scripts/fetch-bundled.mjs` (fetch en build a la imagen) | `IdpManager.installBundled(dir)` en arranque, `installedFrom='bundled'` (no uninstall) | pre-instalado en un release |
+| **Bundled** | `kwirth-bundled.json` → `idps: { id: url }` + `tools/scripts/fetch-bundled.mjs` (fetch en build a la imagen) | `IdpManager.installBundled(dir)` en arranque, `installedFrom='bundled'` (no uninstall) | pre-instalado en un release |
 | **Installable** | `idps/manifest.json` / subida por UI | `IdpApi` (admin, runtime) → `install`/`installFromBuffer` | añadido en runtime |
 
 - **Google (Fase 1)**: se desarrolla como **dev** (`kwirth-dev.json`). Para release, se añade a **`kwirth-bundled.json`**. Es instalable por naturaleza (mismo tgz). NO va compilado en `back/src`.
