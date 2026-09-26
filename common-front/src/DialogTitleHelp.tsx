@@ -2,9 +2,9 @@ import React from 'react'
 import { DialogTitle, DialogTitleProps, Box } from '@mui/material'
 import { HelpButton } from './HelpButton'
 
-// DialogTitle con botón de ayuda a la derecha (regla de proyecto: si el dialog tiene sección de guía,
-// llevar HelpButton que la abra). `section` = ruta docsify (p.ej. 'admin/06-sla-settings');
-// `docsUrl` = base de la guía. Mantiene el título a la izquierda, tamaño fijo.
+// A DialogTitle with a help button on the right (project rule: when a dialog has a guide section, it
+// carries a HelpButton that opens it). `section` = the docsify route (e.g. 'admin/06-sla-settings');
+// `docsUrl` = the guide's base. It keeps the title on the left, at a fixed size.
 export interface IDialogTitleHelpProps extends Omit<DialogTitleProps, 'title'> {
     section: string
     docsUrl?: string

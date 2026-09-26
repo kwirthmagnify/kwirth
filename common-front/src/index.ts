@@ -37,34 +37,35 @@ export interface IClusterSummary {
     home: boolean          // el cluster desde el que se lanzó Kwirth (antes 'source')
 }
 
-// Endpoint completo de un cluster conocido (name + url + accessString), para que un canal pueda abrir
-// conexiones a OTROS clusters (federación multi-cluster). Lo expone el core vía IChannelObject.getClusters()
-// cuando el canal declara requirements.clusterManagement. El front ya guarda estos datos (manage clusters).
+// The full endpoint of a known cluster (name + url + accessString), so a channel can open connections to
+// OTHER clusters (multi-cluster federation). The core exposes it through IChannelObject.getClusters()
+// when the channel declares requirements.clusterManagement. The front end already stores this data
+// (manage clusters).
 export interface IClusterEndpoint {
     name: string
     url: string
     accessString: string
-    home: boolean              // el cluster desde el que se lanzó Kwirth (antes 'source')
-    id: string                 // uid del cluster (kube-system uid); '' si aún no resuelto (readClusterInfo pendiente)
+    home: boolean              // the cluster Kwirth was launched from (formerly 'source')
+    id: string                 // the cluster's uid (kube-system uid); '' when not resolved yet (readClusterInfo pending)
 }
 
-// Estado de una conexión remota gestionada por el core (federación multi-cluster). Nunca string literals.
+// State of a remote connection managed by the core (multi-cluster federation). Never string literals.
 export enum ERemoteConnState {
     CONNECTED = 'connected',
     RECONNECTING = 'reconnecting',
     DOWN = 'down'
 }
 
-// Callbacks que el canal registra para consumir las conexiones remotas (keyed por uid de cluster).
+// Callbacks the channel registers to consume the remote connections (keyed by cluster uid).
 export interface IRemoteChannelHandlers {
     onMessage: (clusterId: string, msg: any) => void
     onState: (clusterId: string, state: ERemoteConnState) => void
 }
 
-// Handle gestionado que devuelve openRemoteChannels: el WS crudo NO se expone (se reemplaza en reconexión).
+// Managed handle returned by openRemoteChannels: the raw WS is NOT exposed (it is replaced on reconnect).
 export interface IRemoteChannelHandle {
-    send: (clusterId: string, msg: any) => void   // enruta al WS vivo del cluster
-    close: () => void                             // cierra todas las conexiones + detiene reintentos
+    send: (clusterId: string, msg: any) => void   // routes to the cluster's live WS
+    close: () => void                             // closes every connection and stops the retries
 }
 
 export interface IChannelObject {
@@ -88,9 +89,10 @@ export interface IChannelObject {
     selectedClusterName?: string
     selectCluster?: (clusterName: string) => void
     openClusterManager?: () => void
-    getClusters?: () => IClusterEndpoint[]   // lista de clusters con endpoint (url+accessString) para federación multi-cluster
-    // Abre una conexión de canal a cada cluster (por nombre), ya arrancada; el core gestiona handshake +
-    // reconexión (el canal solo recibe onMessage/onState). Gated por requirements.clusterManagement.
+    getClusters?: () => IClusterEndpoint[]   // clusters with an endpoint (url+accessString) for multi-cluster federation
+    // Opens a channel connection to each cluster (by name), already started; the core handles the
+    // handshake and the reconnection (the channel only receives onMessage/onState). Gated by
+    // requirements.clusterManagement.
     openRemoteChannels?: (clusterNames: string[], instanceConfig: any, handlers: IRemoteChannelHandlers) => IRemoteChannelHandle
     frontChannels?: Map<string, TChannelConstructor>
     notifications?: any[]
@@ -137,7 +139,7 @@ export interface IChannel {
     readonly channelId: string
     requirements: IChannelRequirements
     getScope(): string
-    // Catálogo de scopes RBAC que declara la extensión (para poblar el editor de seguridad). Opcional.
+    // Catalogue of RBAC scopes the extension declares (to populate the security editor). Optional.
     getScopeCatalog?(): IExtensionScope[]
     getChannelIcon(): JSX.Element
     getSetupVisibility(): boolean

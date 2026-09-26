@@ -28,8 +28,8 @@ interface IMarkdownViewerProps {
     style?: React.CSSProperties
 }
 
-// rel='noopener noreferrer' va con target='_blank' SIEMPRE: sin noopener, la pagina abierta recibe
-// una referencia a la ventana de Kwirth y puede navegarla a donde quiera.
+// rel='noopener noreferrer' ALWAYS goes with target='_blank': without noopener, the page that opens
+// receives a reference to Kwirth's window and can navigate it wherever it likes.
 const components = {
     a: ({ href, children, ...rest }: React.AnchorHTMLAttributes<HTMLAnchorElement>) =>
         <a {...rest} href={href} target='_blank' rel='noopener noreferrer'>{children}</a>

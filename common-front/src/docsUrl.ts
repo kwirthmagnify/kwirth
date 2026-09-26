@@ -1,17 +1,17 @@
-// La guía de una extensión la sirve el propio core, en /core/docs/<tipo>/<id>, desde que 'docs' es un tipo
-// de extensión instalable. Así que la URL es DERIVABLE del cluster y no hay nada que configurar.
+// An extension's guide is served by the core itself, at /core/docs/<type>/<id>, ever since 'docs' became
+// an installable extension type. So the URL is DERIVABLE from the cluster and there is nothing to configure.
 //
-// Existe aquí, y no copiada en cada plugin, por un fallo real: agora la pedía en un campo de su pantalla de
-// settings, alguien la tecleó sin el `/core`, y su botón de ayuda estuvo dando 404 durante meses sin que
-// nadie lo notara — porque HelpButton, si no le pasabas base, se iba a un `http://localhost:4000` que no
-// existe en ningún cluster. Ese default ya no está: sin base, el botón no se pinta.
+// It lives here, rather than copied into each plugin, because of a real failure: agora asked for it in a
+// field on its settings screen, somebody typed it without the `/core`, and its help button spent months
+// returning 404 with nobody noticing — because HelpButton, when passed no base, went to a
+// `http://localhost:4000` that exists in no cluster. That default is gone: with no base, no button is drawn.
 //
-// Excubitor repetía la misma cadena a mano en 20 ficheros e iter en 9. Repetirla no es solo feo: es que
-// cuando la ruta cambie habrá que acordarse de treinta sitios.
+// Excubitor repeated the same string by hand in 20 files and iter in 9. Repeating it is not merely ugly:
+// it means that when the route changes, thirty places will have to be remembered.
 
 export const docsUrl = (clusterUrl: string | undefined, targetType: string, id: string): string =>
     `${(clusterUrl ?? '').replace(/\/+$/, '')}/core/docs/${targetType}/${id}`
 
-/** Atajo para el caso corriente: la guía de un plugin. */
+/** Shortcut for the common case: a plugin's guide. */
 export const pluginDocsUrl = (clusterUrl: string | undefined, pluginId: string): string =>
     docsUrl(clusterUrl, 'plugin', pluginId)

@@ -2,17 +2,18 @@ import React from 'react'
 import { IconButton, Tooltip } from '@mui/material'
 import HelpOutline from '@mui/icons-material/HelpOutline'
 
-// Botón de ayuda reutilizable para dialogs de configuración: abre la guía (docsify) en un NUEVO tab en
-// una sección concreta, deep-link vía hash routing (p.ej. …/#/admin/06-sla-settings). `section` puede
-// llevar ancla de heading (…?id=slug). Pensado para la barra de título de un dialog.
-// Regla de proyecto: si un dialog tiene sección de ayuda, llevar este botón (ver memoria dialog-help-button).
+// A reusable help button for configuration dialogs: it opens the guide (docsify) in a NEW tab at a
+// specific section, deep-linked through hash routing (e.g. …/#/admin/06-sla-settings). `section` may
+// carry a heading anchor (…?id=slug). Meant for a dialog's title bar.
+// Project rule: when a dialog has a help section, it carries this button (see the dialog-help-button note).
 
-// ⚠️ AQUÍ HUBO un `DEFAULT_DOCS_URL = 'http://localhost:4000'`, resto de cuando las guías se servían a mano.
-// Premiaba el patrón malo: si no le pasabas base, el botón no fallaba — se iba a un puerto local que no
-// existe en ningún cluster. Con eso, agora estuvo meses con la URL mal y nadie lo notó. Sin base no hay
-// botón: mejor que no aparezca a que aparezca y no lleve a ninguna parte.
+// ⚠️ THERE USED TO BE a `DEFAULT_DOCS_URL = 'http://localhost:4000'` here, left over from when guides
+// were served by hand. It rewarded the bad pattern: if you passed no base, the button did not fail — it
+// went to a local port that exists in no cluster. Because of that, agora spent months with the wrong URL
+// and nobody noticed. With no base there is no button: better it does not appear at all than appear and
+// lead nowhere.
 //
-// Para construir la base, usa `docsUrl(clusterUrl, tipo, id)` de este mismo paquete.
+// To build the base, use `docsUrl(clusterUrl, type, id)` from this same package.
 
 export interface IHelpButtonProps {
     docsUrl?: string    // base de la guía; derívala con docsUrl(clusterUrl, …). Sin ella no se pinta nada
@@ -22,9 +23,10 @@ export interface IHelpButtonProps {
 const HelpButton: React.FC<IHelpButtonProps> = ({ docsUrl, section }) => {
     const open = (): void => {
         const base = (docsUrl ?? '').replace(/\/+$/, '')
-        // Popup del navegador (ventana aparte, no pestaña): las features de tamaño fuerzan el popup.
-        // Tamaño: 48% ancho × 64% alto de la pantalla ACTUAL. Centrado en su monitor (multi-monitor) vía
-        // availLeft/availTop (origen del monitor donde está la ventana). left/top solo los respeta si es popup real.
+        // A browser popup (a separate window, not a tab): the size features are what force the popup.
+        // Size: 48% width × 64% height of the CURRENT screen. Centred on its own monitor (multi-monitor)
+        // through availLeft/availTop (the origin of the monitor the window is on). left/top are only
+        // honoured when it really is a popup.
         const scr = window.screen as Screen & { availLeft?: number; availTop?: number }
         const sw = scr.availWidth
         const sh = scr.availHeight
@@ -35,7 +37,7 @@ const HelpButton: React.FC<IHelpButtonProps> = ({ docsUrl, section }) => {
         const left = Math.round(originX + (sw - width) / 2)
         const top = Math.round(originY + (sh - height) / 2)
         const features = `popup=yes,width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-        // Nombre estable → clics sucesivos reusan la misma ventana (navega a la nueva sección).
+        // A stable name → successive clicks reuse the same window (it navigates to the new section).
         const w = window.open(`${base}/#/${section}`, 'kwirth-guide', features)
         if (w) { w.opener = null; w.focus() }   // opener=null = seguridad (equiv. noopener, que aquí forzaría pestaña)
     }

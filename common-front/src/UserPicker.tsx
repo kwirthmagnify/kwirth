@@ -2,13 +2,13 @@ import React from 'react'
 import { Autocomplete, TextField } from '@mui/material'
 import { IUserInfo } from '@kwirthmagnify/kwirth-common'
 
-// Selector reutilizable de usuario Kwirth. Consume el catálogo de usuarios (IUserInfo, el subset seguro
-// que expone IBackChannelObject.getUsers) y devuelve el id (email) del elegido. Muestra el name y, si el
-// usuario viene de un IdP externo, un badge con el connector. Pensado para reemplazar los Autocomplete
-// de usuario reimplementados por plugin (p.ej. Defender: ownership rules + assign owner).
+// A reusable Kwirth user selector. It consumes the user catalogue (IUserInfo, the safe subset exposed by
+// IBackChannelObject.getUsers) and returns the id (email) of the chosen one. It shows the name and, when
+// the user comes from an external IdP, a badge with the connector. Meant to replace the user
+// Autocompletes reimplemented plugin by plugin (Defender, for instance: ownership rules + assign owner).
 //
-// NOTA tsc: los genéricos de Autocomplete se fijan explícitos (IUserInfo, false×3) y renderOption usa un
-// <li> plano (no <Box component="li">) para evitar la inferencia polimórfica que dispara el type-check.
+// tsc NOTE: Autocomplete's generics are pinned explicitly (IUserInfo, false×3) and renderOption uses a
+// plain <li> (not <Box component="li">) to avoid the polymorphic inference that blows up the type-check.
 
 export interface IUserPickerProps {
     users: IUserInfo[]

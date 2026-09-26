@@ -4,10 +4,11 @@ import { Close as CloseIcon, DeleteSweep, Notifications as NotificationsIcon } f
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff'
 import { ENotifyLevel } from '@kwirthmagnify/kwirth-common'
 
-// Campana de notificaciones COMPARTIDA (antes vivía en el app del core). El array `notifications` lo gestiona el
-// core y se comparte vía channelObject.notifications; cada notificación lleva `channelId`. El icono por-notificación
-// es una prop OPCIONAL (`renderIcon`): el core la pasa resolviendo el icono del canal; un canal/plugin puede pasar
-// el suyo o dejarla → fallback = icono de campana. Así el mismo componente/UX vale para el core y para cualquier plugin.
+// The SHARED notification bell (it used to live in the core's app). The `notifications` array is managed
+// by the core and shared through channelObject.notifications; each notification carries a `channelId`.
+// The per-notification icon is an OPTIONAL prop (`renderIcon`): the core passes it resolving the
+// channel's icon; a channel or plugin may pass its own or leave it → the fallback is a bell icon. That
+// way the same component and UX serve the core and any plugin alike.
 
 export interface INotification {
     channelId: string | undefined
