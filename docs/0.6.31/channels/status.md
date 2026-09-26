@@ -86,6 +86,21 @@ The second button in the toolbar switches from the table to a **map of who feeds
 It reads top to bottom: **producers on top** — providers and pluviders — and **the channels that consume
 them underneath**. A line from one to the other means that channel is subscribed to that provider.
 
+### When a provider consumes another provider
+
+A provider can subscribe to another provider — for example, one that enriches or aggregates what another
+one produces. Then the graph has **more than two rows**, and every line still goes **down**:
+
+  - **Top row**: the producers that consume nothing.
+  - **Middle rows**: a provider that consumes another one sits **below the one it reads**. If it reads a
+    provider that itself reads another, it goes one row further down, as deep as the chain needs.
+  - **Bottom row**: the channels, always together, whatever they consume.
+
+So with providers **A** and **B**, a provider **C** subscribed to **B**, and a channel reading all three, you
+see A and B side by side on top, C underneath B, and the channel at the bottom with a line from each of
+them. The line from B to C ends on C's own box — a provider that consumes is the same box as the provider
+that produces, not a copy of it.
+
 **Click a node** and everything it touches stays lit while the rest dims: its own lines thicken and glow,
 and so do the components on the other end. Click the background to clear it. On a Kwirth with a handful of
 extensions the whole map fits at a glance; on a busy one, that is the only way to answer *"and this one,

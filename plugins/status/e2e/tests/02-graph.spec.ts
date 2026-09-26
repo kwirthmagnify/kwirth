@@ -270,3 +270,32 @@ test('🔴 al refrescar el grafo no parpadea: un nodo que no ha cambiado no se v
     await elegirRefresco('Manual')
     expect(escondidos, 'estos nodos se han escondido al refrescar: el grafo parpadea').toEqual([])
 })
+
+test('🔴 no line goes back up: every producer sits above what consumes it', async () => {
+    /*
+        A provider can now subscribe to another provider, so the graph has more than two layers: A and
+        B on top, C (reading B) below them, and the channels at the bottom. Checked on the REAL
+        positions of every drawn line, so it covers whatever chains this Kwirth has.
+    */
+    await page.locator('button[aria-label="Graph view"]').click()
+    await expect(page.locator('.react-flow__node').first()).toBeVisible({ timeout: 30000 })
+    await page.waitForTimeout(1500)   // layout is async
+
+    const tops = new Map((await page.locator('.react-flow__node').evaluateAll(nodes =>
+        nodes.map(n => [n.getAttribute('data-id') ?? '', n.getBoundingClientRect().top] as [string, number]))))
+    const ids = await page.locator('.react-flow__edge').evaluateAll(edges => edges.map(e => e.getAttribute('data-id') ?? ''))
+    expect(ids.length, 'no lines to check').toBeGreaterThan(0)
+
+    const upwards: string[] = []
+    for (const id of ids) {
+        const cut = id.indexOf('->')
+        const source = id.slice(0, cut)
+        const consumer = id.slice(cut + 2)
+        // Same rule as the plugin: a provider consumer is the provider's own node.
+        const target = consumer.startsWith('provider:') ? consumer.slice('provider:'.length) : `channel:${consumer}`
+        const from = tops.get(source)
+        const to = tops.get(target)
+        if (from === undefined || to === undefined || from >= to) upwards.push(`${id} (${from} -> ${to})`)
+    }
+    expect(upwards, 'lines that do not go down').toEqual([])
+})

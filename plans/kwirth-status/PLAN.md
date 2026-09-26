@@ -1,6 +1,6 @@
 # Kwirth Status — Plan
 
-> **ESTADO — CERRADO** (2026-09-24). Los cuatro streams entregados; una mejora posterior (2026-09-25, 0.2.5) sin trabajo pendiente. Lo que quede por hacer está en
+> **ESTADO — CERRADO** (2026-09-24). Los cuatro streams entregados; mejoras posteriores hasta 0.2.7 (2026-09-26, grafo en capas) sin trabajo pendiente. Lo que quede por hacer está en
 > "Lo que se queda fuera", al final: son decisiones tomadas, no trabajo pendiente de planificar. Cuelga de [PRD.md](PRD.md), que manda en el
 > **qué** y el **por qué**; aquí está el **cómo** y en qué orden.
 >
@@ -370,5 +370,6 @@ Decisiones tomadas, no trabajo pendiente:
 | 2026-09-24 | Tráfico por arista **descartado por ahora**: la sonda rompería las bajas por identidad. |
 | 2026-09-24 | Rendimiento: el requisito es **coste cero con el canal cerrado**; con alguien mirando no preocupa. Se cae el techo del 5 % (el ruido de medida en Node es mayor) y se cae el interruptor: lo enciende el ciclo de vida del canal. |
 | 2026-09-25 | Con auto-refresco, la línea viva **frena y se para al acabar el intervalo**; en Manual sigue la animación continua. Publicado 0.2.4. |
+| 2026-09-26 | 0.2.7: **grafo en capas**. Un provider puede suscribirse a otro (core `3ee2fd0d`), y el core renombró el consumidor a `consumerId` — Status seguía leyendo `channelId` y estaba roto. Un consumidor `provider:<id>` termina en el nodo del provider; productores sin consumos en FIRST, canales en LAST, y el provider que consume a otro SIN fijar para que elk lo baje. Decisiones en `StatusGraph.ts`, probadas contra elk real. |
 | 2026-09-25 | 0.2.6: el grafo es **un solo layout** (`separateConnectedComponents: false`) con la capa **fijada** por nodo (productores FIRST, canales LAST). Un par aislado —sugarless → sugarless— salía en su propio bloque, con el canal por encima de otros productores. Salió al recablear situs y sugarless al core, que por primera vez los hizo visibles. |
 | 2026-09-25 | Nodos **estables por identidad** entre fotos (firma de lo que pintan) para que React Flow no los esconda y re-mida: sin flash. En `data` solo va lo que se pinta. Publicado 0.2.5. |

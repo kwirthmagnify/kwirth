@@ -109,9 +109,25 @@ export interface IStatusInventory {
 export interface IStatusEdge {
     /** Quién produce: un provider ('events') o un pluvider ('plugin:agora'). */
     providerId: string
-    /** Quién consume: el id del canal. */
-    channelId: string
+    /**
+     * Who consumes: a channel id ('agora'), or another provider with the core's prefix ('provider:aws')
+     * now that a provider can subscribe to another one. Same value and name as the core's
+     * ISubscription.consumerId.
+     */
+    consumerId: string
     since: number
+}
+
+/** The core's prefix for a consumer that is a provider (back/src/providers/Consumer.ts). */
+export const PROVIDER_CONSUMER_PREFIX = 'provider:'
+
+/**
+ * A layer the graph pins a node to. The values are elk's own ('elk.layered.layering.layerConstraint'),
+ * so they go straight into the layout options.
+ */
+export enum EGraphLayer {
+    FIRST = 'FIRST',
+    LAST = 'LAST'
 }
 
 /** Qué trae un mensaje de datos de este canal. Hoy solo hay uno; el diagrama y los contadores vendrán. */

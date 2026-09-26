@@ -1,5 +1,5 @@
 import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel } from '@kwirthmagnify/kwirth-common-back'
-import { EComponentHealth, EComponentKind, EStatusPayload, IStatusComponent, IStatusInventory, IStatusMessageResponse } from '../common/StatusTypes'
+import { EComponentHealth, EComponentKind, EStatusPayload, IStatusComponent, IStatusEdge, IStatusInventory, IStatusMessageResponse } from '../common/StatusTypes'
 
 /*
     Kwirth Status — el inventario de lo que Kwirth tiene montado (S1).
@@ -35,11 +35,30 @@ interface IListing {
     configNames: string[]
 }
 
-/** Una arista tal y como la devuelve el core (ClusterInfo.getSubscriptions). */
+/**
+ * An edge as the core returns it (ClusterInfo.getSubscriptions). The consumer field was renamed from
+ * 'channelId' to 'consumerId' when a provider became able to subscribe to another provider: both are
+ * optional so this plugin reads either core.
+ */
 interface ISubscriptionLike {
     providerId: string
-    channelId: string
+    consumerId?: string
+    channelId?: string
     since: number
+}
+
+/**
+ * The core's subscriptions as edges of this plugin. An entry without a consumer is dropped rather than
+ * drawn as a line to nowhere: that is what happened when the core renamed the field and this plugin
+ * kept reading the old one.
+ */
+export const toStatusEdges = (subscriptions: ISubscriptionLike[]): IStatusEdge[] => {
+    const edges: IStatusEdge[] = []
+    for (const s of subscriptions) {
+        const consumerId = s.consumerId ?? s.channelId
+        if (consumerId) edges.push({ providerId: s.providerId, consumerId, since: s.since })
+    }
+    return edges
 }
 
 interface IClusterInfoView {
@@ -354,10 +373,10 @@ class StatusChannel implements IChannel {
      * Las aristas que el core conoce. Protegido igual que getStats: si el core es anterior a esto o
      * revienta, se devuelve vacío y la pantalla enseña el inventario sin grafo.
      */
-    private subscriptionsOf = (): ISubscriptionLike[] => {
+    private subscriptionsOf = (): IStatusEdge[] => {
         if (!this.clusterInfo.getSubscriptions) return []
         try {
-            return this.clusterInfo.getSubscriptions() ?? []
+            return toStatusEdges(this.clusterInfo.getSubscriptions() ?? [])
         }
         catch {
             return []

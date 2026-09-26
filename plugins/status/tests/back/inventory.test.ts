@@ -240,15 +240,41 @@ test('el inventario trae las aristas que el core conoce', async () => {
     const inv = await inventarioDe({
         providers: [{ id: 'events', started: true, getStats: () => ({ subscribers: 2 }) }],
         getSubscriptions: () => [
-            { providerId: 'events', channelId: 'agora', since: 1 },
-            { providerId: 'events', channelId: 'montag', since: 2 }
+            { providerId: 'events', consumerId: 'agora', since: 1 },
+            { providerId: 'events', consumerId: 'montag', since: 2 }
         ]
     })
     assert.equal(inv.edges.length, 2)
-    assert.deepEqual(inv.edges.map(e => e.channelId).sort(), ['agora', 'montag'])
+    assert.deepEqual(inv.edges.map(e => e.consumerId).sort(), ['agora', 'montag'])
     // y el provider dice cuántos de sus consumidores están identificados
     assert.equal(inv.components[0].subscribers, 2)
     assert.equal(inv.components[0].knownConsumers, 2)
+})
+
+test('🔴 the consumer comes from consumerId, the field the current core returns', async () => {
+    // The core renamed 'channelId' to 'consumerId'; reading the old name left every edge without a
+    // consumer, so the graph drew lines to nowhere.
+    const inv = await inventarioDe({
+        providers: [{ id: 'b', started: true }, { id: 'c', started: true }],
+        getSubscriptions: () => [{ providerId: 'b', consumerId: 'provider:c', since: 1 }]
+    })
+    assert.deepEqual(inv.edges, [{ providerId: 'b', consumerId: 'provider:c', since: 1 }])
+})
+
+test('an older core that still says channelId keeps its graph', async () => {
+    const inv = await inventarioDe({
+        providers: [{ id: 'events', started: true }],
+        getSubscriptions: () => [{ providerId: 'events', channelId: 'agora', since: 1 }]
+    })
+    assert.deepEqual(inv.edges.map(e => e.consumerId), ['agora'])
+})
+
+test('an edge without any consumer is dropped, not drawn as a line to nowhere', async () => {
+    const inv = await inventarioDe({
+        providers: [{ id: 'events', started: true }],
+        getSubscriptions: () => [{ providerId: 'events', since: 1 }]
+    })
+    assert.equal(inv.edges.length, 0)
 })
 
 test('🔴 si el provider dice más consumidores de los que el core conoce, se nota', async () => {
@@ -259,7 +285,7 @@ test('🔴 si el provider dice más consumidores de los que el core conoce, se n
     */
     const inv = await inventarioDe({
         providers: [{ id: 'events', started: true, getStats: () => ({ subscribers: 4 }) }],
-        getSubscriptions: () => [{ providerId: 'events', channelId: 'agora', since: 1 }]
+        getSubscriptions: () => [{ providerId: 'events', consumerId: 'agora', since: 1 }]
     })
     const c = inv.components[0]
     assert.equal(c.subscribers, 4)
@@ -270,7 +296,7 @@ test('un pluvider con consumidores sale ACTIVO, y sin ellos OCIOSO', async () =>
     // Un pluvider no implementa IProvider, así que no hay getStats: el grafo es su ÚNICA fuente.
     const conConsumidor = await inventarioDe({
         pluviders: new Map([['plugin:agora', {}]]),
-        getSubscriptions: () => [{ providerId: 'plugin:agora', channelId: 'montag', since: 1 }]
+        getSubscriptions: () => [{ providerId: 'plugin:agora', consumerId: 'montag', since: 1 }]
     })
     assert.equal(conConsumidor.components[0].health, EComponentHealth.ACTIVE)
     assert.equal(conConsumidor.components[0].subscribers, 1)

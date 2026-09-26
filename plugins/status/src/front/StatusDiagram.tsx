@@ -1,8 +1,9 @@
 import React from 'react'
 import { Box, Chip, Stack, Typography, useTheme } from '@mui/material'
 import { ReactFlow, Background, Controls, Node, Edge, MarkerType, Position } from '@xyflow/react'
-import { EComponentHealth, EComponentKind, IStatusInventory } from '../common/StatusTypes'
+import { EComponentHealth, EComponentKind, EGraphLayer, IStatusInventory } from '../common/StatusTypes'
 import { countUnbrokeredConsumers } from './StatusData'
+import { CHANNEL_NODE_PREFIX, channelsOf, consumerNodeId, elkGraphOf, layerOf } from './StatusGraph'
 
 /*
     El mapa de quién produce y quién consume.
@@ -39,12 +40,20 @@ interface IPosicion {
  * quién consume a quién; una pantalla en blanco, no.
  */
 const colocar = async (nodos: Node[], aristas: Edge[]): Promise<Record<string, IPosicion>> => {
+    const destinos = new Set(aristas.map(a => a.target))
+    // Fallback rows follow the same layers as elk: top, providers that consume providers, channels.
     const filas = (): Record<string, IPosicion> => {
         const pos: Record<string, IPosicion> = {}
-        const productores = nodos.filter(n => n.data.esProductor)
-        const consumidores = nodos.filter(n => !n.data.esProductor)
-        productores.forEach((n, i) => { pos[n.id] = { x: i * 260, y: 0 } })
-        consumidores.forEach((n, i) => { pos[n.id] = { x: i * 260, y: 220 } })
+        const fila = (n: Node): number => {
+            switch (layerOf(n.id, destinos)) {
+                case EGraphLayer.FIRST: return 0
+                case EGraphLayer.LAST: return 2
+                default: return 1
+            }
+        }
+        for (const f of [0, 1, 2]) {
+            nodos.filter(n => fila(n) === f).forEach((n, i) => { pos[n.id] = { x: i * 260, y: f * 220 } })
+        }
         return pos
     }
 
@@ -54,38 +63,8 @@ const colocar = async (nodos: Node[], aristas: Edge[]): Promise<Record<string, I
     try {
         const ELK = await loadElk() as new () => { layout(g: unknown): Promise<{ children?: { id: string, x: number, y: number }[] }> }
         const elk = new ELK()
-        const g = await elk.layout({
-            id: 'root',
-            layoutOptions: {
-                'elk.algorithm': 'layered',
-                /*
-                    De arriba abajo: los productores en la capa de arriba y los consumidores debajo.
-                    Se lee como un diagrama de flujo —el dato cae— y aprovecha el ancho de la pantalla,
-                    que es donde sobra sitio cuando hay muchos nodos.
-                */
-                'elk.direction': 'DOWN',
-                'elk.spacing.nodeNode': '40',
-                'elk.layered.spacing.nodeNodeBetweenLayers': '110',
-                /*
-                    UN solo grafo, no uno por componente. De serie elk coloca cada componente conexo por
-                    su cuenta y luego los apila: un par suelto como sugarless -> sugarless salia en su
-                    propio bloque de dos filas, con su canal por ENCIMA de productores del bloque grande.
-                */
-                'elk.separateConnectedComponents': 'false'
-            },
-            /*
-                Y la fila de cada nodo, fijada: productores en la primera capa, consumidores en la ultima.
-                Sin esto, un productor sin aristas (plugin:montag) es un nodo sin salidas y el layering
-                lo puede bajar con los consumidores.
-            */
-            children: nodos.map(n => ({
-                id: n.id,
-                width: 230,
-                height: 56,
-                layoutOptions: { 'elk.layered.layering.layerConstraint': n.data.esProductor ? 'FIRST' : 'LAST' }
-            })),
-            edges: aristas.map(e => ({ id: e.id, sources: [e.source], targets: [e.target] }))
-        })
+        // The graph elk lays out is built in StatusGraph, where a test runs it through real elk.
+        const g = await elk.layout(elkGraphOf(nodos.map(n => n.id), aristas))
         const pos: Record<string, IPosicion> = {}
         for (const c of g.children ?? []) pos[c.id] = { x: c.x, y: c.y }
         return Object.keys(pos).length === nodos.length ? pos : filas()
@@ -155,7 +134,8 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
         const idsProductores = new Set(productores.map(p => p.id))
 
         // Los canales no salen en el inventario: se deducen de las aristas, que es donde aparecen.
-        const canales = [...new Set(inventory.edges.map(e => e.channelId))]
+        // A consumer that is a provider is not a channel: its line ends on the provider's own node.
+        const canales = channelsOf(inventory.edges)
 
         /*
             La vecindad del nodo seleccionado: el propio nodo y todo lo que toca, en los dos sentidos.
@@ -173,7 +153,7 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
             vecinos.add(seleccionado)
             for (const e of inventory.edges) {
                 const origen = e.providerId
-                const destino = `channel:${e.channelId}`
+                const destino = consumerNodeId(e.consumerId)
                 if (origen === seleccionado) vecinos.add(destino)
                 if (destino === seleccionado) vecinos.add(origen)
             }
@@ -227,16 +207,16 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
         ]
 
         const aristas: Edge[] = inventory.edges.map(e => ({
-            id: `${e.providerId}->${e.channelId}`,
+            id: `${e.providerId}->${e.consumerId}`,
             source: e.providerId,
-            target: `channel:${e.channelId}`,
+            target: consumerNodeId(e.consumerId),
             /*
                 Una línea en movimiento se lee como "por aquí está pasando algo ahora mismo", así que
                 solo se mueve cuando eso se ha MEDIDO (ver 'viva'). Quieta, lo único que dice es que la
                 suscripción existe. Cómo frena con auto-refresco está en el contenedor del ReactFlow.
             */
             ...(() => {
-                const tocaAlSeleccionado = Boolean(seleccionado) && (e.providerId === seleccionado || `channel:${e.channelId}` === seleccionado)
+                const tocaAlSeleccionado = Boolean(seleccionado) && (e.providerId === seleccionado || consumerNodeId(e.consumerId) === seleccionado)
                 /*
                     Viva = el contador de su productor CAMBIO entre el refresco anterior y este. Se
                     animan todas sus salientes.
@@ -268,7 +248,9 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
                     markerEnd: { type: MarkerType.ArrowClosed, color, width: punta, height: punta }
                 }
             })()
-        })).filter(e => idsProductores.has(e.source))
+        }))
+            // Both ends must be drawn: a channel node always is, a provider consumer only if it is installed.
+            .filter(e => idsProductores.has(e.source) && (e.target.startsWith(CHANNEL_NODE_PREFIX) || idsProductores.has(e.target)))
 
         // Aristas cuyo productor ya no está en el inventario: se descartan, pero se cuentan para decirlo.
         const canalesSueltos = inventory.edges.length - aristas.length

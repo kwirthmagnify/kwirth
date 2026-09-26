@@ -47,7 +47,9 @@ await esbuild.build({
         'express',
         '@kwirthmagnify/kwirth-common',
         '@kwirthmagnify/kwirth-common-back',
-        '@kwirthmagnify/kwirth-common-front'
+        '@kwirthmagnify/kwirth-common-front',
+        // Loaded from node_modules, not bundled: bundled, the coverage would measure elk's own code.
+        'elkjs'
     ],
     loader: { '.ts': 'ts', '.tsx': 'tsx' },
 })
