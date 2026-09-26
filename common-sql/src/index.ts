@@ -1,10 +1,10 @@
-// common-sql — tipos isomórficos (back/front) del servicio de almacenamiento relacional compartido.
+// common-sql — isomorphic types (back/front) of the shared relational storage service.
 
-// Clave común de storage donde el core guarda la config de servidor(es) SQL
-// (como STORAGE_KEY_PROVIDERS/STORAGE_KEY_LLMS de common-ai). Se escribe como secret.
+// Common storage key where the core keeps the SQL server(s) config
+// (like common-ai's STORAGE_KEY_PROVIDERS/STORAGE_KEY_LLMS). It is written as a secret.
 export const STORAGE_KEY_SQL_SERVERS = 'kwirth-sql-servers'
 
-// Config de un servidor SQL. La provee el admin y la inyecta el core con configure().
+// Config of a SQL server. The admin provides it and the core injects it with configure().
 export interface ISqlServer {
     id: string
     name: string

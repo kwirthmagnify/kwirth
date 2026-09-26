@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { getDb, ensureSchemaOnce, physicalDbName, describeError } from '../../src/back'
 
-// Unit de lógica pura (sin driver de BD). El comportamiento con BD real (pg) va en pg.integration.test.ts.
+// Pure-logic unit tests (no DB driver). Behaviour against a real DB (pg) lives in pg.integration.test.ts.
 
 test('getDb before ensureDb throws', () => {
     assert.throws(() => getDb('nope'), /before ensureDb/)
@@ -38,12 +38,12 @@ test('describeError saca las causas de dentro de un AggregateError', () => {
         Object.assign(new Error('connect ECONNREFUSED 10.43.1.5:5432'), { code: 'ECONNREFUSED', address: '10.43.1.5', port: 5432 }),
         Object.assign(new Error('connect ECONNREFUSED ::1:5432'), { code: 'ECONNREFUSED', address: '::1', port: 5432 })
     ])
-    // 🔴 Sin esto, String(err) es literalmente 'AggregateError' y no dice nada de nada.
+    // 🔴 Without this, String(err) is literally 'AggregateError' and says nothing whatsoever.
     assert.equal(String(err), 'AggregateError')
     assert.equal(describeError(err), 'AggregateError: ECONNREFUSED 10.43.1.5:5432 · ECONNREFUSED ::1:5432')
 })
 
-// Probar seis direcciones y fallar en todas no son seis noticias, es una.
+// Trying six addresses and failing at all of them is not six pieces of news, it is one.
 test('describeError deduplica causas idénticas', () => {
     const one = () => Object.assign(new Error('x'), { code: 'ETIMEDOUT', address: '10.0.0.1', port: 5432 })
     assert.equal(describeError(new AggregateError([one(), one(), one()])), 'AggregateError: ETIMEDOUT 10.0.0.1:5432')

@@ -1,9 +1,9 @@
-// Runner de tests de common-sql (patrón Defender).
-// Bundlea tests/**/*.test.ts con esbuild (TS->ESM) a tests/.out/ externalizando los drivers
-// (knex/pg/sqlite3) y ejecuta con el runner nativo `node --test`. Los tests importan de ../src.
+// common-sql test runner (the Defender pattern).
+// It bundles tests/**/*.test.ts with esbuild (TS->ESM) into tests/.out/, externalising the drivers
+// (knex/pg/sqlite3), and runs them with the native `node --test` runner. The tests import from ../src.
 //
-//   npm test                       -> unit (sqlite); el test de integración pg se auto-skippea
-//   COMMON_SQL_PG=1 npm test       -> además ejecuta la integración contra Postgres dev
+//   npm test                       -> unit (sqlite); the pg integration test skips itself
+//   COMMON_SQL_PG=1 npm test       -> also runs the integration against the dev Postgres
 
 import esbuild from 'esbuild'
 import { readdirSync, mkdirSync, rmSync } from 'fs'

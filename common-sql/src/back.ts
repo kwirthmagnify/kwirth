@@ -1,27 +1,28 @@
-// common-sql (back) — servicio de almacenamiento relacional provisionado (pg).
+// common-sql (back) — provisioned relational storage service (pg).
 //
-// - El core llama configure(server) al arranque (conexión admin-provista).
-// - Cada extensión pide su almacén: ensureDb(consumerId) (async, provisión, una vez) y
-//   luego getDb(consumerId) (SÍNCRONO, devuelve el Knex ya listo — compat con el uso inline
-//   de Defender: getDb('x')(TABLE).insert(...), transacciones, genéricos).
-// - Aislamiento: BD-por-consumidor -> BD física 'kwirth_<consumerId>'.
-// - Motor: pg (via knex). El tipo ISqlServer.client deja el hook para otros motores en el futuro.
+// - The core calls configure(server) at startup (an admin-provided connection).
+// - Each extension asks for its store: ensureDb(consumerId) (async, provisioning, once) and
+//   then getDb(consumerId) (SYNCHRONOUS, returns the ready Knex — compatible with Defender's
+//   inline use: getDb('x')(TABLE).insert(...), transactions, generics).
+// - Isolation: one DB per consumer -> the physical DB 'kwirth_<consumerId>'.
+// - Engine: pg (through knex). The ISqlServer.client type leaves the hook for other engines later.
 
 import knexFactory from 'knex'
 import type { Knex } from 'knex'
 import { ISqlServer } from './index'
 
-// Re-export para que las extensiones no bundleen el driver.
+// Re-exported so extensions do not bundle the driver.
 export { default as knex } from 'knex'
 export type { Knex } from 'knex'
 
 /*
-    Dónde escribe esta librería. Por defecto la consola, y el consumidor le pasa el suyo con
-    setSqlLogger() — el mismo patrón que setLogger() en providers y canales.
+    Where this library writes. The console by default, and the consumer passes in its own with
+    setSqlLogger() — the same pattern as setLogger() in providers and channels.
 
-    Hace falta porque knex trae su PROPIO logger, que escribe directo a console. Sus mensajes salían
-    sueltos, sin hora, sin nivel y sin decir de qué extensión eran: un "Acquire connection error" a secas
-    en mitad del log, indistinguible de una traza cualquiera y sin forma de filtrarlo.
+    It is needed because knex brings its OWN logger, which writes straight to console. Its messages came
+    out loose, with no time, no level and no mention of which extension they belonged to: a bare "Acquire
+    connection error" in the middle of the log, indistinguishable from any other trace and impossible to
+    filter out.
 */
 export interface ISqlLogger {
     info(message: unknown): void
@@ -56,23 +57,23 @@ const oneLine = (err: unknown): string => {
 export const describeError = (err: unknown): string => {
     const causes = (err as { errors?: unknown[] })?.errors
     if (Array.isArray(causes) && causes.length > 0) {
-        // Deduplicado: probar seis direcciones y fallar en todas no son seis noticias, es una.
+        // Deduplicated: trying six addresses and failing at all of them is not six pieces of news, it is one.
         const seen = [...new Set(causes.map(oneLine))]
         return `${(err as Error)?.name ?? 'AggregateError'}: ${seen.join(' · ')}`
     }
     return oneLine(err)
 }
 
-/** Dimensión del pool de conexiones de un consumidor. Cada extensión pasa la suya en ensureDb. */
+/** A consumer's connection pool sizing. Each extension passes its own in ensureDb. */
 export interface IPoolOptions {
-    min?: number                 // conexiones mantenidas CALIENTES siempre (>0 evita crear conexión en cada query)
-    max?: number                 // tope de conexiones simultáneas de ESTE pool
-    idleTimeoutMillis?: number   // vida de una conexión ociosa por encima de `min` (default knex/tarn: 30s)
+    min?: number                 // connections always kept WARM (>0 avoids creating one on every query)
+    max?: number                 // ceiling of simultaneous connections for THIS pool
+    idleTimeoutMillis?: number   // life of an idle connection above `min` (knex/tarn default: 30s)
 }
-// Default de pool: min>0 mantiene conexiones calientes → sin el ~1-2s de crear conexión cuando el pool queda
-// ocioso. Cada extensión sube/baja lo suyo (p.ej. iter/excubitor min:4, agora min:1) vía ensureDb.
+// Pool default: min>0 keeps connections warm → no ~1-2s connection setup when the pool goes idle. Each
+// extension raises or lowers its own (iter/excubitor min:4, agora min:1, say) through ensureDb.
 const POOL_DEFAULT: Required<Pick<IPoolOptions, 'min' | 'max'>> = { min: 2, max: 10 }
-const POOL_HEADROOM = 5   // conexiones reservadas (superusuario / otros clientes) al calcular el presupuesto
+const POOL_HEADROOM = 5   // connections reserved (superuser / other clients) when computing the budget
 
 let server: ISqlServer | undefined
 const pools = new Map<string, Knex>()          // consumerId -> Knex (BD del consumidor)
@@ -86,7 +87,7 @@ const requireServer = (): ISqlServer => {
     return server
 }
 
-/** Nombre físico de la BD de un consumidor. */
+/** Physical name of a consumer's DB. */
 export const physicalDbName = (consumerId: string): string =>
     'kwirth_' + consumerId.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase()
 
@@ -116,16 +117,17 @@ const knexForDb = (dbName: string, pool?: IPoolOptions): Knex => {
 
 const admin = (): Knex => {
     const s = requireServer()
-    // El pool de MANTENIMIENTO se usa en contadas ocasiones (createDb/dropDb/SHOW): NO mantiene conexiones
-    // calientes (min:0). Además así los procesos cortos (tests/scripts) pueden terminar sin conexiones vivas
-    // colgando el proceso (los pools de consumidor sí las mantienen, pero se cierran con closeDb).
+    // The MAINTENANCE pool is used on rare occasions (createDb/dropDb/SHOW): it keeps NO warm connections
+    // (min:0). It also lets short-lived processes (tests and scripts) finish without live connections
+    // hanging the process (consumer pools do keep them, but they are closed with closeDb).
     if (!adminPool) { adminPool = knexForDb(s.maintenanceDb ?? 'postgres', { min: 0 }); configuredMax.set('#admin', POOL_DEFAULT.max) }
     return adminPool
 }
 
-// Aviso de presupuesto: la SUMA de los `max` de todos los pools (consumidores + admin) compite por el
-// max_connections GLOBAL de Postgres. Si Σmax supera max_connections − headroom, se avisa por consola con el
-// desglose por consumidor (para saber a quién recortar). Best-effort: si no se puede leer max_connections, calla.
+// Budget warning: the SUM of the `max` of every pool (consumers + admin) competes for Postgres's GLOBAL
+// max_connections. When Σmax exceeds max_connections − headroom, a warning goes to the console with the
+// per-consumer breakdown (so you know who to trim). Best-effort: if max_connections cannot be read, it
+// stays quiet.
 const warnIfBudgetExceeded = async (): Promise<void> => {
     try {
         if (maxConnections === undefined) {
@@ -143,10 +145,10 @@ const warnIfBudgetExceeded = async (): Promise<void> => {
     catch { /* best-effort: no rompemos la provisión por no poder avisar */ }
 }
 
-// identificador saneado para nombres de BD (no parametrizables en CREATE/DROP DATABASE)
+// sanitised identifier for DB names (they cannot be parameterised in CREATE/DROP DATABASE)
 const safeIdent = (name: string): string => name.replace(/[^a-zA-Z0-9_]/g, '_')
 
-/** La llama el CORE al arrancar: fija la conexión al servidor SQL. */
+/** Called by the CORE at startup: it pins the connection to the SQL server. */
 export const configure = (s: ISqlServer): void => { server = s }
 
 export const dbExists = async (name: string): Promise<boolean> => {
@@ -160,7 +162,7 @@ export const createDb = async (name: string): Promise<void> => {
 }
 
 export const dropDb = async (name: string): Promise<void> => {
-    // cerrar pool(s) que apunten a esta BD física
+    // close any pool pointing at this physical DB
     for (const [cid, k] of [...pools]) {
         if (physicalDbName(cid) === name) { await k.destroy(); pools.delete(cid); configuredMax.delete(cid) }
     }
@@ -172,7 +174,7 @@ export const listDbs = async (): Promise<string[]> => {
     return r.rows.map((x: { datname: string }) => x.datname)
 }
 
-/** PROVISIÓN (async, una vez): asegura la BD del consumidor y abre el pool. Devuelve el Knex listo. */
+/** PROVISIONING (async, once): ensures the consumer's DB and opens the pool. Returns the ready Knex. */
 export const ensureDb = async (consumerId: string, pool?: IPoolOptions): Promise<Knex> => {
     const existing = pools.get(consumerId)
     if (existing) return existing
@@ -180,21 +182,21 @@ export const ensureDb = async (consumerId: string, pool?: IPoolOptions): Promise
     await createDb(name)
     const opts: IPoolOptions = { ...POOL_DEFAULT, ...(pool ?? {}) }
     const k = knexForDb(name, opts)
-    await k.raw('select 1')          // valida conexión
+    await k.raw('select 1')          // validates the connection
     pools.set(consumerId, k)
     configuredMax.set(consumerId, opts.max ?? POOL_DEFAULT.max)
     await warnIfBudgetExceeded()
     return k
 }
 
-/** USO DIARIO (SÍNCRONO): devuelve el Knex ya provisionado. Lanza si no se llamó ensureDb antes. */
+/** EVERYDAY USE (SYNCHRONOUS): returns the already provisioned Knex. Throws if ensureDb was not called first. */
 export const getDb = (consumerId: string): Knex => {
     const k = pools.get(consumerId)
     if (!k) throw new Error(`[common-sql] getDb('${consumerId}') called before ensureDb('${consumerId}')`)
     return k
 }
 
-/** Esquema idempotente, memoizado por schemaId. NO cachea promesa rechazada (reintenta si la BD estaba caída). */
+/** Idempotent schema, memoised by schemaId. It does NOT cache a rejected promise (it retries if the DB was down). */
 export const ensureSchemaOnce = (db: Knex, schemaId: string, fn: (db: Knex) => Promise<void>): Promise<void> => {
     let p = schemaReady.get(schemaId)
     if (!p) {

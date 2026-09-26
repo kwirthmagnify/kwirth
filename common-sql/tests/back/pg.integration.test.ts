@@ -2,8 +2,8 @@ import { test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { configure, ensureDb, getDb, ensureSchemaOnce, createDb, dropDb, dbExists, listDbs, closeDb, physicalDbName } from '../../src/back'
 
-// Integración contra el Postgres de dev (port-forward svc/defender-postgres 5432).
-// Se auto-skippea salvo COMMON_SQL_PG=1 para no romper `npm test` sin cluster.
+// Integration against the dev Postgres (port-forward svc/defender-postgres 5432).
+// It skips itself unless COMMON_SQL_PG=1, so `npm test` does not break without a cluster.
 const RUN = !!process.env.COMMON_SQL_PG
 
 const server = {
@@ -30,7 +30,7 @@ test('pg: createDb/dbExists/listDbs + ensureDb + schema + insert + tx (Defender-
     assert.equal(await dbExists(DBNAME), true)
     assert.ok((await listDbs()).includes(DBNAME))
 
-    // getDb síncrono devuelve el mismo pool
+    // the synchronous getDb returns the same pool
     assert.equal(getDb(CONSUMER), db)
 
     await ensureSchemaOnce(db, CONSUMER, async d => {
@@ -42,7 +42,7 @@ test('pg: createDb/dbExists/listDbs + ensureDb + schema + insert + tx (Defender-
     assert.equal(rows.length, 2)
     assert.equal(rows[0].v, 1)
 
-    // idempotencia de createDb (no falla si ya existe)
+    // createDb is idempotent (it does not fail when it already exists)
     await createDb(DBNAME)
     assert.equal(await dbExists(DBNAME), true)
 })
