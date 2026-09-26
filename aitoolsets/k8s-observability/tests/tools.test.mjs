@@ -61,7 +61,7 @@ const fakeHost = (over = {}) => {
     }
 }
 
-// ── el contrato ──────────────────────────────────────────────────────────────────────────────────────
+// ── the contract ─────────────────────────────────────────────────────────────────────────────────────
 
 test('declara las dos capabilities que usa, y sus tres tools', () => {
     assert.equal(toolset.id, 'k8s-observability')
@@ -71,7 +71,7 @@ test('declara las dos capabilities que usa, y sus tres tools', () => {
 })
 
 test('leer logs es READ pero NO es public', () => {
-    // Un log es donde acaban tokens, correos y datos de cliente. No cambia nada y enseña mucho.
+    // A log is where tokens, emails and customer data end up. It changes nothing and shows a great deal.
     assert.equal(tool('get_pod_logs').sensitivity, commonAi.EToolSensitivity.INTERNAL)
     assert.equal(tool('get_cluster_events').sensitivity, commonAi.EToolSensitivity.PUBLIC)
 })
@@ -131,7 +131,7 @@ test('el filtro de namespace mira tambien el objeto señalado', async () => {
 })
 
 test('el limite devuelve los ULTIMOS, no los primeros', async () => {
-    // En un buffer de eventos lo viejo casi nunca es lo que se busca.
+    // In an event buffer the old stuff is hardly ever what is wanted.
     const { host } = fakeHost()
     host.events.recent = [1, 2, 3, 4, 5].map(n => lifecycle({ metadata: { name: `api-${n}`, namespace: 'prod' } }))
 
@@ -142,7 +142,7 @@ test('el limite devuelve los ULTIMOS, no los primeros', async () => {
 })
 
 test('un objeto se encuentra tanto si ES el evento como si lo SEÑALA', async () => {
-    // Los Warning de kube apuntan con involvedObject. Mirar solo metadata deja fuera justo esa mitad.
+    // Kube's Warnings point with involvedObject. Looking at metadata alone leaves out precisely that half.
     const { host } = fakeHost()
     host.events.recent = [
         lifecycle({ metadata: { name: 'api-1', namespace: 'prod' }, kind: 'Pod' }),
@@ -177,7 +177,7 @@ test('sin container ni tailLines, se usan los valores por defecto', async () => 
 })
 
 test('un log enorme se recorta por el FINAL y se avisa', async () => {
-    // Lo ultimo que dijo el contenedor antes de morir es lo que explica la muerte; el arranque no.
+    // The last thing the container said before dying is what explains the death; the startup does not.
     const { host } = fakeHost()
     host.k8s.coreApi.readNamespacedPodLog = async () => 'x'.repeat(20000) + 'EL-FINAL'
 

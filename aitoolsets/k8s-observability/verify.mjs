@@ -27,7 +27,7 @@ const coreApi = kc.makeApiClient(CoreV1Api)
 
 const ns = process.argv[2] ?? 'kube-system'
 
-// El buffer del core, reconstruido: cada Event de kube viaja como { type, obj }.
+// The core's buffer, reconstructed: each kube Event travels as { type, obj }.
 const eventList = await coreApi.listEventForAllNamespaces()
 const clusterEvents = eventList.items.map(e => ({ type: 'ADDED', obj: { kind: 'Event', ...e } }))
 
@@ -57,7 +57,7 @@ const delNs = await tool('get_cluster_events').execute({ namespace: ns }, host)
 console.log(`get_cluster_events            todos=${todos.count}  warnings=${warnings.count}  en ${ns}=${delNs.count}`)
 if (warnings.count > 0) console.log(`  ejemplo: ${warnings.events[0].reason} -> ${String(warnings.events[0].message).slice(0, 80)}`)
 
-// Un pod de verdad del namespace, para las dos que quedan.
+// A real pod from the namespace, for the two that are left.
 const pods = await coreApi.listNamespacedPod({ namespace: ns })
 const pod = pods.items[0]
 if (!pod) {

@@ -13,8 +13,8 @@ import { ECapability, EToolEffect, EToolSensitivity } from '@kwirthmagnify/kwirt
     aquí (ver el plan, "Cuándo se borran las 43").
 */
 
-// Las capabilities se piden, no se asumen: si el host no las provisiona, la tool lo dice en vez de
-// reventar por dentro con un 'cannot read property of undefined'.
+// Capabilities are asked for, not assumed: when the host does not provision them, the tool says so
+// instead of blowing up inside with a 'cannot read property of undefined'.
 const events = (host: IToolHost, toolName: string, args: Record<string, unknown> = {}): IClusterEvent[] => {
     host.trace(toolName, args)
     if (!host.events) throw new Error(`[k8s-observability] '${toolName}' needs the cluster event buffer and the host did not provide it`)
@@ -27,7 +27,7 @@ const k8s = (host: IToolHost, toolName: string, args: Record<string, unknown> = 
     return host.k8s
 }
 
-/** Un fallo se devuelve como dato, no como excepción: el modelo tiene que poder leerlo y decidir. */
+/** A failure is returned as data, not as an exception: the model has to be able to read it and decide. */
 const failed = (err: unknown) => ({ error: err instanceof Error ? err.message : String(err) })
 
 /*
@@ -58,11 +58,11 @@ const summarize = (e: IClusterEvent): Record<string, unknown> => {
     }
 }
 
-/** El namespace de un elemento del buffer, venga como objeto propio o señalado por un Event. */
+/** The namespace of a buffer entry, whether it comes as an object of its own or pointed at by an Event. */
 const namespaceOf = (e: IClusterEvent): string | undefined =>
     e?.obj?.metadata?.namespace ?? e?.obj?.involvedObject?.namespace
 
-/** Tope de log que se le manda al modelo. Más que esto no aporta y se come la ventana de contexto. */
+/** Ceiling on the log sent to the model. More than this adds nothing and eats the context window. */
 const LOG_LIMIT = 15000
 
 const k8sObservability: IAiToolset = {
@@ -91,7 +91,7 @@ const k8sObservability: IAiToolset = {
                 if (warningsOnly) evs = evs.filter(e => e?.obj?.kind === 'Event' && e.obj.type === 'Warning')
                 if (namespace) evs = evs.filter(e => namespaceOf(e) === namespace)
 
-                // Se devuelven los ULTIMOS: en un buffer de eventos lo viejo casi nunca es lo que se busca.
+                // The LAST ones are returned: in an event buffer the old stuff is hardly ever what is wanted.
                 return { count: evs.length, events: evs.slice(-limit).map(summarize) }
             }
         },
@@ -109,8 +109,9 @@ const k8sObservability: IAiToolset = {
                 const name = String(args.name)
                 const evs = events(host, 'get_object_events', { namespace, name }).filter(e => {
                     const o = e?.obj ?? {}
-                    // Dos formas de que un evento hable de un objeto: SER el objeto, o señalarlo. Mirar solo
-                    // una deja fuera justo la mitad interesante — los Warning apuntan con involvedObject.
+                    // Two ways for an event to talk about an object: BEING the object, or pointing at it.
+                    // Looking at only one leaves out precisely the interesting half — Warnings point with
+                    // involvedObject.
                     const isObj = o.metadata?.namespace === namespace && o.metadata?.name === name
                     const isInvolved = o.involvedObject?.namespace === namespace && o.involvedObject?.name === name
                     return isObj || isInvolved
@@ -120,8 +121,8 @@ const k8sObservability: IAiToolset = {
         },
         {
             name: 'get_pod_logs',
-            // ⚠️ READ pero INTERNAL, y no por exceso de celo: un log es donde acaban tokens, correos y datos
-            // de cliente. No cambia nada del cluster y puede enseñar más que muchas tools de escritura.
+            // ⚠️ READ but INTERNAL, and not out of excessive zeal: a log is where tokens, emails and
+            // customer data end up. It changes nothing in the cluster and can show more than many write tools.
             description: 'Returns recent container logs for a pod (equivalent to kubectl logs). For a crashing pod (CrashLoopBackOff) pass previous:true to read the CRASHED container instance logs — that is where the root cause usually is: the events only say it is restarting, not why.',
             effect: EToolEffect.READ,
             sensitivity: EToolSensitivity.INTERNAL,
@@ -144,8 +145,8 @@ const k8sObservability: IAiToolset = {
                     const raw: unknown = await c.coreApi.readNamespacedPodLog({ name, namespace, container, previous, tailLines })
                     const text = typeof raw === 'string' ? raw : ((raw as { body?: string })?.body ?? JSON.stringify(raw))
                     const truncated = text.length > LOG_LIMIT
-                    // Se recorta por el FINAL: lo último que dijo el contenedor antes de morir es lo que
-                    // explica la muerte; el arranque casi nunca.
+                    // It is trimmed from the END: the last thing the container said before dying is what
+                    // explains the death; the startup hardly ever does.
                     return { namespace, name, container: container ?? null, previous, truncated, logs: truncated ? text.slice(-LOG_LIMIT) : text }
                 }
                 catch (err) { return failed(err) }
