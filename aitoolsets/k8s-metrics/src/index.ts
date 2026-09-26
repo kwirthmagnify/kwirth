@@ -25,7 +25,7 @@ const k8s = (host: IToolHost) => {
 
 const failed = (err: unknown) => ({ error: err instanceof Error ? err.message : String(err) })
 
-/** Aún no hay lecturas. Es un estado normal al arrancar, no un fallo: se dice tal cual. */
+/** There are no readings yet. It is a normal state at startup, not a failure: it is said as such. */
 const NO_METRICS = { error: 'No metrics available yet' }
 
 const DEFAULT_COUNT = 5
@@ -35,7 +35,7 @@ const GB = 1024 * 1024 * 1024
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
-/** El resumen de uso del cluster en una lectura. Mismo formato para la actual y para las históricas. */
+/** The cluster's usage summary in one reading. The same format for the current one and the historical ones. */
 const clusterUsage = (sample: IMetricsSample) => ({
     vcpus: sample.cluster.vcpus,
     memoryGB: round2(sample.cluster.memory / GB),
@@ -56,10 +56,10 @@ const filterNodes = (sample: IMetricsSample, nodeName?: string): IMetricsNodeSam
     nodeName ? sample.nodes.filter(n => n.name === nodeName) : sample.nodes
 
 /**
- * Suma el consumo de los pods de una lectura que cumplan el filtro.
+ * Adds up the consumption of the pods in a reading that match the filter.
  *
- * Se recorre POR NODO porque así vienen las muestras: un mismo deployment tiene pods repartidos, y
- * sumar solo el primer nodo daría una cifra baja que parece correcta.
+ * It is walked PER NODE because that is how the samples come: a single deployment has its pods spread
+ * out, and adding up only the first node would give a low figure that looks correct.
  */
 const sumPods = (sample: IMetricsSample, matches: (namespace?: string, name?: string) => boolean) => {
     let cpu = 0
@@ -76,7 +76,7 @@ const sumPods = (sample: IMetricsSample, matches: (namespace?: string, name?: st
     return { podCount, cpuMillicores: Math.round(cpu / NANO), memoryMB: Math.round(mem / MB), timestamp: sample.nodes[0]?.timestamp }
 }
 
-/** Los pods que hoy pertenecen a un deployment, por su selector. Es la única parte que toca el cluster. */
+/** The pods that belong to a deployment today, by its selector. It is the only part that touches the cluster. */
 const podsOfDeployment = async (host: IToolHost, namespace: string, name: string): Promise<Set<string>> => {
     const c = k8s(host)
     const deployment = await c.appsApi.readNamespacedDeployment({ name, namespace })
@@ -92,7 +92,7 @@ const k8sMetrics: IAiToolset = {
     version: '0.1.0',
     displayName: 'K8s Metrics',
     description: 'Resource usage of the cluster, its nodes, a deployment or a namespace, now and over the recent readings',
-    // K8S ademas de METRICS: las de deployment necesitan resolver que pods lo componen.
+    // K8S as well as METRICS: the deployment ones need to resolve which pods make it up.
     requires: [ECapability.K8S, ECapability.METRICS],
     tools: [
         defineTool({
@@ -147,7 +147,7 @@ const k8sMetrics: IAiToolset = {
             }
         }),
 
-        // ── las mismas, pero mirando hacia atras ─────────────────────────────────────────────────────
+        // ── the same ones, but looking backwards ────────────────────────────────────────────────────
 
         defineTool({
             name: 'get_prev_cluster_usage',
@@ -190,9 +190,9 @@ const k8sMetrics: IAiToolset = {
                 const samples = metrics(host, 'get_prev_deployment_usage', { namespace, name, count })
                 if (samples.length === 0) return NO_METRICS
                 try {
-                    // ⚠️ Los pods se resuelven UNA vez, con los de ahora, y se aplican a todas las lecturas.
-                    // Es lo que hacia la version original y tiene una consecuencia que conviene saber: si el
-                    // deployment se reinicio, los pods viejos ya no casan y las lecturas antiguas salen a cero.
+                    // ⚠️ The pods are resolved ONCE, with today's, and applied to every reading. That is what
+                    // the original version did, and it has a consequence worth knowing: if the deployment was
+                    // restarted, the old pods no longer match and the older readings come out at zero.
                     const podNames = await podsOfDeployment(host, namespace, name)
                     return samples.slice(-count).map(sample => ({
                         deployment: name, namespace,
@@ -214,7 +214,7 @@ const k8sMetrics: IAiToolset = {
             execute: async ({ namespace, count = DEFAULT_COUNT }, host) => {
                 const samples = metrics(host, 'get_prev_space_data', { namespace, count })
                 if (samples.length === 0) return NO_METRICS
-                // Por namespace no hace falta cluster: el podRef de cada muestra ya lo trae.
+                // By namespace no cluster is needed: each sample's podRef already carries it.
                 return samples.slice(-count).map(sample => ({ namespace, ...sumPods(sample, ns => ns === namespace) }))
             }
         })

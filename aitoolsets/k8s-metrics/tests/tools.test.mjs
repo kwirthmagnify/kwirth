@@ -25,7 +25,7 @@ const tool = (name) => {
 const GB = 1024 * 1024 * 1024
 const MB = 1024 * 1024
 
-/** Un pod dentro del resumen de un nodo. cpu en nanocores, memoria en bytes, como los da kubelet. */
+/** A pod inside a node's summary. cpu in nanocores, memory in bytes, as the kubelet gives them. */
 const pod = (namespace, name, millicores, mb) => ({
     podRef: { namespace, name },
     cpu: { usageNanoCores: millicores * 1_000_000 },
@@ -67,7 +67,7 @@ const fakeHost = (samples = []) => {
     }
 }
 
-// ── el contrato ──────────────────────────────────────────────────────────────────────────────────────
+// ── the contract ─────────────────────────────────────────────────────────────────────────────────────
 
 test('declara sus siete tools y las dos capabilities que usa', () => {
     assert.equal(toolset.id, 'k8s-metrics')
@@ -82,8 +82,8 @@ test('sin metricas provisionadas, la tool lo dice', async () => {
 })
 
 test('con metricas vacias NO es un error del sistema: aun no hay lecturas', async () => {
-    // Pasa siempre al arrancar. Devolver un error tecnico haria que el modelo se pusiera a diagnosticar
-    // un problema que no existe.
+    // It always happens at startup. Returning a technical error would set the model diagnosing a problem
+    // that does not exist.
     const { host } = fakeHost([])
     assert.deepEqual(await tool('get_cluster_usage').execute({}, host), { error: 'No metrics available yet' })
 })
@@ -121,10 +121,10 @@ test('el filtro de nodo deja solo el pedido', async () => {
     assert.deepEqual(await tool('get_node_usage').execute({ nodeName: 'no-existe' }, host), [])
 })
 
-// ── agregacion por deployment y por namespace ────────────────────────────────────────────────────────
+// ── aggregation by deployment and by namespace ───────────────────────────────────────────────────────
 
 test('los pods de un deployment se suman AUNQUE esten en nodos distintos', async () => {
-    // Sumar solo el primer nodo da una cifra baja que parece correcta: el error mas caro de esta tool.
+    // Adding up only the first node gives a low figure that looks correct: this tool's most expensive bug.
     const { host } = fakeHost([sample(10, [
         node('n1', 0, 0, [pod('prod', 'api-1', 100, 50)]),
         node('n2', 0, 0, [pod('prod', 'api-2', 200, 70)])
@@ -152,7 +152,7 @@ test('por namespace se suman TODOS los pods, sin preguntar al cluster', async ()
     const { host } = fakeHost([sample(10, [
         node('n1', 0, 0, [pod('prod', 'api-1', 100, 50), pod('prod', 'otro-9', 50, 20), pod('dev', 'x', 999, 999)])
     ])])
-    // Si intentara resolver un deployment, esto reventaria: no hay appsApi util aqui.
+    // Were it to try resolving a deployment, this would blow up: there is no usable appsApi here.
     host.k8s.appsApi.readNamespacedDeployment = async () => { throw new Error('no deberia llamarse') }
 
     const [r] = await tool('get_prev_space_data').execute({ namespace: 'prod', count: 1 }, host)

@@ -3,9 +3,9 @@ import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
-// Los paquetes comunes NO se bundlean: los sirve el global del back del core, como el resto de
-// extensiones de kwirth. Asi un toolset no arrastra su copia de zod ni de common-ai, y usa exactamente la
-// misma que el core — que es lo que hace que el registro sea uno solo.
+// The common packages are NOT bundled: the core's back-end global serves them, as with every other
+// kwirth extension. That way a toolset does not drag its own copy of zod or common-ai, and uses exactly
+// the same one as the core — which is what makes the registry a single one.
 const kwirthBackGlobalsPlugin = {
     name: 'kwirth-back-globals',
     setup(build) {
@@ -25,7 +25,7 @@ const kwirthBackGlobalsPlugin = {
     },
 }
 
-// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
+// esbuild erases the types without looking at them: without this step the build would pass broken TS.
 const TSC = 'node_modules/typescript/lib/tsc.js'
 if (fs.existsSync(TSC)) {
     try {
