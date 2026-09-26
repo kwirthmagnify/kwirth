@@ -14,8 +14,8 @@ import { PinocchioPlayground } from './PinocchioPlayground'
 import { IChannelObject, MarkdownViewer, HelpButton as _HelpButton, DialogTitleHelp as _DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { docsUrl } from './utils'
 
-// Guardas: un host antiguo puede no exportar todavia estos componentes. Sin ellas, un export ausente
-// renderiza 'undefined' como componente y React tumba la pestaña entera.
+// Guards: an older host may not export these components yet. Without them, a missing export renders
+// 'undefined' as a component and React brings the whole tab down.
 const HelpButton: typeof _HelpButton = typeof _HelpButton === 'function' ? _HelpButton : () => null
 const DialogTitleHelp: typeof _DialogTitleHelp = typeof _DialogTitleHelp === 'function'
     ? _DialogTitleHelp
@@ -58,9 +58,9 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         if (pinocchioBoxRef.current) setPinocchioBoxTop(pinocchioBoxRef.current.getBoundingClientRect().top)
     })
 
-    // Altura dinámica del estado vacío (patrón de altura del proyecto, igual que Agora e Iter): el padre no da
-    // altura fija, así que medimos el borde superior real del contenedor para poder centrar verticalmente. Se
-    // remide al arrancar/parar el canal, que es cuando este bloque se monta o desmonta.
+    // Dynamic height for the empty state (the project's height pattern, as in Agora and Iter): the parent
+    // gives no fixed height, so we measure the container's real top edge in order to centre vertically. It
+    // is remeasured when the channel starts or stops, which is when this block mounts or unmounts.
     useEffect(() => {
         const update = () => { if (emptyRef.current) setEmptyTop(emptyRef.current.getBoundingClientRect().top) }
         update()
@@ -169,7 +169,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         </>)
     }
 
-    /** Refresca el catalogo de tools que puede ofrecer este canal (cambia al conceder/revocar toolsets). */
+    /** Refreshes the catalogue of tools this channel can offer (it changes when toolsets are granted or revoked). */
     const pedirToolsDisponibles = () => {
         let msg:IPinocchioMessage = {
             channel: 'pinocchio',
@@ -227,8 +227,8 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         setShowConfigLlm(false)
     }
 
-    // Carga de modelos del provider: la hace el CORE (tiene el adaptador de cada SDK), igual que el
-    // dialogo de AI Providers de Kwirth. Sin esto el dialogo no ofrece el boton 'Load models'.
+    // Loading the provider's models: the CORE does it (it has each SDK's adapter), just like Kwirth's AI
+    // Providers dialog. Without this the dialog does not offer the 'Load models' button.
     const aiLoadModels = async (provider: ILlmProvider): Promise<ILlmModel[]> => {
         const response = await fetch(`${props.channelObject.clusterUrl}/core/aiconfig/loadmodels`, {
             method: 'POST',
@@ -350,9 +350,9 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 setShowConfigLlm(true)
                 break
             case 'trigger':
-                // Se vuelve a pedir la lista de tools ANTES de abrir: se pedia una sola vez al arrancar el
-                // canal, asi que conceder un toolset con el canal abierto no se veia — el selector seguia
-                // ofreciendo lo de antes, y el admin creia que su concesion no habia servido de nada.
+                // The tool list is requested again BEFORE opening: it used to be asked for once, when the
+                // channel started, so granting a toolset with the channel open was invisible — the
+                // selector kept offering the old set, and the admin believed the grant had done nothing.
                 pedirToolsDisponibles()
                 setShowConfigTrigger(true)
                 break
@@ -362,8 +362,8 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     }
 
-    // Canal no arrancado: estado vacío CENTRADO verticalmente (mismo patrón que Agora e Iter). Antes no se
-    // pintaba nada y la pestaña quedaba en blanco, sin decirle al usuario que tiene que arrancar el canal.
+    // Channel not started: an empty state CENTRED vertically (the same pattern as Agora and Iter).
+    // Before, nothing was drawn and the tab stayed blank, without telling the user to start the channel.
     if (!pinocchioData.started)
         return (
             <Stack ref={emptyRef} alignItems='center' justifyContent='center' spacing={1} sx={{ height: `calc(100vh - ${emptyTop}px - 8px)`, px: 4, textAlign: 'center' }}>

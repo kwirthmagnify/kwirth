@@ -57,8 +57,8 @@ const kwirthBackGlobalsPlugin = {
     },
 }
 
-// esbuild borra los tipos sin mirarlos: sin este paso el build daria por bueno un TS roto.
-// El watch.mjs no lo lleva a proposito, para que guardar siga siendo instantaneo.
+// esbuild erases the types without looking at them: without this step the build would pass broken TS.
+// watch.mjs deliberately leaves it out, so that saving stays instantaneous.
 const TSC = 'node_modules/typescript/lib/tsc.js'
 if (fs.existsSync(TSC)) {
     try {
@@ -120,8 +120,8 @@ const distMeta = { type: 'commonjs', extensionType: 'plugin',
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
-// Docs: la guia de usuario/admin se empaqueta como extension 'docs' (docs/pinocchio.tgz). Un solo
-// 'npm run build' deja listas las tres piezas: front.js, back.js y el tarball de la guia.
+// Docs: the user/admin guide is packaged as a 'docs' extension (docs/pinocchio.tgz). A single
+// 'npm run build' leaves all three pieces ready: front.js, back.js and the guide's tarball.
 await import('./build-docs-tgz.mjs')
 
 console.log(`Done. Run 'npm publish' on your 'dist' folder in order to publish your package to npmjs.`)

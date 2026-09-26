@@ -47,10 +47,10 @@ interface IModelInvocation {
     toolContext: IToolContext
 }
 
-/** Tope de lo que se vuelca de un resultado de tool en la traza. */
+/** Ceiling on how much of a tool result is dumped into the trace. */
 const TRAZA_MAX = 400
 
-/** Con este id se identifica el canal al pedir tools: es el que el admin ve al conceder un toolset. */
+/** The id the channel identifies itself with when asking for tools: the one the admin sees when granting a toolset. */
 const PINOCCHIO_ID = 'pinocchio'
 
 export class PinocchioChannel {
@@ -139,12 +139,12 @@ export class PinocchioChannel {
     }
 
     /**
-     * El techo de tools de una version, en el modelo del registro.
+     * A version's tool ceiling, in the registry's model.
      *
-     * ⚠️ `version.tools` guarda nombres CORTOS ('get_pod_logs'), que es lo que hay persistido en las
-     * configuraciones de los clientes. Aqui se traducen a config de toolsets SIN tocar lo guardado: se
-     * activan los toolsets que aportan alguna de las elegidas y se apagan el resto de sus tools. Migrar
-     * lo persistido a referencias cualificadas es de S5, cuando exista el editor.
+     * ⚠️ `version.tools` stores SHORT names ('get_pod_logs'), which is what is persisted in the clients'
+     * configurations. Here they are translated into a toolset config WITHOUT touching what is stored:
+     * the toolsets contributing any of the chosen ones are activated and the rest of their tools are
+     * turned off. Migrating what is persisted to qualified references belongs to S5, once the editor exists.
      */
     toolsetConfig = (version: IConfigTriggerVersion): IToolsetConfig => {
         if (version.autoTools) return { activeToolsets: listToolsets().map(t => t.id), disabledTools: [] }
@@ -163,20 +163,20 @@ export class PinocchioChannel {
     }
 
     /**
-     * Genera una salida ESTRUCTURADA pudiendo usar tools.
+     * Produces STRUCTURED output while still being able to use tools.
      *
-     * ⚠️ No se puede pedir tools y esquema de respuesta en la MISMA llamada: el proveedor de Google manda
-     * `responseSchema` junto a las `functionDeclarations`, y entonces la tool se ejecuta, devuelve, y la
-     * respuesta estructurada no llega nunca — `AI_NoOutputGeneratedError`. Se destapo al activar `Auto`
-     * en un trigger (QA de S3, 2026-09-17); antes ninguna version con tools usaba salida estructurada.
+     * ⚠️ Tools and a response schema cannot be asked for in the SAME call: Google's provider sends
+     * `responseSchema` alongside the `functionDeclarations`, and then the tool runs, returns, and the
+     * structured response never arrives — `AI_NoOutputGeneratedError`. It surfaced on enabling `Auto`
+     * in a trigger (S3's QA, 2026-09-17); before that no version with tools used structured output.
      *
-     * El propio Playground de este canal ya sorteaba lo mismo con dos fases. Aqui se hace igual, pero
-     * cerrando con el esquema:
+     * This channel's own Playground already worked around the same thing with two phases. The same is
+     * done here, but closing with the schema:
      *
-     *   fase 1 — CON tools, texto libre: el modelo recoge lo que necesite del cluster
-     *   fase 2 — SIN tools, con `Output.object`: redacta el JSON a partir de lo recogido
+     *   phase 1 — WITH tools, free text: the model gathers whatever it needs from the cluster
+     *   phase 2 — WITHOUT tools, with `Output.object`: it writes the JSON from what was gathered
      *
-     * Sin tools se hace UNA sola llamada, como siempre: la segunda fase solo se paga cuando hace falta.
+     * With no tools ONE single call is made, as always: the second phase is only paid for when needed.
      */
     generateStructured = async <T>(params: {
         model: LanguageModel,
@@ -190,8 +190,9 @@ export class PinocchioChannel {
     }): Promise<{ output: T, usage: { inputTokens?: number, outputTokens?: number } }> => {
         const { model, temperature, system, prompt, tools, steps, schema } = params
         const output = Output.object({ schema }) as never
-        // El canal construye providerOptions como Record<string, unknown> (lo hace en buildModelInvocation
-        // y viene de antes); el SDK pide JSONObject. Un solo casteo aqui, en vez de uno en cada llamada.
+        // The channel builds providerOptions as Record<string, unknown> (it does so in
+        // buildModelInvocation, and it predates this); the SDK wants a JSONObject. One single cast here,
+        // rather than one at every call site.
         const providerOptions = params.providerOptions as never
 
         if (Object.keys(tools ?? {}).length === 0) {
@@ -209,8 +210,8 @@ export class PinocchioChannel {
         }
         this.backChannelObject.logTrace?.(`[pinocchio] fase 1: ${fase1.steps.length} paso(s), ${recogido.length} resultado(s) de tool -> fase 2 sin tools`)
 
-        // Lo recogido va al prompt de la fase 2. Si el modelo no llamo a nada pero dijo algo, se usa su
-        // texto: tirarlo obligaria a rehacer el analisis desde cero.
+        // What was gathered goes into phase 2's prompt. If the model called nothing but said something,
+        // its text is used: throwing it away would force redoing the analysis from scratch.
         const promptFinal = recogido.length > 0
             ? `${prompt}\n\nInformation gathered from tools:\n${recogido.join('\n')}`
             : (fase1.text ? `${prompt}\n\nPreliminary analysis:\n${fase1.text}` : prompt)
@@ -281,34 +282,34 @@ export class PinocchioChannel {
             clusterMetrics: this.clusterMetrics,
             trace: (toolName, args) => this.backChannelObject.logTrace?.(`[pinocchio] tool ${toolName} ${JSON.stringify(args)}`)
         }
-        // Las tools ya no se cogen de common-ai: salen del REGISTRO de toolsets (plan S2/S3). Pinocchio
-        // dice que quiere y el core resuelve precedencia, apagadas y capacidades.
+        // Tools no longer come from common-ai: they come out of the toolset REGISTRY (plan S2/S3).
+        // Pinocchio says what it wants and the core resolves precedence, disabled ones and capabilities.
         //
-        // `autoTools` sigue significando lo mismo que hasta ahora —partir de todo lo disponible— solo que
-        // "todo" es ahora "todos los toolsets instalados", no las 43 compiladas dentro del core.
+        // `autoTools` still means what it always meant — start from everything available — except that
+        // "everything" is now "every installed toolset", not the 43 compiled inside the core.
         const techo = this.toolsetConfig(version)
         const tools = buildAgentTools(techo, toolContext, {
-            // Lo que antes hacia un lambda envolviendo cada execute. La traza ahora lleva la referencia
-            // CUALIFICADA: con precedencia, el nombre corto no dice que codigo corrio.
+            // What a lambda wrapping every execute used to do. The trace now carries the QUALIFIED
+            // reference: under precedence, the short name does not say which code ran.
             observe: (invocation, outcome) => {
-                // El resultado se RECORTA en la traza: un get_*_yaml vuelca el manifest entero con sus
-                // managedFields y deja el log inservible. Al modelo le llega completo; aqui solo el
-                // principio, que es para lo que sirve una traza — ver que se llamo y que devolvio algo.
+                // The result is TRIMMED in the trace: a get_*_yaml dumps the whole manifest with its
+                // managedFields and renders the log useless. The model receives it whole; here only the
+                // beginning, which is what a trace is for — seeing that it was called and returned something.
                 const bruto = outcome.ok ? JSON.stringify(outcome.result) : `ERROR ${outcome.error}`
                 const detalle = bruto.length > TRAZA_MAX ? `${bruto.slice(0, TRAZA_MAX)}… (${bruto.length} chars)` : bruto
                 this.backChannelObject.logTrace?.(`[pinocchio] tool ${invocation.ref} (${outcome.ms}ms) ${detalle}`)
             }
-        // ⚠️ El ultimo argumento es QUIEN pide. Sin el, la resolucion no filtra por concesion y el plugin
-        // se serviria toolsets que el admin no le ha concedido. No es cosmetico: es el techo.
+        // ⚠️ The last argument is WHO is asking. Without it, resolution does not filter by grant and the
+        // plugin would serve itself toolsets the admin never granted. Not cosmetic: it is the ceiling.
         }, PINOCCHIO_ID)
 
-        // Traza de diagnostico: sin esto, "el modelo no llamo a ninguna tool" y "no le ofrecimos
-        // ninguna" se ven exactamente igual — que es justo lo que despisto en el QA de S3.
-        // Con el trigger y la version delante no hay que adivinar CUAL de las versiones habilitadas es la
-        // que se esta resolviendo, que es lo que confundio el QA: varias versiones, y solo una tocada.
-        // Lo NEGADO se traza igual de alto que lo concedido: "no me lo han concedido" y "no esta
-        // instalado" son las dos causas de que un agente responda peor, y sin decirlo no hay forma de
-        // distinguirlas desde fuera.
+        // Diagnostic trace: without it, "the model called no tool" and "we offered it none" look exactly
+        // the same — which is precisely what misled S3's QA.
+        // With the trigger and the version up front there is no guessing WHICH of the enabled versions is
+        // being resolved, which is what confused that QA: several versions, and only one of them touched.
+        // What is DENIED is traced just as loudly as what is granted: "it was not granted to me" and "it
+        // is not installed" are the two reasons an agent answers worse, and without saying so there is no
+        // way to tell them apart from the outside.
         const resolucion = resolveTools(techo, PINOCCHIO_ID)
         const pegas = [
             resolucion.notGranted.length ? `SIN CONCEDER [${resolucion.notGranted.join(', ')}]` : '',
@@ -556,14 +557,14 @@ export class PinocchioChannel {
     importConfig = async (data: unknown): Promise<IExtensionImportResult> => {
         const warnings: string[] = []
 
-        // Puede venir de otro Kwirth y puede haberse editado a mano: nada se da por bueno.
+        // It may come from another Kwirth and may have been hand-edited: nothing is taken on trust.
         const entrantes = (data as { triggers?: unknown })?.triggers
         if (!Array.isArray(entrantes)) return { applied: 0, skipped: 0, warnings: ['no triggers array in the imported data'] }
 
         const raw = await this.backChannelObject.readStorage!('pinocchio-config', false)
         const config = ((typeof raw === 'string' ? JSON.parse(raw) : raw) ?? { triggers: [], llms: [] }) as IPinocchioConfig
         const actuales = config.triggers ?? []
-        // Los LLMs que hay AQUI, para avisar de los triggers que apuntan a uno que no existe.
+        // The LLMs that exist HERE, to warn about triggers pointing at one that does not.
         const llmsDisponibles = new Set((config.llms ?? []).map(l => l.id))
 
         let applied = 0
@@ -580,14 +581,14 @@ export class PinocchioChannel {
                     warnings.push(`trigger '${trigger.id}' version '${v.id}' references LLM '${v.llm}', which is not configured here`)
                 }
             }
-            // Upsert por id: de aqui sale la idempotencia que exige el contrato.
+            // Upsert by id: this is where the idempotence the contract demands comes from.
             const idx = actuales.findIndex(t => t.id === trigger.id)
             if (idx >= 0) actuales[idx] = trigger
             else actuales.push(trigger)
             applied++
         }
 
-        // Se reescribe SOLO la parte de triggers: los llms y el playground que hubiera se quedan como estaban.
+        // ONLY the triggers part is rewritten: whatever llms and playground there were stay as they were.
         await this.backChannelObject.writeStorage!('pinocchio-config', false, { ...config, triggers: actuales })
         this.pinocchioConfig = { ...this.pinocchioConfig, triggers: actuales }
         return { applied, skipped, warnings }
@@ -626,10 +627,10 @@ export class PinocchioChannel {
                         flow: EInstanceMessageFlow.RESPONSE,
                         type: EInstanceMessageType.DATA,
                         instance: instance.instanceId,
-                        // Del registro, ya resueltas y filtradas por lo CONCEDIDO: ofrecer una tool que
-                        // luego no se va a poder usar es peor que no ofrecerla — el usuario la marca, se
-                        // va tan tranquilo, y el agente nunca la llama.
-                        // Y si dos toolsets traen el mismo nombre, se ofrece la que de verdad correria.
+                        // From the registry, already resolved and filtered by what was GRANTED: offering
+                        // a tool that then cannot be used is worse than not offering it — the user ticks
+                        // it, walks away happy, and the agent never calls it.
+                        // And if two toolsets carry the same name, the one that would really run is offered.
                         toolsAvailable: resolveTools({ activeToolsets: listToolsets().map(t => t.id), disabledTools: [] }, PINOCCHIO_ID)
                             .effective.map(e => ({ name: e.name, description: e.tool.description, effect: e.tool.effect }))
                     }

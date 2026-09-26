@@ -1,6 +1,6 @@
-// Genera docs/pinocchio.tgz desde docs/guide/ para el marketplace de docs de kwirth (extensionType: docs).
-// Se ejecuta solo al importarlo, asi que build.mjs puede hacer `await import('./build-docs-tgz.mjs')`
-// y watch.mjs puede relanzarlo como proceso hijo en cada cambio de la guia.
+// Generates docs/pinocchio.tgz from docs/guide/ for kwirth's docs marketplace (extensionType: docs).
+// It runs on import alone, so build.mjs can do `await import('./build-docs-tgz.mjs')` and watch.mjs can
+// relaunch it as a child process on every change to the guide.
 import { cpSync, mkdirSync, existsSync, readFileSync, writeFileSync, rmSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -24,7 +24,7 @@ mkdirSync(tmpDir, { recursive: true })
 try {
     cpSync(guideDir, tmpDir, { recursive: true })
 
-    // El core sirve docsify offline (bundle propio): reescribe las URLs de CDN a rutas locales.
+    // The core serves docsify offline (its own bundle): it rewrites the CDN URLs to local paths.
     const htmlPath = join(tmpDir, 'index.html')
     if (existsSync(htmlPath)) {
         let html = readFileSync(htmlPath, 'utf-8')
@@ -48,9 +48,9 @@ try {
         description: 'User and administrator guide for the Kwirth Pinocchio plugin'
     }, null, 2))
 
-    // El prefijo 'package/' NO es decorativo: npmjs rechaza el tarball sin el, con
-    // "415 Unsupported Media Type - invalid path: ./". Kwirth acepta las dos formas al instalar —busca
-    // package.json en la raiz y bajo package/—, asi que esto no rompe nada y ademas hace el tgz publicable.
+    // The 'package/' prefix is NOT decorative: npmjs rejects the tarball without it, with
+    // "415 Unsupported Media Type - invalid path: ./". Kwirth accepts both shapes on install — it looks
+    // for package.json at the root and under package/ — so this breaks nothing and makes the tgz publishable.
     await tarCreate({ gzip: true, file: outTgz, cwd: tmpDir, prefix: 'package' }, ['.'])
     console.log(`pinocchio docs tgz: ${outTgz} (v${pkg.version})`)
 }

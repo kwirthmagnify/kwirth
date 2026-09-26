@@ -91,10 +91,10 @@ const backCtx = await esbuild.context({
 await frontCtx.watch()
 await backCtx.watch()
 
-// Docs: reconstruye docs/pinocchio.tgz al cambiar la guia, igual que front/back con src/. El packer no
-// tiene modo watch propio, asi que lo relanzamos como proceso hijo con un debounce para agrupar rafagas
-// de cambios. El core instala el tgz al arrancar (loadDevDocs), asi que un cambio en la guia se ve tras
-// reiniciarlo — pero el tarball ya estara fresco. Desactivable con PINOCCHIO_NO_DOCS_WATCH=1.
+// Docs: rebuilds docs/pinocchio.tgz when the guide changes, just as front/back do with src/. The packer
+// has no watch mode of its own, so we relaunch it as a child process with a debounce to group bursts of
+// changes. The core installs the tgz at startup (loadDevDocs), so a change to the guide shows after
+// restarting it — but the tarball will already be fresh. Disable with PINOCCHIO_NO_DOCS_WATCH=1.
 let docsTimer
 const rebuildDocs = () => {
     clearTimeout(docsTimer)
