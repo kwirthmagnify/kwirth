@@ -11,6 +11,27 @@ import { ApiKeyApi } from '../../api/ApiKeyApi'
 export interface IMetricsSubscriberConfig {
 }
 
+/*
+    Unfolds what a failed fetch is really complaining about.
+
+    undici throws a bare 'TypeError: fetch failed' and puts the actual reason in 'cause': ECONNREFUSED,
+    ETIMEDOUT, a certificate that does not validate, a name that does not resolve. Logging the error
+    alone spends a line of the log to say nothing, and the four cases above look identical from outside
+    while being fixed in four different ways.
+*/
+const describeFetchError = (err: unknown): string => {
+    if (!(err instanceof Error)) return String(err)
+    const parts = [`${err.name}: ${err.message}`]
+    let cause: unknown = (err as { cause?: unknown }).cause
+    while (cause instanceof Error) {
+        const code = (cause as { code?: string }).code
+        parts.push(`${code ? code + ' ' : ''}${cause.message}`)
+        cause = (cause as { cause?: unknown }).cause
+    }
+    if (cause !== undefined && !(cause instanceof Error)) parts.push(String(cause))
+    return parts.join(' ← ')
+}
+
 export interface MetricDefinition {
     help: string
     type: string
@@ -599,6 +620,10 @@ export class MetricsProvider implements IProvider {
     public readCAdvisorSummary = async (node:INodeInfo): Promise<any> => {
         let { url, options } = await this.configCall(node, '/stats/summary')
         const resp = await fetch(url, options)
+        // The status is checked before parsing, as readCAdvisorMetrics already does: a 404 or a 500
+        // from the kubelet would otherwise surface as an opaque JSON parse error that names neither
+        // the status nor the url.
+        if (!resp.ok) throw new Error(`Error reading summary from '${url}' ${resp.status}: ${resp.statusText}`)
         return await resp.json()
     }
 
@@ -624,9 +649,26 @@ export class MetricsProvider implements IProvider {
             }
 
             // we read the metrics of the nodeset
+            /*
+                One node at a time, and a failing node only costs ITS OWN metrics.
+
+                Without this guard the first unreachable kubelet threw, broke the loop, and the catch
+                below returned undefined: no metrics at all for the whole cluster, even though every
+                other node was answering perfectly. A partial failure turned into a total blackout.
+            */
             let nodeDataList: Array<{ node: IMetricsNode, prevNode: IMetricsNode | undefined }> = []
             for (let node of clusterInfo.nodes.values()) {
-                nodeDataList.push(await this.readNodeMetrics(node))
+                try {
+                    nodeDataList.push(await this.readNodeMetrics(node))
+                }
+                catch (err) {
+                    this.log.error(`Error reading metrics of node '${node.name}' (${node.ip}): ${describeFetchError(err)}`)
+                }
+            }
+            if (nodeDataList.length === 0) {
+                this.log.error('No node answered: there are no cluster metrics for this interval')
+                this.loadingClusterMetrics = false
+                return undefined
             }
             const nodes = nodeDataList.map(d => d.node)
             const clusterMetricValues = this.enrichWithSyntheticMetrics(nodeDataList)
@@ -635,8 +677,7 @@ export class MetricsProvider implements IProvider {
             return { metricsInterval: this.metricsInterval, cluster:usage, nodes, clusterMetricValues }
         }
         catch (err) {
-            this.log.error('Error reading cluster metrics')
-            this.log.error(err)
+            this.log.error(`Error reading cluster metrics: ${describeFetchError(err)}`)
         }
         this.loadingClusterMetrics = false
         return undefined
