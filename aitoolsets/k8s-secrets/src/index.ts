@@ -33,16 +33,16 @@ interface IObjectMetaTimes {
     creationTimestamp?: Date | string
 }
 
-// ⚠️ `managedFields[].time` llega como Date con el cliente tipado. Se normaliza a ISO ANTES de ordenar:
-// ordenar Dates con el sort por defecto las compara como texto ('Apr' < 'Aug' < 'Dec') y da la fecha
-// equivocada — que aquí sería decir que un Secret cambió cuando no, o al revés.
+// ⚠️ `managedFields[].time` arrives as a Date with the typed client. It is normalised to ISO BEFORE
+// sorting: sorting Dates with the default sort compares them as text ('Apr' < 'Aug' < 'Dec') and gives
+// the wrong date — which here would mean saying a Secret changed when it did not, or the other way round.
 const iso = (t: Date | string | undefined): string | undefined => {
     if (!t) return undefined
     const d = t instanceof Date ? t : new Date(t)
     return isNaN(d.getTime()) ? undefined : d.toISOString()
 }
 
-/** Cuándo se tocó por última vez: el `managedFields` más reciente, o la fecha de creación. */
+/** When it was last touched: the most recent `managedFields`, or the creation date. */
 const lastModifiedOf = (meta: IObjectMetaTimes | undefined): string | undefined => {
     const times = (meta?.managedFields ?? []).map(f => iso(f.time)).filter((t): t is string => Boolean(t))
     return times.length ? times.sort()[times.length - 1] : iso(meta?.creationTimestamp)
@@ -63,8 +63,8 @@ const k8sSecrets: IAiToolset = {
             name: 'get_configmap',
             description: 'Returns a ConfigMap data (key → value) plus metadata (resourceVersion, lastModified). Use to inspect the ACTUAL config a workload consumes and to check whether it changed recently — a ConfigMap value change (same env var, different value) does NOT create a Deployment revision, so it is invisible to get_rollout_history.',
             effect: EToolEffect.READ,
-            // El más sensible de los tres, aunque suene raro: devuelve los valores EN CRUDO, y un ConfigMap
-            // es donde acaban las contraseñas de quien no quiso usar un Secret.
+            // The most sensitive of the three, odd as it sounds: it returns the values RAW, and a ConfigMap
+            // is where the passwords of whoever did not want to use a Secret end up.
             sensitivity: EToolSensitivity.SECRET,
             inputSchema: z.object({
                 namespace: z.string().describe('Namespace of the ConfigMap'),
@@ -79,8 +79,8 @@ const k8sSecrets: IAiToolset = {
                         resourceVersion: cm.metadata?.resourceVersion,
                         lastModified: lastModifiedOf(cm.metadata),
                         data: cm.data ?? {},
-                        // De lo binario solo las claves: su contenido no le sirve de nada al modelo y se
-                        // comería la ventana de contexto.
+                        // Of binary data, only the keys: its content is of no use to the model and would
+                        // eat the context window.
                         binaryDataKeys: Object.keys(cm.binaryData ?? {})
                     }
                 }
@@ -91,8 +91,8 @@ const k8sSecrets: IAiToolset = {
             name: 'get_secret',
             description: 'Returns a Secret KEYS, type and metadata (resourceVersion, lastModified) — VALUES ARE REDACTED (never returned). Use to check whether a Secret a workload consumes changed recently (a value change does NOT create a Deployment revision) and which keys it holds. You cannot read the secret values.',
             effect: EToolEffect.READ,
-            // INTERNAL, no SECRET: los valores no salen de aquí. Lo que se expone son nombres de clave y
-            // cuándo cambió — suficiente para diagnosticar, insuficiente para filtrar nada.
+            // INTERNAL, not SECRET: the values do not leave here. What is exposed are key names and when
+            // it changed — enough to diagnose, not enough to leak anything.
             sensitivity: EToolSensitivity.INTERNAL,
             inputSchema: z.object({
                 namespace: z.string().describe('Namespace of the Secret'),
@@ -108,7 +108,7 @@ const k8sSecrets: IAiToolset = {
                         resourceVersion: s.metadata?.resourceVersion,
                         lastModified: lastModifiedOf(s.metadata),
                         keys: Object.keys(s.data ?? {})
-                        // ⚠️ `data` NO se devuelve, y no es un descuido: es el contrato de esta tool.
+                        // ⚠️ `data` is NOT returned, and that is no oversight: it is this tool's contract.
                     }
                 }
                 catch (err) { return failed(err) }
@@ -124,14 +124,14 @@ const k8sSecrets: IAiToolset = {
                 port: z.number().optional().describe('Port to connect to (default: 443)')
             }),
             execute: async ({ hostname, port }, host) => {
-                // No necesita cluster: abre un socket. Aun así se traza, que es lo que permite ver a dónde
-                // se ha conectado el modelo.
+                // It needs no cluster: it opens a socket. It is traced all the same, which is what makes it
+                // possible to see where the model has connected to.
                 host.trace('get_certificate_info', { hostname, port })
                 const targetPort = port ?? DEFAULT_TLS_PORT
 
                 return new Promise(resolve => {
-                    // rejectUnauthorized: false a propósito — se INSPECCIONA el certificado, incluido uno
-                    // caducado o autofirmado. Rechazarlo impediría diagnosticar justo el caso interesante.
+                    // rejectUnauthorized: false on purpose — the certificate is INSPECTED, including an
+                    // expired or self-signed one. Rejecting it would prevent diagnosing the interesting case.
                     const socket = tls.connect({ host: hostname, port: targetPort, servername: hostname, rejectUnauthorized: false }, () => {
                         try {
                             const cert = socket.getPeerCertificate(false)
@@ -153,7 +153,7 @@ const k8sSecrets: IAiToolset = {
                         }
                         catch (err) { socket.end(); resolve(failed(err)) }
                     })
-                    // Un host que no responde colgaria la conversacion entera: se corta y se informa.
+                    // A host that does not answer would hang the whole conversation: it is cut off and reported.
                     socket.setTimeout(TLS_TIMEOUT_MS, () => { socket.destroy(); resolve({ error: 'Connection timed out' }) })
                     socket.on('error', err => resolve({ error: err.message }))
                 })

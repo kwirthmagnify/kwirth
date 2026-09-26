@@ -40,7 +40,7 @@ const fakeHost = () => {
     }
 }
 
-// ── el contrato ──────────────────────────────────────────────────────────────────────────────────────
+// ── the contract ─────────────────────────────────────────────────────────────────────────────────────
 
 test('declara sus tres tools, todas de lectura', () => {
     assert.equal(toolset.id, 'k8s-secrets')
@@ -49,14 +49,14 @@ test('declara sus tres tools, todas de lectura', () => {
 })
 
 test('la sensibilidad va al reves de lo que sugiere el nombre, y a proposito', () => {
-    // get_configmap devuelve los valores EN CRUDO, y un ConfigMap es donde acaban las contraseñas de quien
-    // no quiso usar un Secret. get_secret, en cambio, no devuelve valores: solo claves.
+    // get_configmap returns the values RAW, and a ConfigMap is where the passwords of whoever did not want
+    // to use a Secret end up. get_secret, by contrast, returns no values: keys only.
     assert.equal(tool('get_configmap').sensitivity, commonAi.EToolSensitivity.SECRET)
     assert.equal(tool('get_secret').sensitivity, commonAi.EToolSensitivity.INTERNAL)
     assert.equal(tool('get_certificate_info').sensitivity, commonAi.EToolSensitivity.PUBLIC)
 })
 
-// ── lo que nunca puede salir ─────────────────────────────────────────────────────────────────────────
+// ── what can never get out ───────────────────────────────────────────────────────────────────────────
 
 test('🔴 los VALORES de un Secret no salen NUNCA', async () => {
     const { host } = fakeHost()
@@ -78,7 +78,7 @@ test('un ConfigMap si devuelve sus datos: es su razon de ser', async () => {
 })
 
 test('de lo binario de un ConfigMap solo salen las claves', async () => {
-    // Un binario no le dice nada al modelo y se come la ventana de contexto.
+    // A binary says nothing to the model and eats the context window.
     const { host } = fakeHost()
     host.k8s.coreApi.readNamespacedConfigMap = async () => ({ metadata: {}, binaryData: { 'logo.png': 'iVBORw0KGgo=' } })
 
@@ -90,8 +90,8 @@ test('de lo binario de un ConfigMap solo salen las claves', async () => {
 // ── cuando cambio ────────────────────────────────────────────────────────────────────────────────────
 
 test('lastModified sale del managedFields mas reciente, normalizado a ISO', async () => {
-    // ⚠️ Llegan como Date. Ordenarlas con el sort por defecto las compara como texto ('Apr' < 'Aug' <
-    // 'Dec') y diria que un Secret cambio cuando no, que es justo lo que se viene a averiguar.
+    // ⚠️ They arrive as Dates. Sorting them with the default sort compares them as text ('Apr' < 'Aug' <
+    // 'Dec') and would say a Secret changed when it did not, which is exactly what one comes to find out.
     const { host } = fakeHost()
     host.k8s.coreApi.readNamespacedSecret = async () => ({
         metadata: {
@@ -125,7 +125,7 @@ test('sin cluster, las dos de kubernetes lo dicen', async () => {
 })
 
 test('la de certificados NO necesita cluster: abre un socket', async () => {
-    // Declararlo importa: es la unica del toolset que funcionaria con un host sin k8s.
+    // Declaring it matters: it is the only one in the toolset that would work with a host without k8s.
     const traced = []
     const res = await tool('get_certificate_info').execute({ hostname: '127.0.0.1', port: 1 }, { trace: (t, a) => traced.push({ t, a }) })
 
