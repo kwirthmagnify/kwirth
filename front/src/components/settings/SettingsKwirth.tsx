@@ -8,7 +8,7 @@ import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthTy
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 
-// Enum semantico como id de tab (regla: nunca numeros)
+// A semantic enum as the tab's id (the rule: never numbers)
 enum ESettingsKwirthTab {
     GENERAL = 'general',
     MARKETPLACES = 'marketplaces',

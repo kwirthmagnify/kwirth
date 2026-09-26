@@ -113,7 +113,7 @@ export interface IPluginSelectorSpec<TInstalled> {
     tooltip: string
     /** What to put when there is none. 'No plugin' by default. */
     emptyLabel?: string
-    /** Clave de entrada → ids de plugin asociados. */
+    /** An entry's key → the ids of the plugins associated with it. */
     load: () => Promise<Record<string, string[]>>
     /** Persist THAT entry's new selection. If it throws, the generic dialog undoes it and shows the reason. */
     save: (entry: TInstalled, pluginIds: string[]) => Promise<void>

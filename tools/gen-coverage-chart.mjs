@@ -69,7 +69,7 @@ const headerCells = header ? cells(header) : []
 const iHarness = headerCells.findIndex(c => /^harness/i.test(c))
 const iE2e = headerCells.findIndex(c => /^e2e/i.test(c))
 
-// Cuantos tests de harness EXISTEN. '**232** ✅' -> 232, '**103** (+3)' -> 103, '22/22 ✔' -> 22, 'n/a' -> nada.
+// How many harness tests EXIST. '**232** ✅' -> 232, '**103** (+3)' -> 103, '22/22 ✔' -> 22, 'n/a' -> nothing.
 const parseHarness = (cell) => {
     if (cell === undefined) return undefined
     const ratio = /^\D*(\d+)\s*\/\s*(\d+)/.exec(cell)          // 'pasados/totales': manda el total

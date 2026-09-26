@@ -128,7 +128,7 @@ test('login extensions: anonymous login shows config button', async ({ page }) =
     await page.goto('about:blank')
 })
 
-// ── 6. Anonymous config dialog: campos correctos y Scope como select ──────────
+// ── 6. Anonymous config dialog: the right fields and Scope as a select ────────
 test('login extensions: anonymous config dialog has scope select and resource fields', async ({ page }) => {
     await login(page)
     await dismissOpenDialogs(page)

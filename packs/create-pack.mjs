@@ -1,31 +1,31 @@
 #!/usr/bin/env node
 /**
- * Crea un pack tgz a partir de extension tgzs.
+ * Creates a pack tgz out of extension tgzs.
  *
- * Uso:
- *   node packs/create-pack.mjs <pack-id> [opciones] [tgz1 tgz2 ...]
+ * Usage:
+ *   node packs/create-pack.mjs <pack-id> [options] [tgz1 tgz2 ...]
  *
- * Opciones:
- *   --include tipo:nombre   Buildea + empaqueta la extensión y la incluye en el pack.
- *                           Se puede repetir. Tipos: plugin, provider, sender, theme,
+ * Options:
+ *   --include type:name     Builds + packages the extension and includes it in the pack.
+ *                           It can be repeated. Types: plugin, provider, sender, theme,
  *                           homepage, idp, login.
- *   --name        Nombre de display del pack          (default: pack-id)
- *   --version     Versión del pack                    (default: 1.0.0)
- *   --description Descripción                         (default: "")
- *   --website     URL de la web del pack              (default: "")
- *   --output      Ruta del tgz de salida              (default: <id>-<version>.pack.tgz)
+ *   --name        The pack's display name             (default: pack-id)
+ *   --version     The pack's version                  (default: 1.0.0)
+ *   --description Description                         (default: "")
+ *   --website     The pack's website URL              (default: "")
+ *   --output      Path of the output tgz              (default: <id>-<version>.pack.tgz)
  *
- * Ejemplos:
- *   # Desde tgzs ya construidos
+ * Examples:
+ *   # From already built tgzs
  *   node packs/create-pack.mjs my-pack ./themes/avicii/dist/avicii.tgz \
  *     --name "My Pack" --version "1.0.0"
  *
- *   # Buildea y empaqueta automáticamente
+ *   # Builds and packages automatically
  *   node packs/create-pack.mjs my-pack \
  *     --include theme:avicii --include homepage:matrix \
  *     --name "My Pack" --version "1.0.0"
  *
- *   # Mixto: algunos --include y algún tgz ya construido
+ *   # Mixed: some --include and some already built tgz
  *   node packs/create-pack.mjs my-pack ./plugins/foo/dist/foo.tgz \
  *     --include theme:avicii
  */
@@ -52,8 +52,8 @@ const TYPE_DIRS = {
     idp:      'idps',
     login:    'logins',
     webhook:  'webhooks',
-    // 'docs' no tiene carpeta propia: cada plugin genera su tgz con build-docs-tgz.mjs, asi que la
-    // documentacion se pasa como ruta de tgz suelta, no con --include.
+    // 'docs' has no folder of its own: every plugin generates its tgz with build-docs-tgz.mjs, so the
+    // documentation is passed as a loose tgz path, not with --include.
 }
 
 // --- parse args ---
@@ -139,7 +139,7 @@ async function buildAndPack(type, name) {
 // --- main ---
 console.log(`\nCreando pack '${packId}' v${opts.version}...`)
 
-// Paso 1: procesar --include (build + pack)
+// Step 1: process --include (build + pack)
 const builtTgzs = []
 if (includes.length) {
     console.log('\nBuilding extensions:')
@@ -157,7 +157,7 @@ if (includes.length) {
     }
 }
 
-// Paso 2: construir el pack
+// Step 2: build the pack
 const workDir = join(tmpdir(), `pack-build-${Date.now()}`)
 const pkgDir  = join(workDir, 'package')
 mkdirSync(pkgDir, { recursive: true })
@@ -175,8 +175,8 @@ for (const rawPath of inputTgzs) {
     if (!extId)   { console.error(`\n  ✗ Sin 'id' en package.json`);            process.exit(1) }
     if (!extType) { console.error(`\n  ✗ Sin 'extensionType' en package.json`); process.exit(1) }
 
-    // La documentacion no se identifica por id (que es el de la extension documentada), sino por el par
-    // (targetType, id), asi que su entrada tiene que arrastrar tambien el targetType.
+    // Documentation is not identified by id (which is the documented extension's), but by the pair
+    // (targetType, id), so its entry has to carry the targetType along too.
     if (extType === 'docs' && !pkg.targetType) { console.error(`\n  ✗ Sin 'targetType' en package.json (obligatorio en docs)`); process.exit(1) }
 
     const tgzName = basename(tgzPath)

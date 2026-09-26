@@ -1,10 +1,10 @@
 import { IInstanceMessage, IExtensionScope } from "@kwirthmagnify/kwirth-common"
 
-// ─── Scopes de autorización (RBAC propio de Trivy) ────────────────────────────
+// ─── Authorisation scopes (Trivy's own RBAC) ──────────────────────────────────
 // Namespaced with 'trivy$' (the project convention). They define the channel's access ladder.
 export enum ETrivyScope {
-    WORKLOAD = 'trivy$workload',        // acceso a reports de workloads (namespaced)
-    KUBERNETES = 'trivy$kubernetes'     // + reports a nivel de cluster (cluster-scoped)
+    WORKLOAD = 'trivy$workload',        // access to workload reports (namespaced)
+    KUBERNETES = 'trivy$kubernetes'     // + cluster-level reports (cluster-scoped)
 }
 
 // Catalogue of scopes Trivy declares (the channel exposes it through getScopeCatalog() in front and

@@ -39,7 +39,7 @@ const makeConfigMaps = () => {
 interface IBundleOptions {
     id?: string
     version?: string
-    // true = entradas dentro de 'package/', como deja `npm publish`
+    // true = entries inside 'package/', as `npm publish` leaves them
     npmLayout?: boolean
     front?: string
     // leave front.js out, for the invalid bundle case

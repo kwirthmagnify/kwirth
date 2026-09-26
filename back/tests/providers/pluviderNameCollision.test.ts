@@ -1,5 +1,5 @@
 // A name clash between a provider and a pluvider: an 'agora' provider and an 'agora' plugin that
-// ademas publica como 'plugin:agora'. Tecnicamente no hay ambiguedad —viven en registros distintos y
+// also publishes as 'plugin:agora'. Technically there is no ambiguity — they live in different registries and
 // each is addressed by its own id — but to a person they are easy to confuse, so a WARNING is issued.
 // Nothing is ever rejected: both extensions may be third-party and the user may control neither.
 

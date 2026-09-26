@@ -1,5 +1,5 @@
 // Pinocchio consumes Kwirth's SHARED AI config (the AI Providers / AI Models menus): providers in
-// 'kwirth-store-common-kwirth-ai-providers' y LLMs en 'kwirth-store-common-kwirth-ai-llms'. Este e2e
+// 'kwirth-store-common-kwirth-ai-providers' and LLMs in 'kwirth-store-common-kwirth-ai-llms'. This e2e
 // verifies that contract end to end, writing nothing: it only opens dialogs and cancels.
 //
 // The case that prompted the test: pinocchio sent its own hardcoded list of provider types, with neither

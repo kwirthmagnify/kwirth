@@ -58,7 +58,7 @@ const instalar = async (limite: number | undefined, imagenes: { std?: number, hi
 const KB = 1024
 const TOPE_CONFIGMAP = 800 * KB
 
-// 700 KB de png son ~933 KB en base64: NO caben. 300 KB son ~400 KB: si.
+// 700 KB of png are ~933 KB in base64: they do NOT fit. 300 KB are ~400 KB: they do.
 const HI_QUE_NO_CABE = 700 * KB
 const STD_QUE_CABE = 300 * KB
 

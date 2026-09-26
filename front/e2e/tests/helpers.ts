@@ -30,7 +30,7 @@ export async function login(page: Page, user = USER, pass = PASS): Promise<void>
 
 /** Closes any open dialog (from auto-start or other causes). */
 export async function dismissOpenDialogs(page: Page): Promise<void> {
-    // Intentar Cancel, luego OK, luego Escape — en ese orden
+    // Try Cancel, then OK, then Escape — in that order
     for (const name of ['CANCEL', 'OK', 'Close']) {
         const btn = page.getByRole('button', { name })
         if (await btn.count() > 0) {

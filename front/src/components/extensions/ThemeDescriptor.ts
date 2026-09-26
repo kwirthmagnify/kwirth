@@ -114,7 +114,7 @@ const makeThemeDescriptor = (deps: IThemeDescriptorDeps): IExtensionManagerDescr
         },
         save: async (theme, pluginIds) => {
             // The whole map is rebuilt: assigning this theme to a plugin implies taking away the one
-            // tuviera, porque solo puede haber uno.
+            // it had, because there can only be one.
             const next: Record<string, string> = {}
             for (const [pid, tid] of Object.entries(deps.assignments)) {
                 if (tid !== theme.id) next[pid] = tid

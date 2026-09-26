@@ -6,7 +6,7 @@ import { listControllersTolerant } from '../../src/tools/AuthorizationManagement
 // documentation did not include the 'batch' apiGroup, so 'jobs' answered 403 — and with a Promise.all
 // that rejected the whole promise: the selector was left with NO controller at all, not even the
 // deployments, which could be read. And since the catch returned [], it was indistinguishable from 'this
-// namespace no tiene nada'.
+// namespace has nothing'.
 //
 // These tests pin down the opposite: what can be read is read; what cannot is reported naming the type
 // and its apiGroup, which is the datum that makes fixing the RBAC possible.
