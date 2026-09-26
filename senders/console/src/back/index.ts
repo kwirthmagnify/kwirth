@@ -83,7 +83,7 @@ export class ConsoleSender implements ISender {
             return
         }
 
-        // Sin logger (core antiguo): el formato de siempre, con su configuracion de siempre.
+        // With no logger (an older core): the usual format, with its usual configuration.
         const useTimestamps = config.timestamps ?? true
         const useLevels     = config.levels ?? true
         const ts    = useTimestamps ? `[${new Date().toISOString()}] ` : ''
