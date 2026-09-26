@@ -95,4 +95,15 @@ export interface IProvider extends Omit<IPublicProvider, 'addSubscriber'|'remove
         Optional, like setLogger: a provider built before this exists is simply never called.
     */
     onProvidersReady?: () => void | Promise<void>
+    /*
+        The providers this one consumes; the core instantiates them even when no channel asks for
+        them (see Consumer.ts, resolveConsumedProviders). Declared here for the same reason as
+        setLogger: the installed 'common-back' predates it.
+    */
+    requirements?: IProviderRequirements
+}
+
+/* Mirror of IProviderRequirements in common-back, until the installed version carries it. */
+export interface IProviderRequirements {
+    providers: string[]
 }

@@ -241,6 +241,40 @@ how to complain about it.
 > `processProviderEvent(providerId, payload)`. Passing `this` is the simple case; pass a separate object
 > per subscription if you need to hold several.
 
+### Declaring what you consume
+
+Kwirth does not start every installed provider. It creates the ones **a channel asks for**, plus the
+ones that expose a `router` or a `configRouter`, and no others. A producer that only **another
+provider** needs fits neither case, so without help it is never created, and your `getProvider()`
+returns `undefined` even though the producer is installed.
+
+List the providers you consume in `requirements`. This is the same list a channel declares:
+
+```typescript
+readonly requirements = { providers: ['some-provider', 'another-provider'] }
+```
+
+When your provider is created, the core also creates the ones you list, then the ones **they** list,
+and so on. It does this both at startup and when a plugin that brings you in is installed without a
+restart. Nothing is created twice, and a cycle between two providers is harmless. It all happens
+before `onProvidersReady()`, so by the time you subscribe, whatever you declared is already running.
+
+A few things to keep in mind:
+
+- **It is still a soft dependency.** A listed provider that is not installed produces a warning in
+  the log (`Provider 'yours' consumes 'some-provider', which is not installed`) and startup carries
+  on. You still have to handle `getProvider()` returning `undefined`, as explained above.
+- **Do not list pluviders** (`plugin:<name>`). A pluvider exists when its plugin is installed, and
+  the core cannot create one, so it skips those ids. Ask for it with `getProvider()` anyway: it will
+  be there when the plugin is.
+- **Declare only what you really consume.** Everything you list starts running, together with its
+  polling, quotas and connections, as soon as you do.
+- `requirements` is optional. An older core ignores it, and you do not need a newer
+  `kwirth-common-back` to declare it: a plain property with that shape is enough.
+
+In the startup log, a producer created this way shows up as
+`Provider 'some-provider' is consumed by provider 'yours', instantiating it`.
+
 ## Deprecated: core-managed configuration
 
 Older providers received their configuration through `configure(config)`, fed by the core from a ConfigMap

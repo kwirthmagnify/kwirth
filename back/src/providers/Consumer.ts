@@ -1,4 +1,6 @@
 import { IChannel } from '../channels/IChannel'
+import { IProviderRequirements } from './IProvider'
+import { isPluviderId } from './Pluvider'
 
 /*
     The other half of the symmetry that Pluvider.ts opened.
@@ -92,4 +94,72 @@ export const wireProviderConsumers = async (providers: IWireableProvider[], log:
 export interface IWireableProvider {
     readonly id: string
     onProvidersReady?: () => void | Promise<void>
+}
+
+/*
+    Instantiation phase for providers that CONSUME others.
+
+    The core only instantiates a provider if a CHANNEL asks for it or if it exposes a router. A
+    producer that only another provider needs matches neither, so it was never created and the
+    consumer got 'undefined' from getProvider() in onProvidersReady(). Here a provider declares what
+    it consumes (IProvider.requirements) and the core closes the set transitively: what a consumer
+    needs is instantiated, then what THAT one needs, and so on.
+
+    Cycles cannot loop forever: a provider already present is never created again, and each id is
+    attempted at most once, so the queue only ever grows by providers that did not exist before.
+
+    Pluvider ids are skipped: a pluvider exists when its plugin is installed, the core cannot create
+    one. A consumer that lists one by mistake still gets it through getProvider() if it is there.
+
+    Soft dependency, like everything else in this file: an id that is not registered is reported and
+    the rest carry on. The caller decides how to log it.
+*/
+export const resolveConsumedProviders = async <T extends IRequiringProvider>(
+    consumers: T[],
+    isPresent: (providerId: string) => boolean,
+    isRegistered: (providerId: string) => boolean,
+    instantiate: (providerId: string, consumerId: string) => Promise<T | undefined>
+): Promise<IConsumedProvidersResolution<T>> => {
+    const result: IConsumedProvidersResolution<T> = { added: [], missing: [] }
+    const attempted = new Set<string>()
+    const queue = [...(consumers ?? [])]
+    while (queue.length > 0) {
+        const consumer = queue.shift()!
+        const wanted = consumer?.requirements?.providers
+        if (!Array.isArray(wanted)) continue
+        for (const providerId of wanted) {
+            if (typeof providerId !== 'string' || providerId.length === 0) continue
+            if (isPluviderId(providerId)) continue
+            if (!isRegistered(providerId)) {
+                result.missing.push({ consumerId: consumer.id, providerId })
+                continue
+            }
+            if (isPresent(providerId) || attempted.has(providerId)) continue
+            attempted.add(providerId)
+            // instantiate() logs its own failure; a producer that could not be created is just absent
+            const created = await instantiate(providerId, consumer.id)
+            if (!created) continue
+            result.added.push(created)
+            queue.push(created)
+        }
+    }
+    return result
+}
+
+/** Just enough of a provider to know what it consumes. */
+export interface IRequiringProvider {
+    readonly id: string
+    requirements?: IProviderRequirements
+}
+
+export interface IMissingConsumedProvider {
+    consumerId: string
+    providerId: string
+}
+
+export interface IConsumedProvidersResolution<T extends IRequiringProvider = IRequiringProvider> {
+    /** Providers instantiated by this phase, in creation order. */
+    added: T[]
+    /** Consumed ids that are not registered at all. One entry per consumer that asked. */
+    missing: IMissingConsumedProvider[]
 }

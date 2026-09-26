@@ -74,7 +74,7 @@ import * as crypto from 'crypto'
 
 import { createProviderInstance, IProvider, IProviderStorage, TProviderConstructor } from './providers/IProvider'
 import { findMissingSubscriptionTargets, isPluvider, pluviderId, rebindPluvider, startPluviders, warnNameCollisions } from './providers/Pluvider'
-import { wireProviderConsumers } from './providers/Consumer'
+import { resolveConsumedProviders, wireProviderConsumers } from './providers/Consumer'
 import { buildProviderStorage } from './tools/ProviderStorage'
 import { EventsProvider } from './providers/events/EventsProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
@@ -1345,32 +1345,51 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             logInfo(ELogComponent.CORE, `Plugin channel '${id}' is 'single' and this is not its in-cluster home → announced as remote (not hosted here)`)
                             return
                         }
+                        // Providers created by THIS install: they, and nobody else, still need wiring below.
+                        const hotCreated: IProvider[] = []
+                        const hotCreateProvider = async (provId: string, reason: string): Promise<IProvider | undefined> => {
+                            const provConstructor = registeredProviders.get(provId)
+                            if (!provConstructor) return undefined
+                            const providerInstance = createProviderInstance(provConstructor, activeRI.clusterInfo, activeRI.kwirthData, activeRI.providerStorage) ?? undefined
+                            if (!providerInstance) return undefined
+                            if (providerInstance.configure && providerManager) {
+                                const cfg = await providerManager.getConfig(provId)
+                                if (Object.keys(cfg).length > 0) providerInstance.configure(cfg)
+                            }
+                            providerInstance.startProvider()
+                            activeRI.clusterInfo.providers.push(providerInstance)
+                            hotCreated.push(providerInstance)
+                            logInfo(ELogComponent.CORE, `Provider '${provId}' started ${reason}`)
+                            return providerInstance
+                        }
+                        const hotMountProvider = (providerInstance: IProvider): void => {
+                            if (providerInstance.providesRouter && providerInstance.router && !providerInstance.started) {
+                                const provPath = providerInstance.routerAlias ? `/provider/${providerInstance.routerAlias}` : `/${activeRI.id}/provider/${providerInstance.id}`
+                                riRouter.use(provPath, providerInstance.router)
+                                providerInstance.started = true
+                                logInfo(ELogComponent.CORE, `Provider '${providerInstance.id}' HTTP router registered at '${provPath}'`)
+                            }
+                            mountProviderConfigRouter(riRouter, providerInstance, activeRI.apiKeyApi)
+                        }
                         for (const provId of channelInstance.requirements.providers) {
                             let providerInstance = activeRI.clusterInfo.providers.find(p => p.id === provId)
                             if (!providerInstance) {
-                                const provConstructor = registeredProviders.get(provId)
-                                if (provConstructor) {
-                                    providerInstance = createProviderInstance(provConstructor, activeRI.clusterInfo, activeRI.kwirthData, activeRI.providerStorage) ?? undefined
-                                    if (providerInstance) {
-                                        if (providerInstance.configure && providerManager) {
-                                            const cfg = await providerManager.getConfig(provId)
-                                            if (Object.keys(cfg).length > 0) providerInstance.configure(cfg)
-                                        }
-                                        providerInstance.startProvider()
-                                        activeRI.clusterInfo.providers.push(providerInstance)
-                                        logInfo(ELogComponent.CORE, `Provider '${provId}' started for plugin '${id}'`)
-                                    }
+                                if (registeredProviders.has(provId)) {
+                                    providerInstance = await hotCreateProvider(provId, `for plugin '${id}'`)
                                 } else {
                                     logError(ELogComponent.CORE, `Required provider '${provId}' not registered (needed by plugin '${id}')`)
                                 }
                             }
-                            if (providerInstance && providerInstance.providesRouter && providerInstance.router && !providerInstance.started) {
-                                const provPath = providerInstance.routerAlias ? `/provider/${providerInstance.routerAlias}` : `/${activeRI.id}/provider/${providerInstance.id}`
-                                riRouter.use(provPath, providerInstance.router)
-                                providerInstance.started = true
-                                logInfo(ELogComponent.CORE, `Provider '${provId}' HTTP router registered at '${provPath}'`)
-                            }
-                            if (providerInstance) mountProviderConfigRouter(riRouter, providerInstance, activeRI.apiKeyApi)
+                            if (providerInstance) hotMountProvider(providerInstance)
+                        }
+                        // What the providers just created consume, transitively (same phase as at startup).
+                        const hotConsumed = await resolveConsumedProviders([...hotCreated],
+                            provId => activeRI.clusterInfo.providers.some(p => p.id === provId),
+                            provId => registeredProviders.has(provId),
+                            (provId, consumerId) => hotCreateProvider(provId, `because provider '${consumerId}' consumes it`))
+                        for (const added of hotConsumed.added) hotMountProvider(added)
+                        for (const m of hotConsumed.missing) {
+                            logWarning(ELogComponent.CORE, `Provider '${m.consumerId}' consumes '${m.providerId}', which is not installed`)
                         }
                         activeRI.channels.set(id, channelInstance)
                         // Instalacion en caliente: si el plugin recien instalado ademas produce, queda
@@ -1391,6 +1410,15 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                                 logError(ELogComponent.CORE, `Pluvider '${pluvId}' failed to start: ${err}`)
                             }
                         }
+                        /*
+                            At startup the wiring phase runs once for everyone; a provider created by a
+                            hot install arrived after it and would never subscribe until a restart. It
+                            goes here, with this plugin's pluvider already registered, for the same
+                            reason as at startup: everything it may consume exists by now.
+                        */
+                        const hotWired = await wireProviderConsumers(hotCreated,
+                            (provId, err) => providerLogger(provId).error(`Failed while wiring up to the providers it consumes: ${err}`))
+                        if (hotWired > 0) logInfo(ELogComponent.CORE, `Wired ${hotWired} provider(s) that consume other providers (plugin '${id}')`)
                         channelInstance.startChannel()
                         if ((channelInstance as any).providesRouter && (channelInstance as any).router) {
                             const alias = (channelInstance as any).routerAlias
@@ -1842,14 +1870,17 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 
         
         localClusterInfo.providers = []
-        for(let provId of requiredProviders) {
+        // Shared by the providers a channel asks for and the ones another provider consumes (below).
+        // Captured so the closure keeps the narrowing of the module-level 'let'.
+        const configuredProviderManager = providerManager
+        const startRequiredProvider = async (provId: string): Promise<IProvider | undefined> => {
             let provider = registeredProviders.get(provId)
             if (provider) {
                 let providerInstance = createProviderInstance(registeredProviders.get(provId), localClusterInfo, localKwirthData, runningInstance.providerStorage)
                 if (providerInstance) {
-                    
+
                     if (providerInstance.configure) {
-                        const cfg = await providerManager.getConfig(provId)
+                        const cfg = await configuredProviderManager.getConfig(provId)
                         if (Object.keys(cfg).length > 0) providerInstance.configure(cfg)
                         else logWarning(ELogComponent.CORE, `Provider '${provId}' has no configuration in ConfigMap — configure() skipped`)
                     }
@@ -1860,6 +1891,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                         logError(ELogComponent.CORE, `Provider '${provId}' failed to start: ${err}`)
                     }
                     localClusterInfo.providers.push(providerInstance!)
+                    return providerInstance
                 }
                 else {
                     logError(ELogComponent.CORE, `Couldn't create a provider instance for '${provId}'`)
@@ -1868,6 +1900,10 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             else {
                 logError(ELogComponent.CORE, `Required provider '${provId}' is not registered`)
             }
+            return undefined
+        }
+        for(let provId of requiredProviders) {
+            await startRequiredProvider(provId)
         }
 
         // Auto-instantiate providers with providesRouter=true so their config endpoints and listeners
@@ -1891,6 +1927,22 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             } catch {
                 // non-critical: provider may need specific env to instantiate
             }
+        }
+
+        /*
+            Providers that only ANOTHER provider needs: no channel lists them and they may expose no
+            router, so neither loop above creates them. Resolved transitively over everything already
+            running (see Consumer.ts), before the wiring phase so onProvidersReady() finds them.
+        */
+        const consumed = await resolveConsumedProviders(localClusterInfo.providers,
+            provId => localClusterInfo.providers.some(p => p.id === provId),
+            provId => registeredProviders.has(provId),
+            async (provId, consumerId) => {
+                logInfo(ELogComponent.CORE, `Provider '${provId}' is consumed by provider '${consumerId}', instantiating it`)
+                return startRequiredProvider(provId)
+            })
+        for (const m of consumed.missing) {
+            logWarning(ELogComponent.CORE, `Provider '${m.consumerId}' consumes '${m.providerId}', which is not installed`)
         }
 
         // Fase de PLUVIDERS: entre la de providers (arriba) y la de canales, que ocurre despues en

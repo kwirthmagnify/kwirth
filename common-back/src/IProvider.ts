@@ -95,6 +95,15 @@ export interface IProviderSubscriptionHelp {
 export type IProviderFieldDef = IConfigFieldDef
 
 /**
+ * What a provider needs from the rest of the core. Same shape as the 'providers' list of a channel's
+ * requirements, so both read alike; see IProvider.requirements.
+ */
+export interface IProviderRequirements {
+    /** Ids of the providers this one consumes (never a pluvider 'plugin:<name>' id). */
+    providers: string[]
+}
+
+/**
  * Lo que un provider sabe contar de si mismo.
  *
  * Existe para que kwirth pueda decir si algo esta siendo consumido o esta emitiendo para nadie, que
@@ -217,6 +226,20 @@ export interface IProvider extends IExtension {
      * and an older core that does not know about it simply never calls anyone.
      */
     onProvidersReady?(): void | Promise<void>
+    /**
+     * The providers this provider CONSUMES. The core instantiates them even if no channel asks for
+     * them, the same way it instantiates the ones a channel lists in its own requirements.
+     *
+     * Without it, a producer nobody else asks for and that exposes no router is never instantiated,
+     * and getProvider() hands the consumer 'undefined' in onProvidersReady(). The dependency stays
+     * SOFT: one that is not installed is a warning, and the consumer must survive its absence.
+     *
+     * Pluvider ids ('plugin:<name>') are not listed here: a pluvider exists when its plugin is
+     * installed, the core cannot create it.
+     *
+     * OPTIONAL: a provider that consumes nothing leaves it out, and an older core ignores it.
+     */
+    requirements?: IProviderRequirements
     startProvider(): Promise<void>
     stopProvider(): Promise<void>
     router: any

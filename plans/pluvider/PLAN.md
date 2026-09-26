@@ -12,6 +12,11 @@ de rebuscar en `clusterInfo.providers` por su espalda. Con su fase de cableado (
 porque los dos bucles de arranque registraban en orden opuesto y suscribirse desde `startProvider()`
 funcionaba o no por motivos invisibles.
 
+**F7 cerrada (2026-09-26)**: un provider **declara a qué providers consume** (`requirements.providers`), y
+el core los crea aunque ningún canal los pida, resolviendo el conjunto de forma transitiva. Sin esto, un
+productor que solo necesitaba otro provider no existía nunca. De paso se arregló que la instalación en
+caliente no cableaba a los providers consumidores.
+
 **No se cierra** porque queda la **fase 2**, fuera del MVP por decisión: `ask()` (la cara de consulta),
 `publications[]` (separar la publicación en un array) y el descubrimiento en runtime. Más la
 publicación privada pendiente de Agora y Montag. Detalle al final, en *Backlog que deja este trabajo*.
@@ -650,7 +655,47 @@ que el handle existe para impedir, y lo que volvería a dejar falso el registro 
       contando como canal** —el paso que de verdad importaba, porque lleva las dos formas a la vez— y la
       baja y el alta de nuevo funcionan.
 
+## F7 — Un provider declara a qué providers consume — *CERRADA (2026-09-26)*
+
+F6 dejó que un provider se suscribiera a otro, pero **solo si ese otro existía**. El core crea únicamente
+los providers que pide un **canal** (`requirements.providers`) y los que exponen `router` o
+`configRouter`. Un productor que solo necesita **otro provider** no cumple ninguna de las dos, así que no
+se creaba nunca, y `getProvider()` le devolvía `undefined` al consumidor en `onProvidersReady()`. El
+consumidor no podía distinguir ese caso de un productor no instalado. Es el caso de `cloud-config`, que
+motivó F6: sus consumidores lo verían ausente mientras nadie más lo pidiera.
+
+- [x] **`IProvider.requirements?: IProviderRequirements`** (`{ providers: string[] }`) en el contrato
+      publicado, con la misma forma que la lista de un canal. Es opcional y se puede declarar como
+      propiedad plana sin subir `common-back`, así que no hay cascada. El core lo lleva en local
+      mientras el instalado sea 0.5.48, igual que `setLogger`.
+- [x] **Cierre transitivo** con `resolveConsumedProviders()` en `providers/Consumer.ts`: lo que pide
+      un consumidor, luego lo que pide ese, hasta que no cambia nada.
+      - Ningún provider se crea dos veces y los ciclos terminan.
+      - Los ids de pluvider se saltan, porque el core no puede crear uno.
+      - Un id no instalado da un **warning** y el resto sigue: es dependencia blanda.
+      - Se ejecuta **antes** de la fase de cableado, así que `onProvidersReady()` ya ve lo declarado.
+- [x] El cuerpo del bucle de requeridos pasa a `startRequiredProvider()`, y lo comparten el camino de
+      los canales y el de los providers.
+- [x] 🔴 **Segundo hueco, encontrado al tocar este: la instalación en caliente no cableaba.** Los
+      providers que arrastraba un plugin instalado en caliente se creaban, pero **nunca recibían
+      `onProvidersReady()`**, así que un consumidor que llegara así no se suscribía hasta reiniciar.
+      Ahora también se resuelve lo que consumen y se cablean después de registrar el pluvider del
+      plugin, con el mismo orden que en el arranque.
+- [x] **11 tests** (`tests/providers/providerRequirements.test.ts`); el core queda en **502/502**.
+- [x] Guía: *Declaring what you consume* en `providers/developing`, dentro de *Consuming another
+      provider*.
+- [x] **QA de regresión validado (2026-09-26)**, 4/4: log de arranque sin líneas nuevas (nadie declara
+      todavía), un canal sigue recibiendo de un provider, la instalación en caliente de un plugin arranca
+      sus providers como antes, y el gestor de providers muestra lo mismo. ⚠️ Igual que F6, **no tiene
+      comportamiento observable hasta que exista el primer consumidor**, y su e2e positivo llegará con
+      él.
+
 ## Backlog que deja este trabajo
+
+- ⚠️ **La instalación en caliente no espera a `startProvider()`** (lo lanza sin `await`), al contrario
+  que el arranque. F7 mantiene ese comportamiento para no cambiar dos cosas a la vez. Un consumidor
+  cableado en caliente puede, por tanto, suscribirse a un productor cuyo `startProvider()` aún no ha
+  terminado.
 
 - ⚠️ **El core se traga en silencio los fallos de arranque de un provider.** El bucle de
   auto-instanciación de `back/src/index.ts` cierra con `catch { }` sin traza: si `startProvider()`
