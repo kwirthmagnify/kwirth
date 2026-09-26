@@ -2,12 +2,12 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { backgroundProblem, pickBackground, EBackgroundQuality, CONFIGMAP_SIZE_LIMIT } from '../../src/tools/LoginManager'
 
-// Un login puede quedar instalado A MEDIAS: su background.png no cabe en el ConfigMap —tope duro de ~1 MiB
-// por objeto en Kubernetes, y la imagen viaja dentro en base64— y la pagina sale sin fondo. Hasta ahora eso
-// era solo una linea de log: paso de verdad con un login instalado desde el marketplace, se veia distinto
-// de como lo diseño su autor, y nadie tenia forma de saber por que.
+// A login can end up HALF installed: its background.png does not fit in the ConfigMap — a hard limit of
+// ~1 MiB per object in Kubernetes, and the image travels inside it as base64 — and the page comes out with
+// no background. Until now that was only a line in the log: it really happened with a login installed from
+// the marketplace, it looked different from how its author designed it, and nobody had any way of knowing why.
 //
-// Ahora se anota en el propio login para que su pagina lo diga. Este test fija DONDE esta la frontera.
+// It is now recorded on the login itself so its page can say so. This test pins down WHERE the boundary is.
 
 const b64 = (n: number) => 'x'.repeat(n)
 
@@ -28,8 +28,8 @@ test('un fondo vacio tampoco: no hay nada que no quepa', () => {
 })
 
 test('el tope se mide sobre el BASE64, que es lo que se guarda, no sobre el png', () => {
-    // 600 KB de png son ~800 KB en base64: la imagen cruda cabria y la codificada no. Medir el png seria
-    // dejar pasar fondos que luego el ConfigMap rechaza.
+    // 600 KB of png is ~800 KB in base64: the raw image would fit and the encoded one would not. Measuring
+    // the png would let through backgrounds the ConfigMap later rejects.
     const rawBytes = 620 * 1024
     const encodedLength = Math.ceil(rawBytes / 3) * 4
     assert.ok(encodedLength > CONFIGMAP_SIZE_LIMIT, 'la codificacion crece ~4/3: el margen hay que tomarlo ahi')

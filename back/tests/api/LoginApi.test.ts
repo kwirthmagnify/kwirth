@@ -38,7 +38,7 @@ const mockConfigMaps = (): IConfigMaps => ({
     readAllKeys: async () => ({})
 })
 
-// levanta un express efimero con el router de LoginApi montado en /login
+// brings up an ephemeral express with LoginApi's router mounted at /login
 async function startServer(usersMap: any) {
     const app = express()
     app.use(express.json())
@@ -54,8 +54,8 @@ async function startServer(usersMap: any) {
 const post = (base: string, path: string, body: any) =>
     fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 
-// El FRONT envía la contraseña ya como sha256(hex); el verifyPassword del back compara contra eso
-// (sha256(stored) === incoming para el valor plano heredado). Los tests deben mimetizar al front.
+// The FRONT END sends the password already as sha256(hex); the back end's verifyPassword compares against
+// that (sha256(stored) === incoming for the inherited plain value). The tests have to mimic the front end.
 const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex')
 
 // ---- login ----
@@ -122,24 +122,24 @@ test('POST /login/password con password incorrecta devuelve 401', async () => {
     finally { await srv.stop() }
 })
 
-// ---- el proceso no se cae por una promesa rechazada ----
+// ---- the process does not fall over because of a rejected promise ----
 //
-// Los handlers lanzan su trabajo con `LoginApi.semaphore.use(async () => {...})` sin esperarlo, asi que
-// una excepcion de dentro no la ve express: sale como 'unhandledRejection', y este proceso lo trata como
-// fatal. Un POST sin password contra un usuario ya migrado a bcrypt hacia justo eso — bcrypt.compare
-// exige dos strings y lanza 'Illegal arguments: undefined, string' — y tumbaba el core sin autenticar.
-// El basta con que empiece por $2b$ para entrar en la rama de bcrypt: compare valida sus argumentos antes
-// de mirar el hash.
+// The handlers fire their work with `LoginApi.semaphore.use(async () => {...})` without awaiting it, so
+// express never sees an exception from inside: it comes out as an 'unhandledRejection', and this process
+// treats that as fatal. A POST with no password against a user already migrated to bcrypt did exactly
+// that — bcrypt.compare demands two strings and throws 'Illegal arguments: undefined, string' — and
+// brought the core down without authenticating. Starting with $2b$ is enough to enter the bcrypt branch:
+// compare validates its arguments before looking at the hash.
 const BCRYPT_USER = () => makeUser({ password: '$2b$10$noesunhashrealperoentraenlarama' })
 
-// Vigila que no escape ningun unhandledRejection mientras corre fn.
+// Watches that no unhandledRejection escapes while fn runs.
 const withoutUnhandledRejections = async (fn: () => Promise<void>): Promise<unknown[]> => {
     const escaped: unknown[] = []
     const onReject = (reason: unknown) => escaped.push(reason)
     process.on('unhandledRejection', onReject)
     try {
         await fn()
-        // las rejections llegan en un tick posterior: hay que darles sitio antes de mirar
+        // rejections arrive on a later tick: they have to be given room before looking
         await new Promise(r => setTimeout(r, 50))
     }
     finally {
@@ -158,7 +158,7 @@ test('POST /login sin password no escapa como unhandledRejection y el servidor s
         assert.deepEqual(escaped, [], 'el fallo tiene que quedarse dentro del handler')
         assert.equal(status, 500, 'responde en vez de dejar la peticion colgada')
 
-        // y lo que de verdad importa: el servidor sigue atendiendo
+        // and what really matters: the server is still serving
         const after = await post(srv.base, '/login', { user: 'nadie@example.com', password: 'x' })
         assert.equal(after.status, 401)
     }
@@ -176,10 +176,10 @@ test('POST /login con password null tampoco tumba nada', async () => {
     finally { await srv.stop() }
 })
 
-// El cambio de contraseña tenia un catch que registraba el error y salia SIN responder: la peticion se
-// quedaba colgada para siempre y, al resolver la promesa con normalidad, tampoco dejaba actuar al guard.
-// Duele especialmente aqui, porque es el endpoint del primer arranque (admin con la contraseña por
-// defecto): el usuario se quedaba con el spinner girando sin saber que habia pasado.
+// The password change had a catch that logged the error and left WITHOUT answering: the request hung
+// forever and, by resolving the promise normally, it did not let the guard act either. It hurts
+// especially here, because it is the first-startup endpoint (admin with the default password): the user
+// was left with the spinner going round with no idea what had happened.
 test('POST /login/password sin password RESPONDE en vez de dejar la peticion colgada', async () => {
     const srv = await startServer(encodeUsers([BCRYPT_USER()]))
     try {
@@ -190,7 +190,7 @@ test('POST /login/password sin password RESPONDE en vez de dejar la peticion col
         assert.equal(status, 500, 'tiene que contestar algo, no dejar al cliente esperando')
         assert.deepEqual(escaped, [], 'y el fallo no puede salir del proceso')
 
-        // el servidor sigue atendiendo al resto
+        // the server carries on serving everybody else
         const after = await post(srv.base, '/login', { user: 'nadie@example.com', password: 'x' })
         assert.equal(after.status, 401)
     }
@@ -198,7 +198,7 @@ test('POST /login/password sin password RESPONDE en vez de dejar la peticion col
 })
 
 test('POST /login/password sin newpassword tambien responde', async () => {
-    // pasa la verificacion y revienta despues, en el bcrypt.hash del newpassword ausente
+    // it passes verification and blows up afterwards, in the bcrypt.hash of the missing newpassword
     const srv = await startServer(encodeUsers([makeUser()]))
     try {
         const res = await post(srv.base, '/login/password', { user: 'alice@example.com', password: sha256('secret') })
@@ -208,8 +208,8 @@ test('POST /login/password sin newpassword tambien responde', async () => {
 })
 
 test('un registro de usuario corrupto se descarta arriba y da 401, no cuelga', async () => {
-    // readUsers ya filtra lo que no decodifica, asi que el JSON.parse(atob(...)) del handler nunca ve
-    // basura: el usuario simplemente no existe. Se comprueba para que quede claro donde esta la defensa.
+    // readUsers already filters out what does not decode, so the handler's JSON.parse(atob(...)) never
+    // sees garbage: the user simply does not exist. It is checked so it is clear where the defence lies.
     const srv = await startServer({ 'alice@example.com': 'esto-no-es-base64-de-un-json' })
     try {
         const res = await post(srv.base, '/login/password', { user: 'alice@example.com', password: sha256('secret'), newpassword: sha256('nuevo') })

@@ -29,7 +29,7 @@ const memConfigMaps = (): IConfigMaps => ({
 })
 
 interface IFakeProviderOptions {
-    // rutas que el provider cuelga de su configRouter; sin configRouter si es undefined
+    // routes the provider hangs off its configRouter; with no configRouter it is undefined
     configRoutes?: string[]
 }
 
@@ -73,14 +73,14 @@ const listar = async (providers: IProvider[]): Promise<TProviderApiEntry[]> => {
 }
 
 test('un provider con /test en su configRouter se anuncia con hasTest', async () => {
-    // un provider cloud tipico: state + health + quotas + test
+    // a typical cloud provider: state + health + quotas + test
     const list = await listar([fakeProvider('cloud-x', { configRoutes: ['/state', '/health', '/quotas', '/test'] })])
 
     assert.equal(list.find(e => e.id === 'cloud-x')?.hasTest, true)
 })
 
 test('un provider con configRouter pero SIN /test no lo anuncia: no habria boton que pintar', async () => {
-    // otro que expone su estado para poder validarlo aislado, pero no prueba credenciales
+    // another that exposes its state so it can be validated in isolation, but does not test credentials
     const list = await listar([fakeProvider('read-only-x', { configRoutes: ['/state'] })])
 
     assert.equal(list.find(e => e.id === 'read-only-x')?.hasTest, undefined)

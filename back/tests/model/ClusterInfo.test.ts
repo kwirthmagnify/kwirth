@@ -1,5 +1,5 @@
-// Deteccion del nombre de cluster. Kubernetes no publica ninguno, asi que la precedencia es
-// KWIRTH_CLUSTER_NAME > heuristica por flavour > uid del namespace kube-system.
+// Detecting the cluster's name. Kubernetes publishes none, so the precedence is KWIRTH_CLUSTER_NAME >
+// a flavour heuristic > the uid of the kube-system namespace.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -25,7 +25,7 @@ const node = (spec: INodeSpec): V1Node => ({
     spec: spec.providerID ? { providerID: spec.providerID } : {}
 }) as V1Node
 
-// ClusterInfo solo necesita coreApi para esto: listNode + readNamespace('kube-system')
+// ClusterInfo only needs coreApi for this: listNode + readNamespace('kube-system')
 const clusterInfoWith = (nodes: V1Node[] | Error) => {
     const calls = { listNode: 0, readNamespace: 0 }
     const ci = new ClusterInfo()
@@ -138,9 +138,9 @@ test('gke: the cluster comes out of the providerID node name', async () => {
     await ci.setKubernetesClusterName()
 
     assert.equal(ci.flavour, 'gke')
-    // La heuristica de gke recorta los dos ultimos segmentos del nombre del nodo, asi que el
-    // nodepool se queda pegado al nombre del cluster ('shop' + 'default-pool'). Imprecision
-    // preexistente: se documenta aqui tal cual es, sin cambiarla
+    // The gke heuristic trims the node name's last two segments, so the nodepool stays stuck to the
+    // cluster's name ('shop' + 'default-pool'). A pre-existing imprecision: it is documented here exactly
+    // as it is, without changing it
     assert.equal(ci.name, 'shop-default-pool')
 })
 

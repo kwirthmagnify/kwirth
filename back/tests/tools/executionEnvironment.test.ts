@@ -39,7 +39,7 @@ const probes = (kubeconfig:boolean): IEnvironmentProbes => ({
     kubeconfig: () => kubeconfig
 })
 
-// ── deteccion del entorno ──────────────────────────────────────────────────────────────────────────
+// ── detecting the environment ──────────────────────────────────────────────────────────────────────
 
 test('FORCE manda sobre cualquier otra senal', async () => {
     await conEntorno({ FORCE: 'ecs', KUBERNETES_SERVICE_HOST: '10.0.0.1' }, () => {
@@ -66,7 +66,7 @@ test('el metadata del agente de ECS identifica el entorno, en los dos launch typ
     await conEntorno({ ECS_CONTAINER_METADATA_URI_V4: 'http://169.254.170.2/v4/abc' }, () => {
         assert.equal(detectExecutionEnvironment(), EExecutionEnvironment.ECS)
     })
-    // la variable sin '_V4' es la del agente antiguo, y tambien vale
+    // the variable without '_V4' belongs to the old agent, and it counts too
     await conEntorno({ ECS_CONTAINER_METADATA_URI: 'http://169.254.170.2/v3/abc' }, () => {
         assert.equal(detectExecutionEnvironment(), EExecutionEnvironment.ECS)
     })
@@ -78,11 +78,11 @@ test('sin ninguna senal, el entorno no se detecta', async () => {
     })
 })
 
-// ── de donde puede salir un kubeconfig ─────────────────────────────────────────────────────────────
+// ── where a kubeconfig can come from ───────────────────────────────────────────────────────────────
 //
-// Esto existe por un fallo real, visto en un contenedor: loadFromDefault() se inventa un cluster
-// apuntando a http://localhost:8080 cuando no encuentra ningun kubeconfig, asi que preguntarle despues
-// si hay cluster responde que si, y el arranque se va detras de un servidor inexistente.
+// This exists because of a real failure, seen in a container: loadFromDefault() invents a cluster
+// pointing at http://localhost:8080 when it finds no kubeconfig, so asking it afterwards whether there is
+// a cluster answers yes, and startup goes chasing a server that does not exist.
 
 const KUBECONFIG_EN_CASA = path.join(os.homedir(), '.kube', 'config')
 const TOKEN_IN_CLUSTER = '/var/run/secrets/kubernetes.io/serviceaccount/token'
@@ -112,7 +112,7 @@ test('KUBECONFIG manda, y vale con que exista una de sus rutas', async () => {
 })
 
 test('KUBECONFIG apuntando a algo que no existe no es una fuente, aunque haya uno en la cuenta', async () => {
-    // Si se ha dicho explicitamente donde esta, no se busca en otro sitio a sus espaldas.
+    // If it has been said explicitly where it is, nowhere else is searched behind its back.
     await conEntorno({ KUBECONFIG: '/no/existe' }, () => {
         assert.equal(hasKubeconfigSource(ruta => ruta === KUBECONFIG_EN_CASA), false)
     })
@@ -175,7 +175,7 @@ test('cada capacidad viene con su explicacion, que es lo que se imprime al arran
     assert.ok(capacidades.reasons.some(r => r.startsWith('Store:')))
 })
 
-// ── de donde salen los recursos ────────────────────────────────────────────────────────────────────
+// ── where the resources come from ──────────────────────────────────────────────────────────────────
 
 test('con kubeconfig, los recursos salen del cluster, corramos donde corramos', async () => {
     for (const entorno of [EExecutionEnvironment.DOCKER, EExecutionEnvironment.ECS, EExecutionEnvironment.DESKTOP]) {
@@ -185,8 +185,9 @@ test('con kubeconfig, los recursos salen del cluster, corramos donde corramos', 
 })
 
 test('sin Kubernetes no se observa infraestructura, y eso tiene nombre propio', async () => {
-    // NONE no es un arranque a medias: ese Kwirth sirve el front, lleva canales que no miran al cluster,
-    // y desde el se puede federar contra otro Kwirth o apuntar a un cluster montando un kubeconfig.
+    // NONE is not a half-finished startup: that Kwirth serves the front end, carries channels that do not
+    // look at the cluster, and from it you can federate against another Kwirth or point at a cluster by
+    // mounting a kubeconfig.
     const capacidades = await resolveEnvironmentCapabilities(EExecutionEnvironment.ECS, undefined, probes(false))
     assert.equal(resolveClusterType(capacidades), EClusterType.NONE)
 })

@@ -28,8 +28,8 @@ const almacenFalso = (limite?: number): IConfigMaps & { datos: Map<string, any> 
         datos,
         storeLimit: () => limite,
         write: async (name: string, data: any) => {
-            // null borra, que es como se quita una clave: si se guardara tal cual, un artefacto retirado
-            // seguiria "existiendo" y el test pasaria sin que el borrado funcione de verdad.
+            // null deletes, which is how a key is removed: were it stored as it is, a withdrawn artifact
+            // would go on "existing" and the test would pass without the deletion really working.
             if (data === null) datos.delete(name)
             else datos.set(name, data)
             return {}
@@ -42,7 +42,7 @@ const almacenFalso = (limite?: number): IConfigMaps & { datos: Map<string, any> 
 
 // ── logins ─────────────────────────────────────────────────────────────────────
 
-/** Un tgz de login, con fondo o sin el. El png no es valido: aqui solo importa que ESTE. */
+/** A login tgz, with or without a background. The png is not valid: all that matters here is that it IS THERE. */
 const construirLogin = async (id: string, version: string, conFondo: boolean): Promise<string> => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kwirth-login-upd-'))
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ id, name: `@test/login-${id}`, version, displayName: id }))
@@ -68,7 +68,7 @@ test('un login no se reinstala sin permiso, y con permiso se actualiza', async (
 
     const guardado = almacen.datos.get('kwirth-login-acme')
     assert.equal(guardado.meta.version, '2.0.0')
-    // y en el indice no hay dos entradas: se reemplaza, no se añade
+    // and there are not two entries in the index: it is replaced, not added
     const indice = almacen.datos.get('kwirth-logins-index')
     assert.equal(indice.filter((m: { id: string }) => m.id === 'acme').length, 1)
     assert.equal(indice.find((m: { id: string }) => m.id === 'acme').version, '2.0.0')
@@ -97,7 +97,7 @@ test('si la version nueva de un login ya no trae fondo, el fondo viejo DESAPAREC
 
 // ── senders ────────────────────────────────────────────────────────────────────
 
-/** Un tgz de sender. El front es opcional, que es justo lo que se quiere probar. */
+/** A sender tgz. The front end is optional, which is exactly what is to be tested. */
 const construirSender = async (id: string, version: string, conFront: boolean): Promise<string> => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kwirth-sender-upd-'))
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ id, name: `@test/sender-${id}`, version, displayName: id }))
@@ -124,7 +124,7 @@ test('si la version nueva de un sender ya no trae front, el front viejo DESAPARE
 })
 
 test('y si la nueva SI lo trae, se queda el nuevo, no el de antes', async () => {
-    // el reverso del anterior: borrar de mas seria igual de malo que no borrar
+    // the reverse of the previous one: deleting too much would be just as bad as not deleting
     const almacen = almacenFalso()
     const manager = new SenderManager(almacen)
     await manager.init()
@@ -148,6 +148,6 @@ test('un sender tampoco baja de version, aunque se pida el permiso', async () =>
         manager.install(await construirSender('mail', '1.0.0', false), 'test', undefined, undefined, true),
         /is not newer/
     )
-    // y lo instalado no se ha tocado
+    // and what is installed has not been touched
     assert.equal(almacen.datos.get('kwirth-sender-mail-meta').version, '2.0.0')
 })

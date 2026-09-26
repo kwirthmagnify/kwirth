@@ -18,32 +18,32 @@ import { IInstanceConfig, accessKeySerialize, accessKeyBuild, parseResource } fr
       · los campos se comparan como lista de regex, no como cadena entera
 */
 
-// Un canal de pega con niveles de scope: 'view' es el minimo, 'restart' puede mas, 'cluster' lo maximo.
-// getScopeLevel pregunta al CANAL por el nivel de cada scope, asi que el catalogo lo pone el canal.
+// A fake channel with scope levels: 'view' is the minimum, 'restart' can do more, 'cluster' the most.
+// getScopeLevel asks the CHANNEL for each scope's level, so the catalogue is provided by the channel.
 const NIVELES: Record<string, number> = { view: 10, filter: 10, restart: 50, cluster: 100 }
 
 const fakeChannels = (): Map<string, IChannel> => new Map([
     ['log', { getChannelScopeLevel: (scope: string) => NIVELES[scope] ?? -1 } as unknown as IChannel]
 ])
 
-/** Una instanceConfig con la accessKey serializada dentro, que es de donde la saca checkAkr. */
+/** An instanceConfig with the accessKey serialised inside, which is where checkAkr takes it from. */
 const configCon = (resources: string, scope = 'view'): IInstanceConfig => ({
     channel: 'log',
     scope,
     accessKey: accessKeySerialize(accessKeyBuild('id-1', 'permanent', resources))
 } as unknown as IInstanceConfig)
 
-// ── checkResource: el filtro de recursos ─────────────────────────────────────────────────────────────
+// ── checkResource: the resource filter ───────────────────────────────────────────────────────────────
 
 test('un campo vacio en la clave significa CUALQUIERA, no ninguno', () => {
-    // 'view::::' es "ver lo que sea": sin esto, una clave sin namespaces no daria acceso a nada.
+    // 'view::::' means "view anything": without this, a key with no namespaces would grant access to nothing.
     const r = parseResource('view::::')
     assert.equal(AuthorizationManagement.checkResource(r, 'prod', 'api-1', 'app'), true)
     assert.equal(AuthorizationManagement.checkResource(r, 'lo-que-sea', 'x', 'y'), true)
 })
 
 test('los namespaces se comparan como LISTA, no como cadena entera', () => {
-    // 'prod,dev' tiene que valer para prod Y para dev. Compararlo entero contra 'prod' fallaria en ambos.
+    // 'prod,dev' has to work for prod AND for dev. Comparing it whole against 'prod' would fail on both.
     const r = parseResource('view:prod,dev:::')
     assert.equal(AuthorizationManagement.checkResource(r, 'prod', 'api-1', 'app'), true)
     assert.equal(AuthorizationManagement.checkResource(r, 'dev', 'api-1', 'app'), true)
@@ -58,17 +58,17 @@ test('pods y containers filtran igual que los namespaces', () => {
 })
 
 test('los valores son REGEX, no nombres literales', () => {
-    // Es lo que permite 'todos los pods de la app': sin regex habria que enumerarlos uno a uno.
+    // It is what allows 'every pod of the app': without a regex they would have to be enumerated one by one.
     const r = parseResource('view:prod::api-.*:')
     assert.equal(AuthorizationManagement.checkResource(r, 'prod', 'api-7f6b', 'app'), true)
     assert.equal(AuthorizationManagement.checkResource(r, 'prod', 'web-1', 'app'), false)
 })
 
-// ── checkAkr: la puerta de verdad ────────────────────────────────────────────────────────────────────
+// ── checkAkr: the real gate ──────────────────────────────────────────────────────────────────────────
 
 test('🔴 una clave con VARIOS recursos vale si encaja cualquiera de ellos', () => {
-    // El fallo que tenia la difunta `validAuth`: mirar solo el primero. Con esta clave, el acceso a dev
-    // se caia aunque la clave lo concediera explicitamente.
+    // The fault the late `validAuth` had: looking at the first one only. With this key, access to dev
+    // fell through even though the key granted it explicitly.
     const config = configCon('view:prod:::;view:dev:::')
     const channels = fakeChannels()
 
@@ -84,19 +84,19 @@ test('el nivel de scope lo pone el CANAL, y hay que llegar al pedido', () => {
     assert.equal(AuthorizationManagement.checkAkr(channels, configCon('view:prod:::', 'view'), 'prod', 'p', 'c'), true)
     // pide 'restart' (50) teniendo solo 'view' (10): no llega
     assert.equal(AuthorizationManagement.checkAkr(channels, configCon('view:prod:::', 'restart'), 'prod', 'p', 'c'), false)
-    // pide 'view' teniendo 'restart' (50): de sobra — el nivel es un techo, no una igualdad
+    // asks for 'view' while holding 'restart' (50): more than enough — the level is a ceiling, not an equality
     assert.equal(AuthorizationManagement.checkAkr(channels, configCon('restart:prod:::', 'view'), 'prod', 'p', 'c'), true)
 })
 
 test('de varios scopes en un recurso manda el MAS ALTO', () => {
-    // 'view,restart' tiene que poder reiniciar: se queda con el nivel mayor, no con el primero.
+    // 'view,restart' has to be able to restart: it keeps the highest level, not the first one.
     const channels = fakeChannels()
     assert.equal(AuthorizationManagement.checkAkr(channels, configCon('view,restart:prod:::', 'restart'), 'prod', 'p', 'c'), true)
 })
 
 test('el nivel se comprueba POR recurso: no se mezcla el scope de uno con el namespace de otro', () => {
-    // 'view en prod' + 'restart en dev' NO puede convertirse en 'restart en prod'. Es el error clasico al
-    // recorrer varios recursos: quedarse con el mejor scope de todos y aplicarlo a cualquier sitio.
+    // 'view on prod' + 'restart on dev' must NOT become 'restart on prod'. It is the classic mistake when
+    // walking several resources: keeping the best scope of them all and applying it anywhere.
     const channels = fakeChannels()
     const config = configCon('view:prod:::;restart:dev:::', 'restart')
 
@@ -105,8 +105,8 @@ test('el nivel se comprueba POR recurso: no se mezcla el scope de uno con el nam
 })
 
 test('un scope que el canal no conoce no da acceso', () => {
-    // getChannelScopeLevel devuelve -1 para lo desconocido. Una clave con un scope inventado no debe
-    // colarse por el hueco.
+    // getChannelScopeLevel returns -1 for the unknown. A key with a made-up scope must not slip through
+    // that gap.
     const channels = fakeChannels()
     assert.equal(AuthorizationManagement.checkAkr(channels, configCon('inventado:prod:::', 'view'), 'prod', 'p', 'c'), false)
 })

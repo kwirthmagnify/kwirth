@@ -6,26 +6,26 @@ import path from 'path'
 import { SenderManager } from '../../src/tools/SenderManager'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 
-// REGRESION: el hot-reload de extensiones dev vigilaba con fs.watch, cuyo evento 'error' es
-// ASINCRONO y por tanto se escapa del try/catch que rodeaba la creacion del watcher. Al desaparecer
-// el fichero vigilado -- que es exactamente lo que hace un build limpio antes de regenerarlo -- node
-// convertia ese error en uncaughtException y se llevaba el core por delante:
+// REGRESSION: the hot reload of dev extensions watched with fs.watch, whose 'error' event is
+// ASYNCHRONOUS and therefore escapes the try/catch that surrounded the watcher's creation. When the
+// watched file vanished -- which is exactly what a clean build does before regenerating it -- node
+// turned that error into an uncaughtException and took the core down with it:
 //
 //     [core] [ERROR] 🚨 UNCAUGHT EXCEPTION
 //     Error: EPERM: operation not permitted, watch
 //         at FSEvent.FSWatcher._handle.onchange (node:internal/fs/watchers:267:21)
 //
-// Ahora los cuatro managers (sender, webhook, plugin, provider) vigilan por polling con
-// fs.watchFile, que tolera que la ruta se vaya y vuelva.
+// The four managers (sender, webhook, plugin, provider) now watch by polling with fs.watchFile, which
+// tolerates the path going away and coming back.
 //
-// OJO al leer este test: si la regresion vuelve NO falla con un assert, se muere el proceso de test
-// entero. Llegar vivo hasta el final es justamente lo que se comprueba.
+// CAREFUL when reading this test: if the regression comes back it does NOT fail with an assert, the
+// whole test process dies. Getting to the end alive is precisely what is being checked.
 
-// El watcher sondea cada 500ms; se espera con margen para no depender de la carga de la maquina.
+// The watcher polls every 500ms; the wait is generous so as not to depend on the machine's load.
 const POLL_WAIT = 1500
 
-// El sender publica su 'tag' a traves del schema, que es lo unico observable desde fuera del
-// manager: sirve para distinguir si la version cargada es la vieja o la recargada.
+// The sender publishes its 'tag' through the schema, which is the only thing observable from outside
+// the manager: it serves to tell whether the loaded version is the old one or the reloaded one.
 const senderSource = (tag: string) => `
 class DevWatchTestSender {
     id = 'devwatchtest'
@@ -59,7 +59,7 @@ test('dev watcher: borrar el back.js vigilado no tumba el proceso, y al reaparec
     fs.writeFileSync(path.join(dist, 'package.json'), JSON.stringify({ name: 'devwatchtest', version: '0.0.1' }))
     fs.writeFileSync(path.join(root, 'kwirth-dev.json'), JSON.stringify({ senders: { devwatchtest: './dist' } }))
 
-    // registerDevSender es privado: se entra por loadDevSenders, que lee kwirth-dev.json del cwd.
+    // registerDevSender is private: we come in through loadDevSenders, which reads kwirth-dev.json from the cwd.
     const previousCwd = process.cwd()
     process.chdir(root)
     try {
@@ -68,14 +68,14 @@ test('dev watcher: borrar el back.js vigilado no tumba el proceso, y al reaparec
         assert.deepEqual(manager.getDevIds(), ['devwatchtest'], 'el sender dev debe quedar registrado')
         assert.equal(manager.getSchema('devwatchtest')[0].name, 'v1')
 
-        // Lo que hacia caer el core, TAL CUAL: un build limpio hace 'rm -rf dist' y se lleva el
-        // DIRECTORIO, no solo el fichero. Borrar unicamente el fichero no reproduce el fallo: es
-        // perder el directorio vigilado lo que mata el handle de fs.watch con EPERM en Windows.
+        // What brought the core down, EXACTLY AS IT WAS: a clean build does 'rm -rf dist' and takes the
+        // DIRECTORY, not just the file. Deleting only the file does not reproduce the fault: it is losing
+        // the watched directory that kills fs.watch's handle with EPERM on Windows.
         fs.rmSync(dist, { recursive: true, force: true })
         await wait(POLL_WAIT)
         assert.equal(manager.getSchema('devwatchtest')[0].name, 'v1', 'no debe recargar mientras el fichero no existe')
 
-        // Y cuando el build lo regenera, el hot-reload si tiene que dispararse.
+        // And when the build regenerates it, the hot reload does have to fire.
         fs.mkdirSync(dist, { recursive: true })
         fs.writeFileSync(backPath, senderSource('v2'))
         await wait(POLL_WAIT)

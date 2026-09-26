@@ -3,13 +3,13 @@ import assert from 'node:assert/strict'
 import { staleDevLogins, ILoginMeta } from '../../src/tools/LoginManager'
 import { staleDevDocs, IDocsMeta } from '../../src/tools/DocsManager'
 
-// kwirth-dev.json es DECLARATIVO: lo que figura queda instalado, lo que se quita se desinstala. Los
-// plugins ya se comportaban asi porque su registro de dev vive solo en memoria, pero logins y docs hacen
-// una instalacion REAL —escriben en ConfigMaps— y por eso quitar la linea no bastaba: la entrada
-// sobrevivia en el indice y el manager la seguia dando por instalada para siempre.
+// kwirth-dev.json is DECLARATIVE: what is listed stays installed, what is removed gets uninstalled.
+// Plugins already behaved that way because their dev registry lives only in memory, but logins and docs
+// do a REAL installation — they write to ConfigMaps — and that is why removing the line was not enough:
+// the entry survived in the index and the manager went on considering it installed forever.
 //
-// Lo que NO se puede romper al arreglarlo: lo instalado desde un marketplace, una URL, un fichero, un
-// pack o el bundle no lo declara nadie en kwirth-dev.json y tiene que quedarse.
+// What must NOT break while fixing it: whatever was installed from a marketplace, a URL, a file, a pack
+// or the bundle is declared by nobody in kwirth-dev.json and has to stay.
 
 const login = (id: string, installedFrom: string): ILoginMeta =>
     ({ id, name: id, displayName: id, version: '0.1.0', description: '', installedFrom })
@@ -45,7 +45,7 @@ test('lo instalado por otras vias no lo toca nadie, aunque no este declarado', (
 })
 
 test('un login declarado pero sin construir conserva su sitio', () => {
-    // El tgz no existe todavia, asi que no se pudo reinstalar y no aporta id: lo salva la clave del fichero
+    // The tgz does not exist yet, so it could not be reinstalled and contributes no id: the file's key saves it
     const index = [login('santander', 'dev')]
     assert.deepEqual(staleDevLogins(index, new Set(['santander'])), [])
 })
@@ -64,7 +64,7 @@ test('unas docs recien instaladas se quedan', () => {
 })
 
 test('la identidad de unas docs es el PAR (targetType, id), no el id solo', () => {
-    // Mismo id bajo dos targetType: instalar uno no puede salvar al otro
+    // The same id under two targetTypes: installing one must not save the other
     const index = [docs('plugin', 'iter', 'dev'), docs('theme', 'iter', 'dev')]
     const stale = staleDevDocs(index, new Set(), new Set(['plugin/iter']))
     assert.deepEqual(stale.map(d => `${d.targetType}/${d.id}`), ['theme/iter'])

@@ -8,7 +8,7 @@ import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { accessKeySerialize, IKwirthSettings, EPackageRegistryAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
 
-// configurar Kwirth (/core/settings) es admin-only: validKey + scope 'admin'
+// configuring Kwirth (/core/settings) is admin-only: validKey + the 'admin' scope
 const adminKey = { id: 'adminkey', type: 'permanent', resources: 'admin,cluster::::' }
 const nonAdminKey = { id: 'userkey', type: 'permanent', resources: 'cluster::::' }
 const AUTH = { Authorization: 'Bearer ' + accessKeySerialize(adminKey as any) }
@@ -20,7 +20,7 @@ const storedKeys = [
     { accessKey: nonAdminKey, description: 'cluster-only', expire: Date.now() + 3600_000, days: 1 }
 ]
 
-// configMaps en memoria: 'kwirth.keys' sirve las claves de auth, 'kwirth.settings' es lo que probamos
+// in-memory configMaps: 'kwirth.keys' serves the auth keys, 'kwirth.settings' is what we are testing
 const memConfigMaps = (initialSettings?: IKwirthSettings) => {
     let settings: IKwirthSettings|undefined = initialSettings
     const cm: IConfigMaps = {
@@ -36,9 +36,9 @@ const memConfigMaps = (initialSettings?: IKwirthSettings) => {
     return { cm, current: () => settings }
 }
 
-// secrets en memoria. Respeta el parametro `name`: el ISecrets real guarda cada store por separado, y
-// contraseñas del registro y tokens del manifest viven en stores distintos. Un mock que los mezclara
-// dejaria pasar que el codigo pisara uno con otro.
+// in-memory secrets. It honours the `name` parameter: the real ISecrets keeps each store separately, and
+// registry passwords and manifest tokens live in different stores. A mock that mixed them would let the
+// code overwrite one with the other and never notice.
 const CREDENTIALS_STORE = 'kwirth.registry.credentials'
 
 const memSecrets = (initialCredentials?: Record<string, any>) => {
@@ -203,7 +203,7 @@ test('PUT rechaza intervalos no positivos o no numericos → 400, sin persistir 
 })
 
 test('PUT parcial no borra ajustes que no envia', async () => {
-    // un ajuste futuro ya guardado (p.ej. marketplaces) debe sobrevivir a un PUT que solo trae el intervalo
+    // a future setting already saved (marketplaces, say) must survive a PUT that only carries the interval
     const srv = await startServer({ metricsInterval: 30, ...{ someOtherSetting: 'keep me' } } as IKwirthSettings)
     try {
         await fetch(`${srv.base}/core/settings`, {
@@ -231,8 +231,8 @@ test('SettingsApi.read devuelve lo guardado', async () => {
 // ---- marketplaces: validacion ----
 
 const MP = { id: 'nexus', url: 'https://raw.example.com/manifest.json', label: 'Nexus', enabled: true }
-// El registro de paquetes es OTRA cosa que el marketplace: aqui llevan el mismo id a proposito, porque
-// sus secretos viven en stores distintos y no se pueden pisar.
+// A package registry is a DIFFERENT thing from a marketplace: here they carry the same id on purpose,
+// because their secrets live in different stores and cannot overwrite each other.
 const REG = { id: 'nexus', url: 'https://nexus.example.com/repository/private', label: 'Nexus', enabled: true }
 
 test('validateMarketplaces acepta una lista valida y rechaza lo que no lo es', () => {
@@ -264,7 +264,7 @@ test('validatePackageRegistries valida la lista igual que la de marketplaces', (
     assert.match(SettingsApi.validatePackageRegistries([{ ...REG, enabled: 'yes' }]) ?? '', /boolean enabled/)
 })
 
-// Un marketplace ya NO lleva credenciales de paquete: manifest y paquetes son sitios distintos.
+// A marketplace no longer carries package credentials: manifest and packages are different places.
 test('el marketplace ya no acepta credenciales de paquete: se ignoran, no se persisten', async () => {
     const srv = await startServer()
     try {
@@ -290,11 +290,11 @@ test('PUT rechaza marketplaces invalidos → 400 sin persistir', async () => {
     finally { await srv.stop() }
 })
 
-// ---- marketplaces: los secretos viajan, pero NUNCA se guardan en el configmap ----
+// ---- marketplaces: the secrets travel, but they are NEVER stored in the configmap ----
 //
-// El secreto se trata como cualquier otro campo del formulario: el GET lo devuelve pre-rellenado y el
-// PUT lo acepta dentro de auth/manifestAuth. Lo que sigue siendo invariante es DONDE se guarda: en
-// ISecrets, jamas en el configmap de settings.
+// The secret is handled like any other field of the form: the GET returns it pre-filled and the PUT
+// accepts it inside auth/manifestAuth. What remains invariant is WHERE it is stored: in ISecrets, never
+// in the settings configmap.
 
 test('PUT desvia la contraseña a secrets y NUNCA la guarda en settings', async () => {
     const srv = await startServer()
@@ -302,9 +302,9 @@ test('PUT desvia la contraseña a secrets y NUNCA la guarda en settings', async 
         const body = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u', password: 's3cr3t' } }] }
         const res = await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
         assert.equal(res.status, 200)
-        // la contraseña esta en secrets...
+        // the password is in secrets...
         assert.equal(srv.secrets.current()['nexus'], 's3cr3t')
-        // ...y no aparece por ningun lado del configmap
+        // ...and it appears nowhere in the configmap
         assert.ok(!JSON.stringify(srv.store.current()).includes('s3cr3t'))
     }
     finally { await srv.stop() }
@@ -379,7 +379,7 @@ test('reenviar el password pre-rellenado no lo altera (roundtrip del formulario)
     const stored: IKwirthSettings = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }] }
     const srv = await startServer(stored, { nexus: 's3cr3t' })
     try {
-        // el front recibe el secreto en el GET y lo devuelve tal cual al guardar otro campo
+        // the front end receives the secret in the GET and sends it back untouched when saving another field
         const got = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
         const rows = got.packageRegistries!.map(r => ({ ...r, label: 'Otro nombre' }))
         await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify({ packageRegistries: rows }) })
@@ -400,8 +400,8 @@ test('borrar un registro se lleva su contraseña', async () => {
     finally { await srv.stop() }
 })
 
-// Un PUT que solo trae marketplaces no puede llevarse por delante los registros, ni al reves: son dos
-// listas independientes y el merge es parcial.
+// A PUT carrying only marketplaces must not take the registries down with it, nor the other way round:
+// they are two independent lists and the merge is partial.
 test('tocar los marketplaces no borra los registros', async () => {
     const stored: IKwirthSettings = { packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u' } }] }
     const srv = await startServer(stored, { nexus: 's3cr3t' })
@@ -419,7 +419,7 @@ test('getRegistryPassword devuelve la contraseña al back y undefined si no hay'
     assert.equal(await SettingsApi.getRegistryPassword(secrets.s, 'otro'), undefined)
 })
 
-// ---- token de lectura del manifest, separado de la contraseña del registro ----
+// ---- the manifest's read token, separate from the registry's password ----
 
 test('PUT desvia el token del manifest a secrets y no lo guarda en settings', async () => {
     const srv = await startServer()
@@ -437,7 +437,7 @@ test('GET devuelve el token del manifest guardado', async () => {
     const stored: IKwirthSettings = { marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN } }] }
     const srv = await startServer(stored)
     try {
-        // el token vive en su propio store, distinto del de contraseñas
+        // the token lives in its own store, separate from the passwords one
         await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH,
             body: JSON.stringify({ marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token: 'glpat-abc' } }] }) })
         const json = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
@@ -450,7 +450,7 @@ test('GET devuelve el token del manifest guardado', async () => {
 test('token del manifest y contraseña del registro son independientes', async () => {
     const srv = await startServer()
     try {
-        // mismo id en las dos listas: cada secreto va a su store y no se pisan
+        // the same id in both lists: each secret goes to its own store and they do not overwrite each other
         const body = {
             marketplaces: [{ ...MP, manifestAuth: { type: EManifestAuthType.PRIVATE_TOKEN, token: 'glpat-manifest' } }],
             packageRegistries: [{ ...REG, auth: { type: EPackageRegistryAuthType.BASIC, username: 'u', password: 'nexus-pass' } }]
@@ -489,13 +489,13 @@ test('BASIC es un tipo de auth de manifest valido (Azure DevOps) y su username p
         const res = await fetch(`${srv.base}/core/settings`, { method: 'PUT', headers: JSON_AUTH, body: JSON.stringify(body) })
         assert.equal(res.status, 200)
 
-        // el username NO es secreto: va al configmap junto al tipo
+        // the username is NOT secret: it goes to the configmap along with the type
         assert.equal(srv.store.current()?.marketplaces?.[0].manifestAuth?.username, 'ci')
-        // el token si lo es: nunca toca el configmap
+        // the token is: it never touches the configmap
         assert.ok(!JSON.stringify(srv.store.current()).includes('azdo-pat'))
         assert.equal(await SettingsApi.getManifestToken(srv.secrets.s, 'nexus'), 'azdo-pat')
 
-        // y ambos vuelven juntos al formulario
+        // and both come back together to the form
         const json = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
         assert.equal(json.marketplaces?.[0].manifestAuth?.username, 'ci')
         assert.equal(json.marketplaces?.[0].manifestAuth?.token, 'azdo-pat')
@@ -546,9 +546,9 @@ test('previousLogLines: sin guardar ni entorno, 1000', () => {
 
 test('previousLogLines: un valor absurdo no deja al core sin log', () => {
     delete process.env.PREVIOUSLOGLINES
-    // cero y negativos se ignoran, como en el intervalo de metricas
+    // zero and negatives are ignored, as with the metrics interval
     assert.equal(SettingsApi.resolvePreviousLogLines({ previousLogLines: 0 }), 1000)
     assert.equal(SettingsApi.resolvePreviousLogLines({ previousLogLines: -5 }), 1000)
-    // y un decimal se trunca: tailLines es un entero para la API de Kubernetes
+    // and a decimal is truncated: tailLines is an integer for the Kubernetes API
     assert.equal(SettingsApi.resolvePreviousLogLines({ previousLogLines: 120.7 }), 120)
 })

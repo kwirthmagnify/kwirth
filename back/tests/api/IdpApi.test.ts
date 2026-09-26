@@ -33,7 +33,7 @@ const memSecrets = (): ISecrets => {
     }
 }
 
-// apiKeyApi minimo con una key permanent valida (para validKey)
+// a minimal apiKeyApi with one valid permanent key (for validKey)
 const validAccessKey = { id: 'testkey', type: 'permanent', resources: 'admin::::' }
 const nonAdminKey = { id: 'nonadmin', type: 'permanent', resources: 'view:default:::' }
 const fakeApiKeyApi = (): any => ({
@@ -114,11 +114,11 @@ test('PUT con secreto enmascarado CONSERVA el valor almacenado', async () => {
         const inst = { id: 'google', connectorId: 'fake', label: 'Google', enabled: true, config: { clientId: 'cid', clientSecret: 'supersecret' } }
         await fetch(`${srv.base}/idp`, j({ method: 'POST', body: JSON.stringify(inst) }))
 
-        // el front reenvia el secreto enmascarado (no lo conoce) al cambiar el label
+        // the front end sends the masked secret back (it does not know it) when changing the label
         const upd = { ...inst, label: 'Google Nuevo', config: { clientId: 'cid', clientSecret: '********' } }
         await fetch(`${srv.base}/idp/google`, j({ method: 'PUT', body: JSON.stringify(upd) }))
 
-        // export (sin enmascarar) confirma que el secreto original sigue ahi
+        // the export (unmasked) confirms the original secret is still there
         const exp = await (await fetch(`${srv.base}/idp/export`, j())).json()
         assert.equal(exp.google.label, 'Google Nuevo')
         assert.equal(exp.google.config.clientSecret, 'supersecret')

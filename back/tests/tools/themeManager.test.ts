@@ -42,11 +42,11 @@ interface IBundleOptions {
     // true = entradas dentro de 'package/', como deja `npm publish`
     npmLayout?: boolean
     front?: string
-    // no incluir front.js, para el caso del bundle invalido
+    // leave front.js out, for the invalid bundle case
     noFront?: boolean
 }
 
-// Un tgz de verdad en un directorio temporal: install() acepta rutas locales, asi que no hace falta red
+// A real tgz in a temporary directory: install() accepts local paths, so no network is needed
 const makeBundle = (dir: string, options: IBundleOptions = {}): string => {
     const id = options.id ?? 'santander'
     const root = options.npmLayout ? path.join(dir, 'package') : dir
@@ -87,7 +87,7 @@ test('un tema se instala desde un tgz con las entradas en la raiz', async () => 
     assert.equal(meta.frontStored, true, 'un front pequeño cabe en el ConfigMap')
     assert.deepEqual(tm.getInstalledIds(), ['santander'])
     assert.equal(await tm.getFrontJs('santander'), 'window.__theme = {}')
-    // y queda en el indice, que es lo que lee el arranque siguiente
+    // and it stays in the index, which is what the next startup reads
     const index = store.configMaps.get('kwirth-themes-index')
     assert.deepEqual(index.map((t: any) => t.id), ['santander'])
 
@@ -246,7 +246,7 @@ test('el indice sobrevive a un reinicio: init() lo relee del ConfigMap', async (
     await primero.init()
     await primero.install(makeBundle(dir))
 
-    // otro manager sobre el mismo almacen es lo que pasa al reiniciar el proceso
+    // another manager over the same store is what happens when the process restarts
     const segundo = new ThemeManager(configMaps)
     await segundo.init()
 

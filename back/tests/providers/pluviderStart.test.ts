@@ -1,6 +1,6 @@
-// Fase de arranque de los pluviders. Va entre la de providers y la de canales: cuando el primer
-// consumidor haga startChannel() y se suscriba, la produccion del pluvider ya tiene que estar viva.
-// Lo que se verifica aqui es que la fase arranca a TODOS y que ninguno puede tumbarla.
+// The pluviders' startup phase. It sits between the providers' and the channels': by the time the first
+// consumer calls startChannel() and subscribes, the pluvider's production has to be alive already. What
+// is verified here is that the phase starts them ALL and that none of them can bring it down.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -44,7 +44,7 @@ test('un pluvider que revienta al arrancar NO impide que arranquen los demas', a
         ['plugin:roto', fakePluvider('roto', spy, true)],
         ['plugin:montag', fakePluvider('montag', spy)]
     ))
-    // el roto no aparece, pero los otros dos si: la fase no se corta por el del medio
+    // the broken one does not appear, but the other two do: the phase is not cut short by the middle one
     assert.deepEqual(spy.started.sort(), ['agora', 'montag'])
 })
 
@@ -58,8 +58,8 @@ test('sin pluviders registrados la fase no hace nada y no rompe', async () => {
 })
 
 test('la fase ESPERA a cada startProvider: al volver, la produccion ya esta viva', async () => {
-    // Si la fase no esperase, al volver de startPluviders el contador seguiria a cero y un canal que
-    // arrancase justo despues se suscribiria a algo que aun no produce.
+    // Were the phase not to wait, on returning from startPluviders the counter would still be at zero and
+    // a channel starting right afterwards would subscribe to something that does not produce yet.
     const spy: IStartSpy = { started: [], stopped: [] }
     const lento: TPluviderChannel = {
         ...fakePluvider('lento', spy),

@@ -24,7 +24,7 @@ const MANIFEST = [
     { extensionType: EExtensionType.SENDER, id: 'dos', version: '2.0.0', name: 'Dos', url: 'https://ejemplo/dos.tgz' }
 ]
 
-/** Ajustes con un unico marketplace, que es lo que lee el manager. */
+/** Settings with a single marketplace, which is what the manager reads. */
 const configMapsFalso = (): IConfigMaps => ({
     read: async () => ({ marketplaces: [{ id: 'm1', label: 'M1', url: URL_PRIVADA, enabled: true }] }),
     write: async () => ({}),
@@ -53,7 +53,7 @@ const contarDescargas = (): { porUrl: (url: string) => number, total: () => numb
     const n = new Map<string, number>()
     globalThis.fetch = (async (url: string) => {
         n.set(String(url), (n.get(String(url)) ?? 0) + 1)
-        // Una descarga real tarda; sin esta espera las diez llamadas se resolverian tan seguidas que el
+        // A real download takes time; without this wait the ten calls would resolve so close together that the
         // test pasaria aunque no hubiera deduplicacion.
         await new Promise(r => setTimeout(r, 30))
         return {
@@ -76,9 +76,9 @@ test('diez peticiones a la vez descargan el manifest UNA sola vez', async () => 
     try {
         const tipos = Object.values(EExtensionType)
         await Promise.all(tipos.map(t => manager.resolve(t)))
-        // Sin deduplicacion serian once: una por cada resolve() en vuelo.
+        // Without deduplication there would be eleven: one per resolve() in flight.
         assert.equal(contador.porUrl(URL_PRIVADA), 1, 'el manifest privado se descargo mas de una vez')
-        // Y el publico, uno por tipo, porque cada tipo tiene su propia direccion.
+        // And the public one, one per type, because each type has its own address.
         assert.equal(contador.total(), tipos.length + 1)
     }
     finally {
@@ -90,8 +90,8 @@ test('y las diez reciben el contenido, no solo la primera', async () => {
     const manager = new MarketplaceManager(configMapsFalso(), secretsFalsos())
     const contador = contarDescargas()
     try {
-        // Enganchar a la promesa de otro no puede salir gratis en correccion: todas tienen que ver lo
-        // suyo, filtrado por su tipo.
+        // Hooking onto somebody else's promise must not come free in correctness: they all have to see
+        // their own, filtered by their type.
         const [plugins, senders] = await Promise.all([
             manager.resolve(EExtensionType.PLUGIN),
             manager.resolve(EExtensionType.SENDER)
@@ -107,8 +107,8 @@ test('y las diez reciben el contenido, no solo la primera', async () => {
 })
 
 test('tras invalidar la cache se vuelve a descargar', async () => {
-    // El boton de refrescar del gestor existe para traer lo de ahora mismo: si la deduplicacion o la
-    // cache lo dejaran sin efecto, el usuario no tendria forma de ver una version recien publicada.
+    // The manager's refresh button exists to fetch what is there right now: were deduplication or the
+    // cache to render it ineffective, the user would have no way of seeing a freshly published version.
     const manager = new MarketplaceManager(configMapsFalso(), secretsFalsos())
     const contador = contarDescargas()
     try {

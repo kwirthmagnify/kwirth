@@ -12,7 +12,7 @@ const source = (marketplaceId: string|undefined, entries: IMarketplaceEntry[]): 
 
 const versionsOf = (list: IMarketplaceEntry[], id: string) => list.filter(e => e.id === id).map(e => e.version).sort()
 
-// ---- filtrado por tipo ----
+// ---- filtering by type ----
 
 test('solo devuelve entradas del tipo pedido', () => {
     const s = source(undefined, [entry('log', '1.0.0'), entry('jira', '1.0.0', EExtensionType.SENDER)])
@@ -21,7 +21,7 @@ test('solo devuelve entradas del tipo pedido', () => {
 })
 
 test('mismo id en tipos distintos NO se eclipsan: son extensiones distintas', () => {
-    // un marketplace privado publica un SENDER llamado 'log'; no debe tapar al PLUGIN 'log' publico
+    // a private marketplace publishes a SENDER called 'log'; it must not hide the public PLUGIN 'log'
     const priv = source('nexus', [entry('log', '9.9.9', EExtensionType.SENDER)])
     const pub = source(undefined, [entry('log', '1.0.0', EExtensionType.PLUGIN)])
     const plugins = MarketplaceManager.resolveEntries([priv, pub], EExtensionType.PLUGIN)
@@ -31,10 +31,10 @@ test('mismo id en tipos distintos NO se eclipsan: son extensiones distintas', ()
     assert.deepEqual(senders.map(e => e.version), ['9.9.9'])
 })
 
-// ---- docs: la identidad es el par (targetType, id) ----
+// ---- docs: the identity is the pair (targetType, id) ----
 //
-// El id de una documentacion es el de la extension que documenta, asi que se repite entre tipos: la guia
-// del plugin 'metrics' y la del theme 'metrics' comparten id y son extensiones distintas.
+// A documentation's id is that of the extension it documents, so it repeats across types: the guide of
+// the 'metrics' plugin and that of the 'metrics' theme share an id and are different extensions.
 
 const docsEntry = (targetType: string, id: string, version: string): IMarketplaceEntry => ({
     extensionType: EExtensionType.DOCS, targetType, id, version, name: `${id} guide`,
@@ -50,7 +50,7 @@ test('dos guias con el mismo id y distinto targetType no se eclipsan', () => {
 })
 
 test('la precedencia entre marketplaces tambien va por el par, no por el id', () => {
-    // el privado publica la guia del PLUGIN 'metrics'; no debe tapar la del THEME 'metrics' del publico
+    // the private one publishes the 'metrics' PLUGIN's guide; it must not hide the public 'metrics' THEME's
     const priv = source('nexus', [docsEntry('plugin', 'metrics', '9.9.9')])
     const pub = source(undefined, [docsEntry('plugin', 'metrics', '1.0.0'), docsEntry('theme', 'metrics', '1.0.0')])
     const out = MarketplaceManager.resolveEntries([priv, pub], EExtensionType.DOCS)
@@ -73,7 +73,7 @@ test('el ganador de un par aporta todo su historico de versiones', () => {
 })
 
 test('una entrada sin targetType sigue identificandose solo por id', () => {
-    // el resto de tipos no llevan targetType: su comportamiento no cambia
+    // the remaining types carry no targetType: their behaviour does not change
     const priv = source('nexus', [entry('log', '9.9.9')])
     const pub = source(undefined, [entry('log', '1.0.0')])
     const out = MarketplaceManager.resolveEntries([priv, pub], EExtensionType.PLUGIN)
@@ -115,8 +115,8 @@ test('id en ambos: gana el privado y el publico desaparece por completo', () => 
 })
 
 test('LAS VERSIONES NUNCA SE MEZCLAN entre marketplaces', () => {
-    // el caso que motiva la regla: un log 1.0.0 privado y un log 0.2.20 publico no pueden
-    // acabar en la misma lista de versiones, o el selector ofreceria tarballs de otro origen
+    // the case that motivates the rule: a private log 1.0.0 and a public log 0.2.20 cannot end up in the
+    // same version list, or the selector would offer tarballs from another origin
     const priv = source('nexus', [entry('log', '1.0.0')])
     const pub = source(undefined, [entry('log', '0.2.20'), entry('log', '0.2.19'), entry('log', '0.2.18')])
     const out = MarketplaceManager.resolveEntries([priv, pub], EExtensionType.PLUGIN)
@@ -139,7 +139,7 @@ test('entre varios privados manda el orden configurado', () => {
 })
 
 test('la precedencia es por id, no por marketplace entero', () => {
-    // 'a' lo gana el privado; 'b', que el privado no tiene, sigue viniendo del publico
+    // 'a' is won by the private one; 'b', which the private one does not have, still comes from the public one
     const priv = source('nexus', [entry('a', '9.0.0')])
     const pub = source(undefined, [entry('a', '1.0.0'), entry('b', '1.0.0')])
     const out = MarketplaceManager.resolveEntries([priv, pub], EExtensionType.PLUGIN)
@@ -156,7 +156,7 @@ test('sin fuentes devuelve lista vacia', () => {
     assert.deepEqual(MarketplaceManager.resolveEntries([], EExtensionType.PLUGIN), [])
 })
 
-// ---- construccion de la lista de fuentes ----
+// ---- building the list of sources ----
 
 const mp = (id: string, enabled: boolean) => ({ id, url: `https://example.com/${id}.json`, label: id, enabled })
 

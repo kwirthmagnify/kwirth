@@ -10,7 +10,7 @@ import { ISecrets } from '../../src/tools/ISecrets'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { IUser } from '@kwirthmagnify/kwirth-common'
 
-// identidad que devuelve el conector fake; los tests la ajustan antes de cada callback
+// the identity the fake connector returns; the tests adjust it before each callback
 const fakeControl: { identity: IIdpIdentity } = { identity: { email: 'alice@example.com', emailVerified: true } }
 
 class FakeConnector implements IIdpConnector {
@@ -30,7 +30,7 @@ const makeUser = (over: Partial<IUser>): IUser => ({
     accessKey: { id: '', type: 'volatile', resources: '' } as any, resources: 'view:default:::', ...over
 })
 
-// un unico ISecrets que guarda kwirth-users (seed) y kwirth-idps (lo gestiona IdpManager)
+// a single ISecrets holding kwirth-users (the seed) and kwirth-idps (managed by IdpManager)
 const memSecrets = (usersMap: any): ISecrets => {
     const keys: Record<string, Record<string, any>> = {}
     return {
@@ -44,7 +44,7 @@ const memConfigMaps = (): IConfigMaps => ({
     read: async (_n: string, def?: any) => def ?? [], write: (() => {}) as any, writeKey: async () => {}, readAllKeys: async () => ({})
 })
 
-// GET crudo con node:http para leer el 302 sin seguir el redirect (evita salir a idp.test)
+// a raw GET with node:http to read the 302 without following the redirect (it avoids reaching out to idp.test)
 const getRaw = (base: string, path: string): Promise<{ status: number, location: string }> =>
     new Promise((resolve, reject) => {
         const u = new URL(base + path)
@@ -154,7 +154,7 @@ test('callback con usuario fuera de la lista blanca → ssoerror=notfound', asyn
 test('callback con IdP distinto al asignado → ssoerror=idpmismatch', async () => {
     const srv = await startServer()
     try {
-        // bob esta atado a 'keycloak' pero entra por 'google'
+        // bob is tied to 'keycloak' but comes in through 'google'
         fakeControl.identity = { email: 'bob@example.com', emailVerified: true }
         const state = await startFlow(srv.base)
         const cb = await getRaw(srv.base, `/core/auth/google/callback?state=${state}&code=xyz`)

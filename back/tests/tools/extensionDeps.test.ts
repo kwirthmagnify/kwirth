@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { validateExtensionDeps, IInstalledIndex } from '../../src/tools/ExtensionDeps'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 
-// Un miembro de un pack declara sus dependencias como '<tipo>:<id>:<version minima>'. El indice de
-// instalados tiene que conocer TODOS los tipos instalables, o una dependencia legitima se rechaza con
+// A pack member declares its dependencies as '<type>:<id>:<minimum version>'. The installed index has to
+// know EVERY installable type, or a legitimate dependency is rejected with
 // 'Unknown extension type'.
 
 const empty = (): IInstalledIndex =>
@@ -15,7 +15,7 @@ const withOne = (type: keyof IInstalledIndex, id: string, version: string): IIns
 
 test('el indice de instalados cubre todos los tipos que se pueden instalar', () => {
     const index = empty()
-    // 'pack' es el continente, no un miembro: no se instala como dependencia de nadie
+    // 'pack' is the container, not a member: it is installed as nobody's dependency
     const installable = Object.values(EExtensionType).filter(t => t !== EExtensionType.PACK)
     for (const type of installable) {
         assert.ok(type in index, `el tipo '${type}' no esta en IInstalledIndex: sus dependencias no se podrian resolver`)

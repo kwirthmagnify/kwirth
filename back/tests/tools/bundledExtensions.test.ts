@@ -7,10 +7,10 @@ import tar from 'tar'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType, peekExtensionType } from '../../src/tools/BundledExtensions'
 
-// El directorio de extensiones bundled es UNO SOLO para todos los tipos, asi que cada manager tiene que
-// quedarse con los suyos mirando el extensionType que declara cada tgz. Antes no se filtraba: DocsManager
-// instalaba como documentacion cualquier tgz con targetType (un login lo llevaba) y PluginManager/IdpManager
-// intentaban instalar todos los del directorio esperando que el fallo posterior los descartara.
+// The bundled extensions directory is a SINGLE one for every type, so each manager has to keep its own by
+// looking at the extensionType each tgz declares. It used not to filter: DocsManager installed as
+// documentation any tgz with a targetType (a login carried one) and PluginManager/IdpManager tried to
+// install every one in the directory, expecting the later failure to discard them.
 
 const makeTgz = async (dir: string, name: string, pkg: Record<string, unknown>): Promise<string> => {
     const stage = path.join(dir, `.stage-${name}`, 'package')
@@ -72,7 +72,7 @@ test('cada manager ve SOLO los tgz de su tipo en el directorio compartido', asyn
 
 test('un login bundled NO se cuela como documentacion aunque lleve targetType', async () => {
     await withBundledDir(async dir => {
-        // El login declara targetType por error historico; el unico discriminante valido es extensionType.
+        // The login declares a targetType out of historical error; the only valid discriminator is extensionType.
         await makeTgz(dir, 'magnify', { id: 'magnify', extensionType: 'login', targetType: 'plugin' })
         assert.deepEqual(await listBundledOfType(dir, EExtensionType.DOCS), [])
     })

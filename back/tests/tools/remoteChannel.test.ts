@@ -1,7 +1,8 @@
-// Fase 5 (federación back-a-back): openRemoteChannel es el cliente WS Node del framework. Se prueba contra
-// un WebSocketServer real en un puerto efímero de loopback (rápido y determinista, sin red externa):
-// handshake + accessKey del cluster remoto, captura del instance de la RESPONSE del START, sellado del
-// instance en los envíos, ignorado de frames no-JSON, reconexión con backoff y close() (sin reconexión + DOWN).
+// Phase 5 (back-to-back federation): openRemoteChannel is the framework's Node WS client. It is tested
+// against a real WebSocketServer on an ephemeral loopback port (fast and deterministic, with no external
+// network): handshake + the remote cluster's accessKey, capture of the instance from the START's RESPONSE,
+// stamping of the
+// instance on outgoing sends, ignoring non-JSON frames, reconnection with backoff and close() (no reconnection + DOWN).
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -23,7 +24,7 @@ function makeServer(): Promise<{ wss: WebSocketServer, url: string }> {
     })
 }
 
-// Config de canal que el consumidor pasaría; action/flow/type/instance/accessKey los sobreescribe el cliente.
+// The channel config a consumer would pass; action/flow/type/instance/accessKey are overwritten by the client.
 function baseConfig(): IInstanceConfig {
     return {
         action: EInstanceMessageAction.NONE,
@@ -117,7 +118,7 @@ test('captures the instance from the START RESPONSE and stamps it on outgoing se
     await delay(100)   // deja llegar la RESPONSE al cliente
     assert.equal(received.length, 1)
     assert.equal(received[0].instance, 'INST-123')
-    // un comando enviado por el handle debe llevar el instance que ESTE cluster asignó
+    // a command sent through the handle must carry the instance THIS cluster assigned
     const cmd = new Promise<Record<string, unknown>>((resolve) => serverSock!.once('message', (data: Buffer) => resolve(JSON.parse(data.toString()))))
     handle.send({ action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.SIGNAL, channel: 'agora', instance: '' })
     const seen = await cmd

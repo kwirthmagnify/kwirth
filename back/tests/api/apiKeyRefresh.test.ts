@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 
-// refreshKeys se llama desde validKey, o sea en el camino de autenticacion de CADA peticion cuya clave
-// no este en la cache. Si escribiera siempre el configmap, dos peticiones concurrentes se pisarian y la
-// segunda recibiria un 409 Conflict de kubernetes. Solo debe escribir cuando algo ha caducado.
+// refreshKeys is called from validKey, that is, on the authentication path of EVERY request whose key is
+// not in the cache. Were it always to write the configmap, two concurrent requests would collide and the
+// second would get a 409 Conflict from kubernetes. It must only write when something has expired.
 
 const key = (id: string, expire: number) => ({
     accessKey: { id, type: 'permanent', resources: 'cluster::::' },
@@ -47,7 +47,7 @@ test('refreshKeys SI escribe cuando alguna ha caducado, y la elimina', async () 
 })
 
 test('varios refreshKeys seguidos sin caducados no acumulan escrituras', async () => {
-    // el caso que producia los 409: rafagas de peticiones autenticadas concurrentes
+    // the case that produced the 409s: bursts of concurrent authenticated requests
     const store = countingConfigMaps([key('a', FUTURE)])
     const api = await ApiKeyApi.create(store.cm, 'masterx', false)
     await Promise.all([api!.refreshKeys(), api!.refreshKeys(), api!.refreshKeys(), api!.refreshKeys()])

@@ -3,13 +3,13 @@ import assert from 'node:assert/strict'
 import { MarketplaceManager } from '../../src/tools/MarketplaceManager'
 import { EManifestAuthType, IMarketplace } from '@kwirthmagnify/kwirth-common'
 
-// Cabeceras con las que el back lee un manifest privado. Son independientes de las credenciales del
-// registro de paquetes: un manifest en un GitLab privado y unos tarballs en un Nexus son dos servidores.
+// The headers the back end reads a private manifest with. They are independent of the package registry's
+// credentials: a manifest on a private GitLab and some tarballs on a Nexus are two different servers.
 
 const mkp = (manifestAuth?: { type: EManifestAuthType, username?: string }): IMarketplace =>
     ({ id: 'nexus', url: 'https://example.com/manifest.json', label: 'Nexus', enabled: true, ...(manifestAuth ? { manifestAuth } : {}) })
 
-/** Lo que se manda ademas del Accept, que va siempre. */
+/** What is sent besides the Accept, which always goes. */
 const credentials = (h: Record<string, string>) => {
     const { Accept, ...rest } = h
     return rest
@@ -17,8 +17,8 @@ const credentials = (h: Record<string, string>) => {
 
 // ---- Accept ----
 //
-// La Contents API de GitHub devuelve el fichero en base64 dentro de un JSON salvo que se pida el media
-// type 'raw'. Se manda siempre, con comodin detras, para no tener que configurarlo por host.
+// GitHub's Contents API returns the file as base64 inside a JSON unless the 'raw' media type is asked
+// for. It is always sent, with a wildcard behind it, so it need not be configured per host.
 
 test('el Accept pide el raw de GitHub pero deja comodin para el resto', () => {
     for (const h of [
@@ -31,7 +31,7 @@ test('el Accept pide el raw de GitHub pero deja comodin para el resto', () => {
     }
 })
 
-// ---- por tipo de auth ----
+// ---- by auth type ----
 
 test('PRIVATE_TOKEN manda la cabecera PRIVATE-TOKEN (GitLab)', () => {
     const h = MarketplaceManager.buildManifestHeaders(mkp({ type: EManifestAuthType.PRIVATE_TOKEN }), 'glpat-xxx')
@@ -45,10 +45,10 @@ test('BEARER manda Authorization: Bearer (GitHub)', () => {
 
 test('BASIC manda el PAT como CONTRASEÑA, que es como lo espera Azure DevOps', () => {
     const h = MarketplaceManager.buildManifestHeaders(mkp({ type: EManifestAuthType.BASIC }), 'azdo-pat')
-    // Azure DevOps ignora el usuario: sin username, la parte de usuario va vacia
+    // Azure DevOps ignores the user: with no username, the user part goes empty
     assert.deepEqual(credentials(h), { Authorization: `Basic ${Buffer.from(':azdo-pat').toString('base64')}` })
 
-    // y se puede comprobar al reves, decodificando
+    // and it can be checked the other way round, by decoding
     const decoded = Buffer.from(h.Authorization.replace('Basic ', ''), 'base64').toString()
     assert.equal(decoded, ':azdo-pat', 'el token va en la parte de contraseña, no en la de usuario')
 })
@@ -65,7 +65,7 @@ test('BASIC codifica bien un token con caracteres no ASCII', () => {
     assert.equal(decoded, 'usuario:contraseña-ñ')
 })
 
-// ---- cuando NO se mandan credenciales ----
+// ---- when credentials are NOT sent ----
 
 test('sin token no se manda credencial aunque el tipo lo pida', () => {
     for (const token of [undefined, '']) {
@@ -81,7 +81,7 @@ test('NONE o sin manifestAuth no manda credencial aunque haya token', () => {
 })
 
 test('el marketplace publico nunca lleva credenciales', () => {
-    // clave: el token de un marketplace privado no puede acabar viajando a raw.githubusercontent.com
+    // the key point: a private marketplace's token must not end up travelling to raw.githubusercontent.com
     const h = MarketplaceManager.buildManifestHeaders(undefined, 'glpat-xxx')
     assert.deepEqual(credentials(h), {})
 })

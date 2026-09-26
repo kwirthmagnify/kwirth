@@ -140,7 +140,7 @@ test('install(tgz) registra el conector, lo lista en el índice, loadAll lo recu
     assert.ok(mgr.listConnectors().some(c => c.id === 'installed-fake' && c.installed), 'debe aparecer como installed')
     assert.ok((await mgr.listInstalledMeta()).some(m => m.id === 'installed-fake'), 'debe estar en el índice')
 
-    // loadAll en un manager nuevo con el mismo configMaps lo recupera
+    // loadAll on a new manager with the same configMaps recovers it
     const mgr2 = new IdpManager(memSecrets(), cfg, new Map<string, TIdpConnectorConstructor>())
     await mgr2.init()
     await mgr2.loadAll()

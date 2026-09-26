@@ -1,5 +1,6 @@
-// Registro central de rutas: colisión exacta (dos providers mismo alias), prefijos reservados del core,
-// normalización de barra final, y que el core sí puede montar en lo reservado. Puro (sin Express).
+// The central route registry: an exact clash (two providers with the same alias), the core's reserved
+// prefixes, trailing-slash normalisation, and that the core can indeed mount on what is reserved. Pure
+// (no Express).
 
 import test from 'node:test'
 import assert from 'node:assert/strict'

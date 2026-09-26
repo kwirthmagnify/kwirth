@@ -2,14 +2,14 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { listControllersTolerant } from '../../src/tools/AuthorizationManagement'
 
-// Un ServiceAccount real no siempre puede listar los seis tipos de controller. El ClusterRole de la
-// documentacion de instalacion no incluia el apiGroup 'batch', asi que 'jobs' respondia 403 — y con un
-// Promise.all eso rechazaba la promesa entera: el selector se quedaba SIN NINGUN controller, ni siquiera
-// los deployments, que si se podian leer. Y como el catch devolvia [], era indistinguible de 'este
+// A real ServiceAccount cannot always list the six controller types. The ClusterRole in the installation
+// documentation did not include the 'batch' apiGroup, so 'jobs' answered 403 — and with a Promise.all
+// that rejected the whole promise: the selector was left with NO controller at all, not even the
+// deployments, which could be read. And since the catch returned [], it was indistinguishable from 'this
 // namespace no tiene nada'.
 //
-// Estos tests fijan lo contrario: lo que se puede leer, se lee; lo que no, se reporta nombrando el tipo y
-// su apiGroup, que es el dato que permite arreglar el RBAC.
+// These tests pin down the opposite: what can be read is read; what cannot is reported naming the type
+// and its apiGroup, which is the datum that makes fixing the RBAC possible.
 
 const ok = (kind: string, apiGroup: string, names: [string, string][]) => ({
     kind, apiGroup,

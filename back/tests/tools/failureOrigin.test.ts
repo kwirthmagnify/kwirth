@@ -14,7 +14,7 @@ import { failureOrigin } from '../../src/tools/FailureOrigin'
     dejado el proceso en un estado del que no conviene fiarse. Esa asimetria es lo que fijan estos tests.
 */
 
-// Un stack como el que deja un rechazo nacido en el back de una extension, que el core carga desde /tmp
+// A stack like the one left by a rejection born in an extension's back end, which the core loads from /tmp
 const stackFromExtension = (file: string): Error => {
     const err = new TypeError('reportTypes is not iterable')
     err.stack = [
@@ -60,7 +60,7 @@ test('un fallo del CORE no se atribuye a nadie: el proceso debe seguir muriendo'
 })
 
 test('un rechazo que no es un Error no se atribuye: sin stack no hay a quien culpar', () => {
-    // pasa mas de lo que parece: un reject('texto'), un reject de un objeto de una libreria, o sin valor
+    // it happens more than it seems: a reject('text'), a reject of an object from a library, or with no value
     assert.equal(failureOrigin('un string suelto'), undefined)
     assert.equal(failureOrigin(undefined), undefined)
     assert.equal(failureOrigin(null), undefined)
@@ -69,7 +69,7 @@ test('un rechazo que no es un Error no se atribuye: sin stack no hay a quien cul
 
 test('un fichero que solo se PARECE al de una extension no cuenta', () => {
     const err = new Error('boom')
-    // ni el tipo es de los que carga el core, ni el nombre acaba en back.js/front.js
+    // neither is the type one the core loads, nor does the name end in back.js/front.js
     err.stack = 'Error: boom\n    at x (/tmp/kwirth-something-weird-middle.js:1:1)'
     assert.equal(failureOrigin(err), undefined)
 })

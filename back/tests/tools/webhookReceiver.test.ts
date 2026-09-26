@@ -24,7 +24,7 @@ function makeConfigMaps() {
     }
 }
 
-// Echo webhook: verify compara Authorization con config.apiKey; parse saca el evento del JSON del body.
+// Echo webhook: verify compares Authorization with config.apiKey; parse takes the event out of the body's JSON.
 function makeEchoTgz(): Buffer {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wh-echo-'))
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ id: 'echo', name: 'echo', version: '0.0.1', description: 'echo webhook' }))

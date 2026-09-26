@@ -8,9 +8,10 @@ import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { IPackageRegistry, EPackageRegistryAuthType } from '@kwirthmagnify/kwirth-common'
 
-// De donde se baja un paquete NO es el marketplace: el manifest solo lo lista, y su url puede apuntar a
-// cualquier sitio — el marketplace publico ya tiene los manifests en GitHub y los tarballs en npmjs. Por
-// eso la credencial de descarga se elige casando la URL del tarball, y no por el marketplace de origen.
+// Where a package is downloaded from is NOT the marketplace: the manifest merely lists it, and its url
+// may point anywhere — the public marketplace already has the manifests on GitHub and the tarballs on
+// npmjs. That is why the download credential is chosen by matching the tarball's URL, and not by the
+// marketplace it came from.
 
 const reg = (id: string, url: string, enabled = true, auth?: IPackageRegistry['auth']): IPackageRegistry =>
     ({ id, label: id, url, enabled, auth })
@@ -30,7 +31,7 @@ test('una URL de otro sitio no casa: se baja anonima', () => {
 test('gana el prefijo MAS LARGO, para que lo especifico pueda ganarle a lo general', () => {
     const registries = [reg('todo-el-nexus', 'https://nexus.plexus.services'), reg('solo-mi-repo', NEXUS)]
     assert.equal(matchRegistry(TGZ, registries)?.id, 'solo-mi-repo')
-    // y el orden en la lista no debe influir
+    // and the order in the list must not matter
     assert.equal(matchRegistry(TGZ, [...registries].reverse())?.id, 'solo-mi-repo')
 })
 
@@ -43,13 +44,13 @@ test('la barra final del registro es indiferente', () => {
 })
 
 test('el prefijo casa por SEGMENTO, no por texto suelto', () => {
-    // '.../031-299-IriaOperae' no debe casar con '.../031-299-IriaOperae-privado', que es otro repo
+    // '.../031-299-IriaOperae' must not match '.../031-299-IriaOperae-privado', which is another repo
     const otro = `https://nexus.plexus.services/repository/031-299-IriaOperae-privado/x/-/x-1.0.0.tgz`
     assert.equal(matchRegistry(otro, [reg('nexus', NEXUS)]), undefined)
 })
 
 test('la ruta distingue mayusculas, el host no', () => {
-    // el repo se llama '031-299-IriaOperae': escrito de otra forma es OTRO repo
+    // the repo is called '031-299-IriaOperae': written any other way it is a DIFFERENT repo
     assert.equal(matchRegistry(TGZ, [reg('nexus', NEXUS.toLowerCase())]), undefined)
     const hostRaro = TGZ.replace('nexus.plexus.services', 'NEXUS.Plexus.Services')
     assert.equal(matchRegistry(hostRaro, [reg('nexus', NEXUS)])?.id, 'nexus')
@@ -65,7 +66,7 @@ test('la cabecera Basic lleva usuario y contraseña en base64', () => {
 })
 
 test('sin usuario o sin contraseña la cabecera sigue siendo valida', () => {
-    // Un PAT suele ir como contraseña con usuario vacio; que no reviente ni mande 'undefined'
+    // A PAT usually travels as a password with an empty user; it must neither blow up nor send 'undefined'
     assert.equal(basicHeader(undefined, 'pat').Authorization, 'Basic ' + Buffer.from(':pat').toString('base64'))
 })
 
@@ -75,14 +76,14 @@ test('con auth NONE hay registro pero no credenciales que inyectar', () => {
     assert.deepEqual(authHeader(r.auth, 'lo-que-sea'), {})
 })
 
-// ⚠️ Bearer y Basic NO son intercambiables, aunque el token parezca una credencial codificada. Verificado
-// contra el Nexus real: el mismo user token da 200 como Bearer y 401 como Basic. Y el token es OPACO, no
-// un base64 de 'usuario:contraseña', asi que tampoco se puede traducir de un esquema al otro.
+// ⚠️ Bearer and Basic are NOT interchangeable, even though the token looks like an encoded credential.
+// Verified against the real Nexus: the same user token gives 200 as Bearer and 401 as Basic. And the
+// token is OPAQUE, not a base64 of 'user:password', so it cannot be translated from one scheme to the other.
 
 test('el token de un registro viaja como Bearer, TAL CUAL, sin recodificar', () => {
-    // ⚠️ Un literal con FORMA de credencial real (aqui era 'NpmToken.<uuid>') hace que el escaneo de
-    // secretos de GitHub bloquee el push, y con razon: no puede saber que es de mentira. En los tests, un
-    // valor que no se parezca a nada.
+    // ⚠️ A literal SHAPED like a real credential (here it was 'NpmToken.<uuid>') makes GitHub's secret
+    // scanning block the push, and rightly so: it cannot know it is fake. In tests, a value that looks
+    // like nothing at all.
     const token = 'fake-opaque-registry-token'
     assert.equal(bearerHeader(token).Authorization, `Bearer ${token}`)
 })
@@ -106,15 +107,15 @@ test('sin secreto guardado la cabecera no se inventa nada', () => {
     assert.equal(authHeader(undefined, 'tok').Authorization, undefined)
 })
 
-// ⚠️ packageHeaders() sale por `if (!deps) return {}` mientras nadie haya llamado a
-// configurePackageRegistries(). No es un detalle: una descarga hecha antes de ese momento va ANONIMA, y
-// contra un registro privado eso es un 401 — pero solo al arrancar, porque instalar lo mismo desde la UI
-// ocurre despues y si lleva credenciales. Paso de verdad: el core rehidrataba las extensiones instaladas
-// en prepareRunningInstance() y configuraba esto mas tarde, en setUpRoutes(), y las docs de service-flow
-// del Nexus fallaban con 401 en cada arranque.
+// ⚠️ packageHeaders() leaves through `if (!deps) return {}` for as long as nobody has called
+// configurePackageRegistries(). That is no detail: a download made before that moment goes ANONYMOUS, and
+// against a private registry that is a 401 — but only at startup, because installing the same thing from
+// the UI happens later and does carry credentials. It really happened: the core rehydrated the installed
+// extensions in prepareRunningInstance() and configured this later, in setUpRoutes(), and service-flow's
+// docs from the Nexus failed with 401 on every startup.
 //
-// Estos dos tests fijan el contrato de las dos caras. El orden importa y por eso el 'sin configurar' va
-// primero: `deps` es estado de modulo y no hay forma de desconfigurarlo.
+// These two tests pin down both sides of the contract. Order matters, which is why the 'unconfigured' one
+// goes first: `deps` is module state and there is no way to unconfigure it.
 
 test('sin configurar, packageHeaders NO manda credenciales (y la descarga saldria anonima)', async () => {
     assert.deepEqual(await packageHeaders(TGZ), {})
@@ -128,17 +129,17 @@ test('configurado, packageHeaders inyecta la credencial del registro que sirve e
     configurePackageRegistries(configMaps, secrets)
 
     assert.deepEqual(await packageHeaders(TGZ), basicHeader('iriaoperae', 'fake-stored-password'))
-    // una URL que no sirve ese registro sigue bajando anonima aunque ya este todo configurado
+    // a URL that registry does not serve still downloads anonymously even with everything configured
     assert.deepEqual(await packageHeaders('https://registry.npmjs.org/x/-/x-1.0.0.tgz'), {})
 })
 
 // ── readTarballFile ─────────────────────────────────────────────────────────────
 //
-// Un tarball extraido puede tener las entradas en la raiz (los tgz que armamos a mano: docs, logins) o
-// dentro de 'package/' (todo lo que sale de `npm publish`). El install() de cada manager ya probaba las
-// dos rutas, pero la RECUPERACION mirando solo la raiz dejaba fuera justo a los paquetes del registro:
-// un back.js que no cabe en el ConfigMap se baja del origen EN CADA ARRANQUE, asi que la extension se
-// instalaba bien y desaparecia al primer reinicio. Lo canto el provider 'trivy' (15,8 MB de bundle).
+// An extracted tarball may have its entries at the root (the tgz files we build by hand: docs, logins) or
+// inside 'package/' (everything that comes out of `npm publish`). Each manager's install() already tried
+// both paths, but RECOVERY looking only at the root left out precisely the registry's packages: a back.js
+// that does not fit in the ConfigMap is downloaded from its origin ON EVERY STARTUP, so the extension
+// installed correctly and vanished at the first restart. The 'trivy' provider gave it away (a 15.8 MB bundle).
 
 const extractDir = (layout: Record<string, string>): string => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'kwirth-tarball-test-'))
@@ -187,12 +188,13 @@ test('solo mira esos dos sitios: un back.js mas profundo NO se da por bueno', ()
     rmSync(dir, { recursive: true, force: true })
 })
 
-// ── cache en /tmp del js que se baja del origen ──────────────────────────────────
+// ── /tmp cache of the js downloaded from the origin ─────────────────────────────
 //
-// Un back que no cabe en el ConfigMap se vuelve a bajar del origen. Sin cache eso es un tarball entero
-// por arranque (914 KB en el provider 'trivy') y, si el registro no responde en ese momento, la extension
-// no carga. Y la cache HAY que invalidarla: no lleva la version en el nombre —quien la lee al arrancar
-// solo conoce el id— asi que sin borrarla una actualizacion seguiria cargando el js VIEJO.
+// A back end that does not fit in the ConfigMap gets downloaded from its origin again. With no cache that
+// is a whole tarball per startup (914 KB on the 'trivy' provider) and, if the registry does not answer at
+// that moment, the extension does not load. And the cache MUST be invalidated: it does not carry the
+// version in its name — whoever reads it at startup only knows the id — so without deleting it an update
+// would keep loading the OLD js.
 
 test('el nombre de la cache sale del tipo, el id y el fichero', () => {
     const back = cachedExtensionFile('provider', 'trivy', 'back.js')

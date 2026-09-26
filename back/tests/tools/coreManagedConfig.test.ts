@@ -36,7 +36,7 @@ test('sin nada propio, el interlocutor es el core tal cual', async () => {
 })
 
 test('una extension que no implementa el contrato no envuelve nada', async () => {
-    // Es el caso mayoritario hoy: la extension existe pero no tiene los metodos.
+    // It is the majority case today: the extension exists but does not have the methods.
     const c = combine(soloCore, { } as IExtension)
     assert.deepEqual(await c.exportConfig!(opts(false)), { delCore: 1 })
 })
@@ -55,13 +55,13 @@ test('al importar se suman los dos resultados, avisos incluidos', async () => {
 })
 
 test('si el fichero no trae la parte propia, solo se aplica la del core', async () => {
-    // Pasa con un bundle generado cuando la extension aun no implementaba el contrato.
+    // It happens with a bundle generated when the extension did not implement the contract yet.
     const c = combine(soloCore, conPropio)
     const r = await c.importConfig!({ core: {} })
     assert.equal(r.applied, 1)
 })
 
-// ─── senders: el vaciado de secretos ───────────────────────────────────────────
+// ─── senders: emptying the secrets ─────────────────────────────────────────────
 
 const senderFalso = (schema: unknown, configs: unknown[]): SenderManager => ({
     getConfigs: () => configs,
@@ -84,7 +84,7 @@ test('con credenciales, la configuracion de un sender viaja entera', async () =>
 })
 
 test('sin credenciales, el campo secreto se VACIA — no se omite', async () => {
-    // Vaciarlo y no quitarlo es deliberado: el destino tiene que poder decir cual hay que rellenar.
+    // Emptying it rather than removing it is deliberate: the destination has to be able to say which one to fill in.
     const e = senderConfigs(senderFalso(SCHEMA_SMTP, [CONFIG_SMTP]), 'email')
     const r = await e.exportConfig!(opts(false)) as { configs: Record<string, unknown>[] }
     assert.equal(r.configs[0].password, '')
@@ -93,8 +93,8 @@ test('sin credenciales, el campo secreto se VACIA — no se omite', async () => 
 })
 
 test('un sender SIN esquema no exporta nada, en vez de arriesgarse', async () => {
-    // Sin esquema el core no sabe que campo es la contraseña. Entre omitir la configuracion o escribir
-    // un secreto en claro en un fichero que acaba en Descargas, se omite.
+    // With no schema the core does not know which field is the password. Between omitting the
+    // configuration and writing a secret in the clear into a file that ends up in Downloads, it omits.
     const e = senderConfigs(senderFalso(undefined, [CONFIG_SMTP]), 'email')
     const r = await e.exportConfig!(opts(false)) as { configs: unknown[], omitted: number }
     assert.deepEqual(r.configs, [])
@@ -107,7 +107,7 @@ test('y quien importe ese fichero se entera de que faltan', async () => {
     assert.ok(r.warnings[0].includes('does not declare which of its fields are secret'))
 })
 
-// ─── idp: instancias por conector ──────────────────────────────────────────────
+// ─── idp: instances per connector ──────────────────────────────────────────────
 
 const INSTANCIAS = {
     uno: { id: 'uno', connectorId: 'github-cloud', label: 'GitHub', enabled: true, config: { clientId: 'x', clientSecret: 'secreto' } },
@@ -124,7 +124,7 @@ const idpFalso = (guardadas: unknown[] = []): IdpManager => ({
 } as unknown as IdpManager)
 
 test('un conector exporta SOLO sus instancias, no las de otro conector', async () => {
-    // La relacion es 1 conector -> N instancias, y cada instancia dice a cual pertenece.
+    // The relation is 1 connector -> N instances, and each instance says which one it belongs to.
     const e = idpInstances(idpFalso(), 'github-cloud')
     const r = await e.exportConfig!(opts(true)) as { instances: { id: string }[] }
     assert.equal(r.instances.length, 1)
@@ -149,10 +149,10 @@ test('una instancia que no es de este conector se descarta al importar', async (
     assert.ok(r.warnings[0].includes('does not belong'))
 })
 
-// ─── toolsets: concesiones que referencian plugins ─────────────────────────────
+// ─── toolsets: grants that reference plugins ───────────────────────────────────
 
 test('una concesion a un plugin que no esta instalado aqui se avisa', async () => {
-    // `setGrants` devuelve los que SI se aplicaron: la diferencia es lo que se perdio por el camino.
+    // `setGrants` returns those that WERE applied: the difference is what was lost along the way.
     const manager = {
         listGrants: async () => ({ 'k8s-ops': ['agora', 'fantasma'] }),
         setGrants: async () => ['agora']

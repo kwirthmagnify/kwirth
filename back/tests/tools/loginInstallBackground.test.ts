@@ -19,7 +19,7 @@ import { IConfigMaps } from '../../src/tools/IConfigMap'
     justo el fallo que introduciria un despiste al cablearlo.
 */
 
-/** Almacenamiento en memoria que declara el tope que se le diga. */
+/** In-memory storage that declares whichever limit it is told. */
 const almacenFalso = (limite: number | undefined): IConfigMaps & { datos: Map<string, any> } => {
     const datos = new Map<string, any>()
     return {
@@ -32,7 +32,7 @@ const almacenFalso = (limite: number | undefined): IConfigMaps & { datos: Map<st
     }
 }
 
-/** Un tgz de login con las imagenes que se le pidan. El png no es valido: aqui solo importa su TAMAÑO. */
+/** A login tgz with whichever images are asked for. The png is not valid: all that matters here is its SIZE. */
 const construirLogin = async (id: string, imagenes: { std?: number, hi?: number }): Promise<string> => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kwirth-login-test-'))
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ id, name: `@test/login-${id}`, version: '1.0.0', displayName: id }))
@@ -45,7 +45,7 @@ const construirLogin = async (id: string, imagenes: { std?: number, hi?: number 
     return tgz
 }
 
-/** Instala y devuelve lo que quedo guardado del login. */
+/** Installs and returns whatever was stored of the login. */
 const instalar = async (limite: number | undefined, imagenes: { std?: number, hi?: number }) => {
     const almacen = almacenFalso(limite)
     const manager = new LoginManager(almacen)
@@ -66,7 +66,7 @@ test('en fichero (sin tope) se guarda la BUENA', async () => {
     const guardado = await instalar(undefined, { std: STD_QUE_CABE, hi: HI_QUE_NO_CABE })
     assert.equal(guardado.backgroundQuality, EBackgroundQuality.HI)
     assert.equal(guardado.problem, undefined)
-    // y es de verdad la grande, no la otra: el relleno las distingue
+    // and it really is the big one, not the other: the padding tells them apart
     assert.ok(Buffer.from(guardado.background!, 'base64').length === HI_QUE_NO_CABE)
 })
 

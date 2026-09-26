@@ -4,12 +4,12 @@ import { buildProviderStorage } from '../../src/tools/ProviderStorage'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
 
-// Persistencia inyectada a los providers. Es la contraparte de lo que los canales reciben via
-// IBackChannelObject: un provider decide EN CODIGO que va a un Secret (credenciales) y que va a un
-// ConfigMap (el resto). Lo que se comprueba aqui es el contrato que el provider da por supuesto:
-//   - el destino real segun el booleano 'secret'
-//   - los espacios de nombres, que NO deben pisar los del canal ni la config gestionada por el core
-//   - el round-trip de valores (incluido el base64 del Secret)
+// Persistence injected into providers. It is the counterpart of what channels receive through
+// IBackChannelObject: a provider decides IN CODE what goes to a Secret (credentials) and what goes to a
+// ConfigMap (the rest). What is checked here is the contract the provider takes for granted:
+//   - the real destination according to the 'secret' boolean
+//   - the namespaces, which must NOT overwrite the channel's nor the core-managed config's
+//   - the round trip of values (including the Secret's base64)
 
 interface IStore {
     configMaps: Map<string, any>
@@ -53,7 +53,7 @@ test('writeStorage with secret=true lands on a Secret, base64 encoded', async ()
     assert.ok(written, 'the secret must exist')
     const decoded = JSON.parse(Buffer.from(written.data, 'base64').toString('utf8'))
     assert.deepEqual(decoded, { rss: { token: 's3cr3t' } })
-    // el valor en claro no debe quedar en el propio campo almacenado
+    // the plain value must not remain in the stored field itself
     assert.ok(!written.data.includes('s3cr3t'))
 })
 
@@ -112,8 +112,8 @@ test('the provider namespace does not collide with the channel one nor with the 
 
     const key = [...store.configMaps.keys()][0]
     assert.equal(key, 'kwirth-store-provider-syslog')
-    // 'kwirth-store-channel-<id>' lo usan los canales; 'kwirth-provider-<id>-config' es la config que
-    // gestiona el core (deprecada). Ninguno de los dos debe verse afectado.
+    // 'kwirth-store-channel-<id>' is used by channels; 'kwirth-provider-<id>-config' is the core-managed
+    // config (deprecated). Neither of the two must be affected.
     assert.notEqual(key, 'kwirth-store-channel-syslog')
     assert.notEqual(key, 'kwirth-provider-syslog-config')
 })

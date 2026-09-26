@@ -6,7 +6,7 @@ import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { accessKeySerialize } from '@kwirthmagnify/kwirth-common'
 
-// gestión de API keys (/key) es admin-only: validKey + scope 'admin' (ver ApiKeyApi)
+// managing API keys (/key) is admin-only: validKey + the 'admin' scope (see ApiKeyApi)
 const adminKey = { id: 'adminkey', type: 'permanent', resources: 'admin,cluster::::' }
 const nonAdminKey = { id: 'userkey', type: 'permanent', resources: 'cluster::::' }
 const AUTH = { Authorization: 'Bearer ' + accessKeySerialize(adminKey as any) }

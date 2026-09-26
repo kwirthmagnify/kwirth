@@ -1,7 +1,8 @@
-// Dependencia blanda. Lo que un canal pide en 'requirements.providers' y no esta disponible no puede
-// tumbar su arranque, pero si tiene que reportarse — y no significa lo mismo segun que falte: un
-// provider declarado y no registrado es una mala configuracion, mientras que un pluvider ausente es
-// legitimo (su plugin puede no estar instalado, o ser un canal SINGLE anunciado aqui como remoto).
+// A soft dependency. What a channel asks for in 'requirements.providers' and is not available must not
+// bring its startup down, but it does have to be reported — and it does not mean the same thing depending
+// on what is missing: a provider that is declared and not registered is a misconfiguration, whereas an
+// absent pluvider is legitimate (its plugin may not be installed, or it may be a SINGLE channel announced
+// here as remote).
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -46,14 +47,14 @@ test('los dos mundos se reportan por separado en la misma pasada', () => {
 })
 
 test('un pluvider ausente NO se confunde con un provider ausente aunque se llamen igual', () => {
-    // 'agora' pelado es un provider que no existe; 'plugin:agora' es un pluvider que si
+    // a bare 'agora' is a provider that does not exist; 'plugin:agora' is a pluvider that does
     const missing = findMissingSubscriptionTargets(['agora', 'plugin:agora'], REGISTERED, PLUVIDERS)
     assert.deepEqual(missing.missingProviders, ['agora'])
     assert.deepEqual(missing.missingPluviders, [])
 })
 
 test('el mismo id pedido por varios canales se reporta UNA vez', () => {
-    // tres canales pidiendo lo mismo no deben producir tres avisos identicos en el arranque
+    // three channels asking for the same thing must not produce three identical warnings at startup
     const missing = findMissingSubscriptionTargets(['plugin:situs', 'plugin:situs', 'plugin:situs', 'trivy', 'trivy'], REGISTERED, PLUVIDERS)
     assert.deepEqual(missing.missingPluviders, ['plugin:situs'])
     assert.deepEqual(missing.missingProviders, ['trivy'])

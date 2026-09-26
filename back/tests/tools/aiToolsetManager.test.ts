@@ -9,11 +9,11 @@ import os from 'os'
 import path from 'path'
 import fs from 'fs'
 
-// Manager del tipo `aitoolset` (plan: plans/ai-tools/PLAN.md, S1). Lo que se fija aqui son las reglas que
-// protegen la coherencia entre el indice y el registro: ids reservados, id del paquete == id del toolset,
-// y la reconciliacion de lo declarado en kwirth-dev.json.
+// Manager of the `aitoolset` type (plan: plans/ai-tools/PLAN.md, S1). What is pinned down here are the
+// rules protecting the coherence between the index and the registry: reserved ids, package id == toolset
+// id, and the reconciliation of what is declared in kwirth-dev.json.
 
-// ConfigMaps en memoria: el manager solo necesita leer/escribir claves, no un cluster.
+// In-memory ConfigMaps: the manager only needs to read and write keys, not a cluster.
 const fakeConfigMaps = (): IConfigMaps => {
     const store = new Map<string, any>()
     return {
@@ -24,7 +24,7 @@ const fakeConfigMaps = (): IConfigMaps => {
     } as unknown as IConfigMaps
 }
 
-/** Construye un tgz de aitoolset de verdad: package.json + back.js, como el que sale de un build. */
+/** Builds a real aitoolset tgz: package.json + back.js, like the one a build produces. */
 const makeToolsetTgz = async (id: string, exportedId = id): Promise<string> => {
     const dir = path.join(os.tmpdir(), `kwirth-test-aitoolset-${id}-${Date.now()}`)
     fs.mkdirSync(dir, { recursive: true })
@@ -35,7 +35,7 @@ const makeToolsetTgz = async (id: string, exportedId = id): Promise<string> => {
         description: `test toolset ${id}`,
         extensionType: 'aitoolset'
     }, null, 2))
-    // El modulo solo EXPORTA su definicion: no se auto-registra. Registrarlo es cosa del host.
+    // The module only EXPORTS its definition: it does not register itself. Registering it is the host's job.
     fs.writeFileSync(path.join(dir, 'back.js'), `
         module.exports.default = {
             id: '${exportedId}',
@@ -63,8 +63,8 @@ test('solo se poda lo marcado dev y solo si ya no esta declarado', () => {
         { id: 'd', name: 'd', version: '1', description: '', installedFrom: 'bundled' }
     ]
     const stale = staleDevAiToolsets(index, new Set(['a'])).map(m => m.id)
-    // 'b' sobra (dev y ya no declarado). 'c' y 'd' NO se tocan aunque no esten declarados: eso es
-    // instalado de verdad, y podarlo seria desinstalarle al usuario algo que el puso.
+    // 'b' is surplus (dev and no longer declared). 'c' and 'd' are NOT touched even though they are not
+    // declared: that is really installed, and pruning it would be uninstalling something the user put there.
     assert.deepEqual(stale, ['b'])
 })
 
@@ -108,7 +108,7 @@ test('un id reservado por un built-in se rechaza ANTES de tocar el indice', asyn
 
     const tgz = await makeToolsetTgz('test-reserved')
     await assert.rejects(() => mgr.install(tgz, 'local'), /reserved/)
-    // y el indice queda intacto: una entrada que nunca se podria registrar es peor que no instalar
+    // and the index is left intact: an entry that could never be registered is worse than not installing
     assert.deepEqual(await mgr.listInstalled(), [])
     fs.rmSync(tgz, { force: true })
 })
@@ -125,12 +125,13 @@ test('si el id del paquete y el del toolset exportado no coinciden, no se regist
     const mgr = new AiToolsetManager(cm)
     await mgr.init()
 
-    // package.json dice 'test-mismatch', el modulo exporta otro id distinto
+    // package.json says 'test-mismatch', the module exports a different id
     const tgz = await makeToolsetTgz('test-mismatch', 'otro-id')
     await mgr.install(tgz, 'local')
 
-    // No se registra ninguno de los dos: ni el que dice el paquete ni el que dice el modulo. Registrar el
-    // segundo dejaria el indice diciendo una cosa y el registro otra, y desinstalar no lo encontraria.
+    // Neither of the two is registered: neither the one the package says nor the one the module says.
+    // Registering the second would leave the index saying one thing and the registry another, and
+    // uninstalling would not find it.
     assert.equal(getToolset('test-mismatch'), undefined)
     assert.equal(getToolset('otro-id'), undefined)
 
@@ -147,7 +148,7 @@ test('reinstalar encima reemplaza en vez de chocar con el registro', async () =>
     await mgr.install(tgz, 'local')
     const before = listToolsets().filter(t => t.id === 'test-reinstall').length
 
-    // Segunda instalacion del mismo id (version nueva, o el mismo dev tras un rebuild)
+    // A second installation of the same id (a new version, or the same dev one after a rebuild)
     await mgr.install(tgz, 'dev')
     const after = listToolsets().filter(t => t.id === 'test-reinstall').length
 
@@ -161,7 +162,7 @@ test('reinstalar encima reemplaza en vez de chocar con el registro', async () =>
 // ── concesiones ──────────────────────────────────────────────────────────────────────────────────────
 
 test('instalar por primera vez no concede el toolset a nadie', async () => {
-    // Instalar deja DISPONIBLE, no concedido: instalar `k8s-ops` no puede dar escritura por accidente.
+    // Installing leaves it AVAILABLE, not granted: installing `k8s-ops` must not give write access by accident.
     const mgr = new AiToolsetManager(fakeConfigMaps())
     await mgr.init()
     const tgz = await makeToolsetTgz('test-nogrants')
@@ -174,10 +175,11 @@ test('instalar por primera vez no concede el toolset a nadie', async () => {
 })
 
 test('reinstalar NO revoca la concesion que el admin ya dio', async () => {
-    // Reinstalar pasa por `unregisterToolset` para poder reemplazar, y ese se lleva la concesion con el
-    // toolset. Sin reponerla, actualizar un toolset —o releer el dist de un dev en cada arranque— la
-    // revocaba en silencio, y las dos mitades se contradecian: la tarjeta seguia diciendo a quien estaba
-    // concedido (lo persistido, que instalar no toca) mientras el runtime respondia SIN CONCEDER.
+    // Reinstalling goes through `unregisterToolset` in order to replace, and that takes the grant away
+    // with the toolset. Without putting it back, updating a toolset — or re-reading a dev one's dist on
+    // every startup — revoked it silently, and the two halves contradicted each other: the card kept
+    // saying who it was granted to (what is persisted, which installing does not touch) while the runtime
+    // answered NOT GRANTED.
     const mgr = new AiToolsetManager(fakeConfigMaps())
     await mgr.init()
 
@@ -189,7 +191,7 @@ test('reinstalar NO revoca la concesion que el admin ya dio', async () => {
 
     assert.equal(isToolsetGrantedTo('test-grants', 'agora'), true, 'la concesion no sobrevivio a la reinstalacion')
     assert.deepEqual(getToolsetGrants('test-grants'), ['agora'])
-    // y el registro en memoria y lo guardado dicen lo mismo, que es justo lo que se rompia
+    // and the in-memory registry and what is stored say the same thing, which is exactly what used to break
     assert.deepEqual((await mgr.listGrants())['test-grants'], ['agora'])
 
     await mgr.uninstall('test-grants')
@@ -197,8 +199,8 @@ test('reinstalar NO revoca la concesion que el admin ya dio', async () => {
 })
 
 test('desinstalar SI se lleva la concesion, y tambien la guardada', async () => {
-    // La otra mitad de la regla: reinstalar conserva, desinstalar revoca. Dejarla huerfana haria que
-    // reinstalar resucitara permisos que nadie ha vuelto a conceder.
+    // The other half of the rule: reinstalling keeps, uninstalling revokes. Leaving it orphaned would make
+    // reinstalling resurrect permissions nobody granted again.
     const mgr = new AiToolsetManager(fakeConfigMaps())
     await mgr.init()
 
@@ -213,11 +215,11 @@ test('desinstalar SI se lleva la concesion, y tambien la guardada', async () => 
     fs.rmSync(tgz, { force: true })
 })
 
-// ── instalacion desde carpeta (el camino de dev) ─────────────────────────────────────────────────────
+// ── installing from a folder (the dev path) ──────────────────────────────────────────────────────────
 
 test('instalar desde una CARPETA funciona y NO borra la carpeta', async () => {
-    // En dev se apunta al dist de verdad del toolset, no a un tgz. El manager limpia sus temporales al
-    // acabar, y si no distinguiera, se llevaria por delante el build del usuario en CADA arranque.
+    // In dev it points at the toolset's real dist, not at a tgz. The manager cleans up its temporary files
+    // when it finishes, and were it not to tell them apart, it would take the user's build down on EVERY startup.
     const dir = path.join(os.tmpdir(), `kwirth-test-aitoolset-dir-${Date.now()}`)
     fs.mkdirSync(dir, { recursive: true })
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ id: 'test-fromdir', name: '@test/x', version: '0.0.1', description: 'd', extensionType: 'aitoolset' }))

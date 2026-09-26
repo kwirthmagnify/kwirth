@@ -6,7 +6,7 @@ import { UserApi } from '../../src/api/UserApi'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { accessKeySerialize } from '@kwirthmagnify/kwirth-common'
 
-// gestión de usuarios (/user) es admin-only: validKey + scope 'admin' (ver UserApi)
+// managing users (/user) is admin-only: validKey + the 'admin' scope (see UserApi)
 const adminKey = { id: 'adminkey', type: 'permanent', resources: 'admin,cluster::::' }
 const nonAdminKey = { id: 'userkey', type: 'permanent', resources: 'view:default:::' }
 const fakeApiKeyApi = (): any => ({

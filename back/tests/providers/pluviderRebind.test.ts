@@ -1,7 +1,7 @@
-// Sustituir la INSTANCIA de un canal que ademas es pluvider. Hoy solo pasa en el hot-reload de un
-// plugin de dev, pero el problema es el mismo siempre: el registro guarda la instancia, no la clase.
-// Si no se rehace, el core se queda hablando con un objeto que ya nadie usa y sigue sirviendo su
-// descripcion, su ayuda de suscripcion y su filtro TAL Y COMO ERAN — y un cambio recien recargado
+// Replacing the INSTANCE of a channel that is also a pluvider. Today it only happens in the hot reload of
+// a dev plugin, but the problem is always the same: the registry keeps the instance, not the class. If it
+// is not redone, the core ends up talking to an object nobody uses any more and keeps serving its
+// description, its subscription help and its filter EXACTLY AS THEY WERE — and a freshly reloaded change
 // parece no haber surtido efecto.
 
 import test from 'node:test'
@@ -28,7 +28,7 @@ const fakePluvider = (tag: string, life: ILifecycle, failOnStop = false): TPluvi
     getSubscriptionHelp: () => ({ usage: tag, example: {} })
 } as unknown as TPluviderChannel)
 
-// un canal normal, que NO es pluvider
+// an ordinary channel, which is NOT a pluvider
 const fakeChannel = (): IChannel => ({
     getChannelData: () => ({ id: 'log' }),
     processProviderEvent: () => {}
@@ -42,7 +42,7 @@ test('la instancia nueva REEMPLAZA a la vieja en el registro', async () => {
 
     await rebindPluvider(pluviders, 'plugin:agora', fakePluvider('nueva', life))
 
-    // lo que el core sirva a partir de ahora sale de la nueva, no de la anterior
+    // what the core serves from now on comes from the new one, not from the previous one
     assert.equal(pluviders.get('plugin:agora')?.getPluviderData().description, 'soy nueva')
     assert.equal(pluviders.size, 1)
 })
@@ -69,8 +69,8 @@ test('si no habia nada registrado, simplemente se da de alta', async () => {
 })
 
 test('si la instancia nueva ya NO es pluvider, la vieja se da de baja y no se registra nada', async () => {
-    // caso real: alguien quita getPluviderData del plugin y recarga. El registro no puede quedarse
-    // con la instancia anterior publicando algo que el codigo actual ya no ofrece.
+    // a real case: somebody removes getPluviderData from the plugin and reloads. The registry cannot be
+    // left with the previous instance publishing something the current code no longer offers.
     const life = newLife()
     const pluviders = new Map<string, TPluviderChannel>([['plugin:agora', fakePluvider('vieja', life)]])
 
@@ -87,7 +87,7 @@ test('un canal que nunca fue pluvider no ensucia el registro', async () => {
 })
 
 test('si la vieja revienta al parar, la nueva se registra igual', async () => {
-    // una instancia que ya esta rota no puede impedir que la que la sustituye entre en servicio
+    // an instance that is already broken must not stop the one replacing it from entering service
     const life = newLife()
     const pluviders = new Map<string, TPluviderChannel>([['plugin:agora', fakePluvider('rota', life, true)]])
 

@@ -6,12 +6,12 @@ import path from 'path'
 import tar from 'tar'
 import { WebhookManager } from '../../src/tools/WebhookManager'
 
-// Tipos locales estructurales (evita importar de common-back, que es CJS y rompe el ESM del test).
+// Local structural types (it avoids importing from common-back, which is CJS and breaks the test's ESM).
 interface IWebhookEvent { provider: string; configName: string; kind: string; externalId: string; status?: string; receivedAt: string; headers?: Record<string, string>; raw: unknown }
 interface IWebhookConfig { name: string; [key: string]: unknown }
 
 // ── In-memory IConfigMaps mock ────────────────────────────────────────────────
-// write/read = valores completos por nombre; writeKey/readAllKeys = namespaces con claves.
+// write/read = complete values by name; writeKey/readAllKeys = namespaces with keys.
 function makeConfigMaps() {
     const store = new Map<string, unknown>()
     const keyed = new Map<string, Map<string, unknown>>()
@@ -29,7 +29,7 @@ function makeConfigMaps() {
     }
 }
 
-// Construye un .tgz de un webhook de prueba (package.json + back.js) y devuelve su Buffer.
+// Builds a .tgz of a test webhook (package.json + back.js) and returns its Buffer.
 function makeTestWebhookTgz(id: string): Buffer {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), `wh-src-${id}-`))
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ id, name: id, version: '0.0.1', description: 'test webhook' }))
@@ -145,7 +145,7 @@ test('removeConfig evicts the token; rotateToken invalidates the old one', async
     const token1 = mgr.getUrl('jira', 'default')!.split('/').pop()!
     assert.ok(mgr.resolve(token1))
 
-    // rotate → nuevo token, el viejo deja de resolver
+    // rotate → a new token, the old one stops resolving
     const token2 = mgr.rotateToken('jira', 'default')
     assert.notEqual(token1, token2)
     assert.equal(mgr.resolve(token1), undefined)
@@ -180,7 +180,7 @@ test('tokens + configs survive a restart (persistence)', async () => {
     mgr1.addConfig('jira', cfg({ name: 'prod' }))
     const token = mgr1.getUrl('jira', 'prod')!.split('/').pop()!
 
-    // Nuevo manager compartiendo el mismo almacén (simula reinicio del core).
+    // A new manager sharing the same store (it simulates a core restart).
     const mgr2 = new WebhookManager(cm, '/w')
     await mgr2.init()
     await mgr2.loadAll()                 // recarga el back del webhook desde el store
@@ -191,8 +191,9 @@ test('tokens + configs survive a restart (persistence)', async () => {
     assert.equal(res!.configName, 'prod')
     assert.equal(mgr2.getUrl('jira', 'prod'), `/w/jira/${token}`)
 
-    // listWebhooks debe reflejar lo instalado + sus configs SIN instanciación previa (el bug del selector vacío:
-    // tras un restart, si no llegó ningún callback la instancia no existe, pero el selector debe ver jira/prod).
+    // listWebhooks must reflect what is installed + its configs WITHOUT prior instantiation (the empty
+    // selector bug: after a restart, if no callback arrived the instance does not exist, but the selector
+    // must still see jira/prod).
     const listed = mgr2.listWebhooks()
     const jira = listed.find(w => w.id === 'jira')
     assert.ok(jira, 'listWebhooks must include the installed webhook even before any delivery/instantiation')

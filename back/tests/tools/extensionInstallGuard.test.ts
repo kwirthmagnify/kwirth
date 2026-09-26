@@ -23,13 +23,13 @@ const lanza = (fn: () => void, texto: string) => {
 test('lo que no esta instalado se instala, con o sin permiso', () => {
     assertInstallable('Plugin', 'nuevo', undefined, '1.0.0', false)
     assertInstallable('Plugin', 'nuevo', undefined, '1.0.0', true)
-    // y tampoco le hace falta saber la version: instalar algo por primera vez no compara con nada
+    // and it need not know the version either: installing something for the first time compares with nothing
     assertInstallable('Plugin', 'nuevo', undefined, undefined, false)
 })
 
 test('sin permiso, lo ya instalado se rechaza — el comportamiento de siempre', () => {
     lanza(() => assertInstallable('Plugin', 'log', { version: '1.0.0' }, '2.0.0', false), "'log' is already installed")
-    // el permiso es explicito: no basta con que la version sea mayor
+    // permission is explicit: the version being higher is not enough
     lanza(() => assertInstallable('Sender', 'email', { version: '1.0.0' }, '9.9.9', undefined), "'email' is already installed")
 })
 
@@ -40,9 +40,9 @@ test('con permiso se actualiza a una version mayor', () => {
 })
 
 test('pero NO a la misma ni a una anterior', () => {
-    // la misma: pulsar dos veces no puede parecer que ha hecho algo
+    // the same one: pressing twice must not look as if it did something
     lanza(() => assertInstallable('Plugin', 'log', { version: '1.0.0' }, '1.0.0', true), 'is not newer')
-    // hacia atras: dejaria el indice diciendo una cosa y la configuracion, que no se toca, pensada para otra
+    // backwards: it would leave the index saying one thing and the configuration, which is untouched, meant for another
     lanza(() => assertInstallable('Plugin', 'log', { version: '2.0.0' }, '1.9.9', true), 'is not newer')
     lanza(() => assertInstallable('Provider', 'azure', { version: '0.2.0' }, '0.1.0', true), 'is not newer')
 })
@@ -58,7 +58,7 @@ test('ni a ciegas cuando falta alguna de las dos versiones', () => {
 })
 
 test('el mensaje dice el tipo, la id y las dos versiones', () => {
-    // el aviso acaba en la linea de error del dialogo, y ahi 'is not newer' a secas no dice cual es cual
+    // the warning ends up on the dialog's error line, and there a bare 'is not newer' does not say which is which
     lanza(() => assertInstallable('Theme', 'santander', { version: '2.0.0' }, '1.0.0', true),
         "Theme 'santander' v2.0.0 is already installed, and v1.0.0 is not newer")
 })

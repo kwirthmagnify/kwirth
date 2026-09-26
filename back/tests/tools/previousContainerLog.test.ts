@@ -31,7 +31,7 @@ interface IFakeApi {
 const NS = 'kwirth'
 const POD = 'kwirth-7c9f8d5b6-xk2p9'
 
-// Un containerStatus con lo justo que mira el codigo
+// A containerStatus with just what the code looks at
 const status = (name: string, restartCount: number, terminated?: Record<string, unknown>) => ({
     name,
     restartCount,
@@ -79,9 +79,9 @@ test('tras un crash se lee el log del contenedor anterior, con previous y el num
     assert.equal(result.container, 'kwirth')
     assert.equal(result.termination?.exitCode, 1)
     assert.equal(result.termination?.reason, 'Error')
-    // las marcas de tiempo llegan como Date del cliente de k8s y tienen que salir serializables
+    // the timestamps arrive as Dates from the k8s client and have to come out serialisable
     assert.equal(result.termination?.finishedAt, '2026-09-20T13:47:42.000Z')
-    // la linea vacia que deja el \n final no es una linea de log
+    // the empty line left by the trailing \n is not a log line
     assert.deepEqual(result.lines, ['primera', 'segunda', 'tercera'])
 
     assert.equal(logCalls.length, 1)
@@ -117,7 +117,7 @@ test('si el log ya no esta, el reinicio se reporta igual y se explica por que no
 
     const result = await readPreviousContainerLog(api, NS, POD)
 
-    // el reinicio es un HECHO: lo dice el estado del pod, no el log
+    // the restart is a FACT: the pod's state says so, not the log
     assert.equal(result.restarted, true)
     assert.equal(result.abnormal, true)
     assert.deepEqual(result.lines, [])
@@ -148,7 +148,7 @@ test('con sidecars se elige el contenedor que reinicio, no el primero', async ()
 })
 
 test('un reinicio sin lastState.terminated no se toma por log anterior', async () => {
-    // puede pasar mientras el kubelet esta rehaciendo el estado del pod
+    // it can happen while the kubelet is rebuilding the pod's state
     const { api, logCalls } = fakeApi({ statuses: [status('kwirth', 1)] })
 
     const result = await readPreviousContainerLog(api, NS, POD)
@@ -173,7 +173,7 @@ test('el numero de lineas es 1000 por defecto y se puede subir por entorno', () 
     process.env.PREVIOUSLOGLINES = '5000'
     assert.equal(resolvePreviousLogLines(), 5000)
 
-    // basura y valores absurdos no dejan el core sin log: se cae al default
+    // garbage and absurd values do not leave the core without a log: it falls back to the default
     process.env.PREVIOUSLOGLINES = 'muchas'
     assert.equal(resolvePreviousLogLines(), 1000)
     process.env.PREVIOUSLOGLINES = '0'
@@ -190,7 +190,7 @@ test('las lineas se piden con lo que decida la configuracion de Kwirth, no con e
         log: 'una linea\n',
     })
 
-    // quien llama resuelve el valor (settings → entorno → default) y lo pasa ya resuelto
+    // the caller resolves the value (settings → environment → default) and passes it already resolved
     await readPreviousContainerLog(api, NS, POD, 250)
 
     assert.equal(logCalls[0].tailLines, 250)

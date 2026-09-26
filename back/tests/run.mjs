@@ -1,13 +1,13 @@
-// Runner de tests unitarios del back de Kwirth.
+// Unit test runner for Kwirth's back end.
 //
-// Bundlea cada tests/**/*.test.ts con esbuild (TS→ESM, externalizando deps pesadas/nativas)
-// a tests/.out/ y los ejecuta con el runner nativo `node --test`. Cero dependencias de test
-// nuevas: node:test + node:assert/strict. Mismo patrón que el plugin defender.
+// It bundles each tests/**/*.test.ts with esbuild (TS→ESM, externalising heavy and native deps) into
+// tests/.out/ and runs them with the native `node --test` runner. No new test dependencies at all:
+// node:test + node:assert/strict. The same pattern as the defender plugin.
 //
-//   npm test            → ejecuta toda la suite
+//   npm test            → runs the whole suite
 //
-// Los tests importan directamente de ../src (no se duplica código). Las deps de runtime van
-// external: si un test las toca, node las usa reales; si no, nunca se cargan.
+// The tests import straight from ../src (no code is duplicated). The runtime deps go external: if a test
+// touches them, node uses the real ones; if not, they are never loaded.
 
 import esbuild from 'esbuild'
 import { readdirSync, mkdirSync, rmSync, existsSync, writeFileSync } from 'fs'
@@ -64,10 +64,10 @@ await esbuild.build({
     outbase: TEST_DIR,
     outExtension: { '.js': '.mjs' },
     sourcemap: process.env.COVERAGE ? 'inline' : false,   // COVERAGE=1 → sourcemaps para mapear la cobertura al src/
-    // el src bundleado usa require/require.resolve/require.cache (carga dinámica de conectores);
-    // en salida ESM hay que inyectar un require basado en createRequire.
+    // the bundled src uses require/require.resolve/require.cache (dynamic loading of connectors);
+    // with ESM output a createRequire-based require has to be injected.
     banner: { js: "import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);" },
-    // Deps de runtime del back externalizadas: esbuild solo bundlea el TS de src/ y los tests.
+    // The back end's runtime deps externalised: esbuild only bundles the TS from src/ and the tests.
     external: [
         '@jfvilas/parse-listing', '@kubernetes/client-node',
         '@kwirthmagnify/kwirth-common', '@kwirthmagnify/kwirth-common-ai', '@kwirthmagnify/kwirth-common-back',
@@ -79,7 +79,7 @@ await esbuild.build({
 
 const bundled = readdirSync(OUT_DIR, { recursive: true }).map(String).filter(f => f.endsWith('.mjs')).map(f => path.join(OUT_DIR, f))
 
-// COVERAGE=1 → cobertura nativa de Node mapeada a src/ (excluye node_modules y los propios tests).
+// COVERAGE=1 → Node's native coverage mapped to src/ (it excludes node_modules and the tests themselves).
 const covArgs = process.env.COVERAGE ? ['--experimental-test-coverage', '--test-coverage-exclude=**/node_modules/**', '--test-coverage-exclude=**/tests/**'] : []
 try {
     execFileSync('node', ['--test', ...covArgs, ...bundled], { stdio: 'inherit' })

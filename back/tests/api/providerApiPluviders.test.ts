@@ -1,7 +1,7 @@
-// GET /core/providers sirve TAMBIEN los pluviders, y es deliberado: quien consume productores no
-// tiene por que saber que hay dos clases. Pide la lista, elige uno y se suscribe — el prefijo del id
-// lo resuelve el core por dentro. El marcado 'pluvider' existe solo para el gestor de extensiones,
-// que si necesita distinguirlos porque un pluvider no se instala ni se desinstala por separado.
+// GET /core/providers serves pluviders TOO, and that is deliberate: whoever consumes producers need not
+// know there are two classes. They ask for the list, pick one and subscribe — the id's prefix is resolved
+// by the core internally. The 'pluvider' flag exists only for the extension manager, which does need to
+// tell them apart because a pluvider is neither installed nor uninstalled separately.
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -72,12 +72,12 @@ test('un pluvider vivo se lista junto a los providers, marcado y con su plugin',
     assert.equal(pluv.pluvider, true)
     assert.equal(pluv.hostedBy, 'agora')
     assert.equal(pluv.description, 'Proactive alerts')
-    // un pluvider vivo esta corriendo por definicion: existe porque su plugin esta instanciado
+    // a live pluvider is running by definition: it exists because its plugin is instantiated
     assert.equal(pluv.running, true)
 })
 
 test('el nombre y la version de un pluvider son los de SU PLUGIN', async () => {
-    // Un pluvider no se nombra ni se versiona aparte: va dentro del plugin que lo publica.
+    // A pluvider is neither named nor versioned separately: it goes inside the plugin that publishes it.
     const { list, close } = await serve(
         [], new Map([['plugin:agora', fakePluvider('alertas')]]),
         { agora: { name: 'Agora', displayName: 'Agora', version: '0.1.55' } }
@@ -91,19 +91,19 @@ test('el nombre y la version de un pluvider son los de SU PLUGIN', async () => {
 })
 
 test('si no se puede resolver el plugin, no se inventa ni nombre ni version', async () => {
-    // Antes ponia el literal 'plugin' en la version, y la tarjeta lo pintaba como "vplugin".
+    // It used to put the literal 'plugin' in the version, and the card drew it as "vplugin".
     const { list, close } = await serve([], new Map([['plugin:agora', fakePluvider('alertas')]]))
     close()
 
     const pluv = list.find(e => e.id === 'plugin:agora')
     assert.equal(pluv?.version, '')
-    // sin metadato del plugin, el nombre cae al id del plugin, que es lo unico cierto que se sabe
+    // with no plugin metadata, the name falls back to the plugin's id, which is the only certain thing known
     assert.equal(pluv?.name, 'agora')
 })
 
 test('la procedencia de un pluvider es su plugin, no un marketplace', async () => {
-    // Sin esto caeria en el fallback del front y se anunciaria como servido por el marketplace PUBLICO,
-    // que es falso — y con un plugin de pago lo anunciaria ademas como OSS.
+    // Without this it would fall into the front end's fallback and announce itself as served by the PUBLIC
+    // marketplace, which is false — and with a paid plugin it would announce it as OSS on top of that.
     const { list, close } = await serve([], new Map([['plugin:agora', fakePluvider('alertas')]]))
     close()
 

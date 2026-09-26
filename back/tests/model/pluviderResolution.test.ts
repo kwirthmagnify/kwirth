@@ -1,7 +1,7 @@
-// Resolucion de suscripciones en ClusterInfo. Un id con prefijo ('plugin:agora') apunta a un
-// PLUVIDER —un canal que ademas produce— y se resuelve contra su propio registro; sin prefijo apunta
-// a un provider y el camino es el de siempre. Los dos mundos no se cruzan: ese es justo el motivo de
-// que el registro este separado de 'clusterInfo.providers'.
+// Subscription resolution in ClusterInfo. An id with a prefix ('plugin:agora') points at a PLUVIDER — a
+// channel that also produces — and is resolved against its own registry; without a prefix it points at a
+// provider and the path is the usual one. The two worlds do not cross: that is precisely why the registry
+// is kept apart from 'clusterInfo.providers'.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -15,13 +15,13 @@ interface ISubscriptionCall {
     data: unknown
 }
 
-// Canal minimo: ClusterInfo solo le pide el id para loguear, y processProviderEvent para recibir.
+// A minimal channel: ClusterInfo only asks it for the id in order to log, and processProviderEvent to receive.
 const fakeChannel = (id: string): IChannel => ({
     getChannelData: () => ({ id }),
     processProviderEvent: () => {}
 } as unknown as IChannel)
 
-// Pluvider minimo: un canal que ademas implementa el contrato de produccion.
+// A minimal pluvider: a channel that also implements the production contract.
 const fakePluvider = (id: string, added: ISubscriptionCall[], removed: string[]): TPluviderChannel => ({
     getChannelData: () => ({ id }),
     processProviderEvent: () => {},
@@ -62,15 +62,15 @@ test('pluviderId compone el id con el prefijo, y el autor del plugin no lo escri
     assert.equal(pluviderId('agora'), 'plugin:agora')
     assert.equal(isPluviderId('plugin:agora'), true)
     assert.equal(isPluviderId('events'), false)
-    // un provider que se llamara igual que el plugin sigue siendo direccionable sin ambiguedad
+    // a provider named the same as the plugin is still addressable without ambiguity
     assert.notEqual(pluviderId('agora'), 'agora')
 })
 
 test('isPluvider declara por la PRESENCIA de getPluviderData, no por tener addSubscriber', () => {
     assert.equal(isPluvider(fakePluvider('agora', [], [])), true)
     assert.equal(isPluvider(fakeChannel('log')), false)
-    // un objeto con addSubscriber pero sin getPluviderData NO es un pluvider: addSubscriber es
-    // demasiado generico para decidir con el
+    // an object with addSubscriber but without getPluviderData is NOT a pluvider: addSubscriber is far
+    // too generic to decide with
     const impostor = { getChannelData: () => ({ id: 'x' }), addSubscriber: async () => {} } as unknown as IChannel
     assert.equal(isPluvider(impostor), false)
 })
@@ -111,7 +111,7 @@ test('un provider ausente tampoco rompe, y no se cuela por el camino de pluvider
 
 test('el nombre pelado de un pluvider NO resuelve: hace falta el prefijo', () => {
     const h = harness()
-    // 'agora' a secas es el id del canal, no el del pluvider; sin prefijo se busca entre providers
+    // a bare 'agora' is the channel's id, not the pluvider's; with no prefix it is looked up among providers
     h.ci.addSubscriber('agora', fakeChannel('montag'), {})
     assert.equal(h.toPluvider.length, 0)
     assert.equal(h.toProvider.length, 0)

@@ -35,7 +35,7 @@ const coreFalso = (): ICorePortableConfig & { settings: unknown, sharedAi: unkno
     return estado
 }
 
-// ─── el estado de una entrada ──────────────────────────────────────────────────
+// ─── an entry's state ──────────────────────────────────────────────────────────
 
 test('una extension con instancia y metodo se puede exportar', () => {
     assert.equal(exportStatusOf(refConInstancia('a')), EBundleEntryStatus.AVAILABLE)
@@ -46,8 +46,8 @@ test('con instancia pero sin metodo: no soporta el contrato, que es OPCIONAL', (
 })
 
 test('sin instancia no hay a quien preguntar, y eso NO es lo mismo que no soportarlo', () => {
-    // Un canal no requerido, o anunciado como REMOTE, esta instalado pero no instanciado. Son dos
-    // mensajes distintos para el usuario: uno se arregla usando el plugin, el otro esperando a su autor.
+    // A channel that is not required, or announced as REMOTE, is installed but not instantiated. They are
+    // two different messages for the user: one is fixed by using the plugin, the other by waiting for its author.
     const ref: IExtensionRef = { type: EExtensionType.PLUGIN, id: 'a', displayName: 'a' }
     assert.equal(exportStatusOf(ref), EBundleEntryStatus.NOT_INSTANTIATED)
 })
@@ -67,7 +67,7 @@ test('sin version en el bundle no se inventa un aviso de version', () => {
     assert.equal(importStatusOf(entry, refConInstancia('a')), EBundleEntryStatus.AVAILABLE)
 })
 
-// ─── validacion del envoltorio ─────────────────────────────────────────────────
+// ─── validating the wrapper ────────────────────────────────────────────────────
 
 const bundleBueno = (extensions: IConfigBundle['extensions'] = []): IConfigBundle => ({
     kind: CONFIG_BUNDLE_KIND,
@@ -88,8 +88,8 @@ test('cualquier JSON no es un bundle', () => {
 })
 
 test('un formato mas nuevo se rechaza diciendo QUE hay que hacer, no solo que falla', () => {
-    // Para esto existe formatVersion desde el primer dia: que un Kwirth viejo pueda decir "no se leer
-    // esto" en vez de aplicar medio fichero que no entiende.
+    // This is what formatVersion has existed for since day one: so an old Kwirth can say "I cannot read
+    // this" instead of applying half a file it does not understand.
     const problema = validateBundle({ ...bundleBueno(), formatVersion: CONFIG_BUNDLE_FORMAT_VERSION + 1 })
     assert.ok(problema?.includes('upgrade Kwirth'))
 })
@@ -184,8 +184,8 @@ test('el import aplica lo del core y lo de quien puede recibirlo', async () => {
 })
 
 test('lo que no se puede importar se IGNORA con su motivo, y el resto entra', async () => {
-    // Es la regla que hace usable el mecanismo mientras casi nadie ha adoptado el contrato: un fichero
-    // con diez extensiones y dos instaladas tiene que aplicar esas dos, no fallar entero.
+    // It is the rule that makes the mechanism usable while almost nobody has adopted the contract: a file
+    // with ten extensions and two installed has to apply those two, not fail entirely.
     const bundle = bundleBueno([
         { type: EExtensionType.PLUGIN, id: 'ausente', config: {} },
         { type: EExtensionType.PLUGIN, id: 'buena', config: {} }
@@ -216,8 +216,8 @@ test('una extension que revienta al importar no detiene a las demas', async () =
 })
 
 test('exportar e importar sobre lo mismo no cambia nada', async () => {
-    // Idempotencia: es lo que permite reimportar sin miedo, y lo que se le exige a quien implemente
-    // el contrato. Aqui se comprueba la parte que le toca al core.
+    // Idempotence: it is what makes re-importing fearless, and what is demanded of whoever implements the
+    // contract. What is checked here is the part that falls to the core.
     const core = coreFalso()
     const manager = new ConfigBundleManager(async () => [refConInstancia('a')], core, '0.6.31')
 

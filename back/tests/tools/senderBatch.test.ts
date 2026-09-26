@@ -28,12 +28,12 @@ const memConfigMaps = (): IConfigMaps => ({
 })
 
 interface IFakeSenderOptions {
-    // implementa sendBatch (el caso bueno) o solo send (el caso de compatibilidad)
+    // it implements sendBatch (the good case) or only send (the compatibility case)
     batch?: boolean
-    // el nombre de config que dice tener
+    // the config name it claims to have
     config?: string
     throwOnBatch?: boolean
-    // falla al enviar este cuerpo concreto, para probar que no corta el resto
+    // it fails sending this particular body, to prove it does not cut the rest short
     throwOnBody?: string
 }
 
@@ -72,7 +72,7 @@ const fakeSender = (id: string, options: IFakeSenderOptions = {}): IFakeSender =
 const withSender = async (fake: IFakeSender): Promise<SenderManager> => {
     const manager = new SenderManager(memConfigMaps())
     await manager.init()
-    // se inyecta en el registro de instancias, que es de donde sale getSender()
+    // it is injected into the instance registry, which is where getSender() takes it from
     ;(manager as unknown as { instances: Map<string, ISender> }).instances.set(fake.sender.id, fake.sender)
     return manager
 }
@@ -127,7 +127,7 @@ test('si el sender revienta con el lote, no sube al llamante', async () => {
     const fake = fakeSender('datadog', { batch: true, throwOnBatch: true })
     const manager = await withSender(fake)
 
-    // el reenvio de log no puede tumbar a quien lo produce
+    // forwarding a log must not bring down whoever produces it
     await assert.doesNotReject(() => manager.sendBatch('datadog', 'default', [linea('a')]))
 })
 
@@ -183,11 +183,11 @@ test('una instancia re-creada recupera las configuraciones del core', async () =
     }
     ;(manager as unknown as { registeredSenders: Map<string, unknown> }).registeredSenders.set('file', FakeSender)
 
-    // el core registra una configuracion: se guarda en su almacen y llega a la instancia
+    // the core registers a configuration: it is stored in its store and reaches the instance
     manager.addConfig('file', { name: 'montag-test' } as never)
     assert.deepEqual(recibidas, ['montag-test'])
 
-    // ...y ahora se tira la instancia, que es lo que hace el recargador de dev tras un rebuild
+    // ...and now the instance is thrown away, which is what the dev reloader does after a rebuild
     ;(manager as unknown as { instances: Map<string, unknown> }).instances.delete('file')
 
     const nueva = manager.getSender('file')
