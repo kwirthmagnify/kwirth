@@ -61,7 +61,7 @@ const managerWithFake = () => {
     return mgr
 }
 
-// ---- conectores ----
+// ---- connectors ----
 test('registerConnector + getConnector instancia el conector', () => {
     const mgr = managerWithFake()
     const c = mgr.getConnector('fake')
@@ -123,7 +123,7 @@ test('export/import hace roundtrip del record completo', async () => {
     assert.deepEqual(await mgr2.getInstance('google'), exported['google'])
 })
 
-// ---- conectores instalables (tgz) ----
+// ---- installable connectors (tgz) ----
 test('install(tgz) registra el conector, lo lista en el índice, loadAll lo recupera y uninstall lo quita', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kwirth-idp-test-'))
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ id: 'installed-fake', name: '@x/installed-fake', displayName: 'Installed Fake', version: '0.0.1', description: 'test connector' }))

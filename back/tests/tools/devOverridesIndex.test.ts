@@ -8,22 +8,22 @@ import { ProviderManager } from '../../src/tools/ProviderManager'
 import { WebhookManager } from '../../src/tools/WebhookManager'
 
 /*
-    Una extension registrada en kwirth-dev.json SUSTITUYE a la instalada con su mismo id: no se suma
-    a ella.
+    An extension registered in kwirth-dev.json REPLACES the installed one with the same id: it is not
+    added to it.
 
-    Sonaba obvio y no lo era. 'listInstalled()' concatena el indice de instalados con los metadatos
-    de dev, y en senders, providers y webhooks faltaba filtrar los que se pisan: en un entorno de
-    desarrollo —donde una extension esta instalada Y ademas montada desde su dist— la misma salia
-    DOS veces, y el duplicado viajaba tal cual por '/core/senders', '/core/providers' y
-    '/core/webhooks' a todos sus consumidores: los gestores del front y cualquier extension que
-    liste. Lo cazo el e2e de sender-debug, cuyo desplegable pintaba 'console' repetido.
+    It sounded obvious and it was not. 'listInstalled()' concatenates the installed index with the dev
+    metadata, and in senders, providers and webhooks filtering out the overridden ones was missing: in a
+    development environment —where an extension is installed AND also mounted from its dist— the same one
+    came out TWICE, and the duplicate travelled as it was through '/core/senders', '/core/providers' and
+    '/core/webhooks' to all their consumers: the front end's managers and any extension that lists. The
+    sender-debug e2e caught it, its dropdown painting 'console' twice.
 
-    Plugin, theme, login, homepage y aitoolset ya lo hacian bien; estos tres se habian quedado atras.
+    Plugin, theme, login, homepage and aitoolset already did it right; these three had been left behind.
 */
 
 // ── mocks ────────────────────────────────────────────────────────────────────
 
-// IConfigMaps en memoria, sembrado con el indice de instalados que se quiera probar.
+// In-memory IConfigMaps, seeded with whichever installed index is to be tested.
 const makeConfigMaps = (seed: Record<string, unknown> = {}) => {
     const store = new Map<string, unknown>(Object.entries(seed))
     const keyed = new Map<string, Map<string, unknown>>()
@@ -40,10 +40,10 @@ const makeConfigMaps = (seed: Record<string, unknown> = {}) => {
 }
 
 /*
-    Monta un workspace de dev de verdad: un kwirth-dev.json con su seccion y un dist por extension
-    (package.json + back.js), y ejecuta el cuerpo con el cwd ahi — que es de donde los managers leen
-    el fichero. No se falsean los mapas de dev a mano a proposito: el camino que se quiere probar es
-    el que recorre el core al arrancar.
+    Sets up a real dev workspace: a kwirth-dev.json with its section and one dist per extension
+    (package.json + back.js), and runs the body with the cwd there — which is where the managers read the
+    file from. The dev maps are deliberately not faked by hand: the path to be tested is the one the core
+    walks at startup.
 */
 const withDevWorkspace = async (section: string, ids: string[], version: string, body: () => Promise<void>): Promise<void> => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kwirth-dev-ws-'))
@@ -52,8 +52,8 @@ const withDevWorkspace = async (section: string, ids: string[], version: string,
         const dist = path.join(root, id, 'dist')
         fs.mkdirSync(dist, { recursive: true })
         fs.writeFileSync(path.join(dist, 'package.json'), JSON.stringify({ id, name: id, displayName: `${id} (dev)`, version, description: 'dev build' }))
-        // back.js minimo: lo unico que hace falta es que exporte una clase. Si fallase, el registro
-        // de dev se hace igual (es lo primero que ocurre), pero asi se recorre el camino completo.
+        // a minimal back.js: all it takes is that it exports a class. Were it to fail, the dev
+        // registration happens anyway (it is the first thing that occurs), but this way the whole path is walked.
         fs.writeFileSync(path.join(dist, 'back.js'), `class Dev { constructor() { this.id = ${JSON.stringify(id)} } }\nmodule.exports = Dev\n`)
         entries[id] = path.join(root, id, 'dist')
     }
@@ -66,8 +66,8 @@ const withDevWorkspace = async (section: string, ids: string[], version: string,
     }
     finally {
         process.chdir(previous)
-        // los watchers de dev son persistent:false, pero se sueltan igual para no dejar nada mirando
-        // a un directorio temporal que se borra a continuacion
+        // the dev watchers are persistent:false, but they are released all the same so nothing is left
+        // watching a temporary directory that is deleted right after
         for (const id of ids) fs.unwatchFile(path.join(root, id, 'dist', 'back.js'))
         fs.rmSync(root, { recursive: true, force: true })
     }
@@ -86,8 +86,8 @@ describe('SenderManager.listInstalled', () => {
 
             const list = await manager.listInstalled()
             assert.deepEqual(list.map(m => m.id), ['console'])
-            // manda el de dev: es el que getSender() acaba resolviendo, asi que es el que describe
-            // al sender que de verdad recibira el mensaje
+            // the dev one rules: it is what getSender() ends up resolving, so it is what describes the
+            // sender that will really receive the message
             assert.equal(list[0].version, '9.9.9-dev')
             assert.equal(list[0].displayName, 'console (dev)')
         })

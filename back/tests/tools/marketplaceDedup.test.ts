@@ -6,15 +6,15 @@ import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
 
 /*
-    Una descarga por manifest, aunque se pidan diez a la vez.
+    One download per manifest, even when ten are asked for at once.
 
-    El arranque del front pide el catalogo de CADA tipo de extension en paralelo —diez peticiones—, y la
-    cache por si sola no sirve para eso: se consulta al entrar y se escribe al salir, asi que las diez se
-    encuentran la cache vacia y descargan las diez el mismo manifest. Con tres marketplaces eso son
-    treinta descargas externas donde bastaban tres.
+    The front end's startup asks for EVERY extension type's catalogue in parallel —ten requests— and the
+    cache on its own is no use for that: it is consulted on the way in and written on the way out, so all
+    ten find the cache empty and all ten download the same manifest. With three marketplaces that is
+    thirty external downloads where three were enough.
 
-    No da error ni se nota con un manifest rapido: solo es trabajo de mas, justo en el peor momento del
-    arranque. De ahi que se fije con un test y no de vista.
+    It gives no error and goes unnoticed with a fast manifest: it is just extra work, at the worst possible
+    moment of the startup. Hence it is pinned down with a test and not by eye.
 */
 
 const URL_PRIVADA = 'https://ejemplo/manifest.json'
@@ -42,11 +42,12 @@ const secretsFalsos = (): ISecrets => ({
 })
 
 /*
-    Sustituye el fetch global y cuenta las descargas POR URL.
+    Replaces the global fetch and counts the downloads PER URL.
 
-    Por url y no en total, porque el manifest PUBLICO tiene una direccion distinta por tipo
-    (`plugins/manifest.json`, `senders/manifest.json`...): once descargas suyas son correctas y no hay
-    nada que deduplicar. El que se repetia es el PRIVADO, que es una sola url para los once tipos.
+    Per url and not in total, because the PUBLIC manifest has a different address per type
+    (`plugins/manifest.json`, `senders/manifest.json`...): eleven downloads of it are correct and there is
+    nothing to deduplicate. The one that was being repeated is the PRIVATE one, which is a single url for
+    all eleven types.
 */
 const contarDescargas = (): { porUrl: (url: string) => number, total: () => number, restaurar: () => void } => {
     const original = globalThis.fetch

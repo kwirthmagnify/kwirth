@@ -6,13 +6,13 @@ import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ELogComponent, logError } from '../tools/Logging'
 
 /*
-    Las rutas de la portabilidad de configuracion.
+    The configuration portability routes.
 
-    Todo pasa por `validKey`: un bundle puede llevar credenciales dentro y, al importar, reescribe la
-    configuracion de la instalacion entera. No es una lectura cualquiera.
+    Everything goes through `validKey`: a bundle can carry credentials inside and, when imported, it
+    rewrites the whole installation's configuration. It is not just any read.
 
-    Las rutas de export/import que ya tienen `idp`, `sender` y `webhook` NO se tocan: siguen valiendo
-    para llevarse una extension suelta. Esto se suma por encima, para el conjunto.
+    The export/import routes `idp`, `sender` and `webhook` already have are NOT touched: they remain
+    valid for taking a single extension away. This is added on top, for the whole set.
 */
 export class ConfigBundleApi {
     router: Router

@@ -10,16 +10,16 @@ import { SenderManager } from '../../src/tools/SenderManager'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 
 /*
-    Actualizar una extension instalando ENCIMA, de punta a punta.
+    Updating an extension by installing ON TOP, end to end.
 
-    El guardian se prueba suelto en extensionInstallGuard.test.ts; aqui lo que se comprueba es lo otro,
-    que es donde esta el fallo silencioso: que lo que queda guardado despues de actualizar es EXACTAMENTE
-    lo que trae el paquete nuevo, y no la suma de lo que fueron trayendo sus versiones.
+    The guard is tested on its own in extensionInstallGuard.test.ts; what is checked here is the other
+    half, which is where the silent failure is: that what is left stored after updating is EXACTLY what
+    the new package brings, and not the sum of what its successive versions brought.
 
-    Los managers escriben cada artefacto en su propia clave y algunas escrituras eran condicionales —el
-    front solo si cabia, el fondo solo si venia—. Saltarse una escritura no deja la clave vacia: la deja
-    con el contenido de la version ANTERIOR. Es un fallo que no da error, no aparece en el indice y solo
-    se nota cuando alguien se pregunta por que sigue viendo lo de antes.
+    The managers write each artifact into its own key and some writes were conditional —the front only if
+    it fitted, the background only if it came. Skipping a write does not leave the key empty: it leaves it
+    with the PREVIOUS version's content. It is a failure that gives no error, does not show up in the index
+    and is only noticed when somebody wonders why they still see the old thing.
 */
 
 const almacenFalso = (limite?: number): IConfigMaps & { datos: Map<string, any> } => {
@@ -76,9 +76,9 @@ test('un login no se reinstala sin permiso, y con permiso se actualiza', async (
 
 test('si la version nueva de un login ya no trae fondo, el fondo viejo DESAPARECE', async () => {
     /*
-        El caso concreto que hay que sostener: lo instalado refleja lo que trae la extension. Un login que
-        deja de traer imagen tiene que quedarse sin imagen, no heredar la de la version anterior y seguir
-        pintando un fondo que su paquete ya no incluye.
+        The specific case that has to hold: what is installed reflects what the extension brings. A login
+        that stops bringing an image has to be left without an image, not inherit the previous version's
+        and go on painting a background its package no longer includes.
     */
     const almacen = almacenFalso()
     const manager = new LoginManager(almacen)

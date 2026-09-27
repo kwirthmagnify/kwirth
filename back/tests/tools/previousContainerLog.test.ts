@@ -4,15 +4,15 @@ import { CoreV1Api } from '@kubernetes/client-node'
 import { getPreviousContainerLog, readPreviousContainerLog, resolvePreviousLogLines } from '../../src/tools/PreviousContainerLog'
 
 /*
-    Cuando el core muere dentro del cluster, lo que explica la muerte se queda en el contenedor anterior y
-    solo el kubelet lo tiene, mientras lo tenga. Esto se lee una vez, al arrancar.
+    When the core dies inside the cluster, what explains the death stays in the previous container and
+    only the kubelet has it, for as long as it has it. This is read once, at startup.
 
-    Los dos invariantes que fijan estos tests:
+    The two invariants these tests pin down:
 
-      · leerlo NUNCA puede estropear el arranque — por eso nada de aqui lanza, ni cuando la API de
-        Kubernetes falla;
-      · "no hubo reinicio" y "hubo reinicio pero el log ya no esta" son estados DISTINTOS. Confundirlos es
-        lo que hace que quien mira crea que Kwirth se ha comido el log.
+      · reading it can NEVER spoil the startup — which is why nothing here throws, not even when the
+        Kubernetes API fails;
+      · "there was no restart" and "there was a restart but the log is gone" are DIFFERENT states. Mixing
+        them up is what makes whoever is looking believe Kwirth has eaten the log.
 */
 
 interface IFakeCallOptions {

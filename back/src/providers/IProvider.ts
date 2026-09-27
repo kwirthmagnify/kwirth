@@ -13,19 +13,19 @@ import { ApiKeyApi } from "../api/ApiKeyApi"
 import { IComponentLogger, providerLogger } from "../tools/Logging"
 
 /*
-    Este fichero era un ESPEJO MANUAL del contrato publicado en common-back y habia empezado a
-    divergir. Ahora la unica fuente del contrato es common-back: aqui solo se reexporta lo que no
-    cambia y se ESTRECHA lo que el core necesita ver con tipos concretos (Router, ApiKeyApi,
-    ClusterInfo, IChannel) en vez de los 'any' con los que se publica, mas los dos flags de runtime
-    que gestiona el propio core y que un autor de providers no implementa.
+    This file used to be a MANUAL MIRROR of the contract published in common-back, and it had started to
+    diverge. The contract's only source is now common-back: here what does not change is merely
+    re-exported, and what the core needs to see is NARROWED with concrete types (Router, ApiKeyApi,
+    ClusterInfo, IChannel) instead of the 'any' it is published with, plus the two runtime flags the core
+    itself manages and that a provider's author does not implement.
 */
 
 export { IProviderSubscriptionField, IProviderSubscriptionHelp, IProviderFieldDef }
 
 /*
-    Persistencia que el core inyecta al provider. Es el mismo contrato que reciben los canales
-    (IBackChannelObject), pero con su propio espacio de nombres: 'kwirth-store-provider-<id>'.
-    El booleano 'secret' decide el destino: true -> Secret, false -> ConfigMap.
+    The persistence the core injects into the provider. It is the same contract the channels receive
+    (IBackChannelObject), but with a namespace of its own: 'kwirth-store-provider-<id>'.
+    The 'secret' boolean decides the destination: true -> Secret, false -> ConfigMap.
 */
 export type IProviderStorage = IPublicProviderStorage
 
@@ -52,12 +52,12 @@ export const createProviderInstance = (providerConstructor:TProviderConstructor,
 }
 
 /*
-    Vista que el CORE tiene de un provider. Es el contrato publicado, con dos anadidos:
+    The view the CORE has of a provider. It is the published contract, with two additions:
 
-      - los suscriptores son IChannel y los routers son Router de express, no 'any': dentro del core
-        si conocemos esos tipos y no queremos perderlos.
-      - 'started' y 'configRouterStarted' son estado de runtime que lleva el core, no algo que
-        implemente el autor del provider; por eso no forman parte del contrato publicado.
+      - the subscribers are IChannel and the routers are express Routers, not 'any': inside the core
+        we do know those types and we do not want to lose them.
+      - 'started' and 'configRouterStarted' are runtime state the core keeps, not something a
+        provider's author implements; that is why they are not part of the published contract.
 */
 export interface IProvider extends Omit<IPublicProvider, 'addSubscriber'|'removeSubscriber'|'updateSubscription'|'router'|'configRouter'|'apiKeyApi'> {
     addSubscriber: (c:IChannel, data:any) => Promise<void>
@@ -65,18 +65,18 @@ export interface IProvider extends Omit<IPublicProvider, 'addSubscriber'|'remove
     updateSubscription?: (c:IChannel, data:any) => Promise<void>
     router: Router|undefined
     /*
-        Router de gestion del provider (su propia configuracion). El core lo monta SIEMPRE detras de
-        validacion de accessKey en '/core/providerconfig/<providerId>'. Es una via distinta de 'router',
-        que es publica y puede recibir trafico externo (OTLP, POSTs de terceros).
+        The provider's management router (its own configuration). The core ALWAYS mounts it behind
+        accessKey validation at '/core/providerconfig/<providerId>'. It is a different route from
+        'router', which is public and can receive external traffic (OTLP, third-party POSTs).
     */
     configRouter?: Router
     started?: boolean
     configRouterStarted?: boolean
     apiKeyApi: ApiKeyApi|undefined
     /*
-        Declarado aqui y no tomado del contrato publicado porque 'common-back' todavia no se ha
-        republicado con el: en cuanto npm sirva la version nueva, esta linea sobra. Mientras tanto el
-        core compila y los providers que ya lo implementen reciben su logger.
+        Declared here and not taken from the published contract because 'common-back' has not been
+        republished with it yet: as soon as npm serves the new version, this line is redundant. In the
+        meantime the core compiles and the providers that already implement it receive their logger.
     */
     setLogger?: (logger: IComponentLogger) => void
     /*

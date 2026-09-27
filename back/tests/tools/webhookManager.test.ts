@@ -151,7 +151,7 @@ test('removeConfig evicts the token; rotateToken invalidates the old one', async
     assert.equal(mgr.resolve(token1), undefined)
     assert.ok(mgr.resolve(token2))
 
-    // remove → ambos fuera
+    // remove → both gone
     mgr.removeConfig('jira', 'default')
     assert.equal(mgr.resolve(token2), undefined)
     assert.equal(mgr.getUrl('jira', 'default'), undefined)

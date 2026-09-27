@@ -8,12 +8,12 @@ import { AiToolsetManager } from '../../src/tools/AiToolsetManager'
 import { PluginManager } from '../../src/tools/PluginManager'
 
 /*
-    La configuracion que el core guarda DE una extension.
+    The configuration the core stores ABOUT an extension.
 
-    Lo que se fija aqui es sobre todo QUE NO SE ESCAPE UN SECRETO. Estas configuraciones acaban en un
-    fichero que se descarga a la carpeta de descargas de alguien, y el core no sabe por si mismo cuales
-    de sus campos son contraseñas: se lo dice el esquema que publica cada extension. Un fallo aqui no da
-    error, da una contraseña en claro en un fichero — y no se nota.
+    What is pinned down here is above all THAT NO SECRET ESCAPES. These configurations end up in a file
+    that gets downloaded to somebody's downloads folder, and the core does not know by itself which of
+    their fields are passwords: the schema each extension publishes tells it. A failure here does not give
+    an error, it gives a password in the clear in a file — and it goes unnoticed.
 */
 
 const opts = (includeCredentials: boolean) => ({ includeCredentials })

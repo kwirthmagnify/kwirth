@@ -345,10 +345,10 @@ export class WebhookManager implements IWebhookAccess {
             }
 
             /*
-                null y no saltarse la escritura. Actualizando, una clave que no se toca se queda con el
-                contenido de la version ANTERIOR: el front de antes si el de ahora no cabe —o si la nueva
-                version ya no trae front—, y lo mismo con el back. Lo instalado tiene que ser exactamente
-                lo que trae el paquete, no la suma de lo que fueron trayendo sus versiones.
+                null, and not skipping the write. When updating, a key that is not touched keeps the
+                PREVIOUS version's content: the old front if the current one does not fit —or if the new
+                version no longer brings a front— and the same with the back. What is installed has to be
+                exactly what the package brings, not the sum of what its successive versions brought.
             */
             await this.configMaps.write(`kwirth-webhook-${meta.id}-front`, frontEntry)
 

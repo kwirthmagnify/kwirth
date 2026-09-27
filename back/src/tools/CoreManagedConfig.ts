@@ -9,20 +9,20 @@ import { AiToolsetManager } from './AiToolsetManager'
 import { IdpManager } from './IdpManager'
 
 /*
-    La configuracion que el core guarda DE una extension, presentada como un `IExtension` mas.
+    The configuration the core stores ABOUT an extension, presented as one more `IExtension`.
 
-    No toda la configuracion de una extension la guarda ella. Hay bastante que la guarda el core y que
-    la extension ni siquiera ve: un sender no sabe cuales son sus configuraciones de envio —las guarda
-    `SenderManager`—, un conector de IdP no puede enumerar sus instancias, y ningun toolset conoce sus
-    concesiones. Pedirles que lo exporten seria pedirles algo que no pueden hacer.
+    Not all of an extension's configuration is stored by the extension. A good deal of it is stored by the
+    core and the extension never even sees it: a sender does not know what its sending configurations are
+    — `SenderManager` stores them — an IdP connector cannot enumerate its instances, and no toolset knows
+    its grants. Asking them to export that would be asking for something they cannot do.
 
-    Asi que lo exporta quien puede. Y no hace falta un mecanismo aparte para ello: el core fabrica aqui
-    un `IExtension` por entrada y lo pone donde iria la instancia. `ConfigBundleManager` sigue llamando
-    a `exportConfig`/`importConfig` sin enterarse de quien hay al otro lado — la extension, el core, o
-    los dos combinados.
+    So whoever can, exports it. And no separate mechanism is needed for it: the core manufactures an
+    `IExtension` per entry here and puts it where the instance would go. `ConfigBundleManager` goes on
+    calling `exportConfig`/`importConfig` without finding out who is on the other side — the extension,
+    the core, or both combined.
 
-    Consecuencia practica: casi toda extension tiene algo que exportar desde el primer dia, sin que su
-    autor mueva un dedo. `IExtension` queda para las que ademas guardan cosas por su cuenta.
+    The practical consequence: nearly every extension has something to export from day one, without its
+    author lifting a finger. `IExtension` is left for those that also store things on their own account.
 
     Ver `plans/config-portability/PRD.md`.
 */
@@ -52,8 +52,8 @@ export const combine = (core: IExtension, own: IExtension | undefined): IExtensi
 const nada = (): IExtensionImportResult => ({ applied: 0, skipped: 0, warnings: [] })
 
 /*
-    Configuracion de instalacion de un plugin o un provider: un JSON generico que edita su gestor. El
-    core no lo interpreta, asi que se copia entero.
+    A plugin's or a provider's installation configuration: generic JSON edited by its manager. The core
+    does not interpret it, so it is copied whole.
 */
 export const pluginInstallConfig = (manager: PluginManager, id: string): IExtension => ({
     exportConfig: async () => ({ installConfig: await manager.getConfig(id) }),
@@ -76,13 +76,13 @@ export const providerInstallConfig = (manager: ProviderManager, id: string): IEx
 })
 
 /*
-    Las configuraciones de un sender. Viven en el core (`kwirth-sender-configs`), no en el sender, que
-    solo recibe la suya al usarla.
+    A sender's configurations. They live in the core (`kwirth-sender-configs`), not in the sender, which
+    only receives its own when using it.
 
-    ⚠️ Pueden llevar credenciales dentro (la contraseña de un SMTP, el token de un Teams), y el core no
-    sabe cuales de sus campos son secretos — eso lo declara el esquema del sender. Sin credenciales se
-    vacian por esquema; si el sender no publica esquema, se omite la configuracion entera antes que
-    arriesgarse a escribir una contraseña en un fichero que acaba en la carpeta de descargas de alguien.
+    ⚠️ They can carry credentials inside (an SMTP's password, a Teams token), and the core does not know
+    which of their fields are secret — the sender's schema declares that. Without credentials they are
+    emptied by schema; if the sender publishes no schema, the whole configuration is left out rather than
+    risk writing a password into a file that ends up in somebody's downloads folder.
 */
 export const senderConfigs = (manager: SenderManager, id: string): IExtension => ({
     exportConfig: async (options) => {
@@ -152,12 +152,12 @@ export const webhookConfigs = (manager: WebhookManager, id: string): IExtension 
 })
 
 /*
-    Las INSTANCIAS de un conector de IdP. Un conector puede tener varias —`IIdpInstanceConfig` apunta a
-    el con `connectorId`, no al reves—, y el conector no puede enumerarlas: solo recibe una como
-    parametro cuando toca autenticar.
+    An IdP connector's INSTANCES. A connector can have several — `IIdpInstanceConfig` points at it with
+    `connectorId`, not the other way round — and the connector cannot enumerate them: it only receives one
+    as a parameter when it is time to authenticate.
 
-    Viven en un Secret porque su `config` lleva el clientSecret. Que campos son secretos lo dice el
-    esquema del propio conector, que para eso existe.
+    They live in a Secret because their `config` carries the clientSecret. Which fields are secret is said
+    by the connector's own schema, which is what it is there for.
 */
 export const idpInstances = (manager: IdpManager, connectorId: string): IExtension => ({
     exportConfig: async (options) => {
@@ -199,11 +199,11 @@ export const idpInstances = (manager: IdpManager, connectorId: string): IExtensi
 })
 
 /*
-    Las concesiones de un toolset: que plugins pueden usar sus tools. No las guarda el toolset —es solo
-    back, sin objeto al que preguntar—, las guarda el core.
+    A toolset's grants: which plugins may use its tools. The toolset does not store them — it is back end
+    only, with no object to ask — the core does.
 
-    ⚠️ Referencian PLUGINS por id. Si en el destino no esta ese plugin, la concesion no sirve de nada;
-    `setGrants` devuelve los que si se aplicaron, y de ahi sale el aviso.
+    ⚠️ They reference PLUGINS by id. If that plugin is not at the destination, the grant is of no use;
+    `setGrants` returns the ones that were applied, and the warning comes from there.
 */
 export const toolsetGrants = (manager: AiToolsetManager, id: string): IExtension => ({
     exportConfig: async () => ({ grants: (await manager.listGrants())[id] ?? [] }),

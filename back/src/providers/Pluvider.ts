@@ -3,27 +3,27 @@ import { PLUVIDER_ID_PREFIX } from '@kwirthmagnify/kwirth-common'
 import { ELogComponent, logInfo, logWarning, providerLogger } from '../tools/Logging'
 
 /*
-    Un PLUVIDER es un canal que ADEMAS produce: expone in-process la informacion que ya genera, para
-    que otros plugins se suscriban a ella. Sigue siendo un solo plugin, una sola clase y una sola
-    instancia; lo unico que cambia es que tiene una puerta mas.
+    A PLUVIDER is a channel that ALSO produces: it exposes in-process the information it already
+    generates, so that other plugins can subscribe to it. It is still one plugin, one class and one
+    instance; the only thing that changes is that it has one more door.
 
-    No entra en 'clusterInfo.providers'. Ese array lo recorren los bucles que montan routers en la
-    ruta publica de providers, escriben 'apiKeyApi' o marcan 'started': un canal metido ahi acabaria
-    con el router de su front publicado en una ruta que no exige accessKey. Por eso vive en su propio
-    registro, y la unica puerta comun es la resolucion por id de ClusterInfo.
+    It does not go into 'clusterInfo.providers'. That array is walked by the loops that mount routers on
+    the public providers route, write 'apiKeyApi' or mark 'started': a channel put in there would end up
+    with its front end's router published on a route that does not demand an accessKey. That is why it
+    lives in a registry of its own, and the only common door is ClusterInfo's resolution by id.
 */
 export type TPluviderChannel = IChannel & IPluvider
 
 /*
-    La declaracion es la PRESENCIA de getPluviderData(): un canal que lo implementa se ofrece como
-    productor. No se detecta por 'addSubscriber', que es demasiado generico para decidir con el.
+    Declaring it IS the PRESENCE of getPluviderData(): a channel that implements it offers itself as a
+    producer. It is not detected through 'addSubscriber', which is too generic to decide on.
 */
 export const isPluvider = (c: IChannel): c is TPluviderChannel =>
     typeof (c as Partial<IPluvider>).getPluviderData === 'function'
 
 /*
-    El id de un pluvider lo compone SIEMPRE el core a partir del id del canal, nunca lo escribe el
-    autor del plugin: asi no hay forma de equivocarse con el prefijo.
+    A pluvider's id is ALWAYS composed by the core out of the channel's id, never written by the plugin's
+    author: that way there is no way of getting the prefix wrong.
 */
 export const pluviderId = (channelId: string): string => PLUVIDER_ID_PREFIX + channelId
 
@@ -31,16 +31,16 @@ export const pluviderId = (channelId: string): string => PLUVIDER_ID_PREFIX + ch
 export const isPluviderId = (id: string): boolean => id.startsWith(PLUVIDER_ID_PREFIX)
 
 /*
-    Nombres que existen a la vez como provider y como pluvider: un provider 'agora' y un plugin 'agora'
-    que ademas produce, o sea 'plugin:agora'.
+    Names that exist as both a provider and a pluvider: an 'agora' provider and an 'agora' plugin that
+    also produces, that is, 'plugin:agora'.
 
-    Tecnicamente NO hay ambiguedad —viven en registros distintos y cada uno se direcciona con su propio
-    id, que es justo para lo que esta el prefijo— pero para una persona que lee una lista o escribe una
-    suscripcion si son faciles de confundir. Por eso se avisa. Y solo se avisa: nunca se rechaza una
-    instalacion por esto, entre otras cosas porque las dos extensiones pueden ser de terceros y el
-    usuario no controlar ninguna de las dos.
+    Technically there is NO ambiguity — they live in different registries and each is addressed by its own
+    id, which is exactly what the prefix is for — but to a person reading a list or writing a subscription
+    they are easy to confuse. Hence the warning. And only a warning: an installation is never rejected
+    over this, among other reasons because both extensions may be third-party and the user may control
+    neither.
 
-    Se devuelve el nombre PELADO ('agora'), que es la parte que de verdad coincide.
+    The BARE name is returned ('agora'), which is the part that really coincides.
 */
 export const findNameCollisions = (pluviderIds: string[], providerIds: string[]): string[] =>
     pluviderIds
@@ -49,8 +49,8 @@ export const findNameCollisions = (pluviderIds: string[], providerIds: string[])
         .filter(name => providerIds.includes(name))
 
 /*
-    Avisa de cada coincidencia. 'when' dice en que momento se detecto, porque el mismo choque se reporta
-    en tres: al instalar el plugin, al instalar el provider y en cada arranque del core.
+    Warns about every coincidence. 'when' says at which moment it was detected, because the same clash is
+    reported at three: installing the plugin, installing the provider, and every startup of the core.
 */
 export const warnNameCollisions = (pluviderIds: string[], providerIds: string[], when: string): string[] => {
     const collisions = findNameCollisions(pluviderIds, providerIds)
@@ -61,14 +61,14 @@ export const warnNameCollisions = (pluviderIds: string[], providerIds: string[],
 }
 
 /*
-    De todo lo que los canales PIDEN en 'requirements.providers', que es lo que de verdad no esta
-    disponible. No es lo mismo que recorrer lo registrado: un id pedido y no registrado no aparecia
-    por ningun lado hasta que alguien intentaba suscribirse a el.
+    Of everything the channels ASK FOR in 'requirements.providers', what is really not available. It is
+    not the same as walking what is registered: an id that was asked for and is not registered appeared
+    nowhere until somebody tried to subscribe to it.
 
-    Se devuelven por separado porque la ausencia NO significa lo mismo en cada caso. Un provider
-    declarado y no registrado es una mala configuracion. Un pluvider ausente es legitimo: su plugin
-    puede no estar instalado, o ser un canal SINGLE que aqui se anuncia como remoto — y el consumidor
-    tiene que seguir funcionando sin el.
+    They come back separately because absence does NOT mean the same thing in each case. A provider that
+    is declared and not registered is a misconfiguration. An absent pluvider is legitimate: its plugin may
+    not be installed, or it may be a SINGLE channel announced here as remote — and the consumer has to go
+    on working without it.
 */
 export const findMissingSubscriptionTargets = (
     requestedIds: string[],
@@ -89,14 +89,14 @@ export const findMissingSubscriptionTargets = (
 }
 
 /*
-    Rehace el registro cuando la INSTANCIA de un canal se sustituye — hoy solo pasa en el hot-reload de
-    un plugin de dev, pero el problema es el mismo siempre: el registro guarda la instancia, no la
-    clase, asi que sustituir una sin tocar el registro deja al core hablando con un objeto que ya nadie
-    usa. Sirve su descripcion, su ayuda de suscripcion y su filtro TAL Y COMO ERAN, que es justo lo que
-    hace que un cambio recien recargado parezca no haber surtido efecto.
+    Rebuilds the registry when a channel's INSTANCE is replaced — today that only happens on the hot
+    reload of a dev plugin, but the problem is always the same: the registry holds the instance, not the
+    class, so replacing one without touching the registry leaves the core talking to an object nobody uses
+    any more. It serves its description, its subscription help and its filter EXACTLY AS THEY WERE, which
+    is precisely what makes a freshly reloaded change look as though it had no effect.
 
-    Los suscriptores vivos se quedan en la instancia anterior y no se pueden migrar: quien estuviera
-    escuchando tiene que volver a suscribirse. Por eso se avisa.
+    The live subscribers stay on the previous instance and cannot be migrated: whoever was listening has
+    to subscribe again. Hence the warning.
 */
 export const rebindPluvider = async (pluviders: Map<string, TPluviderChannel>, pluvId: string, newInstance: IChannel): Promise<void> => {
     const old = pluviders.get(pluvId)
@@ -114,14 +114,14 @@ export const rebindPluvider = async (pluviders: Map<string, TPluviderChannel>, p
 }
 
 /*
-    Fase de arranque de los pluviders: va entre la de providers y la de canales. Un pluvider produce
-    desde su lado provider, asi que cuando el primer consumidor haga startChannel() y se suscriba, la
-    produccion ya esta viva.
+    The pluviders' startup phase: it goes between the providers' one and the channels' one. A pluvider
+    produces from its provider side, so by the time the first consumer calls startChannel() and
+    subscribes, production is already alive.
 
-    El orden DENTRO de esta fase no esta garantizado, y es deliberado: un pluvider que consuma de otro
-    puede perderse los primeros eventos, y se asume como limitacion antes que montar un grafo de
-    dependencias. Que uno falle al arrancar tampoco tumba a nadie: su canal sigue adelante y quien se
-    suscriba a el simplemente no recibira, que es la dependencia blanda.
+    The order WITHIN this phase is not guaranteed, and that is deliberate: a pluvider that consumes
+    another one may miss the first events, and that is accepted as a limitation rather than building a
+    dependency graph. One failing to start does not take anybody down either: its channel carries on and
+    whoever subscribes to it simply receives nothing, which is the soft dependency.
 */
 export const startPluviders = async (pluviders: Map<string, TPluviderChannel>): Promise<void> => {
     if (pluviders.size === 0) return

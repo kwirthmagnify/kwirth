@@ -73,7 +73,7 @@ async function startServer(initialSettings?: IKwirthSettings, initialSecrets?: R
     return { base: `http://127.0.0.1:${port}`, store, secrets, changes, stop: () => new Promise<void>(r => server.close(() => r())) }
 }
 
-// ---- resolveMetricsInterval: precedencia guardado > METRICSINTERVAL > 15 ----
+// ---- resolveMetricsInterval: precedence stored > METRICSINTERVAL > 15 ----
 
 test('resolveMetricsInterval: sin nada guardado ni env → 15', () => {
     delete process.env.METRICSINTERVAL
@@ -216,7 +216,7 @@ test('PUT parcial no borra ajustes que no envia', async () => {
     finally { await srv.stop() }
 })
 
-// ---- hidratacion en arranque ----
+// ---- hydration at startup ----
 
 test('SettingsApi.read devuelve {} cuando no hay nada guardado', async () => {
     const store = memConfigMaps()
@@ -521,11 +521,11 @@ test('marketplaces y metricsInterval no se pisan entre si', async () => {
 })
 
 /*
-    previousLogLines: cuantas lineas del log del contenedor ANTERIOR se leen al arrancar.
+    previousLogLines: how many lines of the PREVIOUS container's log are read at startup.
 
-    Misma precedencia que el intervalo de metricas —lo guardado gana, luego la variable de entorno, luego
-    el default— porque es el mismo tipo de ajuste. Se prueba aparte porque el orden ES el contrato: quien
-    lo configura en la pantalla espera que su valor mande sobre el deployment.
+    The same precedence as the metrics interval —what is stored wins, then the environment variable, then
+    the default— because it is the same kind of setting. It is tested separately because the order IS the
+    contract: whoever configures it on the screen expects their value to rule over the deployment.
 */
 test('previousLogLines: lo guardado gana sobre el entorno', () => {
     process.env.PREVIOUSLOGLINES = '250'

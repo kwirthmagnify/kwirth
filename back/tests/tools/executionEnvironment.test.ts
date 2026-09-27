@@ -6,16 +6,17 @@ import os from 'os'
 import path from 'path'
 
 /*
-    Las variables que deciden el entorno. Se limpian antes de cada caso porque el proceso de test las
-    hereda del shell, y un KWIRTH_STORE puesto en la maquina de quien corre esto cambiaria el resultado.
+    The variables that decide the environment. They are cleared before each case because the test process
+    inherits them from the shell, and a KWIRTH_STORE set on the machine of whoever runs this would change
+    the result.
 */
 const VARIABLES = ['FORCE', 'KUBERNETES_SERVICE_HOST', 'ECS_CONTAINER_METADATA_URI_V4', 'ECS_CONTAINER_METADATA_URI', 'KWIRTH_STORE', 'KWIRTH_CLUSTER_NAME']
 
 /*
-    Siempre async y con await al caso. Si el finally corriese al DEVOLVER la promesa en vez de al
-    resolverla, las variables se restaurarian antes de que el caso las hubiese leido: resolveStore consulta
-    KWIRTH_STORE despues del primer await interno, asi que el test pasaria o fallaria segun el entorno de
-    quien lo corre, que es la peor clase de test.
+    Always async and awaiting the case. If the finally ran on RETURNING the promise instead of on
+    resolving it, the variables would be restored before the case had read them: resolveStore consults
+    KWIRTH_STORE after the first internal await, so the test would pass or fail depending on the
+    environment of whoever runs it, which is the worst kind of test.
 */
 const conEntorno = async (valores:{ [nombre:string]:string }, caso:() => Promise<void>|void): Promise<void> => {
     const previas:{ [nombre:string]:string|undefined } = {}

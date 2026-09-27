@@ -39,13 +39,13 @@ const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 const INDEX_KEY = 'kwirth-aitoolsets-index'
 
 /*
-    A que plugins se le ha concedido cada toolset (plan: "El techo en dos fases", fase 1).
+    Which plugins each toolset has been granted to (plan: "El techo en dos fases", phase 1).
 
-    Se guarda en el CORE y no en el plugin, al reves que el orden de precedencia: el toolset es una
-    extension del core, y la lista de invitados es justo lo que el plugin no debe poder decidir.
+    It is stored in the CORE and not in the plugin, the other way round from the precedence order: the
+    toolset is a core extension, and the guest list is exactly what the plugin must not get to decide.
 
-    Un solo ConfigMap con el mapa entero { toolsetId: [pluginId, ...] }: son cuatro lineas de datos y
-    tenerlas juntas permite responder de una lectura a "¿quien puede escribir en el cluster por IA?".
+    A single ConfigMap with the whole map { toolsetId: [pluginId, ...] }: it is four lines of data, and
+    keeping them together makes "who can write to the cluster through AI?" answerable in one read.
 */
 const GRANTS_KEY = 'kwirth-aitoolsets-grants'
 
@@ -282,10 +282,10 @@ export class AiToolsetManager {
 
             await this.configMaps.write(`kwirth-aitoolset-${meta.id}-meta`, meta)
             /*
-                null y no saltarse la escritura. Actualizando, una clave que no se toca se queda con el
-                contenido de la version ANTERIOR: el back de antes si el de ahora no cabe en el
-                almacenamiento. Lo instalado tiene que ser exactamente lo que trae el paquete, no la suma
-                de lo que fueron trayendo sus versiones.
+                null, and not skipping the write. When updating, a key that is not touched keeps the
+                PREVIOUS version's content: the old back if the current one does not fit in the storage.
+                What is installed has to be exactly what the package brings, not the sum of what its
+                successive versions brought.
             */
             await this.configMaps.write(`kwirth-aitoolset-${meta.id}-back`, meta.backStored ? { code: backCompressed, compressed: true } : null)
 

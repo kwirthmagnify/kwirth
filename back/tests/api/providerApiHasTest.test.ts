@@ -1,14 +1,14 @@
 /*
-    Un provider puede saber COMPROBAR su propia configuracion, y el gestor tiene que enterarse para
-    pintarle un boton de prueba junto al formulario.
+    A provider may know how to CHECK its own configuration, and the manager has to find out so it can
+    paint a test button next to the form.
 
-    Que un usuario meta unas credenciales y no sepa si valen hasta que el provider no trae nada horas
-    despues es lo que cada extension que lo queria resolvia por su cuenta. Aqui se hace una vez, en el
-    core, para cualquier provider.
+    A user entering some credentials and not knowing whether they are any good until the provider brings
+    nothing hours later is what every extension that cared about it solved on its own account. Here it is
+    done once, in the core, for any provider.
 
-    La deteccion mira las RUTAS del configRouter en vez de pedirle al provider que lo declare: el
-    endpoint es la unica fuente que no puede mentir —si responde, existe— y asi añadirlo mañana no
-    obliga a tocar tambien el package.json ni el build de la extension.
+    The detection looks at the configRouter's ROUTES instead of asking the provider to declare it: the
+    endpoint is the only source that cannot lie —if it answers, it exists— and this way adding it tomorrow
+    does not force touching the package.json or the extension's build as well.
 */
 
 import { test } from 'node:test'

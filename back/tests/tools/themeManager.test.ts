@@ -11,16 +11,16 @@ import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { cachedExtensionFile } from '../../src/tools/PackageRegistries'
 
 /*
-    Instalacion de temas y homepages, que son gemelos y no tenian ningun test.
+    Installing themes and homepages, which are twins and did not have a single test.
 
-    Lo que importa aqui, y que se aprendio a base de sustos:
+    What matters here, learned the hard way:
 
-      · un tgz puede traer las entradas en la RAIZ (los que armamos a mano) o dentro de 'package/' (todo
-        lo que sale de `npm publish`), y las dos formas tienen que instalar igual;
-      · un front que no cabe en el ConfigMap (~1 MiB por objeto en etcd) NO se guarda ahi: se marca
-        `frontStored: false` y se recupera del origen, con cache en /tmp;
-      · esa cache HAY que invalidarla al instalar y al desinstalar. No lleva la version en el nombre, asi
-        que sin borrarla una actualizacion seguiria sirviendo el front VIEJO mientras el pod siga vivo.
+      · a tgz can carry its entries at the ROOT (the ones we put together by hand) or inside 'package/'
+        (everything that comes out of `npm publish`), and both shapes have to install the same;
+      · a front that does not fit in the ConfigMap (~1 MiB per object in etcd) is NOT stored there: it is
+        marked `frontStored: false` and fetched from the source, cached in /tmp;
+      · that cache MUST be invalidated on install and on uninstall. It does not carry the version in its
+        name, so without deleting it an update would go on serving the OLD front while the pod stays alive.
 */
 
 interface IStoreView { configMaps: Map<string, any> }
@@ -68,9 +68,9 @@ const makeBundle = (dir: string, options: IBundleOptions = {}): string => {
 const tempDir = (): string => mkdtempSync(path.join(os.tmpdir(), 'kwirth-theme-test-'))
 
 /*
-    Un front que NO cabe en el ConfigMap. Tiene que ser incompresible de verdad: con texto periodico
-    gzip lo deja en nada y el front acaba cabiendo, que es justo lo contrario de lo que se quiere probar.
-    El tope efectivo son 800 KB de base64 DESPUES de gzip.
+    A front that does NOT fit in the ConfigMap. It has to be genuinely incompressible: with periodic text
+    gzip reduces it to nothing and the front ends up fitting, which is exactly the opposite of what is to
+    be tested. The effective ceiling is 800 KB of base64 AFTER gzip.
 */
 const frontQueNoCabe = (): string => randomBytes(800_000).toString('base64')
 
@@ -157,9 +157,9 @@ test('cuando el front no esta guardado, se sirve lo cacheado en /tmp sin tocar l
     await tm.install(makeBundle(dir, { front: enorme }))
 
     /*
-        La cache se rellena aqui a mano porque el camino real la llena tras DESCARGAR del origen, y este
-        test no toca la red a proposito: lo que se comprueba es que, estando la cache, no se descarga —que
-        es justo lo que evita bajarse el tarball entero en cada arranque.
+        The cache is filled here by hand because the real path fills it after DOWNLOADING from the source,
+        and this test deliberately does not touch the network: what is checked is that, with the cache in
+        place, nothing is downloaded —which is exactly what avoids pulling the whole tarball on every startup.
     */
     const cache = cachedExtensionFile('theme', 'santander', 'front.js')
     writeFileSync(cache, 'window.__theme = { fromCache: true }')

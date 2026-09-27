@@ -11,19 +11,19 @@ import { IdpManager } from './IdpManager'
 import { combine, pluginInstallConfig, providerInstallConfig, senderConfigs, webhookConfigs, idpInstances, toolsetGrants } from './CoreManagedConfig'
 
 /*
-    Quien hay instalado y a quien se le pregunta por su configuracion.
+    Who is installed, and who gets asked for their configuration.
 
-    Este fichero existe para que `ConfigBundleManager` no tenga que saber que hay once familias con once
-    managers distintos: el manager pide una lista y aqui se construye.
+    This file exists so that `ConfigBundleManager` does not have to know there are eleven families with
+    eleven different managers: the manager asks for a list and it is built here.
 
-    Dos reglas gobiernan lo que sale de aqui:
+    Two rules govern what comes out of here:
 
-      · SE LISTA TODO LO INSTALADO, pueda exportar o no. Omitir lo que no se puede exportar seria lo
-        comodo, y seria mentir por silencio — quien mira el dialogo tiene que ver que su extension esta
-        ahi y por que no entra.
-      · EL INTERLOCUTOR LO FABRICA EL CORE. `combine()` junta lo que el core guarda de una extension con
-        lo que ella exporta de si misma, y devuelve un unico `IExtension`. Por eso casi toda extension
-        tiene algo que exportar desde el primer dia, sin que su autor haga nada.
+      · EVERYTHING INSTALLED IS LISTED, whether it can export or not. Leaving out what cannot export would
+        be the comfortable thing, and it would be lying by silence — whoever looks at the dialog has to
+        see that their extension is there and why it is not going in.
+      · THE CORE MANUFACTURES THE INTERLOCUTOR. `combine()` joins what the core stores about an extension
+        with what the extension exports of itself, and returns a single `IExtension`. That is why nearly
+        every extension has something to export from day one, without its author doing anything.
 */
 
 /** The minimum needed from any extension's metadata. */
@@ -45,9 +45,9 @@ export interface IExtensionRefSources {
     aiToolsetManager: AiToolsetManager
     idpManager: IdpManager
     /*
-        Los canales VIVOS. No hay uno por plugin instalado: solo se instancian los requeridos, y nunca
-        los anunciados como REMOTE. Un plugin sin canal aqui sigue exportando lo que el core guarda de
-        el; lo que no se puede es preguntarle por lo suyo.
+        The LIVE channels. There is not one per installed plugin: only the required ones are
+        instantiated, and never those announced as REMOTE. A plugin with no channel here still exports
+        what the core stores about it; what cannot be done is asking it for its own.
     */
     channels: Map<string, IChannel>
     /** And the live providers. The same criterion. */
@@ -81,10 +81,10 @@ export const buildExtensionRefs = async (src: IExtensionRefSources): Promise<IEx
     }
 
     /*
-        Senders y webhooks: sus configuraciones las guarda el CORE —ellos solo reciben la suya al
-        usarla—, asi que el grueso viene de ahi. `getSender`/`getWebhook` instancian si hace falta, y
-        aqui es aceptable: es el camino normal del core y su arranque es ligero. Lo que no se hace es
-        despertar un canal, que abre informers y conexiones.
+        Senders and webhooks: their configurations are stored by the CORE — they only receive their own
+        when using it — so the bulk comes from there. `getSender`/`getWebhook` instantiate when needed,
+        and that is acceptable here: it is the core's normal route and their startup is light. What is
+        not done is waking a channel, which opens informers and connections.
     */
     for (const meta of await src.senderManager.listInstalled()) {
         añadir(EExtensionType.SENDER, meta as IMetaLike,
@@ -96,9 +96,9 @@ export const buildExtensionRefs = async (src: IExtensionRefSources): Promise<IEx
     }
 
     /*
-        IdP: lo que viaja son las INSTANCIAS configuradas, y un conector puede tener varias. El conector
-        no puede enumerarlas —solo recibe una como parametro al autenticar—, asi que aqui el
-        interlocutor es enteramente del core.
+        IdP: what travels are the configured INSTANCES, and a connector can have several. The connector
+        cannot enumerate them — it only receives one as a parameter when authenticating — so here the
+        interlocutor is entirely the core's.
     */
     // `listConnectors` and not the index of installed ones: the index only has those that arrived through
     // a tgz, and in dev connectors are registered in memory without going through it. What counts is which

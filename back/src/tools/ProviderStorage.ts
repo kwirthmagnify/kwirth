@@ -3,17 +3,17 @@ import { ISecrets } from './ISecrets'
 import { IProviderStorage } from '../providers/IProvider'
 
 /*
-    Persistencia para providers, equivalente a la que reciben los canales via IBackChannelObject.
+    Persistence for providers, the equivalent of what channels receive through IBackChannelObject.
 
-    Un provider es dueño de su configuracion: decide EN CODIGO que va a un Secret (credenciales) y que
-    va a un ConfigMap (el resto), llamando con secret=true o secret=false. El core no interpreta nada.
+    A provider owns its configuration: it decides IN CODE what goes to a Secret (credentials) and what
+    goes to a ConfigMap (the rest), calling with secret=true or secret=false. The core interprets nothing.
 
-    Espacios de nombres:
-      - propio del provider : 'kwirth-store-provider-<id>'  (no colisiona con el de canales, que usa
-                              'kwirth-store-channel-<id>', ni con la config gestionada por el core, que
-                              usa 'kwirth-provider-<id>-config')
-      - comun               : 'kwirth-store-common-<id>'    (el MISMO que usan canales y AiConfigApi:
-                              es el almacen compartido entre extensiones)
+    Namespaces:
+      - the provider's own : 'kwirth-store-provider-<id>'  (it does not collide with the channels' one,
+                             which uses 'kwirth-store-channel-<id>', nor with the core-managed config,
+                             which uses 'kwirth-provider-<id>-config')
+      - common             : 'kwirth-store-common-<id>'    (the SAME one channels and AiConfigApi use:
+                             it is the store shared between extensions)
 */
 
 const PROVIDER_PREFIX = 'kwirth-store-provider-'

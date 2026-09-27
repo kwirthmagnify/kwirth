@@ -5,9 +5,9 @@ export interface ISecrets {
     readAllKeys: (name: string) => Promise<Record<string, any>>
 
     /*
-        Cuanto admite UN objeto, en bytes, o `undefined` si no hay tope practico. Mismo criterio que en
-        IConfigMaps: un Secret de Kubernetes tiene el mismo techo de ~1 MiB que un ConfigMap, y los
-        almacenamientos de fichero no lo tienen. Quien guarda algo grande pregunta antes.
+        How much ONE object admits, in bytes, or `undefined` when there is no practical ceiling. The same
+        criterion as in IConfigMaps: a Kubernetes Secret has the same ~1 MiB ceiling as a ConfigMap, and
+        the file storages do not. Whoever stores something big asks first.
     */
     storeLimit: () => number | undefined
 }

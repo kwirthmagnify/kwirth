@@ -3,15 +3,15 @@ import assert from 'node:assert/strict'
 import { failureOrigin } from '../../src/tools/FailureOrigin'
 
 /*
-    De quien es el fallo decide si el core se muere.
+    Whose failure it is decides whether the core dies.
 
-    Un `unhandledRejection` se trataba siempre como fatal, asi que una promesa sin catch dentro de una
-    extension de terceros tiraba Kwirth entero, con todos sus canales y todos sus usuarios. Paso con el
-    provider 'trivy': bastaba suscribirse a el sin payload desde provider-debug.
+    An `unhandledRejection` was always treated as fatal, so a promise without a catch inside a third-party
+    extension brought the whole of Kwirth down, with all its channels and all its users. It happened with
+    the 'trivy' provider: subscribing to it with no payload from provider-debug was enough.
 
-    Ahora, si el fallo se puede atribuir a una extension, se aisla y el core sigue. Y si NO se puede,
-    se mantiene el comportamiento de siempre —el proceso sale—, porque un fallo del core si puede haber
-    dejado el proceso en un estado del que no conviene fiarse. Esa asimetria es lo que fijan estos tests.
+    Now, if the failure can be attributed to an extension, it is isolated and the core carries on. And if
+    it CANNOT, the behaviour of always is kept —the process exits— because a core failure may indeed have
+    left the process in a state not worth trusting. That asymmetry is what these tests pin down.
 */
 
 // A stack like the one left by a rejection born in an extension's back end, which the core loads from /tmp

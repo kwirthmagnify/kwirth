@@ -2,19 +2,20 @@ import { CoreV1Api } from '@kubernetes/client-node'
 import { ELogComponent, logInfo, logWarning } from './Logging'
 
 /*
-    El log del contenedor ANTERIOR, leido una sola vez al arrancar.
+    The PREVIOUS container's log, read once at startup.
 
-    Cuando el core muere dentro del cluster, el kubelet crea un contenedor nuevo y lo que explica la
-    muerte se queda en el que se fue. Para cuando alguien va a mirar, o el log se ha rotado o el pod se ha
-    recreado, asi que los cierres anomalos se investigaban a ciegas. Se lee en el arranque —el unico
-    momento en el que seguro que esta— y se guarda EN MEMORIA: no se persiste a proposito, porque en cada
-    arranque se vuelve a leer y lo guardado seria siempre mas viejo que lo que hay.
+    When the core dies inside the cluster, the kubelet creates a new container and what explains the
+    death stays in the one that went. By the time somebody goes to look, either the log has rotated or
+    the pod has been recreated, so abnormal exits were investigated blind. It is read at startup —the
+    only moment it is certainly there— and kept IN MEMORY: it is deliberately not persisted, because it
+    is read again on every startup and what was stored would always be older than what is there.
 
-    ⚠️ 'previous' solo existe si el contenedor reinicio DENTRO DEL MISMO POD (crash, OOMKilled,
-    CrashLoopBackOff), que es justo el caso que interesa. Tras un rollout el pod es otro y el kubelet no
-    guarda nada del anterior: eso no es un fallo, es que no hay nada que leer. Por eso 'restarted' y
-    'unavailableReason' se distinguen — "no hubo reinicio" y "hubo reinicio pero el log ya no esta" son
-    cosas distintas, y la segunda es la que desconcierta a quien mira.
+    ⚠️ 'previous' only exists if the container restarted WITHIN THE SAME POD (crash, OOMKilled,
+    CrashLoopBackOff), which is exactly the case of interest. After a rollout the pod is another one and
+    the kubelet keeps nothing of the previous one: that is not a failure, there is simply nothing to
+    read. That is why 'restarted' and 'unavailableReason' are told apart — "there was no restart" and
+    "there was a restart but the log is gone" are different things, and the second is the one that
+    puzzles whoever is looking.
 */
 
 const DEFAULT_LINES = 1000
@@ -56,9 +57,10 @@ export const resolvePreviousLogLines = (): number => {
 }
 
 /*
-    Elige el contenedor del que leer. Un pod de Kwirth lleva uno, pero puede llevar sidecars (service
-    mesh, agentes), asi que no vale coger el primero y ya: se busca el que REINICIO, que es el unico con
-    log anterior. Si ninguno reinicio no hay nada que leer, y ese es el caso normal.
+    Picks the container to read from. A Kwirth pod carries one, but it may carry sidecars (service mesh,
+    agents), so taking the first one and being done with it will not do: the one that RESTARTED is looked
+    for, which is the only one with a previous log. If none restarted there is nothing to read, and that
+    is the normal case.
 */
 const pickRestartedContainer = (statuses: any[]): any|undefined =>
     statuses.find(s => (s.restartCount ?? 0) > 0 && s.lastState?.terminated)
@@ -70,9 +72,10 @@ const asIso = (value: unknown): string|undefined => {
 }
 
 /*
-    `tailLines` viene RESUELTO de fuera (settings → env → default, via SettingsApi) porque quien manda es
-    la configuracion de Kwirth, y este modulo no tiene por que saber de donde sale. Sin argumento cae a
-    env+default, que es lo que hace falta para poder probarlo aislado.
+    `tailLines` arrives already RESOLVED from outside (settings → env → default, through SettingsApi)
+    because the one in charge is Kwirth's configuration, and this module has no reason to know where it
+    comes from. With no argument it falls back to env+default, which is what is needed to test it in
+    isolation.
 */
 export const readPreviousContainerLog = async (coreApi: CoreV1Api, namespace: string, podName: string, lines?: number): Promise<IPreviousContainerLog> => {
     try {

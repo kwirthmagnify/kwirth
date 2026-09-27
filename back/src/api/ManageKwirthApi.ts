@@ -34,12 +34,12 @@ export class ManageKwirthApi {
             })
 
         /*
-            Log del contenedor anterior, leido al arrancar (ver PreviousContainerLog).
+            The previous container's log, read at startup (see PreviousContainerLog).
 
-            🔴 SOLO admin, y no por prudencia generica: esto entrega trazas internas del core —nombres de
-            recursos, rutas, mensajes de error de extensiones—, o sea justo lo que no tiene que ver un
-            usuario cualquiera que entra a mirar sus logs. El front tampoco ofrece el boton sin ese scope,
-            pero quien manda es esta comprobacion.
+            🔴 ADMIN ONLY, and not out of generic caution: this hands over the core's internal traces
+            —resource names, routes, extension error messages—, that is, exactly what an ordinary user
+            coming in to look at their logs must not see. The front end does not offer the button
+            without that scope either, but the one in charge is this check.
         */
         this.router.route('/previouslog')
             .all( async (req:Request, res:Response, next) => {

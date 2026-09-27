@@ -52,8 +52,8 @@ export class MetricsProvider implements IProvider {
     private kwirthData: KwirthData
     private subscribers: Map<IChannel, IMetricsSubscriberConfig> = new Map()
     /*
-        Entregas desde que arranco: una por suscriptor y lectura. Este provider no filtra —cada tick va
-        a todos—, asi que el numero crece con los suscriptores, que es justo el trabajo que hace.
+        Deliveries since startup: one per subscriber and reading. This provider does not filter —every
+        tick goes to everybody— so the number grows with the subscribers, which is exactly the work it does.
     */
     private deliveries = 0
 
@@ -277,9 +277,9 @@ export class MetricsProvider implements IProvider {
     }
 
     /*
-        Lo que este provider sabe de si mismo. Es 'subscribers.size' y nada mas: el contrato pide que
-        sea BARATO —se devuelve lo que ya se tiene, no se calcula—, y de aqui sale que metrics este
-        siendo consumido o emitiendo para nadie.
+        What this provider knows about itself. It is 'subscribers.size' and nothing else: the contract
+        asks for it to be CHEAP —what is already at hand is returned, nothing is computed— and this is
+        what tells whether metrics is being consumed or emitting for nobody.
     */
     getStats = () => ({ subscribers: this.subscribers.size, events: this.deliveries })
 

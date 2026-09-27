@@ -1,23 +1,23 @@
 /*
-    ¿De quien es este fallo: del core o de una extension?
+    Whose failure is this: the core's or an extension's?
 
-    Importa porque la respuesta decide si el core se muere. Un `unhandledRejection` se trataba siempre
-    como fatal: `exitAndLog()` se llevaba el pod por delante. Y eso significa que **una promesa sin catch
-    en una extension de terceros tira Kwirth entero**, con todos sus canales, para todos los usuarios.
-    Paso de verdad: el provider 'trivy' hacia un fire-and-forget sin catch y bastaba con suscribirse a el
-    sin payload desde provider-debug para matar el core.
+    It matters because the answer decides whether the core dies. An `unhandledRejection` was always
+    treated as fatal: `exitAndLog()` took the pod down. And that means **a promise without a catch in a
+    third-party extension brings the whole of Kwirth down**, with all its channels, for every user.
+    It really happened: the 'trivy' provider did a fire-and-forget with no catch, and subscribing to it
+    with no payload from provider-debug was enough to kill the core.
 
-    Matar el proceso por un fallo del CORE sigue teniendo sentido —puede haber quedado en un estado
-    inconsistente—, pero por un fallo de una extension no: lo suyo es aislarlo, dejar traza con su nombre
-    y seguir sirviendo a todo el mundo.
+    Killing the process over a CORE failure still makes sense —it may have been left in an inconsistent
+    state— but over an extension's failure it does not: the right thing is to isolate it, leave a trace
+    with its name and carry on serving everybody.
 
-    Se atribuye por el stack, que es lo unico que hay. El core carga el back de cada extension desde un
-    fichero en el tmpdir del sistema (`/tmp/kwirth-plugin-<id>-back.js`), asi que cuando el
-    rechazo nace en su codigo, ahi esta su rastro.
+    Attribution is done by the stack, which is the only thing there is. The core loads each extension's
+    back end from a file in the system tmpdir (`/tmp/kwirth-plugin-<id>-back.js`), so when the rejection
+    is born in its code, that is where its trail is.
 
-    ⚠️ La heuristica es DELIBERADAMENTE conservadora: si no se puede atribuir a una extension, se trata
-    como fallo del core y el proceso muere, como hasta ahora. Preferimos un reinicio de mas que tragarnos
-    en silencio un fallo del core creyendo que era de un plugin.
+    ⚠️ The heuristic is DELIBERATELY conservative: if it cannot be attributed to an extension, it is
+    treated as a core failure and the process dies, as it did until now. We prefer one restart too many
+    over silently swallowing a core failure believing it was a plugin's.
 */
 
 // `/tmp/kwirth-<type>-<id>-back.js`, which is how the core leaves an extension's back end in order to require it
@@ -29,9 +29,9 @@ export interface IFailureOrigin {
 }
 
 /*
-    Devuelve la extension a la que se puede atribuir el fallo, o undefined si no hay forma de saberlo.
-    Acepta cualquier cosa porque un rechazo puede llevar dentro lo que sea: un Error, un string, un
-    objeto de una libreria, o nada.
+    Returns the extension the failure can be attributed to, or undefined when there is no way of knowing.
+    It accepts anything because a rejection can carry whatever inside: an Error, a string, some library's
+    object, or nothing at all.
 */
 export const failureOrigin = (value: unknown): IFailureOrigin|undefined => {
     const stack = value instanceof Error ? value.stack : undefined

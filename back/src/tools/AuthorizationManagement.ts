@@ -29,15 +29,15 @@ export interface IControllerRef {
 }
 
 /*
-    Lista los controllers TOLERANDO que alguno falle.
+    Lists the controllers TOLERATING that some of them fail.
 
-    Antes esto era un Promise.all, y un solo 403 rechazaba la promesa entera: el ServiceAccount de un
-    despliegue real no puede listar 'jobs' —el ClusterRole de la documentacion no incluye el apiGroup
-    'batch'— y eso dejaba al usuario sin NINGUN controller, ni siquiera los deployments, que si tenia
-    permiso para ver. Peor aun: el catch devolvia [], indistinguible de 'este namespace esta vacio', y el
-    motivo solo aparecia en el log del pod.
+    This used to be a Promise.all, and a single 403 rejected the whole promise: a real deployment's
+    ServiceAccount cannot list 'jobs' —the documented ClusterRole does not include the 'batch' apiGroup—
+    and that left the user with NO controller at all, not even the deployments, which they did have
+    permission to see. Worse still: the catch returned [], indistinguishable from 'this namespace is
+    empty', and the reason only showed up in the pod's log.
 
-    Con allSettled, lo que se puede leer se lee, y lo que no se registra nombrando el tipo Y su apiGroup.
+    With allSettled, what can be read is read, and what cannot is logged naming the type AND its apiGroup.
 */
 export const listControllersTolerant = async (
     sources: IControllerSource[],
@@ -238,14 +238,14 @@ export class AuthorizationManagement {
     }
 
     /*
-        Aqui vivia `validAuth`, que NO la llamaba nadie y ademas estaba mal: evaluaba solo el PRIMER
-        recurso de la accessKey (usaba `parseResource`, singular) y comprobaba `scopes === 'cluster'` por
-        igualdad exacta, asi que una clave 'cluster,view' no entraba por el atajo de admin.
+        `validAuth` used to live here. NOBODY called it and on top of that it was wrong: it evaluated
+        only the FIRST resource of the accessKey (it used `parseResource`, singular) and checked
+        `scopes === 'cluster'` by exact equality, so a 'cluster,view' key did not take the admin shortcut.
 
-        Se borra en vez de arreglarse (2026-09-17). Una funcion muerta que PARECE el control de permisos y
-        esta mal implementada es una trampa: el dia que alguien la llame creyendo que autoriza, autorizara
-        de menos o de mas sin que nadie lo note. Quien autoriza de verdad es `checkAkr`, justo encima, que
-        si recorre todos los recursos y aplica OR entre ellos.
+        It is deleted rather than fixed (2026-09-17). A dead function that LOOKS LIKE the permission
+        check and is badly implemented is a trap: the day somebody calls it believing it authorizes, it
+        will authorize too little or too much without anybody noticing. The one that really authorizes
+        is `checkAkr`, right above, which does walk every resource and ORs them together.
     */
 
     public static getValidValues = (values:string[], regexes:string[]): string[] => {

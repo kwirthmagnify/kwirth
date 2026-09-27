@@ -5,38 +5,38 @@ import { KubeConfig } from '@kubernetes/client-node'
 import { EClusterType, EExecutionEnvironment } from '@kwirthmagnify/kwirth-common'
 
 /*
-    DONDE se guardan configuracion y secretos.
+    WHERE configuration and secrets are stored.
 
-    Son tres y no dos porque el modo docker escribe JSON plano desde siempre (DockerSecrets) mientras que
-    el resto de almacenamiento en fichero cifra los secretos con MASTERKEY (NodeSecrets). Unificarlos
-    cambiaria el formato de los ficheros de quien ya tiene un Kwirth en docker, asi que el formato viejo se
-    queda donde esta y no se usa para nada nuevo: ECS y cualquier entorno futuro van a FILE.
+    There are three and not two because docker mode has always written plain JSON (DockerSecrets) while
+    the rest of the file storage encrypts the secrets with MASTERKEY (NodeSecrets). Unifying them would
+    change the file format for anybody who already has a Kwirth on docker, so the old format stays where
+    it is and is not used for anything new: ECS and any future environment go to FILE.
 */
 enum EStoreKind {
-    KUBERNETES = 'kubernetes',  // Secrets y ConfigMaps del namespace
-    FILE = 'file',              // ficheros, con los secretos cifrados con MASTERKEY (NodeSecrets)
-    FILE_PLAIN = 'file-plain'   // ficheros JSON planos (DockerSecrets), formato historico del modo docker
+    KUBERNETES = 'kubernetes',  // the namespace's Secrets and ConfigMaps
+    FILE = 'file',              // files, with the secrets encrypted with MASTERKEY (NodeSecrets)
+    FILE_PLAIN = 'file-plain'   // plain JSON files (DockerSecrets), docker mode's historical format
 }
 
 /*
-    QUE tiene a mano este Kwirth. Es lo unico que decide comportamiento: el entorno de ejecucion dice donde
-    corremos, pero no basta por si solo, porque un contenedor o una tarea de ECS pueden traer kubeconfig o
-    no traerlo, y eso cambia si hay cluster que observar.
+    WHAT this Kwirth has at hand. It is the only thing that decides behaviour: the execution environment
+    says where we are running, but it is not enough on its own, because a container or an ECS task may
+    bring a kubeconfig or may not, and that changes whether there is a cluster to observe.
 
-    'reasons' no es decoracion: el arranque la imprime tal cual. Quien despliega esto en un sitio al que no
-    puede asomarse —una tarea de ECS, por ejemplo— solo tiene el log para entender por que Kwirth cree lo
-    que cree, y una capacidad sin explicacion es una capacidad que se diagnostica a ciegas.
+    'reasons' is not decoration: startup prints it as it is. Whoever deploys this somewhere they cannot
+    look into — an ECS task, for instance — has only the log to understand why Kwirth believes what it
+    believes, and a capability with no explanation is a capability diagnosed blind.
 */
 interface IEnvironmentCapabilities {
-    kubernetes: boolean         // hay API de Kubernetes: events, metricas, recursos, SA token
+    kubernetes: boolean         // there is a Kubernetes API: events, metrics, resources, SA token
     store: EStoreKind
-    storePath: string|undefined // con store FILE o FILE_PLAIN; undefined = el defecto de cada backend
+    storePath: string|undefined // with store FILE or FILE_PLAIN; undefined = each backend's default
     reasons: string[]
 }
 
 /*
-    La comprobacion que mira la maquina, inyectable. Por defecto es la de verdad; un test la sustituye y
-    asi puede preguntar 'que pasa en Fargate sin kubeconfig' sin estar en Fargate.
+    The check that looks at the machine, injectable. By default it is the real one; a test replaces it and
+    can then ask 'what happens on Fargate with no kubeconfig' without being on Fargate.
 */
 interface IEnvironmentProbes {
     kubeconfig: (context:string|undefined) => boolean
@@ -49,8 +49,8 @@ const isDesktopRuntime = (): boolean => {
 }
 
 /*
-    El agente de ECS inyecta esta variable en los DOS launch types (EC2 desde la version 1.39 del agente,
-    Fargate desde la plataforma 1.4), asi que es la senal canonica y no hay que adivinar cual de los dos es.
+    The ECS agent injects this variable on BOTH launch types (EC2 since agent version 1.39, Fargate since
+    platform 1.4), so it is the canonical signal and there is no need to guess which of the two it is.
 */
 const isEcsRuntime = (): boolean => process.env.ECS_CONTAINER_METADATA_URI_V4 !== undefined || process.env.ECS_CONTAINER_METADATA_URI !== undefined
 
@@ -70,10 +70,10 @@ const detectExecutionEnvironment = (): EExecutionEnvironment|undefined => {
     if (process.env.KUBERNETES_SERVICE_HOST) return EExecutionEnvironment.KUBERNETES
 
     /*
-        ECS va ANTES que docker a proposito: en el launch type EC2 los contenedores los arranca el demonio
-        de Docker, asi que '/.dockerenv' existe y se llevaria la deteccion. En Fargate no existe —es
-        containerd—, que es la razon de que hasta ahora una tarea de Fargate no fuese ningun entorno
-        conocido y el proceso se cerrase al arrancar.
+        ECS goes BEFORE docker on purpose: on the EC2 launch type the containers are started by Docker's
+        daemon, so '/.dockerenv' exists and would take the detection. On Fargate it does not exist — it is
+        containerd — which is why until now a Fargate task was no known environment at all and the process
+        closed on startup.
     */
     if (isEcsRuntime()) return EExecutionEnvironment.ECS
     if (fs.existsSync('/.dockerenv')) return EExecutionEnvironment.DOCKER
@@ -82,17 +82,16 @@ const detectExecutionEnvironment = (): EExecutionEnvironment|undefined => {
 }
 
 /*
-    De donde puede salir una configuracion de Kubernetes. Se pregunta ANTES de cargar nada, y esa es toda
-    la gracia.
+    Where a Kubernetes configuration can come from. It is asked BEFORE loading anything, and that is the
+    whole point.
 
-    loadFromDefault() NO se queda sin cluster cuando no encuentra ningun kubeconfig: se inventa uno que
-    apunta a http://localhost:8080 —el viejo defecto de kubectl— con un contexto llamado 'loaded-context'.
-    Asi que preguntarle despues si hay cluster seleccionado responde que SI dentro de un contenedor
-    pelado, y el arranque se va detras de un servidor que no existe. Ese era exactamente el sintoma que
-    dejaba a Kwirth sin instancia en docker: 'request to http://localhost:8080/api/v1/namespaces/
-    kube-system failed'.
+    loadFromDefault() does NOT end up without a cluster when it finds no kubeconfig: it invents one
+    pointing at http://localhost:8080 — kubectl's old default — with a context called 'loaded-context'. So
+    asking it afterwards whether there is a cluster selected answers YES inside a bare container, and
+    startup goes chasing a server that does not exist. That was exactly the symptom that left Kwirth with
+    no instance on docker: 'request to http://localhost:8080/api/v1/namespaces/kube-system failed'.
 
-    'existe' se inyecta para poder probar esto sin depender de la maquina donde corran los tests.
+    'existe' is injected so this can be tested without depending on the machine the tests run on.
 */
 const hasKubeconfigSource = (existe: (ruta:string) => boolean = fs.existsSync): boolean => {
     // KUBECONFIG admits several paths; one existing is enough.
@@ -108,13 +107,12 @@ const hasKubeconfigSource = (existe: (ruta:string) => boolean = fs.existsSync): 
 }
 
 /*
-    Comprobacion PASIVA: hay una fuente de kubeconfig y de ella sale un cluster. No se le pregunta al
-    servidor.
+    A PASSIVE check: there is a kubeconfig source and a cluster comes out of it. The server is not asked.
 
-    Es deliberado. Preguntar seria mas honesto, pero mete un timeout de red en el arranque y, sobre todo,
-    convierte un cluster que tarda en responder en un Kwirth degradado a 'sin Kubernetes' —que es un
-    diagnostico mucho peor que un error claro al primer uso. Si hay kubeconfig, se intenta usar; si el
-    cluster no contesta, eso se ve y se reporta como el fallo que es.
+    That is deliberate. Asking would be more honest, but it puts a network timeout into startup and, above
+    all, it turns a cluster that is slow to answer into a Kwirth degraded to 'no Kubernetes' — which is a
+    far worse diagnosis than a clear error on first use. If there is a kubeconfig, it is tried; if the
+    cluster does not answer, that shows and is reported as the failure it is.
 */
 const hasUsableKubeconfig = (context:string|undefined): boolean => {
     try {
@@ -153,8 +151,8 @@ const resolveStore = (executionEnvironment:EExecutionEnvironment, kubernetes:boo
 
         case EExecutionEnvironment.KUBERNETES:
             /*
-                'etcd' se admite por compatibilidad: es como se pedia explicitamente el almacenamiento del
-                propio cluster antes de que KWIRTH_STORE aceptase una ruta.
+                'etcd' is accepted for compatibility: it is how the cluster's own storage was explicitly
+                asked for before KWIRTH_STORE accepted a path.
             */
             if (kwirthStore && kwirthStore !== 'etcd') {
                 reasons.push(`Store: encrypted files at '${kwirthStore}' (KWIRTH_STORE)`)
@@ -170,10 +168,10 @@ const resolveStore = (executionEnvironment:EExecutionEnvironment, kubernetes:boo
 }
 
 /*
-    De aqui sale TODO lo que el arranque necesita decidir. Quien quiera saber si hay events de Kubernetes,
-    si hay metricas o donde se persiste, pregunta a este objeto y no vuelve a mirar el entorno por su
-    cuenta: es precisamente la dispersion de esas condiciones lo que hacia que anadir un entorno nuevo
-    fuese un trabajo de riesgo.
+    EVERYTHING startup needs to decide comes out of here. Whoever wants to know whether there are
+    Kubernetes events, whether there are metrics or where things are persisted asks this object and does
+    not go looking at the environment on its own account: it is precisely the scattering of those
+    conditions that made adding a new environment a risky job.
 */
 const resolveEnvironmentCapabilities = async (executionEnvironment:EExecutionEnvironment, context:string|undefined, probes:IEnvironmentProbes = { kubeconfig: hasUsableKubeconfig }): Promise<IEnvironmentCapabilities> => {
     const reasons:string[] = []
@@ -199,12 +197,12 @@ const resolveEnvironmentCapabilities = async (executionEnvironment:EExecutionEnv
 }
 
 /*
-    De donde saldran los recursos. Solo hay dos respuestas: el cluster, o ningun sitio.
+    Where the resources will come from. There are only two answers: the cluster, or nowhere.
 
-    Un Kwirth sin cluster NO se queda sin funcion — sirve el front, lleva canales que no miran a la
-    infraestructura y desde el se puede federar contra otro Kwirth o apuntar a un cluster montando un
-    kubeconfig. Lo que no hace es gestionar contenedores por su cuenta: 'docker compose' como cosa a
-    observar es una via que se abandono a proposito.
+    A Kwirth with no cluster is NOT left without a job — it serves the front end, it carries channels that
+    do not look at the infrastructure, and from it one can federate against another Kwirth or point at a
+    cluster by mounting a kubeconfig. What it does not do is manage containers on its own account: 'docker
+    compose' as a thing to observe is a route that was abandoned on purpose.
 */
 const resolveClusterType = (capabilities:IEnvironmentCapabilities): EClusterType => {
     if (capabilities.kubernetes) return EClusterType.KUBERNETES

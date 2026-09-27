@@ -59,10 +59,10 @@ export class SettingsApi {
     }
 
     /*
-        Cuantas lineas del log del contenedor ANTERIOR se leen al arrancar. Misma precedencia que el
-        intervalo de metricas —lo guardado gana, luego la variable de entorno, luego el default— porque es
-        el mismo tipo de ajuste: un numero con un valor razonable que alguien puede querer cambiar sin
-        tocar el deployment.
+        How many lines of the PREVIOUS container's log are read at startup. The same precedence as the
+        metrics interval —what is stored wins, then the environment variable, then the default— because
+        it is the same kind of setting: a number with a sensible value that somebody may want to change
+        without touching the deployment.
     */
     public static resolvePreviousLogLines(settings: IKwirthSettings): number {
         if (settings.previousLogLines && settings.previousLogLines > 0) return Math.floor(settings.previousLogLines)

@@ -3,14 +3,15 @@ import assert from 'node:assert/strict'
 import { assertInstallable } from '../../src/tools/ExtensionInstallGuard'
 
 /*
-    Cuando una extension se puede instalar ENCIMA de otra.
+    When an extension can be installed ON TOP of another one.
 
-    Instalar y actualizar acaban en el mismo sitio —el install de cada manager ya reemplazaba indice,
-    codigo y modulo cargado—, asi que lo unico que separa "actualizar" de "pisar algo por accidente" es
-    esta funcion. De ahi que valga la pena fijarla suelta: los managers la llaman los once igual, y un
-    despiste aqui sale por once sitios a la vez.
+    Installing and updating end up in the same place —each manager's install already replaced index, code
+    and loaded module— so the only thing separating "updating" from "accidentally overwriting something"
+    is this function. Hence it is worth pinning it down on its own: all eleven managers call it the same
+    way, and a slip here comes out through eleven places at once.
 
-    Lo que se fija: sin permiso explicito no se pisa nada, y con permiso solo se va hacia ADELANTE.
+    What is pinned down: without explicit permission nothing is overwritten, and with permission the only
+    way is FORWARD.
 */
 
 const lanza = (fn: () => void, texto: string) => {
@@ -49,9 +50,10 @@ test('pero NO a la misma ni a una anterior', () => {
 
 test('ni a ciegas cuando falta alguna de las dos versiones', () => {
     /*
-        Pasa de verdad: lo instalado desde kwirth-dev.json esta cargado sin figurar en el indice, asi que
-        los managers le pasan al guardian un objeto sin version. Sin saber de donde se viene no hay forma
-        de saber si se avanza, y dar el paso igual seria pisar un dev con lo que haya en el marketplace.
+        It really happens: what is installed from kwirth-dev.json is loaded without appearing in the
+        index, so the managers hand the guard an object with no version. Without knowing where we are
+        coming from there is no way of knowing whether this moves forward, and taking the step anyway
+        would mean overwriting a dev with whatever is in the marketplace.
     */
     lanza(() => assertInstallable('Plugin', 'log', {}, '1.0.0', true), 'the installed or the new version is unknown')
     lanza(() => assertInstallable('Plugin', 'log', { version: '1.0.0' }, undefined, true), 'the installed or the new version is unknown')

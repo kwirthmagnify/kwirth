@@ -26,12 +26,12 @@ const STATE_TTL_MS = 10 * 60 * 1000
 const HANDOFF_TTL_MS = 60 * 1000
 
 /*
-    Endpoints de autenticacion pre-login (montados en /core/auth/, exentos de validKey).
-    Orquesta el flujo OIDC/OAuth2 delegando en los conectores (logica pura) del IdpManager,
-    y emite el AccessKey via IdentityService. El conector nunca emite AccessKeys ni expone rutas.
+    Pre-login authentication endpoints (mounted at /core/auth/, exempt from validKey).
+    It orchestrates the OIDC/OAuth2 flow delegating to the IdpManager's connectors (pure logic),
+    and issues the AccessKey through IdentityService. A connector never issues AccessKeys nor exposes routes.
 
-    idpManager y el contexto activo se resuelven de forma LAZY porque este router se monta
-    a nivel de app antes de que exista la running instance / el manager.
+    idpManager and the active context are resolved LAZILY because this router is mounted at app
+    level before the running instance / the manager exists.
 */
 export class AuthApi {
     public router = express.Router()

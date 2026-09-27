@@ -95,7 +95,7 @@ test('createApiKey crea una key permanent con los resources del usuario y actual
     assert.match(apiKey!.description, /alice@example\.com/)
     assert.match(apiKey!.description, /1\.2\.3\.4/)
     assert.equal(apiKey!.days, 1)
-    // expira ~24h desde ahora
+    // expires ~24h from now
     assert.ok(apiKey!.expire >= before + 24*60*60*1000)
     assert.ok(apiKey!.expire <= after + 24*60*60*1000)
     // persistido en configmap kwirth.keys

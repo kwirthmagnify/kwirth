@@ -8,15 +8,14 @@ import { LoginManager, EBackgroundQuality } from '../../src/tools/LoginManager'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 
 /*
-    La instalacion de un login con DOS fondos, de punta a punta.
+    Installing a login with TWO backgrounds, end to end.
 
-    Lo que `pickBackground` decide en abstracto, aqui se comprueba sobre el flujo real: se construye un tgz
-    con las dos imagenes y se instala contra un almacenamiento de mentira, una vez declarando el tope de un
-    ConfigMap de Kubernetes y otra sin tope (fichero). Lo que cambia entre las dos NO es el login: es donde
-    se guarda.
+    What `pickBackground` decides in the abstract is checked here against the real flow: a tgz with both
+    images is built and installed against a fake storage, once declaring a Kubernetes ConfigMap's ceiling
+    and once with no ceiling (file). What changes between the two is NOT the login: it is where it is stored.
 
-    Sin esto, la eleccion podria estar bien y el install seguir leyendo solo `background.png` — que es
-    justo el fallo que introduciria un despiste al cablearlo.
+    Without this, the choice could be right and the install still read only `background.png` — which is
+    exactly the failure a slip while wiring it up would introduce.
 */
 
 /** In-memory storage that declares whichever limit it is told. */

@@ -37,15 +37,16 @@ test('el tope se mide sobre el BASE64, que es lo que se guarda, no sobre el png'
 })
 
 /*
-    DOS fondos: `background-hi.png` (la buena) y `background.png` (la que cabe en cualquier sitio).
+    TWO backgrounds: `background-hi.png` (the good one) and `background.png` (the one that fits anywhere).
 
-    Cual se guarda no lo decide el login: lo decide DONDE va a guardarse. En Kubernetes sin almacenamiento
-    de fichero hay ~1 MiB por ConfigMap; en desktop, docker o con KWIRTH_STORE se escribe en disco y no hay
-    ese techo. De ahi que el limite pueda ser `undefined`, que significa "cabe todo", no "no se sabe".
+    Which one is stored is not decided by the login: it is decided by WHERE it is going to be stored. On
+    Kubernetes without file storage there is ~1 MiB per ConfigMap; on desktop, docker or with KWIRTH_STORE
+    it is written to disk and there is no such ceiling. Hence the limit may be `undefined`, which means
+    "everything fits", not "it is not known".
 */
 
-const HI = b64(900 * 1024)      // no cabe en un ConfigMap
-const STD = b64(300 * 1024)     // cabe en cualquier sitio
+const HI = b64(900 * 1024)      // does not fit in a ConfigMap
+const STD = b64(300 * 1024)     // fits anywhere
 
 test('sin tope gana la buena: es el caso de desktop, docker y KWIRTH_STORE', () => {
     const elegido = pickBackground(HI, STD, undefined)

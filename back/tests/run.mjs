@@ -37,14 +37,14 @@ rmSync(OUT_DIR, { recursive: true, force: true })
 mkdirSync(OUT_DIR, { recursive: true })
 
 /*
-    COVERAGE=1 → UN SOLO entry que importa todos los tests.
+    COVERAGE=1 → ONE SINGLE entry that imports every test.
 
-    Con un bundle por fichero, cada uno arrastra su PROPIA copia del src y el informe los trata como
-    ficheros distintos: hace la MEDIA de esas copias en vez de la union, y cuenta como no cubierto todo
-    el src que ese test concreto no toca. El numero salia MUY por debajo del real (y encima el informe
-    listaba `tests/.out/*.test.mjs`, no `src/`). Mismo arreglo que ya llevan montag, agora y
-    provider-debug. Solo con COVERAGE=1: la ejecucion normal sigue siendo un proceso por fichero, que es
-    lo que aisla los tests entre si.
+    With one bundle per file, each drags along its OWN copy of the src and the report treats them as
+    different files: it takes the MEAN of those copies instead of their union, and counts as uncovered
+    all the src that that particular test does not touch. The number came out WAY below the real one (and
+    on top of that the report listed `tests/.out/*.test.mjs`, not `src/`). The same fix montag, agora and
+    provider-debug already carry. Only with COVERAGE=1: the normal run is still one process per file,
+    which is what isolates the tests from one another.
 */
 const ALL_ENTRY = path.join(TEST_DIR, '.coverage-all.generated.ts')
 let buildEntries = entries

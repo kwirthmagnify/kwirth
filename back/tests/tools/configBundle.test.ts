@@ -4,12 +4,13 @@ import { EExtensionType, EBundleEntryStatus, IConfigBundle, CONFIG_BUNDLE_KIND, 
 import { ConfigBundleManager, exportStatusOf, importStatusOf, validateBundle, IExtensionRef, ICorePortableConfig } from '../../src/tools/ConfigBundleManager'
 
 /*
-    Portabilidad de configuracion. Lo que se fija aqui es el REPARTO: el core transporta y no interpreta.
+    Configuration portability. What is pinned down here is the DIVISION OF LABOUR: the core carries and
+    does not interpret.
 
-    Por eso casi ningun test mira el contenido de una configuracion —no hay nada que mirar, es opaco—
-    sino QUE PASA cuando el destinatario no esta, no implementa el contrato o revienta. Ahi es donde un
-    despiste produce el peor resultado posible: un fichero que parece completo y no lo esta, o un import
-    que se queda a medias sin decirlo.
+    That is why hardly any test looks at a configuration's content —there is nothing to look at, it is
+    opaque— but at WHAT HAPPENS when the recipient is not there, does not implement the contract or blows
+    up. That is where a slip produces the worst possible result: a file that looks complete and is not, or
+    an import that stops halfway without saying so.
 */
 
 const refConInstancia = (id: string, exporta = true, importa = true, version = '1.0.0'): IExtensionRef => ({

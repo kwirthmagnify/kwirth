@@ -8,11 +8,11 @@ import { ELogComponent, logError } from '../tools/Logging'
 const SECRET_MASK = '********'
 
 /*
-    Gestion (admin) de conectores e instancias de IdP. Montado en /idp bajo la running instance,
-    protegido por validKey (igual que UserApi/ApiKeyApi; el front oculta el menu a no-admin).
-    Los campos 'password' del schema se ENMASCARAN al salir y, al guardar, si llegan enmascarados
-    se conserva el valor almacenado (patron de campo secreto de solo-escritura).
-    El install de conectores (tgz) es EPIC G.
+    Management (admin) of IdP connectors and instances. Mounted at /idp under the running instance,
+    protected by validKey (just like UserApi/ApiKeyApi; the front end hides the menu from non-admins).
+    The schema's 'password' fields are MASKED on the way out and, when saving, if they arrive masked
+    the stored value is kept (the write-only secret field pattern).
+    Installing connectors (tgz) is EPIC G.
 */
 export class IdpApi {
     public router = express.Router()
@@ -31,7 +31,7 @@ export class IdpApi {
             next()
         })
 
-        // tipos de conector disponibles (bundled/dev/instalados)
+        // available connector types (bundled/dev/installed)
         this.router.get('/connectors', (_req: Request, res: Response) => {
             res.status(200).json(this.idpManager.listConnectors())
         })
@@ -65,7 +65,7 @@ export class IdpApi {
             }
         })
 
-        // desinstalar conector
+        // uninstall a connector
         this.router.delete('/connectors/:connectorId', async (req: Request, res: Response) => {
             try {
                 await this.idpManager.uninstall(req.params.connectorId)

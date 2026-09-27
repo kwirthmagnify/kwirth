@@ -36,9 +36,9 @@ export class EventsProvider implements IProvider {
     private clusterInfo: ClusterInfo
     private subscribers: Map<IChannel, IEventsSubscriber>
     /*
-        Entregas hechas desde que arranco: una por cada llamada a un suscriptor, no una por evento
-        producido. Aqui la diferencia importa — este provider FILTRA por 'kinds', asi que un evento
-        puede no entregarse a nadie, y contar producciones daria un caudal que no existe.
+        Deliveries made since startup: one per call to a subscriber, not one per event produced. Here
+        the difference matters — this provider FILTERS by 'kinds', so an event may be delivered to
+        nobody, and counting productions would give a throughput that does not exist.
     */
     private deliveries = 0
     private eventsWatchStartTime = 0   // epoch ms when the /api/v1/events watch started (backlog gate)
@@ -134,9 +134,9 @@ export class EventsProvider implements IProvider {
     }
 
     /*
-        Lo que este provider sabe de si mismo. Es 'subscribers.size' y nada mas: el contrato pide que
-        sea BARATO —se devuelve lo que ya se tiene, no se calcula—, y de aqui sale que events este
-        siendo consumido o emitiendo para nadie.
+        What this provider knows about itself. It is 'subscribers.size' and nothing else: the contract
+        asks for it to be CHEAP —what is already at hand is returned, nothing is computed— and this is
+        what tells whether events is being consumed or emitting for nobody.
     */
     getStats = () => ({ subscribers: this.subscribers.size, events: this.deliveries })
 

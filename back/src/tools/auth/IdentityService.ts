@@ -5,8 +5,8 @@ import { ISecrets } from '../ISecrets'
 import { IConfigMaps } from '../IConfigMap'
 
 /*
-    Emisión de identidad compartida por los distintos métodos de autenticación (login kwirth y conectores IdP).
-    Toda la lógica que decide/emite AccessKeys vive aquí (código de confianza del core).
+    Identity issuance shared by the different authentication methods (kwirth login and IdP connectors).
+    All the logic that decides/issues AccessKeys lives here (the core's trusted code).
 */
 export class IdentityService {
 

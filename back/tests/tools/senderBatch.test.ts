@@ -5,19 +5,19 @@ import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISender, ISenderMessage } from '@kwirthmagnify/kwirth-common-back'
 
 /*
-    Entrega por LOTES.
+    BATCH delivery.
 
-    `send` es un mensaje por llamada con su propio await, y eso sirve para un aviso —"se ha caido un
-    pod"— pero no para un caudal de log: un await por linea convierte el reenvio en una fila de idas y
-    venidas a la red, y las APIs de los destinos (Datadog, Elastic, Loki) aceptan arrays y cobran por
-    peticion.
+    `send` is one message per call with its own await, and that works for an alert —"a pod has gone
+    down"— but not for a stream of log: one await per line turns the forwarding into a queue of round
+    trips to the network, and the destinations' APIs (Datadog, Elastic, Loki) accept arrays and charge
+    per request.
 
-    Lo que fijan estos tests es el contrato que hace que eso sea posible SIN romper a nadie:
+    What these tests pin down is the contract that makes that possible WITHOUT breaking anybody:
 
-      · quien implementa `sendBatch` recibe el lote entero en UNA llamada;
-      · quien NO lo implementa sigue recibiendo mensajes de uno en uno, en orden;
-      · y un fallo no se lleva por delante lo que queda ni sube al llamante como excepcion — el reenvio
-        de log no puede tumbar al que lo produce.
+      · whoever implements `sendBatch` receives the whole batch in ONE call;
+      · whoever does NOT implement it goes on receiving messages one by one, in order;
+      · and a failure neither takes the remainder down with it nor rises to the caller as an exception —
+        forwarding log cannot bring down whoever produces it.
 */
 
 const memConfigMaps = (): IConfigMaps => ({
@@ -157,12 +157,12 @@ test('una config que el sender no tiene descarta el lote sin lanzar', async () =
 })
 
 /*
-    Una instancia NUEVA del sender tiene que recibir las configuraciones que el core ya conoce.
+    A NEW instance of the sender has to receive the configurations the core already knows about.
 
-    No es un caso de laboratorio: en dev, cada rebuild de un sender tira su instancia para cargar el
-    codigo nuevo, y la siguiente se creaba VACIA. El sintoma engañaba —la lista de senders seguia
-    mostrando las configuraciones, porque esa sale del almacen del core y no de la instancia— y solo al
-    enviar aparecia "has no config", como si se hubieran borrado solas.
+    It is not a laboratory case: in dev, every rebuild of a sender throws its instance away to load the
+    new code, and the next one was created EMPTY. The symptom was misleading —the senders list went on
+    showing the configurations, because that comes from the core's store and not from the instance— and
+    only on sending did "has no config" show up, as if they had deleted themselves.
 */
 
 test('una instancia re-creada recupera las configuraciones del core', async () => {

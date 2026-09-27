@@ -5,17 +5,17 @@ import { IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { IInstanceConfig, accessKeySerialize, accessKeyBuild, parseResource } from '@kwirthmagnify/kwirth-common'
 
 /*
-    El control de permisos de Kwirth: `checkAkr` (quien autoriza de verdad, llamado desde index.ts al
-    añadir objetos a una instancia) y `checkResource` (el filtro por namespace/pod/container).
+    Kwirth's permission control: `checkAkr` (the one that really authorizes, called from index.ts when
+    adding objects to an instance) and `checkResource` (the namespace/pod/container filter).
 
-    No tenian ni un test, y son la puerta por la que pasa el acceso a los recursos del cluster. Se escriben
-    al abordar S4 (plan: plans/ai-tools/PLAN.md), porque la autorizacion de tools va a reutilizar esta misma
-    semantica y conviene tenerla fijada ANTES de apoyarse en ella.
+    They did not have a single test, and they are the door through which access to the cluster's resources
+    passes. They are written while tackling S4 (plan: plans/ai-tools/PLAN.md), because the tools'
+    authorization is going to reuse this very semantics and it is worth pinning it down BEFORE leaning on it.
 
-    Lo que se fija:
-      · una accessKey con VARIOS recursos vale si encaja CUALQUIERA de ellos (OR, no el primero)
-      · un campo vacio en la clave significa "cualquiera", no "ninguno"
-      · los campos se comparan como lista de regex, no como cadena entera
+    What is pinned down:
+      · an accessKey with SEVERAL resources is valid if ANY of them matches (OR, not the first one)
+      · an empty field in the key means "any", not "none"
+      · the fields are compared as a list of regexes, not as a whole string
 */
 
 // A fake channel with scope levels: 'view' is the minimum, 'restart' can do more, 'cluster' the most.
@@ -80,7 +80,7 @@ test('🔴 una clave con VARIOS recursos vale si encaja cualquiera de ellos', ()
 test('el nivel de scope lo pone el CANAL, y hay que llegar al pedido', () => {
     const channels = fakeChannels()
 
-    // pide 'view' (10) teniendo 'view' (10): llega
+    // asks for 'view' (10) holding 'view' (10): that is enough
     assert.equal(AuthorizationManagement.checkAkr(channels, configCon('view:prod:::', 'view'), 'prod', 'p', 'c'), true)
     // pide 'restart' (50) teniendo solo 'view' (10): no llega
     assert.equal(AuthorizationManagement.checkAkr(channels, configCon('view:prod:::', 'restart'), 'prod', 'p', 'c'), false)

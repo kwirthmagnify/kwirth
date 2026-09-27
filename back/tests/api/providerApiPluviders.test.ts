@@ -130,9 +130,9 @@ test('la ayuda de suscripcion de un pluvider viaja igual que la de un provider',
 
 test('la ayuda viaja ENTERA: usage, example y fields', async () => {
     /*
-        Este es el camino que usa de verdad el formulario de provider-debug: lee GET /core/providers,
-        no el catalogo del websocket. Si 'fields' se perdiera por el camino, la pestaña Form quedaria
-        deshabilitada y el usuario tendria que escribir el JSON a mano sin saber que campos admite.
+        This is the path provider-debug's form really uses: it reads GET /core/providers, not the
+        websocket's catalogue. If 'fields' were lost along the way, the Form tab would be left disabled
+        and the user would have to write the JSON by hand without knowing which fields it admits.
     */
     const help = {
         usage: 'subscribe with the configs you care about',

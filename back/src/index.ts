@@ -144,11 +144,11 @@ const runningEnv = {
 }
 
 /*
-    Que tiene a mano este Kwirth: API de Kubernetes, socket del CRI y donde persiste. Se resuelve UNA vez,
-    al arrancar, en cuanto se sabe donde corremos, y de ahi en adelante manda esto.
+    What this Kwirth has at hand: the Kubernetes API, the CRI socket and where it persists. It is resolved
+    ONCE, at startup, as soon as we know where we are running, and from then on this is what rules.
 
-    'runningEnv' sigue ahi porque hay sitios que preguntan por el runtime en si (isTTY para el log, isDesktop
-    para el FORWARD), pero ya no es quien decide que se puede hacer: eso lo dice este objeto.
+    'runningEnv' is still there because there are places that ask about the runtime itself (isTTY for the
+    log, isDesktop for the FORWARD), but it is no longer what decides what can be done: this object says that.
 */
 let capabilities:IEnvironmentCapabilities
 
@@ -187,10 +187,10 @@ const envBodyLimit = process.env.BODYLIMIT || '8mb'
 const envKeepAliveMs = +(process.env.KEEPALIVE || '65000')
 
 /*
-    Rutas de providers que quieren el cuerpo EN CRUDO (las que declaran 'rawBody').
+    Provider routes that want the body RAW (the ones declaring 'rawBody').
 
-    Se rellena al montar sus routers, que ocurre despues de arrancar express; por eso el middleware que
-    la consulta mira esta lista EN CADA PETICION en vez de decidirse al arrancar.
+    It is filled in when their routers are mounted, which happens after express has started; that is why
+    the middleware that consults it looks at this list ON EVERY REQUEST instead of deciding at startup.
 */
 const rawBodyProviderPaths: string[] = []
 const envFront = process.env.FRONT !== undefined ? process.env.FRONT === 'true' : true
@@ -246,10 +246,10 @@ if (envCommand!==undefined) {
 }
 
 /*
-    Donde corremos, y —lo que de verdad importa— que tenemos a mano. La deteccion y la derivacion viven en
-    ExecutionEnvironment.ts para que sean una sola: hasta ahora el resultado de esta funcion se perdia en
-    cuanto terminaba el switch de arranque, y cada sitio que necesitaba saber algo del entorno se lo volvia
-    a preguntar por su cuenta a runningEnv.
+    Where we run, and —what really matters— what we have at hand. The detection and the derivation live in
+    ExecutionEnvironment.ts so that they are one single thing: until now this function's result was lost as
+    soon as the startup switch ended, and every place that needed to know something about the environment
+    went and asked runningEnv again on its own account.
 */
 const getExecutionEnvironment = async ():Promise<EExecutionEnvironment|undefined> => {
     logInfo(ELogComponent.CORE, 'Detecting execution environment...')
@@ -310,9 +310,8 @@ const activateRunningInstance = (ri:IRunningInstance) => {
 }
 
 /*
-    Un almacenamiento en fichero empieza vacio, asi que el primer arranque tiene que dejar dentro alguien
-    con quien poder entrar. En Kubernetes no hace falta, porque el secreto de usuarios lo pone el propio
-    despliegue.
+    A file storage starts out empty, so the first startup has to leave somebody inside to be able to log in
+    with. On Kubernetes it is not needed, because the users secret is put there by the deployment itself.
 */
 const createAdminUserIfMissing = async (secrets:ISecrets) => {
     let users:{ [username:string]:string } = await secrets.read('kwirth-users')
@@ -325,13 +324,13 @@ const createAdminUserIfMissing = async (secrets:ISecrets) => {
 const createRunningInstance = async (context:string|undefined, kwirthData:KwirthData):Promise<IRunningInstance|undefined> => {
     try {
         /*
-            Cargar el kubeconfig tambien va dentro del 'si hay Kubernetes'. No es adorno: donde no hay
-            ninguno —una tarea de Fargate, sin ~/.kube/config y sin las variables del pod— loadFromDefault()
-            puede quejarse de que no hay contexto actual, y esa excepcion acabaria en el catch de esta
-            funcion, que es exactamente el camino que dejaba a Kwirth sin arrancar.
+            Loading the kubeconfig also goes inside the 'if there is Kubernetes'. It is not decoration:
+            where there is none —a Fargate task, with no ~/.kube/config and without the pod's variables—
+            loadFromDefault() may complain that there is no current context, and that exception would end
+            up in this function's catch, which is exactly the path that left Kwirth unable to start.
 
-            El objeto vacio si se asigna: hay codigo que consulta clusterInfo.kubeConfig sin preguntar
-            antes, y prefiere encontrarse un kubeconfig sin clusters a un undefined.
+            The empty object IS assigned: there is code that consults clusterInfo.kubeConfig without
+            asking first, and it would rather find a kubeconfig with no clusters than an undefined.
         */
         let kubeConfig = new KubeConfig()
 
@@ -361,13 +360,14 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         clusterInfo.kubeConfig = kubeConfig
 
         /*
-            Los clientes de Kubernetes se construyen SOLO si hay una API detras. Antes se construian
-            siempre y, acto seguido, se le pedia el uid al namespace kube-system: sin cluster alcanzable eso
-            lanzaba, el catch de esta funcion se lo tragaba y el arranque terminaba sin instancia ninguna.
-            Ese era el motivo real de que Kwirth no pudiera correr en un sitio sin Kubernetes.
+            The Kubernetes clients are built ONLY if there is an API behind them. They used to be built
+            always and, right afterwards, the kube-system namespace was asked for its uid: with no
+            reachable cluster that threw, this function's catch swallowed it and startup ended with no
+            instance at all. That was the real reason why Kwirth could not run somewhere without Kubernetes.
 
-            Es una rama explicita y no un catch mas ancho a proposito: un catch convierte 'aqui no hay
-            cluster, y esta bien' y 'el cluster no responde, y eso es un problema' en el mismo silencio.
+            It is an explicit branch and not a wider catch on purpose: a catch turns 'there is no cluster
+            here, and that is fine' and 'the cluster does not answer, and that is a problem' into the same
+            silence.
         */
         if (!capabilities.kubernetes) {
             logInfo(ELogComponent.CORE, 'No Kubernetes API available: cluster clients will not be created')
@@ -396,9 +396,9 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             clusterInfo.id = await (await clusterInfo.coreApi.readNamespace({ name:'kube-system'})).metadata?.uid || ''
 
             /*
-                El SA Token solo tiene sentido cuando Kwirth ES una carga del cluster. Fuera de el —desktop,
-                un contenedor con kubeconfig, una tarea de ECS— las credenciales son las del kubeconfig y
-                pedir un token de service account no lleva a ninguna parte.
+                The SA Token only makes sense when Kwirth IS a cluster workload. Outside it —desktop, a
+                container with a kubeconfig, an ECS task— the credentials are the kubeconfig's and asking
+                for a service account token leads nowhere.
             */
             if (kwirthData.executionEnvironment !== EExecutionEnvironment.KUBERNETES) {
                 logInfo(ELogComponent.CORE, `SA Token will not be created outside Kubernetes (running on '${kwirthData.executionEnvironment}', using kubeconfig credentials)`)
@@ -422,9 +422,9 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
 
 
         /*
-            Donde se persiste lo dicen las capacidades, no el entorno. Es la misma decision de siempre
-            —ficheros fuera de Kubernetes, Secrets y ConfigMaps dentro—, solo que escrita en un sitio en
-            vez de repartida entre tres ramas que preguntaban cada una por su cuenta.
+            Where things are persisted is said by the capabilities, not by the environment. It is the same
+            decision as always —files outside Kubernetes, Secrets and ConfigMaps inside— only written in
+            one place instead of spread across three branches that each asked on their own account.
         */
         let configMaps
         let secrets
@@ -776,23 +776,24 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
         logInfo(ELogComponent.CORE, `Trying to perform instance config for channel '${instanceConfig.channel}' with view '${instanceConfig.view}'`)
 
         /*
-            Canal autonomo: no necesita NADA del cluster (cluster:false y resourced:false en su
-            getChannelData). Se le invoca una sola vez y con los tres selectores VACIOS.
+            Autonomous channel: it needs NOTHING from the cluster (cluster:false and resourced:false in
+            its getChannelData). It is invoked once and with the three selectors EMPTY.
 
-            Tiene rama propia para no pasar por el camino de la view 'cluster', que registra la
-            instancia como "cluster-wide access key" y llama a addObject con '*all'. Pedir ambito de
-            cluster para un canal que no va a mirar un solo pod es privilegio injustificado y ruido en
-            la auditoria. Se pasan cadenas vacias y no '*all' porque el significado no es "todos los
-            recursos" sino "ningun recurso".
+            It has a branch of its own so as not to go through the 'cluster' view's path, which registers
+            the instance as a "cluster-wide access key" and calls addObject with '*all'. Asking for
+            cluster scope for a channel that is not going to look at a single pod is unjustified
+            privilege and noise in the audit. Empty strings and not '*all' are passed because the meaning
+            is not "every resource" but "no resource".
 
-            La VIEW ELEGIDA DA IGUAL, y por eso no se valida. Aqui se entra por lo que el canal
-            declara, no por lo que el usuario seleccione, y se le entregan selectores vacios en todos
-            los casos: elegir 'cluster' en vez de 'none' no le da al canal ni un permiso mas.
-            Rechazar las demas views era gratuito, ademas de incoherente —'cluster' es MAS permisiva
-            que 'none', asi que quien puede lo mas podia lo menos— y el sintoma era pesimo: el core
-            contestaba al START con un SIGNAL de error que los canales no miraban, el canal se
-            guardaba una instancia vacia como si hubiera arrancado, y el fallo reaparecia mucho
-            despues disfrazado de otra cosa (en asteroids, al intentar guardar una puntuacion).
+            THE CHOSEN VIEW DOES NOT MATTER, which is why it is not validated. This path is entered
+            because of what the channel declares, not because of what the user selects, and empty
+            selectors are handed over in every case: choosing 'cluster' instead of 'none' does not give
+            the channel a single extra permission. Rejecting the other views was gratuitous, and
+            incoherent too —'cluster' is MORE permissive than 'none', so whoever could do more could not
+            do less— and the symptom was awful: the core answered the START with an error SIGNAL the
+            channels did not look at, the channel kept an empty instance as if it had started, and the
+            failure reappeared much later disguised as something else (in asteroids, when trying to save
+            a score).
         */
         const channelData = ri.channels.get(instanceConfig.channel)?.getChannelData()
         if (channelData && !channelData.cluster && !channelData.resourced) {
@@ -1231,12 +1232,12 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
 }
 
 /*
-    Monta el router de gestion de un provider (su propia configuracion) en '/core/providerconfig/<id>',
-    SIEMPRE detras de validacion de accessKey. Es la contraparte para providers de lo que el core ya hace
-    con los endpoints de un canal: la autenticacion la pone el core, no la extension.
+    Mounts a provider's management router (its own configuration) at '/core/providerconfig/<id>', ALWAYS
+    behind accessKey validation. It is the providers' counterpart of what the core already does with a
+    channel's endpoints: authentication is put there by the core, not by the extension.
 
-    No se puede proteger 'provider.router' en su lugar: ese es publico y recibe trafico externo
-    (exportadores OTLP, POSTs de terceros), que no lleva accessKey de Kwirth.
+    'provider.router' cannot be protected instead: that one is public and receives external traffic (OTLP
+    exporters, third-party POSTs), which carries no Kwirth accessKey.
 */
 const mountProviderConfigRouter = (riRouter:Router, provider:IProvider, apiKeyApi:ApiKeyApi|undefined) : void => {
     if (!provider.configRouter || provider.configRouterStarted) return
@@ -1532,8 +1533,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         }
         if (pluginManager && providerManager && senderManager && webhookManager && aiToolsetManager && idpManager) {
             /*
-                Portabilidad de configuracion. El core reune lo suyo y pregunta a quien pueda responder;
-                lo que cada extension considere configuracion suya es cosa suya, y viaja opaco.
+                Configuration portability. The core gathers its own and asks whoever can answer; what each
+                extension considers its configuration is its own business, and it travels opaque.
                 Ver `plans/config-portability/PRD.md`.
             */
             const configBundleManager = new ConfigBundleManager(
@@ -1610,12 +1611,13 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     riRouter.use(path, provider.router)
                     provider.started = true
                     /*
-                        El cuerpo en crudo se decide aqui, no en el router: para cuando el router corre,
-                        el bodyParser global ya se lo habria comido.
+                        The raw body is decided here, not in the router: by the time the router runs, the
+                        global bodyParser would already have eaten it.
 
-                        Se lee de forma estructural y no por el tipo: 'rawBody' es nuevo en
-                        kwirth-common-back, y asi el core compila igual contra la version anterior —lo
-                        que importa cuando el paquete acaba de publicarse y npm todavia no lo sirve.
+                        It is read structurally and not through the type: 'rawBody' is new in
+                        kwirth-common-back, and this way the core compiles just the same against the
+                        previous version —which matters when the package has just been published and npm
+                        does not serve it yet.
                     */
                     const quiereCrudo = (provider as { rawBody?: boolean }).rawBody === true
                     if (quiereCrudo && !rawBodyProviderPaths.includes(path)) rawBodyProviderPaths.push(path)
@@ -1870,14 +1872,14 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             + ` · not required: ${notRequiredProviders.join(', ') || 'none'}`)
 
         /*
-            Lo de arriba recorre lo REGISTRADO; esto recorre lo que los canales PIDEN, que no es lo
-            mismo: un id pedido y no disponible no se reportaba en el arranque, solo al intentar
-            suscribirse.
+            The above walks what is REGISTERED; this walks what the channels ASK FOR, which is not the
+            same: an id that was asked for and is not available was not reported at startup, only when
+            trying to subscribe.
 
-            Y la ausencia se trata distinto segun que falte: un provider declarado y no registrado es
-            una mala configuracion (error), mientras que un pluvider ausente es legitimo —su plugin
-            puede no estar instalado, o ser un canal SINGLE anunciado aqui como remoto— y el
-            consumidor sigue adelante sin el (warning). Esa es la dependencia blanda.
+            And absence is treated differently depending on what is missing: a provider that is declared
+            and not registered is a misconfiguration (error), whereas an absent pluvider is legitimate
+            —its plugin may not be installed, or it may be a SINGLE channel announced here as remote—
+            and the consumer carries on without it (warning). That is the soft dependency.
         */
         const requestedIds = Array.from(runningInstance.channels.values()).flatMap(c => c.requirements.providers)
         const missing = findMissingSubscriptionTargets(requestedIds, Array.from(registeredProviders.keys()), localClusterInfo.pluviders)
@@ -1970,13 +1972,13 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         await startPluviders(localClusterInfo.pluviders)
 
         /*
-            Con TODO lo suscribible ya registrado —providers y pluviders—, se avisa a los providers que
-            consumen a otros para que se suscriban. Va aqui y no dentro de startProvider() porque alli
-            que el productor exista depende de cual de los dos bucles lo instancio y del orden dentro
-            del bucle: el autor no puede verlo y le funciona o no por motivos invisibles.
+            With EVERYTHING subscribable already registered —providers and pluviders— the providers that
+            consume others are told to subscribe. It goes here and not inside startProvider() because
+            there whether the producer exists depends on which of the two loops instantiated it and on
+            the order within the loop: the author cannot see that and it works or not for invisible reasons.
 
-            El fallo de uno se registra y no tumba al resto: consumir a otro productor es una
-            dependencia BLANDA, igual que para un canal que se suscribe a un pluvider ausente.
+            One failing is logged and does not bring the rest down: consuming another producer is a SOFT
+            dependency, just as it is for a channel subscribing to an absent pluvider.
         */
         const wired = await wireProviderConsumers(localClusterInfo.providers,
             (provId, err) => providerLogger(provId).error(`Failed while wiring up to the providers it consumes: ${err}`))
@@ -2177,10 +2179,10 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             logInfo(ELogComponent.CORE, `No deployment detected. Kwirth is not running inside a cluster`)
 
         /*
-            Si el contenedor anterior murio, su log es lo unico que explica por que, y solo esta vivo
-            AHORA: el kubelet lo rota y un rollout se lo lleva. Se lee aqui, una vez, y se queda en
-            memoria para que el About pueda ensenarlo. Que falle no importa —es diagnostico, no arranque—
-            y por eso readPreviousContainerLog() nunca lanza.
+            If the previous container died, its log is the only thing that explains why, and it is only
+            alive NOW: the kubelet rotates it and a rollout takes it away. It is read here, once, and kept
+            in memory so that the About can show it. Its failing does not matter —it is diagnosis, not
+            startup— which is why readPreviousContainerLog() never throws.
         */
         if (localKwirthData.inCluster && process.env.HOSTNAME) {
             // How many lines, from Kwirth's settings (or from PREVIOUSLOGLINES, or 1000)
@@ -2530,14 +2532,14 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
         logInfo(ELogComponent.CORE, 'Creating HTTP server...')
         httpServer = http.createServer(expressApp)
         /*
-            Node cierra las conexiones ociosas a los 5 segundos, y quien nos manda datos las REUTILIZA:
-            un recolector que envie cada 10 s escribe siempre sobre un socket que acabamos de cerrar, y
-            del otro lado se ve un error de red —no un error HTTP— que parece que kwirth no esta
-            escuchando cuando si lo esta. Paso con Fluent Bit y su output http.
+            Node closes idle connections after 5 seconds, and whoever sends us data REUSES them: a
+            collector sending every 10 s always writes onto a socket we have just closed, and on the other
+            side a network error shows up —not an HTTP error— that looks as though kwirth were not
+            listening when it is. It happened with Fluent Bit and its http output.
 
-            Se sube a 65 s, por encima de lo que espacian sus envios los clientes habituales. El
-            headersTimeout DEBE quedar por encima del keepAliveTimeout: si no, Node corta la peticion
-            mientras aun se estan leyendo sus cabeceras.
+            It is raised to 65 s, above the spacing of the usual clients' sends. The headersTimeout MUST
+            stay above the keepAliveTimeout: otherwise Node cuts the request off while its headers are
+            still being read.
         */
         httpServer.keepAliveTimeout = envKeepAliveMs
         httpServer.headersTimeout = envKeepAliveMs + 5000
@@ -2668,10 +2670,10 @@ const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthD
     }
 
     /*
-        Un Error NO tiene propiedades enumerables, asi que JSON.stringify(err) devuelve '{}'. El core
-        moria escribiendo "Reason: {}" y no habia forma de saber que habia pasado ni desde donde, que es
-        justo lo unico que se necesita: estos rechazos suelen venir de una extension, no del core.
-        Lo canto un unhandled rejection del provider 'trivy'.
+        An Error has NO enumerable properties, so JSON.stringify(err) returns '{}'. The core died writing
+        "Reason: {}" and there was no way of knowing what had happened nor from where, which is exactly
+        the only thing needed: these rejections usually come from an extension, not from the core.
+        An unhandled rejection from the 'trivy' provider gave it away.
     */
     const describeFailure = (value: any): string => {
         if (value instanceof Error) return value.stack ?? `${value.name}: ${value.message}`
@@ -2799,14 +2801,14 @@ const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthD
 
     process.on('unhandledRejection', async (reason:any, promise:any) => {
         /*
-            Un fallo de una EXTENSION no puede llevarse el core por delante. Antes si: cualquier promesa
-            sin catch acababa aqui y el proceso salia, con todos sus canales y todos sus usuarios dentro.
-            Lo provoco el provider 'trivy' —un fire-and-forget sin catch— y bastaba con suscribirse a el
-            sin payload desde provider-debug.
+            An EXTENSION's failure cannot take the core down with it. It used to: any promise without a
+            catch ended up here and the process exited, with all its channels and all its users inside.
+            The 'trivy' provider caused it —a fire-and-forget with no catch— and subscribing to it with no
+            payload from provider-debug was enough.
 
-            Se aisla, se deja traza con su nombre, y el core sigue. Si el rechazo NO se puede atribuir a
-            una extension se mantiene el comportamiento de siempre: puede ser un fallo del core, que si
-            deja el proceso en un estado del que no conviene fiarse.
+            It is isolated, a trace is left with its name, and the core carries on. If the rejection
+            CANNOT be attributed to an extension the behaviour of always is kept: it may be a core
+            failure, which does leave the process in a state not worth trusting.
         */
         const origin = failureOrigin(reason)
         if (origin) {
@@ -2857,24 +2859,24 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
     }
 
     /*
-        A partir de aqui nadie vuelve a preguntarle al entorno: se pregunta a las capacidades. Y se imprime
-        el porque de cada una, porque quien despliega esto en un sitio al que no puede asomarse solo tiene
-        el log para entender que cree Kwirth que tiene a mano.
+        From here on nobody asks the environment again: the capabilities are asked. And the reason for
+        each one is printed, because whoever deploys this somewhere they cannot look into has only the log
+        to understand what Kwirth believes it has at hand.
     */
     capabilities = await resolveEnvironmentCapabilities(exenv, envContext)
     logInfo(ELogComponent.CORE, `Execution environment capabilities — ${capabilities.reasons.join(' · ')}`)
 
     /*
-        Los dos providers del CORE leen del cluster y de ningun otro sitio, asi que sin API de Kubernetes
-        no se registran siquiera. Dejarlos instanciarse cuesta caro y se vio en un contenedor: 'events'
-        reintenta una docena de recursos cada 80 segundos con 'No currently active cluster', y el tick de
-        'metrics' lanza en cada intervalo contra un listNode() que no existe. El despliegue funciona igual,
-        pero un arranque perfectamente normal queda sepultado en errores — y entonces un error de verdad
-        ya no se distingue.
+        The CORE's two providers read from the cluster and from nowhere else, so without a Kubernetes API
+        they are not even registered. Letting them be instantiated is expensive, and it showed in a
+        container: 'events' retries a dozen resources every 80 seconds with 'No currently active cluster',
+        and the 'metrics' tick throws on every interval against a listNode() that does not exist. The
+        deployment works just the same, but a perfectly normal startup ends up buried in errors — and then
+        a real error can no longer be told apart.
 
-        Esto decide sobre codigo del core, no sobre extensiones ajenas: un plugin sigue arrancando y
-        conectandose a lo que pueda, y si pide uno de estos dos recibe un 'not registered' claro, dicho
-        una vez, que es la verdad.
+        This decides about the core's code, not about somebody else's extensions: a plugin still starts
+        and connects to whatever it can, and if it asks for one of these two it gets a clear 'not
+        registered', said once, which is the truth.
     */
     if (!capabilities.kubernetes) {
         registeredProviders.delete('events')
@@ -2953,12 +2955,12 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
     app.use(`${envRootPath}/webhook`, express.raw({ type: '*/*', limit: '1mb' }), webhookRouter)
 
     /*
-        Un provider de INGESTA necesita los bytes tal y como llegaron: ndjson y msgpack no son JSON, y
-        verificar una firma exige el cuerpo exacto. El bodyParser global se los comeria, asi que los que
-        lo piden ('rawBody' en IProvider) pasan por delante con su propio parser.
+        An INGEST provider needs the bytes exactly as they arrived: ndjson and msgpack are not JSON, and
+        verifying a signature demands the exact body. The global bodyParser would eat them, so the ones
+        that ask for it ('rawBody' in IProvider) go in front with their own parser.
 
-        Es el mismo patron que ya usa el receptor de webhooks unas lineas mas arriba; lo que faltaba era
-        que los providers publicos pudieran pedirlo tambien, en vez de recibir el cuerpo ya masticado.
+        It is the same pattern the webhook receiver already uses a few lines above; what was missing was
+        for the public providers to be able to ask for it too, instead of receiving the body pre-chewed.
     */
     app.use((req: Request, res: Response, next) => {
         const casa = (ruta: string): boolean =>
@@ -2969,10 +2971,10 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
     })
 
     /*
-        El limite por defecto de body-parser son 100 kB, y eso se queda corto en cuanto una extension
-        RECIBE algo en vez de devolverlo: un recolector de log agrupa varios registros por peticion y
-        pasa de 100 kB sin esfuerzo. El sintoma engaña, porque el 413 lo devuelve el core con una pagina
-        HTML de error antes de que la extension llegue a verlo, y parece un fallo de la extension.
+        body-parser's default limit is 100 kB, and that falls short as soon as an extension RECEIVES
+        something instead of returning it: a log collector batches several records per request and goes
+        past 100 kB without effort. The symptom is misleading, because the 413 is returned by the core
+        with an HTML error page before the extension gets to see it, and it looks like the extension's fault.
     */
     app.use(bodyParser.json({ limit: envBodyLimit }))
     app.use(cors())
@@ -3015,9 +3017,9 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
     }
 
     /*
-        '/healthz' deja de ser cosa solo de Kubernetes. Cualquier orquestador quiere preguntar si esto
-        esta vivo, y un balanceador de AWS que no obtiene respuesta no marca la tarea como sana y la
-        recicla en bucle sin decir por que. No cuesta nada y no ensena nada.
+        '/healthz' stops being a Kubernetes-only matter. Any orchestrator wants to ask whether this is
+        alive, and an AWS balancer that gets no answer does not mark the task as healthy and recycles it
+        in a loop without saying why. It costs nothing and it gives nothing away.
     */
     logInfo(ELogComponent.CORE, 'Configuring healthz endpoint')
     app.get(`/healthz`, (_req:Request,res:Response) => { res.status(200).send() })
