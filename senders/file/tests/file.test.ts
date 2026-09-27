@@ -6,12 +6,12 @@ import path from 'path'
 import FileSender from '../src/back/index'
 
 /*
-    El sender `file`, y sobre todo su entrega por LOTES.
+    The `file` sender, and above all its BATCH delivery.
 
-    Escribir en un fichero parece lo mas simple que hay, y por eso es donde nadie mira: la rotacion
-    cuando un lote cruza el limite, que el formato de un lote sea el MISMO que el de una linea suelta, y
-    que el origen aparezca solo si se pide. Los tres se rompen en silencio — el fichero sigue teniendo
-    lineas, solo que mal.
+    Writing to a file looks like the simplest thing there is, and that is why nobody looks there: the
+    rotation when a batch crosses the limit, a batch's format being the SAME as a single line's, and the
+    origin appearing only when asked for. All three break silently — the file still has lines in it, just
+    the wrong ones.
 */
 
 const tmp = (): string => {
@@ -85,10 +85,10 @@ test('una linea de una MAQUINA lleva su host Y el servicio que la produjo', asyn
     const sender = await crea({ name: 'c', filePath: ruta, timestamps: false, levels: false, origin: true })
 
     /*
-        Log de fuera de un cluster: no hay namespace, y quien lo produce pone el HOST en el campo del
-        pod, porque es lo que un destino espera como su host. Si se toma el trio de Kubernetes en
-        cuanto hay pod, el servicio se pierde — y una maquina corre muchos, asi que todas sus lineas
-        acaban pareciendo la misma.
+        Log from outside a cluster: there is no namespace, and whoever produces it puts the HOST in the
+        pod's field, because that is what a destination expects as its host. If the Kubernetes trio is
+        taken as soon as there is a pod, the service is lost — and one machine runs many, so all of its
+        lines end up looking the same.
     */
     await sender.sendBatch!('c', [{ body: 'latido', origin: { pod: 'windows-dev', service: 'demo-app' } }])
 
