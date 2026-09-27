@@ -2,14 +2,14 @@ import { IAiToolset, IMetricsNodeSample, IMetricsSample, IToolHost, defineTool, 
 import { ECapability, EToolEffect, EToolSensitivity } from '@kwirthmagnify/kwirth-common-ai'
 
 /*
-    Toolset `k8s-metrics` — cuánto consume el cluster, y cuánto consumía hace un rato
+    Toolset `k8s-metrics` — how much the cluster consumes, and how much it was consuming a while ago
     (plan: plans/ai-tools/PLAN.md, S3).
 
-    Estrena `ECapability.METRICS`. Las muestras las mantiene el core en memoria: aquí no se pide nada al
-    cluster para leerlas, solo para resolver QUÉ pods son de un deployment.
+    It is the first to use `ECapability.METRICS`. The core keeps the samples in memory: nothing is asked
+    of the cluster here to read them, only to resolve WHICH pods belong to a deployment.
 
-    Las siete van en pares: la del momento y la de las últimas N lecturas. La histórica no es un lujo —
-    un 90 % de CPU no dice nada por sí solo; lo que dice algo es que hace cinco lecturas iba al 20 %.
+    The seven come in pairs: the one for right now and the one for the last N readings. The historical one
+    is no luxury — 90% CPU says nothing on its own; what says something is that five readings ago it was at 20%.
 */
 
 const metrics = (host: IToolHost, toolName: string, args: Record<string, unknown> = {}): IMetricsSample[] => {

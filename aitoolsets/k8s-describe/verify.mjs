@@ -1,8 +1,8 @@
 /*
-    Verificacion contra un cluster DE VERDAD: node verify.mjs [namespace]
+    Verification against a REAL cluster: node verify.mjs [namespace]
 
-    El harness pasa sin cluster; esto necesita uno. Se corre a mano al tocar el toolset. Busca objetos
-    reales en el namespace indicado y llama a las once tools contra ellos, en SOLO LECTURA.
+    The harness passes with no cluster; this one needs one. It is run by hand when the toolset is touched.
+    It looks for real objects in the given namespace and calls the eleven tools against them, READ ONLY.
 */
 import { createRequire } from 'module'
 import { KubeConfig, CoreV1Api, AppsV1Api, NetworkingV1Api } from '@kubernetes/client-node'

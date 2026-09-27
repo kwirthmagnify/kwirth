@@ -1,13 +1,13 @@
 /*
-    Verificacion contra un cluster DE VERDAD: node verify.mjs [namespace]
+    Verification against a REAL cluster: node verify.mjs [namespace]
 
-    Lo mismo que en k8s-inventory: el harness pasa sin cluster, y esto necesita uno. Se corre a mano al
-    tocar el toolset.
+    The same as in k8s-inventory: the harness passes with no cluster, and this one needs one. It is run by
+    hand when the toolset is touched.
 
-    ⚠️ Con un matiz propio de este paquete: el buffer de eventos lo mantiene el CORE, no la API de
-    Kubernetes, asi que aqui se construye leyendo los Events del cluster —que es de donde el core los
-    saca— y se le da al host con la forma del contrato. Lo que se prueba de verdad contra el cluster es
-    `get_pod_logs`; las dos de eventos se prueban con datos reales pero servidos por nosotros.
+    ⚠️ With one wrinkle of its own: the event buffer is kept by the CORE, not by Kubernetes's API, so here
+    it is built by reading the cluster's Events — which is where the core gets them from — and handed to
+    the host in the contract's shape. What is really tested against the cluster is `get_pod_logs`; the two
+    event ones are tested with real data, but served by us.
 */
 import { createRequire } from 'module'
 import { KubeConfig, CoreV1Api } from '@kubernetes/client-node'

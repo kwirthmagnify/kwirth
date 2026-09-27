@@ -1,12 +1,12 @@
 /*
-    Harness del toolset `k8s-observability`. Contra el dist construido y con host FALSO: `npm test` tiene
-    que pasar en una maquina sin cluster.
+    Harness of the `k8s-observability` toolset. Against the built dist and with a FAKE host: `npm test`
+    has to pass on a machine with no cluster.
 
-    Lo que se fija:
-      · las dos tools de eventos NO llaman al cluster — leen el buffer que presta el host
-      · el filtrado (warnings, namespace, limite) y el resumen de cada clase de elemento
-      · que un objeto se encuentre TAMBIEN cuando el evento lo señala con involvedObject
-      · que el log se recorte por el final, que es donde esta la causa de una muerte
+    What is pinned down:
+      · the two event tools do NOT call the cluster — they read the buffer the host lends them
+      · the filtering (warnings, namespace, limit) and the summary of each kind of item
+      · that an object is found ALSO when the event points at it with involvedObject
+      · that the log is trimmed from the end, which is where the cause of a death is
 */
 import test from 'node:test'
 import assert from 'node:assert/strict'

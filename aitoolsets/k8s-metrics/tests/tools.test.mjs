@@ -1,9 +1,9 @@
 /*
-    Harness del toolset `k8s-metrics`. Con host FALSO: `npm test` pasa sin cluster.
+    Harness of the `k8s-metrics` toolset. With a FAKE host: `npm test` passes with no cluster.
 
-    Lo que merece red aqui es la ARITMETICA y el reparto: convertir unidades mal, o sumar solo los pods
-    del primer nodo, da una cifra que parece correcta y no lo es. Un error asi no revienta nada — hace
-    que el modelo diagnostique sobre datos falsos.
+    What deserves a net here is the ARITHMETIC and the apportioning: converting units wrong, or adding up
+    only the first node's pods, gives a figure that looks right and is not. An error like that blows up
+    nothing — it makes the model diagnose over false data.
 */
 import test from 'node:test'
 import assert from 'node:assert/strict'

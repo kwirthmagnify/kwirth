@@ -1,13 +1,13 @@
 /*
-    Harness del toolset `k8s-inventory`. Corre contra el dist construido (igual que el core carga el
-    paquete) y con clientes de Kubernetes FALSOS: aqui no hay cluster, y no debe hacer falta — `npm test`
-    tiene que pasar en cualquier maquina. La llamada real al cluster la prueba `verify.mjs`, a mano.
+    Harness of the `k8s-inventory` toolset. It runs against the built dist (the same way the core loads
+    the package) and with FAKE Kubernetes clients: there is no cluster here, and there must not need to be
+    — `npm test` has to pass on any machine. The real call to the cluster is what `verify.mjs` tests, by hand.
 
-    Lo que se fija es lo que el contrato de S1 promete y es caro de arreglar tarde:
-      · una tool que necesita cluster y no lo recibe lo DICE, en vez de reventar por dentro
-      · cada invocacion deja traza
-      · el filtro de namespace elige la llamada correcta (namespaced vs all-namespaces)
-      · los fallos del cluster vuelven como DATO, no como excepcion: el modelo tiene que poder leerlos
+    What is pinned down is what S1's contract promises and is expensive to fix late:
+      · a tool that needs a cluster and does not get one SAYS so, instead of blowing up inside
+      · every invocation leaves a trace
+      · the namespace filter picks the right call (namespaced vs all-namespaces)
+      · the cluster's failures come back as DATA, not as an exception: the model has to be able to read them
 */
 import test from 'node:test'
 import assert from 'node:assert/strict'

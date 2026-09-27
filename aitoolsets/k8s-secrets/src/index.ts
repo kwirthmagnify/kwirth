@@ -3,21 +3,22 @@ import { ECapability, EToolEffect, EToolSensitivity } from '@kwirthmagnify/kwirt
 import * as tls from 'tls'
 
 /*
-    Toolset `k8s-secrets` — la configuración que un workload consume de verdad
+    Toolset `k8s-secrets` — the configuration a workload really consumes
     (plan: plans/ai-tools/PLAN.md, S3).
 
-    Existe como paquete aparte aunque sus tres tools sean de lectura: es el caso que justifica que
-    `sensitivity` sea un eje independiente de `effect`. Separarlo permite dárselo a un plugin y negárselo
-    a otro sin tocar nada más.
+    It exists as a separate package even though its three tools are read-only: it is the case that
+    justifies `sensitivity` being an axis independent of `effect`. Separating it allows giving it to one
+    plugin and denying it to another without touching anything else.
 
-    ⚠️ LA SENSIBILIDAD AQUÍ ESTÁ AL REVÉS DE LO QUE PARECE, y conviene saberlo:
+    ⚠️ SENSITIVITY HERE IS THE OTHER WAY ROUND FROM WHAT IT LOOKS LIKE, and it is worth knowing:
 
-      · `get_secret` **no devuelve los valores**. Devuelve las CLAVES, el tipo y cuándo cambió. Eso es
-        deliberado y viene de las 43 originales: se puede saber que un Secret cambió sin poder leerlo.
-      · `get_configmap` **sí devuelve los datos en crudo**. Y un ConfigMap es exactamente donde acaban las
-        contraseñas de quien no quiso complicarse — de ahí que sea el más sensible de los tres.
+      · `get_secret` **does not return the values**. It returns the KEYS, the type and when it changed.
+        That is deliberate and comes from the original 43: one can know that a Secret changed without
+        being able to read it.
+      · `get_configmap` **does return the raw data**. And a ConfigMap is exactly where the passwords of
+        whoever did not want the bother end up — hence it being the most sensitive of the three.
 
-    El nombre del toolset dice "secrets" por el tema, no porque devuelva secretos.
+    The toolset's name says "secrets" for the subject, not because it returns secrets.
 */
 
 const k8s = (host: IToolHost, toolName: string, args: Record<string, unknown> = {}) => {

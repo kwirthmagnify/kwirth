@@ -2,21 +2,23 @@ import { IAiToolset, IToolHost, defineTool, z } from '@kwirthmagnify/kwirth-comm
 import { ECapability, EToolEffect, EToolSensitivity } from '@kwirthmagnify/kwirth-common-ai'
 
 /*
-    Toolset `k8s-describe` — el detalle de UN objeto (plan: plans/ai-tools/PLAN.md, S3).
+    Toolset `k8s-describe` — the detail of ONE object (plan: plans/ai-tools/PLAN.md, S3).
 
-    Donde `k8s-inventory` responde "qué hay", este responde "qué le pasa a esto": el equivalente a
-    `kubectl describe` y a `kubectl get -o yaml`. Es el paquete más grande del reparto, 12 tools.
+    Where `k8s-inventory` answers "what is there", this one answers "what is wrong with this": the
+    equivalent of `kubectl describe` and of `kubectl get -o yaml`. It is the biggest package of the lot,
+    12 tools.
 
-    Copias propias de 12 de las 43; las de `common-ai` quedan CONGELADAS hasta que los plugins estén
-    cableados (ver el plan, "Cuándo se borran las 43").
+    Own copies of 12 of the 43; the ones in `common-ai` stay FROZEN until the plugins are wired up (see
+    the plan, "When the 43 get deleted").
 
-    ⚠️ `get_space_data` nació en `k8s-inventory` y se movió aquí (2026-09-17, lo cazó el usuario): describe
-    UN namespace, que es exactamente lo que hace este paquete. La pista de que estaba mal colocada era que
-    su pareja, `get_namespace_yaml`, ya vivía aquí: el mismo objeto, partido entre dos paquetes.
+    ⚠️ `get_space_data` was born in `k8s-inventory` and moved here (2026-09-17, the user caught it): it
+    describes ONE namespace, which is exactly what this package does. The clue that it was in the wrong
+    place was that its pair, `get_namespace_yaml`, already lived here: the same object, split across two
+    packages.
 
-    ⚠️ Sobre la sensibilidad, que aquí no es uniforme: un manifest completo de pod o de controlador trae
-    los `env` con sus VALORES en claro, y ahí es donde la gente mete contraseñas sin darse cuenta. Por eso
-    esos son INTERNAL aunque sean de lectura, y los de Service/Ingress/Namespace se quedan en PUBLIC.
+    ⚠️ About sensitivity, which here is not uniform: a complete pod or controller manifest brings the
+    `env` with their VALUES in the clear, and that is where people put passwords without realising. That
+    is why those are INTERNAL even though they are read-only, while Service/Ingress/Namespace stay PUBLIC.
 */
 
 const k8s = (host: IToolHost, toolName: string, args: Record<string, unknown> = {}) => {

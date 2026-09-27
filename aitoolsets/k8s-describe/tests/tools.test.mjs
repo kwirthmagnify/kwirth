@@ -1,10 +1,10 @@
 /*
-    Harness del toolset `k8s-describe`. Contra el dist construido y con clientes FALSOS: `npm test` tiene
-    que pasar en una maquina sin cluster.
+    Harness of the `k8s-describe` toolset. Against the built dist and with FAKE clients: `npm test` has to
+    pass on a machine with no cluster.
 
-    Lo que merece red aqui no son las llamadas, es lo que el toolset DECIDE: resolver quien manda sobre un
-    pod, distinguir un DaemonSet de un Deployment, ordenar las revisiones, y no ahogarse cuando falta una
-    pieza opcional.
+    What deserves a net here is not the calls, it is what the toolset DECIDES: resolving who owns a pod,
+    telling a DaemonSet from a Deployment, ordering the revisions, and not choking when an optional piece
+    is missing.
 */
 import test from 'node:test'
 import assert from 'node:assert/strict'

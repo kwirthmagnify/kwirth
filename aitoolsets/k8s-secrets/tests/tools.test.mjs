@@ -1,9 +1,9 @@
 /*
-    Harness del toolset `k8s-secrets`. Con clientes FALSOS: `npm test` pasa sin cluster.
+    Harness of the `k8s-secrets` toolset. With FAKE clients: `npm test` passes with no cluster.
 
-    El test que de verdad importa aqui es uno: QUE LOS VALORES DE UN SECRET NUNCA SALEN. Es el contrato de
-    la tool, no una recomendacion, y si alguien lo rompe mientras "mejora" algo, esto tiene que ponerse
-    rojo inmediatamente.
+    There is one test here that really matters: THAT A SECRET'S VALUES NEVER COME OUT. It is the tool's
+    contract, not a recommendation, and should anybody break it while "improving" something, this has to
+    go red immediately.
 */
 import test from 'node:test'
 import assert from 'node:assert/strict'

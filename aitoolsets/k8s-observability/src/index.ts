@@ -2,15 +2,15 @@ import { IAiToolset, IClusterEvent, IToolHost, z } from '@kwirthmagnify/kwirth-c
 import { ECapability, EToolEffect, EToolSensitivity } from '@kwirthmagnify/kwirth-common-ai'
 
 /*
-    Toolset `k8s-observability` — qué ha pasado en el cluster y qué dijo el contenedor
+    Toolset `k8s-observability` — what has happened in the cluster and what the container said
     (plan: plans/ai-tools/PLAN.md, S3).
 
-    Tercer paquete del reparto de las 43, y el primero que estrena `ECapability.EVENTS`: dos de sus tres
-    tools no llaman al cluster, leen el buffer de eventos que el core ya mantiene. Eso es justo lo que
-    hace que la capability signifique algo — un toolset que solo necesita eventos no recibe cluster.
+    The third package of the 43's split, and the first to use `ECapability.EVENTS`: two of its three tools
+    do not call the cluster, they read the event buffer the core already keeps. That is precisely what
+    makes the capability mean something — a toolset that only needs events does not get a cluster.
 
-    Las copias de `common-ai` quedan CONGELADAS hasta que los plugins estén cableados: un arreglo va solo
-    aquí (ver el plan, "Cuándo se borran las 43").
+    The copies in `common-ai` stay FROZEN until the plugins are wired up: a fix goes here only (see the
+    plan, "When the 43 get deleted").
 */
 
 // Capabilities are asked for, not assumed: when the host does not provision them, the tool says so
@@ -31,9 +31,9 @@ const k8s = (host: IToolHost, toolName: string, args: Record<string, unknown> = 
 const failed = (err: unknown) => ({ error: err instanceof Error ? err.message : String(err) })
 
 /*
-    Un elemento del buffer es de una de dos clases, y se resumen distinto:
-      · un Event de kube (kind: 'Event'): lo interesante es el motivo, el mensaje y a quién señala
-      · un cambio de ciclo de vida de cualquier objeto: lo interesante es qué cambió y de quién
+    An item of the buffer is of one of two kinds, and they are summarised differently:
+      · a kube Event (kind: 'Event'): what matters is the reason, the message and who it points at
+      · a lifecycle change of any object: what matters is what changed and whose it is
 */
 const summarize = (e: IClusterEvent): Record<string, unknown> => {
     const o = e?.obj ?? {}

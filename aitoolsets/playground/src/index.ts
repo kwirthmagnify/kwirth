@@ -2,17 +2,17 @@ import { IAiToolset, z } from '@kwirthmagnify/kwirth-common-ai/back'
 import { EToolEffect, EToolSensitivity } from '@kwirthmagnify/kwirth-common-ai'
 
 /*
-    Toolset `playground` — el primer `aitoolset` empaquetado, y el que valida la maquinaria de punta a
-    punta: construir, instalar, registrar e invocar (plan: plans/ai-tools/PLAN.md, S1).
+    Toolset `playground` — the first packaged `aitoolset`, and the one that validates the machinery end to
+    end: build, install, register and invoke (plan: plans/ai-tools/PLAN.md, S1).
 
-    Las dos tools son de juguete A PROPOSITO. No tocan el cluster, no leen nada y no pueden estropear
-    nada, asi que sirven para probar el camino entero con riesgo cero. Lo que NO valida es el contrato:
-    dos tools que reciben un numero y devuelven otro no dicen nada sobre si ECapability o la sensibilidad
-    estan bien planteados — para eso esta el segundo toolset de validacion, con tools de cluster de verdad.
+    The two tools are toys ON PURPOSE. They do not touch the cluster, they read nothing and they cannot
+    spoil anything, so they serve to test the whole route at zero risk. What they do NOT validate is the
+    contract: two tools that take a number and give back another say nothing about whether ECapability or
+    sensitivity are well conceived — that is what the second validation toolset is for, with real cluster tools.
 
-    Son copias PROPIAS: en common-ai hay dos tools de juguete con estos mismos nombres y NO se tocan. Este
-    paquete trae las suyas, y por eso aqui viven donde deben —en un toolset que nadie activa en produccion—
-    en vez de mezcladas con las 43 del catalogo.
+    They are OWN copies: common-ai has two toy tools with these same names and they are NOT touched. This
+    package brings its own, and that is why here they live where they should — in a toolset nobody enables
+    in production — instead of mixed in with the catalogue's 43.
 */
 
 const playground: IAiToolset = {

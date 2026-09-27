@@ -1,14 +1,14 @@
 /*
-    Verificacion contra un cluster DE VERDAD: node verify.mjs [namespace]
+    Verification against a REAL cluster: node verify.mjs [namespace]
 
-    Por que no es un test del harness: `npm test` tiene que pasar en cualquier maquina, y esto necesita un
-    kubeconfig con un cluster detras. Y por que no es un e2e: el e2e mira la SPA, y esto es back puro.
-    Asi que es un script que se corre a mano cuando se toca el toolset — es la unica forma honesta de
-    decir "llama al cluster" sin abrir un endpoint de invocacion en el core (que es S4, cuando exista
-    autorizacion al invocar).
+    Why it is not a harness test: `npm test` has to pass on any machine, and this needs a kubeconfig with
+    a cluster behind it. And why it is not an e2e: an e2e looks at the SPA, and this is pure back end. So
+    it is a script that is run by hand when the toolset is touched — it is the only honest way of saying
+    "call the cluster" without opening an invocation endpoint in the core (that is S4, once there is
+    authorisation at invocation time).
 
-    Monta el host de K8S tal y como lo montara el core (buildToolHost con requires: [K8S]) y ejecuta las
-    ocho tools contra el cluster activo, en SOLO LECTURA.
+    It builds the K8S host exactly as the core will build it (buildToolHost with requires: [K8S]) and runs
+    the eight tools against the active cluster, READ ONLY.
 */
 import { createRequire } from 'module'
 import { KubeConfig, CoreV1Api, AppsV1Api, NetworkingV1Api } from '@kubernetes/client-node'

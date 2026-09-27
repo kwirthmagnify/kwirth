@@ -2,23 +2,24 @@ import { IAiToolset, IToolHost, z } from '@kwirthmagnify/kwirth-common-ai/back'
 import { ECapability, EToolEffect, EToolSensitivity } from '@kwirthmagnify/kwirth-common-ai'
 
 /*
-    Toolset `k8s-inventory` — el segundo toolset de validacion de S1 (plan: plans/ai-tools/PLAN.md), y el
-    que de verdad ejercita el CONTRATO.
+    Toolset `k8s-inventory` — S1's second validation toolset (plan: plans/ai-tools/PLAN.md), and the one
+    that really exercises the CONTRACT.
 
-    `playground` probo la mecanica (empaquetar → publicar → instalar → registrar → invocar) con dos tools
-    de juguete. Dos tools que reciben un numero y devuelven otro no dicen nada sobre si `ECapability` o
-    `sensitivity` estan bien planteados: no piden nada al host, no leen nada y no distinguen un `read`
-    inocuo de uno peligroso. Estas ocho si.
+    `playground` proved the mechanics (package → publish → install → register → invoke) with two toy
+    tools. Two tools that take a number and give back another say nothing about whether `ECapability` or
+    `sensitivity` are well conceived: they ask the host for nothing, they read nothing and they do not
+    tell a harmless `read` from a dangerous one. These eight do.
 
-    ⚠️ `get_space_data` estuvo aquí hasta el 2026-09-17 y se movió a `k8s-describe`: describe UN namespace,
-    y eso es lo que hace aquel paquete, no este. Aquí se responde "qué hay", allí "qué le pasa a esto".
+    ⚠️ `get_space_data` was here until 2026-09-17 and moved to `k8s-describe`: it describes ONE namespace,
+    and that is what that package does, not this one. Here the answer is "what is there", there it is
+    "what is wrong with this".
 
-    Son copias PROPIAS de siete de las 43 que hay en common-ai, que NO se tocan: viven por el camino viejo
-    (`ctx()` sobre AsyncLocalStorage) hasta S3. Aqui se escriben contra el contrato nuevo —lo que recibe
-    cada tool es un `IToolHost` con SOLO lo declarado en `requires`— que es lo que hay que validar antes
-    de congelarlo.
+    They are OWN copies of seven of the 43 in common-ai, which are NOT touched: those live along the old
+    route (`ctx()` over AsyncLocalStorage) until S3. Here they are written against the new contract — what
+    each tool receives is an `IToolHost` with ONLY what is declared in `requires` — which is what has to
+    be validated before freezing it.
 
-    Todo es de solo lectura: ninguna tool de este toolset escribe en el cluster.
+    Everything is read-only: no tool of this toolset writes to the cluster.
 */
 
 // The cluster is asked for, not assumed: when the host does not provision it, the tool says so instead
