@@ -8,15 +8,15 @@ interface IUser {
     password: string
     accessKey: AccessKey
     resources: string
-    idp?: string           // instanceId del IdP al que esta atado el usuario; vacio/undefined = usuario local kwirth
-    startChannel?: string  // canal a arrancar en fullscreen al hacer login
-    startView?: string     // EInstanceConfigView value para el startChannel (default: 'cluster')
+    idp?: string           // the instanceId of the IdP the user is bound to; empty/undefined = a local kwirth user
+    startChannel?: string  // the channel to start in fullscreen on logging in
+    startView?: string     // the EInstanceConfigView value for startChannel (default: 'cluster')
     startNamespace?: string
     startGroup?: string
     startPod?: string
     startContainer?: string
-    exitFullScreen?: boolean  // si el usuario puede salir del modo fullscreen
-    enabledChannels?: string[]  // lista de canales que el usuario puede lanzar; undefined = todos
+    exitFullScreen?: boolean  // whether the user may leave fullscreen mode
+    enabledChannels?: string[]  // the list of channels the user may launch; undefined = all of them
 }
 
 interface ILoginResponse {
@@ -52,10 +52,10 @@ interface IKwirthSettings {
     // is no one-to-one relation: one manifest can list tarballs hosted in several different registries.
     packageRegistries?: IPackageRegistry[]
     /*
-        Cuantas lineas del log del contenedor ANTERIOR se leen al arrancar (kubernetes, in-cluster).
-        1000 por defecto. Es un ajuste porque 1000 es un numero razonable, no una verdad: un core que
-        escupe mucho en el arranque necesita mas para que la causa del cierre no se quede fuera de la
-        ventana. Lo guardado gana, luego la variable PREVIOUSLOGLINES, luego el default.
+        How many lines of the PREVIOUS container's log are read at startup (kubernetes, in-cluster).
+        1000 by default. It is a setting because 1000 is a reasonable number, not a truth: a core that
+        spews a lot at startup needs more so that the cause of the shutdown does not fall outside the
+        window. What is stored wins, then the PREVIOUSLOGLINES variable, then the default.
     */
     previousLogLines?: number
 }

@@ -4,21 +4,22 @@ enum ClusterTypeEnum {
 }
 
 /*
-    De donde salen los recursos que este Kwirth observa. Solo hay dos respuestas: de un cluster de
-    Kubernetes, o de ningun sitio.
+    Where the resources this Kwirth observes come from. There are only two answers: from a Kubernetes
+    cluster, or from nowhere.
 
-    NONE no es un arranque a medias: es la respuesta honesta cuando no hay API de Kubernetes a mano. Un
-    Kwirth asi sigue sirviendo el front, sigue llevando canales AUTONOMOS —los que declaran 'cluster' y
-    'resourced' a false y arrancan con la vista 'none'—, y desde el se puede federar contra otro Kwirth o
-    apuntar a un cluster montando un kubeconfig. Sin este valor habria que declararse KUBERNETES sin
-    Kubernetes, y el front saldria a listar pods contra nada.
+    NONE is not a half-done startup: it is the honest answer when there is no Kubernetes API at hand. A
+    Kwirth like that goes on serving the front end, goes on carrying AUTONOMOUS channels — those that
+    declare 'cluster' and 'resourced' false and start with the 'none' view — and from it one can federate
+    against another Kwirth or point at a cluster by mounting a kubeconfig. Without this value one would
+    have to declare oneself KUBERNETES with no Kubernetes, and the front end would go off listing pods
+    against nothing.
 
-    DOCKER estuvo aqui: Kwirth iba a gestionar contenedores y proyectos de compose como si fuesen un
-    cluster. Esa via se abandono. Docker sigue siendo un sitio DONDE correr —eso lo dice
-    EExecutionEnvironment—, pero no una fuente de recursos.
+    DOCKER was here: Kwirth was going to manage containers and compose projects as if they were a cluster.
+    That route was abandoned. Docker is still a place to RUN in — EExecutionEnvironment says that — but
+    not a source of resources.
 
-    OJO: esto NO decide capacidades, se DERIVA de ellas. Quien manda es el entorno de ejecucion mas lo que
-    se compruebe al arrancar.
+    MIND: this does NOT decide capabilities, it is DERIVED from them. What rules is the execution
+    environment plus whatever is checked at startup.
 */
 enum EClusterType {
     KUBERNETES = 'kubernetes',
@@ -26,16 +27,17 @@ enum EClusterType {
 }
 
 /*
-    Donde corre este Kwirth. Es el resultado de getExecutionEnvironment() en el back, que hasta ahora se
-    perdia en cuanto terminaba el switch de arranque: lo unico que sobrevivia eran campos derivados y peor
-    informados. Se publica porque es el dato del que cuelga todo lo demas —que hay a mano y donde se
-    persiste— y porque es lo primero que se quiere saber al diagnosticar un despliegue ajeno.
+    Where this Kwirth runs. It is the result of getExecutionEnvironment() in the back end, which until now
+    was lost as soon as the startup switch ended: the only thing that survived were derived and
+    worse-informed fields. It is published because it is the fact everything else hangs off — what is at
+    hand and where things are persisted — and because it is the first thing one wants to know when
+    diagnosing somebody else's deployment.
 */
 enum EExecutionEnvironment {
-    KUBERNETES = 'kubernetes',  // dentro de un cluster, o contra uno via kubeconfig
-    DOCKER = 'docker',          // contenedor suelto en un CRI
-    DESKTOP = 'desktop',        // Electron/Tauri en la maquina del usuario
-    ECS = 'ecs'                 // tarea de AWS ECS (Fargate o EC2)
+    KUBERNETES = 'kubernetes',  // inside a cluster, or against one through a kubeconfig
+    DOCKER = 'docker',          // a loose container on a CRI
+    DESKTOP = 'desktop',        // Electron/Tauri on the user's machine
+    ECS = 'ecs'                 // an AWS ECS task (Fargate or EC2)
 }
 
 // How many back instances of a channel make sense per cluster.
@@ -99,15 +101,15 @@ interface IBackChannelRequirements {
 }
 
 /*
-    Prefijo del id con el que se referencia a un PLUVIDER: un plugin que ademas produce informacion
-    y la expone in-process, para que otros plugins se suscriban a ella.
+    The prefix of the id a PLUVIDER is referenced by: a plugin that also produces information and exposes
+    it in-process, so that other plugins can subscribe to it.
 
-    El id completo es '<PLUVIDER_ID_PREFIX><channelId>' y lo compone SIEMPRE el core, para que el
-    autor del plugin no pueda equivocarse con el prefijo. Un consumidor lo usa igual que el de un
-    provider, tanto en 'requirements.providers' como en 'addSubscriber'.
+    The complete id is '<PLUVIDER_ID_PREFIX><channelId>' and the core ALWAYS composes it, so that the
+    plugin's author cannot get the prefix wrong. A consumer uses it just like a provider's, both in
+    'requirements.providers' and in 'addSubscriber'.
 
-    Vive en common porque el front tambien lo necesita, para distinguir un pluvider de un provider
-    instalado cuando los enseña.
+    It lives in common because the front end needs it too, in order to tell a pluvider from an installed
+    provider when it shows them.
 */
 const PLUVIDER_ID_PREFIX = 'plugin:'
 

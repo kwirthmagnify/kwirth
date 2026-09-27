@@ -1,10 +1,11 @@
 /*
-    De DONDE viene una linea. Viaja en el mensaje, y no lo inventa el sender: un destino solo puede
-    etiquetar lo que le llega etiquetado. Si esto se pierde por el camino, el log acaba en el destino sin
-    poder filtrarse por nada — es decir, inutil.
+    WHERE a line comes from. It travels inside the message, and the sender does not make it up: a
+    destination can only label what reaches it labelled. Should this be lost along the way, the log ends
+    up at the destination with nothing to filter it by — that is, useless.
 
-    Todo opcional porque no todo mensaje viene de un pod: un aviso de un canal, un evento de negocio o una
-    linea que entra por un recolector externo tienen orígenes distintos, y cada uno rellena lo que sabe.
+    All of it optional because not every message comes from a pod: a channel's warning, a business event
+    and a line entering through an external collector have different origins, and each one fills in what
+    it knows.
 */
 export interface ISenderMessageOrigin {
     /** the cluster it came from, when more than one is in play */
@@ -27,9 +28,9 @@ export interface ISenderMessage {
     level?: 'debug' | 'info' | 'warning' | 'error'
     metadata?: Record<string, unknown>
     /*
-        Origen de la linea. Se añade aparte de 'metadata' —que es JSON libre— porque esto SI es contrato:
-        el destino necesita saber donde mirar para etiquetar, y un acuerdo tacito dentro de metadata se
-        rompe en cuanto haya dos senders.
+        The line's origin. It is added apart from 'metadata' — which is free-form JSON — because this one
+        IS contract: the destination needs to know where to look in order to label, and a tacit agreement
+        inside metadata breaks as soon as there are two senders.
     */
     origin?: ISenderMessageOrigin
 }
@@ -54,13 +55,13 @@ export interface ISenderResult {
 export interface ISenderAccess {
     send(senderId: string, configName: string, message: ISenderMessage): Promise<ISenderResult | void>
     /*
-        Entrega un LOTE. Existe porque 'send' es un mensaje por llamada con su propio await, y eso sirve
-        para un aviso y no para un caudal de log: un await por linea convierte el reenvio en una fila de
-        idas y venidas a la red.
+        Delivers a BATCH. It exists because 'send' is one message per call with its own await, and that
+        serves for a notification and not for a stream of log: one await per line turns forwarding into a
+        queue of round trips over the network.
 
-        Un await por LOTE mantiene el significado de la promesa —"estas N lineas entregadas"— que es lo que
-        permite al llamante contar lo enviado y reaccionar a lo que falle. Si el sender no lo implementa,
-        el core lo entrega mensaje a mensaje: nadie tiene que cambiar para seguir funcionando.
+        One await per BATCH keeps the promise's meaning — "these N lines delivered" — which is what lets
+        the caller count what was sent and react to whatever fails. When the sender does not implement it,
+        the core delivers message by message: nobody has to change in order to go on working.
     */
     sendBatch?(senderId: string, configName: string, messages: ISenderMessage[]): Promise<ISenderResult | void>
     // OPTIONAL: queries the current state of an external entity created by the sender (a ticketing

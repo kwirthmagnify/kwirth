@@ -1,20 +1,21 @@
 import { EExtensionType } from './ExtensionType'
 
 /*
-    Portabilidad de configuracion: llevarse la configuracion de un Kwirth a otro.
+    Configuration portability: taking one Kwirth's configuration to another.
 
-    La idea que lo gobierna todo —y que conviene tener presente al leer estos tipos— es que EL CORE NO
-    ENTIENDE LO QUE TRANSPORTA. No puede: los plugins con back propio guardan su configuracion donde
-    quieren, y los dos mas grandes la guardan en su propio Postgres, mezclada con datos de trabajo que
-    NO deben viajar. Solo la extension sabe cual es cual.
+    The idea that governs everything — and that is worth keeping in mind while reading these types — is
+    that THE CORE DOES NOT UNDERSTAND WHAT IT CARRIES. It cannot: plugins with a back end of their own
+    store their configuration wherever they like, and the two biggest ones store it in their own Postgres,
+    mixed with working data that must NOT travel. Only the extension knows which is which.
 
-    Asi que el reparto es:
-      - la extension  decide que es configuracion suya, que exporta y que hace con lo que recibe
-      - el core       reune, escribe el fichero, y en el otro extremo localiza al destinatario y le
-                      entrega su parte; nunca mira dentro
-      - quien lo usa  marca que entradas viajan, en el origen y en el destino
+    So the division of labour is:
+      - the extension  decides what counts as its configuration, what it exports and what it does with
+                       whatever it receives
+      - the core       gathers, writes the file, and at the other end locates the recipient and hands it
+                       its part; it never looks inside
+      - whoever uses it  ticks which entries travel, at the source and at the destination
 
-    Ver `plans/config-portability/PRD.md`.
+    See `plans/config-portability/PRD.md`.
 */
 
 /** What is asked of an extension when its configuration is requested. */
@@ -92,8 +93,8 @@ export interface IConfigBundleMeta {
 export const CONFIG_BUNDLE_KIND = 'kwirth-config-bundle'
 
 /*
-    Version del ENVOLTORIO, no del contenido. Existe desde el primer dia para que un Kwirth viejo pueda
-    decir "no se leer esto" en vez de romperse a medias con un formato que no conoce.
+    The WRAPPER's version, not the content's. It exists from day one so that an old Kwirth can say "I
+    cannot read this" instead of breaking halfway through a format it does not know.
 */
 export const CONFIG_BUNDLE_FORMAT_VERSION = 1
 
@@ -106,9 +107,9 @@ export interface IConfigBundle {
 }
 
 /*
-    Como se nombra una entrada para marcarla o desmarcarla. Vive aqui, y no en el back, porque el front
-    construye las mismas claves para decir que quiere: dos implementaciones del mismo formato acabarian
-    divergiendo el dia que un id lleve un caracter raro.
+    How an entry is named in order to tick or untick it. It lives here, and not in the back end, because
+    the front end builds the same keys in order to say what it wants: two implementations of the same
+    format would end up diverging the day an id carries an odd character.
 */
 export const CORE_SETTINGS_KEY = 'core/settings'
 export const CORE_SHARED_AI_KEY = 'core/sharedAi'

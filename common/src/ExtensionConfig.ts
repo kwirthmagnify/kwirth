@@ -1,56 +1,56 @@
 /*
-    Contrato COMUN de configuracion de extensiones.
+    The COMMON extension configuration contract.
 
-    Toda extension que publique un formulario de configuracion (senders, webhooks, conectores IdP,
-    logins y providers) describe sus campos con ESTE tipo. Antes cada familia tenia el suyo, casi
-    identico pero divergente: provider decia 'string' donde el resto decia 'text', solo el tenia
-    'default', solo sender y webhook tenian 'common', y su definicion ni siquiera vivia aqui (estaba
-    dentro del core, en back/src/tools/ProviderManager.ts).
+    Every extension publishing a configuration form (senders, webhooks, IdP connectors, logins and
+    providers) describes its fields with THIS type. Each family used to have its own, nearly identical
+    but divergent: provider said 'string' where the rest said 'text', only it had 'default', only sender
+    and webhook had 'common', and its definition did not even live here (it was inside the core, in
+    back/src/tools/ProviderManager.ts).
 
-    OJO: no confundir TConfigFieldType (el tipo de UN CAMPO del formulario) con EExtensionType (el
-    tipo de la extension: provider, sender, plugin...), que vive en kwirth-common y es lo que declara
-    el package.json del artefacto.
+    MIND: do not confuse TConfigFieldType (the type of ONE FIELD of the form) with EExtensionType (the
+    extension's type: provider, sender, plugin...), which lives in kwirth-common and is what the
+    artefact's package.json declares.
 */
 
 /*
-    Tipo de un campo del formulario de configuracion.
+    The type of a field of the configuration form.
 
-    ES UNA UNION DE STRINGS Y NO UN ENUM, A PROPOSITO. No lo conviertas en enum: se probo y se
-    revirtio con estas medidas sobre el bundle de senders/console:
+    IT IS A UNION OF STRINGS AND NOT AN ENUM, ON PURPOSE. Do not turn it into an enum: it was tried and
+    reverted, with these measurements over the senders/console bundle:
 
-        union de strings ..............      3.509 bytes
-        enum importado del root .......  15.849.494 bytes   (x4.500)
-        enum desde su propio modulo ...      4.790 bytes
+        union of strings ..............      3,509 bytes
+        enum imported from the root ...  15,849,494 bytes   (x4,500)
+        enum from its own module ......      4,790 bytes
 
-    El motivo es que un artefacto solo importa TIPOS de este paquete, y TypeScript los borra al
-    compilar, asi que hoy no arrastra ni un byte de kwirth-common-back. Un enum es un VALOR en
-    runtime: en cuanto se usa, esbuild tiene que bundlear dist/index.js entero, que reexporta
-    KubernetesTools (-> @kubernetes/client-node) y oidc/oauth2 (-> openid-client). Publicar ESM con
-    sideEffects:false tampoco lo salva, se probo. Mientras el root de este paquete siga siendo
-    pesado, cualquier VALOR que se exporte aqui y usen los artefactos tiene ese coste.
+    The reason is that an artefact only imports TYPES from this package, and TypeScript erases them when
+    compiling, so today it drags in not one byte of kwirth-common-back. An enum is a VALUE at runtime: as
+    soon as it is used, esbuild has to bundle the whole of dist/index.js, which re-exports KubernetesTools
+    (-> @kubernetes/client-node) and oidc/oauth2 (-> openid-client). Publishing ESM with
+    sideEffects:false does not save it either, that was tried. As long as this package's root stays heavy,
+    any VALUE exported here and used by the artefacts carries that cost.
 
-    Lo que hoy pinta el front para cada valor:
-      'text'      campo de texto. Es el comportamiento por defecto cuando 'type' se omite.
-      'number'    campo numerico.
-      'boolean'   switch. Los gestores de sender, webhook, idp y provider lo pintan; el de login no.
-      'password'  campo enmascarado con ojo de visibilidad.
-      'select'    desplegable alimentado por 'options'. Los gestores de sender, webhook y login lo
-                  pintan; los de idp y provider no.
-      'json'      area de texto libre para JSON. NINGUN gestor lo pinta todavia: hoy cae a campo de
-                  texto. Declararlo es valido, pero no esperes editor estructurado.
-      'multiselect' desplegable de VARIOS valores, alimentado por 'options'. El valor se guarda como
-                  una sola cadena separada por comas, no como array: el contrato de configuracion no
-                  tiene tipo lista, y cambiarlo obligaria a migrar lo ya guardado de 25 campos. Lo
-                  pinta el formulario generico del core (ConfigFormDialog); donde no este soportado
-                  cae a campo de texto, y lo que el usuario escriba a mano sigue valiendo.
+    What the front end draws today for each value:
+      'text'      a text field. It is the default behaviour when 'type' is omitted.
+      'number'    a numeric field.
+      'boolean'   a switch. The sender, webhook, idp and provider managers draw it; the login one does not.
+      'password'  a masked field with a visibility eye.
+      'select'    a dropdown fed by 'options'. The sender, webhook and login managers draw it; the idp and
+                  provider ones do not.
+      'json'      a free text area for JSON. NO manager draws it yet: today it falls back to a text field.
+                  Declaring it is valid, but do not expect a structured editor.
+      'multiselect' a dropdown of SEVERAL values, fed by 'options'. The value is stored as a single
+                  comma-separated string, not as an array: the configuration contract has no list type,
+                  and changing it would force migrating what is already stored for 25 fields. The core's
+                  generic form draws it (ConfigFormDialog); where it is not supported it falls back to a
+                  text field, and whatever the user types by hand still works.
 */
 export type TConfigFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select' | 'json' | 'multiselect'
 
 /*
-    Un campo del formulario de configuracion de una extension.
+    A field of an extension's configuration form.
 
-    'type' es OPCIONAL a proposito: omitirlo equivale a 'text', que es como estan escritos hoy 25 de
-    los 64 campos de los artefactos publicados.
+    'type' is OPTIONAL on purpose: omitting it is equivalent to 'text', which is how 25 of the 64 fields
+    of the published artefacts are written today.
 */
 export interface IConfigFieldDef {
     /** The key the value is stored under in the configuration. */
@@ -75,8 +75,8 @@ export interface IConfigFieldDef {
 }
 
 /*
-    Descripcion de la extension como nodo de un grafo (el editor de flujos de senders y webhooks).
-    'icon' es el nombre de un icono de kwirthicons, no un import de @mui/icons.
+    The extension's description as a node of a graph (the flow editor for senders and webhooks).
+    'icon' is the name of a kwirthicons icon, not an @mui/icons import.
 */
 export interface IExtensionNodeMeta {
     label: string
