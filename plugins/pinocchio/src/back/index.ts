@@ -3,11 +3,11 @@ import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage } from './PinocchioConfig'
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
 import { buildModel, loadModels, IToolContext, buildAgentTools, listToolsets, resolveTools } from '@kwirthmagnify/kwirth-common-ai/back'
+import { valueAt } from './Utils'
 import { IToolsetConfig } from '@kwirthmagnify/kwirth-common-ai'
 import { Request, Response } from 'express'
 import { generateText, Output, stepCountIs, z, LanguageModel, ToolSet } from '@kwirthmagnify/kwirth-common-ai/back'
 
-const _ = require('lodash')
 const nunjucks = require('nunjucks')
 
 const MAX_ANALYSIS_HISTORY = 50
@@ -492,14 +492,18 @@ export class PinocchioChannel {
                             catch (err:any) {
                                 let message = `Pinocchio analysis ended in error while processing 'events' when analyzing '${eventsEvent.obj.metadata.name}' in namespace '${eventsEvent.obj.metadata.namespace}' [Kind:${eventsEvent.obj.kind}]`
                                 this.backChannelObject.logError?.(`${message}: ${err}`)
-                                try {
-                                    let msg = _.get(err, errorPath)
-                                }
-                                catch {}
+                                /*
+                                    The provider's readable message, when it publishes one where
+                                    'errorPath' says. Google, for instance, buries it in
+                                    'lastError.data.error.message' and the serialised error is an object
+                                    nobody can read on a card. Falling back to JSON.stringify keeps what
+                                    was shown until now for the providers that declare no path.
+                                */
+                                const detail = valueAt(err, errorPath ?? '') ?? JSON.stringify(err)
                                 let an:IAnalysis = {
                                     findings: [
                                         { description: message, level: 'critical'},
-                                        { description: JSON.stringify(err), level: 'critical'}
+                                        { description: detail, level: 'critical'}
                                     ],
                                     timestamp: Date.now()
                                 }
