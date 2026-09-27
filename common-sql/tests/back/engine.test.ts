@@ -30,8 +30,8 @@ test('physicalDbName sanitizes and prefixes', () => {
 })
 
 /*
-    El formateo de errores. Importa porque el caso que lo motiva es justo aquel en el que MENOS
-    información hay: con la base de datos caída, toda llamada falla a la vez y todas dicen lo mismo.
+    Error formatting. It matters because the case that motivates it is precisely the one where there is
+    the LEAST information: with the database down, every call fails at once and they all say the same thing.
 */
 test('describeError saca las causas de dentro de un AggregateError', () => {
     const err = new AggregateError([

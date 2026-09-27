@@ -39,13 +39,13 @@ let log: ISqlLogger = {
 export const setSqlLogger = (logger: ISqlLogger): void => { log = logger }
 
 /*
-    Un error de base de datos, en una línea y DICIENDO ALGO.
+    A database error, on one line and SAYING SOMETHING.
 
-    🔴 El caso que obliga a esto: cuando el host resuelve a varias direcciones, Node las prueba todas y, si
-    fallan todas, lanza un **AggregateError** cuyo `toString()` es literalmente "AggregateError". Las causas
-    reales —ECONNREFUSED, a qué dirección y a qué puerto— viven dentro de `.errors` y nadie las mira. El
-    resultado es un log que dice que algo falló y ni una pista de qué, justo cuando más falta hace: con la
-    base de datos caída, TODA llamada falla a la vez y todas dicen lo mismo.
+    🔴 The case that forces this: when the host resolves to several addresses, Node tries them all and, if
+    they all fail, throws an **AggregateError** whose `toString()` is literally "AggregateError". The real
+    causes — ECONNREFUSED, to which address and to which port — live inside `.errors` and nobody looks at
+    them. The result is a log that says something failed and not a hint of what, precisely when it is
+    needed most: with the database down, EVERY call fails at once and they all say the same thing.
 */
 const oneLine = (err: unknown): string => {
     const e = err as { code?: string, address?: string, port?: number, message?: string } | undefined
@@ -102,9 +102,9 @@ const knexForDb = (dbName: string, pool?: IPoolOptions): Knex => {
         pool: { ...POOL_DEFAULT, ...(pool ?? {}) },
         acquireConnectionTimeout: 5000,
         /*
-            El logger de knex, redirigido al nuestro. Sin esto escribe a console por su cuenta y sus
-            mensajes salen sin hora, sin nivel y sin dueño — y pasados por describeError además DICEN qué
-            pasó, en vez de un "AggregateError" pelado.
+            knex's logger, redirected to ours. Without this it writes to the console on its own and its
+            messages come out with no time, no level and no owner — and, passed through describeError,
+            they also SAY what happened instead of a bare "AggregateError".
         */
         log: {
             warn: (message: unknown) => log.warning(describeError(message)),
