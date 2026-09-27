@@ -1,13 +1,13 @@
 import { IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpIdentity } from './IIdpConnector'
 
 /*
-    Lógica OAuth2 (Authorization Code) compartida por conectores que NO son OIDC (GitHub, ...).
-    Vive en common-back y el back la expone como global (__kwirth_back__.kwirthCommonBack), de modo
-    que los conectores la usan por composición sin duplicar el flujo.
+    OAuth2 (Authorization Code) logic shared by connectors that are NOT OIDC (GitHub, ...).
+    It lives in common-back and the back end exposes it as a global (__kwirth_back__.kwirthCommonBack), so
+    that connectors use it by composition without duplicating the flow.
 
-    A diferencia de OIDC no hay id_token ni discovery: se intercambia el 'code' por un access_token
-    y el conector aporta el fetch de userinfo (fetchIdentity). Protección CSRF por 'state' (el core lo
-    valida single-use); PKCE es opcional porque algunos IdP OAuth2 no lo soportan.
+    Unlike OIDC there is no id_token and no discovery: the 'code' is exchanged for an access_token and the
+    connector supplies the userinfo fetch (fetchIdentity). CSRF protection through 'state' (the core
+    validates it single-use); PKCE is optional because some OAuth2 IdPs do not support it.
 */
 
 export interface IOAuth2Endpoints {

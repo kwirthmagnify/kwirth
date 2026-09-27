@@ -1,9 +1,9 @@
 import { IIdpIdentity } from './IIdpConnector'
 
 /*
-    Mapper de identidad de GitHub compartido por los conectores github-cloud / github-onprem.
-    GitHub NO es OIDC: con el access_token se consultan GET /user (nombre/login/id) y GET /user/emails
-    (email primary verificado). apiBaseUrl = https://api.github.com (cloud) o https://<ghe-host>/api/v3.
+    The GitHub identity mapper shared by the github-cloud / github-onprem connectors.
+    GitHub is NOT OIDC: with the access_token it queries GET /user (name/login/id) and GET /user/emails
+    (the verified primary email). apiBaseUrl = https://api.github.com (cloud) or https://<ghe-host>/api/v3.
 */
 
 interface IGithubUser {

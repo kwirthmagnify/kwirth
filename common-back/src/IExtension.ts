@@ -1,22 +1,25 @@
 import { IExtensionExportOptions, IExtensionImportResult } from '@kwirthmagnify/kwirth-common'
 
 /*
-    Lo comun a TODA extension de Kwirth, sea del tipo que sea.
+    What is common to EVERY Kwirth extension, whatever its type.
 
-    Hasta ahora no habia nada comun: un canal no se parece a un provider, ni un sender a un IdP, y cada
-    familia tiene su propio contrato. Esto es lo primero que cruza las once — y nace por una necesidad
-    muy concreta: el core necesita poder pedirle lo mismo a cualquier extension sin saber que es.
+    Until now there was nothing common: a channel does not resemble a provider, nor a sender an IdP, and
+    every family has a contract of its own. This is the first thing that crosses all eleven — and it is
+    born of a very concrete need: the core has to be able to ask the same thing of any extension without
+    knowing what it is.
 
-    LOS METODOS SON OPCIONALES, y eso no es tibieza: es lo que permite entregar la portabilidad sin
-    republicar de golpe todas las extensiones que ya hay ahi fuera —los siete de pago incluidos—. Una
-    extension ya publicada sigue funcionando igual sin tocarla; se suma cuando le toque, en su propio
-    ciclo de version. Lo opcional es ADOPTARLO, no cumplirlo: quien implementa uno, implementa los dos.
+    THE METHODS ARE OPTIONAL, and that is not half-heartedness: it is what allows portability to be
+    delivered without republishing in one go every extension already out there — the seven paid ones
+    included. An already published extension goes on working the same without being touched; it joins in
+    when its turn comes, in its own version cycle. What is optional is ADOPTING it, not complying with it:
+    whoever implements one, implements both.
 
-    Y opcional NO significa que el core supla la ausencia. No hay fallback: si el core copiase por su
-    cuenta las claves que conoce de un plugin, produciria un fichero que PARECE llevarlo y que llega al
-    destino sin la mitad de su configuracion. Un hueco declarado es mejor que un engaño.
+    And optional does NOT mean the core makes up for the absence. There is no fallback: were the core to
+    copy on its own account the keys it knows of a plugin, it would produce a file that LOOKS like it
+    carries it and that reaches the destination without half of its configuration. A declared gap is
+    better than a deception.
 
-    Ver `plans/config-portability/PRD.md`.
+    See `plans/config-portability/PRD.md`.
 */
 /**
  * What an extension writes its log with. The core builds it knowing who the extension is, so the
@@ -39,28 +42,28 @@ export interface IExtensionLogger {
 
 export interface IExtension {
     /*
-        Devuelve la configuracion de esta extension, lista para viajar a otro Kwirth.
+        Returns this extension's configuration, ready to travel to another Kwirth.
 
-        Quien la implementa decide QUE ES configuracion suya, que es justo lo que el core no puede
-        saber: en el mismo Postgres de un plugin conviven sus reglas (configuracion) y su histórico
-        (datos). Lo segundo NO debe salir de aqui.
+        Whoever implements it decides WHAT COUNTS AS its configuration, which is precisely what the core
+        cannot know: in a plugin's own Postgres its rules (configuration) live alongside its history
+        (data). The latter must NOT leave here.
 
-        Con `includeCredentials` en false, los campos secreto se devuelven VACIOS —no se omiten—: el
-        destino necesita poder decir cuales hay que rellenar.
+        With `includeCredentials` false, the secret fields are returned EMPTY — they are not omitted —:
+        the destination needs to be able to say which ones have to be filled in.
     */
     exportConfig?(options: IExtensionExportOptions): Promise<unknown>
 
     /*
-        Recibe lo que produjo `exportConfig` —posiblemente en OTRO Kwirth, y posiblemente editado a
-        mano, porque el fichero es texto y eso es deseable— y decide que hacer con ello: que acepta,
-        que descarta, que reemplaza y que conserva de lo que ya tenia. El core no opina.
+        Receives what `exportConfig` produced — possibly in ANOTHER Kwirth, and possibly edited by hand,
+        because the file is text and that is desirable — and decides what to do with it: what it accepts,
+        what it discards, what it replaces and what it keeps of what it already had. The core has no say.
 
-        Dos obligaciones de quien lo implementa:
-          - VALIDAR. Lo que llega no es de fiar: ni el formato, ni que los recursos que referencia
-            existan en este cluster (usuarios, namespaces, uids de cluster de otro sitio).
-          - SER IDEMPOTENTE. Importar lo que uno mismo exporto no debe cambiar nada.
+        Two obligations on whoever implements it:
+          - VALIDATE. What arrives is not to be trusted: neither the format, nor that the resources it
+            references exist in this cluster (users, namespaces, cluster uids from somewhere else).
+          - BE IDEMPOTENT. Importing what one exported oneself must change nothing.
 
-        El resultado es lo unico que el core puede contar del contenido en el informe final.
+        The result is the only thing the core can tell about the content in the final report.
     */
     importConfig?(config: unknown): Promise<IExtensionImportResult>
 }

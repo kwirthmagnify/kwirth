@@ -3,15 +3,15 @@ import * as jose from 'jose'
 import { IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpIdentity } from './IIdpConnector'
 
 /*
-    Lógica OIDC compartida por todos los conectores OIDC (Google, Keycloak, GitLab, Microsoft/Entra, ...).
-    Vive en common-back y el back la expone como global (__kwirth_back__.kwirthCommonBack), de modo
-    que los conectores la usan por composición SIN bundlear openid-client/jose ni duplicar el flujo.
+    OIDC logic shared by every OIDC connector (Google, Keycloak, GitLab, Microsoft/Entra, ...).
+    It lives in common-back and the back end exposes it as a global (__kwirth_back__.kwirthCommonBack), so
+    that connectors use it by composition WITHOUT bundling openid-client/jose or duplicating the flow.
 
-    Flujo Authorization Code + PKCE con intercambio back-channel (el id_token llega por TLS del
-    token endpoint). En single-tenant openid-client valida issuer/aud. En multi-tenant (Entra
-    organizations/common) el issuer descubierto lleva el placeholder {tenantid} y la validación
-    literal de openid-client falla; ahí hacemos el intercambio crudo (grant) y validamos el id_token
-    a mano con jose (firma vía JWKS + iss contra el tid del token).
+    An Authorization Code + PKCE flow with a back-channel exchange (the id_token arrives over the token
+    endpoint's TLS). In single-tenant, openid-client validates issuer/aud. In multi-tenant (Entra
+    organizations/common) the discovered issuer carries the {tenantid} placeholder and openid-client's
+    literal validation fails; there we do the raw exchange (grant) and validate the id_token by hand with
+    jose (the signature through JWKS + iss against the token's tid).
 */
 
 // mapping/validation options for non-standard OIDC connectors (Entra and the like)

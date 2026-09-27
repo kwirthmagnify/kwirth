@@ -1,12 +1,12 @@
 /*
-    Interfaz de conector de Identity Provider (IdP) para Kwirth.
+    The Identity Provider (IdP) connector interface for Kwirth.
 
-    Un conector es LOGICA PURA (sin rutas propias): construye la URL de autorizacion del IdP
-    y procesa el callback devolviendo la identidad verificada. El flujo HTTP pre-login y la
-    emision de AccessKey viven en el core de Kwirth, nunca en el conector.
+    A connector is PURE LOGIC (with no routes of its own): it builds the IdP's authorization URL and
+    processes the callback, returning the verified identity. The pre-login HTTP flow and the issuing of
+    the AccessKey live in Kwirth's core, never in the connector.
 
-    Vive en common-back para que los conectores empaquetados por separado (idps/<id>/) puedan
-    implementarlo importando '@kwirthmagnify/kwirth-common-back', igual que ISender/IProvider.
+    It lives in common-back so that connectors packaged separately (idps/<id>/) can implement it by
+    importing '@kwirthmagnify/kwirth-common-back', just like ISender/IProvider.
 */
 
 import { TConfigFieldType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
