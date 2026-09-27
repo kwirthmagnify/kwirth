@@ -85,8 +85,8 @@ const HttpPullPushConfigDialog: React.FC<IHttpPullPushConfigDialogProps> = ({ on
     }, [])
 
     /*
-        Persiste la lista completa. El provider valida, guarda (credenciales al Secret, el resto al
-        ConfigMap) y reconcilia sus pollers en caliente, asi que cada accion surte efecto al momento.
+        Persists the complete list. The provider validates, saves (credentials to the Secret, the rest to
+        the ConfigMap) and reconciles its pollers hot, so every action takes effect at once.
     */
     const persist = async (next: IHttpPullConfig[]): Promise<boolean> => {
         const found = validateConfigs(next)
@@ -174,9 +174,9 @@ const HttpPullPushConfigDialog: React.FC<IHttpPullPushConfigDialogProps> = ({ on
     const patchAuth = (changes: Partial<IHttpPullConfig['auth']>) => { setForm(prev => ({ ...prev, auth: { ...prev.auth, ...changes } })); setTestResult(undefined) }
 
     /*
-        La prueba la hace el BACK con la conexion tal y como esta en el formulario, sin guardarla. Tiene que
-        ser el back porque es quien tiene la red del cluster, los certificados y la identidad con los que se
-        hara el pull de verdad: una prueba desde el navegador no diria nada.
+        The BACK END runs the test with the connection exactly as it stands in the form, without saving it.
+        It has to be the back end because it is the one with the cluster's network, the certificates and
+        the identity the real pull will be made with: a test from the browser would say nothing.
     */
     const testConnection = async () => {
         setTesting(true)

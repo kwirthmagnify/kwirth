@@ -41,14 +41,14 @@ export class TrivyProvider implements IProvider {
     private subscribers: Map<IProviderSubscriber, ITrivySubscriptionData> = new Map()
 
     /*
-        Lo que este provider sabe de si mismo: cuantos consumidores tiene AHORA. El contrato
-        (IProvider.getStats, opcional desde kwirth-common-back 0.5.50) pide que sea BARATO — se devuelve
-        lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
-        consumido o emitiendo para nadie.
+        What this provider knows about itself: how many consumers it has RIGHT NOW. The contract
+        (IProvider.getStats, optional since kwirth-common-back 0.5.50) asks for it to be CHEAP — what is
+        already held is returned, nothing is computed — and it is what lets kwirth say whether this is
+        being consumed or emitting for nobody.
     */
     /*
-        Entregas desde que arranco: informers, sincronizacion inicial y envio de meta. Una por llamada
-        a un suscriptor, no una por objeto producido — este provider filtra por reportTypes.
+        Deliveries since startup: informers, the initial sync and the sending of meta. One per call to a
+        subscriber, not one per object produced — this provider filters by reportTypes.
     */
     private deliveries = 0
 
@@ -63,11 +63,11 @@ export class TrivyProvider implements IProvider {
 
     addSubscriber = async (c: IProviderSubscriber, data: ITrivySubscriptionData) => {
         /*
-            Se normaliza MIRANDO reportTypes, y no con `data ?? ...`: un suscriptor que no pide tipos
-            concretos manda un objeto VACIO, que no es nullish, asi que el valor por defecto no entraba y
-            reportTypes se quedaba en undefined. Lo de despues era un `for...of undefined` en una promesa
-            que nadie esperaba: unhandled rejection y el core entero abajo. Lo canto provider-debug, que
-            se suscribe sin payload.
+            It is normalised by LOOKING AT reportTypes, and not with `data ?? ...`: a subscriber that
+            asks for no particular types sends an EMPTY object, which is not nullish, so the default value
+            did not kick in and reportTypes was left undefined. What came next was a `for...of undefined`
+            inside a promise nobody awaited: an unhandled rejection and the whole core down. provider-debug
+            gave it away, since it subscribes with no payload.
         */
         const reportTypes = Array.isArray(data?.reportTypes) && data.reportTypes.length > 0 ? data.reportTypes : ALL_PLURALS
         const subData: ITrivySubscriptionData = { ...data, reportTypes }

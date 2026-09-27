@@ -38,14 +38,14 @@ export class SyslogProvider implements IProvider {
     private subscribers = new Map<IProviderSubscriber, unknown>()
 
     /*
-        Lo que este provider sabe de si mismo: cuantos consumidores tiene AHORA. El contrato
-        (IProvider.getStats, opcional desde kwirth-common-back 0.5.50) pide que sea BARATO — se devuelve
-        lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
-        consumido o emitiendo para nadie.
+        What this provider knows about itself: how many consumers it has RIGHT NOW. The contract
+        (IProvider.getStats, optional since kwirth-common-back 0.5.50) asks for it to be CHEAP — what is
+        already held is returned, nothing is computed — and it is what lets kwirth say whether this is
+        being consumed or emitting for nobody.
     */
     /*
-        Entregas desde que arranco: una por suscriptor y mensaje. Distinto de 'messageCount', que cuenta
-        mensajes recibidos aunque no los consuma nadie.
+        Deliveries since startup: one per subscriber and message. Different from 'messageCount', which
+        counts messages received even when nobody consumes them.
     */
     private deliveries = 0
 

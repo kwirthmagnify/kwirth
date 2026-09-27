@@ -1,9 +1,9 @@
 import { EAuthType, IHttpPullConfig } from './HttpPullPush'
 
 /*
-    Validacion para PROBAR una conexion: solo lo que hace falta para lanzar una peticion. A proposito no
-    mira el intervalo ni su relacion con el timeout, porque a una prueba puntual eso no le afecta y seria
-    absurdo impedir probar una url por un intervalo que aun no has ajustado.
+    Validation for TESTING a connection: only what it takes to fire a request. On purpose it does not
+    look at the interval or its relation to the timeout, because a one-off test is not affected by that
+    and it would be absurd to stop someone testing a url over an interval they have not tuned yet.
 */
 export const validateForTest = (config: IHttpPullConfig): string[] => {
     const errors: string[] = []
@@ -28,8 +28,8 @@ export const validateForTest = (config: IHttpPullConfig): string[] => {
 }
 
 /*
-    Validacion compartida: el back la aplica en el PUT (un cliente puede saltarse el dialogo) y el front
-    la usa para avisar antes de guardar. Devuelve la lista de errores; vacia = valido.
+    Shared validation: the back end applies it on the PUT (a client can skip the dialog) and the front end
+    uses it to warn before saving. It returns the list of errors; empty = valid.
 */
 export const validateConfigs = (configs: IHttpPullConfig[]): string[] => {
     const errors: string[] = []

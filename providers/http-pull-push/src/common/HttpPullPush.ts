@@ -1,11 +1,11 @@
 /*
-    Tipos compartidos entre el back y el front del provider.
+    Types shared between the provider's back end and front end.
 
-    Hay DOS capas de configuracion que no se mezclan:
-      - capa 1, conexiones : IHttpPullConfig[]. Son del provider, se persisten y existen aunque no haya
-                             ningun canal instalado. Son las que hacen el pull.
-      - capa 2, suscripcion: IHttpPullPushSubscription. La declara cada canal al suscribirse, vive en
-                             memoria y solo dice QUE conexiones quiere recibir.
+    There are TWO layers of configuration that do not mix:
+      - layer 1, connections : IHttpPullConfig[]. They belong to the provider, they are persisted and
+                               they exist even with no channel installed. They are what does the pull.
+      - layer 2, subscription: IHttpPullPushSubscription. Each channel declares it on subscribing, it
+                               lives in memory and it only says WHICH connections it wants to receive.
 */
 
 export enum EHttpMethod {
@@ -34,21 +34,21 @@ export enum EEmitMode {
 }
 
 /*
-    Credenciales de una conexion. Los campos marcados como secreto NO se guardan junto al resto de la
-    configuracion: el provider los separa y los manda a un Secret (ver ConfigStore).
+    A connection's credentials. The fields marked as secret are NOT stored alongside the rest of the
+    configuration: the provider separates them and sends them to a Secret (see ConfigStore).
 */
 export interface IHttpAuth {
     type: EAuthType
     username?: string
-    password?: string      // secreto (basic)
-    token?: string         // secreto (bearer)
+    password?: string      // secret (basic)
+    token?: string         // secret (bearer)
     headerName?: string
-    headerValue?: string   // secreto (header)
+    headerValue?: string   // secret (header)
 }
 
 /*
-    Una conexion: un endpoint remoto que se consulta cada 'intervalSeconds'.
-    'enabled' en false = creada pero no operativa (se persiste y se lista, pero no genera trafico).
+    A connection: a remote endpoint queried every 'intervalSeconds'.
+    'enabled' false = created but not operational (it is persisted and listed, but generates no traffic).
 */
 export interface IHttpPullConfig {
     name: string
@@ -67,19 +67,19 @@ export interface IHttpPullConfig {
 }
 
 /*
-    Lo que un canal pasa en addSubscriber().
-      - configs con nombres : recibe solo esas
-      - configs vacio ([])   : no recibe nada
-      - configs ausente      : recibe todas las habilitadas, incluidas las que se creen despues
+    What a channel passes in addSubscriber().
+      - configs with names : it receives only those
+      - configs empty ([]) : it receives nothing
+      - configs absent     : it receives every enabled one, including those created later
 */
 export interface IHttpPullPushSubscription {
     configs?: string[]
 }
 
 /*
-    Lo que el provider entrega al suscriptor. El envoltorio existe porque processProviderEvent() solo
-    lleva el id del provider: sin el campo 'config' un canal suscrito a varias conexiones no podria
-    distinguir de cual viene cada evento.
+    What the provider delivers to the subscriber. The wrapper exists because processProviderEvent() only
+    carries the provider's id: without the 'config' field a channel subscribed to several connections
+    could not tell which one each event comes from.
 */
 export interface IHttpPullPushEvent {
     config: string
@@ -90,12 +90,12 @@ export interface IHttpPullPushEvent {
 }
 
 /*
-    Resultado de probar una conexion. La prueba la ejecuta el BACK, no el navegador: es el back quien
-    tiene la red, los certificados y la identidad con los que se hara el pull de verdad, asi que probar
-    desde el front no demostraria nada.
+    The result of testing a connection. The BACK END runs the test, not the browser: it is the back end
+    that has the network, the certificates and the identity the real pull will be made with, so testing
+    from the front end would prove nothing.
 
-    'ok' false significa que la prueba se hizo y fallo (timeout, DNS, TLS...), no que la peticion al
-    provider fallara. Un 4xx/5xx del endpoint remoto es ok=true con su 'status', igual que en el polling.
+    'ok' false means the test ran and failed (timeout, DNS, TLS...), not that the request to the provider
+    failed. A 4xx/5xx from the remote endpoint is ok=true with its 'status', just as in the polling.
 */
 export interface IHttpPullTestResult {
     ok: boolean

@@ -2,14 +2,15 @@ import { IProviderStorage } from '@kwirthmagnify/kwirth-common-back'
 import { EAuthType, IHttpAuth, IHttpPullConfig } from '../common/HttpPullPush'
 
 /*
-    Persistencia de las conexiones, partida por sensibilidad — el mismo criterio que usan los canales
-    (montag/censor guardan sus '*-configs' en ConfigMap y las credenciales de sus proveedores en Secret):
+    Persistence of the connections, split by sensitivity — the same criterion the channels use
+    (montag/censor store their '*-configs' in a ConfigMap and their providers' credentials in a Secret):
 
-      - 'http-pull-push-configs' (secret=false) -> ConfigMap: nombres, urls, intervalos, cabeceras, flags.
-        Sigue siendo inspeccionable con kubectl, que es util para auditar que se esta consultando.
-      - 'http-pull-push-creds'   (secret=true)  -> Secret: password, token y valor de cabecera.
+      - 'http-pull-push-configs' (secret=false) -> ConfigMap: names, urls, intervals, headers, flags.
+        It stays inspectable with kubectl, which is useful for auditing what is being queried.
+      - 'http-pull-push-creds'   (secret=true)  -> Secret: password, token and header value.
 
-    Al leer se recomponen las dos mitades. Una credencial huerfana (su conexion ya no existe) se descarta.
+    On reading, the two halves are put back together. An orphaned credential (its connection no longer
+    exists) is discarded.
 */
 
 const STORAGE_CONFIGS = 'http-pull-push-configs'

@@ -107,17 +107,17 @@ export class KafkaProvider implements IProvider {
     private data = new Map<string, Map<string, any[]>>()
 
     /*
-        Cuantos consumidores tiene AHORA (IProvider.getStats, opcional desde kwirth-common-back 0.5.50).
+        How many consumers it has RIGHT NOW (IProvider.getStats, optional since kwirth-common-back 0.5.50).
 
-        Aqui no vale sumar los de cada conexion: un mismo suscriptor puede estar en varias a la vez —es
-        justo lo que permite este provider— y la suma lo contaria dos veces. Se cuentan UNICOS.
+        Adding up each connection's will not do here: the same subscriber can be in several at once — which
+        is precisely what this provider allows — and the sum would count it twice. UNIQUE ones are counted.
 
-        Sigue siendo barato: recorre conexiones, no mensajes, y de esas hay un puñado.
+        It is still cheap: it walks connections, not messages, and of those there are a handful.
     */
     /*
-        Entregas desde que arranco: una por mensaje aceptado y suscriptor. A diferencia del recuento de
-        suscriptores, aqui NO hay que deduplicar — si el mismo suscriptor recibe por dos conexiones, son
-        dos entregas y dos veces el trabajo.
+        Deliveries since startup: one per accepted message and subscriber. Unlike the subscriber count,
+        here there is NO deduplicating — if the same subscriber receives through two connections, that is
+        two deliveries and twice the work.
     */
     private deliveries = 0
 

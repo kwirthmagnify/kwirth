@@ -5,17 +5,17 @@ import { ETrivyEventKind, TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_A
 import { fakeCluster, fakeSubscriber, settle } from '../helpers'
 
 /*
-    El alta de un suscriptor es el sitio donde este provider tumbaba el core entero.
+    Registering a subscriber is where this provider used to take the whole core down.
 
-    Un suscriptor que no pide tipos de reporte concretos manda un objeto VACIO —provider-debug lo hace
-    siempre, porque suscribirse sin payload es lo normal ahi—, y el valor por defecto se elegia con
-    `data ?? { reportTypes: ALL_PLURALS }`: `{}` no es nullish, asi que el default NO entraba y
-    reportTypes se quedaba en undefined. Lo siguiente era un `for...of undefined` dentro de una promesa
-    que nadie esperaba: unhandled rejection, y el core sale por su propio handler.
+    A subscriber that asks for no particular report types sends an EMPTY object — provider-debug always
+    does, because subscribing with no payload is the normal thing there — and the default value was picked
+    with `data ?? { reportTypes: ALL_PLURALS }`: `{}` is not nullish, so the default did NOT kick in and
+    reportTypes was left undefined. What came next was a `for...of undefined` inside a promise nobody
+    awaited: an unhandled rejection, and the core exits through its own handler.
 
-    De ahi las dos reglas que fijan estos tests: el default se decide MIRANDO reportTypes, y todo
-    fire-and-forget lleva su catch. `node --test` falla el fichero si queda algun rechazo sin atender,
-    asi que estos tests detectan la regresion por si solos.
+    Hence the two rules these tests pin down: the default is decided by LOOKING AT reportTypes, and every
+    fire-and-forget carries its catch. `node --test` fails the file when any rejection is left unattended,
+    so these tests catch the regression by themselves.
 */
 
 const ALL_PLURALS = [TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_RBAC_PLURAL, TRIVY_API_CLUSTER_RBAC_PLURAL]

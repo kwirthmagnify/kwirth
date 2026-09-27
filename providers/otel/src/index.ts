@@ -140,13 +140,13 @@ export class OtelProvider implements IProvider {
     private subscribers = new Map<IProviderSubscriber, IOtelProviderConfig>()
 
     /*
-        Lo que este provider sabe de si mismo: cuantos consumidores tiene AHORA. El contrato
-        (IProvider.getStats, opcional desde kwirth-common-back 0.5.50) pide que sea BARATO — se devuelve
-        lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
-        consumido o emitiendo para nadie.
+        What this provider knows about itself: how many consumers it has RIGHT NOW. The contract
+        (IProvider.getStats, optional since kwirth-common-back 0.5.50) asks for it to be CHEAP — what is
+        already held is returned, nothing is computed — and it is what lets kwirth say whether this is
+        being consumed or emitting for nobody.
     */
     /*
-        Entregas desde que arranco: una por llamada a un suscriptor. Una entrega por señal aceptada y suscriptor.
+        Deliveries since startup: one per call to a subscriber. One delivery per accepted signal and subscriber.
     */
     private deliveries = 0
 

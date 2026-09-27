@@ -1,8 +1,8 @@
 import { IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 
 /*
-    Dobles para el provider trivy. El provider habla con tres APIs de Kubernetes y con sus suscriptores,
-    y nada mas: con eso se puede ejercitar el alta de un suscriptor sin cluster ninguno.
+    Doubles for the trivy provider. The provider talks to three Kubernetes APIs and to its subscribers,
+    and nothing else: with that, registering a subscriber can be exercised with no cluster at all.
 */
 
 export interface ICapturedEvent {

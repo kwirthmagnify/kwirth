@@ -3,11 +3,11 @@ import https from 'https'
 import { EAuthType, EHttpMethod, IHttpPullConfig } from '../common/HttpPullPush'
 
 /*
-    El pull se hace con los modulos http/https nativos y no con fetch() a proposito: asi se controla el
-    timeout por peticion y, sobre todo, 'allowInsecureTls' (rejectUnauthorized), que con el fetch de Node
-    obligaria a manipular el dispatcher de undici. Cero dependencias.
+    The pull is done with the native http/https modules and not with fetch(), on purpose: that way the
+    per-request timeout is under control and, above all, 'allowInsecureTls' (rejectUnauthorized), which
+    with Node's fetch would force meddling with undici's dispatcher. Zero dependencies.
 
-    El Poller recibe el fetcher por parametro, de modo que los tests inyectan uno de mentira y no tocan red.
+    The Poller receives the fetcher as a parameter, so tests inject a fake one and touch no network.
 */
 
 export interface IFetchResult {

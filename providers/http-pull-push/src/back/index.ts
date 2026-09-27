@@ -7,16 +7,16 @@ import { httpFetcher, TFetcher } from './HttpFetcher'
 import { Poller } from './Poller'
 
 /*
-    Provider http-pull-push: consulta endpoints HTTP remotos con la periodicidad que se le diga y empuja
-    cada resultado a los canales suscritos.
+    The http-pull-push provider: it queries remote HTTP endpoints as often as it is told to and pushes
+    every result to the subscribed channels.
 
-    Es dueño de su configuracion: la sirve y la guarda por su propio 'configRouter' (que el core monta
-    SIEMPRE detras de validacion de accessKey en /core/providerconfig/http-pull-push) y la persiste con el
-    storage que el core le inyecta, mandando las credenciales a un Secret. No usa configure().
+    It owns its configuration: it serves and saves it through its own 'configRouter' (which the core
+    ALWAYS mounts behind accessKey validation at /core/providerconfig/http-pull-push) and persists it with
+    the storage the core injects into it, sending the credentials to a Secret. It does not use configure().
 
-    Dos capas independientes:
-      - conexiones  : persistidas, con enabled, existen sin suscriptores
-      - suscripcion : en memoria, cada canal dice que conexiones quiere
+    Two independent layers:
+      - connections  : persisted, with enabled, they exist without subscribers
+      - subscription : in memory, each channel says which connections it wants
 */
 
 // A subscriber with its selection. An undefined 'configs' means all the enabled ones (future ones too).
@@ -60,13 +60,13 @@ export class HttpPullPushProvider implements IProvider {
     private subscribers = new Map<IProviderSubscriber, ISubscriberEntry>()
 
     /*
-        Lo que este provider sabe de si mismo: cuantos consumidores tiene AHORA. El contrato
-        (IProvider.getStats, opcional desde kwirth-common-back 0.5.50) pide que sea BARATO — se devuelve
-        lo que ya se tiene, no se calcula —, y de aqui sale que kwirth pueda decir si esto esta siendo
-        consumido o emitiendo para nadie.
+        What this provider knows about itself: how many consumers it has RIGHT NOW. The contract
+        (IProvider.getStats, optional since kwirth-common-back 0.5.50) asks for it to be CHEAP — what is
+        already held is returned, nothing is computed — and it is what lets kwirth say whether this is
+        being consumed or emitting for nobody.
     */
     /*
-        Entregas desde que arranco: una por llamada a un suscriptor. Filtra por configuracion antes de entregar.
+        Deliveries since startup: one per call to a subscriber. It filters by configuration before delivering.
     */
     private deliveries = 0
 
@@ -124,9 +124,9 @@ export class HttpPullPushProvider implements IProvider {
     }
 
     /*
-        Ayuda para quien se suscribe. Merece la pena declararla porque la semantica de 'configs' no se
-        adivina: un array VACIO no significa "todo", significa "nada"; y las conexiones las crea un
-        administrador en el dialogo del provider, asi que hay que decir sus nombres.
+        Help for whoever subscribes. It is worth declaring because 'configs''s semantics cannot be
+        guessed: an EMPTY array does not mean "all of them", it means "none"; and the connections are
+        created by an administrator in the provider's dialog, so their names have to be stated.
     */
     getSubscriptionHelp = (): IProviderSubscriptionHelp => ({
         usage:
@@ -186,9 +186,9 @@ export class HttpPullPushProvider implements IProvider {
             })
 
         /*
-            Prueba puntual de una conexion, tal y como la tenga el usuario en el dialogo (no hace falta
-            haberla guardado). Responde 200 tambien cuando la peticion remota falla: el 'ok' del cuerpo
-            distingue "la prueba se hizo y fallo" de "la llamada al provider fallo".
+            A one-off test of a connection, exactly as the user has it in the dialog (it need not have
+            been saved). It answers 200 even when the remote request fails: the body's 'ok' tells "the
+            test ran and failed" from "the call to the provider failed".
         */
         this.configRouter.route('/test')
             .post(async (req: Request, res: Response) => {
@@ -204,13 +204,13 @@ export class HttpPullPushProvider implements IProvider {
     }
 
     /*
-        Prueba una conexion HACIENDO LA PETICION DE VERDAD, una sola vez y sin persistir nada.
+        Tests a connection by MAKING THE REQUEST FOR REAL, once and persisting nothing.
 
-        La ejecuta el back a proposito: es el back quien tiene la red del cluster, los certificados y la
-        identidad con los que se hara el pull real, asi que probar desde el navegador no demostraria nada
-        (otra red, otro almacen de CAs, otras reglas de salida).
+        The back end runs it on purpose: it is the back end that has the cluster's network, the
+        certificates and the identity the real pull will be made with, so testing from the browser would
+        prove nothing (another network, another CA store, other egress rules).
 
-        Se ignoran los reintentos: en una prueba interesa el primer resultado, no la insistencia.
+        Retries are ignored: in a test what matters is the first result, not the persistence.
     */
     testConnection = async (config: IHttpPullConfig): Promise<IHttpPullTestResult> => {
         const errors = validateForTest(config)
@@ -246,8 +246,8 @@ export class HttpPullPushProvider implements IProvider {
     }
 
     /*
-        Guarda y aplica en caliente: no hay que reiniciar Kwirth para que una conexion nueva empiece a
-        consultarse, ni para que una que se deshabilita deje de hacerlo.
+        Saves and applies hot: Kwirth need not be restarted for a new connection to start being queried,
+        nor for one that is disabled to stop.
     */
     applyConfigs = async (configs: IHttpPullConfig[]): Promise<void> => {
         await this.store.save(configs)
@@ -256,15 +256,15 @@ export class HttpPullPushProvider implements IProvider {
     }
 
     /*
-        ── Portabilidad de configuracion (IExtension) ──────────────────────────────────────────────
+        ── Configuration portability (IExtension) ──────────────────────────────────────────────────
 
-        Las conexiones SON la configuracion de este provider: nombres, urls, intervalos, cabeceras y
-        credenciales. No guarda nada mas —lo que sondea no se persiste, se emite—, asi que aqui no hay
-        que separar configuracion de datos: viaja todo.
+        The connections ARE this provider's configuration: names, urls, intervals, headers and
+        credentials. It stores nothing else — what it polls is not persisted, it is emitted — so here
+        there is no configuration to separate from data: all of it travels.
 
-        Lo que si hay que separar son las CREDENCIALES, y el store ya las tiene partidas en dos
-        almacenes; aqui solo hay que vaciarlas cuando no se piden. Se vacian, no se omiten: quien
-        importe tiene que poder ver que esa conexion necesita una contraseña.
+        What does have to be separated are the CREDENTIALS, and the store already has them split across
+        two stores; here they only have to be emptied when they are not asked for. They are emptied, not
+        omitted: whoever imports has to be able to see that that connection needs a password.
     */
     exportConfig = async (options: { includeCredentials: boolean }): Promise<unknown> => {
         const configs = this.getConfigs()
@@ -291,9 +291,9 @@ export class HttpPullPushProvider implements IProvider {
         if (errores.length > 0) return { applied: 0, skipped: entrantes.length, warnings: errores }
 
         /*
-            Un fichero exportado SIN credenciales trae los secretos vacios, y aplicarlos tal cual
-            borraria los que ya hay. Si la conexion existe y lo que llega no trae secreto, se conserva
-            el actual; si es nueva, se avisa de que hay que rellenarlo.
+            A file exported WITHOUT credentials carries the secrets empty, and applying them as they are
+            would delete the ones already here. When the connection exists and what arrives carries no
+            secret, the current one is kept; when it is new, a warning says it has to be filled in.
         */
         const conservarSecretos = (entrante: IHttpPullConfig): IHttpPullConfig => {
             const actual = this.configs.get(entrante.name)
@@ -323,11 +323,11 @@ export class HttpPullPushProvider implements IProvider {
     // Names only: it feeds the counter on the card in the extension manager.
     getConfigNames = (): string[] => [...this.configs.keys()]
 
-    // ── Reconciliacion de pollers ───────────────────────────────────────────────
+    // ── Poller reconciliation ───────────────────────────────────────────────────
 
     /*
-        Deja los pollers en marcha exactamente iguales a lo que dicen la configuracion y las suscripciones:
-        arranca los que faltan, para los que sobran y recrea los que han cambiado de parametros.
+        Leaves the running pollers exactly as the configuration and the subscriptions say: it starts the
+        missing ones, stops the surplus ones and recreates those whose parameters have changed.
     */
     private reconcile = (): void => {
         if (!this.started) return
