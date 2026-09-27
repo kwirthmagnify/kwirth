@@ -6,14 +6,14 @@ import { countUnbrokeredConsumers } from './StatusData'
 import { CHANNEL_NODE_PREFIX, channelsOf, consumerNodeId, elkGraphOf, layerOf } from './StatusGraph'
 
 /*
-    El mapa de quién produce y quién consume.
+    The map of who produces and who consumes.
 
-    Las dos puntas de cada arista vienen del CORE (ClusterInfo.getSubscriptions), no de los providers:
-    la suscripción pasa por el core con el canal delante, así que ahí se conocen las dos. Un provider
-    solo sabe cuántos suscriptores tiene, no quiénes son.
+    Both ends of every edge come from the CORE (ClusterInfo.getSubscriptions), not from the providers: the
+    subscription goes through the core with the channel in front, so both are known there. A provider only
+    knows how many subscribers it has, not who they are.
 
-    React Flow y el motor de layout salen de los globales que publica el core, igual que en Iter: no
-    añaden un byte al bundle de este plugin.
+    React Flow and the layout engine come from the globals the core publishes, just as in Iter: they add
+    not one byte to this plugin's bundle.
 */
 
 /** The state colours, aligned with the table's chips so there are not two languages. */
@@ -96,9 +96,10 @@ const VELOCIDAD_INICIAL = 20
 const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh }) => {
     const theme = useTheme()
     /*
-        Cuántas fotos se han pintado. Solo importa su PARIDAD: una animación CSS no vuelve a empezar
-        porque se repinte el elemento, sino cuando cambia su nombre. Alternando entre dos keyframes
-        idénticos, cada refresco relanza el movimiento aunque la línea ya estuviera viva en el anterior.
+        How many snapshots have been drawn. Only its PARITY matters: a CSS animation does not start over
+        because the element is repainted, but when its name changes. Alternating between two identical
+        keyframes, every refresh relaunches the movement even though the line was already alive in the
+        previous one.
     */
     const vueltas = React.useRef({ inventario: inventory, n: 0 })
     if (vueltas.current.inventario !== inventory) vueltas.current = { inventario: inventory, n: vueltas.current.n + 1 }
@@ -107,20 +108,21 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
     const nodosPintados = React.useRef(new Map<string, INodoPintado>())
     const [posiciones, setPosiciones] = React.useState<Record<string, IPosicion> | undefined>(undefined)
     /*
-        Nodo seleccionado. Con muchos nodos, la pregunta deja de ser "¿qué hay?" y pasa a ser "¿y ESTO
-        con quién habla?" — resaltar su vecindad es lo que hace legible un grafo denso. Mismo lenguaje
-        visual que el mapa de Iter: la arista resaltada engorda, lleva sombra y sube de capa.
+        The selected node. With many nodes, the question stops being "what is there?" and becomes "and
+        who does THIS one talk to?" — highlighting its neighbourhood is what makes a dense graph legible.
+        The same visual language as Iter's map: the highlighted edge thickens, carries a shadow and rises
+        a layer.
     */
     const [seleccionado, setSeleccionado] = React.useState<string | undefined>(undefined)
 
     /*
-        Nodos y aristas se derivan del inventario en cada render, sin memo: el inventario solo cambia
-        cuando llega una foto nueva, y son unas decenas de elementos. Un useMemo aquí escondería el
-        bug de "la foto cambió y el grafo no" a cambio de nada medible.
+        Nodes and edges are derived from the inventory on every render, with no memo: the inventory only
+        changes when a new snapshot arrives, and they are a few dozen elements. A useMemo here would hide
+        the "the snapshot changed and the graph did not" bug in exchange for nothing measurable.
     */
     /*
-        Los colores salen del tema, no de constantes: esta pantalla se mira en claro y en oscuro, y unos
-        nodos negros sobre fondo blanco se ven como un error aunque sean legibles.
+        The colours come from the theme, not from constants: this screen is looked at in light and in
+        dark, and black nodes on a white ground look like an error even when they are legible.
     */
     const colores = {
         fondoNodo: theme.palette.background.paper,
@@ -138,15 +140,16 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
         const canales = channelsOf(inventory.edges)
 
         /*
-            La vecindad del nodo seleccionado: el propio nodo y todo lo que toca, en los dos sentidos.
-            Lo de fuera no se esconde, se ATENUA: sigue estando y se ve que hay más grafo alrededor.
+            The selected node's neighbourhood: the node itself and everything it touches, both ways.
+            What is outside is not hidden, it is DIMMED: it is still there and one can see there is more
+            graph around.
         */
         /*
-            La actividad se ve en las LINEAS, no en el nodo.
+            Activity shows in the LINES, not in the node.
 
-            El borde del nodo llego a engordar con el acumulado de entregas, y eso decia poco: un
-            provider que movio un millon el lunes y lleva dos dias parado seguia siendo el mas gordo
-            del grafo. Lo que interesa es que se mueve AHORA, y eso son las lineas por las que sale.
+            The node's border once thickened with the accumulated deliveries, and that said little: a
+            provider that moved a million on Monday and has been stopped for two days was still the
+            fattest in the graph. What matters is that it is moving NOW, and that is the lines it goes out through.
         */
         const vecinos = new Set<string>()
         if (seleccionado) {
@@ -165,9 +168,10 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
                 id: p.id,
                 position: { x: 0, y: 0 },
                 /*
-                    SOLO lo que se pinta (o lo que usa el layout). Aquí llegaron a ir los suscriptores y la
-                    salud sin que nadie los leyera, y como el nodo se rehace cuando cambia su data (ver
-                    'colocados'), un contador que variaba entre fotos hacía parpadear nodos idénticos.
+                    ONLY what is drawn (or what the layout uses). The subscribers and the health once
+                    travelled here without anybody reading them, and since the node is remade when its
+                    data changes (see 'colocados'), a counter that varied between snapshots made
+                    identical nodes flicker.
                 */
                 data: { label: p.displayName, esProductor: true },
                 // With the graph laid out vertically, an edge has to leave from the BOTTOM and enter at
@@ -211,31 +215,32 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
             source: e.providerId,
             target: consumerNodeId(e.consumerId),
             /*
-                Una línea en movimiento se lee como "por aquí está pasando algo ahora mismo", así que
-                solo se mueve cuando eso se ha MEDIDO (ver 'viva'). Quieta, lo único que dice es que la
-                suscripción existe. Cómo frena con auto-refresco está en el contenedor del ReactFlow.
+                A moving line reads as "something is going through here right now", so it only moves when
+                that has been MEASURED (see 'viva'). Still, the only thing it says is that the
+                subscription exists. How it slows down with auto-refresh is in the ReactFlow's container.
             */
             ...(() => {
                 const tocaAlSeleccionado = Boolean(seleccionado) && (e.providerId === seleccionado || consumerNodeId(e.consumerId) === seleccionado)
                 /*
-                    Viva = el contador de su productor CAMBIO entre el refresco anterior y este. Se
-                    animan todas sus salientes.
+                    Alive = its producer's counter CHANGED between the previous refresh and this one. All
+                    of its outgoing edges are animated.
 
-                    ⚠️ Lo que NO dice: por cual de ellas fue. Eso exigiria contar por arista, y hoy el
-                    contador es del provider entero. Una linea viva significa "este componente ha
-                    entregado algo y tu eres uno de sus consumidores", no "por aqui han pasado N".
+                    ⚠️ What it does NOT say: through which of them it went. That would require counting
+                    per edge, and today the counter belongs to the whole provider. A live line means "this
+                    component has delivered something and you are one of its consumers", not "N went
+                    through here".
                 */
                 const viva = active.has(e.providerId)
                 const color = tocaAlSeleccionado ? '#7fd8b0' : viva ? '#5fc79a' : '#4a8'
                 const ancho = tocaAlSeleccionado ? 3 : viva ? 2 : 1
                 /*
-                    El tamaño del marcador se compensa con el grosor de la linea.
+                    The marker's size is compensated against the line's thickness.
 
-                    React Flow dibuja la punta con markerUnits="strokeWidth", asi que su tamaño se
-                    MULTIPLICA por el ancho del trazo: con la linea fina la flecha salia diminuta y al
-                    resaltarla se triplicaba de golpe. Dividiendo entre el grosor, la punta mide lo
-                    mismo en pantalla —unos 16 px— y lo que cambia al seleccionar es la LINEA, que es
-                    justo lo que se quiere resaltar.
+                    React Flow draws the arrowhead with markerUnits="strokeWidth", so its size is
+                    MULTIPLIED by the stroke's width: with a thin line the arrow came out tiny and on
+                    highlighting it tripled at a stroke. Dividing by the thickness, the head measures the
+                    same on screen — about 16 px — and what changes on selecting is the LINE, which is
+                    precisely what one wants to highlight.
                 */
                 const punta = 16 / ancho
                 return {
@@ -261,9 +266,9 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
     }, [inventory, active, seleccionado, colores.fondoNodo, colores.fondoCanal, colores.texto, colores.bordeCanal])
 
     /*
-        El layout depende del INVENTARIO, no de la selección: recalcularlo al hacer clic movería los
-        nodos de sitio bajo el ratón, que es de las cosas más desorientadoras que puede hacer un grafo.
-        Por eso la dependencia es la lista de ids, no los nodos (que cambian de estilo al seleccionar).
+        The layout depends on the INVENTORY, not on the selection: recomputing it on a click would move
+        the nodes around under the mouse, which is one of the most disorienting things a graph can do.
+        That is why the dependency is the list of ids, not the nodes (which change style on selecting).
     */
     const firmaGrafo = nodos.map(n => n.id).join('|') + '#' + aristas.map(a => a.id).join('|')
     React.useEffect(() => {
@@ -302,12 +307,12 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
     }
 
     /*
-        Sin esto, cada refresco era un FLASH del grafo entero aunque no hubiera cambiado nada.
+        Without this, every refresh was a FLASH of the whole graph even when nothing had changed.
 
-        React Flow reutiliza un nodo solo si recibe el MISMO objeto; si le llega uno nuevo, le borra las
-        medidas y lo esconde hasta volver a medirlo — y cada foto regenera todos los nodos. Así que el
-        objeto se conserva mientras lo que se pinta de él (datos, estilo, posición) sea igual, y solo se
-        rehace el nodo que de verdad ha cambiado.
+        React Flow reuses a node only when it receives the SAME object; if a new one arrives, it clears
+        its measurements and hides it until it measures it again — and every snapshot regenerates all the
+        nodes. So the object is kept as long as what is drawn of it (data, style, position) is the same,
+        and only the node that really changed is remade.
     */
     const colocados = nodos.map(n => {
         const position = posiciones[n.id] ?? { x: 0, y: 0 }
@@ -362,13 +367,13 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
                 '& .react-flow__controls-button svg': { fill: theme.palette.text.primary },
                 '& .react-flow__attribution': { display: 'none' },
                 /*
-                    Con auto-refresco, la línea viva arranca a la velocidad de serie y va FRENANDO hasta
-                    pararse justo cuando llega la siguiente foto: lo que se ha visto moverse es lo que
-                    pasó en ese intervalo, y la línea no sigue diciendo "ahora" cuando el dato ya es viejo.
-                    En manual no hay intervalo que agotar, así que se queda la animación continua de serie.
+                    With auto-refresh, the live line starts at the default speed and SLOWS DOWN until it
+                    stops right when the next snapshot arrives: what has been seen moving is what happened
+                    in that interval, and the line does not go on saying "now" when the data is already
+                    stale. In manual there is no interval to run out, so the default continuous animation stays.
 
-                    El recorrido sale de la curva: con ease-out cuadrática la velocidad inicial es 2·D/T,
-                    así que D = VELOCIDAD_INICIAL·T/2 arranca igual que la de serie, sin tirón.
+                    The distance comes out of the curve: with a quadratic ease-out the initial speed is
+                    2·D/T, so D = INITIAL_SPEED·T/2 starts the same as the default one, with no jolt.
                 */
                 ...(autoRefresh > 0 ? {
                     [`@keyframes ${frenada}`]: {

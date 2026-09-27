@@ -2,16 +2,17 @@ import React from 'react'
 import { SvgIcon, SvgIconProps } from '@mui/material'
 
 /*
-    El icono que usa SOLO Fileman.
+    The icon ONLY Fileman uses.
 
-    El barrel de kwirth es para los COMUNES: viaja en el bundle del front, que descarga todo el mundo, asi
-    que un icono de un unico plugin se lo cobra a quien no lo usa. `SvgIcon` sale de `@mui/material`, que el
-    build ya resuelve contra el global del core, de modo que esto no añade dependencias ni bundlea MUI.
+    Kwirth's barrel is for the COMMON ones: it travels in the front end's bundle, which everybody
+    downloads, so an icon belonging to a single plugin charges it to whoever does not use it. `SvgIcon`
+    comes from `@mui/material`, which the build already resolves against the core's global, so this adds
+    no dependencies and does not bundle MUI.
 
-    Para añadir otro: copia el `d` de `@mui/icons-material/<Nombre>.js` — todos sus paths si tiene varios.
-    No importes `@mui/icons-material` aqui: el build lo redirige al barrel del core.
+    To add another: copy the `d` from `@mui/icons-material/<Name>.js` — all of its paths if it has several.
+    Do not import `@mui/icons-material` here: the build redirects it to the core's barrel.
 
-    Los paths son de Material Icons (Apache-2.0).
+    The paths are Material Icons' (Apache-2.0).
 */
 
 export const HexagonOutlined = (props: SvgIconProps) => (

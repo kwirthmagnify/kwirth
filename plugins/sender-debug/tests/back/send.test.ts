@@ -97,8 +97,8 @@ describe('sending one message', () => {
     })
 
     /*
-        EL test del plugin. Por la vía oficial del core esto sería un logError que nadie ve y un
-        undefined indistinguible de un envío correcto. Aquí sube con su texto.
+        THE test of this plugin. Along the core's official route this would be a logError nobody sees and
+        an undefined indistinguishable from a successful send. Here it comes up with its text.
     */
     test('a sender that throws answers ok:false with the error text', async () => {
         const sender = new FakeSender('teams').withSendError('401 Unauthorized from the webhook')

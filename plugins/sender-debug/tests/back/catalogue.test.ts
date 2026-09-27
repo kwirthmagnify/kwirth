@@ -108,9 +108,9 @@ describe('sender catalogue', () => {
     })
 
     /*
-        El core concatena el indice de instalados con los senders de dev y no deduplica
-        (SenderManager.listInstalled), asi que en un entorno de desarrollo el mismo sender llega dos
-        veces y el desplegable lo pintaba repetido. Lo cazo el e2e.
+        The core concatenates the index of installed ones with the dev senders and does not deduplicate
+        (SenderManager.listInstalled), so in a development environment the same sender arrives twice and
+        the dropdown drew it repeated. The e2e caught it.
     */
     test('a sender served twice by the core is listed once, keeping the dev entry', async () => {
         const registry = new FakeRegistry()

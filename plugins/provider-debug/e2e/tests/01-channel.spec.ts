@@ -116,13 +116,13 @@ test('the tab explains that the channel must be started', async () => {
 // is available WITHOUT the channel ever having been started. These tests go before the first Start on
 // purpose: if anybody ties the Select back to the websocket catalogue, they turn red.
 /*
-    No se nombra ningún provider INSTALADO a propósito. La versión anterior exigía 'kafka' y 'otel' por
-    id, y se puso roja el día que kafka dejó de estar instalado en el entorno — un fallo que no decía
-    nada del canal, solo del inventario de quien corría el test. Lo que aquí importa es que la lista
-    llega poblada y con el estado resuelto, no QUÉ hay instalado.
+    No INSTALLED provider is named, on purpose. The previous version demanded 'kafka' and 'otel' by id,
+    and went red the day kafka stopped being installed in the environment — a failure that said nothing
+    about the channel, only about the inventory of whoever was running the test. What matters here is that
+    the list arrives populated and with the state resolved, not WHAT is installed.
 
-    Los de core sí se nombran: 'events' y 'metrics' los registra el core en código, así que están
-    siempre pase lo que pase con las extensiones.
+    The core ones are named: 'events' and 'metrics' are registered by the core in code, so they are always
+    there whatever happens with the extensions.
 */
 test('before any start the select offers core providers and resolves their state', async () => {
     await openSetup()
@@ -205,9 +205,9 @@ test('starting without a provider lists the providers currently running', async 
 })
 
 /*
-    Se busca en la lista CUÁL está parado en vez de nombrar uno: cuál lo esté depende de qué haya
-    instalado y de qué canales corran, y atarlo a un id concreto es lo que puso rojo este fichero
-    cuando kafka dejó de estar instalado.
+    WHICH one is stopped is looked up in the list instead of naming one: which one it is depends on what
+    is installed and on which channels are running, and tying it to a particular id is what turned this
+    file red when kafka stopped being installed.
 */
 test('a provider that is not running is reported instead of failing silently', async () => {
     await openSetup()
@@ -215,13 +215,13 @@ test('a provider that is not running is reported instead of failing silently', a
     const stopped = page.locator('li[data-value]').filter({ hasText: 'not running' }).first()
 
     /*
-        Puede no haber NINGUNO parado: un provider corre si algún canal lo requiere o si publica
-        router, así que en un Kwirth donde todo lo instalado está en uso este caso no existe y no hay
-        forma de provocarlo desde la UI (la Select solo ofrece lo que hay).
+        There may be NONE stopped: a provider runs when some channel requires it or when it publishes a
+        router, so in a Kwirth where everything installed is in use this case does not exist and there is
+        no way of provoking it from the UI (the Select only offers what there is).
 
-        Se salta en vez de fallar, y se cierra el diálogo antes: los tests comparten página, y dejarlo
-        abierto rompería al siguiente. La lógica del aviso está cubierta por el harness del back
-        (tests/back/pluvider.test.ts y ProviderDebugChannel.test.ts), esto solo era el recorrido real.
+        It is skipped rather than failed, and the dialog is closed first: the tests share a page, and
+        leaving it open would break the next one. The warning's logic is covered by the back end's harness
+        (tests/back/pluvider.test.ts and ProviderDebugChannel.test.ts), this was only the real journey.
     */
     if (await stopped.count() === 0) {
         await closeSetup()
@@ -321,9 +321,9 @@ test('each event can be copied without collapsing its card', async () => {
 
 test('the notice warns about matches that fall past the cut', async () => {
     /*
-        Se busca un termino que SOLO exista pasada la linea 1000, calculado desde el objeto entero
-        que da el boton de copiar: asi el caso es real y no depende de que claves tenga el cluster.
-        Si no hubiera ninguno (todas las claves del final ya salen antes), no hay caso que probar.
+        A term that exists ONLY past line 1000 is looked for, computed from the whole object the copy
+        button gives: that way the case is real and does not depend on which keys the cluster has. Were
+        there none (every key at the end already appears earlier), there is no case to test.
     */
     const full = await page.evaluate(() => navigator.clipboard.readText())
     const lines = full.split('\n')

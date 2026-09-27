@@ -2,13 +2,13 @@ import { test, expect, Page } from '@playwright/test'
 import { login, openChannelPicker, openTabMenu, CHANNEL } from './helpers'
 
 /*
-    El inventario de Kwirth Status, de punta a punta (S1).
+    Kwirth Status's inventory, end to end (S1).
 
-    Serial y con UNA sola página: el coste dominante es recargar la SPA contra el dev server, no
-    Playwright. Se paga una vez.
+    Serial and with ONE single page: the dominant cost is reloading the SPA against the dev server, not
+    Playwright. It is paid once.
 
-    NO destructivo por construcción: este canal solo lee. No instala, no configura y no toca nada del
-    Kwirth del usuario — abrirlo es toda la interacción que hay.
+    NOT destructive by construction: this channel only reads. It installs nothing, configures nothing and
+    touches nothing of the user's Kwirth — opening it is the whole of the interaction.
 */
 
 test.describe.configure({ mode: 'serial' })
@@ -27,9 +27,9 @@ test.beforeAll(async ({ browser }) => {
     await page.waitForTimeout(1500)
 
     /*
-        El canal declara setup:false y sin configuración que pedir, asi que el core lo arranca al añadir
-        la pestaña: en el menú ya no hay 'Start'. Se comprueba de todos modos, para que el e2e siga
-        valiendo si algún día el arranque vuelve a ser manual.
+        The channel declares setup:false and has no configuration to ask for, so the core starts it when
+        the tab is added: there is no 'Start' in the menu any more. It is checked all the same, so that
+        the e2e still holds should starting become manual again some day.
     */
     await openTabMenu(page)
     const start = page.getByText('Start', { exact: true })
@@ -71,12 +71,12 @@ test('se listan providers y senders del Kwirth de verdad', async () => {
 
 test('la columna de consumidores distingue "ninguno" de "no lo dice"', async () => {
     /*
-        El invariante, que sobrevive a S2 aunque cambie de forma: un componente que no implementa
-        getStats NO puede salir con un 0 — quien lea "cero consumidores" va a ir a desinstalar algo que
-        quizá se usa. Sale con un guion.
+        The invariant, which survives S2 even though it changes shape: a component that does not
+        implement getStats can NOT come out with a 0 — whoever reads "zero consumers" is going to go and
+        uninstall something that may well be in use. It comes out with a dash.
 
-        Tras cablear los providers del repo conviven los dos casos en la misma tabla, que es justo lo
-        que hay que poder distinguir de un vistazo.
+        Once the repo's providers were wired up, both cases live in the same table, which is precisely
+        what has to be tellable at a glance.
     */
     const filas = page.locator('table tbody tr')
     const n = await filas.count()
@@ -112,8 +112,8 @@ test('la pantalla dice de cuando es la foto y si se refresca sola', async () => 
 
 test('el selector de auto-refresco esta a la izquierda del boton de refrescar', async () => {
     /*
-        El orden importa: se pidio ahi expresamente. Se comprueba por posicion en pantalla, no por el
-        orden del DOM, que es lo que de verdad ve quien lo usa.
+        The order matters: it was asked for there expressly. It is checked by position on screen, not by
+        DOM order, which is what whoever uses it really sees.
     */
     const selector = page.locator('[aria-label="Auto refresh"]')
     await expect(selector).toBeVisible()
@@ -166,12 +166,12 @@ test('refrescar trae una foto nueva', async () => {
 
 test('🔴 la tabla scrollea: con muchos componentes se ven TODOS', async () => {
     /*
-        El contenedor que el core da al contenido de una pestaña no tiene altura definida, asi que un
-        'height: 100%' no resuelve a nada: la tabla crecia hasta salirse de la pantalla y las ultimas
-        filas eran inalcanzables. Se vio en el QA de S1 con 20 componentes.
+        The container the core gives a tab's content has no defined height, so a 'height: 100%' resolves
+        to nothing: the table grew until it ran off the screen and the last rows were unreachable. It was
+        seen in S1's QA with 20 components.
 
-        Se comprueba lo que importa: que la caja no se sale del viewport y que la ultima fila se puede
-        alcanzar scrollando.
+        What matters is checked: that the box does not run off the viewport and that the last row can be
+        reached by scrolling.
     */
     const caja = page.locator('table').locator('xpath=..')
     const alto = await caja.evaluate(el => ({ visible: el.clientHeight, contenido: el.scrollHeight, viewport: window.innerHeight }))

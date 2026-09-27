@@ -1,12 +1,12 @@
 import { IStatusComponent, IStatusInventory } from '../common/StatusTypes'
 
 /*
-    El estado del tab: la última foto y la anterior, y nada más.
+    The tab's state: the latest snapshot and the previous one, and nothing else.
 
-    DOS y no una porque con dos se puede dar una tasa, y una tasa es lo que distingue un provider que
-    está moviendo datos ahora de uno que los movió hace tres días. DOS y no más porque guardar una
-    tercera ya es una serie temporal, que está explícitamente fuera del producto — esta pantalla enseña
-    el ahora, no la historia.
+    TWO and not one because with two a rate can be given, and a rate is what tells a provider that is
+    moving data now from one that moved it three days ago. TWO and no more because keeping a third is
+    already a time series, which is explicitly outside the product — this screen shows the now, not the
+    history.
 */
 export interface IStatusData {
     /**

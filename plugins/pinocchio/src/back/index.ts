@@ -536,21 +536,21 @@ export class PinocchioChannel {
     }
 
     /*
-        ── Portabilidad de configuracion (IExtension) ──────────────────────────────────────────────
+        ── Configuration portability (IExtension) ──────────────────────────────────────────────────
 
-        Lo que pinocchio guarda son TRES cosas distintas, y solo una es configuracion portable:
+        What pinocchio stores is THREE different things, and only one of them is portable configuration:
 
-          · SI viaja   los triggers: lo que alguien ha compuesto —sus versiones, prompts, acciones y
-                       tools—, y lo que duele rehacer a mano en otro Kwirth.
-          · NO viaja   los LLMs: aunque `IPinocchioConfig` los lleve dentro, su origen real es el
-                       almacen COMUN (`STORAGE_KEY_LLMS`), que comparten varias extensiones y que
-                       `startChannel` vuelve a leer al arrancar. No son de pinocchio: los exporta el
-                       core como entrada propia del bundle.
-          · NO viaja   el playground: es un banco de pruebas, el borrador de quien esta trasteando
-                       aqui. Replicarlo en otro cluster no tiene ningun sentido.
+          · DOES travel     the triggers: what somebody composed — their versions, prompts, actions and
+                            tools — and what hurts to redo by hand in another Kwirth.
+          · does NOT travel the LLMs: even though `IPinocchioConfig` carries them inside, their real
+                            origin is the COMMON store (`STORAGE_KEY_LLMS`), which several extensions
+                            share and which `startChannel` reads again at startup. They are not
+                            pinocchio's: the core exports them as an entry of its own in the bundle.
+          · does NOT travel the playground: it is a test bench, the scratch pad of whoever is tinkering
+                            here. Replicating it in another cluster makes no sense at all.
 
-        Los triggers no llevan credenciales propias —`llm` es una referencia—, asi que
-        `includeCredentials` no cambia lo que sale.
+        The triggers carry no credentials of their own — `llm` is a reference — so `includeCredentials`
+        does not change what comes out.
     */
     exportConfig = async (): Promise<unknown> => {
         const raw = await this.backChannelObject.readStorage!('pinocchio-config', false)

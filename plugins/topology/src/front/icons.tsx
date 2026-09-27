@@ -2,18 +2,19 @@ import React from 'react'
 import { SvgIcon, SvgIconProps } from '@mui/material'
 
 /*
-    Los iconos que usa SOLO Topology (los tres de la botonera de la camara).
+    The icons ONLY Topology uses (the three on the camera's button bar).
 
-    El barrel de kwirth es para los COMUNES: viaja en el bundle del front, que descarga todo el mundo, asi
-    que un icono de un unico plugin se lo cobra a quien no lo usa. `SvgIcon` sale de `@mui/material`, que el
-    build ya resuelve contra el global del core, de modo que esto no añade dependencias ni bundlea MUI.
+    Kwirth's barrel is for the COMMON ones: it travels in the front end's bundle, which everybody
+    downloads, so an icon belonging to a single plugin charges it to whoever does not use it. `SvgIcon`
+    comes from `@mui/material`, which the build already resolves against the core's global, so this adds
+    no dependencies and does not bundle MUI.
 
-    ⚠️ ZoomIn y ZoomOut llevan DOS paths (la lupa y el signo): con uno solo el icono sale a medias.
+    ⚠️ ZoomIn and ZoomOut carry TWO paths (the magnifier and the sign): with only one the icon comes out half done.
 
-    Para añadir otro: copia el `d` de `@mui/icons-material/<Nombre>.js` — TODOS sus paths. No importes
-    `@mui/icons-material` aqui: el build lo redirige al barrel del core.
+    To add another: copy the `d` from `@mui/icons-material/<Name>.js` — ALL of its paths. Do not import
+    `@mui/icons-material` here: the build redirects it to the core's barrel.
 
-    Los paths son de Material Icons (Apache-2.0).
+    The paths are Material Icons' (Apache-2.0).
 */
 
 export const CenterFocusStrong = (props: SvgIconProps) => (

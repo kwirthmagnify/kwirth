@@ -9,11 +9,11 @@ import { openCensor, openConfigDialog } from './helpers'
 // Only the shots this plugin's UI changes invalidate; data-heavy tabs (Regex/Logstream/Performance
 // with real numbers) need a live run with an LLM and noisy logs.
 /*
-    La guia de este plugin vive en el arbol de documentacion del CORE, y las capturas van a la
-    version VIVA: la `docs/<x.y.z>` mas alta, resuelta igual que en `back/scripts/build-docs-tgz.js`.
-    Estuvo clavada a una version concreta y envejecio en silencio — se escribia sobre la documentacion
-    antigua mientras la guia viva enseñaba capturas viejas, y el spec pasaba en verde porque una
-    captura no comprueba nada: solo escribe ficheros.
+    This plugin's guide lives in the CORE's documentation tree, and the captures go to the LIVE version:
+    the highest `docs/<x.y.z>`, resolved the same way as in `back/scripts/build-docs-tgz.js`. It was once
+    pinned to a particular version and aged in silence — it wrote over the old documentation while the
+    live guide showed stale captures, and the spec passed green because a capture checks nothing: it only
+    writes files.
 */
 const DOCS = path.resolve(__dirname, '..', '..', '..', '..', 'docs')
 const liveDocsVersion = (): string =>

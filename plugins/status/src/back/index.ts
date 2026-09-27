@@ -2,12 +2,12 @@ import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelDa
 import { EComponentHealth, EComponentKind, EStatusPayload, IStatusComponent, IStatusEdge, IStatusInventory, IStatusMessageResponse } from '../common/StatusTypes'
 
 /*
-    Kwirth Status — el inventario de lo que Kwirth tiene montado (S1).
+    Kwirth Status — the inventory of what Kwirth has mounted (S1).
 
-    El canal NO recolecta: consulta. No hay temporizador, ni suscripción a nada, ni estado que mantener
-    entre peticiones. Cuando alguien abre la pestaña se lee ClusterInfo —que ya está en memoria— y se manda
-    una foto. Con la pestaña cerrada, este plugin no ejecuta una sola instrucción, que es el requisito que
-    manda sobre todo lo demás (RNF1 del PRD).
+    The channel does NOT collect: it queries. There is no timer, no subscription to anything, and no state
+    to keep between requests. When somebody opens the tab, ClusterInfo — which is already in memory — is
+    read and a snapshot is sent. With the tab closed, this plugin does not execute a single instruction,
+    which is the requirement that rules over everything else (the PRD's RNF1).
 */
 
 /**
@@ -104,9 +104,9 @@ interface ISocketEntry {
 class StatusChannel implements IChannel {
     readonly channelId = 'status'
     /*
-        Sin providers y sin almacenamiento. Declarar un provider aquí lo ARRANCARÍA como efecto colateral
-        de tener instalado un visor de estado —el core instancia lo que algún canal declara—, y entonces
-        esta pantalla estaría modificando justo lo que dice observar.
+        No providers and no storage. Declaring a provider here would START it as a side effect of having a
+        status viewer installed — the core instantiates whatever some channel declares — and then this
+        screen would be modifying precisely what it claims to observe.
     */
     readonly requirements: IBackChannelRequirements = { storage: false, providers: [] }
     clusterInfo: IClusterInfoView
@@ -133,9 +133,9 @@ class StatusChannel implements IChannel {
     })
 
     /*
-        Ver el inventario completo es una vista privilegiada: enseña todas las extensiones montadas y su
-        estado. Por eso el nivel mínimo es 'cluster' y no hay escalón por namespace — no tendría sentido
-        un inventario "de un namespace", y dejarlo en 'none' lo abriría a cualquiera.
+        Seeing the complete inventory is a privileged view: it shows every mounted extension and its
+        state. That is why the minimum level is 'cluster' and there is no per-namespace rung — an
+        inventory "of a namespace" would make no sense, and leaving it at 'none' would open it to anyone.
     */
     getChannelScopeLevel = (scope: string): number => ['', 'none', 'cluster'].indexOf(scope)
 
@@ -181,8 +181,9 @@ class StatusChannel implements IChannel {
     }
 
     /*
-        Volver a pedir la foto. Es la ÚNICA forma de que este canal haga trabajo: alguien con la pantalla
-        abierta pulsa refrescar. No hay refresco automático a propósito — sería recolección disfrazada.
+        Asking for the snapshot again. It is the ONLY way this channel does any work: somebody with the
+        screen open presses refresh. There is no automatic refresh on purpose — it would be collection in
+        disguise.
     */
     processCommand = async (webSocket: WebSocket, instanceMessage: IInstanceMessage): Promise<boolean> => {
         if (instanceMessage.flow === EInstanceMessageFlow.IMMEDIATE) return false
@@ -222,11 +223,12 @@ class StatusChannel implements IChannel {
     // ---- the inventory -------------------------------------------------------
 
     /*
-        Estado de un provider con lo que el core sabe HOY.
+        A provider's state with what the core knows TODAY.
 
-        Deliberadamente NO se distingue "activo" de "ocioso": para eso hay que preguntarle al provider
-        cuántos suscriptores tiene, y ese contrato todavía no existe (llega en S2). Inventar el dato sería
-        peor que no darlo — un administrador que lea "ocioso" va a ir a desinstalar algo.
+        "Active" is deliberately NOT told from "idle": for that one has to ask the provider how many
+        subscribers it has, and that contract does not exist yet (it arrives in S2). Inventing the fact
+        would be worse than not giving it — an administrator who reads "idle" is going to go and
+        uninstall something.
     */
     /**
      * How many consumers it has, or undefined when it does not say.
@@ -241,16 +243,16 @@ class StatusChannel implements IChannel {
     private healthOfProvider = (p: IProviderLike, subscribers: number | undefined): { health: EComponentHealth, reason?: string } => {
         if (p.started !== true) {
             /*
-                Parado PERO con suscriptores: la averia silenciosa que esta pantalla existe para cazar.
+                Stopped BUT with subscribers: the silent failure this screen exists to catch.
 
-                El core solo arranca un provider si algun canal lo declara en 'requirements.providers'.
-                Pero cualquiera puede suscribirse en RUNTIME con clusterInfo.addSubscriber(), y eso
-                funciona aunque el provider no haya arrancado nunca: la suscripcion se registra, el
-                provider no emite, y el canal se queda esperando datos que no van a llegar. Sin error,
-                sin log, sin nada.
+                The core only starts a provider when some channel declares it in 'requirements.providers'.
+                But anybody can subscribe at RUNTIME with clusterInfo.addSubscriber(), and that works even
+                though the provider never started: the subscription is registered, the provider emits
+                nothing, and the channel sits waiting for data that is not going to arrive. No error, no
+                log, nothing.
 
-                Decir aqui "no lo declara ningun canal" seria tecnicamente cierto —en requirements— y
-                completamente engañoso, porque SI hay alguien consumiendo.
+                Saying "no channel declares it" here would be technically true — in requirements — and
+                completely misleading, because there IS somebody consuming.
             */
             if (subscribers !== undefined && subscribers > 0) {
                 return {
@@ -273,8 +275,8 @@ class StatusChannel implements IChannel {
             }
         }
         /*
-            Con el dato de S2 ya se puede separar lo que funciona de lo que funciona PARA NADIE. Sin el
-            dato se queda en INSTANTIATED: no informa, y eso es una respuesta, no un hueco.
+            With S2's fact one can now separate what works from what works FOR NOBODY. Without the fact it
+            stays at INSTANTIATED: it does not inform, and that is an answer, not a gap.
         */
         if (subscribers === undefined) return { health: EComponentHealth.INSTANTIATED }
         if (subscribers > 0) return { health: EComponentHealth.ACTIVE }
@@ -287,9 +289,9 @@ class StatusChannel implements IChannel {
     private buildInventory = (): IStatusInventory => {
         const components: IStatusComponent[] = []
         /*
-            Las aristas se piden UNA vez y se cuentan por productor, en vez de recorrerlas dentro del
-            bucle: con unas pocas decenas de suscripciones da igual, pero el bucle anidado sería lo
-            primero que se notaría el día que un Kwirth tenga muchas.
+            The edges are asked for ONCE and counted per producer, rather than walked inside the loop:
+            with a few dozen subscriptions it makes no difference, but the nested loop would be the first
+            thing to show the day a Kwirth has many.
         */
         const edges = this.subscriptionsOf()
         const conocidos = new Map<string, number>()
@@ -312,14 +314,14 @@ class StatusChannel implements IChannel {
         }
 
         /*
-            Un pluvider existe porque su plugin está instalado y corriendo, no porque nadie lo declare: si
-            está en el registro, está en marcha. No hay un estado intermedio que averiguar.
+            A pluvider exists because its plugin is installed and running, not because anybody declares
+            it: if it is in the registry, it is up. There is no intermediate state to find out.
         */
         for (const pluviderId of (this.clusterInfo.pluviders ?? new Map()).keys()) {
             /*
-                Un pluvider no implementa IProvider, así que no hay getStats que preguntarle: lo único
-                que se sabe de él es lo que el core intermedió. Aquí el grafo NO se queda corto — es la
-                única fuente — y por eso su recuento se da como 'subscribers' y no solo como conocidos.
+                A pluvider does not implement IProvider, so there is no getStats to ask it: the only thing
+                known about it is what the core brokered. Here the graph does NOT fall short — it is the
+                only source — and that is why its count is given as 'subscribers' and not merely as known ones.
             */
             const suyas = conocidos.get(pluviderId) ?? 0
             components.push({
@@ -334,12 +336,12 @@ class StatusChannel implements IChannel {
         }
 
         /*
-            Senders y webhooks se listan por su registro de acceso. Su 'salud' es más simple: si están
-            registrados, están disponibles. Lo que aporta información es cuántas configuraciones tienen —
-            un sender sin ninguna está instalado pero no puede entregar nada.
+            Senders and webhooks are listed through their access registry. Their 'health' is simpler: if
+            they are registered, they are available. What adds information is how many configurations they
+            have — a sender with none is installed but cannot deliver anything.
 
-            ⚠️ De los webhooks NO se saca la URL. `getUrl()` la devuelve con el TOKEN dentro, y esta
-            pantalla la puede estar mirando alguien que no debe conocerlo.
+            ⚠️ The webhooks' URL is NOT taken. `getUrl()` returns it with the TOKEN inside, and this screen
+            may be being looked at by somebody who must not know it.
         */
         for (const s of this.clusterInfo.senders?.listSenders() ?? []) {
             components.push({

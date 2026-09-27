@@ -3,8 +3,8 @@ import { login, openChannelPicker, openTabMenu, CHANNEL } from './helpers'
 import path from 'path'
 
 /*
-    Captura del GRAFO para la guía. Fuera de la corrida por defecto (ver testIgnore en la config):
-    escribe en la documentación viva.
+    A capture of the GRAPH for the guide. Outside the default run (see testIgnore in the config): it
+    writes into the live documentation.
 
         STATUS_E2E_CAPTURE=1 ./node_modules/.bin/playwright test zz-capture-graph.spec.ts
 */

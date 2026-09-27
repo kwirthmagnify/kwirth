@@ -2,15 +2,15 @@ import React from 'react'
 import { SvgIcon, SvgIconProps } from '@mui/material'
 
 /*
-    El icono PROPIO de este plugin.
+    This plugin's OWN icon.
 
-    No va al barrel de common-front: ese es la lista de iconos COMUNES y, sobre todo, el contrato que el
-    core publica a todas las extensiones en 'window.__kwirth__.MUI.icons'. Un icono que solo usa un plugin
-    no tiene por qué ensanchar ese contrato — aquí cuesta unos cientos de bytes y cero dependencias.
+    It does not go to common-front's barrel: that is the list of COMMON icons and, above all, the contract
+    the core publishes to every extension in 'window.__kwirth__.MUI.icons'. An icon only one plugin uses
+    has no reason to widen that contract — here it costs a few hundred bytes and zero dependencies.
 
-    ⚠️ Los atributos de trazo van en el <g>, NO en el <SvgIcon>. MUI aplica por CSS
-    '.MuiSvgIcon-root { fill: currentColor }', y el CSS gana a un atributo de presentación: puesto arriba,
-    el icono sale RELLENO y se ve como una mancha.
+    ⚠️ The stroke attributes go on the <g>, NOT on the <SvgIcon>. MUI applies
+    '.MuiSvgIcon-root { fill: currentColor }' through CSS, and CSS beats a presentation attribute: put up
+    there, the icon comes out FILLED and looks like a blob.
 */
 
 /**

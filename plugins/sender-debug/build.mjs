@@ -4,10 +4,10 @@ import fs from 'fs'
 import path from 'path'
 
 /*
-    Todo lo que el core ya sirve como global se resuelve contra el global, no se bundlea. El filtro es
-    ANCLADO (^pkg$): un deep import ('@mui/icons-material/Send') no casa, se resolveria de
-    node_modules y arrastraria @mui/styled-engine -> @emotion/react, que aqui no existe. Por eso los
-    iconos se importan SIEMPRE por el barrel curado de common-front, que tambien esta mapeado aqui.
+    Everything the core already serves as a global is resolved against the global, not bundled. The filter
+    is ANCHORED (^pkg$): a deep import ('@mui/icons-material/Send') does not match, it would be resolved
+    from node_modules and would drag in @mui/styled-engine -> @emotion/react, which does not exist here.
+    That is why icons are ALWAYS imported through common-front's curated barrel, which is mapped here too.
 */
 const kwirthGlobalsPlugin = {
     name: 'kwirth-globals',

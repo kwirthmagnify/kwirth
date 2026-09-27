@@ -23,12 +23,12 @@ const PLUVIDER_PREFIX = 'plugin:'
  * part here.
  */
 /*
-    El handle que entrega el core, visto por este canal. Se declara aqui en vez de importarlo de
-    kwirth-common-back para no atarse a una version concreta del paquete.
+    The handle the core hands out, as seen by this channel. It is declared here instead of imported from
+    kwirth-common-back so as not to tie itself to a particular version of the package.
 
-    'subscribe' devuelve lo que devuelva el provider —normalmente una promesa— y aqui eso importa
-    especialmente: este canal existe para hurgar en providers ajenos, asi que es el ultimo sitio
-    donde se puede dar por hecho que ninguno va a fallar al dar de alta a un suscriptor.
+    'subscribe' returns whatever the provider returns — normally a promise — and here that matters
+    especially: this channel exists to poke around in other people's providers, so it is the last place
+    where one can assume none of them is going to fail when registering a subscriber.
 */
 interface ISubscribable {
     subscribe(c: IProviderSubscriber, data: unknown): unknown
@@ -225,11 +225,11 @@ class ProviderDebugChannel implements IChannel {
         // ordinary provider. Both subscribe the same way, which is precisely the point.
         const isPluvider = instance.providerId.startsWith(PLUVIDER_PREFIX)
         /*
-            Por el HANDLE del core, no cogiendo el objeto del registro y llamandolo por lo bajo. Este
-            canal se suscribe por INSTANCIA —un suscriptor por pestaña, para poder pausar y filtrar
-            cada una por su cuenta—, y el handle lo admite: es lo que hay detras de cada pestaña. A
-            cambio, el core se entera de que provider-debug consume, que antes no podia saberlo y por
-            eso este canal no salia en el grafo.
+            Through the core's HANDLE, not by taking the object from the registry and calling it behind
+            the core's back. This channel subscribes per INSTANCE — one subscriber per tab, so each can be
+            paused and filtered on its own — and the handle admits that: it is what sits behind each tab.
+            In exchange, the core learns that provider-debug consumes, which it could not know before and
+            is why this channel did not show up in the graph.
         */
         const provider: ISubscribable | undefined = this.clusterInfo.getProvider?.(instance.providerId, this)
         if (!provider) {
@@ -260,10 +260,11 @@ class ProviderDebugChannel implements IChannel {
         instance.subscriber = subscriber
         instance.provider = provider
         /*
-            addSubscriber() es async y aqui no se espera: sin catch, un provider que falle al dar de alta
-            al suscriptor no deja un error en este canal — deja un unhandled rejection, y el core sale.
-            Este canal existe para hurgar en providers ajenos, asi que es el ULTIMO sitio donde vale
-            asumir que el provider esta bien escrito. Paso justo con 'trivy' al suscribirse sin payload.
+            addSubscriber() is async and it is not awaited here: with no catch, a provider that fails when
+            registering the subscriber does not leave an error in this channel — it leaves an unhandled
+            rejection, and the core exits. This channel exists to poke around in other people's providers,
+            so it is the LAST place where assuming the provider is well written is acceptable. It happened
+            with 'trivy' precisely, on subscribing with no payload.
         */
         Promise.resolve(provider.subscribe(subscriber, subscriptionData)).catch(err => {
             this.backChannelObject.logWarning?.(`Provider '${instance.providerId}' failed while adding the subscriber: ${String(err)}`)

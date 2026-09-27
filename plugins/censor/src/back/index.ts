@@ -258,20 +258,20 @@ export class CensorChannel {
     }
 
     /*
-        ── Portabilidad de configuracion (IExtension) ──────────────────────────────────────────────
+        ── Configuration portability (IExtension) ──────────────────────────────────────────────────
 
-        El core no sabe —ni puede saber— que de lo que guarda censor es configuracion y que no. Aqui se
-        decide, y la frontera tiene tres lados:
+        The core does not know — and cannot know — which of what censor stores is configuration and which
+        is not. It is decided here, and the border has three sides:
 
-          · SI viaja   las configuraciones con nombre y version, con su marca de activa. Es lo que
-                       alguien ha compuesto a mano y lo que duele rehacer en otro Kwirth.
-          · NO viaja   el autostart: es una preferencia DE ESTA INSTALACION, no del conjunto de reglas.
-          · NO viaja   los LLMs y los proveedores de IA: viven en el almacen COMUN, que comparten varias
-                       extensiones. No son de censor, asi que no le toca a censor exportarlos — lo hace
-                       el core, como entrada propia del bundle.
+          · DOES travel     the named, versioned configurations, with their active mark. It is what
+                            somebody composed by hand and what hurts to redo in another Kwirth.
+          · does NOT travel the autostart: it is a preference OF THIS INSTALLATION, not of the rule set.
+          · does NOT travel the LLMs and the AI providers: they live in the COMMON store, which several
+                            extensions share. They are not censor's, so it is not censor's place to
+                            export them — the core does, as an entry of its own in the bundle.
 
-        Censor no guarda credenciales propias (`llmId` es una referencia, no una clave), asi que
-        `includeCredentials` no cambia lo que sale de aqui.
+        Censor stores no credentials of its own (`llmId` is a reference, not a key), so
+        `includeCredentials` does not change what comes out of here.
     */
     exportConfig = async (): Promise<unknown> => {
         const configs: ICensorInstanceConfig[] = (await this.backChannelObject.readStorage!(STORAGE_KEY_CONFIGS, false)) ?? []

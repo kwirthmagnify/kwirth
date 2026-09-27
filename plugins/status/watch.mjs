@@ -3,14 +3,14 @@ import fs from 'fs'
 import path from 'path'
 
 /*
-    Lo mismo que build.mjs, pero vigilando src/: front.js y back.js se rehacen en cada cambio.
+    The same as build.mjs, but watching src/: front.js and back.js are remade on every change.
 
-    Sin el typecheck, a proposito: esbuild borra los tipos sin mirarlos, y pasar tsc en cada guardado
-    haria que guardar dejara de ser instantaneo. Los tipos se comprueban en build.mjs, que es el que
-    se usa para publicar.
+    Without the typecheck, on purpose: esbuild erases types without looking at them, and running tsc on
+    every save would stop saving being instantaneous. Types are checked in build.mjs, which is the one
+    used for publishing.
 
-    Los globales tienen que ser LOS MISMOS que en build.mjs: si aqui faltara uno, el watch bundlearia
-    una segunda copia de React o de React Flow y el plugin se comportaria distinto que el publicado.
+    The globals have to be THE SAME as in build.mjs: were one missing here, the watch would bundle a
+    second copy of React or of React Flow and the plugin would behave differently from the published one.
 */
 const kwirthGlobalsPlugin = {
     name: 'kwirth-globals',

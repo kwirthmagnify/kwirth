@@ -136,11 +136,12 @@ describe('subscription', () => {
     })
 
     /*
-        Este canal existe para hurgar en providers ajenos, asi que es el ULTIMO sitio donde vale asumir
-        que el provider del otro lado esta bien escrito. addSubscriber()/removeSubscriber() son async y
-        aqui no se esperan: sin catch, lo que falle alli no acaba en una señal de este canal — acaba en
-        un unhandled rejection y el core sale por su propio handler. `node --test` falla el fichero si
-        queda algun rechazo sin atender, asi que estos dos tests cazan la regresion por si solos.
+        This channel exists to poke around in other people's providers, so it is the LAST place where
+        assuming the provider on the other side is well written is acceptable. addSubscriber() and
+        removeSubscriber() are async and are not awaited here: with no catch, whatever fails there does
+        not end up as a signal of this channel — it ends up as an unhandled rejection and the core exits
+        through its own handler. `node --test` fails the file when any rejection is left unattended, so
+        these two tests catch the regression by themselves.
     */
     test('un provider que falla al dar de alta se reporta como error, sin dejar un rechazo sin atender', async () => {
         const roto = new FakeProvider('trivy').withBrokenSubscribe()

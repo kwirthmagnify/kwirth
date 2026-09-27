@@ -4,14 +4,14 @@ import { StatusChannel } from '../../src/back/index'
 import { EComponentHealth, EComponentKind, EStatusPayload, IStatusMessageResponse } from '../../src/common/StatusTypes'
 
 /*
-    El inventario, por el camino real.
+    The inventory, along the real route.
 
-    No se prueban los métodos privados: se arranca una instancia como hace el core y se mira lo que sale
-    por el socket, que es lo único que el front va a ver. Así el test sigue valiendo si mañana se
-    reorganiza el interior.
+    The private methods are not tested: an instance is started the way the core does and what comes out
+    of the socket is looked at, which is the only thing the front end is going to see. That way the test
+    still holds if the insides are reorganised tomorrow.
 
-    Lo que se fija aquí es sobre todo lo que NO se puede decir: que un estado que no se sabe no se
-    inventa, y que un registro ausente no rompe nada.
+    What is pinned down here is above all what canNOT be said: that a state which is unknown is not made
+    up, and that an absent registry breaks nothing.
 */
 
 interface IEnviado {
@@ -52,9 +52,9 @@ test('un provider arrancado sale como INSTANTIATED, y sin motivo que explicar', 
 
 test('🔴 un provider que NO informa no se marca como activo ni como ocioso', async () => {
     /*
-        El caso que más fácil sería estropear, y sigue vigente después de S2: 'getStats' es OPCIONAL y la
-        mayoría de los providers publicados no lo tienen. Sin el dato no se dice nada — quien lea
-        "ocioso" va a ir a desinstalar algo.
+        The case it would be easiest to spoil, and it still holds after S2: 'getStats' is OPTIONAL and
+        most published providers do not have it. Without the fact, nothing is said — whoever reads "idle"
+        is going to go and uninstall something.
     */
     const inv = await inventarioDe({ providers: [{ id: 'events', started: true }] })
     const c = inv.components[0]
@@ -79,8 +79,9 @@ test('sin consumidores sale como OCIOSO, y se explica que emite para nadie', asy
 
 test('🔴 un provider que revienta al preguntarle no tumba la pantalla', async () => {
     /*
-        getStats lo implementa código de terceros. Si lanza, este canal tiene que seguir dando el resto
-        del inventario: se degrada a "no informa", que es exactamente lo mismo que no implementarlo.
+        getStats is implemented by third-party code. If it throws, this channel has to go on giving the
+        rest of the inventory: it degrades to "does not report", which is exactly the same as not
+        implementing it.
     */
     const inv = await inventarioDe({
         providers: [
@@ -118,12 +119,13 @@ test('un provider que el core nunca arrancó dice POR QUÉ', async () => {
 
 test('🔴 parado PERO con suscriptores: la avería silenciosa', async () => {
     /*
-        Pasa de verdad y lo cazó esta pantalla: agora se suscribe a longhorn en runtime, pero no lo
-        declara en 'requirements.providers', así que el core nunca lo arranca. La suscripción se
-        registra, el provider no emite y agora espera datos que no van a llegar — sin error ni log.
+        It really happens and this screen caught it: agora subscribes to longhorn at runtime, but does not
+        declare it in 'requirements.providers', so the core never starts it. The subscription is
+        registered, the provider emits nothing and agora waits for data that is not going to arrive — with
+        no error and no log.
 
-        El mensaje tiene que decir ESO, no "no lo declara ningún canal": sería cierto respecto a los
-        requirements y engañoso, porque sí hay alguien consumiendo.
+        The message has to say THAT, not "no channel declares it": that would be true with respect to the
+        requirements and misleading, because there IS somebody consuming.
     */
     const inv = await inventarioDe({
         providers: [{ id: 'suse-longhorn', started: false, getStats: () => ({ subscribers: 1 }) }]
@@ -156,9 +158,9 @@ test('y si el router SÍ está montado, no molesta con un aviso de reinicio', as
 
 test('los pluviders se listan, y existir ya significa estar en marcha', async () => {
     /*
-        Su estado concreto (activo u ocioso) se comprueba mas abajo, con el grafo: desde S3 un pluvider
-        sin consumidores sale IDLE, porque el registro del core es lo unico que se sabe de el. Aqui solo
-        se fija que aparece, y que aparece como pluvider.
+        Its particular state (active or idle) is checked further down, with the graph: since S3 a pluvider
+        with no consumers comes out IDLE, because the core's registry is the only thing known about it.
+        Here it is only pinned down that it appears, and that it appears as a pluvider.
     */
     const inv = await inventarioDe({ pluviders: new Map([['plugin:agora', {}]]) })
     assert.equal(inv.components[0].kind, EComponentKind.PLUVIDER)
@@ -178,8 +180,8 @@ test('un sender sin configuraciones se lista, y se avisa de que no puede entrega
 
 test('🔴 de los webhooks no sale la URL por ninguna parte', async () => {
     /*
-        getUrl() devuelve la URL con el TOKEN dentro, y esta pantalla la puede estar mirando alguien que
-        no debe conocerlo. El test lo fija para que nadie la añada "porque es cómoda".
+        getUrl() returns the URL with the TOKEN inside, and this screen may be being looked at by somebody
+        who must not know it. The test pins it down so that nobody adds it "because it is handy".
     */
     let pidioUrl = false
     const inv = await inventarioDe({
@@ -204,9 +206,9 @@ test('un provider que cuenta entregas las publica en el inventario', async () =>
 
 test('🔴 quien no cuenta entregas no sale con un 0', async () => {
     /*
-        La misma regla que con los consumidores, y por el mismo motivo: 'events' es OPCIONAL dentro de
-        un getStats que ya de por sí es opcional. Un 0 diría "esto no ha movido nada", y quien lo lea
-        puede desinstalar un provider que lleva semanas trabajando.
+        The same rule as with the consumers, and for the same reason: 'events' is OPTIONAL inside a
+        getStats that is already optional itself. A 0 would say "this has moved nothing", and whoever
+        reads it may uninstall a provider that has been working for weeks.
     */
     const inv = await inventarioDe({
         providers: [{ id: 'viejo', started: true, getStats: () => ({ subscribers: 1 }) }]
@@ -279,9 +281,10 @@ test('an edge without any consumer is dropped, not drawn as a line to nowhere', 
 
 test('🔴 si el provider dice más consumidores de los que el core conoce, se nota', async () => {
     /*
-        Pasa de verdad: provider-debug se suscribe DIRECTAMENTE al provider, sin pasar por el core, así
-        que su suscripción no está en el registro. El grafo dibuja las que conoce y la pantalla avisa de
-        las que faltan — dibujar tres y callar que hay cuatro sería mentir por omisión.
+        It really happens: provider-debug subscribes DIRECTLY to the provider, without going through the
+        core, so its subscription is not in the registry. The graph draws the ones it knows and the screen
+        warns about the missing ones — drawing three and keeping quiet about there being four would be
+        lying by omission.
     */
     const inv = await inventarioDe({
         providers: [{ id: 'events', started: true, getStats: () => ({ subscribers: 4 }) }],

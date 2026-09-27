@@ -64,10 +64,10 @@ const pick = async (combo: () => ReturnType<typeof page.getByRole>, value: strin
 }
 
 /*
-    Elige la PRIMERA configuración que haya, sin nombrarla. Cuántas configuraciones tiene 'console' en
-    la máquina de quien corre esto no lo decide el plugin: son datos del entorno. Nombrar una (o dar
-    por hecho que hay una sola, y que por tanto se autoselecciona) pone el test rojo el día que
-    alguien añade otra — un fallo que no diría nada del canal.
+    It picks the FIRST configuration there is, without naming it. How many configurations 'console' has on
+    the machine of whoever runs this is not decided by the plugin: it is the environment's data. Naming
+    one (or assuming there is only one, and that it therefore auto-selects) turns the test red the day
+    somebody adds another — a failure that would say nothing about the channel.
 */
 const pickFirstConfig = async (): Promise<string> => {
     await configSelect().click()
@@ -182,9 +182,9 @@ test('a batch through a sender without sendBatch is delivered and marked as emul
 })
 
 /*
-    La fila SIEMPRE se abre, también la de un sender que no devuelve nada — 'console' es de
-    notificación pura, que es el caso normal. Lo primero que enseña es el mensaje que se envió: sin
-    eso, saber qué contestó el destino obliga a reconstruir de memoria qué se le mandó.
+    The row ALWAYS opens, including that of a sender that returns nothing — 'console' is pure
+    notification, which is the normal case. The first thing it shows is the message that was sent: without
+    that, knowing what the destination answered forces one to reconstruct from memory what it was sent.
 */
 test('a row opens and shows what was sent and what came back', async () => {
     await page.locator('button[aria-label="Expand send"]').first().click()

@@ -186,15 +186,15 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
     }
 
     /*
-        Canal no arrancado: estado vacío CENTRADO verticalmente, el mismo patrón que Agora e Iter —
-        titular en h6 y la instrucción debajo en body2.
+        Channel not started: an empty state CENTRED vertically, the same pattern as Agora and Iter — the
+        headline in h6 and the instruction below in body2.
 
-        Para ocupar el alto hacen falta las dos cosas, porque el padre puede comportarse de dos maneras:
-        'flex: 1' lo estira cuando el padre es un contenedor flex (que es lo que espera la Card del
-        render normal), y el 'minHeight' medido —top real del contenedor restado al viewport— lo
-        sostiene cuando no lo es. Solo con la altura calculada el bloque se quedaba corto.
+        Both things are needed to take up the height, because the parent can behave in two ways: 'flex: 1'
+        stretches it when the parent is a flex container (which is what the normal render's Card expects),
+        and the measured 'minHeight' — the container's real top subtracted from the viewport — holds it up
+        when it is not. With the computed height alone the block fell short.
 
-        El boxRef es el mismo que usa la lista de eventos: solo uno de los dos está montado a la vez.
+        The boxRef is the same one the event list uses: only one of the two is mounted at a time.
     */
     if (!data.started) {
         return (

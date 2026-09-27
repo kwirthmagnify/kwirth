@@ -8,11 +8,11 @@ import { IStatusData } from './StatusData'
 import { StatusDiagram } from './StatusDiagram'
 
 /*
-    Cómo se dice cada estado, y de qué color.
+    How each state is worded, and in what colour.
 
-    El texto va aquí y no en el back a propósito: el back informa de HECHOS (started, router montado) y el
-    front decide cómo contarlos. Así el día que haya que cambiar una palabra no hay que republicar el back
-    ni reiniciar el servidor.
+    The text goes here and not in the back end on purpose: the back end reports FACTS (started, router
+    mounted) and the front end decides how to tell them. That way, the day a word has to change there is
+    no need to republish the back end or restart the server.
 */
 const HEALTH_LABEL: Record<EComponentHealth, { label: string, color: 'success' | 'warning' | 'error' | 'default' }> = {
     [EComponentHealth.ACTIVE]: { label: 'Active', color: 'success' },
@@ -40,13 +40,13 @@ interface IEmptyStateProps {
 }
 
 /*
-    Mismo patron que situs, iter y asteroids: decir solo "not started" deja al usuario sin saber que lo
-    que falta es darle a Start. El detalle lleva SIEMPRE la accion.
+    The same pattern as situs, iter and asteroids: saying just "not started" leaves the user not knowing
+    that what is missing is pressing Start. The detail ALWAYS carries the action.
 
-    ⚠️ La altura se MIDE, no se hereda. El contenedor que el core da al contenido de una pestaña no
-    tiene altura definida, asi que 'height: 100%' no resuelve a nada y el mensaje se quedaba pegado
-    arriba en vez de centrado. Se mide donde empieza la caja y se le da el resto del viewport — lo
-    mismo que hace la tabla, y que hacen los demas canales en su estado vacio.
+    ⚠️ The height is MEASURED, not inherited. The container the core gives a tab's content has no defined
+    height, so 'height: 100%' resolves to nothing and the message was left stuck at the top instead of
+    centred. Where the box starts is measured and it is given the rest of the viewport — the same as the
+    table does, and as the other channels do in their empty state.
 */
 const EmptyState: React.FC<IEmptyStateProps> = ({ title, detail }) => {
     const ref = React.useRef<HTMLDivElement | null>(null)
@@ -66,26 +66,27 @@ const EmptyState: React.FC<IEmptyStateProps> = ({ title, detail }) => {
 const StatusTabContent: React.FC<IContentProps> = (props) => {
     const data: IStatusData = props.channelObject.data
     /*
-        El estado que debe sobrevivir a cambiar de pestaña se guarda en 'data', que es del canal. Como
-        mutarlo no dispara un render por si solo, se fuerza uno a mano — es el mismo patron que usan
-        los demas canales del proyecto.
+        The state that has to survive switching tabs is kept in 'data', which belongs to the channel.
+        Since mutating it does not trigger a render on its own, one is forced by hand — it is the same
+        pattern the project's other channels use.
     */
     const [, forzarRender] = React.useState(0)
     const repintar = () => forzarRender(n => n + 1)
     const filter = data.filter
     const setFilter = (v: string) => { data.filter = v; repintar() }
     /*
-        La altura del area que scrollea se calcula, no se hereda.
+        The height of the scrolling area is computed, not inherited.
 
-        El contenedor que el core da al contenido de una pestaña no tiene altura definida, asi que un
-        'height: 100%' no resuelve a nada y la tabla crece hasta salirse de la pantalla sin barra. Es el
-        mismo patron que usan los demas canales: se mide donde EMPIEZA la caja y se le da el resto del
-        viewport. Se remide en cada render porque la barra de herramientas de arriba cambia de alto.
+        The container the core gives a tab's content has no defined height, so a 'height: 100%' resolves
+        to nothing and the table grows until it runs off the screen with no bar. It is the same pattern
+        the other channels use: where the box STARTS is measured and it is given the rest of the viewport.
+        It is remeasured on every render because the toolbar above changes height.
     */
     /*
-        Tabla o diagrama. Arranca en TABLA a proposito: responder "¿esta todo bien?" es lo que se hace
-        diez veces al dia, y el grafo es para cuando ya sabes que algo pasa y quieres ver a quien
-        arrastra. Ademas el diagrama descarga el motor de layout, y quien no lo abra no lo paga.
+        Table or diagram. It starts on the TABLE on purpose: answering "is everything all right?" is what
+        one does ten times a day, and the graph is for when you already know something is up and want to
+        see who it drags down. Besides, the diagram downloads the layout engine, and whoever does not open
+        it does not pay for it.
     */
     const vista = data.view
     const setVista = (v: 'table' | 'graph') => { data.view = v; repintar() }
@@ -96,11 +97,11 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
     })
 
     /*
-        Pedir otra foto. Es lo ÚNICO que hace trabajar a este canal: no hay refresco automático, porque
-        un temporizador repitiendo esto sería recolección continua con otro nombre.
+        Asking for another snapshot. It is the ONLY thing that makes this channel work: there is no
+        automatic refresh, because a timer repeating this would be continuous collection by another name.
 
-        ⚠️ El accessKey va en el propio comando: sin él, el core lo descarta antes de que llegue al
-        plugin y lo único que se ve es que no pasa nada.
+        ⚠️ The accessKey goes in the command itself: without it, the core discards it before it reaches
+        the plugin and the only thing one sees is that nothing happens.
     */
     const refresh = () => {
         props.channelObject.webSocket?.send(JSON.stringify({
@@ -116,11 +117,12 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
     }
 
     /*
-        Auto-refresco. El temporizador se monta con el componente y se limpia al desmontarlo, asi que
-        cambiar de pestaña o cerrar el canal lo apaga SIN que nadie tenga que acordarse — con el canal
-        cerrado no queda nada corriendo, que es el requisito que manda en este plugin.
+        Auto-refresh. The timer is mounted with the component and cleared on unmounting it, so switching
+        tabs or closing the channel turns it off WITHOUT anybody having to remember — with the channel
+        closed nothing is left running, which is the requirement that rules in this plugin.
 
-        Se pide una foto al back, no se recalcula en el front: lo que interesa es el estado de AHORA.
+        A snapshot is asked of the back end, it is not recomputed in the front end: what matters is the
+        state of NOW.
     */
     React.useEffect(() => {
         if (!data.autoRefresh) return
@@ -132,9 +134,10 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
     const inventory = data.inventory
 
     /*
-        Entregas por segundo entre la foto anterior y esta. Solo se puede dar si hay dos fotos, si el
-        componente informaba en las dos, y si el contador no ha ido hacia atrás — que pasa cuando el
-        provider se reinicia y empieza de cero: ahí no hay tasa que calcular, hay que decir que no se sabe.
+        Deliveries per second between the previous snapshot and this one. It can only be given when there
+        are two snapshots, when the component reported in both, and when the counter has not gone
+        backwards — which happens when the provider restarts and begins at zero: there is no rate to
+        compute there, one has to say it is unknown.
     */
     const tasaDe = (id: string, ahora?: number): number | undefined => {
         if (ahora === undefined || !data.previous || !inventory) return undefined
@@ -151,15 +154,15 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
     })
 
     /*
-        Que componentes han ENTREGADO ALGO entre el refresco anterior y este.
+        Which components have DELIVERED SOMETHING between the previous refresh and this one.
 
-        Es una comparacion de valores, no una tasa: si el contador es distinto al de la foto anterior,
-        ese componente ha movido algo y sus lineas se animan. Si es el mismo, no. Nada de dividir por
-        el tiempo — la tasa sirve para el numerito de la tabla, pero para decidir si algo se mueve lo
-        unico que hace falta es saber si el valor cambio.
+        It is a comparison of values, not a rate: if the counter differs from the previous snapshot's,
+        that component has moved something and its lines animate. If it is the same, they do not. No
+        dividing by time — the rate serves for the little number in the table, but to decide whether
+        something is moving the only thing needed is knowing whether the value changed.
 
-        Un componente que no informa, o que aun no tiene foto anterior con la que compararse, no entra:
-        no se sabe, y no se anima.
+        A component that does not report, or that has no previous snapshot to compare itself with yet,
+        does not go in: it is unknown, and it is not animated.
     */
     const activos = new Set<string>()
     for (const c of inventory?.components ?? []) {
@@ -169,14 +172,14 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
     }
 
     /*
-        Lo que necesita atención primero, y dentro de cada estado por tipo e id.
+        What needs attention first, and within each state by type and id.
 
-        Primero lo ROTO, después lo que SOBRA (ocioso: funciona, pero no le sirve a nadie), luego lo que
-        no informa, y al final lo que va bien.
+        The BROKEN first, then the SURPLUS (idle: it works, but it is of use to nobody), then what does
+        not report, and at the end what is fine.
 
-        ⚠️ Es un Record y no un array a propósito: con un array, un estado que alguien añada y olvide
-        meter aquí devuelve -1 en indexOf y se cuela ENCIMA de los fallos — justo al revés de lo que se
-        quiere. Con Record, TypeScript obliga a decidir su sitio.
+        ⚠️ It is a Record and not an array on purpose: with an array, a state somebody adds and forgets to
+        put here returns -1 from indexOf and slips in ABOVE the failures — exactly the opposite of what is
+        wanted. With a Record, TypeScript forces a decision about where it goes.
     */
     const ORDEN: Record<EComponentHealth, number> = {
         [EComponentHealth.FAILED]: 0,
@@ -227,9 +230,9 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
     }
 
     /*
-        Los dos estados vacios son distintos y hay que distinguirlos: sin arrancar, lo que falta es una
-        accion del usuario; arrancado y sin foto, lo que falta es que llegue — y no hay nada que hacer
-        salvo esperar un segundo.
+        The two empty states are different and have to be told apart: not started, what is missing is an
+        action by the user; started and with no snapshot, what is missing is for it to arrive — and there
+        is nothing to do but wait a second.
     */
     if (!data.started) {
         return <EmptyState title='Kwirth Status not started'

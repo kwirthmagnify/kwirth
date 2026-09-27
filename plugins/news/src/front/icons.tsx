@@ -2,18 +2,18 @@ import React from 'react'
 import { SvgIcon, SvgIconProps } from '@mui/material'
 
 /*
-    El icono que identifica a este plugin.
+    The icon that identifies this plugin.
 
-    Vive AQUI y no en el barrel de kwirth porque es SUYO: el barrel es para los iconos comunes, y no puede
-    crecer con el icono de cada plugin que exista — viaja en el bundle del front, que descarga todo el
-    mundo. `SvgIcon` sale de `@mui/material`, que el build ya resuelve contra el global del core, asi que
-    esto no añade dependencias.
+    It lives HERE and not in kwirth's barrel because it is ITS OWN: the barrel is for the common icons,
+    and it cannot grow with the icon of every plugin there is — it travels in the front end's bundle,
+    which everybody downloads. `SvgIcon` comes from `@mui/material`, which the build already resolves
+    against the core's global, so this adds no dependencies.
 
-    ⚠️ El MISMO dibujo esta declarado como SVG en crudo en el campo `icon` del package.json. Ese es el que
-    pinta el CORE (managers, marketplace) via `resolveExtensionIcon`, que lo sanea con lista blanca; este
-    es el que usa el propio plugin. Si se cambia uno, hay que cambiar el otro.
+    ⚠️ The SAME drawing is declared as raw SVG in the package.json's `icon` field. That is the one the
+    CORE draws (managers, marketplace) through `resolveExtensionIcon`, which sanitises it with an allow
+    list; this is the one the plugin itself uses. Change one and you have to change the other.
 
-    El path es de Material Icons (Apache-2.0).
+    The path is Material Icons' (Apache-2.0).
 */
 
 export const Newspaper = (props: SvgIconProps) => (

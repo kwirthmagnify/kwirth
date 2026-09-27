@@ -82,17 +82,17 @@ export const elkGraphOf = (nodeIds: string[], lines: IGraphLine[]): IElkGraph =>
         layoutOptions: {
             'elk.algorithm': 'layered',
             /*
-                De arriba abajo: los productores en la capa de arriba y los consumidores debajo.
-                Se lee como un diagrama de flujo —el dato cae— y aprovecha el ancho de la pantalla,
-                que es donde sobra sitio cuando hay muchos nodos.
+                Top down: the producers on the top layer and the consumers below. It reads like a flow
+                diagram — the data falls — and it makes use of the screen's width, which is where there is
+                room to spare when there are many nodes.
             */
             'elk.direction': 'DOWN',
             'elk.spacing.nodeNode': '40',
             'elk.layered.spacing.nodeNodeBetweenLayers': '110',
             /*
-                UN solo grafo, no uno por componente. De serie elk coloca cada componente conexo por
-                su cuenta y luego los apila: un par suelto como sugarless -> sugarless salia en su
-                propio bloque de dos filas, con su canal por ENCIMA de productores del bloque grande.
+                ONE single graph, not one per component. By default elk lays out each connected component
+                on its own and then stacks them: a loose pair like sugarless -> sugarless came out in its
+                own two-row block, with its channel ABOVE producers of the big block.
             */
             'elk.separateConnectedComponents': 'false'
         },

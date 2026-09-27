@@ -69,9 +69,9 @@ export class FakeProvider implements IProvider {
     }
 
     /*
-        Hace que el provider reviente al dar de alta o de baja al subscriber (encadenable). No es un
-        caso raro: addSubscriber() es async y este canal no espera su promesa, asi que un provider que
-        falle ahi se llevaba el core por delante con un unhandled rejection. Paso con 'trivy'.
+        Makes the provider blow up when registering or unregistering the subscriber (chainable). It is no
+        rare case: addSubscriber() is async and this channel does not await its promise, so a provider
+        that fails there took the core down with an unhandled rejection. It happened with 'trivy'.
     */
     withBrokenSubscribe(err = 'boom subscribing'): FakeProvider {
         this.addSubscriber = async () => { throw new Error(err) }
@@ -134,12 +134,13 @@ export class FakePluvider {
 }
 
 /*
-    El clusterInfo que ve el canal, con el HANDLE que hoy entrega el core: el canal ya no coge el
-    objeto provider del registro, pide 'getProvider(id, this)' y se suscribe por ahi.
+    The clusterInfo the channel sees, with the HANDLE the core hands out today: the channel no longer
+    takes the provider object from the registry, it asks for 'getProvider(id, this)' and subscribes
+    through that.
 
-    Aqui el handle es el minimo que el canal usa. Lo que importa reproducir del de verdad es que
-    'subscribe' DEVUELVE lo que devuelva el provider: de eso depende que un provider que falla al dar
-    de alta acabe como un error en pantalla y no como un rechazo sin atender que tumba el proceso.
+    Here the handle is the minimum the channel uses. What matters to reproduce from the real one is that
+    'subscribe' RETURNS whatever the provider returns: on that depends whether a provider that fails when
+    registering ends up as an error on screen and not as an unattended rejection that takes the process down.
 */
 export const makeClusterInfo = (providers: FakeProvider[], pluviders: FakePluvider[] = []) => {
     const pluviderMap = new Map(pluviders.map(p => [p.id, p]))

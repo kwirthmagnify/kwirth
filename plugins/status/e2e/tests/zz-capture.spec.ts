@@ -3,12 +3,13 @@ import { login, openChannelPicker, openTabMenu, CHANNEL } from './helpers'
 import path from 'path'
 
 /*
-    Captura para la guía. NO corre en la suite normal: se pide a mano cuando la pantalla cambia.
+    A capture for the guide. It does NOT run in the normal suite: it is requested by hand when the screen
+    changes.
 
         ./node_modules/.bin/playwright test zz-capture.spec.ts
 
-    Escribe en la documentación VIVA (docs/<version>/_media/ch-images), así que una corrida involuntaria
-    modificaría imágenes publicadas. Por eso está fuera del testMatch por defecto.
+    It writes into the LIVE documentation (docs/<version>/_media/ch-images), so an unintended run would
+    modify published images. That is why it is outside the default testMatch.
 */
 
 const MEDIA = path.resolve(__dirname, '../../../../docs/0.6.31/_media/ch-images')

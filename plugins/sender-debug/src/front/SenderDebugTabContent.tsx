@@ -90,8 +90,9 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
     const sendCommand = (command: ESenderDebugCommand, payload?: ISenderDebugSendRequest) => {
         if (!props.channelObject.instanceId) return
         /*
-            La accessKey va en CADA comando: el core los descarta antes de que lleguen al plugin si no
-            la llevan, y desde el front eso no se distingue de un back que no contesta.
+            The accessKey goes in EVERY command: the core discards them before they reach the plugin when
+            they do not carry it, and from the front end that is indistinguishable from a back end that
+            does not answer.
         */
         props.channelObject.webSocket?.send(JSON.stringify({
             msgtype: 'senderdebugmessage',
@@ -117,9 +118,9 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
             ...(form.batch ? { count: form.count } : {})
         }
         /*
-            La fila se crea AQUI, con su peticion y sin respuesta: el envio se ve en el historial en
-            cuanto sale, y no cuando el sender contesta — que con un destino lento puede tardar. La
-            respuesta la completa processChannelMessage buscando por este id.
+            The row is created HERE, with its request and no response: the send shows in the history as
+            soon as it leaves, and not when the sender answers — which with a slow destination can take a
+            while. The response is completed by processChannelMessage, looking it up by this id.
         */
         data.history.unshift({ request })
         while (data.history.length > config.maxHistory) data.history.pop()
@@ -162,11 +163,11 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
     }
 
     /*
-        La fila SIEMPRE se despliega, y lo primero que enseña es el mensaje que se envió. En un banco
-        de pruebas eso vale tanto como la respuesta: saber qué contestó el destino no sirve de nada si
-        hay que reconstruir de memoria qué se le mandó. Por eso la petición vive en el historial junto
-        a la respuesta — y por eso antes había filas con el desplegable apagado, las de los senders
-        que no devuelven nada, que son la mayoría.
+        The row ALWAYS expands, and the first thing it shows is the message that was sent. On a test bench
+        that is worth as much as the response: knowing what the destination answered is of no use if one
+        has to reconstruct from memory what it was sent. That is why the request lives in the history
+        alongside the response — and why there used to be rows with the expander switched off, those of
+        the senders that return nothing, which are most of them.
     */
     const formatEntry = (entry: ISenderDebugHistoryEntry, index: number) => {
         const open = expanded.has(entry)
@@ -210,9 +211,9 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
     }
 
     /*
-        Canal no arrancado: estado vacio centrado, el mismo patron que provider-debug. Hacen falta las
-        dos cosas para ocupar el alto — 'flex: 1' cuando el padre es flex, y el minHeight medido
-        cuando no lo es.
+        Channel not started: a centred empty state, the same pattern as provider-debug. Both things are
+        needed to take up the height — 'flex: 1' when the parent is flex, and the measured minHeight when
+        it is not.
     */
     if (!data.started) {
         return (

@@ -18,15 +18,15 @@ catch { /* no file → env/defaults */ }
 export default defineConfig({
     testDir: './tests',
     /*
-        El spec de capturas queda FUERA de la corrida por defecto: escribe en docs/<version>/_media, es
-        decir, en la documentacion publicada. Corriendo la suite entera reescribia imagenes de la guia
-        sin que nadie lo pidiera. Se pide a mano:
+        The captures spec stays OUT of the default run: it writes into docs/<version>/_media, that is,
+        into the published documentation. Running the whole suite rewrote the guide's images without
+        anybody asking. It is requested by hand:
             ./node_modules/.bin/playwright test zz-capture.spec.ts --grep-invert "^$"
-        o directamente con --testIgnore vacio; lo normal es lanzarlo por nombre con la config de abajo
-        desactivada temporalmente. Ver el encabezado del propio spec.
+        or directly with an empty --testIgnore; the usual thing is to launch it by name with the config
+        below temporarily disabled. See the spec's own header.
     */
     testIgnore: process.env.STATUS_E2E_CAPTURE ? [] : ['**/zz-capture*.spec.ts'],
-    timeout: 180_000,   // el dev server del front recompila; el login solo ya puede tardar ~1 min
+    timeout: 180_000,   // the front end's dev server recompiles; the login alone can take ~1 min
     fullyParallel: false,
     workers: 1,
     reporter: [['list']],

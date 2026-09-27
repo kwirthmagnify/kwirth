@@ -2,10 +2,10 @@ import { test, expect, Page } from '@playwright/test'
 import { login, openChannelPicker, openTabMenu, CHANNEL } from './helpers'
 
 /*
-    El grafo de quién consume a quién (S3).
+    The graph of who consumes whom (S3).
 
-    Fichero aparte del inventario porque comparten canal pero no tema, y así el de la tabla sigue
-    corriendo solo si este se rompe.
+    A file apart from the inventory because they share a channel but not a subject, and that way the
+    table's one goes on running on its own if this one breaks.
 
     NO destructivo: abre, mira y cierra.
 */
@@ -52,9 +52,9 @@ test('el grafo se dibuja, con nodos y aristas', async () => {
 
 test('los productores quedan ARRIBA y los consumidores DEBAJO', async () => {
     /*
-        La disposicion es informacion: el dato cae de arriba abajo. Si el layout se volviera horizontal
-        sin querer —cambiar elk.direction es una linea— el diagrama seguiria "funcionando" y diria otra
-        cosa distinta, asi que se fija aqui.
+        The arrangement is information: the data falls from top to bottom. Were the layout to turn
+        horizontal by accident — changing elk.direction is one line — the diagram would go on "working"
+        and would say something different, so it is pinned down here.
     */
     const aristas = page.locator('.react-flow__edge')
     expect(await aristas.count()).toBeGreaterThan(0)
@@ -77,10 +77,11 @@ test('los productores quedan ARRIBA y los consumidores DEBAJO', async () => {
 
 test('🔴 con una sola foto no se anima nada: no hay con que comparar', async () => {
     /*
-        Sustituye al invariante de S3 ("nada se anima nunca"), que dejo de valer cuando S4 trajo los
-        contadores. El que queda es igual de importante: una linea se anima solo si el contador de su
-        productor CAMBIO respecto al refresco anterior, asi que recien abierto —cuando solo hay una
-        foto— no puede haber ninguna animada. Si la hay, se esta animando sin dato que lo sostenga.
+        It replaces S3's invariant ("nothing is ever animated"), which stopped holding when S4 brought the
+        counters. The one that remains is just as important: a line is animated only when its producer's
+        counter CHANGED with respect to the previous refresh, so freshly opened — when there is only one
+        snapshot — there can be none animated. If there is, something is being animated with no data
+        behind it.
     */
     expect(await page.locator('.react-flow__edge.animated').count(),
         'hay aristas animadas con una sola foto: se esta afirmando actividad sin comparar nada').toBe(0)
@@ -94,9 +95,10 @@ test('y la pantalla dice que significa una linea, y que significa que se mueva',
 
 test('🔴 el grafo es SOLO VISUALIZACION: no se pueden crear conexiones', async () => {
     /*
-        React Flow es un editor de grafos y de serie deja tirar de un nodo para crear una arista. Aqui
-        eso no significa nada —la topologia la deciden las suscripciones reales— y ademas sugiere que
-        estas cambiando algo. Se comprueba por el atributo que React Flow pone cuando permite conectar.
+        React Flow is a graph editor and by default it lets you drag from a node to create an edge. Here
+        that means nothing — the topology is decided by the real subscriptions — and on top of that it
+        suggests you are changing something. It is checked through the attribute React Flow sets when it
+        allows connecting.
     */
     const conectables = await page.locator('.react-flow__handle.connectable').count()
     expect(conectables, 'los nodos permiten crear conexiones a mano').toBe(0)
@@ -112,9 +114,9 @@ test('al seleccionar un nodo se resaltan sus lineas y se atenua el resto', async
     expect(opacidadesAntes.every(o => o === '' || o === '1'), 'hay aristas atenuadas sin haber seleccionado nada').toBe(true)
 
     /*
-        Se selecciona un nodo que TENGA aristas, no el primero que haya: en el grafo tambien estan los
-        providers sin consumidores (un 'Not started' no tiene ninguna), y clicar uno de esos no resalta
-        nada — el test fallaba por elegir mal el sujeto, no por el producto.
+        A node that HAS edges is selected, not the first one around: the graph also holds the providers
+        with no consumers (a 'Not started' has none), and clicking one of those highlights nothing — the
+        test was failing for picking the wrong subject, not because of the product.
     */
     const origen = await page.locator('.react-flow__edge').first().getAttribute('data-id')
     const idOrigen = (origen ?? '').split('->')[0]
@@ -214,12 +216,12 @@ const esperarLineaViva = async (): Promise<IAnimacionLinea> => {
 
 test('🔴 con auto-refresco, la linea viva FRENA y se para justo al acabar el intervalo', async () => {
     /*
-        La linea que se mueve cuenta lo que paso en el intervalo. Si siguiera moviendose despues, diria
-        "ahora" con un dato que ya es viejo. Por eso con auto-refresco la animacion es UNA sola pasada
-        que dura exactamente el intervalo y se queda en su ultimo fotograma (forwards).
+        The moving line tells what happened in the interval. Were it to go on moving afterwards, it would
+        say "now" with data that is already stale. That is why with auto-refresh the animation is ONE
+        single pass lasting exactly the interval and staying on its last frame (forwards).
 
-        Y tiene que VOLVER A EMPEZAR en cada foto aunque la linea ya estuviera viva: el nombre de la
-        animacion alterna entre dos keyframes identicos, que es lo unico que relanza una animacion CSS.
+        And it has to START OVER on every snapshot even though the line was already alive: the animation's
+        name alternates between two identical keyframes, which is the only thing that relaunches a CSS animation.
     */
     await elegirRefresco('Every 5s')
     let primera: IAnimacionLinea | undefined
@@ -250,9 +252,9 @@ test('en manual no hay intervalo que agotar: la linea viva se mueve sin parar, c
 
 test('🔴 al refrescar el grafo no parpadea: un nodo que no ha cambiado no se vuelve a pintar', async () => {
     /*
-        React Flow esconde (visibility: hidden) todo nodo que recibe como objeto nuevo hasta volver a
-        medirlo. Si cada foto regenera los nodos, el grafo entero da un flash en cada refresco aunque no
-        haya cambiado nada. Se vigila un ciclo completo de auto-refresco muestreando cada 50 ms.
+        React Flow hides (visibility: hidden) every node it receives as a new object until it measures it
+        again. If every snapshot regenerates the nodes, the whole graph flashes on each refresh even when
+        nothing has changed. A complete auto-refresh cycle is watched, sampling every 50 ms.
     */
     await elegirRefresco('Every 5s')
     await page.waitForTimeout(1000)

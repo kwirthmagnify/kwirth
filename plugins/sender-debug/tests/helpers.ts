@@ -129,9 +129,9 @@ export class FakeRegistry {
     private metas = new Map<string, { displayName?: string, version?: string }>()
 
     /*
-        OPCIONAL a propósito, igual que en el manager real visto desde el plugin: hay cores que no lo
-        traen, y el canal tiene que seguir dando un catálogo con lo que haya. withoutListInstalled()
-        lo quita para poder probar ese camino.
+        OPTIONAL on purpose, just as in the real manager seen from the plugin: there are cores that do not
+        carry it, and the channel has to go on giving a catalogue with whatever there is.
+        withoutListInstalled() removes it so that route can be tested.
     */
     listInstalled?: () => Promise<Array<{ id: string, displayName?: string, version?: string, configNames: string[] }>>
 
@@ -147,9 +147,9 @@ export class FakeRegistry {
                 configNames: s.getConfigNames()
             }))
             /*
-                El core concatena el indice de instalados con los de dev SIN deduplicar, asi que la
-                segunda copia va al final y con los metadatos de dev — que es exactamente el orden
-                que se reproduce aqui.
+                The core concatenates the index of installed ones with the dev ones WITHOUT deduplicating,
+                so the second copy goes at the end and with the dev metadata — which is exactly the order
+                reproduced here.
             */
             for (const [id, meta] of this.duplicated) {
                 const original = rows.find(r => r.id === id)

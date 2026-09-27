@@ -65,9 +65,9 @@ const MAX_BATCH = 100
 class SenderDebugChannel implements IChannel {
     readonly channelId = 'sender-debug'
     /*
-        Vacio a proposito, igual que provider-debug: el core solo instancia y arranca lo que algun
-        canal declara, y un depurador no debe abrir nada como efecto colateral de estar instalado.
-        Los senders no se declaran aqui de ninguna forma — se piden al registro cuando hacen falta.
+        Empty on purpose, just like provider-debug: the core only instantiates and starts what some
+        channel declares, and a debugger must not open anything as a side effect of being installed.
+        Senders are not declared here in any form — they are asked of the registry when they are needed.
     */
     readonly requirements: IBackChannelRequirements = { storage: false, providers: [] }
     clusterInfo: IClusterInfoLike
@@ -251,12 +251,12 @@ class SenderDebugChannel implements IChannel {
         if (installed.length === 0) installed = Array.from(live.entries()).map(([id, configNames]) => ({ id, configNames }))
 
         /*
-            DEDUPLICADO POR ID. El core concatena el indice de instalados con los senders de dev y no
-            deduplica (SenderManager.listInstalled), asi que un sender que este en los dos sitios
-            —lo normal en un entorno de desarrollo— llega repetido y el desplegable lo pinta dos
-            veces. Se conserva la ULTIMA entrada, que es la de dev: es la que el core acaba
-            resolviendo por getSender(), asi que es la que describe al sender que de verdad recibira
-            el mensaje.
+            DEDUPLICATED BY ID. The core concatenates the index of installed ones with the dev senders
+            and does not deduplicate (SenderManager.listInstalled), so a sender that is in both places
+            — the normal thing in a development environment — arrives repeated and the dropdown draws it
+            twice. The LAST entry is kept, which is the dev one: it is the one the core ends up resolving
+            through getSender(), so it is the one that describes the sender that will really receive the
+            message.
         */
         const unique = new Map<string, ISenderInstalledMeta>()
         for (const meta of installed) unique.set(meta.id, meta)

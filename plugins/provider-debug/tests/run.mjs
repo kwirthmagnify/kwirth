@@ -24,11 +24,11 @@ mkdirSync(OUT_DIR, { recursive: true })
 // 3) Bundle TS -> ESM node20. The @kwirthmagnify/* packages are externalised (they are resolved at
 //    runtime from node_modules).
 /*
-    COVERAGE=1 → UN SOLO entry que importa todos los tests.
+    COVERAGE=1 → a SINGLE entry that imports every test.
 
-    Con un bundle por fichero, cada uno arrastra su PROPIA copia del src y el informe los trata como
-    ficheros distintos: hace la MEDIA de esas copias en vez de la union, muy por debajo de la
-    cobertura real. Solo con COVERAGE=1: la ejecucion normal sigue siendo un proceso por fichero.
+    With one bundle per file, each one drags in its OWN copy of the src and the report treats them as
+    different files: it AVERAGES those copies instead of taking their union, well below the real coverage.
+    Only with COVERAGE=1: a normal run is still one process per file.
 */
 const ALL_ENTRY = path.join(TEST_DIR, '.coverage-all.generated.ts')
 let buildEntries = entries

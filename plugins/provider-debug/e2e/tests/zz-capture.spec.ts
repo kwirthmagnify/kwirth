@@ -9,11 +9,11 @@ import { login, openChannelPicker, openTabMenu } from './helpers'
 test.use({ trace: 'off', screenshot: 'off', video: 'off' })
 
 /*
-    La guia de este plugin vive en el arbol de documentacion del CORE, y las capturas van a la
-    version VIVA: la `docs/<x.y.z>` mas alta, resuelta igual que en `back/scripts/build-docs-tgz.js`.
-    Estuvo clavada a una version concreta y envejecio en silencio — se escribia sobre la documentacion
-    antigua mientras la guia viva enseñaba capturas viejas, y el spec pasaba en verde porque una
-    captura no comprueba nada: solo escribe ficheros.
+    This plugin's guide lives in the CORE's documentation tree, and the captures go to the LIVE version:
+    the highest `docs/<x.y.z>`, resolved the same way as in `back/scripts/build-docs-tgz.js`. It was once
+    pinned to a particular version and aged in silence — it wrote over the old documentation while the
+    live guide showed stale captures, and the spec passed green because a capture checks nothing: it only
+    writes files.
 */
 const DOCS = path.resolve(__dirname, '..', '..', '..', '..', 'docs')
 const liveDocsVersion = (): string =>
@@ -77,9 +77,9 @@ test('capture', async ({ page }) => {
     await page.screenshot({ path: `${MEDIA}/channel-provider-debug-view.png` })
 
     /*
-        3) El aviso de recorte al final de un evento largo, en su variante mas informativa: con una
-        busqueda cuyas coincidencias caen fuera del corte. Se ASERTA antes de capturar, porque una
-        captura por si sola no comprueba nada y esta ilustra justo esa frase en la guia.
+        3) The trimming notice at the end of a long event, in its most informative variant: with a search
+        whose matches fall outside the cut. It is ASSERTED before capturing, because a capture on its own
+        checks nothing and this one illustrates precisely that sentence in the guide.
     */
     await page.getByLabel('Search events').fill('usageNanoCores')
     const notice = page.getByText(/^Trimmed to the first \d+ of \d+ lines/)

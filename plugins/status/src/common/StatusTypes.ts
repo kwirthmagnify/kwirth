@@ -1,8 +1,8 @@
 /*
-    El contrato entre el back y el front de Kwirth Status.
+    The contract between Kwirth Status's back end and front end.
 
-    Vive en 'common' porque lo comparten los dos lados: si esto fueran uniones de strings sueltas en cada
-    lado, un cambio en uno se descubriría en tiempo de ejecución y no al compilar.
+    It lives in 'common' because both sides share it: were these loose string unions on each side, a
+    change in one would be discovered at runtime and not at compile time.
 */
 
 /** What kind of piece it is. It determines where it comes from in ClusterInfo and how it is drawn. */

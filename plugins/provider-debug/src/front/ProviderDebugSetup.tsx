@@ -104,10 +104,10 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
     }
 
     /*
-        El ejemplo se escribe en el MISMO sitio que edita el formulario (subscriptionData), así que
-        rellena las dos vistas de una vez: no hay dos estados que sincronizar. Y se lleva al usuario a
-        donde va a seguir trabajando — al formulario si el productor describe sus campos, y al JSON si
-        no, que es lo único que le queda.
+        The example is written to the SAME place the form edits (subscriptionData), so it fills both views
+        at once: there are no two states to keep in sync. And it takes the user where they are going to go
+        on working — to the form when the producer describes its fields, and to the JSON when it does not,
+        which is the only thing left to them.
     */
     const useExample = (): void => {
         if (!help) return

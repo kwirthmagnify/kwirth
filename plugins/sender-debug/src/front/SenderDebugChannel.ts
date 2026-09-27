@@ -48,10 +48,10 @@ export class SenderDebugChannel implements IChannel {
                 else {
                     if (msg.result) {
                         /*
-                            La fila ya existe: la creo el propio envio, con su peticion dentro y sin
-                            respuesta. Aqui solo se completa. Si no apareciese —una respuesta sin su
-                            peticion, que solo puede pasar tras un rearranque— se añade suelta, antes
-                            que perderla.
+                            The row already exists: the send itself created it, with its request inside
+                            and no response. Here it is only completed. Should it not turn up — a response
+                            with no request of its own, which can only happen after a restart — it is
+                            added loose, rather than losing it.
                         */
                         const entry = data.history.find(e => e.request?.id === msg.result!.id)
                         if (entry) entry.result = msg.result
@@ -66,10 +66,10 @@ export class SenderDebugChannel implements IChannel {
                 if (startResponse) channelObject.instanceId = signalMessage.instance
 
                 /*
-                    El core responde al start config con un IInstanceConfigResponse, que NO lleva
-                    'level' (back/src/index.ts, sendInstanceConfigSignalMessage). Este canal siempre
-                    manda sus señales CON 'level', asi que se distinguen por estructura y no por su
-                    literal, que es lo que se rompe en cuanto alguien reescribe un texto.
+                    The core answers the start config with an IInstanceConfigResponse, which does NOT
+                    carry 'level' (back/src/index.ts, sendInstanceConfigSignalMessage). This channel
+                    always sends its signals WITH 'level', so they are told apart by structure and not by
+                    their text, which is what breaks the moment somebody rewrites a message.
                 */
                 if (startResponse && signalMessage.level === undefined) {
                     data.configAccepted = true
@@ -96,10 +96,11 @@ export class SenderDebugChannel implements IChannel {
         data.signals = []
         data.configAccepted = false
         /*
-            'history' y 'form' NO se limpian a proposito: lo que se envio antes y lo que se estaba
-            escribiendo siguen siendo lo que se esta investigando, y un rearranque del canal no es
-            motivo para tirarlo. El historial se limpia con su boton, que es una decision del usuario.
-            'senders' tampoco: el back manda el catalogo fresco justo despues y lo sobreescribe solo.
+            'history' and 'form' are NOT cleared, on purpose: what was sent before and what was being
+            typed are still what is being investigated, and a restart of the channel is no reason to throw
+            it away. The history is cleared with its button, which is the user's decision. 'senders' is
+            not cleared either: the back end sends the fresh catalogue right afterwards and overwrites it
+            by itself.
         */
         data.started = true
         return true

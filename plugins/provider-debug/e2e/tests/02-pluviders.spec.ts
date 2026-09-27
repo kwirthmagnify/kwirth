@@ -147,12 +147,12 @@ test('subscribing to a pluvider is confirmed, the same as to a provider', async 
     await page.waitForTimeout(2500)
 
     /*
-        La suscripción in-process se confirma con el MISMO hito verde que la de un provider: para quien
-        depura son lo mismo, que es justo lo que se quiere probar.
+        The in-process subscription is confirmed with the SAME green milestone as a provider's: to whoever
+        is debugging they are the same thing, which is precisely what is being tested.
 
-        No se espera a que lleguen eventos, a diferencia del test de 'metrics': las alertas de Agora no
-        son deterministas —hacen falta un incidente y unas reglas activas—, así que esperarlas sería un
-        test que falla por motivos ajenos al pluvider.
+        It does not wait for events to arrive, unlike the 'metrics' test: Agora's alerts are not
+        deterministic — an incident and some active rules are needed — so waiting for them would be a test
+        that fails for reasons unrelated to the pluvider.
     */
     await expect(page.getByText(`Provider: ${PLUVIDER}`)).toBeVisible()
     await expect(page.locator('.MuiChip-root').filter({ hasText: /^subscribed$/ }).first()).toHaveClass(/MuiChip-filledSuccess/)

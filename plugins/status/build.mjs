@@ -4,11 +4,11 @@ import fs from 'fs'
 import path from 'path'
 
 /*
-    Las dependencias pesadas NO se bundlean: se resuelven contra los globales que el core publica en
-    'window.__kwirth__'. Un plugin que bundlee React o MUI mete una segunda copia en la página y rompe
-    @emotion, aparte de pesar de más.
+    The heavy dependencies are NOT bundled: they are resolved against the globals the core publishes in
+    'window.__kwirth__'. A plugin that bundles React or MUI puts a second copy on the page and breaks
+    @emotion, besides weighing more than it should.
 
-    Aquí solo van los que este plugin usa de verdad.
+    Only the ones this plugin really uses go here.
 */
 const kwirthGlobalsPlugin = {
     name: 'kwirth-globals',

@@ -7,9 +7,9 @@ import { IStatusData, StatusData } from './StatusData'
 import { StatusTabContent } from './StatusTabContent'
 
 /*
-    No hay diálogo de configuración: este canal no tiene nada que configurar — se abre y enseña el
-    inventario. Se declara igualmente porque el contrato lo pide, y dice lo que hay en vez de abrir un
-    diálogo vacío.
+    There is no configuration dialog: this channel has nothing to configure — it is opened and it shows
+    the inventory. It is declared all the same because the contract asks for it, and it says what there is
+    instead of opening an empty dialog.
 */
 const StatusSetup: FC<ISetupProps> = () => React.createElement('div', null, 'Kwirth Status has nothing to configure: open it and it shows what this Kwirth has inside.')
 
@@ -77,12 +77,13 @@ export class StatusChannel implements IChannel {
     startChannel(_channelObject: IChannelObject): boolean { return true }
 
     /*
-        Al parar hay que DECIRLO, y ademas tirar la foto.
+        On stopping it has to be SAID, and the snapshot thrown away too.
 
-        'started' lo ponia a true la respuesta del arranque y no lo bajaba nadie, asi que al parar el
-        canal la pestaña se quedaba enseñando el inventario como si nada. Y esa foto ya no vale: es de
-        un momento anterior y nada la va a refrescar mientras el canal este parado — dejarla puesta es
-        justo el tipo de dato viejo con pinta de actual que este plugin existe para evitar.
+        'started' was set to true by the startup's response and nobody brought it back down, so on
+        stopping the channel the tab was left showing the inventory as if nothing had happened. And that
+        snapshot is no longer any good: it is from an earlier moment and nothing is going to refresh it
+        while the channel is stopped — leaving it there is exactly the kind of stale data that looks
+        current which this plugin exists to prevent.
     */
     stopChannel(channelObject: IChannelObject): boolean {
         const data: IStatusData = channelObject.data
@@ -98,8 +99,8 @@ export class StatusChannel implements IChannel {
     continueChannel(_channelObject: IChannelObject): boolean { return true }
 
     /*
-        Si se cae el socket, el canal deja de recibir y la foto se queda congelada sin avisar. Se trata
-        igual que una parada: mejor decir que hay que arrancar que enseñar algo que ya no se actualiza.
+        If the socket drops, the channel stops receiving and the snapshot freezes without warning. It is
+        treated like a stop: better to say it has to be started than to show something that no longer updates.
     */
     socketDisconnected(channelObject: IChannelObject): boolean {
         const data: IStatusData = channelObject.data
@@ -107,8 +108,9 @@ export class StatusChannel implements IChannel {
         return true
     }
     /*
-        false = el core rehace la instancia al reconectar, en vez de dar por buena la anterior. Es lo que
-        queremos: tras una reconexion la foto que hubiera en pantalla puede ser vieja, y se pide otra.
+        false = the core remakes the instance on reconnecting, instead of taking the previous one as good.
+        That is what we want: after a reconnection whatever snapshot was on screen may be stale, so
+        another one is asked for.
     */
     socketReconnect(_channelObject: IChannelObject): boolean { return false }
 }
