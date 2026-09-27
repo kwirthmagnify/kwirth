@@ -1,9 +1,9 @@
 /*
-    S2: de "estos toolsets, en este orden" a "estas tools, listas para el LLM".
+    S2: from "these toolsets, in this order" to "these tools, ready for the LLM".
 
-    Lo que se fija aqui es la PRECEDENCIA (decision del usuario, 2026-09-17) y los dos ganchos. Es la
-    semantica que se va a persistir en la configuracion de cada plugin, asi que equivocarse aqui no se
-    arregla con un refactor: se arregla migrando configuraciones de clientes.
+    What is pinned down here is the PRECEDENCE (the user's decision, 2026-09-17) and the two hooks. It is
+    the semantics that will be persisted in every plugin's configuration, so getting it wrong here is not
+    fixed with a refactor: it is fixed by migrating customers' configurations.
 */
 import test from 'node:test'
 import assert from 'node:assert/strict'

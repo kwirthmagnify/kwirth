@@ -5,14 +5,14 @@ import {
     MenuItem, Select, Stack, Switch, TextField, Typography
 } from '@mui/material'
 /*
-    DEEP IMPORTS A PROPOSITO, no es un descuido.
+    DEEP IMPORTS ON PURPOSE, this is not an oversight.
 
-    common-ai lo BUNDLEA el front (webpack), y '@mui/icons-material' es un barrel CommonJS que no se
-    puede tree-shakear: importar de la raiz se lleva los ~2000 iconos al bundle. Medido: pasar estas
-    cuatro lineas al barrel raiz engordo el main del front en 1,62 MB.
+    common-ai is BUNDLED by the front end (webpack), and '@mui/icons-material' is a CommonJS barrel that
+    cannot be tree-shaken: importing from the root takes the ~2000 icons into the bundle. Measured: moving
+    these four lines to the root barrel put 1.62 MB on the front end's main.
 
-    Por eso la regla de "nada de deep imports" es solo para PLUGINS —ahi rompe @emotion, que carga su
-    propia copia—, y common-front y common-ai son la excepcion documentada.
+    That is why the "no deep imports" rule is only for PLUGINS — there it breaks @emotion, which loads a
+    copy of its own — and common-front and common-ai are the documented exception.
 */
 import Download from '@mui/icons-material/Download'
 import Upload from '@mui/icons-material/Upload'
