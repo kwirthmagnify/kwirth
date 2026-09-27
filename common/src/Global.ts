@@ -1,4 +1,5 @@
 import { AccessKey } from "./AccessKey"
+import { IKwirthLogSettings } from "./Logging"
 import { IMarketplace } from "./Marketplace"
 import { IPackageRegistry } from "./PackageRegistry"
 
@@ -58,6 +59,12 @@ interface IKwirthSettings {
         window. What is stored wins, then the PREVIOUSLOGLINES variable, then the default.
     */
     previousLogLines?: number
+    /*
+        How talkative the core's own log is, per component. Until this existed, the enabled components
+        were a constant in the module: 'auth' and 'stor' were off and there was no way of turning them on
+        without recompiling, and there was no level filter at all.
+    */
+    log?: IKwirthLogSettings
 }
 
 export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig, IKwirthSettings }

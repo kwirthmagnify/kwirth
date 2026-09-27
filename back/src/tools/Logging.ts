@@ -1,3 +1,5 @@
+import { ELogLevel, IKwirthLogSettings, ILogComponentInfo } from '@kwirthmagnify/kwirth-common'
+
 /*
     Four letters each, so the tag column lines up and the eye can skip it: what you are looking for is
     the id and the message, not which bucket the line belongs to.
@@ -11,9 +13,114 @@ export enum ELogComponent {
     STORAGE = 'stor'
 }
 
+/*
+    What each component writes, and whether the output carries colour.
+
+    Which components were enabled used to be a constant of this module: 'auth' and 'stor' were off with no
+    way of turning them on, and there was no level filter at all. Colour did have a way in — the ANSILOG
+    variable, through setLogConfig() — but nothing survived a restart.
+
+    Both are now configured from Kwirth's settings and applied hot, through applyLogSettings(). Precedence
+    for colour is the usual one: what is stored wins, then ANSILOG, then the default — which works because
+    setLogConfig() runs at the very start and the stored settings are applied afterwards.
+*/
 let ansiLog = true
 
-const ENABLED_COMPONENTS: (ELogComponent | '*')[] = [ ELogComponent.CHANNEL, ELogComponent.CORE, ELogComponent.PROVIDER, ELogComponent.SENDER ]
+/*
+    The default is EVERYTHING ON, at 'info': what a Kwirth with nothing configured writes. Whoever wants
+    less turns it down; nobody has to discover that a component exists in order to start seeing it.
+
+    It is a change from before, where the enabled ones were a constant of this module and 'auth' and
+    'stor' were left out — mute, with their failures swallowed and no way of turning them on.
+*/
+const DEFAULT_LEVELS: Record<ELogComponent, ELogLevel> = {
+    [ELogComponent.AUTH]: ELogLevel.INFO,
+    [ELogComponent.CORE]: ELogLevel.INFO,
+    [ELogComponent.PROVIDER]: ELogLevel.INFO,
+    [ELogComponent.CHANNEL]: ELogLevel.INFO,
+    [ELogComponent.SENDER]: ELogLevel.INFO,
+    [ELogComponent.STORAGE]: ELogLevel.INFO
+}
+
+let levels: Record<ELogComponent, ELogLevel> = { ...DEFAULT_LEVELS }
+
+/*
+    Per-id overrides: 'chan:excubitor' beats 'chan'. One channel at trace while the rest stay at warn is
+    the normal way of debugging one plugin without drowning in everything else's log.
+
+    They live in the same map as the components — the settings are a flat Record — and are told apart by
+    the colon, which no component id carries.
+*/
+const overrideKey = (component: ELogComponent, id: string): string => `${component}:${id}`
+
+/*
+    The ids each component has written under, so the dialog can offer them.
+
+    They are collected from componentLogger() rather than asked of a registry: it is called when a
+    channel, a provider or a sender starts, so what is listed is exactly what can write. There is no
+    registry to plug in and nothing to keep in step — and an id that never appears here is one that has
+    never had a logger, so there would be nothing to configure about it either.
+*/
+const knownIds: Record<string, Set<string>> = {}
+
+/*
+    From most to least talkative. A line is written when its level reaches its component's threshold, so
+    the comparison is an index: 'trace' (0) does not reach a component set to 'warn' (2), and 'off' (4)
+    is unreachable by anything.
+*/
+const SEVERITY: ELogLevel[] = [ELogLevel.TRACE, ELogLevel.INFO, ELogLevel.WARN, ELogLevel.ERROR, ELogLevel.OFF]
+
+const LEVEL_OF: Record<'trace' | 'info' | 'warn' | 'error', ELogLevel> = {
+    trace: ELogLevel.TRACE,
+    info: ELogLevel.INFO,
+    warn: ELogLevel.WARN,
+    error: ELogLevel.ERROR
+}
+
+/**
+ * What the front end needs in order to draw the dialog: the components with a name a person can read.
+ * It is published instead of exporting the enum because moving 'ELogComponent' to common would mean
+ * rewriting the import of 47 files here, and would leave two lists to keep in step.
+ */
+export const logComponentCatalog = (): ILogComponentInfo[] => {
+    const ids = (component: ELogComponent): string[] => [...(knownIds[component] ?? [])].sort()
+    return [
+        { id: ELogComponent.CORE, label: 'Core', description: 'Startup, extensions, API and everything the core does on its own account', ids: ids(ELogComponent.CORE) },
+        { id: ELogComponent.CHANNEL, label: 'Channels', description: 'What the installed plugins write', ids: ids(ELogComponent.CHANNEL) },
+        { id: ELogComponent.PROVIDER, label: 'Providers', description: 'What the producers write, each under its own id', ids: ids(ELogComponent.PROVIDER) },
+        { id: ELogComponent.SENDER, label: 'Senders', description: 'Deliveries to external destinations', ids: ids(ELogComponent.SENDER) },
+        { id: ELogComponent.AUTH, label: 'Authentication', description: 'Logins, IdP connectors and access keys', ids: ids(ELogComponent.AUTH) },
+        { id: ELogComponent.STORAGE, label: 'Storage', description: 'ConfigMaps, Secrets and the file store', ids: ids(ELogComponent.STORAGE) }
+    ]
+}
+
+/**
+ * Applies the stored settings. Called at startup and on every PUT of the settings, so a change takes
+ * effect without restarting: the log is precisely what one wants to turn up while something is going
+ * wrong, and a restart would take away the problem being diagnosed.
+ */
+export const applyLogSettings = (settings?: IKwirthLogSettings): void => {
+    levels = { ...DEFAULT_LEVELS }
+    for (const [key, level] of Object.entries(settings?.levels ?? {})) {
+        /*
+            What is not a known level, or does not belong to a known component, is ignored: the settings
+            are a JSON file that can be edited by hand, and an odd entry must not leave the log in an
+            unknown state.
+
+            ⚠️ The check is on the part BEFORE the colon, not on the whole key. Checking the whole key
+            threw away every per-id override — 'chan:excubitor' is not one of the six components — so they
+            were dropped here and the filter never saw one. Silently, which is the worst way: the dialog
+            stored the level, showed it back, and the channel went on writing at its component's level.
+        */
+        if (!SEVERITY.includes(level)) continue
+        if (!(key.split(':')[0] in DEFAULT_LEVELS)) continue
+        ;(levels as Record<string, ELogLevel>)[key] = level
+    }
+    if (settings?.ansi !== undefined) ansiLog = settings.ansi
+}
+
+/** The levels in force, for the GET of the settings to return what actually rules. */
+export const currentLogSettings = (): IKwirthLogSettings => ({ levels: { ...levels }, ansi: ansiLog })
 
 const colors = {
   reset: '\x1b[0m',
@@ -40,12 +147,20 @@ const logGeneric = (
         level: 'trace' | 'info' | 'warn' | 'error',
         color: string,
         component: ELogComponent,
-        message: any
+        message: any,
+        // Who is writing, when it is known: it is what lets one channel be turned up without touching the rest.
+        id?: string
     ): void => {
 
-    const isEnabled = ENABLED_COMPONENTS.includes('*') || ENABLED_COMPONENTS.includes(component)
-
-    if (!isEnabled && level !== 'error') return
+    /*
+        An error is NEVER silenced, whatever its component is set to — not even at 'off'. It was already
+        so before this was configurable, and it is what keeps the filter honest: it is here to lower the
+        noise, not to hide a failure that nobody then finds out about.
+    */
+    // The id's own level wins over its component's, when it has one set.
+    const threshold = (id !== undefined ? (levels as Record<string, ELogLevel>)[overrideKey(component, id)] : undefined)
+        ?? levels[component] ?? ELogLevel.INFO
+    if (level !== 'error' && SEVERITY.indexOf(LEVEL_OF[level]) < SEVERITY.indexOf(threshold)) return
 
     const timestamp = new Date().toLocaleTimeString(undefined, { hour12: false})
     const label = LEVEL_LABEL[level]
@@ -128,11 +243,14 @@ export const componentLogger = (component: ELogComponent, id: string): IComponen
         if (typeof message === 'object' && message !== null) return `[${id}] ${JSON.stringify(message)}`
         return `[${id}] ${String(message)}`
     }
+    // Noted down so the dialog can offer it: this runs when a channel, provider or sender starts, so what
+    // is collected is exactly what can write.
+    ;(knownIds[component] ??= new Set()).add(id)
     return {
-        info: (message: unknown) => logGeneric('info', colors.info, component, prefixed(message)),
-        trace: (message: unknown) => logGeneric('trace', colors.trace, component, prefixed(message)),
-        warning: (message: unknown) => logGeneric('warn', colors.warning, component, prefixed(message)),
-        error: (message: unknown) => logGeneric('error', colors.error, component, prefixed(message))
+        info: (message: unknown) => logGeneric('info', colors.info, component, prefixed(message), id),
+        trace: (message: unknown) => logGeneric('trace', colors.trace, component, prefixed(message), id),
+        warning: (message: unknown) => logGeneric('warn', colors.warning, component, prefixed(message), id),
+        error: (message: unknown) => logGeneric('error', colors.error, component, prefixed(message), id)
     }
 }
 

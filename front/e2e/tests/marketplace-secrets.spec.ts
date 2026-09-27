@@ -72,7 +72,7 @@ const fingerprint = (m: Record<string, any>) =>
     JSON.stringify({ id: m.id, label: m.label, url: m.url, enabled: m.enabled, auth: m.auth, manifestAuth: m.manifestAuth })
 
 async function openMarketplaces(page: Page) {
-    await clickMenuItem(page, 'Kwirth Settings')
+    await clickMenuItem(page, 'Kwirth settings')
     await expect(dlg(page).getByLabel('Cluster metrics read interval (seconds)', { exact: true })).toBeEnabled({ timeout: 10000 })
     await page.getByRole('tab', { name: 'Marketplaces' }).click()
 }

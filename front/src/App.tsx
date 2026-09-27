@@ -21,6 +21,7 @@ import { ManageUserSecurity } from './components/security/ManageUserSecurity'
 import { ResourceSelector, IResourceSelected } from './components/home/ResourceSelector'
 import { TabContent } from './components/home/TabContent'
 import { SettingsKwirth } from './components/settings/SettingsKwirth'
+import { SettingsPortability } from './components/settings/SettingsPortability'
 import { IKwirthSettings, IMarketplaceEntry } from '@kwirthmagnify/kwirth-common'
 import { SettingsUser } from './components/settings/SettingsUser'
 import { MenuTab, MenuTabOption } from './menus/MenuTab'
@@ -290,6 +291,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showUserSecurity, setShowUserSecurity]=useState<boolean>(false)
     const [showSettingsUser, setShowSettingsUser]=useState<boolean>(false)
     const [showSettingsKwirth, setShowSettingsKwirth]=useState<boolean>(false)
+    const [showSettingsPortability, setShowSettingsPortability]=useState<boolean>(false)
     const [showPluginManagerDialog, setShowPluginManagerDialog]=useState<boolean>(false)
     const [showProviderManagerDialog, setShowProviderManagerDialog]=useState<boolean>(false)
     const [showIdpManagerDialog, setShowIdpManagerDialog]=useState<boolean>(false)
@@ -2131,6 +2133,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.SettingsKwirth:
                 setShowSettingsKwirth(true)
                 break
+            case MenuDrawerOption.SettingsPortability:
+                setShowSettingsPortability(true)
+                break
             case MenuDrawerOption.AiProviders:
                 fetch(`${backendUrl}/core/aiconfig/providers`, addGetAuthorization(accessString))
                     .then(r => r.json())
@@ -2715,6 +2720,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     return <SetupComp config={homepageSetupConfig} onSave={(cfg: Record<string, any>) => { onHomepageActivate(homepageSetupId, cfg); setHomepageSetupId(undefined) }} onClose={() => setHomepageSetupId(undefined)} />
                 })() }
                 { showSettingsKwirth && clusters && <SettingsKwirth onClose={onSettingsKwirthClosed} clusterName={selectedClusterName} clusterUrl={clusters.find(c => c.name===selectedClusterName)?.url ?? ''} accessString={clusters.find(c => c.name===selectedClusterName)?.accessString ?? ''} /> }
+                { showSettingsPortability && clusters && <SettingsPortability onClose={() => setShowSettingsPortability(false)} clusterName={selectedClusterName} clusterUrl={clusters.find(c => c.name===selectedClusterName)?.url ?? ''} accessString={clusters.find(c => c.name===selectedClusterName)?.accessString ?? ''} /> }
                 
                 { initialMessage !== '' && MsgBoxOk('Kwirth',initialMessage, () => setInitialMessage(''))}
                 { firstLogin && <FirstTimeLogin onClose={onFirstTimeLoginClose}/> }

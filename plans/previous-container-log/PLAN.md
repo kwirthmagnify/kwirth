@@ -1,10 +1,13 @@
 # Log del contenedor anterior
 
-> **Estado: en producción, salvo el ajuste en los settings.** S1, S3 y S4 cerrados el **2026-09-20**
-> (CL9 completo: 344 tests en el core, +1 spec e2e con 2 casos, guía y captura). **Queda el S2**: el número
-> de líneas se configura hoy por `PREVIOUSLOGLINES`, y llevarlo a la pantalla de settings obliga a publicar
-> `@kwirthmagnify/kwirth-common` y a subir la dependencia en back y front — decisión de publicación
-> pendiente, no trabajo pendiente.
+> **Estado: CERRADO.** S1, S3 y S4 cerrados el **2026-09-20** (CL9 completo: 344 tests en el core, +1 spec
+> e2e con 2 casos, guía y captura). **S2 cerrado**: el número de líneas está en la pestaña *General* de
+> *kwirth settings* (`Previous container log lines to keep`), con la precedencia de siempre — lo guardado
+> gana, luego `PREVIOUSLOGLINES`, luego 1000. La publicación de `@kwirthmagnify/kwirth-common` que lo
+> bloqueaba se hizo, y la dependencia está subida en back y front.
+>
+> Lo que sigue a esto no es de este plan: la configuración del **resto** del log del core —qué escribe cada
+> componente y a qué nivel— vive en `plans/log-settings/PLAN.md`.
 
 ## Por qué
 

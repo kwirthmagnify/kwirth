@@ -4,7 +4,7 @@ import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { ISecrets } from '../tools/ISecrets'
-import { ELogComponent, logError } from '../tools/Logging'
+import { applyLogSettings, currentLogSettings, ELogComponent, logComponentCatalog, logError } from '../tools/Logging'
 
 const SETTINGS_KEY = 'kwirth.settings'
 const TOKENS_KEY = 'kwirth.marketplace.tokens'             // token de lectura del manifest, por marketplace
@@ -191,6 +191,20 @@ export class SettingsApi {
     }
 
     private initializeRoutes() {
+        /*
+            The components the log has, so the dialog can draw them without knowing the enum. It is the
+            same approach as GET /core/scopes: the list lives in ONE place — the back end — instead of
+            being duplicated in the front end and drifting apart the day a component is added.
+
+            It needs a valid key but not the 'admin' scope: it reveals no configuration, only which
+            buckets exist.
+        */
+        this.router.route('/log/components')
+            .get( async (req:Request, res:Response) => {
+                if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+                res.status(200).json(logComponentCatalog())
+            })
+
         this.router.route('/')
             .all( async (req:Request, res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
@@ -203,7 +217,12 @@ export class SettingsApi {
                     const stored = await SettingsApi.read(this.configMaps)
                     // the effective values are returned, not the raw ones, so the front end shows what actually rules
                     const hydrated = await this.withSecrets(stored)
-                    res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(stored), previousLogLines: SettingsApi.resolvePreviousLogLines(stored) })
+                    /*
+                        The log goes out as what is IN FORCE, not as what is stored: with nothing
+                        configured the stored value is undefined, and the dialog would open with
+                        everything blank while the core is writing under its defaults.
+                    */
+                    res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(stored), previousLogLines: SettingsApi.resolvePreviousLogLines(stored), log: currentLogSettings() })
                 }
                 catch (err) {
                     logError(ELogComponent.CORE, `Error reading kwirth settings: ${err}`)
@@ -249,9 +268,15 @@ export class SettingsApi {
                     }
 
                     await this.configMaps.write(SETTINGS_KEY, merged)
+                    /*
+                        The log is applied HOT, before answering. It is the one setting that is turned up
+                        precisely while something is going wrong, and demanding a restart would take away
+                        the very problem being diagnosed.
+                    */
+                    if (incoming.log !== undefined) applyLogSettings(merged.log)
                     if (this.onSettingsChanged) this.onSettingsChanged(merged)
                     const hydrated = await this.withSecrets(merged)
-                    res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(merged) })
+                    res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(merged), log: currentLogSettings() })
                 }
                 catch (err) {
                     logError(ELogComponent.CORE, `Error writing kwirth settings: ${err}`)

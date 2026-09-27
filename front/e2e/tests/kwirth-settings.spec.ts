@@ -10,7 +10,7 @@ const INTERVAL_LABEL = 'Cluster metrics read interval (seconds)'
 
 /** Opens the dialog and waits until it has finished loading its data (the field enables when it is done). */
 async function openSettings(page: import('@playwright/test').Page) {
-    await clickMenuItem(page, 'Kwirth Settings')
+    await clickMenuItem(page, 'Kwirth settings')
     const field = page.getByLabel(INTERVAL_LABEL)
     await expect(field).toBeEnabled({ timeout: 10000 })
     return field

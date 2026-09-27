@@ -1,16 +1,42 @@
 import React, { useState, useEffect, useContext } from 'react'
-import { Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
-import { Add, Delete, Download, Refresh, Upload, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
+import { Add, Delete, Refresh, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType, EExtensionType,
-    IConfigBundle, IExportableEntry, IImportPreviewEntry, IImportReport, EBundleEntryStatus,
-    CONFIG_BUNDLE_KIND, CORE_SETTINGS_KEY, CORE_SHARED_AI_KEY, bundleEntryKey } from '@kwirthmagnify/kwirth-common'
+import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
+/*
+    'import type' and not a normal import, deliberately. CRA transpiles with Babel, which compiles file by
+    file and cannot tell whether an imported name is a type or a value: with a normal import it leaves the
+    require in the bundle, and 'ELogLevel' — an enum, a value at runtime — has to exist in the copy of
+    kwirth-common webpack is serving. Until the front end is restarted after touching common, it does not.
+    'import type' is erased with certainty, so this screen never depends on it at runtime.
+*/
+import type { ELogLevel, ILogComponentInfo } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
+
+/*
+    The levels of the log, as LITERALS and not as `ELogLevel.X`.
+
+    ⚠️ An enum is a VALUE at runtime, so writing `ELogLevel.TRACE` here makes this screen depend on the
+    bundle carrying the enum. While the copy of kwirth-common webpack is serving is the previous one —
+    which is what happens until the front end is restarted after touching common — the import arrives
+    `undefined` and the whole dialog blows up with "Cannot read properties of undefined". It happened.
+
+    Typing them as ELogLevel keeps the check (a typo does not compile) and TypeScript erases the type when
+    compiling, so nothing of common has to exist at runtime for this list to draw.
+*/
+const LOG_LEVEL_OPTIONS: { value: ELogLevel, label: string }[] = [
+    { value: 'trace' as ELogLevel, label: 'Trace — everything, including the detail' },
+    { value: 'info' as ELogLevel, label: 'Info — the usual' },
+    { value: 'warn' as ELogLevel, label: 'Warnings and errors' },
+    { value: 'error' as ELogLevel, label: 'Errors only' },
+    { value: 'off' as ELogLevel, label: 'Off' }
+]
 
 // A semantic enum as the tab's id (the rule: never numbers)
 enum ESettingsKwirthTab {
     GENERAL = 'general',
+    LOG = 'log',
     MARKETPLACES = 'marketplaces',
     REGISTRIES = 'registries'
 }
@@ -27,73 +53,16 @@ interface IPackageRegistryRow extends IPackageRegistry {
     revealed?: boolean
 }
 
-// Format of the export/import file. 'version' allows it to evolve without breaking older files, and
-// 'credentialsIncluded' says whether the tokens and passwords travel inside or were emptied on export.
-interface IKwirthSettingsExportFile {
-    kwirth: string
-    version: number
-    credentialsIncluded: boolean
-    settings: IKwirthSettings
-}
+/*
+    This dialog used to carry its own export/import of the settings, with its own file format
+    ('kwirth-settings'), its own selection list and its own two sub-dialogs. It is gone: Kwirth
+    portability (Settings → Configuration, the config bundle) does the same and does it better — it also
+    carries what the EXTENSIONS store, which this could never reach, and it is one format instead of two
+    that had to be kept in step.
 
-const EXPORT_KIND = 'kwirth-settings'
-const EXPORT_VERSION = 1
-
-// An item of the export/import list. The key carries the type up front so a marketplace and a registry
-// with the same id do not collide in the same Set.
-interface ISelectableItem {
-    key: string
-    label: string
-    detail: string
-    /** The block it is grouped into. The core's settings go together; extensions, by type. */
-    group: string
-}
-
-const GROUP_GENERAL = 'General'
-
-// Block name per extension type. In the plural, which is how they are named in the rest of the UI.
-const groupOf = (type: EExtensionType): string => {
-    switch (type) {
-        case EExtensionType.PLUGIN: return 'Plugins'
-        case EExtensionType.PROVIDER: return 'Providers'
-        case EExtensionType.SENDER: return 'Senders'
-        case EExtensionType.WEBHOOK: return 'Webhooks'
-        case EExtensionType.IDP: return 'Identity providers'
-        case EExtensionType.AITOOLSET: return 'AI toolsets'
-        case EExtensionType.THEME: return 'Themes'
-        case EExtensionType.HOMEPAGE: return 'Homepages'
-        case EExtensionType.LOGIN: return 'Logins'
-        case EExtensionType.DOCS: return 'Documentation'
-        case EExtensionType.PACK: return 'Packs'
-        default: return 'Extensions'
-    }
-}
-
-const GENERAL_KEY = 'general'
-const marketplaceKey = (id: string) => `marketplace:${id}`
-const registryKey = (id: string) => `registry:${id}`
-
-// What can be chosen from a set of settings, whether the source is the form or an imported file.
-const settingsItems = (settings: IKwirthSettings): ISelectableItem[] => [
-    ...(settings.metricsInterval === undefined ? [] : [{
-        key: GENERAL_KEY,
-        group: GROUP_GENERAL,
-        label: 'Cluster metrics read interval',
-        detail: `${settings.metricsInterval} seconds`
-    }]),
-    ...(settings.marketplaces ?? []).map(m => ({
-        key: marketplaceKey(m.id),
-        group: GROUP_GENERAL,
-        label: m.label.trim() === '' ? m.id : m.label,
-        detail: m.url
-    })),
-    ...(settings.packageRegistries ?? []).map(r => ({
-        key: registryKey(r.id),
-        group: GROUP_GENERAL,
-        label: r.label.trim() === '' ? r.id : r.label,
-        detail: r.url
-    }))
-]
+    The log settings travel in that bundle without anything extra: the core exports IKwirthSettings whole,
+    so a new field is in it the moment it exists.
+*/
 
 interface ISettingsKwirthProps {
     onClose:(settings?:IKwirthSettings) => void
@@ -106,31 +75,20 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const [tab, setTab] = useState<ESettingsKwirthTab>(ESettingsKwirthTab.GENERAL)
     const [metricsInterval, setMetricsInterval] = useState<number>(0)
     const [previousLogLines, setPreviousLogLines] = useState<number>(0)
+    /*
+        How talkative the core's log is, per component.
+
+        The list of components comes from the BACK END, it is not an enum here: the same approach as the
+        RBAC scope catalogue. That way adding a component means touching one place, and this screen cannot
+        end up offering one that no longer exists — or hiding one that was just added.
+    */
+    const [logComponents, setLogComponents] = useState<ILogComponentInfo[]>([])
+    const [logLevels, setLogLevels] = useState<Record<string, ELogLevel>>({})
+    const [logAnsi, setLogAnsi] = useState(true)
     const [marketplaces, setMarketplaces] = useState<IMarketplaceRow[]>([])
     const [registries, setRegistries] = useState<IPackageRegistryRow[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
-    const [exportOpen, setExportOpen] = useState(false)
-    const [exportSelected, setExportSelected] = useState<Set<string>>(new Set())
-    const [exportWithCredentials, setExportWithCredentials] = useState(false)
-    const [importData, setImportData] = useState<IKwirthSettingsExportFile|undefined>(undefined)
-    const [importSelected, setImportSelected] = useState<Set<string>>(new Set())
-    const [importResult, setImportResult] = useState<string|undefined>(undefined)
-    /*
-        Lo que aportan las EXTENSIONES. El core no sabe que hay dentro de cada una —solo ellas saben que
-        de lo suyo es configuracion—, asi que aqui solo se listan y se marcan; el contenido lo pide y lo
-        entrega el back. Ver `plans/config-portability/PRD.md`.
-    */
-    const [extensions, setExtensions] = useState<IExportableEntry[]>([])
-    const [importBundle, setImportBundle] = useState<IConfigBundle|undefined>(undefined)
-    const [importPreview, setImportPreview] = useState<IImportPreviewEntry[]>([])
-    /*
-        Las extensiones marcadas al importar NO se aplican al cerrar el dialogo de import: quedan aqui y
-        se aplican al pulsar OK, con los ajustes. Este dialogo promete desde siempre que nada se guarda
-        hasta OK, y el bundle no es excusa para romperla a medias.
-    */
-    const [pendingExtensions, setPendingExtensions] = useState<string[]>([])
-    const importFileRef = React.useRef<HTMLInputElement>(null)
     const { backendUrl } = useContext(SessionContext) as SessionContextType
 
     // the dialog fetches its own data: it asks Kwirth for the effective values that rule right now
@@ -147,11 +105,16 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 setPreviousLogLines(settings.previousLogLines ?? 0)
                 setMarketplaces((settings.marketplaces ?? []).map(m => ({ ...m })))
                 setRegistries((settings.packageRegistries ?? []).map(r => ({ ...r })))
-
-                // Which extensions can contribute configuration. If this fails the screen does not break:
-                // the settings can still be edited and exported, only without the extensions part.
-                const ext = await fetch(`${props.clusterUrl}/core/config-bundle/exportable`, addGetAuthorization(props.accessString))
-                if (ext.ok) setExtensions(await ext.json() as IExportableEntry[])
+                /*
+                    The back end answers with what is IN FORCE, not with what is stored, so with nothing
+                    configured this opens showing the defaults the core is really writing under instead of
+                    a blank form.
+                */
+                setLogLevels(settings.log?.levels ?? {})
+                setLogAnsi(settings.log?.ansi ?? true)
+                // If this fails the screen does not break: the tab simply has nothing to draw.
+                const components = await fetch(`${props.clusterUrl}/core/settings/log/components`, addGetAuthorization(props.accessString))
+                if (components.ok) setLogComponents(await components.json() as ILogComponentInfo[])
             }
             catch {
                 setError('Could not reach Kwirth to read its settings.')
@@ -237,217 +200,6 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             (r.auth?.type !== EPackageRegistryAuthType.BASIC || (r.auth.username ?? '').trim() !== '')
         )
 
-    /*
-        Las extensiones, como items de la lista. Se listan TODAS las instaladas, puedan exportar o no:
-        quien mira esto tiene que ver su plugin y por que no entra, no encontrarse una lista corta sin
-        explicacion. Las que no pueden salen sin casilla, con el motivo.
-    */
-    const extensionItems = (): ISelectableItem[] => extensions.map(e => ({
-        key: bundleEntryKey(e.type, e.id),
-        group: groupOf(e.type),
-        label: e.displayName,
-        detail: e.status === EBundleEntryStatus.AVAILABLE
-            ? `${e.version ?? ''}${e.marketplace ? ` · ${e.marketplace}` : ''}`.trim() || 'configuration'
-            : e.status === EBundleEntryStatus.NOT_SUPPORTED
-                ? 'this extension cannot export its configuration yet'
-                : 'not running here, so there is nothing to ask'
-    }))
-
-    const exportableExtensionKeys = (): string[] =>
-        extensions.filter(e => e.status === EBundleEntryStatus.AVAILABLE).map(e => bundleEntryKey(e.type, e.id))
-
-    // What is exported is what is IN THE FORM, not what is stored: what you see is what you take with
-    // you, including the changes you have not accepted yet. And ONLY what is ticked, item by item.
-    const doExport = async () => {
-        const chosenMarketplaces = marketplaces.filter(m => exportSelected.has(marketplaceKey(m.id)))
-        const chosenRegistries = registries.filter(r => exportSelected.has(registryKey(r.id)))
-        const settings: IKwirthSettings = {
-            ...(exportSelected.has(GENERAL_KEY) ? { metricsInterval, previousLogLines } : {}),
-            marketplaces: chosenMarketplaces.map(m => ({
-                id: m.id,
-                url: m.url.trim(),
-                label: m.label.trim(),
-                enabled: m.enabled,
-                ...(m.manifestAuth ? { manifestAuth: {
-                    type: m.manifestAuth.type,
-                    ...(m.manifestAuth.username ? { username: m.manifestAuth.username } : {}),
-                    ...(exportWithCredentials && m.manifestAuth.token ? { token: m.manifestAuth.token } : {})
-                } } : {})
-            })),
-            packageRegistries: chosenRegistries.map(r => ({
-                id: r.id,
-                url: r.url.trim(),
-                label: r.label.trim(),
-                enabled: r.enabled,
-                ...(r.auth ? { auth: {
-                    type: r.auth.type,
-                    ...(r.auth.username ? { username: r.auth.username } : {}),
-                    ...(exportWithCredentials && r.auth.token ? { token: r.auth.token } : {}),
-                    ...(exportWithCredentials && r.auth.password ? { password: r.auth.password } : {})
-                } } : {})
-            }))
-        }
-
-        /*
-            El bundle lo arma el back —es quien puede preguntarle a cada extension por lo suyo—, pero los
-            AJUSTES se sustituyen por los del formulario: este dialogo siempre ha exportado lo que ves en
-            pantalla, cambios sin aceptar incluidos, y eso no se pierde por pasar a un fichero mas grande.
-        */
-        const chosenExtensions = exportableExtensionKeys().filter(k => exportSelected.has(k))
-        let bundle: IConfigBundle
-        try {
-            const query = `include=${encodeURIComponent(chosenExtensions.join(','))}&credentials=${exportWithCredentials}`
-            const response = await fetch(`${props.clusterUrl}/core/config-bundle/export?${query}`, addGetAuthorization(props.accessString))
-            if (!response.ok) {
-                setError(`Could not build the configuration file (${response.status}).`)
-                return
-            }
-            bundle = await response.json() as IConfigBundle
-        }
-        catch {
-            setError('Could not reach Kwirth to build the configuration file.')
-            return
-        }
-
-        bundle.core.settings = settings
-        if (!exportSelected.has(CORE_SHARED_AI_KEY)) delete bundle.core.sharedAi
-
-        const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' })
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(blob)
-        link.download = 'kwirth-config.json'
-        link.click()
-        URL.revokeObjectURL(link.href)
-        setExportOpen(false)
-    }
-
-    // The back end reads an empty secret as 'delete it'. A file exported WITHOUT credentials must
-    // therefore not take down the ones already there: if the imported entry carries no secret and one
-    // with that id already existed, whatever was in the form is kept. For a new id there is nothing to keep.
-    const mergeMarketplace = (incoming: IMarketplace, current?: IMarketplaceRow): IMarketplaceRow => {
-        const token = incoming.manifestAuth?.token ?? current?.manifestAuth?.token
-        return {
-            ...incoming,
-            ...(incoming.manifestAuth ? { manifestAuth: { ...incoming.manifestAuth, ...(token ? { token } : {}) } } : {})
-        }
-    }
-
-    const mergeRegistry = (incoming: IPackageRegistry, current?: IPackageRegistryRow): IPackageRegistryRow => {
-        const token = incoming.auth?.token ?? current?.auth?.token
-        const password = incoming.auth?.password ?? current?.auth?.password
-        return {
-            ...incoming,
-            ...(incoming.auth ? { auth: { ...incoming.auth, ...(token ? { token } : {}), ...(password ? { password } : {}) } } : {})
-        }
-    }
-
-    // Reading the file imports NOTHING yet: it opens the list so you can choose what goes in. Everything is pre-ticked.
-    const openImport = async (file: File) => {
-        setError(''); setImportResult(undefined)
-        try {
-            const parsed = JSON.parse(await file.text()) as { kwirth?: string, kind?: string }
-
-            /*
-                Dos formatos. El nuevo lleva la configuracion entera; el viejo —solo ajustes— se sigue
-                aceptando, porque alguien puede tener uno guardado de antes y no hay motivo para
-                invalidarselo.
-            */
-            if (parsed?.kind === CONFIG_BUNDLE_KIND) {
-                const bundle = parsed as unknown as IConfigBundle
-                // The preview is computed by the BACK END: it is what knows which extensions are here and
-                // which of them can receive what the file brings.
-                const response = await fetch(`${props.clusterUrl}/core/config-bundle/preview`,
-                    addPostAuthorization(props.accessString, JSON.stringify(bundle)))
-                if (!response.ok) {
-                    const detail = await response.json().catch(() => ({}))
-                    setError(detail?.error ?? `Could not read the configuration file (${response.status}).`)
-                    return
-                }
-                const previa = await response.json() as IImportPreviewEntry[]
-                setImportBundle(bundle)
-                setImportPreview(previa)
-                setImportData(bundle.core.settings
-                    ? { kwirth: EXPORT_KIND, version: EXPORT_VERSION, credentialsIncluded: bundle.meta.includesCredentials, settings: bundle.core.settings as IKwirthSettings }
-                    : undefined)
-                // What can be applied is pre-ticked; what cannot, cannot even be ticked.
-                setImportSelected(new Set([
-                    ...(bundle.core.settings ? settingsItems(bundle.core.settings as IKwirthSettings).map(i => i.key) : []),
-                    ...previa.filter(p => p.status !== EBundleEntryStatus.NOT_INSTALLED
-                        && p.status !== EBundleEntryStatus.NOT_SUPPORTED
-                        && p.status !== EBundleEntryStatus.NOT_INSTANTIATED)
-                        .map(p => bundleEntryKey(p.type, p.id))
-                ]))
-                return
-            }
-
-            const legacy = parsed as unknown as IKwirthSettingsExportFile
-            if (legacy?.kwirth !== EXPORT_KIND) throw new Error('not a Kwirth configuration file')
-            if (!legacy.settings) throw new Error('no settings in the file')
-            setImportBundle(undefined)
-            setImportPreview([])
-            setImportData(legacy)
-            setImportSelected(new Set(settingsItems(legacy.settings).map(i => i.key)))
-        }
-        catch (err) {
-            setError(`Invalid configuration file: ${err instanceof Error ? err.message : err}`)
-        }
-    }
-
-    // Importing does NOT save: it leaves the form loaded so you can review it and decide with OK or
-    // Cancel. It merges by id — the same id replaces it, a new id is added — so marketplaces the file does
-    // not carry are not lost.
-    const doImport = () => {
-        /*
-            Las extensiones no se aplican aqui. Se apuntan y se mandan al pulsar OK, junto con los
-            ajustes: este dialogo promete que nada se guarda hasta OK, y aplicar la mitad al cerrar esta
-            ventana seria romperla justo donde mas confunde.
-        */
-        const extensionesMarcadas = importPreview
-            .map(p => bundleEntryKey(p.type, p.id))
-            .filter(k => importSelected.has(k))
-        setPendingExtensions(extensionesMarcadas)
-
-        if (!importData) {
-            setImportResult(extensionesMarcadas.length
-                ? `${extensionesMarcadas.length} extension(s) will be configured when you press OK.`
-                : 'Nothing selected.')
-            setImportPreview([])
-            return
-        }
-        const incomingMarketplaces = (importData.settings.marketplaces ?? []).filter(m => importSelected.has(marketplaceKey(m.id)))
-        const incomingRegistries = (importData.settings.packageRegistries ?? []).filter(r => importSelected.has(registryKey(r.id)))
-
-        let replaced = 0
-        setMarketplaces(prev => {
-            const byId = new Map(prev.map(m => [m.id, m]))
-            for (const m of incomingMarketplaces) {
-                if (byId.has(m.id)) replaced++
-                byId.set(m.id, mergeMarketplace(m, byId.get(m.id)))
-            }
-            return [...byId.values()]
-        })
-        setRegistries(prev => {
-            const byId = new Map(prev.map(r => [r.id, r]))
-            for (const r of incomingRegistries) {
-                if (byId.has(r.id)) replaced++
-                byId.set(r.id, mergeRegistry(r, byId.get(r.id)))
-            }
-            return [...byId.values()]
-        })
-        const general = importSelected.has(GENERAL_KEY) && importData.settings.metricsInterval !== undefined
-        if (general) setMetricsInterval(importData.settings.metricsInterval!)
-
-        const parts: string[] = []
-        if (general) parts.push('the metrics interval')
-        if (incomingMarketplaces.length) parts.push(`${incomingMarketplaces.length} marketplace(s)`)
-        if (incomingRegistries.length) parts.push(`${incomingRegistries.length} registry(ies)`)
-        if (extensionesMarcadas.length) parts.push(`${extensionesMarcadas.length} extension(s)`)
-        setImportResult(`Imported ${parts.length ? parts.join(', ') : 'nothing'}${replaced ? ` (${replaced} replaced)` : ''}.`
-            + (importData.credentialsIncluded ? '' : ' The file carried no credentials, so the ones already set were kept.')
-            + ' Nothing is saved until you press OK.')
-        setImportData(undefined)
-        setImportPreview([])
-    }
 
     const ok = async () => {
         setError('')
@@ -474,7 +226,8 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         : { password: r.auth.password ?? '' })
                 } } : {})
             }))
-            const payload = JSON.stringify({ metricsInterval, previousLogLines, marketplaces: cleaned, packageRegistries: cleanedRegistries })
+            const payload = JSON.stringify({ metricsInterval, previousLogLines, marketplaces: cleaned, packageRegistries: cleanedRegistries,
+                log: { levels: logLevels, ansi: logAnsi } })
             const response = await fetch(`${props.clusterUrl}/core/settings`, addPutAuthorization(props.accessString, payload))
             if (!response.ok) {
                 const detail = await response.json().catch(() => ({}))
@@ -485,27 +238,6 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             }
             const guardados = await response.json() as IKwirthSettings
 
-            /*
-                Y ahora las extensiones del fichero importado. Van despues de los ajustes a proposito: si
-                el PUT falla, no se toca nada mas. Una entrada que no se pueda aplicar no detiene a las
-                demas —de eso se encarga el back—, y lo que quede sin aplicar se cuenta aqui en vez de
-                cerrar la ventana como si todo hubiera ido bien.
-            */
-            if (importBundle && pendingExtensions.length > 0) {
-                const payload = JSON.stringify({ bundle: importBundle, include: pendingExtensions })
-                const imported = await fetch(`${props.clusterUrl}/core/config-bundle/import`, addPostAuthorization(props.accessString, payload))
-                if (!imported.ok) {
-                    setError(`Settings were saved, but the extensions could not be configured (${imported.status}).`)
-                    return
-                }
-                const report = await imported.json() as IImportReport
-                const fallidas = report.entries.filter(e => e.error || !e.result)
-                if (fallidas.length > 0) {
-                    setError(`Settings were saved. ${report.entries.length - fallidas.length} of ${report.entries.length} extension(s) configured; `
-                        + fallidas.map(f => `${f.id}: ${f.error ?? f.status}`).join('; '))
-                    return
-                }
-            }
 
             props.onClose(guardados)
         }
@@ -611,118 +343,59 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             </Box>
         )
     }
-
-    // The same tickable list serves for choosing what is exported and what is imported. 'note' is used
-    // only by the import, to warn that the id already exists and is about to replace the one there.
-    // `disabled` leaves items VISIBLE but not tickable: an extension that cannot export is shown with its
-    // reason, because a short list with no explanation is worse than a declared gap.
     /*
-        La lista de seleccion, por BLOQUES: los ajustes del core en uno, y las extensiones agrupadas por
-        tipo. Plana era ilegible en cuanto pasaban de una docena — un sender, un IdP y un plugin no se
-        eligen con el mismo criterio, y verlos revueltos obliga a leerse la lista entera.
+        The log, back to what Kwirth writes with nothing configured.
 
-        Cada bloque lleva su propia casilla, que marca o desmarca solo lo suyo. `disabled` deja items
-        VISIBLES pero no marcables: una extension que no puede exportar se enseña con su motivo, porque
-        una lista corta sin explicacion es peor que un hueco declarado.
+        ONLY the log, and the button only shows on its tab. A generic 'reset' over this dialog would mean
+        emptying the marketplaces and the package registries — configuration somebody composed by hand, not
+        a value with a sensible default to fall back to — and a button pressed for the log has no business
+        wiping that.
+
+        It EMPTIES the map rather than filling it with 'info': an absent key means "whatever the core's
+        default is", so a Kwirth that changes that default later follows it instead of staying pinned to
+        today's value.
     */
-    const selectionList = (items: ISelectableItem[], selected: Set<string>, setSelected: (s: Set<string>) => void, note?: (item: ISelectableItem) => string|undefined, disabled?: (item: ISelectableItem) => boolean) => {
-        const marcables = items.filter(i => !disabled?.(i))
+    const resetLog = () => {
+        setLogLevels({})
+        setLogAnsi(true)
+    }
 
-        const set = (keys: string[], checked: boolean) => {
-            const next = new Set(selected)
-            for (const k of keys) {
-                if (checked) next.add(k)
-                else next.delete(k)
-            }
-            setSelected(next)
-        }
-
-        // The order the items arrive in is respected: the general block first, and the extensions in the
-        // order the back end returns them.
-        const bloques: { nombre: string, items: ISelectableItem[] }[] = []
-        for (const item of items) {
-            const ultimo = bloques.find(b => b.nombre === item.group)
-            if (ultimo) ultimo.items.push(item)
-            else bloques.push({ nombre: item.group, items: [item] })
-        }
-
-        const casilla = (keys: string[], label: React.ReactNode, size?: 'small') => {
-            const marcadas = keys.filter(k => selected.has(k)).length
-            return <FormControlLabel label={label} control={<Checkbox size={size}
-                checked={marcadas === keys.length && keys.length > 0}
-                indeterminate={marcadas > 0 && marcadas < keys.length}
-                onChange={(_e, checked) => set(keys, checked)} />} />
-        }
-
-        return (<>
-            { casilla(marcables.map(i => i.key), 'Select all') }
-            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1, py: 0.5 }}>
-                { items.length === 0 && <Typography variant='body2' color='text.secondary' sx={{ py: 1 }}>Nothing to choose from.</Typography> }
-                { bloques.map((bloque, indice) => (
-                    <Box key={bloque.nombre} sx={{ mb: 1, ...(indice > 0 ? { borderTop: 1, borderColor: 'divider', pt: 1 } : {}) }}>
-                        { casilla(bloque.items.filter(i => !disabled?.(i)).map(i => i.key),
-                            <Typography variant='caption' sx={{ textTransform: 'uppercase', letterSpacing: 0.5, color: 'text.secondary', fontWeight: 600 }}>{bloque.nombre}</Typography>,
-                            'small') }
-                        { bloque.items.map(item => {
-                            const warning = note?.(item)
-                            return (
-                                <FormControlLabel key={item.key} sx={{ display: 'flex', alignItems: 'flex-start', mb: 0.5, ml: 2 }}
-                                    control={<Checkbox size='small' disabled={disabled?.(item)} checked={selected.has(item.key)} onChange={(_e, checked) => set([item.key], checked)} />}
-                                    label={<Box>
-                                        <Typography variant='body2'>{item.label}{warning && <Typography component='span' variant='caption' color='warning.main'> — {warning}</Typography>}</Typography>
-                                        <Typography variant='caption' color='text.secondary'>{item.detail}</Typography>
-                                    </Box>} />
-                            )
-                        }) }
-                    </Box>
-                )) }
+    /*
+        One row of the log tab. The same one serves a component and one of its writers, because they
+        differ only in the indent and in having an inherited value: an id with nothing set is NOT at info,
+        it is at whatever its component is, and saying so is what keeps 'set one channel to trace' from
+        reading as 'set every channel one by one'.
+    */
+    const levelRow = (key: string, label: string, description: string|undefined, nested: boolean, inheritsFrom?: string) => {
+        const chosen = logLevels[key]
+        return <Stack key={key} direction='row' spacing={2} alignItems='center' sx={{ pl: nested ? 4 : 0 }}>
+            <Box sx={{ width: '55%' }}>
+                <Typography variant='body2' color={nested ? 'text.secondary' : 'text.primary'}>
+                    {label} { !nested && <Typography component='span' variant='body2' color='text.secondary'>[{key}]</Typography> }
+                </Typography>
+                { description && <Typography variant='caption' color='text.secondary'>{description}</Typography> }
             </Box>
-        </>)
-    }
-
-    const formItems = (): ISelectableItem[] => settingsItems({ metricsInterval, marketplaces, packageRegistries: registries })
-
-    // The common AI store belongs to no extension — several share it — so it is an entry of its own, at
-    // the same level as the settings.
-    const sharedAiItem: ISelectableItem = {
-        key: CORE_SHARED_AI_KEY,
-        group: GROUP_GENERAL,
-        label: 'Shared AI configuration',
-        detail: 'models and providers shared by every extension that uses AI'
-    }
-
-    const exportItems = (): ISelectableItem[] => [...formItems(), sharedAiItem, ...extensionItems()]
-
-    const importItems = (): ISelectableItem[] => [
-        ...(importData ? settingsItems(importData.settings) : []),
-        ...(importBundle?.core.sharedAi !== undefined ? [sharedAiItem] : []),
-        ...importPreview.map(p => ({
-            key: bundleEntryKey(p.type, p.id),
-            group: groupOf(p.type),
-            label: p.displayName,
-            detail: p.status === EBundleEntryStatus.NOT_INSTALLED ? 'not installed here — it will be skipped'
-                : p.status === EBundleEntryStatus.NOT_SUPPORTED ? 'installed, but it cannot import configuration yet'
-                : p.status === EBundleEntryStatus.NOT_INSTANTIATED ? 'not running here, so it cannot be configured'
-                : p.status === EBundleEntryStatus.VERSION_DIFFERS ? `file says ${p.version}, installed is ${p.installedVersion}`
-                : `${p.version ?? 'configuration'}`
-        }))
-    ]
-
-    // What the file brings but cannot be applied here: it is seen, not ticked.
-    const notApplicable = (item: ISelectableItem): boolean => {
-        const p = importPreview.find(e => bundleEntryKey(e.type, e.id) === item.key)
-        return p !== undefined && p.status !== EBundleEntryStatus.AVAILABLE && p.status !== EBundleEntryStatus.VERSION_DIFFERS
-    }
-
-    // And the same for what cannot be exported.
-    const notExportable = (item: ISelectableItem): boolean => {
-        const e = extensions.find(x => bundleEntryKey(x.type, x.id) === item.key)
-        return e !== undefined && e.status !== EBundleEntryStatus.AVAILABLE
-    }
-    const alreadyThere = (item: ISelectableItem): string|undefined => {
-        if (item.key === GENERAL_KEY) return 'overwrites the current value'
-        const existing = formItems().some(i => i.key === item.key)
-        return existing ? 'replaces the one already set' : undefined
+            <FormControl variant='standard' sx={{ width: '30%' }} disabled={loading || error!==''}>
+                { !nested && <InputLabel>Level</InputLabel> }
+                <Select value={chosen ?? (nested ? '' : 'info')} displayEmpty={nested}
+                    onChange={(e) => setLogLevels(prev => {
+                        const next = { ...prev }
+                        // The empty option is 'inherit', which is not a level: hence reading it as a
+                        // plain string instead of as ELogLevel.
+                        const chosenValue = e.target.value as string
+                        // Choosing 'inherit' REMOVES the key rather than storing a value: an id with
+                        // nothing of its own has to follow its component when that one is changed later.
+                        if (chosenValue === '') delete next[key]
+                        else next[key] = chosenValue as ELogLevel
+                        return next
+                    })}>
+                    { nested && <MenuItem value=''>Same as {inheritsFrom}</MenuItem> }
+                    { LOG_LEVEL_OPTIONS.map(option =>
+                        <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                    )}
+                </Select>
+            </FormControl>
+        </Stack>
     }
 
     return (<>
@@ -731,6 +404,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             <DialogContent sx={{ height: 460, overflowY: 'auto' }}>
                 <Tabs value={tab} onChange={(_e, v) => setTab(v as ESettingsKwirthTab)}>
                     <Tab label='General' value={ESettingsKwirthTab.GENERAL} />
+                    <Tab label='Log' value={ESettingsKwirthTab.LOG} />
                     <Tab label='Marketplaces' value={ESettingsKwirthTab.MARKETPLACES} />
                     <Tab label='Package registries' value={ESettingsKwirthTab.REGISTRIES} />
                 </Tabs>
@@ -742,6 +416,38 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         {/* El log del contenedor anterior se lee UNA vez, al arrancar: cambiar esto no
                             tiene efecto hasta el siguiente arranque del core. */}
                         <TextField value={previousLogLines} onChange={(e) => setPreviousLogLines(+e.target.value)} variant='standard' label='Previous container log lines to keep (on startup)' type='number' sx={{ width: '40%' }} disabled={loading || error!==''} helperText='Read once when kwirth starts, so a change applies from the next restart' />
+                    </Stack>
+                </Box>
+
+                <Box hidden={tab !== ESettingsKwirthTab.LOG}>
+                    <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
+                        <Typography variant='body2'>
+                            How talkative Kwirth's own log is. Each component writes from the level chosen here upwards, so
+                            turning one down lowers the noise without losing what matters. It applies <b>immediately</b>, with no
+                            restart — the log is precisely what you turn up while something is going wrong.
+                        </Typography>
+                        {/*
+                            Errors are the exception and it is said here rather than left to be discovered: a filter is for
+                            lowering noise, not for hiding a failure that nobody then finds out about.
+                        */}
+                        <Alert severity='info' sx={{ py: 0 }}>Errors are always written, whatever level a component is set to.</Alert>
+                        { logComponents.map(component => <React.Fragment key={component.id}>
+                            { levelRow(component.id, component.label, component.description, false) }
+                            {/*
+                                And under each component, whoever writes under it. An id inherits its
+                                component's level until it is given one of its own, so 'Same as…' is not a
+                                decoration: it is what keeps this from turning into a list of levels to
+                                maintain one by one.
+                            */}
+                            { (component.ids ?? []).map(id => levelRow(`${component.id}:${id}`, id, undefined, true, component.id)) }
+                        </React.Fragment>)}
+                        { logComponents.length === 0 && <Typography variant='body2' color='text.secondary'>Could not read the log components from Kwirth.</Typography> }
+                        <FormControlLabel control={<Checkbox checked={logAnsi} onChange={(e) => setLogAnsi(e.target.checked)} disabled={loading || error!==''} />}
+                            label={<Typography variant='body2'>Colour the output (ANSI)</Typography>} />
+                        <Typography variant='caption' color='text.secondary' sx={{ mt: -1 }}>
+                            Helpful on a terminal, in the way anywhere else: collected into a file or forwarded to a log service,
+                            the colour codes travel as rubbish in the middle of the message.
+                        </Typography>
                     </Stack>
                 </Box>
 
@@ -774,20 +480,17 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 </Box>
 
                 { loading && <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 2 }}><CircularProgress size={16} /><Typography variant='body2'>Reading current settings…</Typography></Stack> }
-                { importResult && <Alert severity='info' sx={{ mt: 2 }} onClose={() => setImportResult(undefined)}>{importResult}</Alert> }
                 { error!=='' && <Alert severity='error' sx={{ mt: 2 }}>{error}</Alert> }
             </DialogContent>
             <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
-                <Stack direction='row' spacing={1}>
-                    <input ref={importFileRef} type='file' accept='.json,application/json' style={{ display: 'none' }}
-                        onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) openImport(f) }} />
-                    <Tooltip title='Export this Kwirth configuration to a JSON file'>
-                        <span><Button size='small' startIcon={<Download />} disabled={loading} onClick={() => { setExportWithCredentials(false); setExportSelected(new Set([...formItems().map(i => i.key), CORE_SHARED_AI_KEY, ...exportableExtensionKeys()])); setExportOpen(true) }}>Export</Button></span>
-                    </Tooltip>
-                    <Tooltip title='Import a Kwirth configuration from a JSON file'>
-                        <span><Button size='small' startIcon={<Upload />} disabled={loading} onClick={() => importFileRef.current?.click()}>Import</Button></span>
-                    </Tooltip>
-                </Stack>
+                {/*
+                    Only on the log tab, and it says so. No confirmation is needed because nothing here is
+                    written until OK: Cancel undoes it.
+                */}
+                <Box>
+                    { tab === ESettingsKwirthTab.LOG &&
+                        <Button size='small' onClick={resetLog} disabled={loading || error!==''}>Reset to defaults</Button> }
+                </Box>
                 <Stack direction='row' spacing={1}>
                     <Button variant='outlined' onClick={ok} disabled={loading || error!=='' || metricsInterval<=0 || !rowsValid()}>OK</Button>
                     <Button variant='outlined' onClick={() => props.onClose(undefined)}>Cancel</Button>
@@ -795,58 +498,6 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             </DialogActions>
         </Dialog>
 
-        {/* Export — se elige item a item, y aparte si las credenciales viajan dentro del fichero */}
-        <Dialog open={exportOpen} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '700px' } }}>
-            <DialogTitle>Export Kwirth configuration</DialogTitle>
-            <DialogContent sx={{ pt: '16px !important', height: 500, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <Stack spacing={1} sx={{ flex: 1, minHeight: 0 }}>
-                    <Typography variant='body2'>
-                        Pick what goes into the file. Settings carry what is in the form right now, including changes you have
-                        not accepted yet; each extension is asked for its own configuration.
-                    </Typography>
-                    { selectionList(exportItems(), exportSelected, setExportSelected, undefined, notExportable) }
-                    <FormControlLabel
-                        label='Include credentials'
-                        control={<Checkbox checked={exportWithCredentials} onChange={(_e, checked) => setExportWithCredentials(checked)} />} />
-                    {exportWithCredentials
-                        ? <Alert severity='warning'>
-                            Tokens and passwords will be written to the file in clear text. Treat it as a secret.
-                          </Alert>
-                        : <Alert severity='info'>
-                            Credentials are left out. Whoever imports the file keeps the ones already set, and has to type the
-                            missing ones.
-                          </Alert>
-                    }
-                </Stack>
-            </DialogContent>
-            <DialogActions>
-                <Button variant='contained' disabled={exportSelected.size === 0} onClick={doExport}>Export</Button>
-                <Button onClick={() => setExportOpen(false)}>Cancel</Button>
-            </DialogActions>
-        </Dialog>
-
-        {/* Import — el fichero ya esta leido, aqui se elige que entra en el formulario */}
-        <Dialog open={importData !== undefined || importPreview.length > 0} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '700px' } }}>
-            <DialogTitle>Import Kwirth configuration</DialogTitle>
-            <DialogContent sx={{ pt: '16px !important', height: 500, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <Stack spacing={1} sx={{ flex: 1, minHeight: 0 }}>
-                    <Typography variant='body2'>
-                        Pick what to bring in. Nothing is saved yet: settings land in the form and extensions are configured
-                        when you press OK on the settings dialog.
-                    </Typography>
-                    { selectionList(importItems(), importSelected, setImportSelected, alreadyThere, notApplicable) }
-                    { importData && !importData.credentialsIncluded &&
-                        <Alert severity='info'>
-                            The file was exported without credentials. Whatever is already set is kept, so nothing is lost.
-                        </Alert>
-                    }
-                </Stack>
-            </DialogContent>
-            <DialogActions>
-                <Button variant='contained' disabled={importSelected.size === 0} onClick={doImport}>Import</Button>
-                <Button onClick={() => { setImportData(undefined); setImportBundle(undefined); setImportPreview([]) }}>Cancel</Button>
-            </DialogActions>
-        </Dialog>
     </>)
 }
 

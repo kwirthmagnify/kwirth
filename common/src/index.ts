@@ -31,6 +31,7 @@ export * from './AuthMethod'
 export * from './ExtensionType'
 export * from './ConfigBundle'
 export * from './ExtensionScope'
+export * from './Logging'
 export * from './Marketplace'
 export * from './PackageRegistry'
 // (daemons removed: export * from './Daemon' has been dropped)

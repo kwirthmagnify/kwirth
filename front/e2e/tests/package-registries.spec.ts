@@ -26,7 +26,7 @@ const rowOf = (page: Page, url: string) => page.locator('div.MuiBox-root')
     .last()
 
 const openRegistriesTab = async (page: Page) => {
-    await clickMenuItem(page, 'Kwirth Settings')
+    await clickMenuItem(page, 'Kwirth settings')
     await expect(page.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: 10000 })
     await page.getByRole('tab', { name: 'Package registries' }).click()
     await expect(page.getByRole('button', { name: 'Add registry' })).toBeVisible()

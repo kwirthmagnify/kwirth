@@ -52,7 +52,7 @@ test('capture marketplaces (dark, redactado)', async ({ page }) => {
     await login(page)
     await dismissOpenDialogs(page)
 
-    await clickMenuItem(page, 'Kwirth Settings')
+    await clickMenuItem(page, 'Kwirth settings')
     const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth settings' })
     await dialog.waitFor()
 

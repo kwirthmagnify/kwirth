@@ -79,7 +79,7 @@ import { buildProviderStorage } from './tools/ProviderStorage'
 import { EventsProvider } from './providers/events/EventsProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
 
-import { ELogComponent, logError, logInfo, logTrace, logWarning, providerLogger, setLogConfig } from './tools/Logging'
+import { applyLogSettings, ELogComponent, logError, logInfo, logTrace, logWarning, providerLogger, setLogConfig } from './tools/Logging'
 import { PluginManager } from './tools/PluginManager'
 import { LicenseManager } from './tools/LicenseManager'
 import { PluginApi } from './api/PluginApi'
@@ -1136,19 +1136,24 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
 
         let validNamespaces:string[] = []
         if (instanceConfig.namespace) validNamespaces = await AuthorizationManagement.getValidNamespaces(ri.clusterInfo.coreApi, accessKey, instanceConfig.namespace.split(','))
-        logInfo(ELogComponent.AUTH, 'validNamespaces: ' + validNamespaces)
+        /*
+            These four are TRACE and not info: they dump internal lists on every instance start, which is
+            detail for debugging permissions, not something to tell. As info they could not be silenced
+            without losing the rest of 'auth' along with them.
+        */
+        logTrace(ELogComponent.AUTH, 'validNamespaces: ' + validNamespaces)
 
         let validControllers:string[] = []
         if (instanceConfig.group) validControllers = await AuthorizationManagement.getValidControllers(ri.clusterInfo.coreApi,ri.clusterInfo.appsApi, ri.clusterInfo.batchApi, accessKey, validNamespaces, instanceConfig.group.split(','))
-        logInfo(ELogComponent.AUTH, 'validControllers:' + validControllers)
+        logTrace(ELogComponent.AUTH, 'validControllers:' + validControllers)
 
         let validPodNames:string[] = []
         if (instanceConfig.pod) validPodNames = await AuthorizationManagement.getValidPods(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, validNamespaces, accessKey, instanceConfig.pod.split(','))
-        logInfo(ELogComponent.AUTH, 'validPods:' + validPodNames)
+        logTrace(ELogComponent.AUTH, 'validPods:' + validPodNames)
 
         let validContainers:string[] = []
         if (instanceConfig.container) validContainers = await  AuthorizationManagement.getValidContainers(ri.clusterInfo.coreApi, accessKey, validNamespaces, validPodNames, instanceConfig.container.split(','))
-        logInfo(ELogComponent.AUTH, 'validContainers:' + validContainers)
+        logTrace(ELogComponent.AUTH, 'validContainers:' + validContainers)
         
         switch (instanceConfig.action) {
             case EInstanceMessageAction.COMMAND:
@@ -1275,6 +1280,9 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         // Kwirth's own persisted configuration. It applies the metrics interval to the live provider and
         // reflects it in kwirthData, which is what /config/info serves to the front end.
         const applyKwirthSettings = (settings: IKwirthSettings) => {
+            // The log first: what comes after this may write, and it has to do so with what the admin
+            // configured rather than with the defaults.
+            applyLogSettings(settings.log)
             const interval = SettingsApi.resolveMetricsInterval(settings)
             ri.kwirthData.metricsInterval = interval
             const metricsProvider = ri.clusterInfo.providers.find(p => p.id === 'metrics') as MetricsProvider|undefined
@@ -1541,7 +1549,16 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                 }),
                 {
                     readSettings: () => SettingsApi.read(ri.configMaps),
-                    writeSettings: async (data: unknown) => { await ri.configMaps.write('kwirth.settings', data) },
+                    /*
+                        Imported settings are APPLIED, not just written. The log travels inside like any
+                        other field, and writing it into the configmap alone would leave it stored but not
+                        in force until the next restart — with the dialog showing one thing and the core
+                        writing another, which is precisely the kind of lie this setting exists to avoid.
+                    */
+                    writeSettings: async (data: unknown) => {
+                        await ri.configMaps.write('kwirth.settings', data)
+                        applyKwirthSettings(data as IKwirthSettings)
+                    },
                     // The common AI store: the models in a configmap and the providers in a secret,
                     // exactly as AiConfigApi stores them. The providers carry keys, so they only come out
                     // when credentials have been asked for.

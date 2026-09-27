@@ -14,6 +14,7 @@ enum MenuDrawerOption {
     ExportWorkspaces,
     SettingsUser,
     SettingsKwirth,
+    SettingsPortability,
     ManageCluster,
     UserSecurity,
     ApiSecurity,
@@ -85,7 +86,13 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                 </MenuList>
             </Collapse>
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsUser)}><Settings/>&nbsp;User settings</MenuItem>
-            <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsKwirth)} disabled={props.selectedClusterName===undefined}><Settings/>&nbsp;Kwirth Settings</MenuItem>
+            <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsKwirth)} disabled={props.selectedClusterName===undefined}><Settings/>&nbsp;Kwirth settings</MenuItem>
+            {/*
+                Portability is not a setting: it is an operation over the whole installation, extensions
+                included, and it used to be hidden behind two buttons at the foot of the settings dialog.
+                It sits next to them because that is where one looks for it, but on its own entry.
+            */}
+            <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsPortability)} disabled={props.selectedClusterName===undefined}><ImportExport/>&nbsp;Kwirth portability</MenuItem>
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageCluster)}><Edit/>&nbsp;Manage cluster list</MenuItem>
             <Divider/>
             { props.hasAdminScope &&

@@ -49,6 +49,50 @@ Managing these settings requires the **`admin`** scope; without it the dialog wi
 
 > The interval can also be set at deploy time (Helm `metricsinterval` / `--metricsinterval`). Precedence is: what you save in this dialog wins; otherwise the deploy-time value; otherwise 15 seconds. So the Helm value acts as the starting point until somebody changes it here.
 
+### How much kwirth writes to its log
+
+The **Log** tab of the same dialog decides how talkative kwirth's own log is. It does not change *what* kwirth does, only what it tells you about it.
+
+![The Log tab of the kwirth settings dialog](../../_media/guide/admin-kwirth-settings-log.png)
+
+The log is split into six **components**, which is the tag you see in every line — `[core]`, `[chan]`, `[prov]`, `[send]`, `[auth]`, `[stor]`. Each one is given a minimum **level**, and it writes from that level upwards:
+
+| Level | What it writes |
+|---|---|
+| Trace | everything, including the detail that is only useful while debugging |
+| Info | the usual: what is starting, what is installed, what is connecting |
+| Warnings and errors | only what is not going well |
+| Errors only | only what broke |
+| Off | nothing |
+
+Everything starts at **Info**. Turn a component down when its noise is getting in the way, and up when you are chasing something in it.
+
+> **An error is always written**, whatever level its component is set to — even `Off`. The filter is there to lower the noise, not to hide a failure that nobody then finds out about. So turning a component off is safe: you will still learn when it breaks.
+
+#### Turning up one channel, not all of them
+
+Under each component you will find **whoever writes under it**: your plugins under Channels, the producers under Providers, and so on. Each can be given a level of its own, and it **wins over its component's**.
+
+That is what lets you debug one thing without drowning in everything else. To follow a single plugin in detail, leave **Channels** at *Warnings and errors* and set **that plugin** to *Trace*: it will write its detail while the rest stay quiet. When you are done, put it back to *Same as chan* and it follows its component again.
+
+> The list only shows what has actually written since kwirth started. A plugin that has never been opened has never had a logger, so there is nothing of its own to configure yet.
+
+Changes apply **immediately**, with no restart — which is the point, because the log is exactly what you turn up while something is going wrong, and restarting would take the problem away with it. **Reset to defaults** puts the whole tab back to Info; it only affects the log, and nothing is saved until you press OK.
+
+**Colour the output (ANSI)** adds colour codes to each line. They help when you are reading the log on a terminal and get in the way everywhere else: collected into a file or forwarded to a log service, they travel as rubbish in the middle of the message.
+
+### Taking the configuration to another kwirth
+
+**☰ → kwirth portability** exports this installation's configuration to a file, and applies one from another kwirth.
+
+![The kwirth portability dialog](../../_media/guide/admin-kwirth-portability.png)
+
+It carries kwirth's own settings — metrics interval, log levels, marketplaces and package registries — the shared AI providers and models, and **what each extension stores**: its rules, its connections, whatever it considers its own configuration. Kwirth does not look inside: each extension decides what of its own travels, which is why an extension that has not adopted that contract yet appears in the list with the reason instead of silently going missing.
+
+Credentials are **left out unless you tick them**. A file with tokens and passwords inside ends up in somebody's downloads folder, so by default the secret fields travel **empty** rather than omitted — the destination can then see which ones it has to fill in.
+
+Importing shows you **what would happen to each entry before anything is applied**: what is going in, what is not installed here (kwirth installs nothing on import), and what cannot receive configuration. Nothing is written until you press Import.
+
 ### Adding your own marketplace
 
 Kwirth installs extensions from the public marketplace. In the **Marketplaces** tab of the same dialog you can register **additional** ones — your organisation's own plugins, senders, themes and so on — without replacing the public one.
