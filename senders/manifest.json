@@ -29,10 +29,10 @@
   {
     "extensionType": "sender",
     "id": "email-resend",
-    "version": "0.1.13",
+    "version": "0.1.14",
     "name": "Email Sender (Resend)",
     "displayName": "Email Sender (Resend)",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-resend/-/kwirth-sender-email-resend-0.1.13.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-resend/-/kwirth-sender-email-resend-0.1.14.tgz",
     "description": "Email sender for Kwirth — sends messages via Resend (resend.dev)"
   },
   {

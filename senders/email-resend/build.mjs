@@ -29,6 +29,17 @@ await esbuild.build({
     platform: 'node',
     target: 'node20',
     outfile: 'dist/back.js',
+    /*
+        The resend SDK can render a React component as the body of an email, and for that it does an
+        `import("@react-email/render")` — dynamic, inside a try/catch, with its own message telling you to
+        install it. In other words: an OPTIONAL dependency. esbuild resolves dynamic imports too, so it
+        was bundling it, and with it react-dom (1.29 MB), prettier (338 KB), react and the html-to-text
+        tree: 1.7 MB, 82% of a back.js whose own code is 5 KB.
+
+        This sender always sends `html`, never `react`, so that branch never runs. Marking it external
+        leaves the dynamic import unresolved, which is exactly the case the SDK already handles.
+    */
+    external: ['@react-email/render'],
     loader: { '.ts': 'ts' },
     minify: false,
 })
