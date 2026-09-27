@@ -1,21 +1,21 @@
 /*
-    Auditoria del barrel de iconos (common-front/src/kwirthicons.ts): que iconos hay y donde se usan.
+    Audit of the icons barrel (common-front/src/kwirthicons.ts): which icons there are and where they are used.
 
-    Se barre TODO el working copy, repos privados incluidos, porque los de pago viven dentro (gitignorados
-    pero presentes) y tambien consumen el barrel.
+    The WHOLE working copy is swept, private repos included, because the paid ones live inside (gitignored
+    but present) and they consume the barrel too.
 
-    Hay CUATRO formas de consumir un icono, y solo la primera se ve leyendo imports:
+    There are FOUR ways of consuming an icon, and only the first shows up when reading imports:
 
-      1. import { X } from '@kwirthmagnify/kwirth-common-front/icons'  — lo normal en front y extensiones
-      2. import { X } from './kwirthicons'                             — DENTRO de common-front, ruta relativa
-      3. import { X } from '@mui/icons-material'                       — sin pasar por el barrel
-      4. "icon": "X" / icon: 'X'                                       — POR NOMBRE, en un manifest o en codigo;
-         se resuelve en runtime contra window.__kwirth__.MUI.icons, asi que el icono tiene que seguir en el
-         barrel aunque nadie lo importe
+      1. import { X } from '@kwirthmagnify/kwirth-common-front/icons'  — the usual one in the front end and extensions
+      2. import { X } from './kwirthicons'                             — INSIDE common-front, a relative path
+      3. import { X } from '@mui/icons-material'                       — without going through the barrel
+      4. "icon": "X" / icon: 'X'                                       — BY NAME, in a manifest or in code;
+         it is resolved at runtime against window.__kwirth__.MUI.icons, so the icon has to stay in the
+         barrel even though nobody imports it
 
-    Las vias 2 y 4 son las que producen falsos "sin usar" si se olvidan.
+    Routes 2 and 4 are the ones that produce false "unused" when forgotten.
 
-    Uso:  node tools/icons-audit.mjs   -> reescribe plans/icons/ICONS-AUDIT.md
+    Usage:  node tools/icons-audit.mjs   -> rewrites plans/icons/ICONS-AUDIT.md
 */
 import { readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'fs'
 import { join, extname, relative, dirname } from 'path'
@@ -80,9 +80,9 @@ const sinUso = filas.filter(f => !f.code.length && !f.byName.length)
 const soloNombre = filas.filter(f => !f.code.length && f.byName.length)
 
 /*
-    El dibujo del icono, sacado del propio paquete de MUI: cada modulo lleva su path en `d: "..."`.
-    Se emite SVG en linea para poder VER el icono al lado del nombre — se ve en el preview de markdown
-    de VS Code; GitHub sanea el svg y ahi solo quedaria el nombre.
+    The icon's drawing, taken from MUI's own package: every module carries its path in `d: "..."`.
+    Inline SVG is emitted so the icon can be SEEN next to the name — it shows in VS Code's markdown
+    preview; GitHub sanitises the svg and there only the name would be left.
 */
 const MUI = join(root, 'front/node_modules/@mui/icons-material')
 const dibujo = (nombre) => {
@@ -109,11 +109,11 @@ for (const f of filas) {
     md += `| ${dibujo(f.icono)} | \`${f.icono}\` | ${f.code.length ? f.code.join('<br>') : '—'} | ${f.byName.length ? f.byName.join('<br>') : '—'} |\n`
 }
 /*
-    Segunda tabla: la vista inversa, por PROYECTO. La primera responde "quien usa este icono"; esta
-    responde "que iconos usa este plugin", que es lo que hace falta cuando se toca un proyecto o se
-    quiere saber a quien afecta retirar algo.
+    Second table: the inverse view, by PROJECT. The first answers "who uses this icon"; this one answers
+    "which icons does this plugin use", which is what is needed when a project is touched or when one
+    wants to know who is affected by removing something.
 
-    El proyecto es el directorio raiz del artefacto: plugins/censor, senders/tee, front, common-front…
+    The project is the artefact's root directory: plugins/censor, senders/tee, front, common-front…
 */
 const proyectoDe = (rel) => {
     const p = rel.split('/')

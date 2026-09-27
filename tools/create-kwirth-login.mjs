@@ -4,14 +4,14 @@ import fs from 'fs'
 import path from 'path'
 
 /*
-    Scaffold de una extension de LOGIN.
+    Scaffold of a LOGIN extension.
 
-    Hasta ahora un login se creaba copiando `logins/_template/` a mano y cambiando los nombres dentro,
-    que es exactamente donde se cuelan los despistes: el id en un sitio y el nombre del tgz en otro.
+    Until now a login was created by copying `logins/_template/` by hand and changing the names inside,
+    which is exactly where slips creep in: the id in one place and the tgz's name in another.
 
-    Un login no lleva codigo —ni TypeScript ni esbuild—, solo `login.json` y sus imagenes, asi que este
-    scaffold es mas corto que el de un plugin o un tema. Lo que si trae es el build ya resuelto: los DOS
-    fondos, con el tope aplicado al que tiene que caber en cualquier sitio.
+    A login carries no code — neither TypeScript nor esbuild — only `login.json` and its images, so this
+    scaffold is shorter than a plugin's or a theme's. What it does bring is the build already solved: BOTH
+    backgrounds, with the ceiling applied to the one that has to fit anywhere.
 */
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.

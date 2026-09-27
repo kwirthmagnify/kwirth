@@ -444,35 +444,35 @@ const constructorBody = [
 ].join('\n')
 
 /*
-    Portabilidad de configuracion: los dos metodos de `IExtension`.
+    Configuration portability: `IExtension`'s two methods.
 
-    Se generan solo si el provider tiene configuracion. Son OPCIONALES en el contrato —una extension sin
-    ellos sigue funcionando—, pero implementarlos es lo que hace que la configuracion de este provider
-    viaje en el fichero de configuracion de Kwirth. El comentario que los acompaña es la mitad del valor
-    de generarlos: recuerda las tres reglas que se olvidan.
+    They are generated only when the provider has configuration. They are OPTIONAL in the contract — an
+    extension without them goes on working — but implementing them is what makes this provider's
+    configuration travel in Kwirth's configuration file. The comment that comes with them is half the
+    value of generating them: it recalls the three rules that get forgotten.
 */
 const portabilityBlock = hasConfig ? `
     /*
-        ── Portabilidad de configuracion (IExtension) ──────────────────────────────────────────────
+        ── Configuration portability (IExtension) ──────────────────────────────────────────────────
 
-        Kwirth llama a estos dos metodos cuando alguien exporta o importa la configuracion de la
-        instalacion entera. El core NO sabe que guardas ni donde: eso lo decides aqui.
+        Kwirth calls these two methods when somebody exports or imports the whole installation's
+        configuration. The core does NOT know what you store or where: you decide that here.
 
-        TRES REGLAS, y las tres se olvidan:
+        THREE RULES, and all three get forgotten:
 
-          1. QUE VIAJA. Solo configuracion: lo que alguien compuso a mano y le dolera rehacer. NO los
-             datos que acumules —historicos, cachés, estado de ejecucion—, ni las preferencias de ESTA
-             instalacion. Si dudas: ¿querrias esto igual en otro cluster? Si la respuesta es "depende
-             del cluster", no viaja.
-          2. SECRETOS. Con \`includeCredentials\` en false, los campos secreto se devuelven VACIOS, no se
-             omiten: el destino tiene que poder decir cuales hay que rellenar. Y al importar, un secreto
-             vacio NO debe borrar el que ya hubiera aqui.
-          3. IDEMPOTENCIA. Importar lo que tu mismo exportaste no puede cambiar nada. Y lo que llega
-             puede venir de otro cluster o estar editado a mano: validalo, no te fies de su forma ni de
-             que los recursos que menciona existan aqui.
+          1. WHAT TRAVELS. Configuration only: what somebody put together by hand and would hate to
+             redo. NOT the data you accumulate — history, caches, execution state — nor THIS
+             installation's preferences. When in doubt: would you want this the same in another
+             cluster? If the answer is "it depends on the cluster", it does not travel.
+          2. SECRETS. With \`includeCredentials\` false, the secret fields are returned EMPTY, they are
+             not omitted: the destination has to be able to say which ones have to be filled in. And on
+             importing, an empty secret must NOT delete the one that was already here.
+          3. IDEMPOTENCE. Importing what you exported yourself cannot change anything. And what arrives
+             may come from another cluster or be edited by hand: validate it, do not trust its shape or
+             that the resources it mentions exist here.
 
-        Los \`warnings\` son lo UNICO que Kwirth puede contar de tu contenido: di que descartaste y por
-        que, y avisa de lo que se aplico pero apunta a algo que falta.
+        The \`warnings\` are the ONLY thing Kwirth can tell about your content: say what you discarded and
+        why, and warn about what was applied but points at something missing.
     \*/
     exportConfig = async (options: IExtensionExportOptions): Promise<unknown> => {
         // TODO: if your configuration carries credentials, empty them when 'options.includeCredentials'

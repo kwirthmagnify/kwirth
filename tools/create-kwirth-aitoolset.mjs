@@ -347,11 +347,11 @@ import { ${importsCommon} } from '@kwirthmagnify/kwirth-common-ai'
 /*
     Toolset \`${id}\` — ${description}
 
-    Un aitoolset es un paquete de tools que un modelo puede llamar mientras investiga. No pinta nada: se
-    instala una vez y despues se CONCEDE a los plugins que pueden usarlo (instalar no es conceder).
+    An aitoolset is a package of tools a model can call while it investigates. It draws nothing: it is
+    installed once and afterwards GRANTED to the plugins that may use it (installing is not granting).
 
-    ⚠️ El host presta SOLO lo declarado en \`requires\`: ${caps.length ? `aqui, \`${caps.join('\`, \`')}\`` : 'aqui, nada — solo la traza'}.
-    Pedir una capability que no se declara no da un error de compilacion, da \`undefined\` en runtime.
+    ⚠️ The host lends ONLY what is declared in \`requires\`: ${caps.length ? `here, \`${caps.join('\`, \`')}\`` : 'here, nothing — only the trace'}.
+    Asking for a capability that is not declared gives no compilation error, it gives \`undefined\` at runtime.
 */
 ${ej.guarda ? '\n' + ej.guarda + '\n' : ''}
 const ${camelId}: IAiToolset = {

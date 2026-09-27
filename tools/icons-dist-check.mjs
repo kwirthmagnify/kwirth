@@ -1,16 +1,16 @@
 /*
-    Comprueba que ningun plugin YA CONSTRUIDO pida un icono que no esta en el barrel.
+    Checks that no ALREADY BUILT plugin asks for an icon that is not in the barrel.
 
-    Por que hace falta: el build de cada extension mapea '@mui/icons-material' y el barrel de kwirth a
-    window.__kwirth__.MUI.icons, asi que el dist NO lleva los iconos dentro: los pide POR NOMBRE en
-    runtime. Si se retira uno del barrel, ese plugin revienta con "Element type is invalid ... got
-    undefined" y no hay tsc que lo avise, porque el dist es de antes.
+    Why it is needed: every extension's build maps '@mui/icons-material' and kwirth's barrel to
+    window.__kwirth__.MUI.icons, so the dist does NOT carry the icons inside: it asks for them BY NAME at
+    runtime. If one is removed from the barrel, that plugin blows up with "Element type is invalid ... got
+    undefined" and there is no tsc to warn about it, because the dist is from before.
 
-    Como se detecta: en el bundle un icono aparece como acceso a propiedad del modulo de iconos
-    (`He.ZoomIn`), asi que se buscan los `.Nombre` que ademas EXISTEN como icono de MUI. Exigir el
-    punto es lo que evita el falso positivo de `title: "Clear"`, que es texto, no icono.
+    How it is detected: in the bundle an icon appears as a property access on the icons module
+    (`He.ZoomIn`), so the `.Name`s that ALSO EXIST as a MUI icon are looked for. Demanding the dot is what
+    avoids the false positive of `title: "Clear"`, which is text, not an icon.
 
-    Uso:  node tools/icons-dist-check.mjs      (salida 1 si hay alguno pendiente de rebuild)
+    Usage:  node tools/icons-dist-check.mjs      (exit 1 when any is pending a rebuild)
 */
 import { readFileSync, readdirSync, statSync } from 'fs'
 import { join, dirname, relative } from 'path'
@@ -41,17 +41,17 @@ for (const b of ['plugins', 'providers', 'senders', 'homepages', 'idps', 'webhoo
 }
 
 /*
-    El listado se lee UNA vez y se compara exacto. Con existsSync no vale: el sistema de ficheros de
-    Windows no distingue mayusculas, asi que 'Checkbox' (el componente de MUI) casaba con CheckBox.js
-    y 'START' (un valor de enum) con Start.js — 25 falsos positivos.
+    The listing is read ONCE and compared exactly. existsSync will not do: Windows's file system is not
+    case sensitive, so 'Checkbox' (MUI's component) matched CheckBox.js and 'START' (an enum value)
+    matched Start.js — 25 false positives.
 */
 const iconosMui = new Set(readdirSync(MUI).filter(f => f.endsWith('.js')).map(f => f.slice(0, -3)))
 
 /*
-    Y fuera los que son COMPONENTES de @mui/material: en el bundle, `material.Tab` es indistinguible
-    de `icons.Tab` mirando solo el punto, y hay nombres que son las dos cosas (Tab, Radio, Badge,
-    Checkbox). Se prefiere callarlos a dar la alarma en falso; si alguno se usa ademas como icono, lo
-    cazara el uso real en cuanto reviente en pantalla.
+    And out go those that are @mui/material COMPONENTS: in the bundle, `material.Tab` is
+    indistinguishable from `icons.Tab` looking at the dot alone, and there are names that are both things
+    (Tab, Radio, Badge, Checkbox). Keeping quiet about them is preferred to raising a false alarm; should
+    one of them also be used as an icon, real use will catch it as soon as it blows up on screen.
 */
 const componentesMui = new Set(readdirSync(join(root, 'front/node_modules/@mui/material'), { withFileTypes: true })
     .filter(d => d.isDirectory()).map(d => d.name))

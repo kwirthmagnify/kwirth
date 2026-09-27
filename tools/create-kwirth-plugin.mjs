@@ -440,27 +440,28 @@ export class ${className}Channel {
     }
 
     /*
-        ── Portabilidad de configuracion (IExtension) ──────────────────────────────────────────────
+        ── Configuration portability (IExtension) ──────────────────────────────────────────────────
 
-        Kwirth sabe exportar e importar la configuracion de una instalacion entera (Settings -> Kwirth
-        -> Export). De este plugin ya viaja lo que guarda el CORE —su configuracion de instalacion—,
-        sin que tengas que hacer nada.
+        Kwirth knows how to export and import a whole installation's configuration (Settings -> Kwirth
+        -> Export). Of this plugin, what the CORE stores already travels — its installation
+        configuration — without you having to do anything.
 
-        Lo que el core NO puede exportar es lo que guardes TU: si este canal empieza a persistir
-        configuracion propia (\`backChannelObject.writeStorage\`, una base de datos, un servicio
-        externo), descomenta estos dos metodos y rellenalos. Son opcionales: mientras no los
-        implementes, el plugin aparece declarado como que aun no exporta lo suyo, que es la verdad.
+        What the core CANNOT export is whatever YOU store: should this channel start persisting
+        configuration of its own (\`backChannelObject.writeStorage\`, a database, an external service),
+        uncomment these two methods and fill them in. They are optional: as long as you do not
+        implement them, the plugin is declared as not yet exporting its own, which is the truth.
 
-        TRES REGLAS, y las tres se olvidan:
+        THREE RULES, and all three get forgotten:
 
-          1. QUE VIAJA. Solo configuracion: lo que alguien compuso a mano y le dolera rehacer. NO los
-             datos que acumules, ni las preferencias de ESTA instalacion. Si dudas: ¿querrias esto
-             igual en otro cluster? Si la respuesta es "depende del cluster", no viaja.
-          2. SECRETOS. Con \`includeCredentials\` en false, los campos secreto se devuelven VACIOS, no
-             se omiten: el destino tiene que poder decir cuales rellenar. Y al importar, un secreto
-             vacio NO debe borrar el que ya hubiera aqui.
-          3. IDEMPOTENCIA. Importar lo que tu mismo exportaste no puede cambiar nada. Y lo que llega
-             puede venir de otro cluster o estar editado a mano: validalo.
+          1. WHAT TRAVELS. Configuration only: what somebody put together by hand and would hate to
+             redo. NOT the data you accumulate, nor THIS installation's preferences. When in doubt:
+             would you want this the same in another cluster? If the answer is "it depends on the
+             cluster", it does not travel.
+          2. SECRETS. With \`includeCredentials\` false, the secret fields are returned EMPTY, they are
+             not omitted: the destination has to be able to say which ones to fill in. And on
+             importing, an empty secret must NOT delete the one that was already here.
+          3. IDEMPOTENCE. Importing what you exported yourself cannot change anything. And what
+             arrives may come from another cluster or be edited by hand: validate it.
 
         import { IExtensionExportOptions, IExtensionImportResult } from '@kwirthmagnify/kwirth-common'
 
