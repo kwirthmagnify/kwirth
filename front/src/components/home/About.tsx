@@ -29,6 +29,51 @@ interface IPreviousContainerLog {
     unavailableReason?: string
 }
 
+/** What the core returns at /managekwirth/log: the current container's log, or why there is none. */
+interface ICoreLog {
+    lines: string[]
+    unavailableReason?: string
+}
+
+/*
+    The core writes its log WITH colour (see the back's Logging.ts), and here it is rendered instead of
+    stripped: the colour is what tells a level from a component at a glance, which is the whole point of
+    looking at a log rather than grepping it.
+
+    Only SGR is understood —'\x1b[...m'— which is all the core emits; any other escape is dropped rather
+    than guessed at. The palette is the BRIGHT one, over the dark box the dialog paints: that way a line
+    reads the same in either theme instead of depending on the one in use.
+*/
+const ANSI_COLOUR: Record<string, string> = {
+    '31': '#f28b82',   // error
+    '32': '#81c995',   // trace
+    '33': '#fdd663',   // warning
+    '35': '#d7aefb',   // component
+    '36': '#78d9ec',   // info
+    '90': '#9aa0a6'    // timestamp
+}
+
+const ansiToSpans = (line: string): React.ReactNode[] => {
+    const out: React.ReactNode[] = []
+    let colour: string|undefined = undefined
+    let from = 0
+    const escapes = /\x1b\[([0-9;]*)([a-zA-Z])/g
+    let escape: RegExpExecArray|null
+    while ((escape = escapes.exec(line)) !== null) {
+        if (escape.index > from) out.push(<span key={out.length} style={{ color: colour }}>{line.substring(from, escape.index)}</span>)
+        // Several codes travel in one escape ('0;31'), and the last colour seen is the one that paints.
+        if (escape[2] === 'm') {
+            for (const code of escape[1].split(';')) {
+                if (code === '' || code === '0') colour = undefined
+                else if (ANSI_COLOUR[code]) colour = ANSI_COLOUR[code]
+            }
+        }
+        from = escapes.lastIndex
+    }
+    if (from < line.length) out.push(<span key={out.length} style={{ color: colour }}>{line.substring(from)}</span>)
+    return out
+}
+
 interface IAboutProps {
     onClose: () => void
 }
@@ -37,6 +82,8 @@ const About: React.FC<IAboutProps> = (props:IAboutProps) => {
     const preRef = useRef<HTMLPreElement | null>(null)
     const [previousLog, setPreviousLog] = useState<IPreviousContainerLog|undefined>(undefined)
     const [showPreviousLog, setShowPreviousLog] = useState(false)
+    const [coreLog, setCoreLog] = useState<ICoreLog|undefined>(undefined)
+    const [showCoreLog, setShowCoreLog] = useState(false)
     // The session already travels through context (and the About is opened from two places): asking for
     // it through props would require both callers to have it at hand, and the channel preferences one
     // does not.
@@ -92,6 +139,27 @@ const About: React.FC<IAboutProps> = (props:IAboutProps) => {
         return 'The previous container ended cleanly'
     }
 
+    /*
+        Asked for on demand, unlike the previous container's log: that one the core has held in memory
+        since it started, while this one is a live read of up to a thousand lines. Nobody opening the
+        About to look at the version should pay for it.
+
+        Failures come back as a reason to show rather than as a thrown error: the dialog is already open
+        by then, and leaving it empty with the cause only in the browser's console is the way to make
+        somebody think Kwirth has no log.
+    */
+    const loadCoreLog = async () => {
+        setCoreLog(undefined)
+        try {
+            const response = await fetch(`${session.backendUrl}/managekwirth/log?lines=1000`, addGetAuthorization(session.accessString))
+            if (response.ok) setCoreLog(await response.json() as ICoreLog)
+            else setCoreLog({ lines: [], unavailableReason: `The core answered HTTP ${response.status}` })
+        }
+        catch (err) {
+            setCoreLog({ lines: [], unavailableReason: err instanceof Error ? err.message : String(err) })
+        }
+    }
+
     return (<>
         <Dialog open={true} disableRestoreFocus={true} fullWidth maxWidth={'md'}>
             <DialogTitle>About Kwirth...</DialogTitle>
@@ -128,6 +196,13 @@ const About: React.FC<IAboutProps> = (props:IAboutProps) => {
             </DialogContent>
             <DialogActions>
                 <Stack direction='row' flex={1} sx={{ml:2, mr:2}} alignItems='center'>
+                    <Tooltip title={isAdmin ? 'The log this container is writing right now' : 'Only administrators can read the log of the core'}>
+                        <span>
+                            <Button disabled={!isAdmin} onClick={() => { setShowCoreLog(true); loadCoreLog() }}>
+                                Core log
+                            </Button>
+                        </span>
+                    </Tooltip>
                     <Tooltip title={previousLogHint()}>
                         <span>
                             <Button disabled={!isAdmin || !previousLog?.restarted} onClick={() => setShowPreviousLog(true)}>
@@ -174,6 +249,35 @@ const About: React.FC<IAboutProps> = (props:IAboutProps) => {
             </DialogContent>
             <DialogActions>
                 <Button onClick={() => setShowPreviousLog(false)}>Close</Button>
+            </DialogActions>
+        </Dialog> }
+
+        {/*
+            The box is DARK whatever the theme is, and that is not a style slip: the colours it paints are
+            the ones the core emitted for a terminal, and on a light background half of them are unreadable.
+            A log viewer looking like a terminal is also what whoever opens it expects.
+        */}
+        { showCoreLog && <Dialog open={true} fullWidth maxWidth='lg' disableRestoreFocus={true}>
+            <DialogTitle>Log of the core</DialogTitle>
+            <DialogContent>
+                <Stack spacing={1} height='60vh'>
+                    { !coreLog && <Typography variant='body2' color='text.secondary'>Reading the log...</Typography> }
+                    { coreLog?.unavailableReason &&
+                        <Typography variant='body2' color='warning.main'>{coreLog.unavailableReason}</Typography>
+                    }
+                    { coreLog && !coreLog.unavailableReason &&
+                        <Typography variant='caption' color='text.secondary'>Last {coreLog.lines.length} lines</Typography>
+                    }
+                    <Box sx={{ flexGrow:1, overflow:'auto', backgroundColor:'#1e1e1e', borderRadius:1, p:1 }}>
+                        <pre style={{ margin:0, fontSize:12, whiteSpace:'pre-wrap', wordBreak:'break-all', color:'#dddddd' }}>
+                            {coreLog?.lines.map((line, index) => <div key={index}>{ansiToSpans(line)}</div>)}
+                        </pre>
+                    </Box>
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={loadCoreLog} disabled={!coreLog}>Refresh</Button>
+                <Button onClick={() => setShowCoreLog(false)}>Close</Button>
             </DialogActions>
         </Dialog> }
     </>)

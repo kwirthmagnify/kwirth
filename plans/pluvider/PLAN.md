@@ -692,6 +692,21 @@ motivó F6: sus consumidores lo verían ausente mientras nadie más lo pidiera.
 
 ## Backlog que deja este trabajo
 
+- ⚠️ **`Required provider 'X' is not registered` no dice QUIÉN lo pide** (usuario, 2026-09-27). El
+  mensaje es correcto y no sirve para actuar: con quince canales instalados, saber que falta `syslog`
+  no dice a cuál hay que ir a mirar, ni si sobra el provider o sobra quien lo pide.
+
+  **El dato existe y se tira una línea antes.** `back/src/index.ts:1884` hace
+  `Array.from(runningInstance.channels.values()).flatMap(c => c.requirements.providers)`: `channels` es
+  un **Map** cuya clave es el id del canal, y `.values()` la descarta antes de que `flatMap` funda las
+  listas de todos los canales en un array plano. Para cuando se emite el error en `:1887` ya no hay
+  forma de volver atrás. Bastaría llevar pares `(consumidor, providerId)` en vez de ids sueltos.
+
+  Son **tres sitios**, no uno: `:1887` (lo pide un canal), `:1923` (lo pide otro provider — ahí el
+  consumidor también se conoce) y el warning de pluviders de `:1890`, que dice *«is required by a
+  channel»* sin nombrarlo. `findMissingSubscriptionTargets()` recibe hoy `string[]`, así que el cambio
+  le toca a ella y a sus tests.
+
 - ⚠️ **La instalación en caliente no espera a `startProvider()`** (lo lanza sin `await`), al contrario
   que el arranque. F7 mantiene ese comportamiento para no cambiar dos cosas a la vez. Un consumidor
   cableado en caliente puede, por tanto, suscribirse a un productor cuyo `startProvider()` aún no ha

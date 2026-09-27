@@ -124,6 +124,28 @@ Download the installer for **Windows, macOS or Linux** from the [Releases page](
   not listening" when it is.
 - The other environment variable worth setting is **`KWIRTH_CLUSTER_NAME`**, which names the cluster in the title bar and the Homepage. kwirth detects the name on AKS, EKS, GKE and k3d, but on **k3s and bare clusters there is nothing to detect** — see [The cluster's own name](06-cluster-management#the-clusters-own-name).
 
+## Reading the core's own log
+
+Everything under [How much kwirth writes to its log](02-initial-config#how-much-kwirth-writes-to-its-log)
+decides **what** kwirth writes. This is where you read it, without leaving kwirth for a `kubectl logs` —
+which is exactly what you do not have at hand when something is going wrong inside the cluster.
+
+**About kwirth…** → **Core log** shows the last **1000 lines** the running container has written, with the
+colour kwirth put there: the timestamp in grey, the component in violet, and the level in its own colour —
+cyan for `INFO`, yellow for `WARN`, red for `ERRO`, green for `TRCE`. **Refresh** re-reads it; the dialog
+does not follow the log by itself, so what you see is a snapshot of the moment you asked for it.
+
+It is **only for administrators**, for the same reason as the previous container's log below: these are
+kwirth's own internals. The endpoint behind it answers `403` to anybody else.
+
+⚠️ **It needs kwirth to be running as a pod.** The lines come from the container's log in Kubernetes, so on
+desktop, on docker or on an ECS task there is nothing to read and the dialog says so rather than showing an
+empty box.
+
+⚠️ **The colour comes from the log itself.** If you turn *Colour the output (ANSI)* off — which is what you
+want when the log is going to end up in a file — the escape codes stop being written, and this viewer has
+nothing to colour with: it still shows every line, in grey.
+
 ## After an unexpected restart
 
 When kwirth dies inside a cluster, the kubelet starts a **new container in the same pod** and the log that

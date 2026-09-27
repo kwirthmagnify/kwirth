@@ -31,6 +31,7 @@ meses después — que es exactamente lo que pasaba antes de escribir este índi
 | [ecs](ecs/PLAN.md) · [PRD](ecs/PRD.md) | desplegar Kwirth en AWS ECS (Fargate y EC2) con la misma imagen | **S1 hecho**: el core ya arranca sin Kubernetes, y de paso se retiró Docker como fuente de recursos (12 artefactos republicados). Quedan S2 (qué se observa), S3 (el proyecto `ecs/` con los ejemplos) y S4 (documentación). Pendientes del cierre: publicar el back y una corrida e2e completa |
 | [config-portability](config-portability/PLAN.md) · [PRD](config-portability/PRD.md) | llevarse la configuración de un Kwirth a otro | core, front y las open source con configuración, hechos; quedan Excubitor y Agora, que son la prueba de fuego |
 | [provider-handle](provider-handle/PLAN.md) | lo que el core entrega a un consumidor deja de ser el `IProvider` real: un handle por (canal, instancia) | **en producción lo esencial**: el handle está en el core y el logger de providers cableado y publicado en los 13. Queda H2 a propósito —los diez consumidores que ya pasan por el core se migran cuando se toquen— y, abierto, que `started` significa "router montado" y no "arrancado" |
+| [log-settings](log-settings/PLAN.md) | el log del core se configura, y ahora también **se ve desde el front** | **entregado y validado** (2026-09-27): `GET /managekwirth/log` + diálogo *Core log* en el About, con el ANSI interpretado. Queda **solo la captura de la guía**, que no se puede sacar en el dev porque no corre como pod: el spec está escrito y se lanza contra un Kwirth desplegado. ⚠️ el visor solo enseña líneas con Kwirth corriendo como pod |
 
 ## Cerrados
 
@@ -38,7 +39,6 @@ Terminados y en producción. Se consultan para saber **por qué** algo es como e
 
 | plan | entregado |
 |---|---|
-| [log-settings](log-settings/PLAN.md) | el log del core se configura: nivel por componente **y por canal**, en caliente, con los errores siempre escritos |
 | [previous-container-log](previous-container-log/PLAN.md) | ver en el About el log del contenedor anterior cuando el core reinicia, con las líneas configurables desde los settings |
 | [sso-idp](sso-idp/SSO-IDP-PLAN.md) | el tipo `idp` y seis conectores SSO instalables |
 | [login-extensions](login-extensions/PLAN.md) | el tipo `login`: páginas de acceso con marca y canales limitados, con fondo de alta calidad donde el almacenamiento lo admite |

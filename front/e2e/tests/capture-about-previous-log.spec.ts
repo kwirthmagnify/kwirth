@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { login, clickMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from './helpers'
 
 // Screenshot of the guide's image for "After an unexpected restart" (the admin guide). Dark theme.
-// Ejecutar a mano: playwright test --config playwright.capture.config.ts capture-about-previous-log.spec.ts
+// Run by hand: playwright test --config playwright.capture.config.ts capture-about-previous-log.spec.ts
 // Non-destructive: it opens the About, looks at it and closes it. It restarts nothing.
 
 const MEDIA = GUIDE_MEDIA

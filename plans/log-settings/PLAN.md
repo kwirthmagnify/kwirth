@@ -1,8 +1,13 @@
 # Configuración del log del core
 
-> **Estado: CERRADO el 2026-09-27.** CL9 completa: 514 tests en el core (+12 nuevos), 2 specs e2e nuevos
-> (9 casos), guía con dos capturas, histórico de métricas y sus dos PNG. `@kwirthmagnify/kwirth-common`
-> publicado en **0.5.57** y la dependencia subida en back y front.
+> **Estado: CERRADO el 2026-09-27** en su alcance original. CL9 completa: 514 tests en el core (+12
+> nuevos), 2 specs e2e nuevos (9 casos), guía con dos capturas, histórico de métricas y sus dos PNG.
+> `@kwirthmagnify/kwirth-common` publicado en **0.5.57** y la dependencia subida en back y front.
+>
+> 🟡 **Reabierto para el visor.** El punto pendiente —ver el log del core desde el front— está
+> **entregado y validado** por el usuario el **2026-09-27**, sobre una imagen docker desplegada en el
+> clúster (en el dev no se puede: no corre como pod). Queda **una sola cosa**: la captura de la guía,
+> que necesita ese mismo despliegue. Ver *Pendiente*.
 
 ## Por qué
 
@@ -71,11 +76,57 @@ con su entrada de menú.
 
 ## Pendiente
 
-- **Ver el log del core desde el front**, leyendo los logs del pod, con formateo ANSI. Pedido por el
-  usuario en esta misma sesión. Hay pieza reutilizable: `PreviousContainerLog` ya lee el log del
-  contenedor por `readNamespacedPodLog`. ⚠️ **Decisión que trae consigo**: si el visor interpreta ANSI,
-  la casilla *Colour the output* pasa a tener dos consumidores con intereses opuestos — apagarla para que
-  el log salga limpio a un fichero dejaría el visor en blanco y negro. Probablemente el visor deba colorear
-  por su cuenta a partir del nivel y el componente, sin depender de los códigos del back.
+- ✅ **Ver el log del core desde el front** — **ENTREGADO y validado** el 2026-09-27, sobre una imagen
+  docker desplegada en el clúster. 🟡 **Queda la captura de la guía** (ver el final de este punto).
+
+  **Qué se hizo, y sobre todo qué NO se tocó.** La primera idea que se valoró fue montar un diálogo
+  sobre el **canal `log`** apuntado al pod de Kwirth — hay precedente: `ContentExternal.tsx` de magnify
+  ya monta el `TabContent` de otro canal fuera de su pestaña. Se descartó por decisión del usuario
+  («no quiero tocar las otras cosas que ya están funcionando»), y el reconocimiento le dio la razón por
+  partida doble: el canal `log` es un **plugin instalable** (el core pasaría a depender de una extensión
+  para enseñar su propio log) y además **borra el ANSI** con `cleanANSI()`, con lo que el visor habría
+  salido en blanco y negro — que era justo la mitad del encargo.
+
+  Así que son dos piezas y ninguna toca nada que ya funcione:
+
+  - `back/src/api/ManageKwirthApi.ts` → `GET /managekwirth/log`, al lado de `/previouslog` y con su
+    misma puerta **admin-only**. Lee el contenedor **actual** con el mismo `readNamespacedPodLog` que
+    ya usaba `PreviousContainerLog`, sin `previous`. `tailLines` viene de la query y se acota a
+    1..10000. Un fallo contesta **200 con `unavailableReason`**, no un error: para quien mira, «no hay
+    log y es por esto» es una respuesta.
+  - `front/src/components/home/About.tsx` → botón *Core log* y su diálogo, con un `ansiToSpans` local
+    de unas 20 líneas. Se pide **al pulsar**, no al abrir el About: el log anterior lo tiene el core en
+    memoria, pero este es una lectura viva.
+
+  **La decisión del ANSI, resuelta.** El conflicto que este plan dejó anotado —que interpretar ANSI le
+  daba dos consumidores con intereses opuestos a la casilla *Colour the output*— **no se ha resuelto**,
+  se ha esquivado: el visor interpreta los códigos que vengan. Si alguien apaga *Colour the output*
+  para llevarse un log limpio a un fichero, **el visor se queda en gris**. Es el comportamiento que hay
+  hoy y está sin discutir.
+
+  ⚠️ **Solo con Kwirth corriendo como POD.** `inCluster` solo se pone a `true` en `index.ts:279`, la
+  rama que lee su propio pod; desktop, docker y ECS lo dejan en `false`. Una imagen lanzada con
+  `docker run` enseñará el motivo, no el log: hay que desplegarla **en Kubernetes**. Es la misma
+  limitación que habría tenido la vía del canal `log`.
+
+  🔴 **Un verde que no probaba nada, cazado al hacer la captura.** El segundo caso del e2e —el que
+  comprueba que los escapes ANSI **no** llegan a pantalla como texto, que es el único que valida el
+  visor— estaba escrito como un `if/else`: con líneas, asertaba; sin líneas, asertaba el motivo. Como el
+  dev **no corre como pod**, siempre se iba por la rama vacía y **la corrida salía verde igualmente**,
+  afirmando que el visor estaba verificado cuando la aserción que importa no se había ejecutado nunca.
+  Se reportó como «2 casos pasan» y era cierto y engañoso a la vez. Ahora es un `test.skip()` explícito:
+  donde no hay log que pintar sale **⏭, no ✅**. El patrón es general y merece recordarse — *un caso que
+  se adapta al entorno en vez de saltarse convierte la suite en un sello de goma*.
+
+  **Estado de la CL9**: 1 harness ✅ (514) · 2a e2e ✅ (`about-core-log`: **1 ✅ / 1 ⏭** en dev) ·
+  2b histórico ✅ · 2c los dos PNG ✅ · 3 QA manual ✅ (el usuario, sobre el clúster) · 4 guía ✅ *sin
+  captura* · 5 backlog ✅ · 6 plan ✅ · 7-9 commit y push.
+
+  🟡 **Lo único que queda: la captura.** `capture-about-core-log.spec.ts` está escrito y **no se puede
+  correr en el dev** —no hay líneas que fotografiar—, así que la sección de la guía va **sin imagen**,
+  al revés que su hermana. Se saca apuntando a un Kwirth desplegado:
+  `KWIRTH_E2E_URL=<url> playwright test --config playwright.capture.config.ts capture-about-core-log.spec.ts`
+  y luego se añade `![The core's own log](_media/guide/admin-about-core-log.png)` al final de
+  *Reading the core's own log* en `docs/0.6.31/guide/admin/01-deployment.md`.
 - **`API Security` junto a `User security`** en el drawer: una con mayúscula y otra sin ella, siendo el
   mismo tipo de entrada. Señalado y no tocado.

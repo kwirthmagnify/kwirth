@@ -51,6 +51,48 @@ export class ManageKwirthApi {
                 res.status(200).json(getPreviousContainerLog())
             })
 
+        /*
+            The log of the container running RIGHT NOW, which is the counterpart of '/previouslog': one
+            explains a death, this one explains what is happening.
+
+            🔴 ADMIN ONLY, for the same reason as the previous one: these are the core's internal traces.
+
+            It reads the pod's log the same way PreviousContainerLog does, minus 'previous'. No container
+            is named: a Kwirth pod carries one, and if somebody put a sidecar in there Kubernetes says so
+            and the reason reaches the dialog.
+
+            A failure answers 200 with 'unavailableReason' instead of an error status, which is the shape
+            '/previouslog' already uses: for whoever is looking, "there is no log and this is why" is an
+            answer, not a failed request.
+        */
+        this.router.route('/log')
+            .all( async (req:Request, res:Response, next) => {
+                if (! (await AuthorizationManagement.validKey(req, res, apiKeyApi))) return
+                if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
+                next()
+            })
+            .get( async (req:Request, res:Response) => {
+                const podName = process.env.HOSTNAME
+                if (!kwirthData.inCluster || !podName) {
+                    res.status(200).json({ lines: [], unavailableReason: `This kwirth is not running as a pod, so there is no container log to read. The execution environment is '${kwirthData.executionEnvironment}', and this viewer needs kwirth deployed inside the cluster` })
+                    return
+                }
+                try {
+                    // Clamped because it comes from the query string: a tail of millions of lines is a way
+                    // of asking the core to hold the whole log in memory to answer one dialog.
+                    const asked = Number(req.query.lines)
+                    const tailLines = Math.min(Math.max(isNaN(asked) ? 1000 : Math.floor(asked), 1), 10000)
+                    const log = await this.coreApi.readNamespacedPodLog({ name: podName, namespace: kwirthData.namespace, tailLines })
+                    const lines = String(log ?? '').split('\n')
+                    // a log ending in \n leaves a last empty line that adds nothing
+                    if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
+                    res.status(200).json({ lines })
+                }
+                catch (err) {
+                    res.status(200).json({ lines: [], unavailableReason: err instanceof Error ? err.message : String(err) })
+                }
+            })
+
     }
 
     restartController = async (coreApi:CoreV1Api, appsApi:AppsV1Api, batchApi: BatchV1Api, namespace:string, controllerTypeName:string): Promise<void> => {
