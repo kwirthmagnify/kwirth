@@ -56,10 +56,26 @@ kwirth-bundled.json
 /plugins/situs/
 /plugins/spectrum/
 /plugins/modus/
+/plugins/object-mapper/
 /providers/sugarless/
 /iria/
 /providers/service-flow/
 /providers/flight-status/
+/providers/azure/
+/providers/aws/
+/providers/fluentbit/
+/providers/cloud-config/
+/providers/v16/
+/providers/object-mapper/
+/senders/datadog/
+/common-cloud/
+
+# Familia SUSE (de pago): COMODIN a proposito, para que cada artefacto suse-* nuevo quede cubierto desde
+# el minuto cero y no dependa de que alguien se acuerde de anadir su linea. Duplicado en
+# .git/info/exclude y en el hook pre-commit, que son los que abortan el commit; este es el unico de los
+# tres que VIAJA en el clon.
+/providers/suse-*/
+/aitoolsets/suse-*/
 
 # AI toolsets de pago: mismo criterio que el resto de artefactos de pago — repo propio, fuera del publico
 /aitoolsets/k8s-ops/
