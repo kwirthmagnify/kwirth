@@ -90,7 +90,8 @@ if (!packId) { console.error('Error: falta pack-id'); process.exit(1) }
 if (!includes.length && !inputTgzs.length) { console.error('Error: se necesita al menos un --include o un tgz'); process.exit(1) }
 
 opts.name   = opts.name   ?? packId
-opts.output = opts.output ?? `${packId}-${opts.version}.pack.tgz`
+// The file is named after the package too, so what is on disk and what is published say the same thing.
+opts.output = opts.output ?? `kwirth-pack-${packId}-${opts.version}.tgz`
 
 // --- helpers ---
 async function readPkgFromTgz(tgzPath) {
@@ -186,8 +187,12 @@ for (const rawPath of inputTgzs) {
 }
 
 // pack's package.json
+//
+// The name follows the same 'kwirth-<type>-<id>' pattern as every other extension type. It used to be
+// just '@kwirthmagnify/<packId>', which put a package named after nothing in particular ('censor') at the
+// top of the scope, next to the core's own packages.
 const packPkgJson = {
-    name:          `@kwirthmagnify/${packId}`,
+    name:          `@kwirthmagnify/kwirth-pack-${packId}`,
     id:            packId,
     displayName:   opts.name,
     version:       opts.version,

@@ -64,7 +64,8 @@ if (existsSync(bgHiSrc)) {
 }
 
 // pack into tgz
-const tgzName = `${id}.tgz`
+// Named after the package, like every other extension type: 'kwirth-<type>-<id>'.
+const tgzName = `kwirth-login-${id}.tgz`
 execSync(`tar -czf ${tgzName} package.json login.json${existsSync(bgSrc) ? ' background.png' : ''}` +
     `${existsSync(bgHiSrc) ? ' background-hi.png' : ''}`, { cwd: distDir })
 

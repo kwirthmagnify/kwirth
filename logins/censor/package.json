@@ -1,8 +1,8 @@
 {
-    "name": "@kwirthmagnify/login-censor",
+    "name": "@kwirthmagnify/kwirth-login-censor",
     "id": "censor",
     "displayName": "Censor",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "files": [
         "login.json",
         "background.png"

@@ -9,9 +9,13 @@ const pkg = JSON.parse(await readFile(join(__dir, 'package.json'), 'utf-8'))
 const id = pkg.id ?? pkg.name.split('/').pop()
 const distDir = join(__dir, 'dist')
 
+// The tarball is named after the package, like every other extension type: 'kwirth-<type>-<id>'. It used
+// to be just '<id>.tgz', which is the one name that says nothing about what the file is.
+const tgzName = `kwirth-login-${id}.tgz`
+
 mkdirSync(distDir, { recursive: true })
 copyFileSync(join(__dir, 'package.json'), join(distDir, 'package.json'))
 copyFileSync(join(__dir, 'login.json'), join(distDir, 'login.json'))
 
-execSync(`tar -czf ${id}.tgz package.json login.json`, { cwd: distDir })
-console.log(`[build] ${id} v${pkg.version} packed → dist/${id}.tgz`)
+execSync(`tar -czf ${tgzName} package.json login.json`, { cwd: distDir })
+console.log(`[build] ${id} v${pkg.version} packed → dist/${tgzName}`)
