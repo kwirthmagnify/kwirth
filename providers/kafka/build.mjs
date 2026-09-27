@@ -29,7 +29,6 @@ await esbuild.build({
     platform: 'node',
     target: 'node20',
     outfile: 'dist/back.js',
-    external: ['express'],
     loader: { '.ts': 'ts' },
     minify: false,
 })
