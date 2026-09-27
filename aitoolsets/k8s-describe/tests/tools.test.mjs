@@ -310,7 +310,7 @@ test('toda invocacion deja traza con sus argumentos', async () => {
     assert.deepEqual(traced[0], { tool: 'describe_controller', args: { namespace: 'prod', kind: 'DaemonSet', name: 'agent' } })
 })
 
-// ── get_space_data (llegada desde k8s-inventory) ─────────────────────────────────────────────────────
+// ── get_space_data (arrived from k8s-inventory) ──────────────────────────────────────────────────────
 
 test('describir un namespace sobrevive a que falten quotas y limitranges', async () => {
     // It is usually missing RBAC for THOSE resources. Their absence must not hide the rest of the namespace.

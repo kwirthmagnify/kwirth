@@ -132,7 +132,7 @@ test('get_workload_data pide las cinco familias de recursos', async () => {
     ])
 })
 
-// ── datos ────────────────────────────────────────────────────────────────────────────────────────────
+// ── data ─────────────────────────────────────────────────────────────────────────────────────────────
 
 test('get_node_data sale del mapa del core, sin llamar al cluster', async () => {
     const { host, calls } = fakeHost()
@@ -158,7 +158,7 @@ test('un fallo del cluster vuelve como dato, no como excepcion', async () => {
     assert.deepEqual(await tool('list_namespaces').execute({}, host), { error: '403 forbidden' })
 })
 
-// ── referencias de configuracion ─────────────────────────────────────────────────────────────────────
+// ── configuration references ─────────────────────────────────────────────────────────────────────────
 
 test('las referencias a ConfigMap/Secret se deduplican juntando los motivos', async () => {
     const { host } = fakeHost()

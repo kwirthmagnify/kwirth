@@ -110,9 +110,9 @@ export interface ISenderDebugResult {
 export interface ISenderDebugMessageResponse extends IInstanceMessage {
     msgtype: 'senderdebugmessageresponse'
     payloadType: ESenderDebugPayload
-    /** presente cuando payloadType === SENDERS */
+    /** present when payloadType === SENDERS */
     senders?: ISenderDebugSenderInfo[]
-    /** presente cuando payloadType === RESULT */
+    /** present when payloadType === RESULT */
     result?: ISenderDebugResult
 }
 
@@ -130,6 +130,6 @@ export interface ISenderDebugCommandMessage extends IInstanceMessage {
 export interface ISenderDebugInstanceConfig {
     /** sender preselected when the tab opens; empty = none */
     senderId: string
-    /** configuracion preseleccionada; vacio = ninguna */
+    /** the pre-selected configuration; empty = none */
     configName: string
 }

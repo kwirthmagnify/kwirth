@@ -7,7 +7,7 @@ import { login, openChannelPicker, openTabMenu, CHANNEL } from './helpers'
     A file apart from the inventory because they share a channel but not a subject, and that way the
     table's one goes on running on its own if this one breaks.
 
-    NO destructivo: abre, mira y cierra.
+    NON-destructive: it opens, looks and closes.
 */
 
 test.describe.configure({ mode: 'serial' })

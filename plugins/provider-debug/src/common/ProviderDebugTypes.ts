@@ -93,9 +93,9 @@ export interface IProviderDebugEvent {
 export interface IProviderDebugMessageResponse extends IInstanceMessage {
     msgtype: 'providerdebugmessageresponse'
     payloadType: EProviderDebugPayload
-    /** presente cuando payloadType === PROVIDERS */
+    /** present when payloadType === PROVIDERS */
     providers?: IProviderDebugProviderInfo[]
-    /** presente cuando payloadType === EVENT */
+    /** present when payloadType === EVENT */
     event?: IProviderDebugEvent
 }
 

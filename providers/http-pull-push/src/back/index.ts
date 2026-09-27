@@ -156,7 +156,7 @@ export class HttpPullPushProvider implements IProvider {
         ]
     })
 
-    // ── Configuracion (capa 1) ──────────────────────────────────────────────────
+    // ── Configuration (layer 1) ─────────────────────────────────────────────────
 
     private addConfigRoutes = (): void => {
         this.configRouter.route('/configs')

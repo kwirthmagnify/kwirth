@@ -87,7 +87,7 @@ test('de lo binario de un ConfigMap solo salen las claves', async () => {
     assert.equal(JSON.stringify(res).includes('iVBORw0KGgo='), false)
 })
 
-// ── cuando cambio ────────────────────────────────────────────────────────────────────────────────────
+// ── when it changed ──────────────────────────────────────────────────────────────────────────────────
 
 test('lastModified sale del managedFields mas reciente, normalizado a ISO', async () => {
     // ⚠️ They arrive as Dates. Sorting them with the default sort compares them as text ('Apr' < 'Aug' <
@@ -116,7 +116,7 @@ test('sin managedFields se cae a la fecha de creacion', async () => {
     assert.equal(res.lastModified, '2025-01-02T03:04:05.000Z')
 })
 
-// ── errores y trazas ─────────────────────────────────────────────────────────────────────────────────
+// ── errors and traces ────────────────────────────────────────────────────────────────────────────────
 
 test('sin cluster, las dos de kubernetes lo dicen', async () => {
     const soloTrace = { trace: () => {} }

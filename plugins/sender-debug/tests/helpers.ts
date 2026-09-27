@@ -50,9 +50,9 @@ export class FakeSender {
     readonly id: string
     senderType?: 'filter' | 'output'
     configNames: string[]
-    /** cada send() recibido, en orden */
+    /** every send() received, in order */
     received: Array<{ configName: string, message: ISenderMessage }> = []
-    /** cada sendBatch() recibido, en orden */
+    /** every sendBatch() received, in order */
     receivedBatches: Array<{ configName: string, messages: ISenderMessage[] }> = []
     sendBatch?: (configName: string, messages: ISenderMessage[]) => Promise<ISenderResult | void>
     private result: ISenderResult | undefined = undefined
