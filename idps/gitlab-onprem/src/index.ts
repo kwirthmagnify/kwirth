@@ -1,10 +1,10 @@
 import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpConnector, IIdpIdentity, oidcBuildAuthorizationUrl, oidcHandleCallback } from '@kwirthmagnify/kwirth-common-back'
 
 /*
-    Conector GitLab self-managed (on-prem) — OIDC. Artefacto fino sobre los helpers OIDC de common-back
-    (mismo core que 'gitlab-cloud' y 'google'). Aquí el issuer es REQUERIDO (la URL de tu GitLab,
-    p.ej. https://gitlab.miempresa.com) y NO hay default: sin issuer configurado el helper lanza error.
-    Para GitLab.com (SaaS) usa el conector 'gitlab-cloud'.
+    The self-managed (on-prem) GitLab connector — OIDC. A thin artefact over common-back's OIDC helpers
+    (the same core as 'gitlab-cloud' and 'google'). Here the issuer is REQUIRED (your GitLab's URL,
+    https://gitlab.mycompany.com for instance) and there is NO default: with no issuer configured the
+    helper throws. For GitLab.com (SaaS) use the 'gitlab-cloud' connector.
 */
 export default class GitlabOnpremConnector implements IIdpConnector {
     id = 'gitlab-onprem'

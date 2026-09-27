@@ -1,10 +1,10 @@
 import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpConnector, IIdpIdentity, githubIdentityFromToken, oauth2BuildAuthorizationUrl, oauth2HandleCallback } from '@kwirthmagnify/kwirth-common-back'
 
 /*
-    Conector GitHub Enterprise Server (on-prem) — OAuth2. Mismo core que 'github-cloud' (oauth2* /
-    github* de common-back) pero con la URL de tu GHE (baseUrl) REQUERIDA: los endpoints OAuth2 se
-    derivan de ella y la API es <baseUrl>/api/v3 (configurable vía apiBaseUrl). Para GitHub.com usa
-    el conector 'github-cloud'.
+    The GitHub Enterprise Server (on-prem) connector — OAuth2. The same core as 'github-cloud' (oauth2* /
+    github* from common-back) but with your GHE's URL (baseUrl) REQUIRED: the OAuth2 endpoints are derived
+    from it and the API is <baseUrl>/api/v3 (configurable through apiBaseUrl). For GitHub.com use the
+    'github-cloud' connector.
 */
 const DEFAULT_SCOPES = 'read:user user:email'
 

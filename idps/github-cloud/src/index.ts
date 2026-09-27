@@ -1,11 +1,11 @@
 import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpConnector, IIdpIdentity, githubIdentityFromToken, oauth2BuildAuthorizationUrl, oauth2HandleCallback } from '@kwirthmagnify/kwirth-common-back'
 
 /*
-    Conector GitHub.com (SaaS) — OAuth2 (GitHub NO es OIDC). Artefacto fino: el flujo OAuth2 y el
-    mapper de identidad de GitHub viven en common-back (oauth2* / github*), que el back expone como
-    global; aquí solo aportamos id/label/kind y los endpoints FIJOS de github.com. El admin solo
-    aporta credenciales. Para GitHub Enterprise Server usa el conector 'github-onprem'.
-    Cero dependencias de runtime propias.
+    The GitHub.com (SaaS) connector — OAuth2 (GitHub is NOT OIDC). A thin artefact: the OAuth2 flow and
+    GitHub's identity mapper live in common-back (oauth2* / github*), which the back end exposes as a
+    global; here we only supply id/label/kind and github.com's FIXED endpoints. The admin only supplies
+    credentials. For GitHub Enterprise Server use the 'github-onprem' connector.
+    Zero runtime dependencies of its own.
 */
 const AUTHORIZATION_ENDPOINT = 'https://github.com/login/oauth/authorize'
 const TOKEN_ENDPOINT = 'https://github.com/login/oauth/access_token'

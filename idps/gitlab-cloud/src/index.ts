@@ -1,10 +1,11 @@
 import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpConnector, IIdpIdentity, oidcBuildAuthorizationUrl, oidcHandleCallback } from '@kwirthmagnify/kwirth-common-back'
 
 /*
-    Conector GitLab.com (SaaS) — OIDC. Artefacto fino: toda la lógica OIDC vive en common-back (oidc*),
-    que el back expone como global; aquí solo aportamos id/label/kind y el issuer FIJO (gitlab.com).
-    El admin solo aporta credenciales (no puede cambiar el issuer). Para GitLab self-managed usa
-    el conector 'gitlab-onprem'. Cero dependencias de runtime propias (openid-client lo da el core).
+    The GitLab.com (SaaS) connector — OIDC. A thin artefact: all the OIDC logic lives in common-back
+    (oidc*), which the back end exposes as a global; here we only supply id/label/kind and the FIXED
+    issuer (gitlab.com). The admin only supplies credentials (they cannot change the issuer). For a
+    self-managed GitLab use the 'gitlab-onprem' connector. Zero runtime dependencies of its own (the core
+    gives openid-client).
 */
 const ISSUER = 'https://gitlab.com'
 
