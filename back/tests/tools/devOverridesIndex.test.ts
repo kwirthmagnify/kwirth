@@ -144,13 +144,13 @@ describe('ProviderManager.listInstalled', () => {
 
     test('lo instalado que NO esta en dev se conserva', async () => {
         await withDevWorkspace('providers', ['azure'], '9.9.9-dev', async () => {
-            const index = [installed('azure', '0.2.0'), installed('longhorn', '0.1.0')]
+            const index = [installed('azure', '0.2.0'), installed('suse-longhorn', '0.1.0')]
             const manager = new ProviderManager(makeConfigMaps({ 'kwirth-providers-index': index }) as never)
             await manager.init()
             manager.loadDevProviders(new Map())
 
             const list = await manager.listInstalled()
-            assert.deepEqual(list.map(m => m.id).sort(), ['azure', 'longhorn'])
+            assert.deepEqual(list.map(m => m.id).sort(), ['azure', 'suse-longhorn'])
         })
     })
 })

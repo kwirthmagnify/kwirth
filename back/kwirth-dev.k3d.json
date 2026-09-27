@@ -12,7 +12,7 @@
     "otel": "../providers/otel/dist",
     "syslog": "../providers/syslog/dist",
     "trivy": "../providers/trivy/dist",
-    "longhorn": "../providers/longhorn/dist"
+    "suse-longhorn": "../providers/suse-longhorn/dist"
   },
   "senders": {},
   "webhooks": {},

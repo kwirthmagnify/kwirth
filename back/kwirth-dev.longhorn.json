@@ -4,7 +4,7 @@
     "provider-debug": "../plugins/provider-debug/dist"
   },
   "providers": {
-    "longhorn": "../providers/longhorn/dist"
+    "suse-longhorn": "../providers/suse-longhorn/dist"
   },
   "senders": {},
   "webhooks": {},

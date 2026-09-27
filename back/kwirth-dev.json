@@ -9,7 +9,7 @@
         "sugarless": "../plugins/sugarless/dist"
     },
     "providers": {
-        "longhorn": "../providers/longhorn/dist",
+        "suse-longhorn": "../providers/suse-longhorn/dist",
         "azure": "../providers/azure/dist",
         "fluentbit": "../providers/fluentbit/dist",
         "sugarless": "../providers/sugarless/dist",

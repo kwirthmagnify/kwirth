@@ -126,7 +126,7 @@ test('🔴 parado PERO con suscriptores: la avería silenciosa', async () => {
         requirements y engañoso, porque sí hay alguien consumiendo.
     */
     const inv = await inventarioDe({
-        providers: [{ id: 'longhorn', started: false, getStats: () => ({ subscribers: 1 }) }]
+        providers: [{ id: 'suse-longhorn', started: false, getStats: () => ({ subscribers: 1 }) }]
     })
     const c = inv.components[0]
     assert.equal(c.health, EComponentHealth.NOT_INSTANTIATED)
