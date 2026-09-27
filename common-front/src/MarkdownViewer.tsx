@@ -3,24 +3,24 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 /*
-    Visor de Markdown compartido por los plugins (agora, excubitor, pinocchio, situs).
+    The Markdown viewer shared by the plugins (agora, excubitor, pinocchio, situs).
 
-    Lleva 'remark-gfm' porque sin el react-markdown NO RENDERIZA TABLAS —lo quito de serie en la v6—
-    y una tabla sin el sale como parrafos con pipes sueltos. Se detecto con el informe de auditoria de
-    situs, que es casi todo tablas; hasta entonces ningun consumidor generaba ninguna y por eso nadie
-    se habia topado con ello.
+    It carries 'remark-gfm' because without it react-markdown DOES NOT RENDER TABLES — it was dropped from
+    the defaults in v6 — and a table without it comes out as paragraphs with loose pipes. It was spotted
+    with situs's audit report, which is nearly all tables; until then no consumer generated any, and that
+    is why nobody had run into it.
 
-    ⚠️ GFM añade tablas, tachado, listas de tareas y autoenlaces. NO añade HTML crudo: react-markdown
-    lo sigue ignorando, asi que la propiedad de la que depende excubitor —markdown de terceros
-    renderizado sin riesgo de XSS— se mantiene intacta.
+    ⚠️ GFM adds tables, strikethrough, task lists and autolinks. It does NOT add raw HTML: react-markdown
+    goes on ignoring it, so the property excubitor depends on — third-party markdown rendered with no risk
+    of XSS — stays intact.
 
-    Y los enlaces se abren en PESTAÑA NUEVA. Kwirth es una SPA: seguir un enlace en la misma pestaña
-    se lleva por delante la sesion entera —canales abiertos, estado, lo que estuvieras mirando— para
-    ir a una pagina de la que hay que volver. Con los autoenlaces de GFM esto pasa de conveniente a
-    necesario, porque ahora una URL suelta en un mensaje de chat TAMBIEN es un enlace.
+    And links open in a NEW TAB. Kwirth is an SPA: following a link in the same tab takes the whole session
+    down with it — open channels, state, whatever you were looking at — to go to a page you then have to
+    come back from. With GFM's autolinks this goes from convenient to necessary, because now a loose URL in
+    a chat message is ALSO a link.
 
-    Excubitor lo venia resolviendo por su cuenta interceptando el clic, porque este componente no lo
-    hacia. Su apaño sigue funcionando y ya no hace falta.
+    Excubitor had been solving it on its own account by intercepting the click, because this component did
+    not. Its workaround still works and is no longer needed.
 */
 
 interface IMarkdownViewerProps {

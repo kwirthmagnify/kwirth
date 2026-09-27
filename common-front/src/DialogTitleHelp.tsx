@@ -17,15 +17,15 @@ const DialogTitleHelp: React.FC<IDialogTitleHelpProps> = ({ section, docsUrl, ch
     const ref = React.useRef<HTMLHeadingElement>(null)
 
     /*
-        MUI reconoce el titulo de un Dialog por identidad del componente, y solo cuando es hijo DIRECTO:
-        ahi le inyecta el id al que apunta el 'aria-labelledby' del dialogo. Envuelto en este componente
-        deja de reconocerlo, el aria-labelledby se queda apuntando a un id que no existe y el dialogo
-        acaba SIN NOMBRE ACCESIBLE — un lector de pantalla lo anuncia sin titulo, y
-        getByRole('dialog', { name }) no lo encuentra.
+        MUI recognises a Dialog's title by the component's identity, and only when it is a DIRECT child:
+        there it injects into it the id the dialog's 'aria-labelledby' points at. Wrapped in this
+        component it stops recognising it, the aria-labelledby is left pointing at an id that does not
+        exist and the dialog ends up WITH NO ACCESSIBLE NAME — a screen reader announces it with no title,
+        and getByRole('dialog', { name }) does not find it.
 
-        Se corrige aqui, una vez para todos los dialogos: el titulo se identifica con su propio id y se
-        le dice al dialogo que mire ahi. Se detecto porque un e2e que buscaba un dialogo por su nombre
-        dejo de verlo al cambiarle el DialogTitle por este componente.
+        It is fixed here, once for every dialog: the title identifies itself with an id of its own and the
+        dialog is told to look there. It was spotted because an e2e looking for a dialog by its name
+        stopped seeing it once its DialogTitle was swapped for this component.
     */
     React.useLayoutEffect(() => {
         const dialog = ref.current?.closest('[role="dialog"]')
