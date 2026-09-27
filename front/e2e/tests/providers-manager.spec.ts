@@ -2,19 +2,21 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migracion del gestor de `provider` al diálogo generico (plan: plans/extension-managers-ui/PLAN.md).
+    Migration of the `provider` manager to the generic dialog (plan: plans/extension-managers-ui/PLAN.md).
 
-    Es el tipo con mas matices propios, y son justo los que se podrian perder al tirar sus 600 lineas:
+    It is the type with the most quirks of its own, and they are exactly what could be lost when throwing
+    away its 600 lines:
 
-      · los providers DE CORE (events, metrics) no son extensiones y no salen en el gestor
-      · se configura de DOS formas, y la elige `hasFront`: el formulario por schema que pinta el core, o
-        la UI que trae el propio provider (que es quien tiene sus configuraciones y su endpoint)
-      · el chip 'N configs' cuenta lo que dice el provider, no lo que sabe el core
+      · the CORE providers (events, metrics) are not extensions and do not show up in the manager
+      · it is configured in TWO ways, chosen by `hasFront`: the schema-driven form the core paints, or
+        the UI the provider itself brings (being the one with its configurations and its endpoint)
+      · the 'N configs' chip counts what the provider says, not what the core knows
 
-    ⚠️ No se comprueba contra una lista fija de providers: el entorno cambia. Se pregunta al back que hay
-    y se compara con lo que se pinta.
+    ⚠️ It is not checked against a fixed list of providers: the environment changes. The back end is asked
+    what there is and that is compared with what gets painted.
 
-    NO destructivo: abre, mira y cierra. No instala, no desinstala y no guarda ninguna configuracion.
+    NON-destructive: it opens, looks and closes. It does not install, does not uninstall and saves no
+    configuration.
 */
 
 const DIALOG = /Manage providers/i
@@ -59,9 +61,9 @@ test.describe('gestor generico de extensiones: providers', () => {
     const dialog = () => page.getByRole('dialog').filter({ hasText: DIALOG })
 
     /*
-        El engranaje de la tarjeta de ESE provider. Se sube del nombre al primer ancestro que tenga un
-        engranaje dentro: filtrar divs por texto devuelve el <Typography> del nombre (sin botones) o el
-        contenedor de todas las tarjetas (con el engranaje de otra), y las dos formas enseñan lo que no es.
+        THAT provider's card cog. It climbs from the name to the first ancestor with a cog inside:
+        filtering divs by text returns either the name's <Typography> (with no buttons) or the container
+        of all the cards (with somebody else's cog), and both shapes show the wrong thing.
     */
     const gearDe = (nombre: string) => dialog().getByText(nombre, { exact: true }).first()
         .locator('xpath=ancestor::*[.//button[@aria-label="Configure"]][1]')
@@ -87,10 +89,11 @@ test.describe('gestor generico de extensiones: providers', () => {
     })
 
     /*
-        PLUVIDERS: un plugin que además produce y publica su información in-process. Se sirven en la
-        MISMA lista que los providers —quien consume no tiene por qué saber que hay dos clases— y por eso
-        se pintan aquí: quien abre este diálogo viene a ver a qué puede suscribirse, y esconderlos
-        obligaría a saber de antemano que existen. Lo que NO se puede es gestionarlos desde aquí.
+        PLUVIDERS: a plugin that also produces and publishes its information in-process. They are served
+        in the SAME list as the providers —whoever consumes has no reason to know there are two kinds—
+        and that is why they are painted here: whoever opens this dialog comes to see what they can
+        subscribe to, and hiding them would force knowing in advance that they exist. What CANNOT be done
+        is managing them from here.
     */
     test('un pluvider se pinta, marcado, con el nombre y la version de SU plugin', async () => {
         const pluviders = delBack.filter(p => p.pluvider)
@@ -138,10 +141,10 @@ test.describe('gestor generico de extensiones: providers', () => {
 
     test('un provider con front propio abre SU dialogo, no el formulario del core', async () => {
         /*
-            La diferencia se ve en el titulo: el formulario del core se titula 'Configure: <nombre>', y la
-            UI del provider trae la suya. Lo que se comprueba es que al pulsar la rueda de uno con
-            `hasFront` NO sale el formulario del core — que es lo que pasaria si la migracion se hubiera
-            dejado por el camino el camino del front propio.
+            The difference shows in the title: the core's form is titled 'Configure: <name>', and the
+            provider's UI brings its own. What is checked is that pressing the cog on one with `hasFront`
+            does NOT bring up the core's form — which is what would happen if the migration had dropped
+            the own-front path along the way.
         */
         const conFront = delBack.find(p => !p.core && p.hasFront)
         test.skip(!conFront, 'ningun provider con front propio en este entorno')
@@ -150,11 +153,11 @@ test.describe('gestor generico de extensiones: providers', () => {
         await gearDe(nombre).click()
 
         /*
-            ⚠️ Se cuenta `.MuiDialog-root`, NO getByRole('dialog'): con dos diálogos apilados MUI le pone
-            aria-hidden al de debajo y Playwright deja de verlo como dialogo, asi que el rol dice 1
-            teniendo 2 en pantalla. Costo un rato de diagnostico creyendo que no se abria nada.
+            ⚠️ `.MuiDialog-root` is counted, NOT getByRole('dialog'): with two dialogs stacked MUI puts
+            aria-hidden on the one underneath and Playwright stops seeing it as a dialog, so the role
+            says 1 while there are 2 on screen. It cost a while of diagnosis believing nothing opened.
 
-            Su UI tarda: hay que bajarse el front.js del provider y montarlo.
+            Its UI takes a while: the provider's front.js has to be downloaded and mounted.
         */
         await expect(page.locator('.MuiDialog-root'), 'no se abrio la UI del provider').toHaveCount(2, { timeout: 30000 })
         await expect(page.getByText(`Configure: ${nombre}`), 'se abrio el formulario del core en vez de la UI del provider').toHaveCount(0)
@@ -178,11 +181,11 @@ test.describe('gestor generico de extensiones: providers', () => {
 
     test('🔴 el que no se configura de ninguna forma tiene la rueda muerta, y lo dice', async () => {
         /*
-            Hay providers que no traen front NI declaran schema: para esos la rueda no lleva a ningun
-            sitio. Su diálogo a medida ya la dejaba muerta con 'No configuration available', y al migrar
-            se perdio: salia viva y abria un formulario vacio.
+            There are providers that bring no front NOR declare a schema: for those the cog leads
+            nowhere. Their bespoke dialog already left it dead with 'No configuration available', and on
+            migrating that was lost: it came out alive and opened an empty form.
 
-            La rueda NO desaparece — se queda visible y deshabilitada, que es la regla de UI del proyecto.
+            The cog does NOT disappear — it stays visible and disabled, which is the project's UI rule.
         */
         // A PLUVIDER is not configured either, but its gear says something else — it points at its
         // plugin — so it has its own test and does not count here.

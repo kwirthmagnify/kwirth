@@ -53,7 +53,7 @@ test('la ayuda de un sender lleva a SU pagina de referencia, y a la general si n
     await dismissOpenDialogs(page)
     await captureOpens(page)
 
-    // 'console' tiene pagina propia: guide/extensions/senders/console
+    // 'console' has a page of its own: guide/extensions/senders/console
     const consoleUrl = await helpUrlFor(page, /^Console Sender/)
     expect(consoleUrl, 'debe abrir la referencia del propio sender').toContain('guide/extensions/senders/console')
     expect(consoleUrl, 'y no la general').not.toContain('senders/index')

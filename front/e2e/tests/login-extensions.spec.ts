@@ -38,12 +38,13 @@ test('login extensions: ?loginExt=magnify renders custom login page', async ({ p
 })
 
 /*
-    El fondo se SIRVE y la pagina lo pinta.
+    The background is SERVED and the page paints it.
 
-    Un login puede traer dos imagenes —`background.png` y `background-hi.png`— y cual se guarda lo decide
-    el almacenamiento al instalar. Esto no comprueba cual de las dos es: comprueba lo que nunca debe
-    romperse al tocar esa eleccion, que es que el endpoint devuelva una imagen y que la pagina la use como
-    fondo. Sin esto, un fallo ahi se ve como una pagina de color plano, que es facil confundir con diseño.
+    A login may bring two images —`background.png` and `background-hi.png`— and which one is stored is
+    decided by the storage on install. This does not check which of the two it is: it checks what must
+    never break when touching that choice, which is that the endpoint returns an image and that the page
+    uses it as its background. Without this, a failure there looks like a flat-coloured page, which is
+    easy to mistake for design.
 */
 test('login extensions: el fondo se sirve como imagen y la pagina lo usa', async ({ page }) => {
     // The request the BROWSER makes is listened to: the back end lives on another port, and asking for it
@@ -146,7 +147,7 @@ test('login extensions: anonymous config dialog has scope select and resource fi
     await expect(configDialog).toBeVisible({ timeout: 5000 })
     await expect(configDialog.getByText(/configure/i)).toBeVisible()
 
-    // Campos presentes
+    // The fields are there
     await expect(configDialog.getByLabel(/auto-login user/i)).toBeVisible()
     await expect(configDialog.getByLabel(/auto-login password/i)).toBeVisible()
     await expect(configDialog.getByLabel(/scope/i)).toBeVisible()

@@ -2,18 +2,20 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migracion del gestor de `pack` al diálogo generico (plan: plans/extension-managers-ui/PLAN.md).
+    Migration of the `pack` manager to the generic dialog (plan: plans/extension-managers-ui/PLAN.md).
 
-    El plan marcaba packs como candidato a NO migrar: es el unico tipo que CONTIENE otras extensiones y al
-    instalarlo hay que cargar el front de cada miembro. Lo que se vigila aqui es justo lo que hacia dudar:
+    The plan marked packs as a candidate NOT to migrate: it is the only type that CONTAINS other
+    extensions and installing it means loading each member's front. What is watched here is exactly what
+    raised the doubt:
 
-      · la LINEA DE MIEMBROS ('plugin, login' en el catalogo; '1 plugin, 1 login' instalado), que ningun
-        otro tipo tiene y que el generico gano como `subtitle` al migrarlo
-      · que instalar un pack instale DE VERDAD lo que trae, y desinstalarlo se lo lleve
-      · que el boton de desinstalar avise de eso, en vez del 'Uninstall' generico
+      · the MEMBERS LINE ('plugin, login' in the catalogue; '1 plugin, 1 login' when installed), which no
+        other type has and which the generic one gained as `subtitle` on migrating it
+      · that installing a pack REALLY installs what it brings, and uninstalling it takes it away
+      · that the uninstall button warns about that, instead of the generic 'Uninstall'
 
-    Se prueba el ciclo completo con el pack PUBLICO del catalogo, y se deja el entorno como estaba: si algo
-    queda instalado, la proxima corrida lo veria y el resultado dejaria de significar nada.
+    The full cycle is tested with the PUBLIC pack from the catalogue, and the environment is left as it
+    was: if anything is left installed, the next run would see it and the result would stop meaning
+    anything.
 */
 
 const DIALOG = /Manage extension packs/i
@@ -21,8 +23,8 @@ const DIALOG = /Manage extension packs/i
 test.describe.configure({ mode: 'serial' })
 
 /** What a pack brings: 'Includes: 2 plugins, 1 theme' when installed, 'Includes: plugin, theme' in the catalogue.
-    El prefijo va en la comprobacion: sin el, la linea caia bajo una descripción recortada y se leia
-    como su continuación. */
+    The prefix goes into the check: without it, the line fell below a truncated description and read as
+    its continuation. */
 const TIPOS = '(plugin|theme|homepage|sender|provider|webhook|login|docs|aitoolset|idp)'
 const MIEMBROS = new RegExp(`^Includes: (\\d+ )?${TIPOS}s?(, (\\d+ )?${TIPOS}s?)*$`)
 

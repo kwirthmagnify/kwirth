@@ -2,15 +2,15 @@ import { test, expect } from '@playwright/test'
 import { login, dismissOpenDialogs } from './helpers'
 
 /*
-    Portabilidad de configuracion: el bundle que se lleva la configuracion de un Kwirth a otro.
+    Configuration portability: the bundle that takes one Kwirth's configuration to another.
 
-    Se prueba contra el back real, reutilizando la sesion del navegador —se captura la cabecera
-    Authorization de una llamada que la app ya hace— en vez de manejar credenciales aqui.
+    It is tested against the real back end, reusing the browser's session —the Authorization header of a
+    call the app already makes is captured— instead of handling credentials here.
 
-    NO DESTRUCTIVO, y merece una explicacion porque este es de los pocos sitios donde un test podria
-    cargarse la configuracion del usuario: se exporta y se lee cuanto se quiera, y lo unico que se
-    importa es `plugin/censor`, con el contenido que el propio Kwirth acaba de exportar. Es decir, se
-    le devuelve lo que ya tenia. Los ajustes globales NO se importan nunca aqui.
+    NON-DESTRUCTIVE, and that deserves an explanation because this is one of the few places where a test
+    could wreck the user's configuration: exporting and reading happen as much as one likes, and the only
+    thing imported is `plugin/censor`, with the content Kwirth itself has just exported. That is, it is
+    given back what it already had. The global settings are NEVER imported here.
 */
 
 interface ISession { auth: string; backend: string }

@@ -7,8 +7,8 @@ interface ITabContentProps {
 }
 
 /*
-    El contenido de una pestaña lo pinta la EXTENSION, asi que va envuelto en su boundary: lo que se
-    cae es la pestaña, no Kwirth entero (ver ChannelErrorBoundary).
+    A tab's content is painted by the EXTENSION, so it goes wrapped in its boundary: what falls over is
+    the tab, not the whole of Kwirth (see ChannelErrorBoundary).
 */
 const TabContent: React.FC<ITabContentProps> = (props:ITabContentProps) => {
     const showContent = () => {

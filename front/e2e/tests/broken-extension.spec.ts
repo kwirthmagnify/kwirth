@@ -2,18 +2,18 @@ import { test, expect } from '@playwright/test'
 import { login, assertFrontCompiles, pickCombo, pickLastCombo, dismissOpenDialogs } from './helpers'
 
 /*
-    Una extension rota NO puede tumbar Kwirth.
+    A broken extension must NOT bring Kwirth down.
 
-    El caso es real y costo una mañana: un plugin construido contra otra version del barrel de iconos
-    devolvia como icono de canal algo que React no sabe pintar, y como ese icono se dibuja en la HOME
-    —en las pestañas, en el selector de canales—, React 18 desmontaba el arbol entero. El usuario no veia
-    una extension rota: veia Kwirth en blanco, sin una sola pista de quien tenia la culpa.
+    The case is real and cost a morning: a plugin built against another version of the icon barrel
+    returned as its channel icon something React does not know how to paint, and since that icon is drawn
+    on the HOME —in the tabs, in the channel selector— React 18 unmounted the whole tree. The user did
+    not see a broken extension: they saw Kwirth blank, without a single clue as to whose fault it was.
 
-    Aqui se provoca a proposito, sin tocar el codigo del plugin: se deja cargar su front de verdad y se
-    le sustituye `getChannelIcon` por uno que devuelve un elemento con el `type` estropeado, que es
-    exactamente la forma del fallo (un objeto sin marca de React, como el namespace de un modulo).
+    Here it is provoked on purpose, without touching the plugin's code: its front is allowed to load for
+    real and `getChannelIcon` is replaced with one returning an element with a broken `type`, which is
+    exactly the shape of the failure (an object with no React mark, like a module's namespace).
 
-    ⚠️ Un `type` asi es TRUTHY: por eso no basta con comprobar que el elemento existe.
+    ⚠️ A `type` like that is TRUTHY: that is why checking that the element exists is not enough.
 */
 
 const romperIconoDeCanal = async (page: import('@playwright/test').Page): Promise<void> => {
@@ -81,10 +81,10 @@ test('el resto de la aplicacion sigue siendo usable', async ({ page }) => {
 })
 
 /*
-    Y lo mismo con el CONTENIDO de una pestaña: si el canal revienta al pintarse, se cae la pestaña y se
-    dice cual, no la aplicacion. Aqui se rompe a proposito el TabContent de un canal —envolviendo su
-    clase, que asi vale tanto si la propiedad es de instancia como si es del prototipo— y se abre su
-    pestaña por el camino normal.
+    And the same with a tab's CONTENT: if the channel blows up while painting, the tab falls over and it
+    is said which one, not the application. Here a channel's TabContent is broken on purpose —by
+    wrapping its class, which works whether the property is on the instance or on the prototype— and its
+    tab is opened the normal way.
 */
 // A CLUSTER channel that draws as soon as it is added: with no setup in between, the content — and hence
 // the boundary — is visible the moment the tab opens.
@@ -123,7 +123,7 @@ test('un canal que revienta al pintarse se lleva su pestaña, no la aplicacion',
     await assertFrontCompiles(page)
     await dismissOpenDialogs(page)
 
-    // Cluster -> vista cluster -> canal log -> ADD
+    // Cluster -> cluster view -> log channel -> ADD
     await pickCombo(page, 0, 'inCluster')
     await page.waitForTimeout(600)
     await pickCombo(page, 1, 'cluster')

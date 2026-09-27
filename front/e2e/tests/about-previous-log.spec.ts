@@ -2,14 +2,14 @@ import { test, expect } from '@playwright/test'
 import { login, clickMenuItem } from './helpers'
 
 /*
-    El About ofrece el log del contenedor ANTERIOR del core.
+    The About offers the core's PREVIOUS container log.
 
-    Ese log solo existe tras un reinicio dentro del mismo pod, asi que en un entorno sano lo normal es que
-    NO haya nada que ver. Eso es justo lo que se comprueba: que el boton esta, que el core responde con el
-    contrato que el dialogo consume, y que los dos encajan. Provocar un crash del core para verlo lleno no
-    es cosa de un e2e — va en el QA manual.
+    That log only exists after a restart within the same pod, so in a healthy environment the normal
+    thing is for there to be NOTHING to see. That is exactly what is checked: that the button is there,
+    that the core answers with the contract the dialog consumes, and that the two fit together. Crashing
+    the core to see it full is no job for an e2e — it belongs in the manual QA.
 
-    ⚠️ No destructivo: solo lee. No reinicia nada ni toca configuracion.
+    ⚠️ Non-destructive: it only reads. It restarts nothing and touches no configuration.
 */
 
 test.describe.configure({ mode: 'serial' })

@@ -6,15 +6,15 @@ import { ConfigListDialog } from './ConfigListDialog'
 import { WebhookUrlPanel } from './WebhookUrlPanel'
 
 /*
-    Descriptor del tipo `webhook` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
+    The `webhook` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
 
-    Es el primero que trae CONFIGURACIONES CON NOMBRE: un webhook no se configura una vez, tiene una
-    entrada por cada sistema que le llama, y de ahi el chip 'N configs' que el generico ya sabia pintar
-    (`configCount`) pero que hasta ahora no usaba nadie.
+    It is the first one to bring NAMED CONFIGURATIONS: a webhook is not configured once, it has one entry
+    per system that calls it, hence the 'N configs' chip the generic one already knew how to paint
+    (`configCount`) but which until now nobody used.
 
-    El gestor de esas configuraciones no es de webhooks: es ExtensionConfigsDialog, comun con senders, que
-    habla los mismos endpoints bajo su basePath. Lo unico propio del tipo es la URL de ingesta con su
-    token, que entra por `perConfigPanel`.
+    The manager of those configurations does not belong to webhooks: it is ExtensionConfigsDialog, shared
+    with senders, which speaks the same endpoints under its basePath. The only thing of the type's own is
+    the ingest URL with its token, which comes in through `perConfigPanel`.
 */
 
 interface IRequirement {

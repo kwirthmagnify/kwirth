@@ -2,21 +2,22 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migracion del gestor de `idp` al diálogo generico (plan: plans/extension-managers-ui/PLAN.md).
+    Migration of the `idp` manager to the generic dialog (plan: plans/extension-managers-ui/PLAN.md).
 
-    Era el que el plan marcaba como el mejor candidato a NO migrar, por tener dos entidades: el CONECTOR
-    (lo que se instala) y la INSTANCIA (ese conector ya configurado). Como hay una instancia por conector
-    y comparten id, en la pantalla se comportan como una extension y su configuracion.
+    It was the one the plan marked as the best candidate NOT to migrate, because it has two entities: the
+    CONNECTOR (what gets installed) and the INSTANCE (that connector already configured). Since there is
+    one instance per connector and they share an id, on the screen they behave like an extension and its
+    configuration.
 
-    Lo que se vigila es justo lo que no tiene ningun otro tipo:
+    What is watched is exactly what no other type has:
 
-      · el chip de ESTADO de tres valores: enabled / disabled / not configured. Un IdP apagado y uno sin
-        configurar no son lo mismo, y confundirlos es dejar a la gente sin poder entrar.
-      · que un conector bundled o de dev no se pueda desinstalar, y lo diga.
-      · que el conector sin version no enseñe un chip 'v' vacio.
+      · the three-valued STATUS chip: enabled / disabled / not configured. An IdP switched off and one
+        not configured are not the same thing, and confusing them leaves people unable to log in.
+      · that a bundled or dev connector cannot be uninstalled, and says so.
+      · that a connector with no version does not show an empty 'v' chip.
 
-    NO destructivo: abre, mira y cierra. NO guarda ninguna configuracion de IdP — tocar eso es tocar por
-    donde entra la gente.
+    NON-destructive: it opens, looks and closes. It saves NO IdP configuration — touching that is
+    touching the way people get in.
 */
 
 const DIALOG = /Identity providers/i
@@ -40,12 +41,12 @@ test.describe('gestor generico de extensiones: idp', () => {
         await login(page)
         await dismissOpenDialogs(page)
         /*
-            El endpoint va autenticado y la sesion no vive en localStorage, asi que se ESCUCHA la
-            respuesta que pide el propio diálogo al abrirse.
+            The endpoint is authenticated and the session does not live in localStorage, so the response
+            the dialog itself asks for on opening is LISTENED to.
 
-            ⚠️ Solo /idp/connectors. La lista de instancias NO se lee aqui: '/idp' lo pide tambien la
-            pantalla de login para saber que botones enseñar, y escucharlo devolvia esa otra respuesta.
-            Lo que hay configurado se deduce de los chips, que es justo lo que se quiere comprobar.
+            ⚠️ Only /idp/connectors. The instances list is NOT read here: '/idp' is also requested by the
+            login screen to know which buttons to show, and listening for it returned that other
+            response. What is configured is deduced from the chips, which is exactly what is to be checked.
         */
         const respConectores = page.waitForResponse(r => r.url().endsWith('/idp/connectors'), { timeout: 60000 })
         await clickExtensionMenuItem(page, 'Identity providers')
@@ -70,10 +71,10 @@ test.describe('gestor generico de extensiones: idp', () => {
 
     test('🔴 cada conector dice su estado, y no todos son "sin configurar"', async () => {
         /*
-            El chip es lo propio del tipo y depende de datos que el generico NO tiene: las instancias las
-            carga el descriptor en `loadExtraData`. Si el generico no repintara al terminar esa carga,
-            saldrian TODOS como 'not configured' — que es lo que pasaba mientras se migraba, y es lo que
-            caza el segundo assert.
+            The chip is the type's own and depends on data the generic one does NOT have: the instances
+            are loaded by the descriptor in `loadExtraData`. If the generic one did not repaint when
+            that load finishes, they would ALL come out as 'not configured' — which is what happened
+            while migrating, and is what the second assert catches.
         */
         const encendidos = await dialog().getByText('enabled', { exact: true }).count()
         const apagados = await dialog().getByText('disabled', { exact: true }).count()

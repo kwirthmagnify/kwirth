@@ -91,8 +91,8 @@ interface IRawKubeEvent {
 }
 
 /*
-    Lo que se mira de /managekwirth/previouslog para decidir si hay que avisar. La respuesta del core
-    trae mas cosas (el detalle completo lo pinta el About); aqui solo esta lo que decide el aviso.
+    What is looked at in /managekwirth/previouslog to decide whether to warn. The core's answer brings
+    more (the full detail is painted by the About); only what decides the warning is here.
 */
 interface IPreviousLogNotice {
     restarted?: boolean
@@ -334,11 +334,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }, [activeHomepageId])
 
     /*
-        Aviso de reinicio, uno para los nueve managers de extensiones (docs no lo necesita: su guia se
-        sirve del tgz en cada peticion, no se engancha a nada al arrancar).
+        The restart notice, one for the nine extension managers (docs does not need it: its guide is
+        served from the tgz on every request, it does not hook into anything at startup).
 
-        Antes cada dialogo llevaba el literal repetido en su linea, y decia 'installed' tambien cuando
-        se desinstalaba — porque desinstalar ni siquiera avisaba.
+        Each dialog used to carry the literal repeated in its own line, and it said 'installed' even when
+        uninstalling — because uninstalling did not even warn.
     */
     const onExtensionRestartRequired = (extension: string, action: ERestartAction) =>
         setMsgBox(MsgBoxOkError('Kwirth server restart required', restartNotice(extension, action), setMsgBox))
@@ -490,10 +490,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     /*
-        Instalar un tema o una homepage cambia DOS cosas, y hasta ahora solo se hacia una: se cargaba su
-        front en caliente, pero la LISTA de instalados se leia unicamente al hacer login. De esa lista sale
-        el desplegable de User Settings, asi que un tema recien instalado no aparecia ahi hasta volver a
-        entrar. Se relee en los dos caminos que instalan y desinstalan: el gestor de extensiones y el de packs.
+        Installing a theme or a homepage changes TWO things, and until now only one was done: its front
+        was loaded hot, but the LIST of installed ones was read only on login. That list feeds the User
+        Settings dropdown, so a freshly installed theme did not show up there until logging in again. It
+        is re-read on both paths that install and uninstall: the extension manager and the pack one.
     */
     const refreshInstalledThemes = () => {
         fetch(`${backendUrl}/core/themes`, addGetAuthorization(accessString))
@@ -510,9 +510,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     /*
-        Persistencia de los dos selectores de plugins del gestor de extensiones. Antes cada control se
-        buscaba la vida por su cuenta dentro de su descriptor; ahora el generico pinta el control y la
-        sesion (que es quien tiene accessString) se encarga de leer y escribir.
+        Persistence for the extension manager's two plugin selectors. Each control used to fend for
+        itself inside its own descriptor; now the generic one paints the control and the session (which
+        is the one holding accessString) takes care of reading and writing.
     */
     const saveThemeAssignments = async (a: Record<string, string>) => {
         const res = await fetch(`${backendUrl}/core/themes/assignments`, addPutAuthorization(accessString, JSON.stringify(a)))
@@ -624,16 +624,17 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const settingsLoaded = readLoggedUserSettings()
 
         /*
-            load front.js for already-installed plugins, EL DEL CANAL DE ARRANQUE PRIMERO.
+            load front.js for already-installed plugins, THE STARTUP CHANNEL'S ONE FIRST.
 
-            El tab inicial no se crea hasta que su canal esta registrado (ver el efecto de
-            'user.startChannel'), asi que lo que el usuario espera mirando una pantalla vacia es un solo
-            bundle: el suyo. Cargandolos todos a la vez ese bundle competia con los demas por las seis
-            conexiones que el navegador abre por host, y con una docena de plugins instalados podia caer
-            en la ultima tanda.
+            The initial tab is not created until its channel is registered (see the 'user.startChannel'
+            effect), so what the user is waiting for while staring at an empty screen is a single bundle:
+            theirs. Loading them all at once made that bundle compete with the rest for the six
+            connections the browser opens per host, and with a dozen plugins installed it could fall into
+            the last batch.
 
-            Medido con trece plugins: el tab aparecia a los 9,3 s, justo cuando terminaba de descargarse
-            el ultimo. Adelantandolo, el resto sigue cargando detras sin que nadie lo espere mirando.
+            Measured with thirteen plugins: the tab appeared after 9.3 s, exactly when the last one
+            finished downloading. Bringing it forward, the rest goes on loading behind with nobody
+            watching and waiting for it.
         */
         fetch(`${backendUrl}/core/plugins`, addGetAuthorization(accessString))
             .then(r => r.json())
@@ -750,34 +751,34 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
 
         /*
-            El chequeo NO bloquea el render —no hay await—, pero lanzaba sus 20 peticiones (catalogo e
-            instalados, una de cada por tipo de extension) justo cuando el front esta descargando los
-            bundles de los plugins, que es lo que necesita para pintar.
+            The check does NOT block the render —there is no await— but it fired its 20 requests
+            (catalogue and installed, one of each per extension type) exactly while the front end is
+            downloading the plugins' bundles, which is what it needs in order to paint.
 
-            Medido en un arranque real: 146 peticiones, 34 en vuelo A LA VEZ contra un limite de 6
-            conexiones por host, y los bundles de plugin tardando 700-900 ms compitiendo con estas. Lo
-            que se ve desde fuera es que la home tarda en responder "hasta que sale el aviso", cuando en
-            realidad el aviso solo es el final de la tormenta.
+            Measured on a real startup: 146 requests, 34 in flight AT ONCE against a limit of 6
+            connections per host, and the plugin bundles taking 700-900 ms competing with these. What is
+            seen from outside is that the home is slow to respond "until the notice comes up", when in
+            fact the notice is merely the end of the storm.
 
-            Saber que hay una version nueva no corre ninguna prisa, asi que se espera a que el navegador
-            este ocioso. El timeout es el tope: si nunca hay calma, se hace igualmente a los 10 s.
+            Knowing there is a new version is in no hurry at all, so it waits for the browser to be idle.
+            The timeout is the ceiling: if calm never comes, it is done anyway after 10 s.
         */
         if (window.requestIdleCallback) window.requestIdleCallback(() => { checkExtensionUpdates() }, { timeout: 10000 })
         else setTimeout(() => { checkExtensionUpdates() }, 5000)
 
         /*
-            Si el contenedor anterior del core se fue, avisar: el log que lo explica esta en el About, y
-            solo mientras el kubelet lo guarde.
+            If the core's previous container went away, warn: the log that explains it is in the About,
+            and only for as long as the kubelet keeps it.
 
-            Es un ERROR, no un aviso: que el core se reinicie solo no es una incidencia menor, y lo que
-            lo explica CADUCA —el kubelet rota ese log y un rollout se lo lleva—, asi que quien lo ve
-            tiene que ir a mirarlo ahora. Por eso el texto dice el camino exacto hasta las lineas en vez
-            de mencionar el About de pasada: el que recibe el aviso no tiene por que saber que ese boton
-            existe.
+            It is an ERROR, not a warning: the core restarting on its own is not a minor incident, and
+            what explains it EXPIRES —the kubelet rotates that log and a rollout takes it away— so
+            whoever sees it has to go and look now. That is why the text gives the exact path to the
+            lines instead of mentioning the About in passing: whoever receives the notice has no reason
+            to know that button exists.
 
-            El aviso se da UNA VEZ por reinicio, no en cada recarga de la SPA: se recuerda la marca de
-            tiempo de aquella muerte, que no cambia hasta que haya otra. Sin eso, quien abre Kwirth diez
-            veces al dia veria diez avisos del mismo reinicio y dejaria de leerlos.
+            The notice is given ONCE per restart, not on every reload of the SPA: the timestamp of that
+            death is remembered, and it does not change until there is another one. Without that, someone
+            opening Kwirth ten times a day would see ten notices of the same restart and stop reading them.
         */
         const checkPreviousContainer = async () => {
             if (!hasAdminScope()) return
@@ -799,10 +800,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     ? `Its last ${lineas} log lines are available in the side menu, About, "Previous container log".`
                     : 'Its log is no longer available (the kubelet has already rotated it).'
                 /*
-                    Un SIGTERM atendido sale con 0, que es justo lo que pasa cuando a este contenedor lo
-                    para el kubelet: decir "abnormal exit: code 0" seria mentir, y quien lo lea dejaria de
-                    fiarse del aviso. Pero se avisa IGUAL, porque lo que importa es que el core se
-                    reinicio, no como de limpia fue la salida.
+                    A SIGTERM that was attended to exits with 0, which is exactly what happens when the
+                    kubelet stops this container: saying "abnormal exit: code 0" would be lying, and
+                    whoever read it would stop trusting the notice. But the notice is given ANYWAY,
+                    because what matters is that the core restarted, not how clean the exit was.
                 */
                 const salida = previous.abnormal
                     ? `after an abnormal exit: code ${previous.termination?.exitCode}${reason}`
@@ -1337,13 +1338,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             if (newTab.channel.requirements.webSocket) newTab.channelObject.webSocket = newTab.ws
             if (newTab && (newTab.channelStarted || start)) {
                 // *********************************************************************************************
-                // *** REVIEW THE IMPACT ON OTHER CHANNELS AND EXECUTION ENVIRONMENTS BEFORE ACCEPTING.    ***
-                // *** We guard against settings.config/instanceConfig === undefined so as NOT to trash     ***
-                // *** what initChannel left. Without this, auto-start with start=true (login/fullscreen    ***
-                // *** enforcement, say) passes settings={config:undefined} and overwrites config with      ***
-                // *** rompiendo canales cuyo startChannel lee config (montag: config.selectedSessionId).   ***
-                // *** Antes esto era incondicional: `channelObject.config = settings.config`.              ***
-                // *** PENDIENTE verificar: tab normal, desktop/ELECTRON, in-cluster, remote, restore tabs. ***
+                // *** REVIEW THE IMPACT ON OTHER CHANNELS AND EXECUTION ENVIRONMENTS BEFORE ACCEPTING.      ***
+                // *** We guard against settings.config/instanceConfig === undefined so as NOT to trash      ***
+                // *** what initChannel left. Without this, auto-start with start=true (login/fullscreen     ***
+                // *** enforcement, say) passes settings={config:undefined} and overwrites config with       ***
+                // *** undefined, breaking channels whose startChannel reads config (montag:                 ***
+                // *** config.selectedSessionId). This used to be unconditional:                             ***
+                // *** `channelObject.config = settings.config`.                                             ***
+                // *** STILL TO VERIFY: normal tab, desktop/ELECTRON, in-cluster, remote, restore tabs.      ***
                 // *********************************************************************************************
                 if (settings) {
                     if (settings.config !== undefined) newTab.channelObject.config = settings.config

@@ -6,14 +6,15 @@ import { addGetAuthorization, addPostAuthorization } from '../../tools/Authoriza
 import { IPerConfigPanelProps } from './ConfigListDialog'
 
 /*
-    La URL de ingesta de una configuracion de webhook, que es lo unico que webhooks añade al gestor comun
-    de configuraciones.
+    A webhook configuration's ingest URL, which is the only thing webhooks adds to the common
+    configurations manager.
 
-    Es lo que se pega en el sistema que va a llamar (Jira Automation → Send web request), y lleva el token
-    dentro: quien tenga la URL puede meter eventos, asi que se avisa de que es un secreto y se puede
-    regenerar sin rehacer la configuracion.
+    It is what gets pasted into the system that will call (Jira Automation → Send web request), and it
+    carries the token inside: whoever has the URL can push events, so it is flagged as a secret and can
+    be regenerated without redoing the configuration.
 
-    Solo tiene sentido con la configuracion ya guardada: el token lo acuña el back al crearla.
+    It only makes sense with the configuration already saved: the token is minted by the back end when
+    creating it.
 */
 const WebhookUrlPanel: React.FC<IPerConfigPanelProps> = ({ basePath, configName }) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType

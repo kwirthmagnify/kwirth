@@ -1,19 +1,19 @@
 import { SvgIcon, SvgIconProps } from '@mui/material'
 
 /*
-    Los iconos que usa SOLO Magnify.
+    The icons ONLY Magnify uses.
 
-    El barrel de kwirth (`common-front/src/kwirthicons.ts`) es la lista de iconos COMUNES, y ademas es la
-    que el core publica a las extensiones en `window.__kwirth__.MUI.icons`. Un icono que usa un unico canal
-    no pinta en esa API: aqui la razon no es tanto el peso (Magnify viaja en el bundle del core de todas
-    formas) como no ensanchar el contrato con cosas que nadie mas va a pedir.
+    Kwirth's barrel (`common-front/src/kwirthicons.ts`) is the list of COMMON icons, and it is also the
+    one the core publishes to the extensions at `window.__kwirth__.MUI.icons`. An icon used by a single
+    channel has no business in that API: the reason here is not so much the weight (Magnify travels in
+    the core's bundle anyway) as not widening the contract with things nobody else is going to ask for.
 
-    `SvgIcon` sale de `@mui/material`, que el front del core ya tiene; el ahorro es el envoltorio de
-    `@mui/icons-material`, que se cambia por un `path`.
+    `SvgIcon` comes from `@mui/material`, which the core's front end already has; what is saved is the
+    `@mui/icons-material` wrapper, swapped for a `path`.
 
-    Para añadir otro: copia el `d` de `@mui/icons-material/<Nombre>.js` — todos sus paths si tiene varios.
+    To add another one: copy the `d` from `@mui/icons-material/<Name>.js` — all its paths if it has several.
 
-    Los paths son de Material Icons (Apache-2.0).
+    The paths are Material Icons (Apache-2.0).
 */
 
 export const West = (props: SvgIconProps) => (

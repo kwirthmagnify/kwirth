@@ -2,14 +2,14 @@ import { test, expect, request as playwrightRequest } from '@playwright/test'
 import { login, assertFrontCompiles, dismissOpenDialogs } from './helpers'
 
 /*
-    El entorno de ejecucion y las capacidades que se derivan de el.
+    The execution environment and the capabilities derived from it.
 
-    Lo que aqui se comprueba es la parte OBSERVABLE del cambio que permitio a Kwirth arrancar fuera de
-    Kubernetes: el entorno se publica en vez de perderse al arrancar, y '/healthz' existe siempre y no solo
-    dentro de un cluster. El arranque en ECS en si no se puede montar en un e2e —haria falta ECS—, y esa
-    parte la cubre el harness de 'back/tests/tools/executionEnvironment.test.ts'.
+    What is checked here is the OBSERVABLE part of the change that let Kwirth start outside Kubernetes:
+    the environment is published instead of being lost at startup, and '/healthz' always exists and not
+    only inside a cluster. Starting up on ECS itself cannot be set up in an e2e —that would need ECS— and
+    that part is covered by the 'back/tests/tools/executionEnvironment.test.ts' harness.
 
-    NO destructivo: todo son lecturas.
+    NON-destructive: it is all reads.
 */
 
 const BACK_URL = process.env.KWIRTH_E2E_BACK_URL ?? 'http://localhost:3883'

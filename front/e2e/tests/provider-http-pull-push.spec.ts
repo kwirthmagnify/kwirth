@@ -2,24 +2,24 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Provider http-pull-push: valida de punta a punta el modelo de "provider dueño de su configuracion"
-    que estrena el core (configRouter montado detras de validKey + storage inyectado):
+    The http-pull-push provider: it validates end to end the "a provider owns its configuration" model
+    the core premieres (a configRouter mounted behind validKey + injected storage):
 
-      - el dialogo propio se carga desde la rueda dentada del gestor de providers
-      - una conexion creada desde la UI se persiste y sobrevive a reabrir el dialogo
-      - las credenciales acaban en el Secret y NO en el ConfigMap
-      - los endpoints de gestion exigen accessKey
+      - its own dialog is loaded from the providers manager's cog
+      - a connection created from the UI is persisted and survives reopening the dialog
+      - the credentials end up in the Secret and NOT in the ConfigMap
+      - the management endpoints demand an accessKey
 
-    NO destructivo: se guarda la configuracion previa al empezar y se restaura al terminar. Las conexiones
-    de prueba llevan el prefijo 'e2e-hpp-' para no confundirlas con las del usuario.
+    NON-destructive: the previous configuration is saved at the start and restored at the end. The test
+    connections carry the 'e2e-hpp-' prefix so as not to confuse them with the user's.
 */
 
 const PREFIX = 'e2e-hpp-'
 const CONFIG_PATH = '/core/providerconfig/http-pull-push/configs'
 
 /*
-    El accessKey vive en el estado de React, no en storage, asi que se captura de las propias peticiones
-    que el front hace al back. Es mas robusto que hurgar en el interior del front.
+    The accessKey lives in React's state, not in storage, so it is captured from the very requests the
+    front end makes to the back end. It is more robust than poking around inside the front end.
 */
 interface ISession {
     bearer: string

@@ -1,14 +1,13 @@
 /*
-    Selector de recursos: las views y el gate de canales.
+    The resource selector: the views and the channel gate.
 
-    Este fichero existe porque al cablear la view 'none' (ver plans/instance-view-none/PLAN.md) se
-    constato que el ResourceSelector NO tenia ningun e2e propio, siendo el componente que usan TODOS
-    los canales para arrancar. Los specs de pinocchio lo tocan de refilon (view 'cluster'), pero nadie
-    comprobaba que las cinco views de recursos sigan ahi ni que los desplegables se habiliten como
-    deben.
+    This file exists because while wiring up the 'none' view (see plans/instance-view-none/PLAN.md) it
+    was found that the ResourceSelector had NO e2e of its own, being the component EVERY channel uses to
+    start. Pinocchio's specs touch it in passing (the 'cluster' view), but nobody checked that the five
+    resource views are still there nor that the dropdowns get enabled as they should.
 
-    Es NO DESTRUCTIVO a proposito: solo abre el dialogo ADD, recorre el desplegable de View y lo
-    cancela. No crea ni una pestaña, asi que no toca el espacio de trabajo del usuario.
+    It is NON-DESTRUCTIVE on purpose: it only opens the ADD dialog, walks the View dropdown and cancels
+    it. It creates not a single tab, so it does not touch the user's workspace.
 */
 import { test, expect, Page } from '@playwright/test'
 import { login, dismissOpenDialogs, assertFrontCompiles, pickCombo } from './helpers'
@@ -93,16 +92,16 @@ test('the none view disables the namespace dropdown too', async () => {
 
 test('selecting the none view does not query the cluster', async () => {
     /*
-        El motivo de ser de la view 'none': un canal autonomo no toca el cluster, asi que elegir la
-        view tampoco debe hacerlo. Antes del cambio, onChangeView llamaba a /config/namespace en todas
-        las ramas, lo que ademas de ser una peticion inutil le saltaba un dialogo de error a quien no
-        tuviera permiso para listar namespaces.
+        The 'none' view's reason for being: an autonomous channel does not touch the cluster, so
+        choosing the view must not either. Before the change, onChangeView called /config/namespace on
+        every branch, which besides being a useless request popped an error dialog at anybody without
+        permission to list namespaces.
     */
     const calls: string[] = []
     const record = (url: string) => { if (url.includes('/config/')) calls.push(url) }
     page.on('request', request => record(request.url()))
 
-    await pickCombo(page, COMBO_VIEW, 'namespace')   // parte de una view que si consulta
+    await pickCombo(page, COMBO_VIEW, 'namespace')   // start from a view that does query
     await page.waitForTimeout(500)
     calls.length = 0
 
@@ -115,12 +114,12 @@ test('selecting the none view does not query the cluster', async () => {
 
 test('with the none view, channels that need the cluster are not selectable', async () => {
     /*
-        Se comprueba por el lado que no depende de que haya un canal autonomo instalado: los canales
-        que SI necesitan el cluster tienen que quedar fuera. Nombrar 'log' y 'metrics' es seguro
-        porque son del core y siempre estan.
+        It is checked from the side that does not depend on an autonomous channel being installed: the
+        channels that DO need the cluster have to be left out. Naming 'log' and 'metrics' is safe
+        because they belong to the core and are always there.
 
-        No se asierta que un canal autonomo concreto este habilitado a proposito: este es un e2e del CORE, y no debe
-        exigir que un plugin concreto este instalado para pasar.
+        That a particular autonomous channel is enabled is deliberately not asserted: this is a CORE
+        e2e, and it must not demand a particular plugin be installed in order to pass.
     */
     await pickCombo(page, COMBO_VIEW, 'none')
 
@@ -168,12 +167,12 @@ test('with the cluster view, only cluster-capable channels are selectable', asyn
 
 test('the filter field of a dropdown keeps the focus while you type', async () => {
     /*
-        El campo de filtro perdia el foco A CADA LETRA, en los cuatro desplegables: MenuList clona el
-        item ACTIVO con autoFocus y lo recalcula en cada render, asi que al cambiar la lista filtrada
-        otro MenuItem montaba con foco y se lo quitaba al campo. Solo entraba la primera letra.
+        The filter field lost focus ON EVERY LETTER, in all four dropdowns: MenuList clones the ACTIVE
+        item with autoFocus and recomputes it on every render, so when the filtered list changed another
+        MenuItem mounted with focus and took it away from the field. Only the first letter got in.
 
-        Por eso el test teclea VARIAS letras seguidas sin volver a pinchar y mira el VALOR: que el
-        campo exista no prueba nada.
+        That is why the test types SEVERAL letters in a row without clicking again and looks at the
+        VALUE: the field existing proves nothing.
     */
     await pickCombo(page, COMBO_VIEW, 'namespace')
     await page.getByRole('combobox').nth(COMBO_NAMESPACE).click()
@@ -203,15 +202,15 @@ test('the filter field of a dropdown keeps the focus while you type', async () =
 
 test('a resource view only offers channels that support per-resource invocation', async () => {
     /*
-        La regla por view: 'cluster' ofrece los cluster-wide MAS los autonomos, 'none' solo los
-        autonomos, y las cuatro de recurso solo los que declaran resourced.
+        The rule per view: 'cluster' offers the cluster-wide ones PLUS the autonomous ones, 'none' only
+        the autonomous ones, and the four resource ones only those declaring resourced.
 
-        Esa ultima rama NO EXISTIA: con view 'namespace' (o pod, o…) se ofrecian todos los canales,
-        incluido uno que no sabe arrancar por recurso, y addable() tampoco lo paraba porque solo mira
-        que haya recursos elegidos.
+        That last branch DID NOT EXIST: with view 'namespace' (or pod, or…) every channel was offered,
+        including one that does not know how to start per resource, and addable() did not stop it either
+        because it only looks at whether resources have been chosen.
 
-        Se asierta con dos canales del core de bandera opuesta, que siempre estan: 'magnify' es
-        cluster-wide y NO resourced, 'metrics' es resourced y no cluster-wide.
+        It is asserted with two core channels of opposite flags, which are always there: 'magnify' is
+        cluster-wide and NOT resourced, 'metrics' is resourced and not cluster-wide.
     */
     await pickCombo(page, COMBO_VIEW, 'namespace')
 

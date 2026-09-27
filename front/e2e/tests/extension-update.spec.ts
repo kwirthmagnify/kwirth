@@ -2,32 +2,32 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    El boton de ACTUALIZAR de las extensiones instaladas.
+    The UPDATE button of the installed extensions.
 
-    Antes actualizar era desinstalar + instalar, y eso se lleva por delante la configuracion de la
-    extension. Ahora se instala encima, que es lo que el back ya hacia por dentro —reemplaza indice,
-    codigo y modulo cargado— y solo faltaba dejarle pedirlo.
+    Updating used to be uninstall + install, and that takes the extension's configuration away. Now it
+    installs on top, which is what the back end already did inside —it replaces index, code and loaded
+    module— and all that was missing was letting it be asked for.
 
-    Lo que se vigila aqui es la parte que se ve, y en particular lo que NO se puede romper:
+    What is watched here is the visible part, and in particular what must NOT break:
 
-      · el boton esta SIEMPRE, tambien cuando no hay nada que actualizar, y entonces dice por que. Si
-        apareciera y desapareciera, los botones bailarian de sitio entre filas y la papelera acabaria
-        justo donde estaba el update de la fila de arriba — con lo que eso significa al pulsar rapido.
-      · la papelera sigue siendo el ULTIMO boton.
-      · un pack no se actualiza en sitio (instalarlo rechaza tambien si alguno de sus miembros esta
-        puesto), y el boton lo dice en vez de ofrecer algo que va a fallar.
+      · the button is ALWAYS there, including when there is nothing to update, and then it says why. If
+        it came and went, the buttons would dance about between rows and the bin would end up exactly
+        where the row above's update was — with all that means when clicking fast.
+      · the bin is still the LAST button.
+      · a pack is not updated in place (installing it also refuses if any of its members is in place),
+        and the button says so instead of offering something that is going to fail.
 
-    NO destructivo: abre, mira y cierra. No se pulsa ningun update — actualizar de verdad cambiaria las
-    extensiones del usuario, y eso es del QA manual, no de aqui.
+    NON-destructive: it opens, looks and closes. No update is ever pressed — really updating would change
+    the user's extensions, and that belongs to the manual QA, not here.
 */
 
 test.describe.configure({ mode: 'serial' })
 
 /*
-    Los tooltips posibles del boton de update, que son su unica etiqueta. Fijarlos en una lista es el
-    objetivo y no un efecto colateral: cada uno responde a una situacion distinta —y un 'Up to date'
-    puesto donde en realidad no hay catalogo seria mentira—, asi que si alguien añade un caso nuevo, este
-    test le obliga a decidir que texto le toca.
+    The update button's possible tooltips, which are its only label. Pinning them down in a list is the
+    goal and not a side effect: each answers a different situation —and an 'Up to date' put where there
+    is in fact no catalogue would be a lie— so if somebody adds a new case, this test forces them to
+    decide which text it gets.
 */
 const ETIQUETAS_UPDATE = [
     /^Update to v/,
@@ -52,12 +52,12 @@ const etiquetasDe = async (page: Page, dialogo: RegExp): Promise<string[]> => {
 }
 
 /*
-    Que cada extension INSTALADA tenga su update, sin tener que separar las dos secciones del diálogo.
+    That every INSTALLED extension has its update, without having to separate the dialog's two sections.
 
-    En el catalogo tambien hay botones que dicen 'Update to v…' —desde alli se actualiza a una version
-    concreta—, asi que contarlos todos no distingue una seccion de la otra. Lo que si es propio de lo
-    instalado es la papelera, y el update va justo ANTES de ella: comprobar esa pareja verifica de una vez
-    que el boton esta en todas y que no se ha colado detras de la papelera.
+    The catalogue also has buttons saying 'Update to v…' —from there one updates to a specific version—
+    so counting them all does not tell one section from the other. What IS specific to what is installed
+    is the bin, and the update goes right BEFORE it: checking that pair verifies in one go that the
+    button is on all of them and that it has not slipped behind the bin.
 */
 const parejas = (etiquetas: string[]): { papeleras: number, conUpdateDelante: number } => {
     let papeleras = 0
@@ -93,9 +93,9 @@ test.describe('boton de actualizar en las extensiones instaladas', () => {
 
     test('cada plugin instalado tiene su update, y va justo antes de la papelera', async () => {
         /*
-            El orden importa mas de lo que parece: el update se metio ENTRE configurar y desinstalar, y si
-            se hubiera puesto al final, la papelera cambiaria de sitio en todas las filas de los once
-            gestores a la vez.
+            The order matters more than it seems: the update was put BETWEEN configure and uninstall, and
+            had it been put at the end, the bin would have moved in every row of all eleven managers at
+            once.
         */
         const d = await abrir('Plugins', /Manage channel plugins/i)
         await expect(d.getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
@@ -150,8 +150,8 @@ test.describe('boton de actualizar en las extensiones instaladas', () => {
 
     test('en el catalogo, algo ya instalado invita a elegir una version mas nueva', async () => {
         /*
-            El texto de antes era 'Already installed — uninstall first', que ya no es verdad: desde el
-            desplegable de versiones se puede ir a una mas nueva sin desinstalar nada.
+            The previous text was 'Already installed — uninstall first', which is no longer true: from
+            the versions dropdown one can go to a newer one without uninstalling anything.
         */
         const d = await abrir('Plugins', /Manage channel plugins/i)
         await expect(d.getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })

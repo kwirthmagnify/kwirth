@@ -8,16 +8,16 @@ import { resolveExtensionIcon } from './extensionIcon'
 import { TruncatedText } from './TruncatedText'
 
 /*
-    Las DOS vistas de una extension —tarjeta y fila— en un solo sitio, para los once tipos y las dos
-    secciones. Son 44 combinaciones que antes se escribian a mano y derivaban una a una.
+    The TWO views of an extension —card and row— in a single place, for all eleven types and both
+    sections. That is 44 combinations that used to be written by hand and drifted one by one.
 
-    Aqui se cumplen por construccion las reglas de plans/extension-managers-ui/PLAN.md:
-      1. instalados y disponibles se ven igual: es el MISMO componente, solo cambian chips y acciones
-      2. procedencia siempre, en las dos vistas
-      3. Select de version en el catalogo (aunque haya una sola), Chip en lo instalado
-      4. compactChip en todos los chips
-      6. en la fila, los chips a la derecha (grid con justifySelf)
-      9. mismo texto en tarjeta y en fila
+    The rules of plans/extension-managers-ui/PLAN.md are met here by construction:
+      1. installed and available look the same: it is the SAME component, only chips and actions change
+      2. provenance always, in both views
+      3. a version Select in the catalogue (even with a single one), a Chip on what is installed
+      4. compactChip on every chip
+      6. in the row, the chips to the right (a grid with justifySelf)
+      9. the same text in card and in row
 */
 
 interface IExtensionViewProps {
@@ -27,15 +27,15 @@ interface IExtensionViewProps {
     versions?: string[]
     onVersionChange?: (v: string) => void
     /*
-        Los chips van en DOS grupos, y no es decoracion:
+        The chips go in TWO groups, and that is not decoration:
 
-          · `chips`, a la izquierda con la procedencia — DE DONDE vino esto (dev, fichero local, via pack,
-            Kwirth, el marketplace).
-          · `statusChips`, a la derecha pegados a los botones — COMO esta esto ahora ('3 configs',
+          · `chips`, on the left with the provenance — WHERE this came from (dev, local file, via pack,
+            Kwirth, the marketplace).
+          · `statusChips`, on the right right next to the buttons — HOW this is now ('3 configs',
             'enabled', 'active', 'installed').
 
-        Mezclarlos deja una fila de chips donde no se distingue el origen del estado, y el estado es lo que
-        se mira antes de pulsar un boton: por eso viaja con ellos.
+        Mixing them leaves a row of chips where origin cannot be told from status, and the status is what
+        gets looked at before pressing a button: that is why it travels with them.
     */
     chips?: React.ReactNode[]
     statusChips?: React.ReactNode[]
@@ -45,9 +45,9 @@ interface IExtensionViewProps {
 }
 
 /*
-    Alto de la fila del titulo. Lo marca su control mas alto, que es el boton de la web (30px), y se fija
-    para que el ICONO del tipo pueda centrarse con el nombre: sin una altura conocida, el icono se alinea
-    contra un bloque que incluye descripcion y subtitulo, y queda descolgado.
+    The title row's height. Its tallest control sets it, which is the website button (30px), and it is
+    fixed so that the type's ICON can be centred with the name: without a known height, the icon aligns
+    against a block that includes description and subtitle, and ends up hanging.
 */
 const TITLE_ROW_HEIGHT = 30
 
@@ -140,9 +140,9 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
 }
 
 /*
-    Vista de fila. Devuelve CELDAS de un grid, no un contenedor: el grid lo pone el diálogo, que es lo que
-    alinea las columnas entre filas. Con un flex por fila —como hacian plugins, providers y senders— cada
-    fila se alinea por su cuenta y los chips bailan de una a otra.
+    The row view. It returns a grid's CELLS, not a container: the grid is put there by the dialog, which
+    is what aligns the columns across rows. With one flex per row —as plugins, providers and senders used
+    to do— each row aligns on its own account and the chips dance from one to the next.
 */
 const extensionRowCells = (
     key: string,

@@ -4,19 +4,19 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { EChipIcon, EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IExtensionVerdict } from './extensionManagerModel'
 
 /*
-    Descriptor del tipo `homepage` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
+    The `homepage` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
 
-    Lo que aporta el tipo:
-      · el chip `active` de la homepage en uso
-      · el engranaje, que aqui NO es del tipo sino de la tarjeta: solo la homepage activa se configura, y
-        solo si su extension trae un SetupDialog propio
-      · desactivar al desinstalar la que estaba puesta
-      · cargar/descargar su front en caliente
+    What the type brings:
+      · the `active` chip of the homepage in use
+      · the cog, which here belongs NOT to the type but to the card: only the active homepage is
+        configured, and only if its extension brings a SetupDialog of its own
+      · deactivating when uninstalling the one that was set
+      · loading/unloading its front hot
 
-    ⚠️ El dialogo de configuracion no lo pone el core: lo trae la propia homepage en
-    `window.__kwirth_homepages__[id].SetupDialog`, y su configuracion vive en localStorage. El core solo
-    decide CUANDO se abre; lo que se pinta dentro es de la extension. Por eso aqui se monta con
-    `createElement` y el fichero sigue siendo .ts: un descriptor declara, no maqueta.
+    ⚠️ The configuration dialog is not put there by the core: the homepage itself brings it at
+    `window.__kwirth_homepages__[id].SetupDialog`, and its configuration lives in localStorage. The core
+    only decides WHEN it opens; what is painted inside belongs to the extension. That is why it is
+    mounted here with `createElement` and the file is still a .ts: a descriptor declares, it does not lay out.
 */
 
 interface IHomepageManifestEntry {
@@ -115,9 +115,9 @@ const makeHomepageDescriptor = (deps: IHomepageDescriptorDeps): IExtensionManage
             : [],
 
     /*
-        El engranaje es de la TARJETA, no del tipo: solo la homepage activa se reconfigura, y solo si su
-        extension trae dialogo. Se distinguen los dos motivos a proposito — uno es definitivo y el otro
-        dice QUE HACER para poder configurarla.
+        The cog belongs to the CARD, not to the type: only the active homepage is reconfigured, and only
+        if its extension brings a dialog. The two reasons are told apart on purpose — one is final and
+        the other says WHAT TO DO in order to be able to configure it.
     */
     canConfigure: h => {
         if (!loadedHomepage(h.id)?.SetupDialog) return { allowed: false, reason: 'This homepage has no settings' }

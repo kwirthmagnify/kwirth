@@ -5,14 +5,14 @@ import { EManagerSection, IExtensionAction, IExtensionManagerDescriptor, IExtens
 import { ConfigFormDialog } from './ConfigFormDialog'
 
 /*
-    Descriptor del tipo `login` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
+    The `login` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
 
-    Lo que aporta el tipo, y solo eso:
-      · abrir la pagina de ese login en otra pestaña, para verla SIN cerrar la sesion
-      · su configuracion en caliente, cuando la extension declara `configSchema`
+    What the type brings, and only that:
+      · opening that login's page in another tab, to see it WITHOUT logging out
+      · its configuration, hot, when the extension declares a `configSchema`
 
-    Todo lo demas —las dos secciones, el filtro, tarjeta/lista, las versiones, instalar desde
-    catalogo/URL/fichero y los chips de procedencia— lo pone ExtensionManagerDialog.
+    Everything else —the two sections, the filter, card/list, the versions, installing from
+    catalogue/URL/file and the provenance chips— is put there by ExtensionManagerDialog.
 */
 
 interface ILoginManifestEntry {
@@ -57,12 +57,12 @@ const canUninstall = (l: IInstalledLogin): IExtensionVerdict => {
 }
 
 /*
-    Abre la pagina de ese login en otra pestaña, para verla sin cerrar la sesion.
+    Opens that login's page in another tab, to see it without logging out.
 
-    La direccion es la MISMA por la que ha entrado quien esta mirando —origen y ruta, que no siempre es la
-    raiz: Kwirth se sirve tambien bajo un rootPath— mas ?loginExt=<id>, que es como el front decide pintar
-    el login de una extension en vez del suyo. Es la misma forma que arma LoginExtensionPage para su
-    returnTo, no una convencion nueva.
+    The address is the SAME one whoever is looking came in through —origin and path, which is not always
+    the root: Kwirth is also served under a rootPath— plus ?loginExt=<id>, which is how the front end
+    decides to paint an extension's login instead of its own. It is the same shape LoginExtensionPage
+    builds for its returnTo, not a new convention.
 */
 const openLoginPage = (id: string) => {
     window.open(`${window.location.origin}${window.location.pathname}?loginExt=${encodeURIComponent(id)}`, '_blank', 'noopener')

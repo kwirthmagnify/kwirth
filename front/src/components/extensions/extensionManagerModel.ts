@@ -2,16 +2,16 @@ import { ComponentType, ReactNode } from 'react'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 
 /*
-    Modelo del gestor de extensiones GENERICO (plan: plans/extension-managers-ui/PLAN.md).
+    The GENERIC extension manager's model (plan: plans/extension-managers-ui/PLAN.md).
 
-    Habia once diálogos de gestión con el mismo esqueleto copiado once veces, y la copia derivaba: cada
-    arreglo habia que aplicarlo once veces y bastaba olvidar uno para que el sintoma reapareciera. Se midio
-    antes de escribir esto: entre ellos solo compartian LITERALMENTE el 22-59% del codigo, o sea que ya
-    habian derivado, y por eso ninguno servia de canonico.
+    There were eleven management dialogs with the same skeleton copied eleven times, and the copies
+    drifted: every fix had to be applied eleven times and forgetting one was enough for the symptom to
+    reappear. It was measured before writing this: they only shared 22-59% of the code LITERALLY, that
+    is, they had already drifted, which is why none of them served as the canonical one.
 
-    Aqui vive lo que cada tipo tiene que APORTAR. Todo lo demas —las dos secciones, el filtro, el
-    conmutador tarjeta/lista, el agrupado por version, instalar desde catalogo/URL/fichero, la procedencia,
-    la altura de las tarjetas y las nueve reglas de UI— lo pone el generico, igual para todos.
+    What each type has to CONTRIBUTE lives here. Everything else —the two sections, the filter, the
+    card/list toggle, the grouping by version, installing from catalogue/URL/file, the provenance, the
+    cards' height and the nine UI rules— is put there by the generic one, the same for everybody.
 */
 
 export enum EManagerSection {
@@ -27,24 +27,25 @@ export interface IExtensionCardModel {
     website?: string
     installedFrom?: string
     marketplaceLabel?: string
-    icon?: ReactNode             // si el tipo no lo da, el generico usa el icono del tipo
+    icon?: ReactNode             // if the type does not give one, the generic one uses the type's icon
     /*
-        El icono que declara la propia extension en su package.json: el nombre de uno del set curado, o un
-        SVG en crudo para que pueda traer el suyo. Lo resuelve el generico (ver extensionIcon), que ademas
-        SANEA el SVG: viene de una extension que puede haberse instalado desde un marketplace ajeno.
+        The icon the extension itself declares in its package.json: the name of one from the curated set,
+        or a raw SVG so it can bring its own. The generic one resolves it (see extensionIcon), and it
+        also SANITIZES the SVG: it comes from an extension that may have been installed from somebody
+        else's marketplace.
     */
     iconName?: string
     /*
-        Una linea mas bajo la descripcion. La necesita `pack`, que es el unico tipo que CONTIENE otras
-        extensiones y tiene que decir cuales ('2 plugins, 1 theme'). Va en una linea y con elipsis: un pack
-        con muchos tipos creceria y se comeria la fila de procedencia y acciones.
+        One more line below the description. `pack` needs it, being the only type that CONTAINS other
+        extensions and has to say which ('2 plugins, 1 theme'). It goes on one line and with an ellipsis:
+        a pack with many types would grow and eat the provenance and actions row.
     */
     subtitle?: string
 }
 
 /*
-    Iconos que puede llevar un chip. Es un enum corto y cerrado a proposito: el descriptor DECLARA chips,
-    no los pinta, y asi no necesita importar iconos ni ser un .tsx.
+    The icons a chip may carry. It is a short, closed enum on purpose: a descriptor DECLARES chips, it
+    does not paint them, and this way it needs neither to import icons nor to be a .tsx.
 */
 export enum EChipIcon {
     /** A mark for "this is what is set right now": the active theme, the active homepage. */
@@ -93,20 +94,21 @@ export interface IExtensionVerdict {
 }
 
 /*
-    "Que plugins van con esta extension", que resulta ser la misma pregunta en varios tipos:
+    "Which plugins go with this extension", which turns out to be the same question in several types:
 
-      · themes     → que canales usan este tema
-      · aitoolset  → que canales pueden usar este toolset (la concesion de la fase 1)
+      · themes     → which channels use this theme
+      · aitoolset  → which channels may use this toolset (phase 1's grant)
 
-    Se escribio dos veces por separado —ThemeAssignSelector y GrantSelector— y las dos copias eran el mismo
-    `Select multiple` con casillas, el mismo placeholder y el mismo alto. Peor: cada TARJETA pedia
-    `/core/plugins` por su cuenta, asi que abrir el diálogo con doce instaladas eran doce peticiones
-    identicas. Al subirlo aqui, el generico pide la lista UNA vez y el tipo solo dice de donde se lee y
-    donde se guarda.
+    It was written twice, separately —ThemeAssignSelector and GrantSelector— and both copies were the
+    same `Select multiple` with checkboxes, the same placeholder and the same height. Worse: every CARD
+    asked `/core/plugins` on its own account, so opening the dialog with twelve installed meant twelve
+    identical requests. Moved up here, the generic one asks for the list ONCE and the type only says
+    where it is read from and where it is stored.
 
-    El mapa de `load` va de CLAVE DE ENTRADA a ids de plugin, no al reves: es como se pinta (cada tarjeta
-    pregunta por lo suyo) y como lo devuelve el back de aitoolsets. Themes lo tiene invertido —un plugin
-    tiene UN tema— y es el descriptor quien lo da la vuelta, que para eso conoce su formato.
+    `load`'s map goes from ENTRY KEY to plugin ids, not the other way round: it is how it is painted
+    (each card asks about its own) and how the aitoolsets back end returns it. Themes has it the other
+    way round —a plugin has ONE theme— and it is the descriptor that flips it, since it is the one that
+    knows its format.
 */
 export interface IPluginSelectorSpec<TInstalled> {
     /** What the control means, for the tooltip: 'Plugins using this theme'… */
@@ -134,15 +136,16 @@ export interface IExtensionRequirement {
 }
 
 /*
-    Lo que aporta un tipo de extension. Todo lo opcional es una CAPACIDAD: si no se declara, el generico
-    simplemente no pinta esa parte.
+    What an extension type contributes. Everything optional is a CAPABILITY: if it is not declared, the
+    generic one simply does not paint that part.
 
-    Dos decisiones que salieron de leer los diez diálogos enteros, y que no son caprichos:
+    Two decisions that came out of reading all ten dialogs through, and that are not whims:
 
-      - `key` en vez de asumir `id`: la documentacion se identifica por el PAR (targetType, id), porque el
-        id es el de la extension documentada y se repite entre tipos.
-      - `canUninstall` en vez de repetir la cadena de `installedFrom`: lo no desinstalable cambia por tipo
-        (dev en todos, bundled en unos, 'pack:' en casi todos, core en providers, un flag propio en IdP).
+      - `key` instead of assuming `id`: documentation is identified by the PAIR (targetType, id), because
+        the id is that of the documented extension and it repeats across types.
+      - `canUninstall` instead of repeating the `installedFrom` chain: what cannot be uninstalled varies
+        by type (dev in all of them, bundled in some, 'pack:' in nearly all, core in providers, a flag of
+        its own in IdP).
 */
 export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     extensionType: EExtensionType
@@ -151,9 +154,9 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     /** What one of these is called in singular and plural, for the generic dialog's texts. */
     noun: { singular: string, plural: string }
     /*
-        Seccion de la guia para el boton de ayuda (regla 7). OPCIONAL a proposito: un tipo recien creado
-        todavia no tiene pagina de guia, y la propia regla dice que un boton que abre una seccion que no
-        existe es peor que no tenerlo. Sin seccion, el generico pinta el titulo sin ayuda.
+        The guide's section for the help button (rule 7). OPTIONAL on purpose: a freshly created type
+        has no guide page yet, and the rule itself says that a button opening a section that does not
+        exist is worse than not having one. With no section, the generic one paints the title without help.
     */
     helpSection?: string
     /** The type's icon, the one drawn when the entry carries none of its own. */
@@ -176,10 +179,11 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     uninstallTooltip?: string
 
     /*
-        Que entradas de lo instalado SON de este gestor.
+        Which of the installed entries BELONG to this manager.
 
-        Lo necesita `provider`: su endpoint devuelve tambien los providers del core (events, metrics), que
-        no son extensiones — no se instalan ni se desinstalan, y pintarlos invita a intentar quitarlos.
+        `provider` needs it: its endpoint also returns the core's providers (events, metrics), which are
+        not extensions — they are neither installed nor uninstalled, and painting them invites trying to
+        remove them.
     */
     filterInstalled?: (entry: TInstalled) => boolean
 
@@ -207,11 +211,11 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     canConfigure?: (entry: TInstalled) => IExtensionVerdict
 
     /*
-        Chips propios del tipo: 'active', 'enabled', 'Requires 2'…
+        The type's own chips: 'active', 'enabled', 'Requires 2'…
 
-        ⚠️ La PROCEDENCIA no entra aqui: los chips de dev / fichero local / via pack / Kwirth los pone el
-        generico para todos los tipos. Estaban copiados uno por diálogo y solo se diferenciaban en el icono
-        del chip 'Kwirth', que no es mas que el icono del tipo.
+        ⚠️ PROVENANCE does not come in here: the dev / local file / via pack / Kwirth chips are put there
+        by the generic one for every type. They were copied one per dialog and differed only in the
+        'Kwirth' chip's icon, which is nothing but the type's icon.
     */
     extraChips?: (entry: TInstalled | TEntry, section: EManagerSection) => IExtensionChip[]
     /** Actions of its own: open the guide, open the login page… */

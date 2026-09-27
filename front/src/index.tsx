@@ -36,17 +36,17 @@ declare global {
 /*
     "ResizeObserver loop completed with undelivered notifications".
 
-    Lo lanza el NAVEGADOR cuando el callback de un ResizeObserver provoca mas cambios de tamaño en el
-    mismo fotograma: React re-renderiza, el elemento cambia, y quedan notificaciones sin entregar. Es
-    benigno —nada se rompe— pero en desarrollo el overlay de CRA lo trata como fatal y TAPA LA PANTALLA,
-    que es justo lo que impide ver un error de verdad.
+    The BROWSER throws it when a ResizeObserver's callback causes further size changes in the same frame:
+    React re-renders, the element changes, and notifications are left undelivered. It is benign —nothing
+    breaks— but in development CRA's overlay treats it as fatal and COVERS THE SCREEN, which is exactly
+    what stops a real error from being seen.
 
-    Se parchea aqui, UNA vez y para toda la aplicacion, en vez de en cada sitio que observa tamaños: asi
-    cubre tambien los ResizeObserver de las librerias de terceros —React Flow re-mide sus nodos, MUI sus
-    contenedores—, que no podemos tocar. Diferir la medida un fotograma es seguro: lo unico que cambia es
-    que se mide despues de que el navegador haya terminado, que es cuando el dato es bueno.
+    It is patched here, ONCE and for the whole application, instead of in every place that observes sizes:
+    that way it also covers third-party libraries' ResizeObservers —React Flow re-measures its nodes, MUI
+    its containers— which we cannot touch. Deferring the measurement by one frame is safe: the only thing
+    that changes is that it measures after the browser has finished, which is when the figure is good.
 
-    El patron salio del mapa de iter (React Flow), donde ya se habia resuelto; aqui vale para todos.
+    The pattern came from iter's map (React Flow), where it had already been solved; here it serves everybody.
 */
 if (typeof window !== 'undefined' && window.ResizeObserver && !(window as unknown as { __kwirthROPatched?: boolean }).__kwirthROPatched) {
     ;(window as unknown as { __kwirthROPatched?: boolean }).__kwirthROPatched = true

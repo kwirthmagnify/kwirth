@@ -5,8 +5,8 @@
 // created from the channel was saved with the first type on the list ('google') and WITHOUT a Base URL —
 // the name and the type came out wrong and the provider could not be built.
 //
-// NON-DESTRUCTIVE: it uses a name with its own prefix, and at the end deletes it and checks that the rest of
-// providers queda EXACTAMENTE como estaba.
+// NON-DESTRUCTIVE: it uses a name with its own prefix, and at the end deletes it and checks that the rest
+// of the providers are EXACTLY as they were.
 import { test, expect, Page } from '@playwright/test'
 import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
 

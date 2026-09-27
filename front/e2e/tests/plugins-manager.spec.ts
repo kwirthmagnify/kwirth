@@ -2,18 +2,19 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migracion del gestor de `plugin` al diálogo generico (plan: plans/extension-managers-ui/PLAN.md).
+    Migration of the `plugin` manager to the generic dialog (plan: plans/extension-managers-ui/PLAN.md).
 
-    Los plugins son los canales de Kwirth, el tipo mas visible, y lo que se vigila aqui es lo que cambia
-    de comportamiento al migrarlo:
+    Plugins are Kwirth's channels, the most visible type, and what is watched here is what changes
+    behaviour on migrating it:
 
-      · LA RUEDA DENTADA solo en los plugins que declaran configuracion. Antes salia en todos —la
-        configuracion de instalacion es JSON libre y el gestor no podia saber quien la lee— y abria un
-        editor que en la mayoria no servia para nada. Ahora lo declara el plugin con `configSchema`.
-      · `requires` / `uses` en el catalogo: el generico los entiende para los once tipos, no solo aqui.
-      · el icono que declara cada plugin, que lo pinta el generico.
+      · THE COG only on the plugins that declare configuration. It used to show on all of them —the
+        installation configuration is free JSON and the manager could not know who reads it— and it
+        opened an editor that in most cases was of no use. Now the plugin declares it with `configSchema`.
+      · `requires` / `uses` in the catalogue: the generic one understands them for all eleven types, not
+        only here.
+      · the icon each plugin declares, painted by the generic one.
 
-    NO destructivo: abre, mira y cierra.
+    NON-destructive: it opens, looks and closes.
 */
 
 const DIALOG = /Manage channel plugins/i
@@ -67,13 +68,13 @@ test.describe('gestor generico de extensiones: plugins', () => {
 
     test('🔴 la rueda dentada SOLO en los plugins que declaran configuracion', async () => {
         /*
-            Era el sintoma que se reporto: la rueda salia en todos, incluidos los que no leen ninguna
-            configuracion de instalacion, y abria un editor JSON que no hacia nada. Ahora la declara el
-            plugin (configSchema en su package.json) y el gestor la ofrece solo en esos.
+            This was the reported symptom: the cog showed on all of them, including the ones that read no
+            installation configuration at all, and it opened a JSON editor that did nothing. Now the
+            plugin declares it (configSchema in its package.json) and the manager offers it only on those.
         */
         /*
-            ⚠️ La rueda NO desaparece: se queda visible y deshabilitada con el motivo, que es la regla de
-            UI del proyecto. Lo que se cuenta es cuantas estan VIVAS.
+            ⚠️ The cog does NOT disappear: it stays visible and disabled with the reason, which is the
+            project's UI rule. What is counted is how many are ALIVE.
         */
         const configurables = delBack.filter(p => (p.configSchema?.length ?? 0) > 0)
         const vivas = await dialog().locator('button[aria-label="Configure"]:not([disabled])').count()
@@ -99,20 +100,22 @@ test.describe('gestor generico de extensiones: plugins', () => {
         await expect(dialog().locator('span[aria-label$="nstall"] button').first()).toBeVisible({ timeout: 60000 })
 
         /*
-            Que catalogo sirve el back se ESCUCHA de la respuesta que pide el propio diálogo: el endpoint
-            va autenticado y la sesion no vive en localStorage, asi que pedirlo por separado da 403.
+            Which catalogue the back end serves is LISTENED to from the response the dialog itself asks
+            for: the endpoint is authenticated and the session does not live in localStorage, so asking
+            for it separately gives a 403.
 
-            Importa hacerlo asi y no conformarse con mirar la pantalla: si el manifest trae dependencias y
-            la tarjeta no las enseña, se perdieron por el camino, que es justo lo que hay que detectar.
+            Doing it this way and not settling for looking at the screen matters: if the manifest brings
+            dependencies and the card does not show them, they were lost along the way, which is exactly
+            what has to be detected.
         */
         const cuerpo = page.waitForResponse(r => r.url().includes('/core/marketplace/plugin'), { timeout: 60000 })
         await dialog().getByRole('button', { name: 'Refresh catalog' }).click()
         const entradas = await (await cuerpo).json() as { id: string, version: string, requires?: unknown[], uses?: unknown[] }[]
 
         /*
-            ⚠️ Solo cuenta la version que la tarjeta ENSEÑA, que es la mas nueva de cada id. Mirar el
-            manifest entero daba un falso rojo: censor declaraba dependencias en 0.2.48 y dejo de
-            declararlas en 0.2.49, asi que el catalogo las traia y la tarjeta —con razon— no las pintaba.
+            ⚠️ Only the version the card SHOWS counts, which is the newest of each id. Looking at the
+            whole manifest gave a false red: censor declared dependencies in 0.2.48 and stopped declaring
+            them in 0.2.49, so the catalogue brought them and the card —rightly— did not paint them.
         */
         const masNueva = new Map<string, { version: string, requires?: unknown[], uses?: unknown[] }>()
         for (const e of entradas) {

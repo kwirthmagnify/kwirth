@@ -1,21 +1,21 @@
 /*
-    El aviso de "hace falta reiniciar", en UN SOLO SITIO.
+    The "a restart is needed" notice, in a SINGLE PLACE.
 
-    Una extensión puede declarar `requiresRestart` en su package.json, y el caso típico es traer su
-    propio router de express: el core los engancha SOLO al arrancar, así que hasta que no se reinicie,
-    una extensión recién instalada responde 404 en sus rutas.
+    An extension may declare `requiresRestart` in its package.json, and the typical case is bringing its
+    own express router: the core hooks them up ONLY at startup, so until it is restarted, a freshly
+    installed extension answers 404 on its routes.
 
-    Lo mismo vale al revés y hasta ahora no se decía: al DESINSTALARLA su router sigue montado, porque
-    tampoco se puede desenganchar en caliente. La extensión desaparece de la lista y parece que ya
-    está, cuando sigue respondiendo. De ahí que el aviso tenga que distinguir las dos acciones — el
-    texto de instalar era directamente falso para el otro caso.
+    The same holds the other way round and until now was not said: on UNINSTALLING it, its router stays
+    mounted, because it cannot be unhooked hot either. The extension disappears from the list and it
+    looks done, when it is still answering. Hence the notice has to tell the two actions apart — the
+    install text was flatly false for the other case.
 
-    Y actualizar es un TERCER caso, no una instalación: la extensión no es que "no vaya a funcionar", es
-    que sigue funcionando la de ANTES. Decirle a alguien que su extensión no funciona cuando la ve
-    funcionando es la mejor forma de que ignore el aviso.
+    And updating is a THIRD case, not an installation: it is not that the extension "will not work", it
+    is that the PREVIOUS one goes on working. Telling somebody their extension does not work while they
+    are watching it work is the surest way to have them ignore the notice.
 
-    Al actualizar se mira `requiresRestart` en las DOS, la que se va y la que llega: si la vieja traía
-    router, el suyo sigue montado aunque la nueva ya no declare ninguno.
+    When updating, `requiresRestart` is looked at on BOTH, the one going away and the one arriving: if
+    the old one brought a router, its router stays mounted even though the new one declares none.
 */
 
 export enum ERestartAction {

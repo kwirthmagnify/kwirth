@@ -8,33 +8,32 @@ const createChannelInstance = (channelConstructor:TChannelConstructor): IChannel
 }
 
 /*
-    El icono de un canal lo construye el PLUGIN, y puede venir ROTO.
+    A channel's icon is built by the PLUGIN, and it may arrive BROKEN.
 
-    No es hipotetico: el front de un plugin pide sus iconos POR NOMBRE al global del core
-    (window.__kwirth__.MUI.icons), asi que un plugin instalado de una version anterior a una poda del
-    barrel pide uno que ya no existe. El elemento llega con `type` undefined y React tumba la pagina
-    entera con "Element type is invalid: ... got: undefined" — sin decir de que plugin se trata.
+    It is not hypothetical: a plugin's front end asks the core's global for its icons BY NAME
+    (window.__kwirth__.MUI.icons), so a plugin installed from a version predating a pruning of the barrel
+    asks for one that no longer exists. The element arrives with `type` undefined and React brings the
+    whole page down with "Element type is invalid: ... got: undefined" — without saying which plugin it is.
 
-    Paso de verdad al retirar FolderCopyTwoTone, que era el icono de canal de fileman: con el fileman
-    0.2.8 instalado, la home dejaba de pintarse.
+    It really happened when FolderCopyTwoTone was removed, which was fileman's channel icon: with fileman
+    0.2.8 installed, the home stopped painting.
 
-    Quien pinte el icono de un canal debe pasar por aqui. Devuelve la interrogacion —la misma que ya
-    se usaba cuando faltaba la CLASE del canal— en vez de dejar que se caiga todo.
+    Whoever paints a channel's icon must go through here. It returns the question mark —the same one
+    already used when the channel's CLASS was missing— instead of letting everything fall over.
 */
 const canalIconoFallback = <HelpOutline sx={{ minWidth: '24px', color: 'warning.main' }} />
 
 /*
-    Que un elemento sea "valido" para React NO basta: lo que revienta al pintarlo es su `type`, y ahi
-    caben cosas que son truthy y aun asi no se pueden renderizar.
+    An element being "valid" for React is NOT enough: what blows up when painting it is its `type`, and
+    that can hold things that are truthy and still cannot be rendered.
 
-    El segundo modo de fallo, que costo una mañana: un plugin con un DEEP import
-    (`@mui/icons-material/X`) no falla al resolver — el shim del build le entrega el BARREL ENTERO como
-    modulo—, asi que `type` acaba siendo un objeto con 80 iconos dentro. React lo rechaza con "got:
-    object" en vez de "got: undefined", y un `if (icono.type)` lo deja pasar porque un objeto es truthy.
+    The second failure mode, which cost a morning: a plugin with a DEEP import (`@mui/icons-material/X`)
+    does not fail to resolve — the build's shim hands it THE WHOLE BARREL as the module — so `type` ends
+    up being an object with 80 icons inside. React rejects it with "got: object" instead of "got:
+    undefined", and an `if (icono.type)` lets it through because an object is truthy.
 
-    Renderizable es: un tag ('div'), una funcion (componente), o un objeto CON MARCA de React
-    —forwardRef, memo, lazy, un contexto—. El namespace de un modulo no tiene `$$typeof`, y eso es
-    justo lo que lo distingue.
+    Renderable is: a tag ('div'), a function (a component), or an object WITH a React MARK —forwardRef,
+    memo, lazy, a context. A module's namespace has no `$$typeof`, and that is exactly what tells it apart.
 */
 const tipoRenderizable = (type: unknown): boolean => {
     if (typeof type === 'string' || typeof type === 'function') return true
@@ -57,8 +56,8 @@ const avisar = (channelId: string|undefined, icono: unknown): void => {
 }
 
 /*
-    El icono de un canal a partir de su CLASE. Instanciar el canal solo para pedirle el icono es lo que
-    hacen los sitios que aun no tienen instancia (menus de notificaciones, listas de plugins).
+    A channel's icon from its CLASS. Instantiating the channel just to ask it for the icon is what the
+    places that do not have an instance yet do (notification menus, plugin lists).
 */
 const getChannelIconSafe = (channelConstructor: TChannelConstructor | undefined, channelId?: string): JSX.Element => {
     if (!channelConstructor) return canalIconoFallback
@@ -66,15 +65,15 @@ const getChannelIconSafe = (channelConstructor: TChannelConstructor | undefined,
         const canal = new channelConstructor()
         return getChannelIconOf(canal, channelId ?? canal.channelId)
     }
-    catch { /* un constructor que revienta tampoco puede llevarse la pagina por delante */ }
+    catch { /* a constructor that blows up cannot take the page down either */ }
     avisar(channelId, undefined)
     return canalIconoFallback
 }
 
 /*
-    Lo mismo cuando YA se tiene el canal: las pestañas y el overview trabajan con la instancia viva, y
-    volver a construirla solo para el icono es tirar trabajo (y ejecutar el constructor de un plugin de
-    mas).
+    The same when the channel is ALREADY at hand: the tabs and the overview work with the live instance,
+    and building it again just for the icon is throwing work away (and running a plugin's constructor one
+    time too many).
 */
 const getChannelIconOf = (channel: IChannel | undefined, channelId?: string): JSX.Element => {
     if (!channel) return canalIconoFallback

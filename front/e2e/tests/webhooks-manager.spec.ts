@@ -2,19 +2,20 @@ import { test, expect } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migracion del gestor de `webhook` al diálogo generico (plan: plans/extension-managers-ui/PLAN.md).
+    Migration of the `webhook` manager to the generic dialog (plan: plans/extension-managers-ui/PLAN.md).
 
-    Lo que ya cubre webhooks.spec.ts —crear una config, su URL con token, clonar y borrar— no se repite
-    aqui: ese spec pasa SIN TOCARLO tras la migracion, que es la mejor prueba de que el comportamiento se
-    conserva. Aqui va lo que la migracion añade y nadie miraba:
+    What webhooks.spec.ts already covers —creating a config, its URL with a token, cloning and deleting—
+    is not repeated here: that spec passes UNTOUCHED after the migration, which is the best proof that
+    the behaviour is preserved. What goes here is what the migration adds and nobody was looking at:
 
-      · el chip 'N configs', que webhooks estrena: el generico sabia pintarlo (`configCount`) pero hasta
-        ahora ningun tipo migrado tenia configuraciones con nombre. Se comprueba que CUENTA, no que exista.
-      · que el panel de la URL solo salga en configuraciones YA GUARDADAS: antes de guardar no hay token
-        que enseñar, y enseñar un hueco vacio invita a copiar una URL que no existe.
+      · the 'N configs' chip, premiered by webhooks: the generic one knew how to paint it (`configCount`)
+        but until now no migrated type had named configurations. That it COUNTS is checked, not that it
+        exists.
+      · that the URL panel only shows up on configurations ALREADY SAVED: before saving there is no token
+        to show, and showing an empty gap invites copying a URL that does not exist.
 
-    NO destructivo: las configuraciones llevan prefijo propio y se borran al final.
-    ⚠️ Crear una configuracion de webhook NO dispara nada hacia fuera: un webhook es ingesta ENTRANTE.
+    NON-destructive: the configurations carry a prefix of their own and are deleted at the end.
+    ⚠️ Creating a webhook configuration fires NOTHING outwards: a webhook is INBOUND ingest.
 */
 
 const CFG1 = 'e2e-chip-uno'

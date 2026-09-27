@@ -1,17 +1,17 @@
 import { SvgIcon, SvgIconProps } from '@mui/material'
 
 /*
-    Los iconos que usa SOLO el front del core, y que no caen dentro de un modulo con su propio fichero de
-    iconos (magnify, metrics y menus tienen el suyo).
+    The icons ONLY the core's front end uses, and that do not fall inside a module with an icons file of
+    its own (magnify, metrics and menus each have theirs).
 
-    El barrel de kwirth (`common-front/src/kwirthicons.ts`) tiene dos trabajos: ser la lista de iconos
-    COMUNES y, sobre todo, ser la API que el core publica a las extensiones en
-    `window.__kwirth__.MUI.icons`. Un icono que ninguna extension pide no tiene por que estar ahi: aqui no
-    se gana descarga —el front del core lo bundlea igual— sino que no se ensancha ese contrato.
+    Kwirth's barrel (`common-front/src/kwirthicons.ts`) has two jobs: being the list of COMMON icons and,
+    above all, being the API the core publishes to the extensions at `window.__kwirth__.MUI.icons`. An
+    icon no extension asks for has no reason to be there: nothing is saved on download here —the core's
+    front end bundles it either way— what is gained is not widening that contract.
 
-    Para añadir otro: copia el `d` de `@mui/icons-material/<Nombre>.js` — todos sus paths si tiene varios.
+    To add another one: copy the `d` from `@mui/icons-material/<Name>.js` — all its paths if it has several.
 
-    Los paths son de Material Icons (Apache-2.0).
+    The paths are Material Icons (Apache-2.0).
 */
 
 export const AccountCircle = (props: SvgIconProps) => (

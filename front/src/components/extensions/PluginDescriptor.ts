@@ -5,19 +5,19 @@ import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionRequirement
 import { ConfigJsonDialog } from './ConfigJsonDialog'
 
 /*
-    Descriptor del tipo `plugin` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
+    The `plugin` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
 
-    Los plugins son los canales de Kwirth, el tipo mas visible de todos, y casi todo lo suyo resulto ser
-    de todos:
+    Plugins are Kwirth's channels, the most visible type of them all, and almost everything of theirs
+    turned out to belong to everybody:
 
-      · `requires` / `uses` los entiende ya el generico para los once tipos. Los declaraba cualquier
-        extension y solo los miraban plugins y providers, cada uno con su copia.
-      · el icono propio (nombre del set curado o SVG saneado) tambien: lo pinta el generico a partir de
-        `iconName`, porque cualquier extension puede traer el suyo.
+      · `requires` / `uses` are already understood by the generic one for all eleven types. Any extension
+        declared them and only plugins and providers looked at them, each with its own copy.
+      · the extension's own icon (a name from the curated set or a sanitized SVG) too: the generic one
+        paints it from `iconName`, because any extension may bring its own.
 
-    Lo que queda del tipo es su configuracion de instalacion, y sobre todo CUANDO se ofrece: la rueda
-    dentada salia en todos los plugins, incluidos los que no leen ninguna configuracion, y abria un editor
-    que no servia para nada. Ahora la ofrece quien la declara.
+    What is left of the type is its installation configuration, and above all WHEN it is offered: the cog
+    showed up on every plugin, including the ones that read no configuration at all, and it opened an
+    editor that was of no use. Now it is offered by whoever declares one.
 */
 
 interface IPluginManifestEntry {
@@ -106,7 +106,7 @@ const makePluginDescriptor = (deps: IPluginDescriptorDeps): IExtensionManagerDes
     }),
 
     // The channel is loaded and unloaded hot: without this the page would have to be reloaded to use a
-    // plugin recien instalado.
+    // freshly installed plugin.
     onInstalled: meta => deps.onPluginLoaded(meta.id),
     onUninstalled: p => deps.onPluginUnloaded(p.id)
 })

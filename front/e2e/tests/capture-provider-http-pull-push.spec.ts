@@ -2,13 +2,13 @@ import { test, expect } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from './helpers'
 
 /*
-    Regenera la captura del dialogo del provider http-pull-push para la guia (docs/_media/guide).
+    Regenerates the screenshot of the http-pull-push provider's dialog for the guide (docs/_media/guide).
 
-    Excluida de la corrida normal (la config del repo ignora 'capture-*.spec.ts'): se pide a mano al
-    actualizar la guia, porque escribe en las imagenes de la documentacion.
+    Excluded from the normal run (the repo's config ignores 'capture-*.spec.ts'): it is asked for by hand
+    when updating the guide, because it writes into the documentation's images.
 
-    NO destructivo: guarda las conexiones que hubiera, monta una de ejemplo solo para la foto y restaura
-    el estado original al terminar.
+    NON-destructive: it saves whatever connections were there, sets up an example one just for the
+    picture and restores the original state when it finishes.
 */
 
 // The screenshots go to the LIVE documentation: see GUIDE_MEDIA in helpers.ts.

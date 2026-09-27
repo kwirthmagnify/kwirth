@@ -2,29 +2,29 @@ import { test, expect, Page, APIRequestContext } from '@playwright/test'
 import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
 
 /*
-    Pinocchio deja de coger las 43 tools compiladas dentro de `common-ai` y las resuelve contra el
-    REGISTRO de toolsets instalados (plan: plans/ai-tools/PLAN.md, S3).
+    Pinocchio stops taking the 43 tools compiled inside `common-ai` and resolves them against the
+    REGISTRY of installed toolsets (plan: plans/ai-tools/PLAN.md, S3).
 
-    El cambio no se ve: la misma lista de tools, con los mismos nombres. Por eso el test no comprueba
-    "que hay tools" —eso pasaba también antes— sino que la lista ES la de los toolsets que Pinocchio
-    tiene a su alcance:
+    The change is invisible: the same list of tools, with the same names. That is why the test does not
+    check "that there are tools" —that was true before as well— but that the list IS that of the toolsets
+    Pinocchio has within reach:
 
-      · están las de los toolsets concedidos a `pinocchio` (k8s-describe, k8s-observability)
-      · NO está `delete_pod`, que vive en `k8s-ops` y NO se le concede
-      · NO está `times_two`, que vive en `playground` y ni siquiera está instalado
+      · the ones from the toolsets granted to `pinocchio` are there (k8s-describe, k8s-observability)
+      · `delete_pod` is NOT, which lives in `k8s-ops` and is NOT granted to it
+      · `times_two` is NOT, which lives in `playground` and is not even installed
 
-    Con el camino viejo las tres aparecían siempre, porque venían todas del mismo sitio. Si alguna
-    reaparece, es que se ha vuelto a colar el catálogo compilado.
+    With the old path all three always showed up, because they all came from the same place. If any of
+    them reappears, the compiled catalogue has crept back in.
 
-    ⚠️ **La concesión se la da el propio test, y la devuelve como estaba.** La lista del selector sale de
-    `resolveTools(…, 'pinocchio')`, así que sin concesión llega VACÍA aunque los toolsets estén instalados
-    y todo funcione. La primera versión del test daba por hecho el estado del entorno, y el día que los
-    toolsets se concedieron a otro plugin —a `agora`— se puso rojo sin que nada se hubiera roto: el
-    síntoma era "0 tools" y el mensaje culpaba al registro, que estaba perfecto. Un test no puede depender
-    de cómo tenga configurado su dev quien lo corra.
+    ⚠️ **The grant is given by the test itself, and given back as it was.** The selector's list comes from
+    `resolveTools(…, 'pinocchio')`, so without a grant it arrives EMPTY even though the toolsets are
+    installed and everything works. The test's first version assumed the environment's state, and the day
+    the toolsets were granted to another plugin —to `agora`— it went red without anything having broken:
+    the symptom was "0 tools" and the message blamed the registry, which was perfectly fine. A test
+    cannot depend on how whoever runs it has their dev configured.
 
-    NO destructivo: hace snapshot de las concesiones, concede lo justo, y restaura al terminar. Abre el
-    canal, mira el selector y cancela. No guarda configuración del canal.
+    NON-destructive: it snapshots the grants, grants just what is needed, and restores when it finishes.
+    It opens the channel, looks at the selector and cancels. It saves no channel configuration.
 */
 
 test.describe.configure({ mode: 'serial' })
@@ -36,9 +36,9 @@ const PINOCCHIO = 'pinocchio'
 type TGrants = Record<string, string[]>
 
 /*
-    El front firma cada llamada al back con su accessString, y el test no tiene forma de fabricarse una:
-    se la toma prestada de la primera petición que salga hacia `/core/`. Registrar esto ANTES del login es
-    lo que lo hace fiable — la app empieza a llamar al back en cuanto entra.
+    The front end signs every call to the back end with its accessString, and the test has no way of
+    manufacturing one: it borrows it from the first request that goes out to `/core/`. Registering this
+    BEFORE the login is what makes it reliable — the app starts calling the back end as soon as it is in.
 */
 interface IBackAccess {
     base: string

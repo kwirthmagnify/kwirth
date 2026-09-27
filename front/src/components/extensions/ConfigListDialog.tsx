@@ -11,27 +11,27 @@ import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 
 /*
-    Gestor de las N CONFIGURACIONES CON NOMBRE de una extension: la lista a la izquierda, el formulario de
-    la seleccionada a la derecha.
+    The manager of an extension's N NAMED CONFIGURATIONS: the list on the left, the selected one's form
+    on the right.
 
-    No es el formulario de ConfigFormDialog, que edita LA configuracion de una extension (un login, un
-    provider). Aqui una misma extension tiene varias configuraciones independientes —un sender con dos
-    destinos, un webhook con una entrada por sistema que le llama— y cada una tiene nombre, se clona y se
-    borra por separado. De ahi el chip 'N configs' de la tarjeta.
+    It is not ConfigFormDialog's form, which edits THE configuration of an extension (a login, a
+    provider). Here one and the same extension has several independent configurations —a sender with two
+    destinations, a webhook with one entry per system that calls it— and each has a name, is cloned and
+    is deleted separately. Hence the card's 'N configs' chip.
 
-    Sirve a webhooks y a senders, que hablan exactamente los mismos endpoints bajo su `basePath`:
-      GET  <basePath>/schema          el formulario que hay que pintar
+    It serves webhooks and senders, which speak exactly the same endpoints under their `basePath`:
+      GET  <basePath>/schema          the form to be painted
       GET  <basePath>/configs         { configs: [...] }
-      POST <basePath>/configs         crear o actualizar (el nombre va dentro)
+      POST <basePath>/configs         create or update (the name goes inside)
       DEL  <basePath>/configs/<name>
 
-    El documento que guarda el back es `{ ...camposComunes, configs: [...] }`. Los campos COMUNES son los
-    que el schema marca con `common`: pertenecen a la extension y no a cada configuracion — el servidor de
-    correo es uno, y los destinatarios son varios. Se editan aparte, en su propia pantalla, y solo aparece
-    si el schema declara alguno.
+    The document the back end stores is `{ ...commonFields, configs: [...] }`. The COMMON fields are the
+    ones the schema marks with `common`: they belong to the extension and not to each configuration — the
+    mail server is one, and the recipients are many. They are edited apart, on their own screen, and it
+    only shows up if the schema declares any.
 
-    Lo que sea PROPIO de un tipo entra por `perConfigPanel`, que se pinta bajo el formulario y solo para
-    configuraciones ya guardadas: webhooks enseña ahi la URL de ingesta con su token.
+    Whatever is a type's OWN comes in through `perConfigPanel`, which is painted below the form and only
+    for configurations already saved: webhooks shows the ingest URL with its token there.
 */
 
 // A configuration is whatever its schema says: the core does not know each extension's fields.
@@ -48,9 +48,9 @@ interface IConfigListDialogProps {
     title: string
     helpSection?: string
     /*
-        Pagina de ayuda PROPIA de esta extension, si existe. Se comprueba de verdad —un HEAD al .md— y si
-        no esta, se usa `helpSection`. Asi publicar la referencia de un sender la enlaza sola, sin tocar
-        el front ni mantener una lista aparte de quien la tiene.
+        This extension's OWN help page, if it exists. It is genuinely checked —a HEAD to the .md— and if
+        it is not there, `helpSection` is used. That way publishing a sender's reference links it by
+        itself, without touching the front end or keeping a separate list of who has one.
     */
     preferredHelpSection?: string
     /** THAT extension's back-end route, e.g. '/core/webhooks/jira'. */
@@ -117,8 +117,8 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     useEffect(() => { reload() }, [props.basePath])
 
     /*
-        La ayuda apunta a la pagina de ESTA extension si existe. Se comprueba con un HEAD en vez de
-        mantener una lista: publicar la referencia de un sender la enlaza sola.
+        The help points at THIS extension's page if it exists. It is checked with a HEAD instead of
+        keeping a list: publishing a sender's reference links it by itself.
     */
     useEffect(() => {
         const propia = props.preferredHelpSection
@@ -137,8 +137,8 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     const camposComunes = schema.filter(f => f.common)
 
     /*
-        La base se guarda con el documento ENTERO: el back recibe los comunes y las configuraciones
-        juntos, asi que mandar solo los comunes borraria las configuraciones.
+        The base is saved with the WHOLE document: the back end receives the common fields and the
+        configurations together, so sending only the common ones would delete the configurations.
     */
     const guardarBase = async () => {
         setSavingBase(true)
@@ -194,9 +194,9 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     }
 
     /*
-        Importar NO borra lo que hay: las configuraciones elegidas se añaden a las existentes, y una con
-        el mismo nombre se sobreescribe. Traer un fichero no puede llevarse por delante configuraciones
-        que no estaban en el.
+        Importing does NOT delete what is there: the chosen configurations are added to the existing
+        ones, and one with the same name is overwritten. Bringing in a file cannot take away
+        configurations that were not in it.
     */
     const confirmarImportacion = async () => {
         setImportOpen(false)
@@ -228,9 +228,9 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     }
 
     /*
-        Clonar = quedarse con los valores y soltar el nombre original, pero sobre todo SIN `originalName`:
-        eso es lo que distingue guardar una copia de renombrar la original, porque al guardar se borra la
-        anterior cuando ese campo esta puesto y el nombre ha cambiado.
+        Cloning = keeping the values and dropping the original name, but above all WITHOUT
+        `originalName`: that is what tells saving a copy from renaming the original, because on saving
+        the previous one is deleted when that field is set and the name has changed.
     */
     const clonar = () => {
         setEditingName(undefined)
@@ -259,22 +259,23 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     }
 
     /*
-        ⚠️ Los campos vacios NO se envian, que es como funcionaba antes de unificar el diálogo. Vaciar un
-        campo no lo borra: hay que borrar la configuracion entera. Se conserva a proposito — cambiarlo aqui
-        tocaria a la vez el CRUD de webhooks y el de senders, que estan en uso — y queda anotado en el plan.
+        ⚠️ Empty fields are NOT sent, which is how it worked before the dialog was unified. Emptying a
+        field does not delete it: the whole configuration has to be deleted. It is kept on purpose —
+        changing it here would touch both webhooks' and senders' CRUD at once, and they are in use — and
+        it is written down in the plan.
 
-        Los `common` se quedan fuera: son de la EXTENSION, no de cada configuracion.
+        The `common` ones stay out: they belong to the EXTENSION, not to each configuration.
     */
     const buildPayload = (): TConfigValues => {
         const payload: TConfigValues = { name: values.name }
         for (const f of schema.filter(f => !f.common && f.name !== 'name')) {
             const v = values[f.name]
             /*
-                Un booleano se guarda SIEMPRE, tambien cuando esta apagado.
+                A boolean is ALWAYS saved, including when it is switched off.
 
-                Saltarlo por "vacio" convertia el apagado en AUSENTE, y una extension con un campo cuyo
-                defecto es true lo volvia a encender: el interruptor se veia apagado y el comportamiento
-                era el de encendido. Lo que se ve tiene que ser lo que se guarda.
+                Skipping it as "empty" turned switched-off into ABSENT, and an extension with a field
+                whose default is true switched it back on: the toggle looked off and the behaviour was
+                that of on. What is seen has to be what is saved.
             */
             if (f.type === 'boolean') { payload[f.name] = Boolean(v); continue }
             if (v === undefined || v === '') continue
@@ -321,8 +322,8 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     })
 
     /*
-        Un campo del schema. Recibe de DONDE lee y a donde escribe porque los mismos campos se pintan en
-        dos sitios: la configuracion seleccionada y la base comun de la extension.
+        One field of the schema. It receives WHERE it reads from and writes to because the same fields
+        are painted in two places: the selected configuration and the extension's common base.
     */
     const campo = (f: IConfigFieldDef, valores: TConfigValues = values, escribir?: (name: string, val: unknown) => void) => {
         const value = valores[f.name] ?? (f.type === 'boolean' ? false : '')

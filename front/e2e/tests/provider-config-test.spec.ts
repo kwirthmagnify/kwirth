@@ -2,19 +2,19 @@ import { test, expect } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    El formulario de configuracion de un provider, con las dos cosas que el core le puso:
+    A provider's configuration form, with the two things the core added to it:
 
-      · el boton TEST, que sale cuando el provider expone '/test' en su configRouter. Antes no habia
-        forma de saber si unas credenciales valian hasta que el provider fallaba en silencio. Cada
-        extension que lo queria se lo montaba por su cuenta; esto lo hace una vez para todas.
-      · el campo 'multiselect', que se pinta como desplegable de VARIOS valores CON CHECKBOX. Sin el
-        check, un desplegable de seleccion multiple parece de seleccion unica.
+      · the TEST button, which shows up when the provider exposes '/test' in its configRouter. There used
+        to be no way of knowing whether some credentials were any good until the provider failed
+        silently. Every extension that wanted it built its own; this does it once for all of them.
+      · the 'multiselect' field, painted as a MULTI-value dropdown WITH CHECKBOXES. Without the check, a
+        multiple-selection dropdown looks like a single-selection one.
 
-    ⚠️ No se PULSA el boton: probar de verdad sale a la red del proveedor cloud que haya detras.
-    Lo que se comprueba aqui es el contrato de la UI; que la prueba funcione es del QA manual.
+    ⚠️ The button is NOT PRESSED: really testing goes out to the network of whatever cloud provider is
+    behind it. What is checked here is the UI's contract; that the test works belongs to the manual QA.
 
-    Si el entorno no tiene ningun provider con '/test', el caso se salta en vez de fallar: la suite no
-    puede depender de que este instalada una extension concreta.
+    If the environment has no provider with '/test', the case is skipped instead of failing: the suite
+    cannot depend on a particular extension being installed.
 */
 
 interface IProviderEntry {
@@ -88,8 +88,8 @@ test('su formulario saca el boton TEST, y un multiselect con checkbox', async ({
         await expect(opciones.first()).toBeVisible({ timeout: 10000 })
         expect(await page.locator('[role="option"] input[type="checkbox"]').count()).toBeGreaterThan(0)
         /*
-            El listbox de MUI se cierra por su BACKDROP, no con Escape: mientras siga abierto pone
-            aria-hidden en todo lo de debajo y el CANCEL del dialogo deja de ser clicable.
+            MUI's listbox is closed through its BACKDROP, not with Escape: for as long as it stays open
+            it puts aria-hidden on everything underneath and the dialog's CANCEL stops being clickable.
         */
         await page.locator('.MuiBackdrop-root').last().click({ force: true })
         await page.waitForTimeout(400)

@@ -85,13 +85,13 @@ export async function pickLastCombo(page: Page, option: string): Promise<void> {
 }
 
 /*
-    ── Dónde van las capturas de la guía ────────────────────────────────────────────────────────────
+    ── Where the guide's screenshots go ─────────────────────────────────────────────────────────────
 
-    A la carpeta de la versión VIVA de la documentación, resuelta igual que en
-    `back/scripts/build-docs-tgz.js`: la `docs/<x.y.z>` más alta. Cada spec de captura tenía la ruta
-    clavada a una versión concreta, y envejeció en silencio: al publicarse una versión nueva de la
-    documentación, las corridas seguían escribiendo sobre la ANTIGUA mientras la guía viva enseñaba
-    capturas viejas — en verde, porque un spec de captura no comprueba nada, solo escribe ficheros.
+    To the folder of the LIVE version of the documentation, resolved the same way as in
+    `back/scripts/build-docs-tgz.js`: the highest `docs/<x.y.z>`. Every capture spec had the path nailed
+    to a specific version, and it aged in silence: when a new version of the documentation was published,
+    the runs went on writing over the OLD one while the live guide showed old screenshots — green,
+    because a capture spec checks nothing, it only writes files.
 */
 const DOCS = path.resolve(__dirname, '..', '..', '..', 'docs')
 
@@ -111,9 +111,9 @@ export const liveDocsVersion = (): string =>
 export const GUIDE_MEDIA = path.join(DOCS, liveDocsVersion(), '_media', 'guide').replace(/\\/g, '/')
 
 /*
-    Regenerar UNA captura sin arrastrar las demás: `CAPTURE_ONLY=aitoolsets`. Sin la variable se
-    regeneran todas, como siempre. Hace falta porque un cierre normal cambia una sola pantalla, y
-    rehacer un puñado de imágenes para actualizar una deja diffs que nadie ha mirado.
+    Regenerating ONE screenshot without dragging the rest along: `CAPTURE_ONLY=aitoolsets`. Without the
+    variable they are all regenerated, as always. It is needed because a normal closing changes a single
+    screen, and redoing a handful of images to update one leaves diffs nobody has looked at.
 */
 const ONLY = process.env.CAPTURE_ONLY ?? ''
 export const capturePedida = (file: string): boolean => !ONLY || file.includes(ONLY)

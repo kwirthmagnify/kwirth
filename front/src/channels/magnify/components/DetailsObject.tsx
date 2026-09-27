@@ -65,7 +65,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
     
     const containsEdit = React.useMemo(() => {
         if (!props.sections || !props.object.data) return false;
-        // Buscamos si algún item en alguna sección tiene formato 'edit'
+        // We look for any item in any section with the 'edit' format
         return props.sections.some(section => 
             section.items.some(item => item.format === 'edit' || (item.style && item.style.includes('edit')))
         );
@@ -113,7 +113,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
 
         let obj = JSON.parse(JSON.stringify(srcobj))
         if (src.includes('|') && src.includes(':')) {  
-            // xxx|yyyy:clave 
+            // xxx|yyyy:key
             // merges the items of xxx and those of yyy sharing the same key value, leaving the result in xxx
             let key = src.split(':')[1]
             let parts = src.split(':')[0].split('|')

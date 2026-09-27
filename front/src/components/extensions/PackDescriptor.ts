@@ -3,18 +3,18 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionVerdict } from './extensionManagerModel'
 
 /*
-    Descriptor del tipo `pack` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
+    The `pack` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
 
-    El plan lo marcaba como candidato a NO migrar, junto con IdP, porque un pack CONTIENE otras extensiones
-    y al instalarlo hay que cargar el front de cada una. Migrado, resulta que eso cabe entero en
-    `onInstalled` / `onUninstalled`, que es donde ya vivian los efectos de themes y homepages: un pack
-    simplemente los dispara en bucle, uno por miembro.
+    The plan marked it as a candidate NOT to migrate, along with IdP, because a pack CONTAINS other
+    extensions and installing it means loading each one's front. Migrated, it turns out that fits
+    entirely in `onInstalled` / `onUninstalled`, which is where themes' and homepages' effects already
+    lived: a pack simply fires them in a loop, one per member.
 
-    Lo unico que hubo que añadir al generico es la LINEA DE MIEMBROS ('2 plugins, 1 theme'), que ningun
-    otro tipo tiene porque ningun otro contiene nada, y el aviso del boton de desinstalar.
+    The only thing that had to be added to the generic one is the MEMBERS LINE ('2 plugins, 1 theme'),
+    which no other type has because no other one contains anything, and the uninstall button's warning.
 
-    ⚠️ Un pack no tiene version de dev: se instala entero o no esta. Por eso aqui no hay chip 'dev' ni
-    veredicto que lo contemple.
+    ⚠️ A pack has no dev version: it is installed whole or it is not there. That is why there is no 'dev'
+    chip here nor a verdict contemplating one.
 */
 
 /** An extension the pack brings inside. */
@@ -75,10 +75,10 @@ const toModel = (e: IInstalledPack | IPackManifestEntry): IExtensionCardModel =>
     installedFrom: (e as IInstalledPack).installedFrom,
     marketplaceLabel: e.marketplaceLabel,
     /*
-        Que trae el pack. Lleva 'Includes:' delante a proposito: sin el, la linea caia debajo de una
-        descripción recortada y se leia como su continuación en vez de como la lista de lo que trae.
+        What the pack brings. It carries 'Includes:' in front on purpose: without it, the line fell below
+        a truncated description and read as its continuation instead of as the list of what it brings.
 
-        Instalado se sabe lo que hay DENTRO; del catalogo, solo que tipos promete traer.
+        Once installed what is INSIDE is known; from the catalogue, only which types it promises to bring.
     */
     subtitle: (e as IInstalledPack).extensions
         ? `Includes: ${membersSummary((e as IInstalledPack).extensions)}`
@@ -124,10 +124,10 @@ const makePackDescriptor = (deps: IPackDescriptorDeps): IExtensionManagerDescrip
     // Removing a pack takes with it everything it brought, and that is warned about BEFORE pressing.
     uninstallTooltip: 'Uninstall pack (removes all member extensions)',
     /*
-        El unico tipo que NO se actualiza instalando encima. Instalar un pack rechaza tambien si alguno de
-        sus miembros ya esta puesto, asi que reemplazarlo no es reemplazar una extension: es actualizar
-        todas las que trae, con sus reinicios y su configuracion. Mientras el back no lo haga, el boton lo
-        dice en vez de ofrecer algo que va a fallar.
+        The only type that is NOT updated by installing on top. Installing a pack also refuses if any of
+        its members is already in place, so replacing it is not replacing one extension: it is updating
+        every one it brings, with their restarts and their configuration. Until the back end does that,
+        the button says so instead of offering something that is going to fail.
     */
     updateBlockedReason: () => 'Packs cannot be updated in place — uninstall this pack and install the new version',
     keyOf: e => e.id,

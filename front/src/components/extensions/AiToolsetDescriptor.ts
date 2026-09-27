@@ -3,12 +3,12 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IExtensionVerdict } from './extensionManagerModel'
 
 /*
-    Descriptor del tipo `aitoolset` (plan: plans/ai-tools/PLAN.md) y PRIMER cliente del gestor generico.
-    Se estreno aqui a proposito: era el unico tipo sin diálogo propio, asi que estrenarlo no podia romper
-    nada de lo que ya funcionaba.
+    The `aitoolset` type's descriptor (plan: plans/ai-tools/PLAN.md) and the generic manager's FIRST
+    client. It was premiered here on purpose: it was the only type without a dialog of its own, so
+    premiering it could not break anything that already worked.
 
-    Las dos secciones, el filtro, tarjeta/lista, el Select de version, instalar desde catalogo/URL/fichero,
-    la procedencia y el selector de plugins los pone ExtensionManagerDialog.
+    The two sections, the filter, card/list, the version Select, installing from catalogue/URL/file, the
+    provenance and the plugin selector are all put there by ExtensionManagerDialog.
 */
 
 interface IAiToolsetEntry {
@@ -71,14 +71,14 @@ const makeAiToolsetDescriptor = (deps: IAiToolsetDescriptorDeps): IExtensionMana
     canUninstall,
 
     /*
-        LA CONCESION: que plugins pueden usar este toolset (plan: "El techo en dos fases", fase 1).
+        THE GRANT: which plugins may use this toolset (plan: "El techo en dos fases", phase 1).
 
-        Se concede desde el TOOLSET y no desde el plugin porque lo peligroso es el toolset: `k8s-ops` son
-        las ocho tools de escritura, y asi "¿quien puede escribir en el cluster por IA?" se responde en UNA
-        pantalla, en vez de recorriendo los canales instalados uno a uno.
+        It is granted from the TOOLSET and not from the plugin because the dangerous one is the toolset:
+        `k8s-ops` is the eight writing tools, and this way "who can write to the cluster through AI?" is
+        answered on ONE screen, instead of walking the installed channels one by one.
 
-        ⚠️ Por defecto no lo usa nadie: instalar deja el toolset disponible, no concedido. De ahi que el
-        control diga 'No plugin' en vez de quedarse en blanco.
+        ⚠️ By default nobody uses it: installing leaves the toolset available, not granted. Hence the
+        control says 'No plugin' rather than staying blank.
     */
     pluginSelector: {
         tooltip: 'Plugins allowed to use this toolset',

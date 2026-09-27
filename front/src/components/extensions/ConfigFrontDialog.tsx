@@ -3,17 +3,17 @@ import { Dialog, DialogContent, Typography } from '@mui/material'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 
 /*
-    La configuracion que trae la PROPIA extension en su front.js. Es una de las cuatro formas de
-    configurar una extension (ver ConfigFormDialog), y la usan providers y senders.
+    The configuration the extension ITSELF brings in its front.js. It is one of the four ways of
+    configuring an extension (see ConfigFormDialog), and providers and senders use it.
 
-    Un provider basico se configura con un formulario que pinta el core a partir de su schema. Uno
-    complejo —sugarless, syslog, service-flow— tiene varias configuraciones con nombre, listas y pruebas
-    de conexion, y eso no cabe en un formulario plano: trae su UI y el core solo la monta, igual que hace
-    con el SetupDialog de una homepage.
+    A basic provider is configured with a form the core paints from its schema. A complex one —sugarless,
+    syslog, service-flow— has several named configurations, lists and connection tests, and that does not
+    fit in a flat form: it brings its UI and the core merely mounts it, just as it does with a homepage's
+    SetupDialog.
 
-    ⚠️ El script se vuelve a cargar cada vez que se abre, con la marca de tiempo en la URL: si no, tras
-    actualizar la extension seguiria montandose la UI vieja que quedo en la global, y se estaria
-    configurando una version que ya no esta instalada.
+    ⚠️ The script is loaded again every time it opens, with the timestamp in the URL: otherwise, after
+    updating the extension the old UI left in the global would go on being mounted, and a version that is
+    no longer installed would be the one being configured.
 */
 
 /** What the core passes to the extension's UI: with this it talks to its own back end. */

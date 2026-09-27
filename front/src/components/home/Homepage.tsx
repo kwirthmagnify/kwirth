@@ -115,14 +115,14 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
     }
 
     /*
-        Hueco de ancho FIJO para cada icono de la fila.
+        A FIXED-width slot for each icon in the row.
 
-        El del canal lo pinta cada plugin con getChannelIcon(), asi que uno trae una gota, otro un
-        engranaje y otro un pin, y cada uno ocupa lo que ocupa. Sin un ancho fijo, el nombre de la
-        pestaña empieza en una x distinta en cada linea y la lista sale desalineada.
+        The channel's one is painted by each plugin through getChannelIcon(), so one brings a drop,
+        another a cog and another a pin, and each takes up whatever it takes up. Without a fixed width,
+        the tab's name starts at a different x on every line and the list comes out misaligned.
 
-        24 px porque es el tamaño por defecto de un icono de MUI; el de la view se pide a 20 y se
-        centra dentro.
+        24 px because that is a MUI icon's default size; the view's one is asked for at 20 and centred
+        inside.
     */
     const iconSlotSx = {
         width: 24,

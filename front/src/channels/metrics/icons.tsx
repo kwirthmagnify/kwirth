@@ -1,20 +1,20 @@
 import { SvgIcon, SvgIconProps } from '@mui/material'
 
 /*
-    Los iconos que usa SOLO el canal Metrics (el menu de tipos de grafico).
+    The icons ONLY the Metrics channel uses (the chart types menu).
 
-    El barrel de kwirth (`common-front/src/kwirthicons.ts`) es la lista de iconos COMUNES, y ademas es la
-    que el core publica a las extensiones en `window.__kwirth__.MUI.icons`. Un icono que usa un unico menu
-    no pinta en esa API.
+    Kwirth's barrel (`common-front/src/kwirthicons.ts`) is the list of COMMON icons, and it is also the
+    one the core publishes to the extensions at `window.__kwirth__.MUI.icons`. An icon used by a single
+    menu has no business in that API.
 
-    ⚠️ Ojo con los nombres: `AreaChart` y `PieChart` son TAMBIEN componentes de **recharts**, y ahi si se
-    usan en varios sitios (`Chart.tsx`, `Homepage.tsx`). Son cosas distintas con el mismo nombre: aqui son
-    los ICONOS del menu. Si algun dia un fichero necesita el icono y el grafico a la vez, hay que renombrar
-    uno de los dos en el import.
+    ⚠️ Careful with the names: `AreaChart` and `PieChart` are ALSO **recharts** components, and there they
+    are indeed used in several places (`Chart.tsx`, `Homepage.tsx`). They are different things with the
+    same name: here they are the menu's ICONS. If one day a file needs both the icon and the chart, one of
+    the two has to be renamed in the import.
 
-    Para añadir otro: copia el `d` de `@mui/icons-material/<Nombre>.js` — todos sus paths si tiene varios.
+    To add another one: copy the `d` from `@mui/icons-material/<Name>.js` — all its paths if it has several.
 
-    Los paths son de Material Icons (Apache-2.0).
+    The paths are Material Icons (Apache-2.0).
 */
 
 export const AreaChart = (props: SvgIconProps) => (

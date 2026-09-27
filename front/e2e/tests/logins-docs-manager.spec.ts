@@ -2,20 +2,21 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migracion de los gestores de `login` y `docs` al diálogo generico
+    Migration of the `login` and `docs` managers to the generic dialog
     (plan: plans/extension-managers-ui/PLAN.md).
 
-    No se comprueba "que se pinte algo": se comprueba lo que cada tipo APORTA y que el generico tiene que
-    respetar, que es justo lo que se podria perder al tirar sus 624 y 488 lineas:
+    It does not check "that something gets painted": it checks what each type CONTRIBUTES and the generic
+    one has to honour, which is exactly what could be lost when throwing away their 624 and 488 lines:
 
-      · login → abrir su pagina en otra pestaña (?loginExt=<id>) y el engranaje SOLO en los que declaran
-        configuracion
-      · docs  → la identidad es el PAR (targetType, id), no el id; y lo `bundled` no se desinstala
+      · login → opening its page in another tab (?loginExt=<id>) and the cog ONLY on those declaring
+        configuration
+      · docs  → identity is the PAIR (targetType, id), not the id; and what is `bundled` is not uninstalled
 
-    Ademas se vigila que la procedencia, que ahora pinta el generico para los once tipos, siga saliendo.
+    On top of that it watches that the provenance, now painted by the generic one for all eleven types,
+    still shows up.
 
-    NO destructivo: abre, mira y cierra. No instala ni desinstala nada, y NO pulsa el boton que abre la
-    pagina de login (abriria una pestaña real).
+    NON-destructive: it opens, looks and closes. It installs and uninstalls nothing, and it does NOT press
+    the button that opens the login page (that would open a real tab).
 */
 
 const LOGINS = /Manage login extensions/i
@@ -106,13 +107,14 @@ test.describe('gestores migrados al generico: logins y docs', () => {
 
     test('docs: lo que no se puede quitar lo dice y tiene el boton muerto', async () => {
         /*
-            La documentacion que viene DENTRO (bundled) o la que gobierna kwirth-dev.json no se desinstalan
-            desde aqui: borrar la del core dejaria Kwirth sin ayuda, y la de dev volveria al arrancar. El
-            generico tiene que enseñar el MOTIVO, no solo desactivar el boton.
+            Documentation that comes INSIDE (bundled) or is governed by kwirth-dev.json is not
+            uninstalled from here: deleting the core's would leave Kwirth without help, and the dev one
+            would come back at startup. The generic one has to show the REASON, not merely disable the
+            button.
 
-            ⚠️ No se nombra cual de los dos motivos hay en el entorno: la primera version daba por hecho
-            que existia una 'bundled' y se puso roja en un entorno donde la del core esta en dev. Se
-            comprueba el COMPORTAMIENTO con lo que haya instalado.
+            ⚠️ Which of the two reasons is present in the environment is not named: the first version
+            assumed there was a 'bundled' one and went red in an environment where the core's is in dev.
+            The BEHAVIOUR with whatever is installed is what gets checked.
         */
         const dialog = await abrir('Documentation', DOCS)
         const bloqueado = dialog.locator('span[aria-label$="documentation cannot be uninstalled"] button')

@@ -1,23 +1,23 @@
 import { SvgIcon, SvgIconProps } from '@mui/material'
 
 /*
-    Los iconos que usan SOLO los menus del core (MenuTab y MenuDrawer).
+    The icons ONLY the core's menus use (MenuTab and MenuDrawer).
 
-    El barrel de kwirth (`common-front/src/kwirthicons.ts`) es la lista de iconos COMUNES, y ademas es la
-    que el core publica a las extensiones en `window.__kwirth__.MUI.icons`. Estos seis no los pide nadie
-    mas, asi que no tienen por que estar en esa API.
+    Kwirth's barrel (`common-front/src/kwirthicons.ts`) is the list of COMMON icons, and it is also the
+    one the core publishes to the extensions at `window.__kwirth__.MUI.icons`. Nobody else asks for these
+    six, so they have no reason to be in that API.
 
-    ⚠️ Son iconos de MENU, al lado de texto y junto a otros de 24x24 (`Delete`, `Check`, `FactCheck`…).
-    Por eso siguen siendo SVG y no caracteres tipograficos (‹ › « »): un glifo tiene ancho de letra, no
-    caja de 24, desalinea el texto de su fila respecto a las demas, cambia de dibujo segun la fuente —y
-    aqui los temas instalables cambian la fuente— y lo leeria el lector de pantalla como texto.
+    ⚠️ They are MENU icons, next to text and alongside other 24x24 ones (`Delete`, `Check`, `FactCheck`…).
+    That is why they are still SVG and not typographic characters (‹ › « »): a glyph has letter width, not
+    a 24 box, it misaligns its row's text with respect to the others, it changes shape with the font —and
+    here the installable themes change the font— and a screen reader would read it as text.
 
-    `Save` y `SaveAs` NO estan aqui a proposito: son comunes y se quedan en el barrel.
+    `Save` and `SaveAs` are deliberately NOT here: they are common and they stay in the barrel.
 
-    ⚠️ KeyboardDoubleArrowLeft/Right llevan DOS paths (una punta de flecha cada uno): con uno solo sale
-    media flecha.
+    ⚠️ KeyboardDoubleArrowLeft/Right carry TWO paths (one arrow head each): with only one you get half
+    an arrow.
 
-    Los paths son de Material Icons (Apache-2.0).
+    The paths are Material Icons (Apache-2.0).
 */
 
 export const KeyboardArrowLeft = (props: SvgIconProps) => (

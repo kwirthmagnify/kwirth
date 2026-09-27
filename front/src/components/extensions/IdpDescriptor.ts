@@ -5,19 +5,20 @@ import { EChipIcon, EManagerSection, IExtensionManagerDescriptor, IExtensionCard
 import { IdpConfigDialog, IIdpInstance } from './IdpConfigDialog'
 
 /*
-    Descriptor del tipo `idp` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
+    The `idp` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
 
-    El plan lo marcaba como el mejor candidato a NO migrar, por tener DOS entidades: el conector, que es
-    lo que se instala, y la instancia, que es ese conector ya configurado. Leyendolo entero resulta que la
-    relacion es 1:1 —hay una instancia por conector y comparten id— asi que en la pantalla se comportan
-    como una extension y su configuracion, igual que las demas.
+    The plan marked it as the best candidate NOT to migrate, because it has TWO entities: the connector,
+    which is what gets installed, and the instance, which is that connector already configured. Reading
+    it through, the relationship turns out to be 1:1 —there is one instance per connector and they share
+    an id— so on the screen they behave like an extension and its configuration, just like the rest.
 
-    Lo que aporta el tipo:
-      · el chip de estado, que es lo primero que se mira aqui: enabled / disabled / not configured. Un
-        IdP configurado pero apagado y uno sin configurar se ven distinto, porque son cosas distintas.
-      · su configuracion, que es la instancia (ver IdpConfigDialog).
-      · que NO cuelga de /core/<plural>: los conectores viven bajo /idp, y de ahi que el modelo tenga los
-        endpoints explicitos en vez de adivinarlos.
+    What the type brings:
+      · the status chip, which is the first thing looked at here: enabled / disabled / not configured. An
+        IdP that is configured but switched off and one that is not configured look different, because
+        they are different things.
+      · its configuration, which is the instance (see IdpConfigDialog).
+      · that it does NOT hang off /core/<plural>: the connectors live under /idp, hence the model having
+        the endpoints explicit rather than guessing them.
 */
 
 interface IIdpConnector {
@@ -54,10 +55,11 @@ interface IIdpDescriptorDeps {
 }
 
 /*
-    Las instancias configuradas, indexadas por el id de su conector.
+    The configured instances, indexed by their connector's id.
 
-    Viven en el modulo y no en el estado del generico: son datos que el generico no conoce ni tiene por
-    que conocer. Se cargan en `loadExtraData`, y el generico repinta cuando esa carga termina.
+    They live in the module and not in the generic one's state: they are data the generic one neither
+    knows nor has any reason to know. They are loaded in `loadExtraData`, and the generic one repaints
+    when that load finishes.
 */
 let instancias: Record<string, IIdpInstance> = {}
 
@@ -77,8 +79,8 @@ const toModel = (e: IIdpConnector | IIdpConnectorManifestEntry): IExtensionCardM
 }
 
 /*
-    ⚠️ Aqui `installed` no significa "esta en la lista": significa que se instalo COMO EXTENSION. Un
-    conector bundled o de dev viene dentro de Kwirth, sale en la lista y no se puede quitar.
+    ⚠️ Here `installed` does not mean "it is in the list": it means it was installed AS AN EXTENSION. A
+    bundled or dev connector comes inside Kwirth, shows up in the list and cannot be removed.
 */
 const canUninstall = (c: IIdpConnector): IExtensionVerdict => {
     if (!c.installed) return { allowed: false, reason: 'Bundled/dev connector (cannot be uninstalled)' }
@@ -103,11 +105,11 @@ const makeIdpDescriptor = (deps: IIdpDescriptorDeps): IExtensionManagerDescripto
     canUninstall,
 
     /*
-        ⚠️ El mapa se sustituye ENTERO al final, y no se vacia antes de pedir los datos.
+        ⚠️ The map is replaced WHOLE at the end, and it is not emptied before asking for the data.
 
-        Vaciandolo primero quedaba un hueco —el tiempo de la peticion— en el que cualquier repintado
-        pintaba todos los conectores como 'not configured'. Se veia al guardar la configuracion de un IdP:
-        el chip daba un salto por un estado intermedio que no existia.
+        Emptying it first left a gap —the request's duration— in which any repaint painted every
+        connector as 'not configured'. It showed when saving an IdP's configuration: the chip jumped
+        through an intermediate state that did not exist.
     */
     loadExtraData: async () => {
         const mapa: Record<string, IIdpInstance> = {}
@@ -116,8 +118,8 @@ const makeIdpDescriptor = (deps: IIdpDescriptorDeps): IExtensionManagerDescripto
     },
 
     /*
-        El estado de la instancia, que es lo primero que se mira en esta pantalla: un IdP encendido, uno
-        configurado pero apagado y uno sin tocar son tres situaciones distintas y las tres importan.
+        The instance's status, which is the first thing looked at on this screen: an IdP switched on, one
+        configured but switched off and one untouched are three different situations and all three matter.
     */
     extraChips: (e, section): IExtensionChip[] => {
         if (section !== EManagerSection.INSTALLED) return []

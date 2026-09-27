@@ -1,15 +1,15 @@
 import { SxProps, Theme } from '@mui/material'
 
 /*
-    El aspecto de una tarjeta de extension, en UN SOLO SITIO.
+    An extension card's appearance, in a SINGLE PLACE.
 
-    Los once diálogos de gestión pintaban su propia copia del mismo contenedor, y la copia derivaba: themes
-    tenía 120 de alto y los otros diez 100. Peor: NINGUNO recortaba la descripción, así que una descripción
-    larga —el login de Santander, por ejemplo— estiraba la tarjeta, y con ella la fila entera del grid,
-    dejando a sus vecinas con un hueco muerto en medio.
+    The eleven management dialogs each painted their own copy of the same container, and the copies
+    drifted: themes was 120 tall and the other ten 100. Worse: NONE of them truncated the description, so
+    a long description —Santander's login, for instance— stretched the card, and with it the grid's whole
+    row, leaving its neighbours with dead space in the middle.
 
-    La descripción se recorta a dos líneas con puntos suspensivos. El texto completo no se pierde: la
-    página de la extensión está a un clic en el icono de enlace externo.
+    The description is truncated to two lines with an ellipsis. The full text is not lost: the
+    extension's page is one click away on the external link icon.
 */
 
 // FIXED height, not minimum: with a minimum, a card that grows stretches its whole row of the grid and
@@ -60,10 +60,10 @@ const clampSx = (lineas: number): SxProps<Theme> => ({
 export const extensionCardDescriptionSx = clampSx(2)
 
 /*
-    Una sola línea, cuando la tarjeta lleva ademas subtitulo (hoy, los packs con lo que traen dentro).
+    A single line, when the card also carries a subtitle (today, the packs with what they bring inside).
 
-    Con las dos líneas de siempre, el subtitulo caia pegado a una descripción CORTADA y se leia como su
-    continuación: 'Censor pack for Kwirth — LLM-based log noise filtering channel plus its…' seguido de
-    'plugin, login' parecia mas texto de la descripción, no la lista de lo que trae el pack.
+    With the usual two lines, the subtitle fell right below a TRUNCATED description and read as its
+    continuation: 'Censor pack for Kwirth — LLM-based log noise filtering channel plus its…' followed by
+    'plugin, login' looked like more description text, not the list of what the pack brings.
 */
 export const extensionCardDescriptionOneLineSx = clampSx(1)

@@ -33,12 +33,12 @@ const MANAGERS: { menu: string, title: RegExp, file: string }[] = [
 ]
 
 /*
-    Nombres de CLIENTE que no pueden aparecer en una guía PÚBLICA. El entorno de desarrollo tiene instaladas
-    extensiones hechas para clientes concretos (un tema con su marca, por ejemplo), y salían con su nombre en
-    las imágenes publicadas. No se desinstalan — el entorno es del usuario y desinstalar sería destructivo —:
-    se reetiquetan en el DOM justo antes de disparar la captura, igual que las capturas de Agora hacen con los
-    nombres de cluster reales. La imagen sigue siendo fiel a lo que hace el producto; lo único que cambia es a
-    quién pertenece el ejemplo.
+    CUSTOMER names that cannot appear in a PUBLIC guide. The development environment has extensions made
+    for particular customers installed (a theme with their brand, for instance), and they came out with
+    their name in the published images. They are not uninstalled — the environment is the user's and
+    uninstalling would be destructive —: they are relabelled in the DOM right before firing the capture,
+    just as Agora's captures do with the real cluster names. The image stays faithful to what the product
+    does; the only thing that changes is who the example belongs to.
 */
 const RELABEL: Record<string, string> = { Santander: 'Acme Bank' }
 

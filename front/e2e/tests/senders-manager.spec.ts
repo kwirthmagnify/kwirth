@@ -2,20 +2,21 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migracion del gestor de `sender` al diálogo generico (plan: plans/extension-managers-ui/PLAN.md).
+    Migration of the `sender` manager to the generic dialog (plan: plans/extension-managers-ui/PLAN.md).
 
-    Es el ultimo de los once y el que mas traia. Lo que se vigila es lo que podria haberse quedado por el
-    camino al tirar sus 1060 lineas:
+    It is the last of the eleven and the one that brought the most. What is watched is what could have
+    been left behind when throwing away its 1060 lines:
 
-      · el chip con las configuraciones que tiene puestas, que aqui son los DESTINOS
-      · la configuracion BASE (los campos que el schema marca `common`): el servidor de correo es uno y
-        los destinatarios son varios
-      · exportar e importar configuraciones, que es como se lleva lo mismo de un Kwirth a otro
-      · los que traen su propia UI (composite) abren la SUYA, no la lista del core
+      · the chip with the configurations it has in place, which here are the DESTINATIONS
+      · the BASE configuration (the fields the schema marks as `common`): the mail server is one and the
+        recipients are many
+      · exporting and importing configurations, which is how the same thing is taken from one Kwirth to
+        another
+      · those bringing their own UI (composite) open THEIRS, not the core's list
 
-    ⚠️⚠️ NO se guarda NADA ni se pulsa nada que pueda mandar un aviso. Un sender manda correos y mensajes
-    a personas reales: aqui se abre, se mira y se cancela. Tampoco se exporta: el fichero llevaria las
-    credenciales de los destinos.
+    ⚠️⚠️ NOTHING is saved and nothing that could send an alert is pressed. A sender sends emails and
+    messages to real people: here it is opened, looked at and cancelled. Nothing is exported either: the
+    file would carry the destinations' credentials.
 */
 
 const DIALOG = /Manage senders/i
@@ -67,18 +68,18 @@ test.describe('gestor generico de extensiones: senders', () => {
     })
 
     /*
-        Un sender montado desde dev SUSTITUYE al instalado con su mismo id, no se suma a el.
+        A sender mounted from dev REPLACES the installed one with the same id, it is not added to it.
 
-        Faltaba el filtro en `SenderManager.listInstalled()` —que concatena el indice de instalados
-        con los metadatos de dev— y en un entorno de desarrollo, donde lo normal es tener una
-        extension instalada Y ademas montada desde su dist, el mismo sender salia DOS veces: aqui en
-        el gestor, y en cualquier consumidor de '/core/senders'. Lo cazo el e2e del plugin
-        sender-debug, cuyo desplegable pintaba 'console' repetido.
+        The filter was missing in `SenderManager.listInstalled()` —which concatenates the installed index
+        with the dev metadata— and in a development environment, where the normal thing is to have an
+        extension installed AND also mounted from its dist, the same sender came out TWICE: here in the
+        manager, and in any consumer of '/core/senders'. The sender-debug plugin's e2e caught it, its
+        dropdown painting 'console' twice.
 
-        Se mira la RESPUESTA del endpoint y no las tarjetas: el gestor pinta los instalados y ademas
-        los disponibles en el marketplace, asi que un sender instalado que tambien esta publicado sale
-        dos veces con toda la razon. Contar tarjetas por su nombre daria un rojo que no dice nada del
-        bug — se comprobo, y era exactamente lo que pasaba con 'email-resend'.
+        The endpoint's RESPONSE is looked at and not the cards: the manager paints the installed ones and
+        also those available in the marketplace, so an installed sender that is also published shows up
+        twice quite rightly. Counting cards by name would give a red that says nothing about the bug —
+        it was checked, and that was exactly what happened with 'email-resend'.
     */
     test('ningun sender sale repetido, aunque este instalado y ademas montado desde dev', async () => {
         const ids = senders.map(s => s.id)
@@ -119,11 +120,11 @@ test.describe('gestor generico de extensiones: senders', () => {
 
     test('🔴 la configuracion BASE existe cuando el sender la declara, y se abre aparte', async () => {
         /*
-            Los campos `common` del schema son de la extension, no de cada destino: el servidor de correo
-            es uno y los destinatarios son varios. Se editan en su propia pantalla, y el acceso solo
-            aparece en los senders que declaran alguno.
+            The schema's `common` fields belong to the extension, not to each destination: the mail
+            server is one and the recipients are many. They are edited on their own screen, and the way
+            in only appears on the senders that declare any.
 
-            Se abre y se CANCELA. Guardar aqui tocaria la configuracion real de envio.
+            It is opened and CANCELLED. Saving here would touch the real sending configuration.
         */
         const candidatos = senders.filter(s => !s.hasFront && s.configNames.length > 0)
         let encontrado = false

@@ -7,15 +7,16 @@ import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 
 /*
-    La configuracion de un identity provider: la INSTANCIA de un conector.
+    An identity provider's configuration: a connector's INSTANCE.
 
-    Un conector (google, entra, github…) es lo que se instala; la instancia es ese conector ya configurado
-    y encendido. Hay UNA por conector —su id es el del conector—, asi que aunque sean dos entidades en el
-    back, en la pantalla se comportan como una extension con su configuracion.
+    A connector (google, entra, github…) is what gets installed; the instance is that connector already
+    configured and switched on. There is ONE per connector —its id is the connector's— so even though
+    they are two entities in the back end, on the screen they behave like an extension and its
+    configuration.
 
-    ⚠️ Los secretos no llegan con el resto: la lista los da enmascarados y el valor REAL solo se pide al
-    pulsar el ojo, contra /idp/export, que es admin-only. Asi un secreto no viaja al navegador de nadie
-    mientras no haga falta enseñarlo.
+    ⚠️ Secrets do not arrive with the rest: the list gives them masked and the REAL value is only asked
+    for on pressing the eye, against /idp/export, which is admin-only. That way a secret does not travel
+    to anybody's browser until it has to be shown.
 */
 
 interface IIdpInstance {
@@ -50,8 +51,8 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
         setInstancia(prev => ({ ...prev, config: { ...prev.config, [name]: value } }))
 
     /*
-        Al revelar un secreto se trae su valor REAL del export (admin-only): lo que hay en el formulario
-        viene enmascarado de la lista, y guardar la mascara dejaria la configuracion rota sin avisar.
+        Revealing a secret fetches its REAL value from the export (admin-only): what is in the form comes
+        masked from the list, and saving the mask would leave the configuration broken without warning.
     */
     const alternarSecreto = async (name: string) => {
         if (revelados[name]) {

@@ -6,20 +6,20 @@ import { ConfigListDialog } from './ConfigListDialog'
 import { ConfigFrontDialog } from './ConfigFrontDialog'
 
 /*
-    Descriptor del tipo `sender` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
+    The `sender` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
 
-    El ultimo de los once, y el que mas cosas traia. Casi todas resultaron ser de todos y estan ya en el
-    generico o en los diálogos comunes:
+    The last of the eleven, and the one that brought the most. Almost all of it turned out to belong to
+    everybody and is already in the generic one or in the common dialogs:
 
-      · varias configuraciones con nombre, como webhooks → ConfigListDialog, con los mismos endpoints
-      · configuracion BASE (los campos que el schema marca `common`): el servidor de correo es uno y los
-        destinatarios son varios. La edita ConfigListDialog, que la aprendio al migrar este tipo.
-      · exportar e importar configuraciones, tambien de ConfigListDialog: es como se lleva la misma
-        configuracion de un Kwirth a otro sin volver a teclearla.
-      · los que traen su propia UI (hasFront) → ConfigFrontDialog, igual que los providers complejos
-      · `requires` / `uses` los entiende el generico para los once tipos
+      · several named configurations, like webhooks → ConfigListDialog, with the same endpoints
+      · the BASE configuration (the fields the schema marks as `common`): the mail server is one and the
+        recipients are many. ConfigListDialog edits it, which it learned while migrating this type.
+      · exporting and importing configurations, also from ConfigListDialog: it is how the same
+        configuration is taken from one Kwirth to another without typing it again.
+      · those bringing their own UI (hasFront) → ConfigFrontDialog, just like the complex providers
+      · `requires` / `uses` are understood by the generic one for all eleven types
 
-    Lo unico que queda aqui: que la ayuda apunte a la pagina de ESE sender cuando existe.
+    The only thing left here: making the help point at THAT sender's page when one exists.
 */
 
 interface ISenderManifestEntry {

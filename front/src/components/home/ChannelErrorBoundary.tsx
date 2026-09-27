@@ -3,18 +3,18 @@ import { Box, Button, Stack, Typography } from '@mui/material'
 import { Warning } from '@kwirthmagnify/kwirth-common-front/icons'
 
 /*
-    Un canal que revienta al pintarse se lleva SU pestaña, no la aplicacion.
+    A channel that blows up while painting takes ITS tab down, not the application.
 
-    Sin esto, una sola extension rota deja Kwirth en blanco: React 18 desmonta el arbol entero cuando
-    nadie captura el error, y el arbol entero incluye el menu, los clusters y las demas pestañas. Paso
-    de verdad con un plugin que pedia al core un icono que ya no existia — el usuario no veia un tab
-    roto, veia que Kwirth "no arrancaba", y nada en pantalla decia de quien era la culpa.
+    Without this, a single broken extension leaves Kwirth blank: React 18 unmounts the whole tree when
+    nobody catches the error, and the whole tree includes the menu, the clusters and the other tabs. It
+    really happened with a plugin asking the core for an icon that no longer existed — the user did not
+    see a broken tab, they saw that Kwirth "would not start", and nothing on screen said whose fault it was.
 
-    Por eso el mensaje dice el CANAL y el error: quien lo ve tiene que poder saber que extension
-    desinstalar o actualizar sin abrir la consola del navegador.
+    That is why the message gives the CHANNEL and the error: whoever sees it has to be able to tell which
+    extension to uninstall or update without opening the browser's console.
 
-    ⚠️ Un boundary solo atrapa errores de RENDER de sus hijos. Lo que ocurra en un callback, en un
-    setTimeout o en una promesa sigue yendo a parar a window.onerror, y eso no lo cubre esta clase.
+    ⚠️ A boundary only catches RENDER errors from its children. Whatever happens in a callback, in a
+    setTimeout or in a promise still ends up at window.onerror, and this class does not cover that.
 */
 
 interface IChannelErrorBoundaryProps {
@@ -38,9 +38,9 @@ class ChannelErrorBoundary extends React.Component<IChannelErrorBoundaryProps, I
     }
 
     /*
-        Al cambiar de canal se empieza de cero. El contenido se monta con una `key` por pestaña, asi que
-        lo normal es que esta clase se remonte sola; esto cubre el caso en que no ocurra y el usuario se
-        quedaria mirando el error de OTRO canal.
+        Switching channel starts from scratch. The content is mounted with a `key` per tab, so normally
+        this class remounts by itself; this covers the case where it does not and the user would be left
+        staring at ANOTHER channel's error.
     */
     componentDidUpdate(prev: IChannelErrorBoundaryProps): void {
         if (prev.channelId !== this.props.channelId && this.state.error) this.setState({ error: undefined })

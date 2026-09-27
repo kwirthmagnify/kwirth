@@ -2,17 +2,17 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { SxProps, Theme, Tooltip, Typography } from '@mui/material'
 
 /*
-    Un texto recortado que enseña el texto COMPLETO al pasar por encima.
+    A truncated text that shows the FULL text on hover.
 
-    Las tarjetas recortan el nombre a una linea y la descripcion a dos, porque si no una descripcion larga
-    estira la tarjeta y con ella toda su fila del grid. Pero recortar dejaba el texto completo sin ningun
-    sitio donde leerse: el enlace de la tarjeta lleva a la WEB de la extension, que es otra cosa y mucho
-    mas larga, cuando lo que se quiere es leer esa descripcion.
+    The cards truncate the name to one line and the description to two, because otherwise a long
+    description stretches the card and with it the whole of its grid row. But truncating left the full
+    text with nowhere to be read: the card's link leads to the extension's WEBSITE, which is another
+    thing entirely and much longer, when what is wanted is to read that description.
 
-    ⚠️ El tooltip solo aparece si el texto ESTA recortado de verdad. Ponerlo siempre repetiria lo que ya
-    se lee —ruido en cada tarjeta— asi que se mide el nodo: si lo que ocupa el contenido no cabe en la
-    caja, hay recorte. Se vuelve a medir cuando cambia el tamaño, porque el diálogo es elastico (72vw) y
-    lo que cabe en una ventana ancha no cabe en una estrecha.
+    ⚠️ The tooltip only appears if the text IS genuinely truncated. Having it always would repeat what is
+    already legible —noise on every card— so the node is measured: if what the content takes up does not
+    fit in the box, there is truncation. It is measured again when the size changes, because the dialog
+    is elastic (72vw) and what fits in a wide window does not fit in a narrow one.
 */
 const TruncatedText: React.FC<{
     text: string

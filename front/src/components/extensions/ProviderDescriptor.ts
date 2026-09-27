@@ -6,19 +6,19 @@ import { ConfigFormDialog } from './ConfigFormDialog'
 import { ConfigFrontDialog } from './ConfigFrontDialog'
 
 /*
-    Descriptor del tipo `provider` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
+    The `provider` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
 
-    Es el tipo con mas matices propios de los migrados hasta ahora:
+    It is the type with the most quirks of its own among those migrated so far:
 
-      · Se configura de DOS formas. Un provider basico declara un `schema` y el core le pinta el
-        formulario sobre una configuracion unica (<id>/config). Uno complejo trae su propio front y
-        gestiona SUS configuraciones —sugarless tiene varias con nombre—, y entonces el core solo monta
-        lo que la extension trae, igual que hace con el SetupDialog de una homepage. `hasFront` decide.
-      · El chip 'N configs' cuenta las del provider, que las lleva el, no el core.
-      · Su endpoint devuelve tambien los providers DE CORE (events, metrics). No son extensiones: no se
-        instalan ni se desinstalan, asi que no salen en el gestor.
-      · Declara `requires`: hay providers que no funcionan sin cierto plugin o sender. Si falta, instalar
-        se queda bloqueado con el motivo — eso lo resuelve ya el generico.
+      · It is configured in TWO ways. A basic provider declares a `schema` and the core paints the form
+        for it over a single configuration (<id>/config). A complex one brings its own front and manages
+        ITS configurations —sugarless has several, with names— and then the core only mounts what the
+        extension brings, just as it does with a homepage's SetupDialog. `hasFront` decides.
+      · The 'N configs' chip counts the provider's own, which it keeps, not the core.
+      · Its endpoint also returns the CORE providers (events, metrics). They are not extensions: they are
+        neither installed nor uninstalled, so they do not show up in the manager.
+      · It declares `requires`: there are providers that do not work without a certain plugin or sender.
+        If it is missing, installing stays blocked with the reason — the generic one already handles that.
 */
 
 interface IProviderManifestEntry {
@@ -52,9 +52,10 @@ interface IInstalledProvider {
     /** It declares a schema, and then the core draws the form. */
     hasSchema?: boolean
     /*
-        Sabe comprobar su propia configuracion: expone '/test' en su configRouter, y el core lo detecta
-        mirando sus rutas. Con esto el formulario saca un boton TEST — el usuario sabe si sus credenciales
-        valen en el momento de escribirlas, en vez de descubrirlo cuando el provider no trae nada.
+        It knows how to check its own configuration: it exposes '/test' in its configRouter, and the core
+        detects that by looking at its routes. With this the form gets a TEST button — the user knows
+        whether their credentials are any good at the moment of typing them, instead of finding out when
+        the provider brings nothing.
     */
     hasTest?: boolean
     /** A core provider (events, metrics): it comes inside Kwirth, it is not an extension. */
@@ -79,10 +80,10 @@ const toModel = (e: IInstalledProvider | IProviderManifestEntry): IExtensionCard
     installedFrom: (e as IInstalledProvider).installedFrom,
     marketplaceLabel: e.marketplaceLabel,
     /*
-        Un pluvider se llama como su plugin ('Agora'), asi que su ID deja de verse — y el id es justo lo
-        que hace falta para suscribirse a el. Va de subtitulo. De que plugin sale ya lo dice el chip de
-        procedencia, asi que repetirlo aqui seria gastar la unica linea disponible en decir dos veces lo
-        mismo.
+        A pluvider is named after its plugin ('Agora'), so its ID stops being visible — and the id is
+        exactly what is needed to subscribe to it. It goes as a subtitle. Which plugin it comes from is
+        already said by the provenance chip, so repeating it here would spend the only line available
+        saying the same thing twice.
     */
     ...((e as IInstalledProvider).pluvider ? { subtitle: `Subscribe with id: ${e.id}` } : {})
 })
@@ -125,8 +126,8 @@ const providerDescriptor: IExtensionManagerDescriptor<IInstalledProvider, IProvi
     configCount: p => p.pluvider ? undefined : p.configNames?.length,
 
     /*
-        Chips propios: marcar que una fila es un pluvider y no un provider. Sin esto, un 'plugin:agora'
-        en la lista solo se distingue por el prefijo del id, que es mucho pedir.
+        Chips of its own: marking that a row is a pluvider and not a provider. Without this, a
+        'plugin:agora' in the list is only told apart by the id's prefix, which is asking a lot.
     */
     extraChips: e => ('pluvider' in e && e.pluvider)
         ? [{

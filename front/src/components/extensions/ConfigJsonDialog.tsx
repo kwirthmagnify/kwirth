@@ -5,16 +5,17 @@ import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 
 /*
-    Una configuracion en JSON LIBRE, con exportar e importar. Es una de las cuatro formas de configurar
-    una extension (ver ConfigFormDialog).
+    A configuration in FREE JSON, with export and import. It is one of the four ways of configuring an
+    extension (see ConfigFormDialog).
 
-    Se edita en crudo y no con un formulario porque es un requisito del proyecto para los componentes que
-    llevan configuracion: asi la misma configuracion se lleva de un Kwirth a otro sin volver a teclearla.
+    It is edited raw and not with a form because that is a project requirement for components carrying
+    configuration: this way the same configuration is taken from one Kwirth to another without typing it
+    again.
 
-    Hoy la usan los plugins, cuya configuracion de instalacion la lee el plugin en runtime y el core no
-    interpreta. ⚠️ Que un plugin ACEPTE configuracion lo dice el propio plugin con `configSchema` en su
-    package.json, y el gestor solo deja viva la rueda en esos; el schema todavia no se usa para pintar
-    campos, pero es lo que distingue un plugin configurable de uno que no lo es.
+    Today it is used by plugins, whose installation configuration is read by the plugin at runtime and
+    not interpreted by the core. ⚠️ Whether a plugin ACCEPTS configuration is said by the plugin itself
+    with `configSchema` in its package.json, and the manager only keeps the cog alive on those; the
+    schema is not used to paint fields yet, but it is what tells a configurable plugin from one that is not.
 */
 interface IConfigJsonDialogProps {
     /** The dialog's title, already worded by whoever opens it. */

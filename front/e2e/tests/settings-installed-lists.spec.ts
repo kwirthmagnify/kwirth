@@ -2,18 +2,21 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickMenuItem, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Lo que instalas tiene que aparecer en User settings SIN volver a entrar.
+    What you install has to show up in User settings WITHOUT logging in again.
 
-    Regresion de un fallo real (2026-09-17): la lista de temas y homepages instalados solo se leia en el
-    efecto de login, y de esa lista sale el desplegable de User settings. Instalabas un tema desde el gestor
-    —el tema se cargaba, salia en el gestor con su chip— y al abrir User settings no estaba: habia que
-    cerrar sesion y volver a entrar. Se arregla releyendo la lista al instalar y al desinstalar (App.tsx).
+    Regression of a real failure (2026-09-17): the list of installed themes and homepages was read only
+    in the login effect, and that list feeds the User settings dropdown. You installed a theme from the
+    manager —the theme loaded, it showed in the manager with its chip— and on opening User settings it
+    was not there: you had to log out and back in. It is fixed by re-reading the list on install and on
+    uninstall (App.tsx).
 
-    Se prueba el CICLO COMPLETO a proposito: instalar y que aparezca es la mitad; desinstalar y que
-    DESAPAREZCA es la otra, y es la que dejaria el desplegable ofreciendo un tema que ya no existe.
+    The FULL CYCLE is tested on purpose: installing and it showing up is half of it; uninstalling and it
+    DISAPPEARING is the other, and it is the one that would leave the dropdown offering a theme that no
+    longer exists.
 
-    NO destructivo: instala un tema del catalogo y lo desinstala al terminar. Si el entorno no tiene
-    ninguno instalable (todos puestos ya), el test se salta en vez de inventarse uno.
+    NON-destructive: it installs a theme from the catalogue and uninstalls it at the end. If the
+    environment has none installable (all of them in place already), the test is skipped rather than
+    inventing one.
 */
 
 const THEMES_DIALOG = /Manage themes/i

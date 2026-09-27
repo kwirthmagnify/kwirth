@@ -2,16 +2,16 @@ import { test, expect } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    El selector de concesión de una tarjeta de extensión: ancho FIJO y sin tooltip encima del desplegable.
+    An extension card's grant selector: FIXED width and no tooltip on top of the dropdown.
 
-    Dos regresiones reales, las dos del mismo componente (lo comparten AI toolsets y themes):
+    Two real regressions, both from the same component (AI toolsets and themes share it):
 
-      · con `minWidth` crecía con cada plugin concedido («agora, pinocchio, excubitor») y descuadraba la
-        tarjeta — en una rejilla, una tarjeta no puede cambiar de tamaño por su contenido;
-      · el tooltip se pintaba ENCIMA de la lista al desplegarla, tapando las primeras opciones.
+      · with `minWidth` it grew with every granted plugin ("agora, pinocchio, excubitor") and threw the
+        card out of shape — in a grid, a card cannot change size because of its content;
+      · the tooltip was painted ON TOP of the list when opening it, covering the first options.
 
-    ⚠️ No se concede nada a nadie ni se marca ninguna casilla: eso cambiaría la configuración real. Se abre,
-    se mide y se cierra con Escape.
+    ⚠️ Nothing is granted to anybody and no checkbox is ticked: that would change the real configuration.
+    It is opened, measured and closed with Escape.
 */
 test('el selector de plugins: ancho fijo y sin tooltip al desplegar', async ({ page }) => {
     test.setTimeout(120_000)

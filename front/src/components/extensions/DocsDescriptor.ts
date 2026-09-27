@@ -4,15 +4,15 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { EManagerSection, IExtensionAction, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionVerdict } from './extensionManagerModel'
 
 /*
-    Descriptor del tipo `docs` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
+    The `docs` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
 
-    Es el tipo que motivo que el generico tenga `keyOf` y no diera por hecho el `id`: una documentacion se
-    identifica por el PAR (targetType, id), porque el id es el de la extension DOCUMENTADA y se repite
-    entre tipos — un plugin y un theme pueden llamarse igual y traer cada uno su guia. Esa clave compuesta
-    es la que usa el catalogo para agrupar versiones, la que decide si algo ya esta instalado y la que
-    arma la ruta de borrado.
+    It is the type that made the generic one have a `keyOf` instead of assuming the `id`: a piece of
+    documentation is identified by the PAIR (targetType, id), because the id is that of the DOCUMENTED
+    extension and it repeats across types — a plugin and a theme may share a name and each bring its own
+    guide. That composite key is what the catalogue uses to group versions, what decides whether
+    something is already installed and what builds the deletion path.
 
-    Lo demas que aporta el tipo: abrir la documentacion en otra pestaña.
+    The other thing the type brings: opening the documentation in another tab.
 */
 
 // The id is that of the documented extension; the pair with targetType is what identifies it.

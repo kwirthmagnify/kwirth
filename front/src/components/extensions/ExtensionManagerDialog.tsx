@@ -13,22 +13,23 @@ import { EChipIcon, EManagerSection, IExtensionAction, IExtensionChip, IExtensio
 import { ExtensionCard, extensionRowCells, EXTENSION_ROW_COLUMNS } from './ExtensionCard'
 
 /*
-    Diálogo de gestión de extensiones GENERICO (plan: plans/extension-managers-ui/PLAN.md).
+    The GENERIC extension management dialog (plan: plans/extension-managers-ui/PLAN.md).
 
-    Sustituye al esqueleto que estaba copiado once veces: dos secciones con su filtro, conmutador
-    tarjeta/lista que vale para las dos (regla 5), catalogo agrupado por clave con sus versiones ordenadas,
-    instalacion desde catalogo / URL / fichero, refresco del catalogo invalidando la cache del back,
-    procedencia, linea de error y cierre.
+    It replaces the skeleton that was copied eleven times: two sections with their filter, a card/list
+    toggle serving both (rule 5), a catalogue grouped by key with its versions sorted, installation from
+    catalogue / URL / file, refreshing the catalogue by invalidating the back end's cache, provenance,
+    the error line and closing.
 
-    Lo propio de cada tipo entra por descriptor, nunca copiando esto.
+    Whatever is a type's own comes in through its descriptor, never by copying this.
 */
 
 // The minimum the generic dialog needs from any installed or catalogue entry. Each type has its own
 // shape; the generic dialog only looks at this and leaves the rest to the descriptor.
 interface IMinimalEntry {
     /*
-        Opcional porque no todo lo instalado la tiene: un conector de IdP bundled viene dentro de Kwirth y
-        no lleva version propia. En el CATALOGO siempre esta — es lo que se elige en el desplegable.
+        Optional because not everything installed has one: a bundled IdP connector comes inside Kwirth
+        and carries no version of its own. In the CATALOGUE it is always there — it is what gets chosen
+        in the dropdown.
     */
     version?: string
     url?: string
@@ -36,9 +37,9 @@ interface IMinimalEntry {
     marketplaceLabel?: string
     requiresRestart?: boolean
     /*
-        Dependencias entre extensiones, tal y como vienen en el manifest. Las puede declarar CUALQUIER
-        tipo —aunque hasta ahora solo las miraban plugins y providers, cada uno con su copia—, asi que las
-        entiende el generico: `requires` bloquea instalar si falta, `uses` solo se informa.
+        Dependencies between extensions, exactly as they come in the manifest. ANY type may declare them
+        —even though until now only plugins and providers looked at them, each with its own copy— so the
+        generic one understands them: `requires` blocks installing when missing, `uses` is only reported.
     */
     requires?: IExtensionRequirement[]
     uses?: IExtensionRequirement[]
@@ -63,10 +64,11 @@ interface IInstalledPluginRef {
 }
 
 /*
-    El selector de plugins de una entrada (ver IPluginSelectorSpec).
+    An entry's plugin selector (see IPluginSelectorSpec).
 
-    ⚠️ Vive FUERA del diálogo a proposito. Definido dentro, cada render crearia un tipo de componente nuevo
-    y React lo desmontaria y volveria a montar: el desplegable se cerraria solo al escribir en el filtro.
+    ⚠️ It lives OUTSIDE the dialog on purpose. Defined inside, every render would create a new component
+    type and React would unmount and remount it: the dropdown would close by itself when typing in the
+    filter.
 */
 const PluginMultiSelect: React.FC<{
     plugins: IInstalledPluginRef[]
@@ -149,14 +151,14 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data = await res.json() as TInstalled[]
             /*
-                Los datos del TIPO se cargan ANTES de pintar lo instalado, no despues.
+                The TYPE's data is loaded BEFORE painting what is installed, not after.
 
-                Al reves se veia un parpadeo: el primer render llegaba con esos datos todavia vacios —en
-                IdP, todos los conectores como 'not configured'— y un segundo render los corregia unos
-                milisegundos despues. Pintando lo instalado al final, el chip sale bien a la primera.
+                The other way round showed a flicker: the first render arrived with that data still
+                empty —in IdP, every connector as 'not configured'— and a second render corrected it a
+                few milliseconds later. Painting what is installed last, the chip comes out right first time.
 
-                No se deja que un fallo aqui tumbe la lista: sin los datos del tipo se pinta igual, con
-                los chips en su estado por defecto.
+                A failure here is not allowed to bring the list down: without the type's data it is
+                painted just the same, with the chips in their default state.
             */
             if (d.loadExtraData) await d.loadExtraData().catch(() => undefined)
             setInstalled(d.filterInstalled ? data.filter(d.filterInstalled) : data)
@@ -188,8 +190,9 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     }
 
     /*
-        Lo instalado de OTROS tipos, para poder decir si se cumplen los requisitos de una entrada del
-        catalogo. Solo se pide lo que haga falta: si nada declara requisitos, no se pide nada.
+        What is installed of OTHER types, so as to be able to say whether a catalogue entry's
+        requirements are met. Only what is needed is asked for: if nothing declares requirements,
+        nothing is asked for.
     */
     const loadRequirementTargets = async (entradas: TEntry[]) => {
         const tipos = new Set(entradas.flatMap(e => [...(e.requires ?? []), ...(e.uses ?? [])]).map(r => r.extensionType).filter(t => t !== d.extensionType))
@@ -290,11 +293,12 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const isDevInstalled = (key: string) => installedByKey.get(key)?.['installedFrom' as keyof TInstalled] === 'dev'
 
     /*
-        Por que algo instalado NO se actualiza desde el catalogo, ya redactado para el tooltip.
+        Why something installed is NOT updated from the catalogue, already worded for the tooltip.
 
-        Son las dos procedencias que no las sirve un marketplace: lo de dev se cambia en kwirth-dev.json y
-        lo bundled viaja dentro de Kwirth. El back las rechaza igual —no sabe su version—, asi que esto no
-        es la defensa, es poder decir el motivo en vez de dejar un boton muerto.
+        These are the two provenances a marketplace does not serve: the dev one is changed in
+        kwirth-dev.json and the bundled one travels inside Kwirth. The back end rejects them anyway —it
+        does not know their version— so this is not the defence, it is being able to say the reason
+        instead of leaving a dead button.
     */
     const notUpdatableReason = (installedFrom?: string): string | undefined => {
         switch (installedFrom) {
@@ -305,11 +309,11 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     }
 
     /*
-        La actualizacion disponible para algo instalado, si la hay.
+        The update available for something installed, if there is one.
 
-        El dato ya estaba aqui: el catalogo viene agrupado por clave y con las versiones ordenadas de mas
-        nueva a mas vieja, asi que basta comparar la primera con la instalada. No hace falta preguntarle
-        nada al back ni reaprovechar el aviso del arranque.
+        The data was already here: the catalogue comes grouped by key and with the versions sorted
+        newest to oldest, so comparing the first with the installed one is enough. There is no need to
+        ask the back end anything nor to reuse the startup notice.
     */
     const updateFor = (entry: TInstalled): TEntry | undefined => {
         if (updateBlocked(entry)) return undefined
@@ -324,9 +328,10 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         notUpdatableReason(d.toModel(entry).installedFrom) ?? d.updateBlockedReason?.(entry)
 
     /*
-        El tooltip del boton de update, que es lo unico que se ve cuando esta deshabilitado —que es casi
-        siempre—. Un 'Up to date' cuando lo que pasa es que el catalogo aun no ha cargado, o que la
-        extension no esta en ninguno, seria mentira: son tres situaciones distintas y cada una lo dice.
+        The update button's tooltip, which is the only thing visible when it is disabled —which is
+        almost always. An 'Up to date' when what is really happening is that the catalogue has not
+        loaded yet, or that the extension is in none of them, would be a lie: they are three different
+        situations and each one says so.
     */
     const updateTooltip = (entry: TInstalled, newer?: TEntry): string => {
         const blocked = updateBlocked(entry)
@@ -343,14 +348,14 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         return d.keyOf(entry).toLowerCase().includes(f) || d.toModel(entry).name.toLowerCase().includes(f)
     }
 
-    // ── instalar / desinstalar ──────────────────────────────────────────────────
+    // ── install / uninstall ─────────────────────────────────────────────────────
     /*
-        `replaced` es lo que habia instalado antes, cuando esto es una ACTUALIZACION y no una instalacion.
+        `replaced` is what was installed before, when this is an UPDATE and not an installation.
 
-        Se necesita por el aviso de reinicio: hay que mirar `requiresRestart` en las DOS. Si la version
-        que se va traia su router de express, ese router sigue montado aunque la nueva ya no declare
-        ninguno —engancharlos y desengancharlos solo pasa al arrancar—, y preguntarselo solo a la nueva
-        daria por buena una actualizacion que deja media extension vieja viva.
+        It is needed for the restart notice: `requiresRestart` has to be looked at on BOTH. If the
+        version going away brought its express router, that router is still mounted even though the new
+        one no longer declares any —hooking them up and unhooking them only happens at startup— and
+        asking only the new one would wave through an update that leaves half of the old extension alive.
     */
     const afterInstall = async (meta: TInstalled, replaced?: TInstalled) => {
         await loadInstalled()
@@ -369,10 +374,10 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     }
 
     /*
-        Instalar y actualizar son la MISMA operacion, y por eso no hay dos caminos: el back reemplaza
-        indice, codigo y modulo cargado, y lo unico que cambia es que hay que pedirle permiso con
-        `upgrade` para pisar lo que ya esta. Hacerlo con desinstalar + instalar, que es lo que tocaba
-        antes, se lleva por delante la configuracion de la extension.
+        Installing and updating are the SAME operation, which is why there are not two paths: the back
+        end replaces index, code and loaded module, and the only thing that changes is that permission
+        has to be asked with `upgrade` in order to overwrite what is already there. Doing it with
+        uninstall + install, which is what used to be required, takes the extension's configuration away.
     */
     const installFromCatalog = async (entry: TEntry, replaced?: TInstalled) => {
         const key = d.keyOf(entry)
@@ -463,12 +468,12 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     }
 
     /*
-        DE DONDE vino lo instalado. Lo pone el generico para los once tipos: estaba copiado diálogo a
-        diálogo —misma tabla, mismos colores— y lo unico que cambiaba era el icono del chip 'Kwirth', que
-        es el icono del propio tipo.
+        WHERE what is installed came from. The generic one puts it there for all eleven types: it was
+        copied dialog by dialog —same table, same colours— and the only thing that changed was the
+        'Kwirth' chip's icon, which is the type's own icon.
 
-        Una URL suelta no pinta nada a proposito: la direccion recortada llenaba la fila sin decir gran
-        cosa, y ya la da el tooltip del icono de procedencia (MarketplaceSourceIcon).
+        A bare URL deliberately paints nothing: the truncated address filled the row without saying much,
+        and the provenance icon's tooltip already gives it (MarketplaceSourceIcon).
     */
     const sourceChip = (installedFrom?: string): IExtensionChip | undefined => {
         if (!installedFrom) return undefined
@@ -481,9 +486,9 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     }
 
     /*
-        Los chips se reparten en dos grupos (ver IExtensionViewProps): a la izquierda DE DONDE vino, a la
-        derecha COMO esta. El estado —'3 configs', 'enabled', 'active', 'installed'— viaja pegado a los
-        botones porque es lo que se mira justo antes de pulsarlos.
+        The chips are split into two groups (see IExtensionViewProps): on the left WHERE it came from, on
+        the right HOW it is. The status —'3 configs', 'enabled', 'active', 'installed'— travels right
+        next to the buttons because it is what gets looked at just before pressing them.
     */
     const originChips = (entry: TInstalled): React.ReactNode[] => {
         const src = sourceChip(d.toModel(entry).installedFrom)
@@ -524,9 +529,9 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         const key = d.keyOf(entry)
         const newer = updateFor(entry)
         /*
-            Visible siempre y deshabilitado con el motivo, como el de configurar: apareciendo solo cuando
-            hay version nueva, los botones bailarian de sitio entre filas y la papelera acabaria justo
-            donde estaba el update de la fila de arriba.
+            Always visible and disabled with the reason, like the configure one: showing up only when
+            there is a new version, the buttons would dance about between rows and the bin would end up
+            exactly where the row above's update was.
         */
         actions.push({
             icon: updatingKey === key ? <CircularProgress size={16} /> : <Upgrade fontSize='small' />,
@@ -551,9 +556,9 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         const blocked = requirementsBlocking(entry) ?? d.installBlockedReason?.(entry)
         const current = installedByKey.get(key)
         /*
-            Desde aqui tambien se actualiza, y ademas a una version CONCRETA —la del desplegable—, mientras
-            que el boton de la seccion de instaladas va siempre a la mas nueva. Hacia atras no: volver a
-            una version anterior deja el indice diciendo una cosa y la configuracion pensada para otra.
+            Updating also happens from here, and to a SPECIFIC version at that —the dropdown's— whereas
+            the button in the installed section always goes to the newest. Not backwards: going back to
+            an earlier version leaves the index saying one thing and the configuration meant for another.
         */
         const isUpgrade = Boolean(current && !updateBlocked(current)
             && current.version && entry.version && versionGreaterThan(entry.version, current.version))

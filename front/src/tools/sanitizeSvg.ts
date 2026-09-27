@@ -1,18 +1,18 @@
 /*
-    Saneado de un SVG que viene de FUERA: el campo 'icon' del package.json de una extension.
+    Sanitizing an SVG that comes from OUTSIDE: an extension's package.json 'icon' field.
 
-    Una extension puede instalarse desde un marketplace de terceros, asi que su icono es markup ajeno,
-    y un SVG no es una imagen inerte: admite <script>, manejadores on*, <foreignObject> con HTML dentro
-    y referencias externas. Pintarlo con dangerouslySetInnerHTML sin filtrar seria un XSS con la misma
-    firma que "he instalado un plugin".
+    An extension may be installed from a third-party marketplace, so its icon is somebody else's markup,
+    and an SVG is not an inert image: it admits <script>, on* handlers, <foreignObject> with HTML inside
+    and external references. Painting it with dangerouslySetInnerHTML without filtering would be an XSS
+    with the same signature as "I have installed a plugin".
 
-    El criterio es LISTA BLANCA, no lista negra: se parsea el documento y se reconstruye dejando solo
-    los elementos y atributos de dibujo conocidos. Lo que no este en la lista desaparece, sin intentar
-    adivinar si era peligroso. Una lista negra siempre se queda corta.
+    The criterion is a WHITELIST, not a blacklist: the document is parsed and rebuilt keeping only the
+    known drawing elements and attributes. Whatever is not on the list disappears, without trying to
+    guess whether it was dangerous. A blacklist always falls short.
 
-    Se conserva 'currentColor' a proposito: es lo que hace que el icono siga el color del tema, igual
-    que uno de MUI. Por eso no se usa <img src="data:...">, que seria inmune por construccion pero
-    pintaria el icono con sus colores fijos y se veria mal en uno de los dos temas.
+    'currentColor' is deliberately preserved: it is what makes the icon follow the theme's colour, just
+    like a MUI one. That is why <img src="data:..."> is not used, which would be immune by construction
+    but would paint the icon with its fixed colours and look bad in one of the two themes.
 */
 
 const ALLOWED_ELEMENTS = new Set([

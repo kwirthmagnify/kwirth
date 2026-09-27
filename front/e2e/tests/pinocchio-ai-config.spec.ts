@@ -52,8 +52,8 @@ test.describe('pinocchio: AI config compartido de Kwirth', () => {
 
     test.afterAll(async () => { await page?.close() })
 
-    // 'AI providers' and 'AI models' live inside the COLLAPSIBLE 'AI' group of the Config menu: it has to be
-    // expandirlo antes de poder clicarlos.
+    // 'AI providers' and 'AI models' live inside the COLLAPSIBLE 'AI' group of the Config menu: it has to
+    // be expanded before they can be clicked.
     const openConfig = async (item: RegExp, group?: RegExp) => {
         await page.getByRole('button', { name: 'Config', exact: true }).click()
         await page.waitForTimeout(400)

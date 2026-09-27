@@ -8,9 +8,9 @@ import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 
 /*
-    Lo que devuelve el core en /managekwirth/previouslog. Se declara aqui, como el resto de respuestas
-    del core que consume el front, en vez de compartir el tipo por 'kwirth-common': ni back ni front
-    tienen paths al source del paquete, asi que compartirlo obligaria a publicarlo para cada campo.
+    What the core returns at /managekwirth/previouslog. It is declared here, like the rest of the core's
+    responses the front end consumes, rather than sharing the type through 'kwirth-common': neither back
+    nor front have paths to the package's source, so sharing it would mean publishing it for every field.
 */
 interface IPreviousContainerLog {
     restarted: boolean
@@ -46,8 +46,9 @@ const About: React.FC<IAboutProps> = (props:IAboutProps) => {
     useKeyboard(props.onClose)
 
     /*
-        Se pide al abrir el About, no al pulsar el boton: asi el boton puede decir de entrada si hay algo
-        que ver. El core lo tiene en memoria desde su arranque, asi que la llamada es barata.
+        It is requested when the About opens, not when the button is pressed: that way the button can say
+        up front whether there is anything to see. The core has held it in memory since its startup, so
+        the call is cheap.
     */
     useAsync (async () => {
         if (!isAdmin) return
@@ -79,9 +80,9 @@ const About: React.FC<IAboutProps> = (props:IAboutProps) => {
     }, [preRef])
 
     /*
-        El boton se queda visible aunque no se pueda usar, y el tooltip dice POR QUE. "No hubo reinicio" y
-        "hubo reinicio pero el log ya no esta" son cosas distintas, y la segunda es la que desconcierta a
-        quien va a mirar: sin decirlo, parece que Kwirth se lo ha comido.
+        The button stays visible even when it cannot be used, and the tooltip says WHY. "There was no
+        restart" and "there was a restart but the log is gone" are different things, and the second is the
+        one that puzzles whoever goes to look: without saying so, it looks as if Kwirth had eaten it.
     */
     const previousLogHint = (): string => {
         if (!isAdmin) return 'Only administrators can read the log of the core'

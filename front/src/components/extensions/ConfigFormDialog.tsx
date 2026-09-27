@@ -7,43 +7,44 @@ import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 
 /*
-    UNA configuracion, en formulario, montado a partir del `configSchema` de la extension.
+    ONE configuration, as a form, built from the extension's `configSchema`.
 
-    Es una de las cuatro formas que tiene una extension de configurarse, y los ficheros se llaman por esa
-    forma: ConfigFormDialog (esta), ConfigListDialog (varias con nombre), ConfigJsonDialog (JSON libre) y
-    ConfigFrontDialog (la pinta la propia extension).
+    It is one of the four ways an extension has of being configured, and the files are named after that
+    way: ConfigFormDialog (this one), ConfigListDialog (several, with names), ConfigJsonDialog (free JSON)
+    and ConfigFrontDialog (painted by the extension itself).
 
-    Estaba copiado en CINCO diálogos de gestión (logins, senders, providers, webhooks e IdP) con las mismas
-    tres ramas —texto, secreto con ojo, desplegable— y la misma carga y guardado contra
-    `<endpoint>` (GET y PUT). Se saca aqui al migrar logins al gestor generico, para que los que quedan lo
-    hereden en vez de traerse su copia.
+    It was copied across FIVE management dialogs (logins, senders, providers, webhooks and IdP) with the
+    same three branches —text, secret with an eye, dropdown— and the same loading and saving against
+    `<endpoint>` (GET and PUT). It is pulled out here while migrating logins to the generic manager, so
+    that the remaining ones inherit it instead of bringing their own copy.
 
-    Los secretos siguen la regla del proyecto: el back devuelve el valor REAL, el campo llega relleno y lo
-    unico que cambia es que se enseña con `type='password'` y un ojo para verlo.
+    Secrets follow the project's rule: the back end returns the REAL value, the field arrives filled in
+    and the only thing that changes is that it is shown with `type='password'` and an eye to reveal it.
 
-    ⚠️ Se envian TODOS los campos, tambien los que se dejan vacios. La copia anterior omitia los vacios, y
-    eso hacia imposible BORRAR un valor ya guardado: se quitaba del formulario, se guardaba, y el back
-    seguia con el de antes. Un numero vacio si se omite, porque no hay numero que mandar.
+    ⚠️ ALL the fields are sent, including the ones left empty. The previous copy omitted the empty ones,
+    and that made it impossible to DELETE an already stored value: it was removed from the form, saved,
+    and the back end carried on with the old one. An empty number IS omitted, because there is no number
+    to send.
 */
 
 interface IConfigFormDialogProps {
-    /** Titulo completo, p.ej. 'Configure — Corporate login'. */
+    /** The full title, e.g. 'Configure — Corporate login'. */
     title: string
     /** The guide's section for the help button. */
     helpSection?: string
     /*
-        El formulario, de una de las dos formas en que los tipos lo tienen:
-          · `schema`, cuando la metadata de la extension ya lo trae (logins)
-          · `schemaEndpoint`, cuando hay que pedirlo (providers, en <id>/schema)
+        The form, in one of the two shapes the types have it:
+          · `schema`, when the extension's metadata already brings it (logins)
+          · `schemaEndpoint`, when it has to be asked for (providers, at <id>/schema)
     */
     schema?: IConfigFieldDef[]
     schemaEndpoint?: string
     /** The back-end route, relative to backendUrl: GET to read and PUT to save. */
     endpoint: string
     /*
-        Ruta de comprobacion, si la extension sabe probar su configuracion (GET, responde {ok, message}).
-        Presente = sale el boton TEST. Es lo que permite saber si unas credenciales valen sin tener que
-        esperar a que el provider falle en silencio media hora despues.
+        The check route, if the extension knows how to test its configuration (GET, answers {ok, message}).
+        Present = the TEST button shows up. It is what makes it possible to know whether some credentials
+        are any good without waiting for the provider to fail silently half an hour later.
     */
     testEndpoint?: string
     /** What to say when the extension has nothing configurable. */
@@ -126,17 +127,18 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
     const dirty = (): boolean => Object.keys({ ...loaded, ...values }).some(k => (values[k] ?? '') !== (loaded[k] ?? ''))
 
     /*
-        Probar la configuracion. La prueba la hace el BACK, que es quien tiene las credenciales y la red.
+        Testing the configuration. The test is done by the BACK END, which is the one with the
+        credentials and the network.
 
-        Se manda el BORRADOR por POST: se prueba lo que el usuario tiene delante SIN guardarlo, que es lo
-        que hacen las extensiones que traen su propia UI. Obligar a guardar para poder probar es pedirle que
-        escriba unas credenciales que a lo mejor estan mal para averiguar si estan mal.
+        The DRAFT is sent by POST: what the user has in front of them is tested WITHOUT saving it, which
+        is what the extensions bringing their own UI do. Forcing a save in order to test is asking them
+        to write credentials that may well be wrong in order to find out whether they are wrong.
 
-        ⛔ Y este boton NO guarda por su cuenta: si el formulario se hubiera cargado a medias —un campo que
-        el back no devuelve, un GET que falla— guardar dejaria la configuracion peor de como estaba.
+        ⛔ And this button does NOT save on its own: if the form had loaded incompletely —a field the back
+        end does not return, a GET that fails— saving would leave the configuration worse than it was.
 
-        Una extension que solo acepte GET prueba lo GUARDADO; entonces, y solo entonces, se avisa de que
-        hay cambios pendientes. El dialogo no se cierra: el sentido del boton es corregir y reprobar.
+        An extension accepting only GET tests what is SAVED; then, and only then, a warning about pending
+        changes is given. The dialog does not close: the point of the button is to correct and retest.
     */
     const test = async () => {
         setTesting(true)
@@ -190,13 +192,13 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
         }
 
         /*
-            Varios valores, guardados como UNA cadena separada por comas: el contrato de configuracion no
-            tiene tipo lista, y darselo obligaria a migrar lo ya guardado de todos los artefactos.
+            Several values, stored as ONE comma-separated string: the configuration contract has no list
+            type, and giving it one would mean migrating what is already stored in every artifact.
 
-            Las opciones las trae el schema, que las extensiones pueden generar EN CALIENTE —un provider
-            cloud puede descubrir sus regiones con las credenciales guardadas—. Si el descubrimiento no da fruto, la
-            lista llega vacia; entonces esto cae a campo de texto y lo escrito a mano sigue valiendo, que
-            es justo lo que hace falta la primera vez, cuando todavia no hay credenciales que preguntar.
+            The options come from the schema, which extensions may generate HOT —a cloud provider can
+            discover its regions with the stored credentials. If the discovery bears no fruit, the list
+            arrives empty; this then falls back to a text field and what is typed by hand still counts,
+            which is exactly what is needed the first time, when there are no credentials to ask with yet.
         */
         if (f.type === 'multiselect' && (f.options ?? []).length > 0) {
             const seleccion = (values[f.name] ?? '').split(/[,\s]+/).map(x => x.trim()).filter(Boolean)
@@ -222,11 +224,12 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
             type={esSecreto && !showSecrets[f.name] ? 'password' : 'text'}
             slotProps={{
                 /*
-                    Chrome IGNORA autocomplete='off' en lo que cree un formulario de credenciales: al ver un
-                    type='password' rellena el campo de texto ANTERIOR como si fuera el usuario (salia 'admin'
-                    en 'Client ID'). Con 'new-password' lo clasifica como alta/cambio de credencial y deja de
-                    autorrellenar tanto el secreto como el campo de antes. Es lo que ya hacen ConfigListDialog
-                    e IdpConfigDialog; aqui se quedo el 'off' pelado al consolidar los cinco dialogos.
+                    Chrome IGNORES autocomplete='off' in what it believes to be a credentials form: on
+                    seeing a type='password' it fills the PREVIOUS text field as if it were the username
+                    ('admin' showed up in 'Client ID'). With 'new-password' it classifies it as creating
+                    or changing a credential and stops autofilling both the secret and the field before
+                    it. It is what ConfigListDialog and IdpConfigDialog already do; the bare 'off' was
+                    left here when the five dialogs were consolidated.
                 */
                 htmlInput: { autoComplete: esSecreto ? 'new-password' : 'off' },
                 ...(esSecreto ? {

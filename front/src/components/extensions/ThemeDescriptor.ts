@@ -3,25 +3,26 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { EChipIcon, EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IExtensionVerdict } from './extensionManagerModel'
 
 /*
-    Descriptor del tipo `theme` para el gestor generico (plan: plans/extension-managers-ui/PLAN.md).
+    The `theme` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
 
-    PRIMER manager a medida que se migro, y por eso importa: `aitoolset` era codigo nuevo y no tenia nada
-    que romper; themes lo usa gente. Lo que este fichero tiene que conseguir es que la pantalla se vea y
-    se comporte IGUAL, con 523 lineas menos.
+    The FIRST bespoke manager to be migrated, and that is why it matters: `aitoolset` was new code with
+    nothing to break; themes is used by people. What this file has to achieve is that the screen looks
+    and behaves THE SAME, with 523 lines fewer.
 
-    Es un .ts, no un .tsx, y eso no es casualidad: un descriptor DECLARA —chips, iconos, endpoints— y no
-    pinta nada. Lo que antes traia de UI se subio al generico al ver que estaba copiado en varios tipos:
-      · el `Select multiple` de plugins → `pluginSelector` (themes y aitoolset tenian su propia copia,
-        y ademas cada tarjeta pedia /core/plugins por su cuenta)
-      · los chips de procedencia (dev, fichero local, via pack, Kwirth) → los pone el generico
+    It is a .ts, not a .tsx, and that is no accident: a descriptor DECLARES —chips, icons, endpoints— and
+    paints nothing. What it used to bring in UI was moved up to the generic one on seeing it copied
+    across several types:
+      · the plugins `Select multiple` → `pluginSelector` (themes and aitoolset each had their own copy,
+        and on top of that every card asked /core/plugins on its own account)
+      · the provenance chips (dev, local file, via pack, Kwirth) → put there by the generic one
 
-    Queda, que es lo unico de themes: el chip `active`, a quien se le asigna el tema, y cargar/descargar
-    su front en caliente.
+    What is left, which is the only thing that is themes': the `active` chip, who the theme is assigned
+    to, and loading/unloading its front hot.
 
-    ⚠️ Se quedo fuera la imagen de PREVIEW como fondo de la tarjeta. Estaba montada de punta a punta
-    —endpoint, `hasPreview`, copia en los build.mjs— y NUNCA se alimento: no existe ni un `preview.png` en
-    ningun tema. Se descarta al migrar (decision del usuario, 2026-09-17). Cuando haga falta un fondo, sera
-    un atributo generico de la tarjeta, no un `previewUrl` de themes.
+    ⚠️ The PREVIEW image as the card's background was left out. It was wired end to end —endpoint,
+    `hasPreview`, a copy in the build.mjs files— and it was NEVER fed: there is not a single `preview.png`
+    in any theme. It is dropped on migration (the user's decision, 2026-09-17). When a background is
+    needed, it will be a generic attribute of the card, not a themes `previewUrl`.
 */
 
 interface IThemeManifestEntry {

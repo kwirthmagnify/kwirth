@@ -4,11 +4,11 @@ import { CloudQueue, FolderOpen, Https, Link, Terminal } from '@kwirthmagnify/kw
 import { Extension } from '../../icons'
 
 /*
-    Procedencia de un PLUVIDER: no viene de ningun marketplace, viene de un plugin instalado, y su
-    'installedFrom' es su propio id ('plugin:agora'). Se marca con la misma convencion que 'pack:<id>'.
+    A PLUVIDER's provenance: it comes from no marketplace, it comes from an installed plugin, and its
+    'installedFrom' is its own id ('plugin:agora'). It is marked with the same convention as 'pack:<id>'.
 
-    Sin este caso caeria en el fallback del marketplace publico y se anunciaria como servido por el,
-    que es falso — y con un plugin de pago lo anunciaria ademas como OSS.
+    Without this case it would fall into the public marketplace's fallback and be announced as served by
+    it, which is false — and with a paid plugin it would announce it as OSS on top of that.
 */
 const PLUGIN_SOURCE_PREFIX = 'plugin:'
 
@@ -42,14 +42,14 @@ const compactChip = { height: 20, fontSize: '0.68rem', '& .MuiChip-label': { px:
 const compact = compactChip
 
 /*
-    Una extension de dev (kwirth-dev.json), instalada desde un fichero local o descargada de una URL
-    suelta NO viene de ningun marketplace: su id no esta en ningun catalogo, asi que 'label' llega
-    undefined y el fallback la etiquetaria como "publica de Kwirth". Eso no es solo impreciso, es falso
-    — y con un artefacto de pago cargado en dev llega a anunciarlo como OSS publico. En esos casos no se
-    pinta chip: basta el icono, que en su tooltip dice de donde salio de verdad.
+    A dev extension (kwirth-dev.json), one installed from a local file or downloaded from a bare URL
+    comes from NO marketplace: its id is in no catalogue, so 'label' arrives undefined and the fallback
+    would label it as "Kwirth public". That is not merely imprecise, it is false — and with a paid
+    artifact loaded in dev it goes as far as announcing it as public OSS. In those cases no chip is
+    painted: the icon is enough, and its tooltip says where it really came from.
 
-    Antes la URL se enseñaba recortada en un chip aparte, que ademas de ocupar la fila entera duplicaba
-    lo que ya dice el badge cuando la extension SI viene de un catalogo.
+    The URL used to be shown truncated in a chip of its own, which besides taking up the whole row
+    duplicated what the badge already says when the extension DOES come from a catalogue.
 */
 // ⚠️ Provenance is STORED on install, not deduced. The download URL used to be looked at, and that stopped
 // working: the manifest and the packages live on different servers, so the tgz's url points at the
@@ -111,9 +111,9 @@ const MarketplaceBadge: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceB
 }
 
 /*
-    El icono que acompaña al chip, con la misma decision en un solo sitio: candado si la sirve un
-    marketplace privado, nube si la publica, y consola si no viene de ningun marketplace (dev o fichero
-    local). Antes estaba duplicado en linea en los 10 dialogos de gestion de extensiones.
+    The icon accompanying the chip, with the same decision in a single place: a padlock if a private
+    marketplace serves it, a cloud if a public one does, and a console if it comes from no marketplace
+    (dev or local file). It used to be duplicated inline across the 10 extension management dialogs.
 */
 const MarketplaceSourceIcon: React.FC<IMarketplaceBadgeProps> = (props: IMarketplaceBadgeProps) => {
     // It comes from a plugin: the icon is an extension's, not a download origin's — because it has not

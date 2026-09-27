@@ -2,20 +2,21 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Gestor GENERICO de extensiones (ExtensionManagerDialog) estrenado por el tipo `aitoolset`
-    (plan: plans/ai-tools/PLAN.md, S1). Lo que se vigila aqui no es "que se pinte algo", sino las
-    decisiones que el generico tiene que respetar para poder sustituir a los diez dialogos a medida:
+    The GENERIC extension manager (ExtensionManagerDialog), premiered by the `aitoolset` type
+    (plan: plans/ai-tools/PLAN.md, S1). What is watched here is not "that something gets painted", but
+    the decisions the generic one has to honour in order to replace the ten bespoke dialogs:
 
-      · lo instalado y el catalogo son DOS secciones distintas, cada una con su filtro
-      · una extension ya instalada no se puede volver a instalar desde el catalogo
-      · un tipo que NO declara dialogo de configuracion no enseña engranaje
-      · los chips de una tarjeta comparten tamaño (mezclar tamaños se ve desordenado)
+      · what is installed and the catalogue are TWO separate sections, each with its filter
+      · an extension already installed cannot be installed again from the catalogue
+      · a type that does NOT declare a configuration dialog shows no cog
+      · a card's chips share a size (mixing sizes looks untidy)
 
-    NO destructivo: solo abre el dialogo, filtra y cambia de vista. No instala ni desinstala nada.
+    NON-destructive: it only opens the dialog, filters and switches view. It installs and uninstalls
+    nothing.
 
-    ⚠️ El spec NO nombra ningun toolset concreto, y eso es deliberado: la primera version daba por hecho
-    que el instalado era `playground` y se puso roja el dia que el entorno paso a tener los de Kubernetes.
-    Lo que se comprueba es el COMPORTAMIENTO del gestor con lo que haya instalado, sea lo que sea.
+    ⚠️ The spec names NO particular toolset, and that is deliberate: the first version assumed the
+    installed one was `playground` and went red the day the environment came to have the Kubernetes ones.
+    What is checked is the manager's BEHAVIOUR with whatever is installed, whatever that may be.
 */
 
 const DIALOG = /Manage AI toolsets/i

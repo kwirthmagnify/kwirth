@@ -26,26 +26,27 @@ const RemoteBadge: React.FC<{ operative: boolean }> = ({ operative }) => (
 )
 
 /*
-    Canal autonomo: no necesita nada del cluster, asi que la unica view en la que se puede arrancar es
-    'none'. Se reconoce por tener las DOS banderas de invocacion en false — sin 'cluster' no se le
-    puede llamar una vez con '*all', y sin 'resourced' no se le puede llamar por recurso, asi que esa
-    combinacion no tenia ninguna via de arranque hasta que existio la view 'none'.
+    An autonomous channel: it needs nothing from the cluster, so the only view it can be started in is
+    'none'. It is recognized by having BOTH invocation flags false — without 'cluster' it cannot be
+    called once with '*all', and without 'resourced' it cannot be called per resource, so that
+    combination had no way of starting at all until the 'none' view existed.
 */
 const isAutonomous = (channel: BackChannelData | undefined): boolean =>
     channel !== undefined && !channel.cluster && !channel.resourced
 
 /*
-    Que canales tienen sentido con la view elegida:
+    Which channels make sense with the chosen view:
 
-      cluster                              -> los que soportan invocacion cluster-wide, MAS los
-                                              autonomos: si un canal no necesita nada del cluster,
-                                              tampoco le estorba que la view lo sea
-      none                                 -> solo los autonomos
-      namespace/controller/pod/container   -> solo los que soportan invocacion POR RECURSO
+      cluster                              -> those supporting cluster-wide invocation, PLUS the
+                                              autonomous ones: if a channel needs nothing from the
+                                              cluster, the view being cluster-wide does not bother it
+      none                                 -> only the autonomous ones
+      namespace/controller/pod/container   -> only those supporting PER-RESOURCE invocation
 
-    Antes solo se filtraba en 'cluster' y en 'none', asi que con cualquier view de recurso se ofrecian
-    TODOS los canales, incluido uno que no sabe arrancar por recurso. Y 'addable()' tampoco lo paraba:
-    solo mira que haya recursos seleccionados, no si el canal los admite.
+    Filtering used to happen only on 'cluster' and on 'none', so with any resource view ALL the channels
+    were offered, including one that does not know how to start per resource. And 'addable()' did not
+    stop it either: it only looks at whether there are resources selected, not whether the channel
+    admits them.
 */
 const channelFitsView = (channel: BackChannelData, view: EInstanceConfigView | ''): boolean => {
     switch (view) {
@@ -194,9 +195,9 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         setView(view)
 
         /*
-            La view 'none' es de canales que no necesitan el cluster, asi que aqui no se consulta
-            nada: el resto de ramas llaman a loadAllNamespaces(), y eso ademas de ser una peticion
-            inutil le saltaria un MsgBox de error a quien no tenga permiso para listar namespaces.
+            The 'none' view belongs to channels that do not need the cluster, so nothing is queried
+            here: the other branches call loadAllNamespaces(), and besides being a useless request that
+            would pop an error MsgBox at anybody without permission to list namespaces.
         */
         if (view === EInstanceConfigView.NONE) {
             setNamespaces([])
