@@ -159,7 +159,10 @@ test('la fachada de cluster NO deja pasar las credenciales del core', () => {
     // clusterInfo carries saToken, token, senders and webhooks. A third-party toolset has no business
     // seeing them, and handing over the whole object is exactly the catch-all this contract came to close.
     const host = buildToolHost([ECapability.K8S], fakeContext())
-    assert.deepEqual(Object.keys(host.k8s).sort(), ['appsApi', 'coreApi', 'flavour', 'memory', 'name', 'networkApi', 'nodes', 'vcpus'])
+    // The list is exact on purpose: this is the assertion that turns red the day somebody widens the
+    // facade, so widening it is always a decision and never a slip. crdApi joined it on 2026-09-28 --
+    // without it a toolset cannot read a single CRD, which is where Fleet, Kubewarden and Longhorn live.
+    assert.deepEqual(Object.keys(host.k8s).sort(), ['appsApi', 'coreApi', 'crdApi', 'flavour', 'memory', 'name', 'networkApi', 'nodes', 'vcpus'])
     assert.equal(JSON.stringify(host.k8s).includes('NO-DEBE-SALIR'), false)
 })
 

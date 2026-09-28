@@ -1,7 +1,7 @@
 import { ILlm, ILlmModel, ILlmProvider, ECapability, EToolEffect, EToolSensitivity, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, parseToolRef, toolRef } from './index'
 // TYPES ONLY: the compiler erases them, so common-ai does not drag the Kubernetes client (~6.6 MB) into
 // any bundle. That is why @kubernetes/client-node is an optional peer and not a dependency.
-import type { AppsV1Api, CoreV1Api, NetworkingV1Api } from '@kubernetes/client-node'
+import type { AppsV1Api, CoreV1Api, CustomObjectsApi, NetworkingV1Api } from '@kubernetes/client-node'
 
 interface ILogChannel {
     logInfo?: (msg: string) => void
@@ -427,6 +427,12 @@ export interface IK8sCapability {
     coreApi: CoreV1Api
     appsApi: AppsV1Api
     networkApi: NetworkingV1Api
+    /**
+     * Custom resources. The three typed APIs above only reach built-in kinds, so without this a toolset
+     * cannot read a single CRD -- and that is where whole products live: Fleet, Kubewarden, Longhorn,
+     * Trivy. The core already builds this client at startup; it simply was not being lent.
+     */
+    crdApi: CustomObjectsApi
 }
 
 // A metrics sample, as a tool sees it. This is a FACADE over the core model
@@ -632,7 +638,8 @@ export const buildToolHost = (requires: ECapability[], context: IToolContext): I
             nodes: context.nodes as Map<string, IK8sNodeInfo>,
             coreApi: ci.coreApi,
             appsApi: ci.appsApi,
-            networkApi: ci.networkApi
+            networkApi: ci.networkApi,
+            crdApi: ci.crdApi
         }
     }
     if (requires.includes(ECapability.METRICS)) host.metrics = { samples: (context.clusterMetrics ?? []) as IMetricsSample[] }
