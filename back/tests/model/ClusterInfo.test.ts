@@ -4,6 +4,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { V1Node } from '@kubernetes/client-node'
+import { EClusterFlavour, ERancherRole } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../src/model/ClusterInfo'
 
 const KUBE_SYSTEM_UID = 'b7c1f0de-1111-2222-3333-444455556666'
@@ -25,10 +26,22 @@ const node = (spec: INodeSpec): V1Node => ({
     spec: spec.providerID ? { providerID: spec.providerID } : {}
 }) as V1Node
 
-// ClusterInfo only needs coreApi for this: listNode + readNamespace('kube-system')
-const clusterInfoWith = (nodes: V1Node[] | Error) => {
+/*
+    ClusterInfo needs coreApi for this (listNode + readNamespace('kube-system')) and, since 2026-09-28,
+    appsApi to look for Rancher's agent in cattle-system. `cattleDeployments` is what that namespace
+    holds; leaving it out makes the lookup throw, which is exactly what happens on a cluster with no
+    cattle-system at all, and must degrade to "no Rancher" rather than break the name detection.
+*/
+const clusterInfoWith = (nodes: V1Node[] | Error, cattleDeployments?: string[]) => {
     const calls = { listNode: 0, readNamespace: 0 }
     const ci = new ClusterInfo()
+    ci.appsApi = {
+        listNamespacedDeployment: async ({ namespace }: { namespace: string }) => {
+            assert.equal(namespace, 'cattle-system')
+            if (!cattleDeployments) throw new Error('namespaces "cattle-system" not found')
+            return { items: cattleDeployments.map(name => ({ metadata: { name } })) }
+        }
+    } as never
     ci.coreApi = {
         listNode: async () => {
             calls.listNode++
@@ -67,7 +80,7 @@ test('KWIRTH_CLUSTER_NAME wins over any heuristic', async (t) => {
     await ci.setKubernetesClusterName()
 
     assert.equal(ci.name, 'my-own-name')
-    assert.equal(ci.flavour, 'aks', 'the flavour is still detected')
+    assert.equal(ci.flavour, EClusterFlavour.AKS, 'the flavour is still detected')
 })
 
 test('KWIRTH_CLUSTER_NAME is ignored when blank', async (t) => {
@@ -82,7 +95,7 @@ test('aks: the node resource group prefix is stripped', async () => {
     const { ci } = clusterInfoWith([aksNode])
     await ci.setKubernetesClusterName()
 
-    assert.equal(ci.flavour, 'aks')
+    assert.equal(ci.flavour, EClusterFlavour.AKS)
     assert.equal(ci.name, 'shop-prod_westeurope')
 })
 
@@ -102,7 +115,7 @@ test('eks: the karpenter discovery tag names the cluster', async () => {
     })])
     await ci.setKubernetesClusterName()
 
-    assert.equal(ci.flavour, 'eks')
+    assert.equal(ci.flavour, EClusterFlavour.EKS)
     assert.equal(ci.name, 'shop-eks')
 })
 
@@ -137,7 +150,7 @@ test('gke: the cluster comes out of the providerID node name', async () => {
     })])
     await ci.setKubernetesClusterName()
 
-    assert.equal(ci.flavour, 'gke')
+    assert.equal(ci.flavour, EClusterFlavour.GKE)
     // The gke heuristic trims the node name's last two segments, so the nodepool stays stuck to the
     // cluster's name ('shop' + 'default-pool'). A pre-existing imprecision: it is documented here exactly
     // as it is, without changing it
@@ -151,7 +164,7 @@ test('k3d: the cluster is the node name up to the -server- separator', async () 
     })])
     await ci.setKubernetesClusterName()
 
-    assert.equal(ci.flavour, 'k3d')
+    assert.equal(ci.flavour, EClusterFlavour.K3D)
     assert.equal(ci.name, 'k3d-kwirth')
 })
 
@@ -162,7 +175,7 @@ test('k3s: a plain hostname is the cluster name, not an empty string', async () 
     })])
     await ci.setKubernetesClusterName()
 
-    assert.equal(ci.flavour, 'k3s')
+    assert.equal(ci.flavour, EClusterFlavour.K3S)
     assert.equal(ci.name, 'nodo1')
 })
 
@@ -191,7 +204,7 @@ test('a cluster with no clues at all falls back to the kube-system uid', async (
     await ci.setKubernetesClusterName()
 
     assert.equal(ci.name, KUBE_SYSTEM_UID)
-    assert.equal(ci.flavour, 'unknown')
+    assert.equal(ci.flavour, EClusterFlavour.UNKNOWN)
     assert.equal(calls.readNamespace, 1)
 })
 
@@ -225,4 +238,94 @@ test('an already resolved name is never recomputed', async () => {
 
     assert.equal(ci.name, 'set-by-someone-else')
     assert.equal(calls.listNode, 0, 'no api call at all')
+})
+
+// ── SUSE distributions (S1 of the suse-stack) ────────────────────────────────────────────────────────
+//
+// ⚠️ RKE2 and Harvester are NOT verified against a real cluster: there is none available yet, and their
+// clues come from the distributions' documentation. These tests pin down the CONTRACT (what we do with
+// each clue), not that the clue is the right one -- that gets re-checked when a Rancher shows up.
+
+test('rke2: detected by its own annotation', async () => {
+    const { ci } = clusterInfoWith([node({
+        name: 'rke2-server-1', controlPlane: true,
+        annotations: { 'rke2.io/hostname': 'rke2-server-1', 'rke2.io/node-args': '["server"]' }
+    })])
+    await ci.setKubernetesClusterName()
+    assert.equal(ci.flavour, EClusterFlavour.RKE2)
+})
+
+test('rke2: also detected by the +rke2 suffix of the kubelet version', async () => {
+    const n = node({ name: 'worker-1', controlPlane: true })
+    n.status = { nodeInfo: { kubeletVersion: 'v1.31.5+rke2r1' } } as never
+    const { ci } = clusterInfoWith([n])
+    await ci.setKubernetesClusterName()
+    assert.equal(ci.flavour, EClusterFlavour.RKE2)
+})
+
+test('rke2: a Rancher-managed one takes its name from the cattle label', async () => {
+    const { ci } = clusterInfoWith([node({
+        name: 'rke2-server-1', controlPlane: true,
+        labels: { 'cattle.io/cluster-name': 'prod-bcn' },
+        annotations: { 'rke2.io/hostname': 'rke2-server-1' }
+    })])
+    await ci.setKubernetesClusterName()
+    assert.equal(ci.name, 'prod-bcn')
+})
+
+test('harvester: wins over rke2, because it RUNS on rke2', async () => {
+    // A Harvester node carries the rke2 clues too. Asking for rke2 first would label every Harvester
+    // as plain rke2, and the order in the code is what prevents it.
+    const { ci } = clusterInfoWith([node({
+        name: 'harvester-node-1', controlPlane: true,
+        labels: { 'harvesterhci.io/managed': 'true', 'harvesterhci.io/cluster-name': 'hci-01' },
+        annotations: { 'rke2.io/hostname': 'harvester-node-1' }
+    })])
+    await ci.setKubernetesClusterName()
+    assert.equal(ci.flavour, EClusterFlavour.HARVESTER)
+    assert.equal(ci.name, 'hci-01')
+})
+
+// ── Rancher ──────────────────────────────────────────────────────────────────────────────────────────
+
+test('rancher: the cluster it runs on is the local one', async () => {
+    const { ci } = clusterInfoWith([aksNode], ['rancher', 'cattle-cluster-agent', 'rancher-webhook'])
+    await ci.setKubernetesClusterName()
+    assert.equal(ci.rancherManaged, true)
+    assert.equal(ci.rancherRole, ERancherRole.LOCAL)
+})
+
+test('rancher: with only the agent, the cluster is downstream', async () => {
+    const { ci } = clusterInfoWith([aksNode], ['cattle-cluster-agent'])
+    await ci.setKubernetesClusterName()
+    assert.equal(ci.rancherManaged, true)
+    assert.equal(ci.rancherRole, ERancherRole.DOWNSTREAM)
+})
+
+test('rancher: a cattle-system holding something else is NOT a Rancher', async () => {
+    const { ci } = clusterInfoWith([aksNode], ['some-other-thing'])
+    await ci.setKubernetesClusterName()
+    assert.equal(ci.rancherManaged, false)
+    assert.equal(ci.rancherRole, ERancherRole.NONE)
+})
+
+test('rancher: no cattle-system at all leaves everything untouched', async () => {
+    // Not being able to read is not the same as there being none, but it is treated as "no Rancher":
+    // the worst outcome is a cluster that does not say it is managed, never one that claims to be.
+    const { ci } = clusterInfoWith([aksNode])
+    await ci.setKubernetesClusterName()
+    assert.equal(ci.rancherManaged, false)
+    assert.equal(ci.name, 'shop-prod_westeurope', 'the failed lookup did not break name detection')
+})
+
+test('🔴 plain k3s is NOT reported as Rancher-managed', async () => {
+    // k3s ships k3s.cattle.io and helm.cattle.io of its own, so detecting Rancher by the 'cattle.io'
+    // domain reports one on every k3s in existence. It is the agent that says it, not the domain.
+    const { ci } = clusterInfoWith([node({
+        name: 'k3d-kwirth-server-0', controlPlane: true,
+        annotations: { 'k3s.io/hostname': 'k3d-kwirth-server-0', 'k3s.io/node-args': '["server"]' }
+    })])
+    await ci.setKubernetesClusterName()
+    assert.equal(ci.flavour, EClusterFlavour.K3D)
+    assert.equal(ci.rancherManaged, false)
 })

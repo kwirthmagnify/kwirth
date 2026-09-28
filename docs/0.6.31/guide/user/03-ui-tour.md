@@ -41,6 +41,15 @@ It shows three blocks plus live gauges:
 - **Context** — the home cluster, the currently selected cluster, and the channels available on it.
 - **kwirth Info** — kwirth version, namespace, and the clusters it knows about.
 - **Cluster Info** — name, Kubernetes flavour and version, platform, node count and total CPU / memory.
+  Kwirth works out the flavour on its own, from the traces each distribution leaves on its nodes: **AKS**,
+  **EKS**, **GKE**, **OpenShift**, **K3s**, **K3d**, **RKE2** and **Harvester**. When it recognises none of
+  them it simply says *Kubernetes*, and nothing else changes.
+
+  If a **Rancher** manages the cluster, a *Managed by* line appears saying so and whether this is the
+  cluster Rancher itself runs on (*local*) or one it manages from elsewhere (*downstream*). That line is
+  absent when there is no Rancher — it is not shown empty. Kwirth looks for Rancher's own agent, so a
+  plain K3s is never reported as managed even though it ships resources under the same `cattle.io` domain
+  that Rancher uses.
 - **CPU / Mem / Tx / Rx gauges** — real-time resource usage of the cluster at a glance.
 
 ### Tabs & workspaces shortcuts

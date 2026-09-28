@@ -11,7 +11,7 @@ import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { getIconFromKind } from '../../tools/Constants-React'
 import { clusterColor } from '../../tools/clusterColor'
 import { Area, AreaChart } from 'recharts'
-import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
+import { EClusterFlavour, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { getChannelIconSafe } from '../../tools/ChannelTools'
 import { MiniGauge } from '@kwirthmagnify/kwirth-common-front'
 
@@ -249,31 +249,39 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
         </>
     }
 
-    const distributionIcon = (flavour:string|undefined) => {
+    const distributionIcon = (flavour:EClusterFlavour|undefined) => {
         if (!flavour) return <></>
-        
+
         let content = <></>
         switch (flavour) {
-            case 'aks':
+            case EClusterFlavour.AKS:
                 content = <>{getIconFromKind('IconAks', 20)}&nbsp;Azure Kubernetes</>
                 break
-            case 'k3s':
-                content = <>{getIconFromKind('IconK3s', 20)}&nbsp;Rancher K3</>
+            case EClusterFlavour.K3S:
+                content = <>{getIconFromKind('IconK3s', 20)}&nbsp;SUSE K3s</>
                 break
-            case 'k3d':
+            case EClusterFlavour.K3D:
                 content = <Stack direction={'row'} alignItems={'center'}>{getIconFromKind('IconK3d', 24)}&nbsp;K3D</Stack>
                 break
-            case 'eks':
+            case EClusterFlavour.EKS:
                 content = <>{getIconFromKind('IconEks', 20)}&nbsp;AWS Kubernetes</>
                 break
-            case 'ocp':
+            case EClusterFlavour.OCP:
                 content = <>{getIconFromKind('IconOcp', 20)}&nbsp;OpenShift</>
                 break
-            case 'gke':
+            case EClusterFlavour.HARVESTER:
+                content = <>{getIconFromKind('IconHarvester', 20)}&nbsp;SUSE Harvester</>
+                break
+            case EClusterFlavour.GKE:
                 content = <>{getIconFromKind('IconGke', 20)}&nbsp;Google Kubernetes</>
                 break
-            case 'rk2e':
-                content = <>{getIconFromKind('IconRk2e', 20)}&nbsp;Rancher Kubernetes</>
+            /*
+                This case used to read 'rk2e' -- a typo of 'rke2' -- and never ran once, because nothing
+                produced that value. Icon, label and all, dead since the day it was written. Matching on
+                the enum is what makes that impossible to write again.
+            */
+            case EClusterFlavour.RKE2:
+                content = <>{getIconFromKind('IconRk2e', 20)}&nbsp;SUSE RKE2</>
                 break
             default:
                 content = <>{getIconFromKind('IconK8s', 20)}&nbsp;Kubernetes</>
@@ -305,7 +313,15 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                             const isChannelActive = props.clusters.find(c => c.name === props.cluster!.name)!.kwirthData!.channels.some((ch: any) => ch.id === c.trim())
                                             const colorToken = isChannelActive ? 'text.primary' : 'text.disabled';
                                             let newElement = React.cloneElement(icon, { fontSize: 'small', sx:{ color:colorToken } })
-                                            return <Tooltip key={ci} title={c.trim()}>{newElement}</Tooltip>
+                                            /*
+                                                The Box is not decoration: Tooltip hands a ref to its child, and these
+                                                channel icons are plain function components that cannot hold one --
+                                                which filled the console with "Function components cannot be given
+                                                refs". Same fix already used above for the channel and view icons.
+                                                No width here on purpose: iconSlotSx would force 24px on icons that
+                                                render at 'small', changing the spacing of this row.
+                                            */
+                                            return <Tooltip key={ci} title={c.trim()}><Box sx={{ display:'flex', alignItems:'center' }}>{newElement}</Box></Tooltip>
                                         }
                                         return <></>
                                     })
@@ -375,6 +391,10 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                     <Typography><b>Flavour: &nbsp;</b></Typography>
                                     {distributionIcon(props.cluster?.clusterInfo?.flavour)}
                                 </Stack>
+                                {/* Only shown when there IS a Rancher: a cluster without one reads exactly as before. */}
+                                {props.cluster?.clusterInfo?.rancherManaged &&
+                                    <Typography><b>Managed by: </b>Rancher ({props.cluster?.clusterInfo?.rancherRole})</Typography>
+                                }
                                 <Typography><b>Version: </b>{props.cluster?.clusterInfo?.version}</Typography>
                                 <Typography><b>Platform: </b>{props.cluster?.clusterInfo?.platform}</Typography>
                                 <Typography><b>Nodes: </b>{props.cluster?.clusterInfo?.nodes?.length}</Typography>

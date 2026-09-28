@@ -45,6 +45,8 @@ export class ConfigApi {
                         id: this.clusterInfo.id,
                         type: this.clusterInfo.type,
                         flavour: this.clusterInfo.flavour,
+                        rancherManaged: this.clusterInfo.rancherManaged,
+                        rancherRole: this.clusterInfo.rancherRole,
                         memory: this.clusterInfo.memory,
                         vcpu: this.clusterInfo.vcpus,
                         reportedName: clusterInfo?.name,

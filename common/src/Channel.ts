@@ -27,6 +27,38 @@ enum EClusterType {
 }
 
 /*
+    Which Kubernetes distribution this is. Detected from the clues each one leaves on its nodes (see
+    ClusterInfo.detectClusterName); UNKNOWN means none of them was recognised, and everything must keep
+    working exactly the same in that case.
+
+    This was a free-form string until 2026-09-28, and it cost a feature: the front had a case for 'rk2e'
+    -- a typo of 'rke2' -- with its icon and its label, and it never ran once, because nothing ever
+    produced that value. Nobody noticed, because a string that nobody matches fails silently.
+*/
+/*
+    What a Rancher is to this cluster, when there is one. Rancher calls 'local' the cluster it runs on and
+    'downstream' the ones it manages from there, and the difference matters: the local one holds the
+    Fleet workspaces and the whole delivery chain, a downstream one only receives.
+*/
+enum ERancherRole {
+    NONE = '',                  // no Rancher managing this cluster
+    LOCAL = 'local',            // this is the cluster Rancher itself runs on
+    DOWNSTREAM = 'downstream'   // managed by a Rancher living somewhere else
+}
+
+enum EClusterFlavour {
+    AKS = 'aks',                // Azure Kubernetes Service
+    EKS = 'eks',                // Amazon Elastic Kubernetes Service
+    GKE = 'gke',                // Google Kubernetes Engine
+    OCP = 'ocp',                // OpenShift
+    K3S = 'k3s',                // SUSE K3s
+    K3D = 'k3d',                // k3s inside Docker containers
+    RKE2 = 'rke2',              // SUSE RKE2
+    HARVESTER = 'harvester',    // SUSE Harvester (HCI on top of Kubernetes)
+    UNKNOWN = 'unknown'
+}
+
+/*
     Where this Kwirth runs. It is the result of getExecutionEnvironment() in the back end, which until now
     was lost as soon as the startup switch ended: the only thing that survived were derived and
     worse-informed fields. It is published because it is the fact everything else hangs off — what is at
@@ -113,4 +145,4 @@ interface IBackChannelRequirements {
 */
 const PLUVIDER_ID_PREFIX = 'plugin:'
 
-export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, EExecutionEnvironment, EChannelInstances, EChannelMode, IBackChannelRequirements, PLUVIDER_ID_PREFIX }
+export { ClusterTypeEnum, KwirthData, BackChannelData, EClusterType, EClusterFlavour, ERancherRole, EExecutionEnvironment, EChannelInstances, EChannelMode, IBackChannelRequirements, PLUVIDER_ID_PREFIX }

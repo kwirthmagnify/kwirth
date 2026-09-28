@@ -1,5 +1,5 @@
 import { AdmissionregistrationV1Api, ApiextensionsV1Api, ApisApi, AppsV1Api, AutoscalingV2Api, BatchV1Api, CoordinationV1Api, CoreV1Api, CustomObjectsApi, Exec, KubeConfig, KubernetesObjectApi, Log, NetworkingV1Api, NodeV1Api, PolicyV1Api, RbacAuthorizationV1Api, SchedulingV1Api, StorageV1Api, V1Node, VersionApi } from '@kubernetes/client-node'
-import { EClusterType, IInstanceConfig, ISenderAccess, IWebhookAccess } from '@kwirthmagnify/kwirth-common'
+import { EClusterType, EClusterFlavour, ERancherRole, IInstanceConfig, ISenderAccess, IWebhookAccess } from '@kwirthmagnify/kwirth-common'
 import { IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
@@ -145,7 +145,15 @@ export class ClusterInfo {
     public vcpus: number = 0
     public memory: number = 0
     public type: EClusterType = EClusterType.KUBERNETES
-    public flavour: string ='unknown'
+    public flavour: EClusterFlavour = EClusterFlavour.UNKNOWN
+    /*
+        Whether a Rancher is managing this cluster, and in which role. Detected from the presence of its
+        agent, NOT from the 'cattle.io' domain: that one belongs to SUSE as a whole and plain k3s already
+        uses it for its own CRDs (k3s.cattle.io, helm.cattle.io), so matching on it reports a Rancher on
+        every k3s in existence.
+    */
+    public rancherManaged: boolean = false
+    public rancherRole: ERancherRole = ERancherRole.NONE
 
     /*
         A prefixed id ('plugin:agora') points at a pluvider and is resolved against its registry;
@@ -329,6 +337,8 @@ export class ClusterInfo {
                 detectedName = this.detectClusterName(controlPlane ?? nodes[0], nodes)
             }
 
+            await this.detectRancher()
+
             this.name = configuredName || detectedName || await this.getClusterUid()
             if (!configuredName && !detectedName) {
                 logWarning(ELogComponent.CORE, `Cluster name cannot be detected on flavour '${this.flavour}', using cluster uid instead. Set KWIRTH_CLUSTER_NAME to give it a name.`)
@@ -341,13 +351,42 @@ export class ClusterInfo {
         }
     }
 
+    /*
+        Is a Rancher managing this cluster, and is it the one Rancher runs on?
+
+        It cannot be told from the nodes, so it is a separate look: Rancher deploys 'cattle-cluster-agent'
+        on every cluster it manages, and on its own it additionally runs 'rancher' in cattle-system. That
+        pair is what separates local from downstream.
+
+        ⚠️ NOT detected by the 'cattle.io' domain. That belongs to SUSE at large, and plain k3s already
+        ships k3s.cattle.io and helm.cattle.io of its own: matching on it would report a Rancher on every
+        k3s in existence. Verified on the dev k3d, which has those CRDs and no Rancher anywhere.
+
+        Failing to read is not the same as there being none, but it is treated as 'no Rancher': the worst
+        outcome is a cluster that does not say it is managed, never one that claims to be and is not.
+    */
+    private detectRancher = async (): Promise<void> => {
+        try {
+            const deployments = await this.appsApi.listNamespacedDeployment({ namespace: 'cattle-system' })
+            const names = (deployments.items ?? []).map(d => d.metadata?.name ?? '')
+            if (!names.includes('cattle-cluster-agent') && !names.includes('rancher')) return
+            this.rancherManaged = true
+            // The Rancher server itself only runs on its local cluster; the managed ones just get the agent.
+            this.rancherRole = names.includes('rancher') ? ERancherRole.LOCAL : ERancherRole.DOWNSTREAM
+            logInfo(ELogComponent.CORE, `Rancher detected: this cluster is '${this.rancherRole}'`)
+        }
+        catch {
+            // No cattle-system namespace, or no permission to read it. Either way: nothing to claim.
+        }
+    }
+
     // The name published by the cluster's flavour ('' when that flavour publishes none)
     private detectClusterName = (node: V1Node, nodes: V1Node[]): string => {
         const labels = node.metadata?.labels ?? {}
         const annotations = node.metadata?.annotations ?? {}
 
         if (labels['kubernetes.azure.com/cluster']) {
-            this.flavour = 'aks'
+            this.flavour = EClusterFlavour.AKS
             // the label carries the node's resource group in front (MC_<rg>_<cluster>_<region>)
             let name = labels['kubernetes.azure.com/cluster']
             const rg = labels['kubernetes.azure.com/network-resourcegroup']
@@ -356,7 +395,7 @@ export class ClusterInfo {
         }
 
         if (labels['k8s.io/cloud-provider-aws']) {
-            this.flavour = 'eks'
+            this.flavour = EClusterFlavour.EKS
             const lastAppliedConfig = annotations['kubectl.kubernetes.io/last-applied-configuration']
             if (lastAppliedConfig) {
                 try {
@@ -373,21 +412,40 @@ export class ClusterInfo {
         }
 
         if (node.spec?.providerID?.toLowerCase().startsWith('gce://')) {
-            this.flavour = 'gke'
+            this.flavour = EClusterFlavour.GKE
             if (labels['name']) return labels['name']
             const fullNodeName = node.spec.providerID.split('/').pop() ?? ''
             const gkeMatch = fullNodeName.match(/^gke-(.*)-[^-]+-[^-]+$/)
             return gkeMatch?.[1] || labels['cloud.google.com/gke-nodepool'] || ''
         }
 
+        /*
+            SUSE RKE2 and Harvester, before k3s: Harvester runs ON TOP of RKE2, so its nodes carry the
+            RKE2 clues too and asking for k3s first would mislabel both. Order here is not cosmetic.
+
+            ⚠️ Unlike the ones above, these two are NOT verified against a real cluster -- there is none
+            available yet -- and come from the distributions' documentation. They are the ones to re-check
+            first when a Rancher shows up.
+        */
+        if (labels['harvesterhci.io/managed'] !== undefined || annotations['harvesterhci.io/host-ip']) {
+            this.flavour = EClusterFlavour.HARVESTER
+            return labels['harvesterhci.io/cluster-name'] ?? ''
+        }
+
+        if (annotations['rke2.io/hostname'] || annotations['rke2.io/node-args'] || node.status?.nodeInfo?.kubeletVersion?.includes('+rke2')) {
+            this.flavour = EClusterFlavour.RKE2
+            // RKE2 publishes no cluster name of its own; a Rancher-managed one leaves it in a label.
+            return labels['cattle.io/cluster-name'] ?? annotations['rke2.io/hostname']?.toLocaleLowerCase() ?? ''
+        }
+
         if (annotations['k3s.io/hostname']) {
             const hostname = annotations['k3s.io/hostname'].toLocaleLowerCase()
-            this.flavour = hostname.startsWith('k3d') ? 'k3d' : 'k3s'
+            this.flavour = hostname.startsWith('k3d') ? EClusterFlavour.K3D : EClusterFlavour.K3S
             // k3d names its nodes '<cluster>-server-N' / '<cluster>-agent-N', so the cluster's name
             // comes from trimming at the separator. A real k3s uses the machine's hostname, which
             // carries neither separator nor cluster name: the best there is is the control-plane's
             // hostname (and should that not do, the operator has KWIRTH_CLUSTER_NAME)
-            if (this.flavour !== 'k3d') return hostname
+            if (this.flavour !== EClusterFlavour.K3D) return hostname
             let cut = hostname.indexOf('-agent-')
             if (cut < 0) cut = hostname.indexOf('-server-')
             return cut >= 0 ? hostname.substring(0, cut) : hostname

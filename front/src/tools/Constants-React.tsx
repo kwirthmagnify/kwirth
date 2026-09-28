@@ -1958,6 +1958,24 @@ const IconGke = () => (
   </svg>
 )
 
+/*
+    ⚠️ NOT the official Harvester logo, which we do not have: a plain mark of what Harvester is -- a
+    chassis running virtual machines on top of Kubernetes -- in the SUSE green. Replace it with the real
+    asset when the brand kit is at hand.
+*/
+const IconHarvester = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="128"
+    height="128"
+    fill="#30BA78"
+    viewBox="0 0 128 128"
+  >
+    <path d="M18 22h92a8 8 0 0 1 8 8v68a8 8 0 0 1-8 8H18a8 8 0 0 1-8-8V30a8 8 0 0 1 8-8m0 8v68h92V30z"></path>
+    <path d="M28 42h24v18H28zm0 26h24v18H28zm34-26h24v18H62zm0 26h24v18H62zm34-26h8v44h-8z"></path>
+  </svg>
+)
+
 const IconRk2e = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -1970,6 +1988,11 @@ const IconRk2e = () => (
   </svg>
 )
 
+/*
+    `fill="currentColor"` is what makes this follow the theme. Without it the paths fall back to SVG's
+    default black, which reads fine on the light theme and DISAPPEARS on the dark one -- reported on
+    2026-09-28 against the cluster card, where it is the k3d icon that says which distribution this is.
+*/
 const IconK3d = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -1978,6 +2001,7 @@ const IconK3d = () => (
     x="0"
     y="0"
     version="1.1"
+    fill="currentColor"
     viewBox="0 0 165.587 62.75"
   >
     <path
@@ -2211,6 +2235,7 @@ export const getIconFromKind = (kind:string, size:number) => {
         case 'IconGke': icon = <IconGke/>; break
         case 'IconOcp': icon = <IconOcp/>; break
         case 'IconRk2e': icon = <IconRk2e/>; break
+        case 'IconHarvester': icon = <IconHarvester/>; break
         case 'IconController': icon = <IconController/>; break
     }
     return <Box sx={{minWidth:size, minHeight:size, width:size, height:size}}>

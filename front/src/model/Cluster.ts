@@ -1,4 +1,4 @@
-import { KwirthData } from '@kwirthmagnify/kwirth-common'
+import { EClusterFlavour, ERancherRole, KwirthData } from '@kwirthmagnify/kwirth-common'
 import { MetricDefinition } from '../channels/metrics/MetricsTypes'
 
 export class Cluster {
@@ -18,7 +18,10 @@ export interface IClusterInfo {
     id: string,
     name: string,
     type: string,
-    flavour: string,
+    flavour: EClusterFlavour,
+    /** Whether a Rancher manages this cluster, and whether it is the one Rancher runs on. */
+    rancherManaged: boolean,
+    rancherRole: ERancherRole,
     memory: number
     vcpu: number
     reportedName: string,
