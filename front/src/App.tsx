@@ -746,7 +746,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         if (latest && versionGreaterThan(latest, inst.version)) updates.push(`${type} ${inst.id} ${inst.version}→${latest}`)
                     }
                 })
-                if (updates.length > 0) notify(undefined, ENotifyLevel.WARNING, `Updates available: ${updates.join(', ')}`)
+                /*
+                    INFO, not WARNING. Nothing is wrong: an extension having a newer version in the
+                    catalogue is news, not an incident, and there is nothing to attend to. Shouting it
+                    as a warning next to the ones that DO need attention is how a warning stops being
+                    read — and this one shows up on every single login.
+                */
+                if (updates.length > 0) notify(undefined, ENotifyLevel.INFO, `Updates available: ${updates.join(', ')}`)
             } catch {}
         }
 
