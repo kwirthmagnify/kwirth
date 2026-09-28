@@ -690,6 +690,42 @@ motivó F6: sus consumidores lo verían ausente mientras nadie más lo pidiera.
       comportamiento observable hasta que exista el primer consumidor**, y su e2e positivo llegará con
       él.
 
+## F8 — Cualquier extensión consume providers, con identidad sellada por el core — *CERRADA (2026-09-28)*
+
+F6 y F7 dejaron que un **provider** consumiera a otro. La necesidad siguiente llegó el mismo día desde
+tres familias distintas: un **sender** que envía correo por SES y quiere las credenciales de la cuenta
+cloud, un **idp** que lee Cognito o B2C, una **homepage** que muestra el estado de una cuenta. Y con
+ella un problema que F6 no tenía: un sender y un provider tienen **la misma forma** (`{ id }`), así que
+un productor que necesite saber *quién* le pregunta —el de cuentas cloud, que desde C6 guarda **una
+credencial por consumidor**— no tiene manera de distinguirlos, ni de impedir que uno diga ser otro.
+
+- [x] **`IExtension.requirements?.providers` y `IExtension.onProvidersReady?(access: IProviderAccess)`**
+      en `common-back@0.5.55`, para las once familias. `IProvider` ya los tenía (F6/F7) y siguen
+      compatibles. `access.getProvider(id)` va **atado a la identidad** del consumidor: la extensión no
+      se nombra a sí misma ni toca `clusterInfo`.
+- [x] 🔴 **La identidad la escribe el core**: `stampConsumerId()` deja en la instancia un sello no
+      enumerable y de solo lectura, `__kwirthConsumerId` = `<tipo>:<id>` (`sender:ses`, `webhook:gitlab`,
+      `homepage:status`, `provider:aws`). Los channels siguen con id pelado. `consumerIdOf()` lee el
+      sello **antes** que la forma; sin sello, la regla de F6. `common-back` exporta la misma regla
+      (`KWIRTH_CONSUMER_ID`, `consumerIdOf`) para que un **productor** lea al suscriptor con la del core.
+- [x] **`wireExtensionConsumers(type, instances, deps)`** en `providers/Consumer.ts`: sella, instancia lo
+      declarado en `requirements` (blando, como F7), y llama a `onProvidersReady(access)`. Un `WeakSet`
+      hace inocua la segunda pasada. Es el **único** sitio por el que pasa todo consumidor: no se tocan
+      los once managers. Senders y webhooks enganchados (`listInstances()` + `onInstanceStarted` en sus
+      managers); homepages, idps y el resto son **una línea** en el suyo cuando lo necesiten.
+- [x] Se cablea **dos veces**: al final de `setKubernetesClusterKwirthRequirements` (todo registrado) y
+      cuando nace una instancia después — un sender la tiene al añadirle su primera configuración, que
+      puede ser una semana tras el arranque.
+- [x] ⚠️ El core **no importa** `consumerIdOf` de `common-back`: repite la regla con el mismo literal,
+      para que su build no dependa de la versión del paquete que él mismo publica.
+- [x] **10 tests** (`tests/providers/extensionConsumer.test.ts`) + 8 en `common-back`
+      (`tests/consumer.test.ts`); el core queda en **524/524**.
+- [x] Guía: *Consuming a provider from any other extension* en `providers/developing`.
+- [x] **QA validado en vivo (2026-09-28)** con el productor de cuentas cloud: los tres suscriptores
+      salen con su id calificado (`provider:aws`, `provider:azure`, `excubitor`), y la misma cuenta AWS
+      entrega **credenciales distintas** a Excubitor y al provider de Agora. El primer sender que lo use
+      será el de SES, en su propio plan.
+
 ## Backlog que deja este trabajo
 
 - ✅ **`Required provider 'X' is not registered` ya dice QUIÉN lo pide** — pedido por el usuario el

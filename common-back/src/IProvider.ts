@@ -104,6 +104,20 @@ export interface IProviderRequirements {
 }
 
 /**
+ * What the core hands ANY extension that consumes providers, in its onProvidersReady(). It is already
+ * bound to the consumer's identity — the core stamps the instance and builds this for it — so the
+ * extension names nobody: it asks for a producer by id and gets a handle, or undefined if it is not
+ * installed (a SOFT dependency, to be survived).
+ *
+ * It is the same door for every family: a sender that emails through SES, a webhook, a homepage that
+ * shows the state of a cloud account, an IdP that reads Cognito or B2C — all of them reach a provider
+ * through this and nothing else, so the core's registry of who consumes what stays true.
+ */
+export interface IProviderAccess {
+    getProvider(providerId: string): IProviderHandle | undefined
+}
+
+/**
  * What a provider can tell about itself.
  *
  * It exists so kwirth can say whether something is being consumed or emitting to nobody, which is one

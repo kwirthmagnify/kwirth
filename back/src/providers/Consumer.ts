@@ -1,6 +1,8 @@
 import { IChannel } from '../channels/IChannel'
 import { IProviderRequirements } from './IProvider'
 import { isPluviderId } from './Pluvider'
+// The published shape every family declares its consumption with (common-back ≥ 0.5.55).
+import { IExtensionRequirements, IProviderAccess, IProviderHandle } from '@kwirthmagnify/kwirth-common-back'
 
 /*
     The other half of the symmetry that Pluvider.ts opened.
@@ -44,6 +46,35 @@ export const PROVIDER_CONSUMER_ID_PREFIX = 'provider:'
 export const providerConsumerId = (providerId: string): string => PROVIDER_CONSUMER_ID_PREFIX + providerId
 
 /*
+    The identity of a consumer is WRITTEN BY THE CORE, as a stamp on the instance, when the extension is
+    wired up to the providers it consumes — and read from there by anyone, the core's registry and the
+    producers alike. It is what lets a sender, a webhook, a homepage or an IdP be told apart from a
+    provider: all of them carry a bare `id`, and there is no shape to tell them apart by.
+
+    ⚠️ The key is the same literal `common-back` publishes as KWIRTH_CONSUMER_ID, so a producer built
+    against the published contract reads what this core wrote. It is repeated here rather than imported
+    because the core is where the rule is born, and importing it back would make the core's build depend
+    on the version of the package it publishes.
+*/
+export const KWIRTH_CONSUMER_ID = '__kwirthConsumerId'
+
+/** Extension families whose consumer id carries a prefix. Channels do not: their id is the bare channel id. */
+export type TConsumerType = 'provider' | 'sender' | 'webhook' | 'homepage' | 'login' | 'idp' | 'theme' | 'docs' | 'pack'
+
+export const consumerIdFor = (type: TConsumerType, id: string): string => `${type}:${id}`
+
+/** Non-enumerable and read-only: it does not leak into a JSON dump, and an extension cannot rewrite it. */
+export const stampConsumerId = (instance: object, consumerId: string): void => {
+    Object.defineProperty(instance, KWIRTH_CONSUMER_ID, { value: consumerId, enumerable: false, configurable: true, writable: false })
+}
+
+export const stampedConsumerId = (consumer: unknown): string | undefined => {
+    if (!consumer || typeof consumer !== 'object') return undefined
+    const stamped = (consumer as Record<string, unknown>)[KWIRTH_CONSUMER_ID]
+    return typeof stamped === 'string' && stamped.length > 0 ? stamped : undefined
+}
+
+/*
     Decided by the PRESENCE of getChannelData(), the same way a pluvider is decided by the presence of
     getPluviderData(). It is checked first on purpose: a pluvider is a channel that also produces, so
     it may well carry an 'id' too, and asking about 'id' first would file it as a provider.
@@ -56,6 +87,10 @@ export const isChannelConsumer = (consumer: TSubscriptionConsumer): consumer is 
     refusing the subscription would be worse than an unnamed edge, so it warns and carries on.
 */
 export const consumerIdOf = (consumer: TSubscriptionConsumer): string | undefined => {
+    // The stamp the core wrote when wiring wins over any shape: it is the only way to tell a sender, a
+    // webhook or a homepage from a provider, since all of them carry a bare `id`.
+    const stamped = stampedConsumerId(consumer)
+    if (stamped !== undefined) return stamped
     if (isChannelConsumer(consumer)) return consumer.getChannelData()?.id
     const id = (consumer as Partial<IProviderConsumer>)?.id
     return typeof id === 'string' && id.length > 0 ? providerConsumerId(id) : undefined
@@ -81,6 +116,8 @@ export const wireProviderConsumers = async (providers: IWireableProvider[], log:
     let wired = 0
     for (const provider of providers ?? []) {
         if (typeof provider?.onProvidersReady !== 'function') continue
+        // Stamped BEFORE it subscribes, so the producer reads `provider:<id>` and not a guess from its shape.
+        if (stampedConsumerId(provider) === undefined) stampConsumerId(provider, consumerIdFor('provider', provider.id))
         try {
             await provider.onProvidersReady()
             wired++
@@ -162,4 +199,73 @@ export interface IConsumedProvidersResolution<T extends IRequiringProvider = IRe
     added: T[]
     /** Consumed ids that are not registered at all. One entry per consumer that asked. */
     missing: IMissingConsumedProvider[]
+}
+
+/*
+    ── Every OTHER family ───────────────────────────────────────────────────────────────────────────
+
+    Channels subscribe through addSubscriber and providers through the phase above. The rest — senders,
+    webhooks, homepages, IdPs, whatever comes — go through HERE, all of them the same way, because the
+    need is the same: a sender that emails through SES wants the cloud accounts, a homepage wants to show
+    the state of one, an IdP wants to read Cognito or B2C. None of them should have to reach into the
+    core's registry behind its back, and none of them should be able to say it is somebody else.
+
+    What one call does for one extension, exactly once (a WeakSet remembers):
+      1. STAMPS it with `<type>:<id>` — the identity the registry and the producers will read;
+      2. instantiates the providers it declares in `requirements.providers` that are registered but not
+         running yet (a soft dependency: one that is not installed is reported, not fatal);
+      3. hands it an access bound to itself and calls its onProvidersReady().
+
+    It is called twice in the life of a core: once when everything subscribable is registered (startup),
+    and again for any instance born later — a sender gets its instance when its first configuration is
+    added, which may well be a week after startup. The WeakSet is what makes both calls safe.
+*/
+/*
+    Just enough of an extension to be wired. The shape is the published one (IExtension in common-back):
+    a METHOD signature on purpose, so that every family's contract —ISender, IWebhook, and the rest, which
+    declare it the same way— is assignable here without each of them being named.
+*/
+export interface IWireableExtension {
+    readonly id: string
+    requirements?: IExtensionRequirements
+    onProvidersReady?(access: IProviderAccess): void | Promise<void>
+}
+
+export interface IExtensionWiringDeps {
+    isPresent(providerId: string): boolean
+    isRegistered(providerId: string): boolean
+    instantiate(providerId: string, consumerId: string): Promise<unknown>
+    /** clusterInfo.getProvider, bound by the caller: the consumer passed is the stamped instance itself. */
+    getProvider(providerId: string, consumer: IProviderConsumer): IProviderHandle | undefined
+    warn(message: string): void
+    error(consumerId: string, err: unknown): void
+}
+
+const wiredExtensions = new WeakSet<object>()
+
+export const wireExtensionConsumers = async (type: TConsumerType, extensions: IWireableExtension[], deps: IExtensionWiringDeps): Promise<number> => {
+    let wired = 0
+    for (const ext of extensions ?? []) {
+        if (!ext || typeof ext !== 'object' || typeof ext.id !== 'string' || ext.id.length === 0) continue
+        if (wiredExtensions.has(ext)) continue
+        const consumerId = consumerIdFor(type, ext.id)
+        if (stampedConsumerId(ext) === undefined) stampConsumerId(ext, consumerId)
+        // Nothing to wire is still "wired": it must not be stamped and visited again on the next pass.
+        wiredExtensions.add(ext)
+        const wanted = Array.isArray(ext.requirements?.providers) ? ext.requirements!.providers! : []
+        for (const providerId of wanted) {
+            if (typeof providerId !== 'string' || providerId.length === 0 || isPluviderId(providerId)) continue
+            if (!deps.isRegistered(providerId)) { deps.warn(`${consumerId} consumes provider '${providerId}', which is not installed`); continue }
+            if (deps.isPresent(providerId)) continue
+            try { await deps.instantiate(providerId, consumerId) }
+            catch (err) { deps.error(consumerId, err) }
+        }
+        if (typeof ext.onProvidersReady !== 'function') continue
+        try {
+            await ext.onProvidersReady({ getProvider: (providerId: string) => deps.getProvider(providerId, ext) })
+            wired++
+        }
+        catch (err) { deps.error(consumerId, err) }
+    }
+    return wired
 }

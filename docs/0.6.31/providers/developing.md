@@ -275,6 +275,49 @@ A few things to keep in mind:
 In the startup log, a producer created this way shows up as
 `Provider 'some-provider' is consumed by provider 'yours', instantiating it`.
 
+### Consuming a provider from any other extension
+
+Providers are not the only consumers. **Any extension** — a sender, a webhook, a homepage, an identity
+provider — can subscribe to a provider the same way, through the two members every extension contract
+now shares (`kwirth-common-back` ≥ 0.5.55):
+
+```typescript
+// A sender that emails through SES and takes the AWS credentials from the cloud accounts provider.
+readonly requirements = { providers: ['cloud-config'] }
+
+onProvidersReady = async (access: IProviderAccess): Promise<void> => {
+    const handle = access.getProvider('cloud-config')
+    if (!handle) { this.log.warning('cloud-config is not installed here: SES has no accounts'); return }
+    await Promise.resolve(handle.subscribe(this, { clouds: ['aws'] })).catch(
+        err => this.log.error(`could not subscribe to cloud-config: ${err}`))
+    this.accounts = handle
+}
+
+stopSender = async (): Promise<void> => {
+    this.accounts?.unsubscribe(this)      // 🔴 the same rule: whatever you subscribe to, unsubscribe
+    this.accounts = undefined
+}
+```
+
+Two things differ from a provider, and both are deliberate:
+
+- **You receive the access; you do not ask the cluster for it.** `onProvidersReady(access)` hands you
+  an `IProviderAccess` that is already bound to who you are. There is no `clusterInfo` to reach into and
+  no way to subscribe as somebody else.
+- **The core names you.** Before calling `onProvidersReady()`, the core stamps your instance with its
+  qualified consumer id — `sender:ses`, `webhook:gitlab`, `homepage:status`, `idp:cognito` — and that
+  id is what the producer reads to know who is asking. A producer that keeps one credential per
+  consumer (the cloud accounts provider does) resolves what to hand you from that id. You never write
+  it, and you cannot overwrite it.
+
+The core wires you up when every provider is registered, and again if your instance is born later —
+a sender or a webhook gets its instance when its first configuration is added, which may be long after
+startup. Either way you are wired once. `requirements` works exactly as for a provider: what you list
+gets instantiated, missing ones are a warning, pluvider ids are skipped.
+
+Both members are optional. An extension that consumes nothing leaves them out, and an older core
+simply never calls `onProvidersReady()`.
+
 ## Deprecated: core-managed configuration
 
 Older providers received their configuration through `configure(config)`, fed by the core from a ConfigMap

@@ -74,7 +74,7 @@ import * as crypto from 'crypto'
 
 import { createProviderInstance, IProvider, IProviderStorage, TProviderConstructor } from './providers/IProvider'
 import { findMissingSubscriptionTargets, isPluvider, pluviderId, rebindPluvider, startPluviders, warnNameCollisions } from './providers/Pluvider'
-import { resolveConsumedProviders, wireProviderConsumers } from './providers/Consumer'
+import { resolveConsumedProviders, wireProviderConsumers, wireExtensionConsumers, IExtensionWiringDeps } from './providers/Consumer'
 import { buildProviderStorage } from './tools/ProviderStorage'
 import { EventsProvider } from './providers/events/EventsProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
@@ -1996,6 +1996,32 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         // plugin and on installing the provider, because either of the two can arrive second and the user
         // has to find out just the same.
         warnNameCollisions([...localClusterInfo.pluviders.keys()], [...registeredProviders.keys()], 'at startup')
+
+        /*
+            Every OTHER family that consumes providers — senders and webhooks today; homepages, IdPs and
+            the rest join by handing their instances to the same call — is wired now, with everything
+            subscribable registered, and again whenever an instance is born later: a sender gets its
+            instance when its first configuration is added, which may be a week after startup. The
+            wiring stamps each one with its `<type>:<id>` identity, so a producer that keeps one
+            credential per consumer (the cloud accounts) knows who is asking. See providers/Consumer.ts.
+        */
+        const extensionWiring: IExtensionWiringDeps = {
+            isPresent: provId => localClusterInfo.providers.some(p => p.id === provId),
+            isRegistered: provId => registeredProviders.has(provId),
+            instantiate: async (provId, consumerId) => {
+                logInfo(ELogComponent.CORE, `Provider '${provId}' is consumed by '${consumerId}', instantiating it`)
+                return startRequiredProvider(provId)
+            },
+            getProvider: (provId, consumer) => localClusterInfo.getProvider(provId, consumer),
+            warn: message => logWarning(ELogComponent.CORE, message),
+            error: (consumerId, err) => logError(ELogComponent.CORE, `'${consumerId}' failed while wiring up to the providers it consumes: ${err}`)
+        }
+        const wiredSenders = await wireExtensionConsumers('sender', senderManager?.listInstances() ?? [], extensionWiring)
+        const wiredWebhooks = await wireExtensionConsumers('webhook', webhookManager?.listInstances() ?? [], extensionWiring)
+        if (wiredSenders + wiredWebhooks > 0) logInfo(ELogComponent.CORE, `Wired ${wiredSenders} sender(s) and ${wiredWebhooks} webhook(s) that consume providers`)
+        // Instances born after this point (a configuration added while running) are wired the moment they start.
+        if (senderManager && !senderManager.onInstanceStarted) senderManager.onInstanceStarted = instance => { void wireExtensionConsumers('sender', [instance], extensionWiring) }
+        if (webhookManager && !webhookManager.onInstanceStarted) webhookManager.onInstanceStarted = instance => { void wireExtensionConsumers('webhook', [instance], extensionWiring) }
     }
     catch (err) {
         logError(ELogComponent.CORE, 'Error setting up kubernetes requirements')

@@ -470,6 +470,16 @@ export class WebhookManager implements IWebhookAccess {
 
     // ── Instances ─────────────────────────────────────────────────────────────
 
+    /** Every webhook instance alive right now: what the core wires up to the providers they consume. */
+    listInstances(): IWebhook[] { return [...this.instances.values()] }
+
+    /*
+        Told by the core once it can wire an instance to the providers it consumes. A webhook gets its
+        instance when its first configuration is added, which may be long after startup. Set by the core;
+        undefined until the providers are ready.
+    */
+    onInstanceStarted?: (instance: IWebhook) => void
+
     getWebhook(id: string): IWebhook | undefined {
         if (this.instances.has(id)) return this.instances.get(id)
         const Ctor = this.registeredWebhooks.get(id)
@@ -477,6 +487,7 @@ export class WebhookManager implements IWebhookAccess {
         const instance = new Ctor()
         instance.startWebhook?.(this).catch(err => logError(ELogComponent.CORE, `Webhook '${id}' startWebhook error: ${err}`))
         this.instances.set(id, instance)
+        this.onInstanceStarted?.(instance)
         return instance
     }
 

@@ -490,6 +490,17 @@ export class SenderManager implements ISenderAccess {
 
     // ── Config management ───────────────────────────────────────────────────────
 
+    /** Every sender instance alive right now: what the core wires up to the providers they consume. */
+    listInstances(): ISender[] { return [...this.instances.values()] }
+
+    /*
+        Told by the core once it can wire an instance to the providers it consumes. A sender gets its
+        instance when its first configuration is added, which may be long after startup: without this
+        hook, a sender that emails through SES and reads the cloud accounts would only be wired on the
+        next restart. Set by the core; undefined until the providers are ready.
+    */
+    onInstanceStarted?: (instance: ISender) => void
+
     getSender(id: string): ISender | undefined {
         if (this.instances.has(id)) return this.instances.get(id)
         const Ctor = this.registeredSenders.get(id)
@@ -505,6 +516,7 @@ export class SenderManager implements ISenderAccess {
         withLogger.setLogger?.(componentLogger(ELogComponent.SENDER, id))
         instance.startSender(this).catch(err => logError(ELogComponent.CORE, `Sender '${id}' startSender error: ${err}`))
         this.instances.set(id, instance)
+        this.onInstanceStarted?.(instance)
         /*
             A FRESHLY created instance knows nothing: its configurations were loaded into the previous
             instance, when the core started. And this is reached not only the first time, but every time

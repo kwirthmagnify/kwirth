@@ -106,6 +106,15 @@ export class MySender implements ISender {
 export default MySender
 ```
 
+### Consuming a provider from your sender
+
+A sender can subscribe to a provider — typically to take shared configuration from it, such as the
+cloud accounts a sender that emails through SES needs. Declare what you consume in `requirements` and
+subscribe in `onProvidersReady(access)`; the core hands you an access already bound to your identity
+(`sender:<id>`), and unsubscribing in `stopSender()` is not optional. The mechanism is the same for every
+extension family and is described once, in
+[Consuming a provider from any other extension](../providers/developing.md#consuming-a-provider-from-any-other-extension).
+
 ### Hot-reload for development
 
 Point kwirth at your local build output via `kwirth-dev.json`:

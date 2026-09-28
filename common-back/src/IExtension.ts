@@ -1,4 +1,6 @@
 import { IExtensionExportOptions, IExtensionImportResult } from '@kwirthmagnify/kwirth-common'
+// Type-only, so the cycle with IProvider.ts (which extends IExtension) costs nothing at runtime.
+import type { IProviderAccess } from './IProvider'
 
 /*
     What is common to EVERY Kwirth extension, whatever its type.
@@ -40,7 +42,38 @@ export interface IExtensionLogger {
     error(message: unknown): void
 }
 
+/**
+ * What an extension needs from the rest of the core. The same shape for every family: the `providers`
+ * list a channel or a provider already declares, now available to all eleven.
+ */
+export interface IExtensionRequirements {
+    /** Ids of the providers this extension consumes (never a pluvider 'plugin:<name>' id). */
+    providers?: string[]
+}
+
 export interface IExtension {
+    /**
+     * The providers this extension CONSUMES. The core instantiates them even if no channel asks for
+     * them, the same way it does for a channel's or a provider's requirements. The dependency stays
+     * SOFT: one that is not installed is a warning, and the consumer must survive its absence.
+     *
+     * OPTIONAL: an extension that consumes nothing leaves it out, and an older core ignores it.
+     */
+    requirements?: IExtensionRequirements
+    /**
+     * Called by the core once EVERY provider is registered and started, with an access already bound
+     * to this extension's identity. This is where an extension subscribes to the providers it consumes —
+     * never from its own start hook, because whether a producer exists at that point depends on the
+     * startup order, which the author cannot see.
+     *
+     * Any family may implement it: a sender that emails through SES reaching the cloud accounts, a
+     * homepage showing the state of an account, an IdP reading Cognito or B2C. Whoever subscribes MUST
+     * unsubscribe in its own stop hook, or the producer goes on handing events to a dead instance.
+     *
+     * OPTIONAL: an extension that consumes nothing leaves it out, and an older core never calls it.
+     */
+    onProvidersReady?(access: IProviderAccess): void | Promise<void>
+
     /*
         Returns this extension's configuration, ready to travel to another Kwirth.
 
