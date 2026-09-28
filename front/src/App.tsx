@@ -706,6 +706,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 [EExtensionType.PACK]:     `${backendUrl}/core/packs`,
                 [EExtensionType.DOCS]:     `${backendUrl}/core/docs`,
                 [EExtensionType.IDP]:      `${backendUrl}/idp/connectors`,
+                [EExtensionType.AITOOLSET]: `${backendUrl}/core/aitoolsets`,
             }
             // Coming in through a login extension is a NARROW door: the user lands on a specific login's
             // page and goes straight to its channel, with no marketplace and usually with no Kwirth beyond
@@ -725,8 +726,18 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
             }
             try {
-                // with a login extension only the two types that can appear in the notice are queried
-                const types = loginExtSlug ? [EExtensionType.LOGIN, EExtensionType.PLUGIN] : Object.values(EExtensionType)
+                /*
+                    with a login extension only the two types that can appear in the notice are queried
+
+                    Types with no endpoint are skipped. The loop walks the whole enum, so a type added
+                    there and forgotten here used to end up as fetch(undefined) -- the browser asking
+                    for the literal string "undefined" relative to the front, a 404 on every login.
+                    The catch below swallowed it, so the only visible trace was a red line in the
+                    console, while that type silently never got its update check. It happened with
+                    aitoolset, and the enum will keep growing.
+                */
+                const allTypes = loginExtSlug ? [EExtensionType.LOGIN, EExtensionType.PLUGIN] : Object.values(EExtensionType)
+                const types = allTypes.filter(t => ENDPOINTS[t])
                 const [catalogs, installeds] = await Promise.all([
                     Promise.all(types.map(t => fetch(`${backendUrl}/core/marketplace/${t}`, addGetAuthorization(accessString)).then(r => r.ok ? r.json() : []).catch(() => []))),
                     Promise.all(types.map(t => fetch(ENDPOINTS[t], addGetAuthorization(accessString)).then(r => r.ok ? r.json() : []).catch(() => [])))
