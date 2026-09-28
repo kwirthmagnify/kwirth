@@ -692,20 +692,33 @@ motivó F6: sus consumidores lo verían ausente mientras nadie más lo pidiera.
 
 ## Backlog que deja este trabajo
 
-- ⚠️ **`Required provider 'X' is not registered` no dice QUIÉN lo pide** (usuario, 2026-09-27). El
-  mensaje es correcto y no sirve para actuar: con quince canales instalados, saber que falta `syslog`
-  no dice a cuál hay que ir a mirar, ni si sobra el provider o sobra quien lo pide.
+- ✅ **`Required provider 'X' is not registered` ya dice QUIÉN lo pide** — pedido por el usuario el
+  2026-09-27, **hecho y validado el 2026-09-28**.
 
-  **El dato existe y se tira una línea antes.** `back/src/index.ts:1884` hace
+  El mensaje era correcto y no servía para actuar: con quince canales instalados, saber que falta
+  `syslog` no decía a cuál ir a mirar, ni si sobraba el provider o sobraba quien lo pedía.
+
+  **El dato existía y se tiraba una línea antes.** `index.ts:1884` hacía
   `Array.from(runningInstance.channels.values()).flatMap(c => c.requirements.providers)`: `channels` es
-  un **Map** cuya clave es el id del canal, y `.values()` la descarta antes de que `flatMap` funda las
-  listas de todos los canales en un array plano. Para cuando se emite el error en `:1887` ya no hay
-  forma de volver atrás. Bastaría llevar pares `(consumidor, providerId)` en vez de ids sueltos.
+  un **Map** cuya clave es el id del canal, y `.values()` la descartaba antes de que `flatMap` fundiera
+  las listas de todos en un array plano. Ahora viajan pares `(consumerId, targetId)` y
+  `findMissingSubscriptionTargets()` devuelve **un entry por target con todos sus consumidores**
+  (`IMissingTarget`), no ids sueltos.
 
-  Son **tres sitios**, no uno: `:1887` (lo pide un canal), `:1923` (lo pide otro provider — ahí el
-  consumidor también se conoce) y el warning de pluviders de `:1890`, que dice *«is required by a
-  channel»* sin nombrarlo. `findMissingSubscriptionTargets()` recibe hoy `string[]`, así que el cambio
-  le toca a ella y a sus tests.
+  🔴 **El invariante que había que no romper**: tres canales pidiendo lo mismo son **una** línea, no
+  tres iguales — y eso antes se conseguía **tirando** a los consumidores. Agrupar sin perder a nadie es
+  justo lo que hacen los dos tests nuevos, junto con que un canal que pide dos veces lo mismo no salga
+  duplicado. Los consumidores salen **ordenados**, para que dos arranques iguales no se lean distinto.
+
+  ⚠️ **Solo se tocó la vía de canales.** La de provider→provider (`:1967`) ya nombraba a su consumidor
+  desde F7 (`Provider 'X' consumes 'Y', which is not installed`), y `:1923` es defensivo: sus dos
+  llamantes comprueban `registeredProviders` antes, así que no se alcanza.
+
+  Resultado en el log:
+  ```
+  [core] [ERRO] Required provider 'syslog' is not registered — required by: montag
+  [core] [WARN] Pluvider 'plugin:situs' is not available here (...) — required by: excubitor
+  ```
 
 - ⚠️ **La instalación en caliente no espera a `startProvider()`** (lo lanza sin `await`), al contrario
   que el arranque. F7 mantiene ese comportamiento para no cambiar dos cosas a la vez. Un consumidor

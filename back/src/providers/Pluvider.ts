@@ -61,6 +61,22 @@ export const warnNameCollisions = (pluviderIds: string[], providerIds: string[],
 }
 
 /*
+    What somebody asked for, and WHO asked for it. The pair is the point: an id on its own cannot be
+    acted upon — with fifteen channels installed, knowing that 'syslog' is missing does not say which one
+    to go and look at, nor whether what is wrong is the absent provider or the one demanding it.
+*/
+export interface ISubscriptionRequest {
+    consumerId: string
+    targetId: string
+}
+
+/** A target nobody could provide, with EVERY consumer that asked for it. */
+export interface IMissingTarget {
+    id: string
+    consumers: string[]
+}
+
+/*
     Of everything the channels ASK FOR in 'requirements.providers', what is really not available. It is
     not the same as walking what is registered: an id that was asked for and is not registered appeared
     nowhere until somebody tried to subscribe to it.
@@ -69,23 +85,40 @@ export const warnNameCollisions = (pluviderIds: string[], providerIds: string[],
     is declared and not registered is a misconfiguration. An absent pluvider is legitimate: its plugin may
     not be installed, or it may be a SINGLE channel announced here as remote — and the consumer has to go
     on working without it.
+
+    One entry per missing TARGET, not per request: three channels asking for the same absent thing is one
+    problem, and three identical lines at startup is noise. The consumers are gathered into that single
+    entry instead, which is what turns the report into something actionable.
 */
 export const findMissingSubscriptionTargets = (
-    requestedIds: string[],
+    requests: ISubscriptionRequest[],
     registeredProviderIds: string[],
     pluviders: Map<string, TPluviderChannel>
-): { missingProviders: string[], missingPluviders: string[] } => {
-    const missingProviders: string[] = []
-    const missingPluviders: string[] = []
-    for (const id of new Set(requestedIds)) {
-        if (isPluviderId(id)) {
-            if (!pluviders.has(id)) missingPluviders.push(id)
+): { missingProviders: IMissingTarget[], missingPluviders: IMissingTarget[] } => {
+    const missingProviders = new Map<string, Set<string>>()
+    const missingPluviders = new Map<string, Set<string>>()
+
+    const note = (into: Map<string, Set<string>>, targetId: string, consumerId: string): void => {
+        const consumers = into.get(targetId)
+        if (consumers) consumers.add(consumerId)
+        else into.set(targetId, new Set([consumerId]))
+    }
+
+    for (const { consumerId, targetId } of requests) {
+        if (isPluviderId(targetId)) {
+            if (!pluviders.has(targetId)) note(missingPluviders, targetId, consumerId)
         }
-        else if (!registeredProviderIds.includes(id)) {
-            missingProviders.push(id)
+        else if (!registeredProviderIds.includes(targetId)) {
+            note(missingProviders, targetId, consumerId)
         }
     }
-    return { missingProviders, missingPluviders }
+
+    // Sorted so the same startup always reports the same way: a line that changes order between restarts
+    // looks like a change when nothing changed.
+    const asList = (found: Map<string, Set<string>>): IMissingTarget[] =>
+        [...found].map(([id, consumers]) => ({ id, consumers: [...consumers].sort() }))
+
+    return { missingProviders: asList(missingProviders), missingPluviders: asList(missingPluviders) }
 }
 
 /*

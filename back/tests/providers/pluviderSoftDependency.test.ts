@@ -3,15 +3,19 @@
 // on what is missing: a provider that is declared and not registered is a misconfiguration, whereas an
 // absent pluvider is legitimate (its plugin may not be installed, or it may be a SINGLE channel announced
 // here as remote).
+//
+// And it has to say WHO asked. The id on its own cannot be acted upon: with fifteen channels installed,
+// 'syslog is missing' does not say which one to go and look at. That is what these tests pin down, because
+// the consumer used to be thrown away one line before the message was written.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { findMissingSubscriptionTargets, TPluviderChannel } from '../../src/providers/Pluvider'
+import { findMissingSubscriptionTargets, ISubscriptionRequest, TPluviderChannel } from '../../src/providers/Pluvider'
 
 const fakePluvider = (id: string): TPluviderChannel => ({
     getChannelData: () => ({ id }),
     processProviderEvent: () => {},
-    getPluviderData: () => ({ description: `lo que produce ${id}` }),
+    getPluviderData: () => ({ description: `what ${id} produces` }),
     addSubscriber: async () => {},
     removeSubscriber: async () => {},
     startProvider: async () => {},
@@ -22,52 +26,84 @@ const fakePluvider = (id: string): TPluviderChannel => ({
 const REGISTERED = ['events', 'metrics']
 const PLUVIDERS = new Map<string, TPluviderChannel>([['plugin:agora', fakePluvider('agora')]])
 
-test('lo que esta disponible no se reporta como ausente', () => {
-    const missing = findMissingSubscriptionTargets(['events', 'metrics', 'plugin:agora'], REGISTERED, PLUVIDERS)
+/** Reads as the call site does: which channel asks for what. */
+const asks = (consumerId: string, ...targetIds: string[]): ISubscriptionRequest[] =>
+    targetIds.map(targetId => ({ consumerId, targetId }))
+
+test('what is available is not reported as missing', () => {
+    const missing = findMissingSubscriptionTargets(asks('montag', 'events', 'metrics', 'plugin:agora'), REGISTERED, PLUVIDERS)
     assert.deepEqual(missing.missingProviders, [])
     assert.deepEqual(missing.missingPluviders, [])
 })
 
-test('un provider pedido y no registrado se reporta como provider ausente', () => {
-    const missing = findMissingSubscriptionTargets(['events', 'trivy'], REGISTERED, PLUVIDERS)
-    assert.deepEqual(missing.missingProviders, ['trivy'])
+test('a provider asked for and not registered is reported, WITH whoever asked', () => {
+    const missing = findMissingSubscriptionTargets(asks('montag', 'events', 'trivy'), REGISTERED, PLUVIDERS)
+    assert.deepEqual(missing.missingProviders, [{ id: 'trivy', consumers: ['montag'] }])
     assert.deepEqual(missing.missingPluviders, [])
 })
 
-test('un pluvider pedido y no disponible se reporta APARTE, porque no es un error', () => {
-    const missing = findMissingSubscriptionTargets(['plugin:situs'], REGISTERED, PLUVIDERS)
+test('an absent pluvider is reported APART, because it is not an error, and also names its consumer', () => {
+    const missing = findMissingSubscriptionTargets(asks('excubitor', 'plugin:situs'), REGISTERED, PLUVIDERS)
     assert.deepEqual(missing.missingProviders, [])
-    assert.deepEqual(missing.missingPluviders, ['plugin:situs'])
+    assert.deepEqual(missing.missingPluviders, [{ id: 'plugin:situs', consumers: ['excubitor'] }])
 })
 
-test('los dos mundos se reportan por separado en la misma pasada', () => {
-    const missing = findMissingSubscriptionTargets(['trivy', 'plugin:situs', 'events', 'plugin:agora'], REGISTERED, PLUVIDERS)
-    assert.deepEqual(missing.missingProviders, ['trivy'])
-    assert.deepEqual(missing.missingPluviders, ['plugin:situs'])
+test('both worlds are reported separately in the same pass', () => {
+    const missing = findMissingSubscriptionTargets(asks('montag', 'trivy', 'plugin:situs', 'events', 'plugin:agora'), REGISTERED, PLUVIDERS)
+    assert.deepEqual(missing.missingProviders, [{ id: 'trivy', consumers: ['montag'] }])
+    assert.deepEqual(missing.missingPluviders, [{ id: 'plugin:situs', consumers: ['montag'] }])
 })
 
-test('un pluvider ausente NO se confunde con un provider ausente aunque se llamen igual', () => {
+test('an absent pluvider is NOT confused with an absent provider even when they share a name', () => {
     // a bare 'agora' is a provider that does not exist; 'plugin:agora' is a pluvider that does
-    const missing = findMissingSubscriptionTargets(['agora', 'plugin:agora'], REGISTERED, PLUVIDERS)
-    assert.deepEqual(missing.missingProviders, ['agora'])
+    const missing = findMissingSubscriptionTargets(asks('montag', 'agora', 'plugin:agora'), REGISTERED, PLUVIDERS)
+    assert.deepEqual(missing.missingProviders, [{ id: 'agora', consumers: ['montag'] }])
     assert.deepEqual(missing.missingPluviders, [])
 })
 
-test('el mismo id pedido por varios canales se reporta UNA vez', () => {
-    // three channels asking for the same thing must not produce three identical warnings at startup
-    const missing = findMissingSubscriptionTargets(['plugin:situs', 'plugin:situs', 'plugin:situs', 'trivy', 'trivy'], REGISTERED, PLUVIDERS)
-    assert.deepEqual(missing.missingPluviders, ['plugin:situs'])
-    assert.deepEqual(missing.missingProviders, ['trivy'])
+test('🔴 the same id asked for by several channels is ONE line that names them ALL', () => {
+    /*
+        The invariant that was already here —three channels asking for the same thing must not produce
+        three identical warnings— now has to hold WITHOUT losing anybody: one entry per missing target,
+        with every consumer inside it. Collapsing to one line used to be done by throwing the consumers
+        away, which is exactly the bug this fixes.
+    */
+    const missing = findMissingSubscriptionTargets([
+        ...asks('montag', 'plugin:situs', 'trivy'),
+        ...asks('excubitor', 'plugin:situs', 'trivy'),
+        ...asks('agora', 'plugin:situs')
+    ], REGISTERED, PLUVIDERS)
+    assert.deepEqual(missing.missingPluviders, [{ id: 'plugin:situs', consumers: ['agora', 'excubitor', 'montag'] }])
+    assert.deepEqual(missing.missingProviders, [{ id: 'trivy', consumers: ['excubitor', 'montag'] }])
 })
 
-test('sin nada pedido no hay nada que reportar', () => {
+test('the same channel asking twice for the same thing is named once', () => {
+    // a duplicate in 'requirements.providers' must not print the consumer twice in the same line
+    const missing = findMissingSubscriptionTargets(asks('montag', 'trivy', 'trivy'), REGISTERED, PLUVIDERS)
+    assert.deepEqual(missing.missingProviders, [{ id: 'trivy', consumers: ['montag'] }])
+})
+
+test('the consumers come out SORTED, so the same startup always reports the same way', () => {
+    // a line that changes order between restarts looks like a change when nothing changed
+    const missing = findMissingSubscriptionTargets([
+        ...asks('zulu', 'trivy'),
+        ...asks('alfa', 'trivy'),
+        ...asks('mike', 'trivy')
+    ], REGISTERED, PLUVIDERS)
+    assert.deepEqual(missing.missingProviders, [{ id: 'trivy', consumers: ['alfa', 'mike', 'zulu'] }])
+})
+
+test('with nothing asked for there is nothing to report', () => {
     const missing = findMissingSubscriptionTargets([], REGISTERED, PLUVIDERS)
     assert.deepEqual(missing.missingProviders, [])
     assert.deepEqual(missing.missingPluviders, [])
 })
 
-test('sin pluviders registrados, todo lo pedido con prefijo esta ausente', () => {
-    const missing = findMissingSubscriptionTargets(['plugin:agora', 'plugin:montag'], REGISTERED, new Map())
-    assert.deepEqual(missing.missingPluviders, ['plugin:agora', 'plugin:montag'])
+test('with no pluviders registered, everything asked for with the prefix is missing', () => {
+    const missing = findMissingSubscriptionTargets(asks('montag', 'plugin:agora', 'plugin:montag'), REGISTERED, new Map())
+    assert.deepEqual(missing.missingPluviders, [
+        { id: 'plugin:agora', consumers: ['montag'] },
+        { id: 'plugin:montag', consumers: ['montag'] }
+    ])
     assert.deepEqual(missing.missingProviders, [])
 })

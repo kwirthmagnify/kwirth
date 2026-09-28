@@ -1881,13 +1881,21 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             —its plugin may not be installed, or it may be a SINGLE channel announced here as remote—
             and the consumer carries on without it (warning). That is the soft dependency.
         */
-        const requestedIds = Array.from(runningInstance.channels.values()).flatMap(c => c.requirements.providers)
-        const missing = findMissingSubscriptionTargets(requestedIds, Array.from(registeredProviders.keys()), localClusterInfo.pluviders)
-        for (const provId of missing.missingProviders) {
-            logError(ELogComponent.CORE, `Required provider '${provId}' is not registered`)
+        /*
+            ⚠️ 'entries()', not 'values()'. The Map's KEY is the channel's id, and it used to be dropped
+            here: a flatMap merged every channel's list into one flat array of ids, so by the time the
+            line was written there was no way back to who had asked. The message was correct and could
+            not be acted upon — 'syslog is missing' does not say which of fifteen channels to go and look
+            at. The consumer travels with its request from here on.
+        */
+        const requests = Array.from(runningInstance.channels.entries())
+            .flatMap(([channelId, channel]) => channel.requirements.providers.map(targetId => ({ consumerId: channelId, targetId })))
+        const missing = findMissingSubscriptionTargets(requests, Array.from(registeredProviders.keys()), localClusterInfo.pluviders)
+        for (const provider of missing.missingProviders) {
+            logError(ELogComponent.CORE, `Required provider '${provider.id}' is not registered — required by: ${provider.consumers.join(', ')}`)
         }
-        for (const pluvId of missing.missingPluviders) {
-            logWarning(ELogComponent.CORE, `Pluvider '${pluvId}' is required by a channel but is not available here (its plugin is not installed, or is not hosted by this Kwirth)`)
+        for (const pluvider of missing.missingPluviders) {
+            logWarning(ELogComponent.CORE, `Pluvider '${pluvider.id}' is not available here (its plugin is not installed, or is not hosted by this Kwirth) — required by: ${pluvider.consumers.join(', ')}`)
         }
 
         
