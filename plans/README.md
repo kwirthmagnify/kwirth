@@ -20,6 +20,7 @@ meses después — que es exactamente lo que pasaba antes de escribir este índi
 
 | plan | de qué va | qué queda |
 |---|---|---|
+| [kwirth-status v2](kwirth-status/PLAN-v2.md) · [PRD](kwirth-status/PRD-v2.md) | Kwirth Status en cinco pestañas: providers, grafo, rendimiento del proceso, plugins y resto de extensiones | S1–S4 |
 | [ai-tools](ai-tools/PLAN.md) | las tools de IA como extensión instalable (`aitoolset`) | S4–S7; las 43 viejas ya retiradas de `common-ai` (2026-09-26) |
 | [icons](icons/PLAN.md) | aligerar el barrel de iconos | los dos que un sender pide por nombre, y el alias `/icons` en 26 `build.mjs` |
 | [provider-debug](provider-debug/PLAN.md) | canal para ver en crudo lo que emite un provider | la fase de front |
@@ -52,7 +53,7 @@ Terminados y en producción. Se consultan para saber **por qué** algo es como e
 | [http-pull-push](http-pull-push/PLAN.md) | el provider que sondea HTTP y empuja a sus suscriptores |
 | [extension-managers-ui](extension-managers-ui/PLAN.md) | los once gestores de extensiones en un único diálogo |
 | [extension-upgrade](extension-upgrade/PLAN.md) | actualizar una extensión instalando encima, sin desinstalar y sin perder su configuración |
-| [kwirth-status](kwirth-status/PLAN.md) · [PRD](kwirth-status/PRD.md) | una pantalla para echar un ojo a Kwirth por dentro: qué hay montado, cómo está, quién consume a quién y cuánto mueve |
+| [kwirth-status](kwirth-status/PLAN.md) · [PRD](kwirth-status/PRD.md) | una pantalla para echar un ojo a Kwirth por dentro: qué hay montado, cómo está, quién consume a quién y cuánto mueve. Sigue en la **v2** |
 | [user-admin-guide](user-admin-guide/USER-ADMIN-GUIDE-PLAN.md) | la guía de usuario y administrador |
 
 ## Sin empezar

@@ -113,8 +113,16 @@ const distMeta = { type: 'commonjs', extensionType: 'plugin',
     ...(meta.website ? { website: meta.website } : {}),
     requiresRestart: meta.requiresRestart ?? false,
     requiresExtension: meta.requiresExtension ?? [],
+    // What npm shows on the package page: without these, nothing there says this belongs to Kwirth.
+    homepage: 'https://kwirthmagnify.dev',
+    repository: { type: 'git', url: 'git+https://github.com/kwirthmagnify/kwirth.git', directory: 'plugins/status' },
+    keywords: ['kwirth', 'kubernetes', 'plugin', 'observability'],
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
+
+// The package page on npm is this README: publishing without it leaves a page that says nothing.
+fs.copyFileSync('README.md', path.join('dist', 'README.md'))
+console.log('Copied README.md to dist/')
 
 console.log(`Done. Run 'npm publish' on your 'dist' folder in order to publish your package to npmjs.`)

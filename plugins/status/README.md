@@ -1,81 +1,76 @@
 # Kwirth Status
 
-A look inside Kwirth: **what is installed, how it is doing, and — soon — who consumes what.**
+A channel for **[Kwirth](https://kwirthmagnify.dev)** that looks inside Kwirth itself: **what is installed,
+how it is doing, who consumes what, and how much it moves.**
 
 Kwirth knows a lot about your cluster and almost nothing about itself. When a provider does not start, when
 an extension needs a restart, or when something is installed but nothing consumes it, the symptom you see
-rarely looks like the problem. This channel puts that state on a screen.
+rarely looks like the problem. This channel puts that state on a screen — for whoever **operates** a Kwirth.
+
+> **Kwirth** is an open-source Kubernetes observability and operations tool: logs, metrics, events and more,
+> in real time, extended with plugins like this one.
+> Website: **https://kwirthmagnify.dev** · Source: **https://github.com/kwirthmagnify/kwirth**
 
 ## What it shows
 
-An inventory of everything this Kwirth has mounted — providers, pluviders, senders and webhooks — each with
-its state **and the reason for it**:
+**The inventory** — every provider, pluvider, sender and webhook this Kwirth has mounted, each with its
+state **and the reason for it**:
 
 | State | Meaning |
 |---|---|
-| **Running** | instantiated and working |
+| **Active** | running, and something consumes it |
+| **Idle** | running, and emitting to nobody |
+| **Running** | running; it does not say how many consumers it has |
 | **Not started** | installed, but the core never started it — the reason says why |
 | **Needs restart** | running, but something of it is not wired in until the server restarts |
 | **Failed** | it tried to start and failed |
-| **Not reported** | the component does not expose that information (this is *not* an error) |
 
-That last column — **why** — is the point of the whole screen. A bare *"not running"* is what you already
-have today, and it does not get anyone anywhere.
+The **why** is the point of the screen: a bare *"not running"* gets nobody anywhere. Alongside it, how many
+**consumers** each producer has and how much it has **delivered**, with a rate between two snapshots.
+A value a component does not report is shown as a dash, never as a zero.
+
+**The graph** — who consumes whom, top to bottom: producers on top, channels at the bottom, and a provider
+that consumes another provider in between, below the one it reads. A line **moves** only when its producer
+delivered something since the previous snapshot; with auto-refresh it slows down and stops as the next
+snapshot arrives.
+
+**Refresh** — manual, or every 5s / 15s / 30s / minute while the tab is open.
 
 ## What it is not
 
-- **Not a monitoring platform.** No time series, no alerts, no history. It shows *now*. Your Prometheus
-  already covers CPU and memory of the pod, with more history and better alerting.
-- **Not a debugger.** It never shows payloads. To inspect what a provider actually emits, use
-  [`provider-debug`](../provider-debug), which is built for whoever *writes* a provider. This one is for
-  whoever *operates* a Kwirth.
-- **Not free-for-all.** The inventory is a privileged view, so it needs its own RBAC scope at `cluster`
-  level.
+- **Not a monitoring platform.** No history and no alerts: it shows *now*.
+- **Not a debugger.** It never shows payloads. To inspect what a provider emits, use Kwirth's
+  **provider-debug** channel, built for whoever *writes* a provider.
 
 ## Cost
 
-**Zero when nobody is looking.** There is no timer, no collection and no subscription: with the tab closed
-this plugin does not execute a single instruction. When you open it, it reads state that is already in
-memory and sends one snapshot. The snapshot does not refresh on its own — press refresh for a new one.
-
-That is a deliberate product decision, not an optimisation pending: Kwirth sits in the path of your logs,
-and a tool that watches it cannot slow it down.
-
-## Configuration
-
-None. Open it and it shows what this Kwirth has inside.
+**Zero when nobody is looking.** No background timer, no collection, no subscription: with the tab closed
+this plugin does not run a single instruction. Opening it reads state that is already in memory.
 
 ## Install
 
-From the marketplace (**☰ → Extensions → Plugins**), or by URL:
+In Kwirth, from the marketplace: **☰ → Extensions → Plugins**, find **Kwirth Status**, install. Or by URL:
 
 ```
 https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-status/-/kwirth-plugin-status-<version>.tgz
 ```
 
+No configuration. The inventory is a privileged view: it needs **cluster** scope.
+
 ## Development
+
+Part of the Kwirth repository, in `plugins/status`:
 
 ```bash
 npm install
-node build.mjs          # typechecks first, then builds dist/front.js and dist/back.js
+node build.mjs          # typechecks, then builds dist/ (front.js, back.js, package.json, README.md)
+npm test                # harness; COVERAGE=1 npm test for coverage
+node watch.mjs          # rebuilds on every change, without typecheck
 ```
 
-To run it from source, add it to `back/kwirth-dev.json`:
+To run it from source, add it to `back/kwirth-dev.json` as `"status": "../plugins/status/dist"`. The core
+caches a plugin's `back.js`: after a back change, **restart the Kwirth back**; the front reloads on its own.
 
-```json
-"plugins": { "status": "../plugins/status/dist" }
-```
+## License
 
-⚠️ The core caches a plugin's `back.js`, so after building you have to **restart the Kwirth back**; the
-front reloads on its own.
-
-## Roadmap
-
-| | |
-|---|---|
-| **S1** ✅ | the inventory with real state |
-| **S2** | `getStats?()` in `IProvider` → who consumes what, and *active* vs *idle* |
-| **S3** | the dependency diagram, with the same library Iter uses |
-| **S4** | per-component counters, on while you watch and off when you close |
-
-Product decisions and rationale live in [`plans/kwirth-status/`](../../plans/kwirth-status/).
+Same as Kwirth — see https://github.com/kwirthmagnify/kwirth.
