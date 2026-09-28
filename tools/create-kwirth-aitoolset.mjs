@@ -30,6 +30,10 @@ prompt and takes the remaining values from the flags (or their defaults).
   --sensitivity <public|internal>
                             who may be offered it (default public; internal with repos)
   --verify                  also write verify.mjs, to run the tools against a REAL cluster (k8s only)
+  --into-existing           scaffold INTO a directory that already exists, keeping every file
+                            already there (each one is reported as kept, not overwritten).
+                            For artifacts whose repo is created first — git, remote, README,
+                            docs — and get their code afterwards.
   --help                    this text
 `)
     process.exit(0)
@@ -110,8 +114,15 @@ const npmName    = `${publisher}/kwirth-aitoolset-${id}`
 const toolsetDir = path.resolve('aitoolsets', id)
 const camelId    = id.split('-').map((s, i) => i ? s[0].toUpperCase() + s.slice(1) : s).join('')
 
-if (fs.existsSync(toolsetDir)) {
+// Artifacts whose repo is born before their code -- git, remote, README, docs first, scaffold afterwards --
+// need to be filled in place. With --into-existing the directory is allowed to exist and every file already
+// there is KEPT (see write()), so nothing handwritten is ever lost.
+const intoExisting = hasFlag('into-existing')
+const kept = []   // files that were already there and therefore not written (reported at the end)
+
+if (fs.existsSync(toolsetDir) && !intoExisting) {
     console.error(`Error: Directory already exists: ${toolsetDir}`)
+    console.error(`       Use --into-existing to scaffold into it, keeping the files already there.`)
     process.exit(1)
 }
 
@@ -657,6 +668,13 @@ console.log(`
 
 function write(file, content) {
     const fullPath = path.join(toolsetDir, file)
+    // Under --into-existing an existing file is never touched: the scaffold fills the gaps, it does not
+    // overwrite. A handwritten README or a tuned build.mjs must survive being scaffolded around.
+    if (intoExisting && fs.existsSync(fullPath)) {
+        kept.push(file)
+        console.log(`  kept  ${file} (already there)`)
+        return
+    }
     fs.mkdirSync(path.dirname(fullPath), { recursive: true })
     fs.writeFileSync(fullPath, content, 'utf-8')
     console.log(`  wrote ${file}`)

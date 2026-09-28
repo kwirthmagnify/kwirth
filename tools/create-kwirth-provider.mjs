@@ -25,6 +25,10 @@ prompt and takes the remaining values from the flags (or their defaults).
   --website <url>           optional website
   --router                  expose a public HTTP ingest router
   --config <mode>           none | schema | front   (default schema)
+  --into-existing           scaffold INTO a directory that already exists, keeping every file
+                            already there (each one is reported as kept, not overwritten).
+                            For artifacts whose repo is created first — git, remote, README,
+                            docs — and get their code afterwards.
   --help                    this text
 `)
     process.exit(0)
@@ -85,8 +89,15 @@ const hasSchema  = configMode === 'schema'
 // configRouter and the public router are two different paths, but both need express bundled.
 const usesExpress = wantsRouter || hasFront
 
-if (fs.existsSync(providerDir)) {
+// Artifacts whose repo is born before their code -- git, remote, README, docs first, scaffold afterwards --
+// need to be filled in place. With --into-existing the directory is allowed to exist and every file already
+// there is KEPT (see write()), so nothing handwritten is ever lost.
+const intoExisting = hasFlag('into-existing')
+const kept = []   // files that were already there and therefore not written (reported at the end)
+
+if (fs.existsSync(providerDir) && !intoExisting) {
     console.error(`Error: Directory already exists: ${providerDir}`)
+    console.error(`       Use --into-existing to scaffold into it, keeping the files already there.`)
     process.exit(1)
 }
 
@@ -858,6 +869,13 @@ src/front/${className}ConfigDialog.tsx   the configuration dialog` : ''}
 
 // ─── done ──────────────────────────────────────────────────────────────────
 
+if (kept.length > 0) {
+    console.log(`
+! ${kept.length} file(s) already existed and were KEPT, not overwritten:
+${kept.map(f => `    ${f}`).join('\n')}
+  Check them against the scaffold if the provider does not build.`)
+}
+
 console.log(`
 ✓ Provider scaffolded at providers/${id}/
 
@@ -878,6 +896,13 @@ Next steps:
 
 function write(file, content) {
     const fullPath = path.join(providerDir, file)
+    // Under --into-existing an existing file is never touched: the scaffold fills the gaps, it does not
+    // overwrite. A handwritten README or a tuned build.mjs must survive being scaffolded around.
+    if (intoExisting && fs.existsSync(fullPath)) {
+        kept.push(file)
+        console.log(`  kept  ${file} (already there)`)
+        return
+    }
     fs.mkdirSync(path.dirname(fullPath), { recursive: true })
     fs.writeFileSync(fullPath, content, 'utf-8')
     console.log(`  wrote ${file}`)
