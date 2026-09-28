@@ -18,7 +18,15 @@
 
 Cada stream cierra con su CL9 completa.
 
-### S1 — Las pestañas · PENDIENTE
+### S1 — Las pestañas · ✅ HECHO (2026-09-28)
+
+Cerrado sin versión: la v2 se publica entera al final, no con pestañas que prometen. `EStatusTab` con valor
+explícito por pestaña; Providers solo con providers y pluviders; Extensions con senders y webhooks, sin las
+columnas de productor; Performance y Plugins explican por qué aún no tienen datos. +5 e2e (29 en total) y el
+del filtro reescrito, que con solo providers en la tabla ya no probaba nada. Capturas de la guía
+regeneradas: el grafo del dev ya enseña tres capas reales (`aws` y `azure` consumen `cloud-config`).
+
+Lo planeado era:
 
 - Pestañas con **enum** (regla de la casa): Providers y Graph con el contenido actual; Performance,
   Plugins y Extensions como pestañas que dicen que llegan en S2–S4. Refresco y hora de la foto, comunes.
@@ -58,3 +66,4 @@ Cada stream cierra con su CL9 completa.
 | 2026-09-28 | Se toca el core para exponer plugins y extensiones en solo lectura (RF6). |
 | 2026-09-28 | Pestaña 1 solo providers y pluviders; senders y webhooks, a la 5. |
 | 2026-09-28 | Performance con serie de sesión en el front; nada persistente, nada en segundo plano. |
+| 2026-09-28 | S1 entregado. La v2 no se publica por streams: se hace bbpm al cerrar S4, para no sacar pestañas vacías. |

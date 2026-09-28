@@ -1,9 +1,9 @@
 import React from 'react'
-import { Box, Chip, IconButton, MenuItem, Select, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material'
-import { Refresh, ViewList, Hub } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Box, Chip, IconButton, MenuItem, Select, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Tooltip, Typography } from '@mui/material'
+import { Refresh } from '@kwirthmagnify/kwirth-common-front/icons'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
-import { EComponentHealth, EComponentKind, EStatusCommand, IStatusComponent } from '../common/StatusTypes'
+import { EComponentHealth, EComponentKind, EStatusCommand, EStatusTab, IStatusComponent } from '../common/StatusTypes'
 import { IStatusData } from './StatusData'
 import { StatusDiagram } from './StatusDiagram'
 
@@ -33,6 +33,36 @@ const KIND_LABEL: Record<EComponentKind, string> = {
     [EComponentKind.WEBHOOK]: 'Webhook',
     [EComponentKind.CHANNEL]: 'Channel'
 }
+
+/*
+    Which kinds each list tab shows. The Providers tab (and its graph) is about producing data; the
+    Extensions tab is about the rest, which does not produce. A kind nobody places here shows nowhere, so
+    the Record forces a decision for every kind.
+*/
+const TAB_OF_KIND: Record<EComponentKind, EStatusTab | undefined> = {
+    [EComponentKind.PROVIDER]: EStatusTab.PROVIDERS,
+    [EComponentKind.PLUVIDER]: EStatusTab.PROVIDERS,
+    [EComponentKind.SENDER]: EStatusTab.EXTENSIONS,
+    [EComponentKind.WEBHOOK]: EStatusTab.EXTENSIONS,
+    // Channels are not inventory rows: they only exist as consumers in the graph.
+    [EComponentKind.CHANNEL]: undefined
+}
+
+/** The tabs where the filter applies: the ones that are lists. */
+const FILTERABLE: ReadonlySet<EStatusTab> = new Set([EStatusTab.PROVIDERS, EStatusTab.PLUGINS, EStatusTab.EXTENSIONS])
+
+interface IPendingTabProps {
+    title: string
+    detail: string
+}
+
+/** A tab whose data this version cannot show yet: it says why, instead of an empty table. */
+const PendingTab: React.FC<IPendingTabProps> = ({ title, detail }) => (
+    <Stack alignItems='center' justifyContent='center' spacing={1} sx={{ flex: 1, px: 4, py: 6, textAlign: 'center' }}>
+        <Typography variant='subtitle1' color='text.secondary'>{title}</Typography>
+        <Typography variant='body2' color='text.secondary'>{detail}</Typography>
+    </Stack>
+)
 
 interface IEmptyStateProps {
     title: string
@@ -83,13 +113,13 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
         It is remeasured on every render because the toolbar above changes height.
     */
     /*
-        Table or diagram. It starts on the TABLE on purpose: answering "is everything all right?" is what
-        one does ten times a day, and the graph is for when you already know something is up and want to
-        see who it drags down. Besides, the diagram downloads the layout engine, and whoever does not open
-        it does not pay for it.
+        The open tab. It starts on PROVIDERS on purpose: answering "is everything all right?" is what one
+        does ten times a day, and the graph is for when you already know something is up and want to see
+        who it drags down. Besides, the diagram downloads the layout engine, and whoever does not open it
+        does not pay for it.
     */
     const vista = data.view
-    const setVista = (v: 'table' | 'graph') => { data.view = v; repintar() }
+    const setVista = (v: EStatusTab) => { data.view = v; repintar() }
     const boxRef = React.useRef<HTMLDivElement | null>(null)
     const [boxTop, setBoxTop] = React.useState(0)
     React.useEffect(() => {
@@ -195,8 +225,10 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
         if (d !== 0) return d
         return a.kind === b.kind ? a.id.localeCompare(b.id) : a.kind.localeCompare(b.kind)
     })
+    const filasDe = (tab: EStatusTab): IStatusComponent[] => componentes.filter(c => TAB_OF_KIND[c.kind] === tab)
 
-    const fila = (c: IStatusComponent) => {
+    // 'producer': consumers and deliveries only mean something for what produces data (Providers tab).
+    const fila = (c: IStatusComponent, producer: boolean) => {
         const estado = HEALTH_LABEL[c.health]
         return (
             <TableRow key={`${c.kind}-${c.id}`}>
@@ -204,16 +236,16 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 <TableCell><Typography variant='body2' sx={{ fontWeight: 500 }}>{c.displayName}</Typography></TableCell>
                 <TableCell><Chip size='small' label={estado.label} color={estado.color} variant={c.health === EComponentHealth.ACTIVE ? 'outlined' : 'filled'} /></TableCell>
                 {/*
-                    Un guion cuando no se sabe, nunca un 0: el cero diria "nadie lo consume" y quien lo
-                    lea puede ir a desinstalar algo que en realidad si se usa. Lo mismo vale para las
-                    entregas de la columna siguiente.
+                    A dash when it is unknown, never a 0: a zero would say "nobody consumes it", and whoever
+                    reads it may go and uninstall something that is in fact used. The same goes for the
+                    deliveries in the next column.
                 */}
-                <TableCell align='right'>
+                {producer && <TableCell align='right'>
                     <Typography variant='body2' sx={{ fontVariantNumeric: 'tabular-nums' }} color={c.subscribers === undefined ? 'text.disabled' : 'text.primary'}>
                         {c.subscribers === undefined ? '—' : c.subscribers}
                     </Typography>
-                </TableCell>
-                <TableCell align='right'>
+                </TableCell>}
+                {producer && <TableCell align='right'>
                     <Typography variant='body2' sx={{ fontVariantNumeric: 'tabular-nums' }} color={c.events === undefined ? 'text.disabled' : 'text.primary'}>
                         {c.events === undefined ? '—' : c.events.toLocaleString()}
                     </Typography>
@@ -222,12 +254,28 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                         if (t === undefined) return null
                         return <Typography variant='caption' color='text.secondary' display='block'>{t < 1 && t > 0 ? t.toFixed(2) : Math.round(t)}/s</Typography>
                     })()}
-                </TableCell>
-                {/* El porqué es la columna que justifica la pantalla: sin ella esto es otra lista más. */}
+                </TableCell>}
+                {/* The why is the column that justifies the screen: without it this is one more list. */}
                 <TableCell><Typography variant='body2' color='text.secondary'>{c.reason ?? ''}</Typography></TableCell>
             </TableRow>
         )
     }
+
+    const tabla = (filas: IStatusComponent[], producer: boolean) => (
+        <Table size='small' stickyHeader>
+            <TableHead>
+                <TableRow>
+                    <TableCell>Kind</TableCell>
+                    <TableCell>Name</TableCell>
+                    <TableCell>State</TableCell>
+                    {producer && <TableCell align='right'>Consumers</TableCell>}
+                    {producer && <TableCell align='right'>Delivered</TableCell>}
+                    <TableCell>Why</TableCell>
+                </TableRow>
+            </TableHead>
+            <TableBody>{filas.map(c => fila(c, producer))}</TableBody>
+        </Table>
+    )
 
     /*
         The two empty states are different and have to be told apart: not started, what is missing is an
@@ -249,17 +297,12 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 <Typography variant='subtitle2'>What this Kwirth has inside</Typography>
                 <Chip size='small' variant='outlined' label={`${inventory.components.length} components`} />
                 <Box sx={{ flexGrow: 1 }} />
-                <TextField size='small' placeholder='Filter…' value={filter} onChange={e => setFilter(e.target.value)} sx={{ width: 220 }} />
-                <Tooltip title='Table view'>
-                    <IconButton size='small' color={vista === 'table' ? 'primary' : 'default'} aria-label='Table view' onClick={() => setVista('table')}><ViewList fontSize='small' /></IconButton>
-                </Tooltip>
-                <Tooltip title='Graph view'>
-                    <IconButton size='small' color={vista === 'graph' ? 'primary' : 'default'} aria-label='Graph view' onClick={() => setVista('graph')}><Hub fontSize='small' /></IconButton>
-                </Tooltip>
+                {FILTERABLE.has(vista) &&
+                    <TextField size='small' placeholder='Filter…' value={filter} onChange={e => setFilter(e.target.value)} sx={{ width: 220 }} />}
                 {/*
-                    Sin Tooltip a proposito: el Select ya ENSEÑA su valor ('Manual', 'Every 5s'), asi
-                    que la ayuda sobraba — y al desplegarse, el tooltip se quedaba flotando ENCIMA del
-                    menu y tapaba las opciones. El aria-label cubre al lector de pantalla.
+                    No Tooltip on purpose: the Select already SHOWS its value ('Manual', 'Every 5s'), so the
+                    hint was redundant — and when it opened, the tooltip floated OVER the menu and hid the
+                    options. The aria-label covers screen readers.
                 */}
                 <Select size='small' value={data.autoRefresh} aria-label='Auto refresh'
                         onChange={e => { data.autoRefresh = Number(e.target.value); repintar() }}
@@ -275,28 +318,31 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 </Tooltip>
             </Stack>
 
-            {/* Que la foto es de un instante concreto se dice, no se insinúa: esto no se actualiza solo. */}
+            {/* That the snapshot is of one instant is said, not implied. One snapshot is of ALL the tabs. */}
             <Typography variant='caption' color='text.secondary' sx={{ mb: 1 }}>
                 Snapshot taken at {new Date(inventory.takenAt).toLocaleTimeString()}
                 {data.autoRefresh ? ` — refreshing every ${data.autoRefresh}s while this tab is open` : ' — it does not refresh on its own'}.
                 {' '}Delivered counts since each component started; the rate is measured against your previous snapshot.
             </Typography>
 
-            <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: vista === 'table' ? 'auto' : 'hidden', overflowX: 'hidden', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
-                {vista === 'graph' && <StatusDiagram inventory={inventory} active={activos} autoRefresh={data.autoRefresh} />}
-                {vista === 'table' && <Table size='small' stickyHeader>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Kind</TableCell>
-                            <TableCell>Name</TableCell>
-                            <TableCell>State</TableCell>
-                            <TableCell align='right'>Consumers</TableCell>
-                            <TableCell align='right'>Delivered</TableCell>
-                            <TableCell>Why</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>{componentes.map(fila)}</TableBody>
-                </Table>}
+            <Tabs value={vista} onChange={(_e, v: EStatusTab) => setVista(v)} sx={{ minHeight: 36, mb: 1, borderBottom: 1, borderColor: 'divider' }}>
+                <Tab value={EStatusTab.PROVIDERS} label='Providers' sx={{ minHeight: 36, py: 0 }} />
+                <Tab value={EStatusTab.GRAPH} label='Graph' sx={{ minHeight: 36, py: 0 }} />
+                <Tab value={EStatusTab.PERFORMANCE} label='Performance' sx={{ minHeight: 36, py: 0 }} />
+                <Tab value={EStatusTab.PLUGINS} label='Plugins' sx={{ minHeight: 36, py: 0 }} />
+                <Tab value={EStatusTab.EXTENSIONS} label='Extensions' sx={{ minHeight: 36, py: 0 }} />
+            </Tabs>
+
+            <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: vista === EStatusTab.GRAPH ? 'hidden' : 'auto', overflowX: 'hidden', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
+                {vista === EStatusTab.GRAPH && <StatusDiagram inventory={inventory} active={activos} autoRefresh={data.autoRefresh} />}
+                {vista === EStatusTab.PROVIDERS && tabla(filasDe(EStatusTab.PROVIDERS), true)}
+                {vista === EStatusTab.EXTENSIONS && tabla(filasDe(EStatusTab.EXTENSIONS), false)}
+                {vista === EStatusTab.PERFORMANCE &&
+                    <PendingTab title='Performance of this Kwirth'
+                        detail="Memory, CPU and event-loop lag of the Kwirth process come in the next version of this plugin." />}
+                {vista === EStatusTab.PLUGINS &&
+                    <PendingTab title='Plugins'
+                        detail="This Kwirth's core does not tell channels which plugins are installed yet, so there is nothing true to show here." />}
             </Box>
 
             {data.signals.length > 0 && (

@@ -1,4 +1,4 @@
-import { IStatusComponent, IStatusInventory } from '../common/StatusTypes'
+import { EStatusTab, IStatusComponent, IStatusInventory } from '../common/StatusTypes'
 
 /*
     The tab's state: the latest snapshot and the previous one, and nothing else.
@@ -10,10 +10,10 @@ import { IStatusComponent, IStatusInventory } from '../common/StatusTypes'
 */
 export interface IStatusData {
     /**
-     * Table or graph. It lives here and not in the component because switching tabs unmounts it: with a
-     * useState, coming back to the tab always returned you to the table even if you were on the graph.
+     * The open tab. It lives here and not in the component because switching the channel's tab unmounts
+     * it: with a useState, coming back always returned you to the first tab.
      */
-    view: 'table' | 'graph'
+    view: EStatusTab
     /** What was typed into the filter, for the same reason. */
     filter: string
     /**
@@ -61,7 +61,7 @@ export const countUnbrokeredConsumers = (components: IStatusComponent[]): number
     }, 0)
 
 export class StatusData implements IStatusData {
-    view: 'table' | 'graph' = 'table'
+    view: EStatusTab = EStatusTab.PROVIDERS
     filter = ''
     autoRefresh = 0
     inventory?: IStatusInventory

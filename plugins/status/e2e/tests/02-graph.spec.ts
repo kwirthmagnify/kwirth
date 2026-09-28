@@ -29,7 +29,7 @@ test.beforeAll(async ({ browser }) => {
     else await page.keyboard.press('Escape')
     await expect(page.getByText('What this Kwirth has inside')).toBeVisible({ timeout: 30000 })
 
-    await page.locator('button[aria-label="Graph view"]').click()
+    await page.getByRole('tab', { name: 'Graph', exact: true }).click()
 })
 
 test.afterAll(async () => {
@@ -141,7 +141,7 @@ test('al seleccionar un nodo se resaltan sus lineas y se atenua el resto', async
 })
 
 test('se vuelve a la tabla sin perder nada', async () => {
-    await page.locator('button[aria-label="Table view"]').click()
+    await page.getByRole('tab', { name: 'Providers', exact: true }).click()
     await expect(page.getByRole('columnheader', { name: 'Why', exact: true })).toBeVisible()
     expect(await page.locator('table tbody tr').count()).toBeGreaterThan(0)
 })
@@ -157,7 +157,7 @@ test('🔴 if there is consumption, it either draws it or says why it cannot', a
         It crosses what the USER sees in both views, not the internal state, so the test keeps its
         value even if where each number comes from changes.
     */
-    await page.locator('button[aria-label="Table view"]').click()
+    await page.getByRole('tab', { name: 'Providers', exact: true }).click()
     await expect(page.getByRole('columnheader', { name: 'Why', exact: true })).toBeVisible()
 
     const rows = page.locator('table tbody tr')
@@ -167,7 +167,7 @@ test('🔴 if there is consumption, it either draws it or says why it cannot', a
         if (/^[0-9]+$/.test(cell)) consumption += Number(cell)
     }
 
-    await page.locator('button[aria-label="Graph view"]').click()
+    await page.getByRole('tab', { name: 'Graph', exact: true }).click()
     if (consumption === 0) return   // with no consumption, "nothing to draw" is the truth
 
     await page.waitForTimeout(1500)   // the layout is asynchronous
@@ -279,7 +279,7 @@ test('🔴 no line goes back up: every producer sits above what consumes it', as
         B on top, C (reading B) below them, and the channels at the bottom. Checked on the REAL
         positions of every drawn line, so it covers whatever chains this Kwirth has.
     */
-    await page.locator('button[aria-label="Graph view"]').click()
+    await page.getByRole('tab', { name: 'Graph', exact: true }).click()
     await expect(page.locator('.react-flow__node').first()).toBeVisible({ timeout: 30000 })
     await page.waitForTimeout(1500)   // layout is async
 

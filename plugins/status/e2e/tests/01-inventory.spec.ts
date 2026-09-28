@@ -61,12 +61,12 @@ test('la tabla trae la columna QUE justifica la pantalla', async () => {
     }
 })
 
-test('se listan providers y senders del Kwirth de verdad', async () => {
-    // Against the real back end: what shows depends on the environment, but there must be rows of several kinds.
+test('🔴 the Providers tab lists ONLY providers and pluviders', async () => {
+    // Senders and webhooks do not produce data: they live in the Extensions tab since v2.
     const filas = page.locator('table tbody tr')
     expect(await filas.count()).toBeGreaterThan(0)
-    const texto = await page.locator('table tbody').innerText()
-    expect(texto).toMatch(/Provider|Sender|Webhook|Pluvider/)
+    const tipos = await filas.evaluateAll(rows => rows.map(r => (r.querySelector('td')?.textContent ?? '').trim()))
+    expect([...new Set(tipos)].filter(t => t !== 'Provider' && t !== 'Pluvider'), 'kinds that do not belong here').toEqual([])
 })
 
 test('la columna de consumidores distingue "ninguno" de "no lo dice"', async () => {
@@ -88,21 +88,15 @@ test('la columna de consumidores distingue "ninguno" de "no lo dice"', async () 
         else if (/^[0-9]+$/.test(consumidores)) conNumero++
         else throw new Error(`la columna de consumidores dice '${consumidores}', que no es ni un numero ni un guion`)
     }
+    // Every cell is either a number or a dash. That a component which does not report gets a dash and
+    // not a 0 is pinned in the harness; here only providers remain, and all of them may report.
     expect(conNumero + sinDato).toBe(n)
-    // Senders and webhooks do not report (the contract belongs to providers), so there are always dashes.
-    expect(sinDato, 'nadie sale como "no informa", y eso significa que se esta inventando el dato').toBeGreaterThan(0)
 })
 
 test('🔴 un provider cableado dice si esta ACTIVO o si emite para nadie', async () => {
     // With the repo.s providers wired up, the table has to be able to say it for at least one.
     const texto = await page.locator('table tbody').innerText()
     expect(texto, 'ningun provider informa: el cableado de getStats no ha llegado').toMatch(/Active|Idle/)
-})
-
-test('🔴 no se filtra ninguna URL de webhook: llevan el token dentro', async () => {
-    const texto = await page.locator('table').innerText()
-    expect(texto).not.toMatch(/token=/i)
-    expect(texto).not.toMatch(/https?:\/\//i)
 })
 
 test('la pantalla dice de cuando es la foto y si se refresca sola', async () => {
@@ -183,10 +177,55 @@ test('🔴 la tabla scrollea: con muchos componentes se ven TODOS', async () => 
 })
 
 test('el filtro deja solo lo que se busca', async () => {
-    const todas = await page.locator('table tbody tr').count()
-    await page.getByPlaceholder('Filter…').fill('provider')
+    // Filter by the name of a real row: what is left must all match, and it must include that row.
+    const nombre = (await page.locator('table tbody tr').first().locator('td').nth(1).innerText()).trim()
+    await page.getByPlaceholder('Filter…').fill(nombre)
     await expect(async () => {
-        expect(await page.locator('table tbody tr').count()).toBeLessThan(todas)
+        const nombres = await page.locator('table tbody tr').evaluateAll(rows => rows.map(r => (r.querySelectorAll('td')[1]?.textContent ?? '').trim()))
+        expect(nombres).toContain(nombre)
     }).toPass({ timeout: 10000 })
+    await page.getByPlaceholder('Filter…').fill('zz-no-component-has-this-name')
+    await expect(page.locator('table tbody tr')).toHaveCount(0)
     await page.getByPlaceholder('Filter…').fill('')
+})
+
+// ── The tabs (v2) ──────────────────────────────────────────────────────────────
+
+test('🔴 the five tabs, in their order', async () => {
+    const nombres = await page.getByRole('tablist').last().getByRole('tab').allInnerTexts()
+    expect(nombres.map(n => n.trim())).toEqual(['PROVIDERS', 'GRAPH', 'PERFORMANCE', 'PLUGINS', 'EXTENSIONS'])
+})
+
+test('the filter only shows on the tabs that are lists', async () => {
+    await page.getByRole('tab', { name: 'Graph', exact: true }).click()
+    await expect(page.getByPlaceholder('Filter…')).toHaveCount(0)
+    await page.getByRole('tab', { name: 'Performance', exact: true }).click()
+    await expect(page.getByPlaceholder('Filter…')).toHaveCount(0)
+    await page.getByRole('tab', { name: 'Providers', exact: true }).click()
+    await expect(page.getByPlaceholder('Filter…')).toBeVisible()
+})
+
+test('a tab with nothing true to show yet says why, instead of an empty table', async () => {
+    await page.getByRole('tab', { name: 'Performance', exact: true }).click()
+    await expect(page.getByText(/Memory, CPU and event-loop lag of the Kwirth process come in the next version/)).toBeVisible()
+    await page.getByRole('tab', { name: 'Plugins', exact: true }).click()
+    await expect(page.getByText(/does not tell channels which plugins are installed yet/)).toBeVisible()
+    await expect(page.locator('table')).toHaveCount(0)
+})
+
+test('🔴 the Extensions tab lists senders and webhooks, without producer columns', async () => {
+    await page.getByRole('tab', { name: 'Extensions', exact: true }).click()
+    const tipos = await page.locator('table tbody tr').evaluateAll(rows => rows.map(r => (r.querySelector('td')?.textContent ?? '').trim()))
+    expect([...new Set(tipos)].filter(t => t !== 'Sender' && t !== 'Webhook'), 'kinds that do not belong here').toEqual([])
+    // Consumers and deliveries are about producing data: they would be a column of dashes here.
+    await expect(page.getByRole('columnheader', { name: 'Consumers', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('columnheader', { name: 'Why', exact: true })).toBeVisible()
+})
+
+test('🔴 no se filtra ninguna URL de webhook: llevan el token dentro', async () => {
+    // On the Extensions tab, which is where webhooks are now.
+    const texto = await page.locator('table').innerText()
+    expect(texto).not.toMatch(/token=/i)
+    expect(texto).not.toMatch(/https?:\/\//i)
+    await page.getByRole('tab', { name: 'Providers', exact: true }).click()
 })

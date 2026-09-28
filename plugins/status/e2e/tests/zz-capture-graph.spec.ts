@@ -27,7 +27,7 @@ test('captura del grafo', async ({ browser }) => {
     else await page.keyboard.press('Escape')
     await expect(page.getByText('What this Kwirth has inside')).toBeVisible({ timeout: 30000 })
 
-    await page.locator('button[aria-label="Graph view"]').click()
+    await page.getByRole('tab', { name: 'Graph', exact: true }).click()
     await expect(page.locator('.react-flow__node').first()).toBeVisible({ timeout: 30000 })
     // The layout is asynchronous and does a fitView afterwards: it is left to settle before shooting.
     await page.waitForTimeout(2500)

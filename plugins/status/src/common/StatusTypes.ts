@@ -119,6 +119,18 @@ export interface IStatusEdge {
     since: number
 }
 
+/**
+ * The tabs of the channel. String values with a meaning, set explicitly on each Tab: adding, removing or
+ * reordering a tab must not shift the others.
+ */
+export enum EStatusTab {
+    PROVIDERS = 'providers',
+    GRAPH = 'graph',
+    PERFORMANCE = 'performance',
+    PLUGINS = 'plugins',
+    EXTENSIONS = 'extensions'
+}
+
 /** The core's prefix for a consumer that is a provider (back/src/providers/Consumer.ts). */
 export const PROVIDER_CONSUMER_PREFIX = 'provider:'
 

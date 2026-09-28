@@ -19,18 +19,41 @@ Key features of Status channel:
   - **Real state, not just installed/not installed** — each component is classified and the reason is spelled out in plain words.
   - **A map of who feeds whom** — the same kind of graph the Iter channel draws, applied to Kwirth's own insides.
   - **Sorted by what needs attention** — problems first, healthy components last. You never scroll to find the bad news.
-  - **Filter by name or kind** — type `sender` and only senders remain.
+  - **One tab per question** — providers, the graph, the process's performance, plugins and the rest of the extensions. See [The tabs](#the-tabs).
+  - **Filter by name or kind** — on the tabs that are lists, type part of a name and only the matches remain.
   - **Zero cost when closed** — no timer, no polling, no background collection. See [Cost](#cost).
   - **No payloads, ever** — it never shows the content of your logs or messages.
 
 ## Use
 Select the cluster in the resource selector, add a **status** tab and start it. There is nothing to configure.
 
-The table has five columns:
+### The tabs
+
+The content is split into five tabs, and it opens on the first one:
+
+| Tab | What it answers |
+|---|---|
+| **Providers** | how is each **producer** of data doing — providers and pluviders, with their state, consumers and deliveries |
+| **Graph** | who consumes whom — see [The graph](#the-graph) |
+| **Performance** | how much the Kwirth **process** itself is using — memory, CPU, event loop. *Coming in the next version.* |
+| **Plugins** | which plugins are installed and what they have running. *Coming when the core tells channels about plugins.* |
+| **Extensions** | the extensions that **do not produce** data — senders and webhooks today, the other kinds next |
+
+The toolbar above the tabs is shared: the refresh button, the auto-refresh selector and the time of the
+snapshot apply to **all** of them — a snapshot is of the whole Kwirth, not of one tab. The **Filter** box
+only appears on the tabs that are lists. Status remembers the tab you were on when you come back to it.
+
+A tab whose data this version cannot show says so in words, instead of showing an empty table that could be
+read as *"there is nothing"*.
+
+### The Providers table
+
+The table on the **Providers** tab has six columns (the **Extensions** tab has the same ones without
+**Consumers** and **Delivered**, which are about producing data):
 
 | Column | What it tells you |
 |---|---|
-| **Kind** | Provider, Pluvider, Sender or Webhook |
+| **Kind** | Provider or Pluvider (Sender or Webhook on the Extensions tab) |
 | **Name** | the component id, as the rest of Kwirth names it |
 | **State** | see the table below |
 | **Consumers** | how many things are consuming it — or **—** when the component does not say |
@@ -64,9 +87,9 @@ things, and the difference matters:
 | **0** | nothing is consuming it — that row also shows as **Idle** |
 | **—** | the component **does not say**. Nothing is wrong with it |
 
-Reporting consumers is optional, so a component that does not implement it shows a dash. Senders and
-webhooks always show a dash: the mechanism belongs to providers. A provider written before this existed, or
-one that comes from elsewhere, shows one too — and it keeps working exactly the same.
+Reporting consumers is optional, so a component that does not implement it shows a dash. A provider written
+before this existed, or one that comes from elsewhere, shows one — and it keeps working exactly the same.
+(Senders and webhooks have no such column at all: they are on the Extensions tab, and they do not produce.)
 
 **This is on purpose.** Showing a `0` where the answer is unknown would read as *"nothing uses this"*, and
 whoever read it might uninstall something that is very much in use. A dash cannot be misread.
@@ -79,7 +102,7 @@ and never wired to a channel, or one whose consumer you removed and forgot to cl
 
 ## The graph
 
-The second button in the toolbar switches from the table to a **map of who feeds whom**.
+The **Graph** tab is a **map of who feeds whom**.
 
 ![statusgraph](../_media/ch-images/status-graph.png ':class=imageclass80')
 
@@ -140,7 +163,7 @@ of what is happening. The table still shows how much each producer is delivering
 ### What the graph does not include
 
 Only providers, pluviders and the channels consuming them. **Senders and webhooks are not in it**: they are
-destinations and entry points, not part of these subscriptions. They are all in the table.
+destinations and entry points, not part of these subscriptions. They are on the **Extensions** tab.
 
 ## How much is moving
 
@@ -208,4 +231,6 @@ The inventory is a privileged view: it lists every extension mounted in the serv
 
 ## Coming next
 
-  - **Per-component counters** — events and bytes moved by each provider, channel and sender, counted only while you are watching.
+  - **Performance** — memory, CPU and event-loop lag of the Kwirth process, with a small series of what you watched while the tab was open.
+  - **Plugins** — each installed plugin, the channels it registers and how many instances and connections are live.
+  - **All the extensions** — themes, homepages, logins, identity providers, AI toolsets, docs and packs join senders and webhooks on the Extensions tab.
