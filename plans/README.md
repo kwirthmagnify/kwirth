@@ -48,6 +48,7 @@ Terminados y en producción. Se consultan para saber **por qué** algo es como e
 
 | plan | entregado |
 |---|---|
+| [nettools](completed/nettools/PLAN.md) · [PRD](completed/nettools/PRD.md) | la DCE `nettools` y su plugin: DNS y alcanzabilidad TCP compartidos por las extensiones, contestados **desde donde corre Kwirth**. La primera DCE de utilidad del core, y el primer consumidor con front que no es un stub. El ICMP se entregó y se retiró el mismo día: Kwirth son contenedores, y depender del `ping` de la imagen —y de cómo lo imprima en cada plataforma y cada idioma— no compensaba |
 | [dce](completed/dce/PLAN.md) · [PRD](completed/dce/PRD.md) | el tipo `dce`, *dynamic core extension*: objetos que el core instancia **una vez** y otras extensiones consumen por id — lo común de una suite que no pertenece al core. Back, front, gestor, packs y scaffold; el consumidor no se instala sin su DCE y la DCE no se va mientras alguien la use |
 | [previous-container-log](completed/previous-container-log/PLAN.md) | ver en el About el log del contenedor anterior cuando el core reinicia, con las líneas configurables desde los settings |
 | [sso-idp](completed/sso-idp/SSO-IDP-PLAN.md) | el tipo `idp` y seis conectores SSO instalables |

@@ -34,6 +34,7 @@ Each card shows the plugin's **name**, **version**, a short **description** and 
 | 🧪 [Echo](echo) | Reference/demo channel for plugin authors | plugin |
 | 🧩 [Provider Debug](provider-debug) | Watch the raw events a provider emits | plugin |
 | 🧩 [Sender Debug](sender-debug) | Send a message by hand through a sender and read its answer | plugin |
+| 🧩 [Net Tools](nettools) | Resolve DNS names and check TCP ports from where kwirth runs | plugin |
 
 ### Autonomous channels
 

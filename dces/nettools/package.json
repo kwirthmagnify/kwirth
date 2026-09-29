@@ -1,0 +1,27 @@
+{
+    "id": "nettools",
+    "name": "@kwirthmagnify/kwirth-dce-nettools",
+    "publisher": "@kwirthmagnify",
+    "version": "0.1.0",
+    "displayName": "Net Tools",
+    "description": "Network primitives shared by Kwirth extensions: TCP reachability and DNS resolution, forward and reverse. No binary is spawned",
+    "website": "https://kwirthmagnify.dev",
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs",
+        "watch": "node watch.mjs",
+        "test": "node tests/run.mjs",
+        "try": "node try.mjs"
+    },
+    "dependencies": {
+        "@kwirthmagnify/kwirth-common": "^0.5.59",
+        "@kwirthmagnify/kwirth-common-back": "^0.5.56"
+    },
+    "devDependencies": {
+        "@types/node": "^20.12.13",
+        "esbuild": "^0.27.2",
+        "typescript": "^5.4.0"
+    },
+    "requiresRestart": true,
+    "requiresExtension": []
+}

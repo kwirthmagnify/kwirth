@@ -6,6 +6,7 @@
         "provider-debug": "../plugins/provider-debug/dist",
         "status": "../plugins/status/dist",
         "dce-consumer": "../dces/sample/consumer/dist",
+        "nettools": "../plugins/nettools/dist",
         "situs": "../plugins/situs/dist",
         "sugarless": "../plugins/sugarless/dist"
     },
@@ -37,7 +38,8 @@
         "suse-fleet": "../aitoolsets/suse-fleet/dist"
     },
     "dces": {
-        "sample": "../dces/sample/dist"
+        "sample": "../dces/sample/dist",
+        "nettools": "../dces/nettools/dist"
     },
     "docs": {}
 }

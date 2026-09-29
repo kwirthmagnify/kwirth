@@ -16,3 +16,4 @@ Detailed configuration and usage reference for each available kwirth plugin.
 | [News](news) | RSS feed streaming — reference for external-data plugins |
 | [Provider Debug](provider-debug) | Subscribe to a running provider and inspect its raw events |
 | [Sender Debug](sender-debug) | Send a message by hand through a sender and read what it answered |
+| [Net Tools](nettools) | Resolve DNS names and check TCP ports from the kwirth process |

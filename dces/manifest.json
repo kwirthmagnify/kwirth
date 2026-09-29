@@ -8,5 +8,15 @@
     "description": "A reference dynamic core extension: one shared counter, so two consumers can prove they hold the same instance",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-sample/-/kwirth-dce-sample-0.1.0.tgz",
     "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "dce",
+    "id": "nettools",
+    "name": "@kwirthmagnify/kwirth-dce-nettools",
+    "displayName": "Net Tools",
+    "version": "0.1.0",
+    "description": "Network primitives shared by Kwirth extensions: TCP reachability and DNS resolution, forward and reverse. No binary is spawned",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-nettools/-/kwirth-dce-nettools-0.1.0.tgz",
+    "website": "https://kwirthmagnify.dev"
   }
 ]

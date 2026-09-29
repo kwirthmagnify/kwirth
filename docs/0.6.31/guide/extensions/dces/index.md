@@ -100,6 +100,7 @@ And `packs/create-pack.mjs` takes `--include dce:my-icons`, reading from `dces/m
 | DCE | what it provides |
 |---|---|
 | [Sample](sample) | a shared counter, to see with your own eyes that two consumers hold the same instance |
+| [Net Tools](nettools) | DNS resolution and TCP reachability, from where kwirth runs. Spawns no processes |
 
 ## Writing your own
 
@@ -137,6 +138,8 @@ const icons = getDce<IMyIcons>('my-icons')   // throws if it is not loaded, and 
 ```
 
 ⚠️ **Do not bundle the DCE's package into the consumer.** Install it for its **types** and let the build resolve it against the registry, the same way the common packages are resolved. A bundled DCE is a second copy of the code that builds its own object, and the one instance the type guarantees quietly becomes two. `dces/sample/consumer/build.mjs` in the kwirth repo carries the mapping, ready to copy.
+
+⚠️ **The mapping hands back the instance, not the module.** Whatever your contract exports that is not part of that object — an **enum**, a constant, a helper function — is not there after the mapping, and a consumer that imports one gets `undefined` at runtime with nothing failing at build time. Declare those locally in the consumer and ask the registry only for the object. `plugins/nettools` does exactly that, and is the worked example of a real consumer.
 
 While developing, point kwirth at your build like any other extension:
 
