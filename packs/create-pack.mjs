@@ -164,6 +164,8 @@ const pkgDir  = join(workDir, 'package')
 mkdirSync(pkgDir, { recursive: true })
 
 const extensions = []
+// For the README only: 'pack.json' identifies a member by its tgz, not by a version field.
+const members = []
 console.log('\nProcesando extensiones:')
 for (const rawPath of inputTgzs) {
     const tgzPath = resolve(rawPath)
@@ -183,6 +185,7 @@ for (const rawPath of inputTgzs) {
     const tgzName = basename(tgzPath)
     copyFileSync(tgzPath, join(pkgDir, tgzName))
     extensions.push({ extensionType: extType, id: extId, tgz: tgzName, ...(extType === 'docs' ? { targetType: pkg.targetType } : {}) })
+    members.push({ extensionType: extType, id: extId, version: pkg.version ?? '?' })
     console.log(`ok  (${extType}:${extId}${extType === 'docs' ? ` for ${pkg.targetType}` : ''} v${pkg.version ?? '?'})`)
 }
 
@@ -206,6 +209,30 @@ writeFileSync(join(pkgDir, 'package.json'), JSON.stringify(packPkgJson, null, 2)
 
 // pack.json
 writeFileSync(join(pkgDir, 'pack.json'), JSON.stringify({ extensions }, null, 2))
+
+/*
+    The package page on npm is this README: publishing without it leaves a page that says nothing.
+    A hand written 'packs/<id>.README.md' wins; otherwise one is generated from what the pack already
+    knows, so that no pack can be published without it.
+*/
+const ownReadme = join('packs', `${packId}.README.md`)
+if (existsSync(ownReadme)) {
+    copyFileSync(ownReadme, join(pkgDir, 'README.md'))
+}
+else {
+    const rows = members.map(e => `| ${e.extensionType} | \`${e.id}\` | ${e.version} |`).join('\n')
+    writeFileSync(join(pkgDir, 'README.md'),
+        `# ${opts.name ?? packId}\n\n` +
+        `A pack for **[Kwirth](https://kwirthmagnify.dev)**: several extensions installed together, as one.\n\n` +
+        (opts.description ? `${opts.description}\n\n` : '') +
+        `> **Kwirth** is an open-source Kubernetes observability and operations tool: logs, metrics, events\n` +
+        `> and more, in real time, extended with plugins.\n` +
+        `> Website: **https://kwirthmagnify.dev** · Source: **https://github.com/kwirthmagnify/kwirth**\n\n` +
+        `## What it installs\n\n| Type | Id | Version |\n|---|---|---|\n${rows}\n\n` +
+        `## Installing it\n\nFrom Kwirth: **☰ → Manage extensions → Packs**, find it in the marketplace and\n` +
+        `install it. Every member is validated before any of them is installed, so a pack either goes in\n` +
+        `whole or not at all.\n`)
+}
 
 // crear el fat tgz
 const outputPath = resolve(opts.output)
