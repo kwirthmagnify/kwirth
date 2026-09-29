@@ -15,5 +15,6 @@ As of kwirth version 0.6.31, these are the existing channels:
   - **[Status](channels/status)**. What this Kwirth has inside: every provider, sender and webhook it has mounted, what state each one is in, and why.
   - **[News](channels/news)**. RSS news feed reader — test/demo plugin.
   - **[Provider Debug](channels/provider-debug)**. For debugging purposes, it shows provider subscriptions data in real time.
+  - **[Sender Debug](channels/sender-debug)**. For debugging purposes, it sends a hand-written message through a sender and shows what the sender answered.
 
 Please follow the links to get specific information on each channel.

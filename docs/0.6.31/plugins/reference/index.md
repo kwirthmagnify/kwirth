@@ -15,3 +15,4 @@ Detailed configuration and usage reference for each available kwirth plugin.
 | [Echo](echo) | Reference implementation for plugin developers |
 | [News](news) | RSS feed streaming — reference for external-data plugins |
 | [Provider Debug](provider-debug) | Subscribe to a running provider and inspect its raw events |
+| [Sender Debug](sender-debug) | Send a message by hand through a sender and read what it answered |

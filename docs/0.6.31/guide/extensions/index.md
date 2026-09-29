@@ -22,6 +22,7 @@ The channels users work with. Most are **plugins** you can install or remove; a 
 - 📰 [News](plugins/news) — RSS news feed reader (demo).
 - 🧪 [Echo](plugins/echo) — reference/demo channel for plugin authors.
 - 🧩 [Provider Debug](plugins/provider-debug) — inspect the raw events a running provider emits.
+- 🧩 [Sender Debug](plugins/sender-debug) — send a message by hand through a sender and read what it answered.
 
 ## [Providers (data sources)](providers/index)
 
