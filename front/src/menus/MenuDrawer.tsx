@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Collapse, Divider, MenuItem, MenuList } from "@mui/material"
-import { ChevronRight, Delete, Description, Edit, ExpandMore, ExitToApp, FolderOpen, Home, Https, ImportExport, Info, Key, LockPerson, Memory, Palette, Person, RestartAlt, Save, SaveAs, Send, Settings, SmartToy, Construction } from '@kwirthmagnify/kwirth-common-front/icons'
+import { ChevronRight, Delete, Description, Edit, ExpandMore, ExitToApp, FolderOpen, Home, Https, Hub, ImportExport, Info, Key, LockPerson, Memory, Palette, Person, RestartAlt, Save, SaveAs, Send, Settings, SmartToy, Construction } from '@kwirthmagnify/kwirth-common-front/icons'
 import { Extension, Factory } from '../icons'
 import { CreateNewFolder, FolderZip } from './icons'
 
@@ -28,6 +28,7 @@ enum MenuDrawerOption {
     ManageIdps,
     ManageDocs,
     ManageAiToolsets,
+    ManageDces,
     ManageLogins,
     ManagePacks,
     AiProviders,
@@ -114,6 +115,7 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageIdps)}><Key />&nbsp;Identity providers</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageDocs)}><Description />&nbsp;Documentation</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageAiToolsets)}><Construction />&nbsp;AI toolsets</MenuItem>
+                            <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageDces)}><Hub />&nbsp;DCEs</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManageLogins)}><LockPerson />&nbsp;Login extensions</MenuItem>
                             <MenuItem sx={{ pl: 4 }} onClick={() => selectExtension(MenuDrawerOption.ManagePacks)}><FolderZip />&nbsp;Packs</MenuItem>
                         </MenuList>

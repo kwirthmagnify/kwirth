@@ -31,6 +31,16 @@ declare global {
         __kwirth_senders__: Record<string, { ConfigDialog?: React.ComponentType<any>; nodeLabel?: string; nodeDescription?: string; nodeIcon?: string }>
         __kwirth_themes__: Record<string, { displayName: string; getThemeOptions: (mode: 'light' | 'dark') => any }>
         __kwirth_homepages__: Record<string, any>
+        /*
+            The DCE registry (plan: plans/dce/PRD.md) and the doorstep its front.js registers on.
+
+            Two globals and not one, because they are two different things: `__kwirth_dce_factories__` is
+            where a DCE's script LEAVES its factory when it loads, and `__kwirth_dce__` is where the core
+            puts the instance after calling it — which is what `getDce()` reads. Keeping them apart is
+            what makes "loaded" mean the factory already ran.
+        */
+        __kwirth_dce_factories__: Record<string, { create: (kwirth: unknown) => unknown }>
+        __kwirth_dce__: kwirthCommon.TDceRegistry
     }
 }
 /*
@@ -71,6 +81,8 @@ window.__kwirth_plugins__ = {}
 window.__kwirth_senders__ = {}
 window.__kwirth_themes__ = {}
 window.__kwirth_homepages__ = {}
+window.__kwirth_dce_factories__ = {}
+window.__kwirth_dce__ = {}
 
 //const isDesktop = true
 const isDesktop = navigator.userAgent.toLowerCase().indexOf(' electron/') >= 0 || !!(globalThis as any).__TAURI__

@@ -97,10 +97,14 @@ y un consumidor de back la obtiene con `getDce()`. Sin UI todavía: el manager l
 - **e2e**: spec de API en `front/e2e/tests/dce-api.spec.ts` (request context): instalar la muestra, listar,
   intentar desinstalar con un consumidor declarado, desinstalar limpio.
 
-### S2 — El front: manager, carga en orden y consumo desde los cuatro cargadores · PENDIENTE
+### S2 — El front: manager, carga en orden y consumo desde los cuatro cargadores · ✅ HECHO (2026-09-29)
 
-**MVP**: la DCE de muestra se instala desde *Manage extensions → DCE*, y un plugin de muestra la consume en
-el front; la carga espera a la DCE aunque el plugin se abra el primero.
+Entregado con **un ajuste en RF7** (D12, abajo): se carga el conjunto entero de DCE una sola vez, antes que
+nadie, en vez de resolver las que declara cada consumidor. Publicado `common-front 0.5.64`. El stub
+`dces/sample/consumer/` lee la DCE en los dos lados y su e2e comprueba lo único que importa: que los
+contadores **crecen** entre lecturas. Métricas: +6 e2e (`dce-manager`), 6/6 en verde.
+
+Lo planeado era:
 
 - **`window.__kwirth_dce__`** en `front/src/index.tsx`, y `getDce<T>(id)` en `common-front` (RF4).
 - **`loadDceFront(id)`** con promesa cacheada por id, y **`ensureDces(requiresExtension)`** que se llama
@@ -148,6 +152,7 @@ Este plan se puede cerrar sin S4: S4 es quien lo valida, no quien lo termina.
 | D9 | **RF5 reutiliza `requiresExtension`** (`dce:<id>:<versiónMínima>`) en vez de una clave `dces` nueva. Es el contrato que ya validan los packs y que ya conocen los once managers; una segunda clave para lo mismo es lo que este proyecto lleva meses quitando | confirmada, usuario, 2026-09-29 |
 | D10 | Con `requiresExtension`, la dependencia es **versión mínima** (`>=`), no un rango: subir una DCE nunca "sale del rango". **RF11 se concreta en el major**: actualizar una DCE cambiando de major (1.x → 2.0) con consumidores que exigen un major inferior se rechaza. Es la convención semver de "major = rompe", sin inventar una sintaxis de rangos que el resto de tipos no tiene | confirmada, usuario, 2026-09-29 |
 | D11 | El stub de consumidor vive dentro de `dces/sample/consumer/`, solo dev, y no se publica. Un plugin público que dependiera de la muestra obligaría a instalarla a todo el mundo | tomada, 2026-09-29 |
+| D12 | **RF7 carga el CONJUNTO de DCE, no las que declara cada consumidor.** El plan pedía `ensureDces(requiresExtension)` por consumidor, y el `ConfigFrontDialog` no tiene a mano el meta de su extensión: resolver por consumidor obligaría a los cuatro cargadores a pedirlo antes. Una DCE es una librería compartida, no una funcionalidad, así que el conjunto es pequeño; y así la garantía no depende de que cada cargador se acuerde de preguntar. Una sola promesa cacheada en `front/src/tools/DceLoader.ts`, que los cuatro esperan | tomada, 2026-09-29 |
 
 ## Registro de decisiones
 
@@ -157,6 +162,8 @@ Este plan se puede cerrar sin S4: S4 es quien lo valida, no quien lo termina.
 | 2026-09-29 | Se descubre que `requiresExtension` solo lo valida `PackApi`; RF8 lo lleva a los managers en S1. |
 | 2026-09-29 | **Dónde arranca la DCE.** La primera versión la creaba en `setUpRoutes()`, junto a los IdP, creyendo que era lo primero. El orden real es `prepareRunningInstance()` → `startRunningInstance()` → `setUpRoutes()`: senders, webhooks, toolsets y providers cargaban ANTES que la DCE (RF6 roto) y el resolutor de consumidores se cableaba con `dceManager` sin crear, así que desinstalar una DCE en uso devolvía 200. Lo destapó el e2e de RF9, no el harness: el harness no arranca el core. Ahora es lo primero de `prepareRunningInstance()`, y el resolutor se cablea allí mismo con una closure que lee los managers en cada llamada. |
 | 2026-09-29 | S1 cerrado. El tgz de `dces/sample` no se publica hasta S2: sin diálogo no hay desde dónde instalarlo. |
+| 2026-09-29 | **El icono de un canal no puede llevar texto.** El stub devolvía `<span>◎</span>` en `getChannelIcon()`, y el selector de canales construye cada opción con el icono MÁS el nombre: el carácter se convirtió en el nombre accesible y el canal aparecía en la lista como `◎`, sin su id por ninguna parte. Nada parecía roto — la opción estaba ahí — y costó tres corridas del e2e encontrarlo. Un `SvgIcon` no aporta texto, que es por lo que el resto de canales no lo sufren. |
+| 2026-09-29 | **Un e2e no puede elegir el cluster por nombre ni por posición.** Este Kwirth tiene seis clusters conectados y el stub solo está en el local; el primero de la lista dejaba el selector de canales vacío sin error, y la barra de título no sirve de pista porque se renombra con el cluster elegido. El spec prueba cada cluster y se queda con el que ofrece el canal, que además es justo la pregunta que se quiere responder. |
 
 ## Backlog
 
@@ -169,3 +176,5 @@ Este plan se puede cerrar sin S4: S4 es quien lo valida, no quien lo termina.
 | B5 | Kwirth Status lista las DCE (RF10) | espera al S3 de Status v2 (D8) |
 | B6 | `--dce` en los scaffolds de provider, sender, webhook, theme y homepage | S3 solo lo hace en el de plugin |
 | B7 | Validar `requiresExtension` al instalar cualquier extensión suelta, para **todos** los tipos y no solo para `dce:` | S1 lo introduce por RF8; generalizarlo es un cambio de contrato de los managers que merece su propio QA |
+| B8 | Harness propio para `getDce()` de **common-front** | El paquete no tiene infraestructura de tests, y montarla es abrir un frente nuevo. El código es idéntico al de common-back, que sí tiene sus cuatro casos, y aquí lo cubre el e2e de verdad a través del stub |
+| B9 | **La suite e2e del front arrastra 10 rojos que no son de la DCE** | Estado del entorno (configs de webhooks, `playground` instalado, tamaño del catálogo del marketplace), paquetes docs de plugins desactualizados (pinocchio, 404 en `user/04-triggers`) y preexistentes ya presentes el 2026-09-25. Arreglarlos dentro de este plan sería colar trabajo ajeno en su cierre |

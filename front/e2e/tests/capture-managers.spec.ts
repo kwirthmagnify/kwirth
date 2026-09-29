@@ -27,9 +27,10 @@ const MANAGERS: { menu: string, title: RegExp, file: string }[] = [
     { menu: 'Themes',         title: /Manage themes/i,      file: 'manage-themes.png' },
     { menu: 'Homepages',      title: /Manage homepages/i,   file: 'manage-homepages.png' },
     { menu: 'Identity providers', title: /identity provider/i, file: 'manage-idps.png' },
-    // The only one served by the GENERIC manager (ExtensionManagerDialog): the screenshot shows the UI is
-    // the same as everybody else's, which is exactly what the guide promises.
-    { menu: 'AI toolsets',    title: /Manage AI toolsets/i, file: 'manage-aitoolsets.png' }
+    // Served by the GENERIC manager (ExtensionManagerDialog): the screenshot shows the UI is the same as
+    // everybody else's, which is exactly what the guide promises.
+    { menu: 'AI toolsets',    title: /Manage AI toolsets/i, file: 'manage-aitoolsets.png' },
+    { menu: 'DCEs',           title: /Manage DCEs/i,        file: 'manage-dces.png' }
 ]
 
 /*

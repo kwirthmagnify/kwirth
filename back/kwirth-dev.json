@@ -5,6 +5,7 @@
         "montag": "../plugins/montag/dist",
         "provider-debug": "../plugins/provider-debug/dist",
         "status": "../plugins/status/dist",
+        "dce-consumer": "../dces/sample/consumer/dist",
         "situs": "../plugins/situs/dist",
         "sugarless": "../plugins/sugarless/dist"
     },

@@ -187,7 +187,8 @@
     <div class="iface-row"><div class="iface-name">uninstall a DCE</div><div class="iface-desc">Refused while <strong>somebody requires it</strong>. The message names who.</div></div>
     <div class="iface-row"><div class="iface-name">update across a major</div><div class="iface-desc">Refused while a consumer requires the old major: in semver, <code>1.x → 2.0</code> means <em>this breaks</em>.</div></div>
     <div class="iface-row"><div class="iface-name">a factory that fails</div><div class="iface-desc">Does <strong>not</strong> take the core down. The DCE is marked <em>failed</em> with the cause, and a consumer asking for it gets that cause as an error — never an empty value.</div></div>
-    <div class="iface-row"><div class="iface-name">load order</div><div class="iface-desc">DCEs load <strong>before every other family</strong>, so a consumer can ask for its DCE the moment it starts.</div></div>
+    <div class="iface-row"><div class="iface-name">load order</div><div class="iface-desc">DCEs load <strong>before every other family</strong> — and the front end does the same before adding any plugin, theme, homepage or configuration UI to the page — so a consumer can ask for its DCE the moment it starts, on either side.</div></div>
+    <div class="iface-row"><div class="iface-name">one per side</div><div class="iface-desc">One instance in the Kwirth process and one in each browser page: the back end's object lives in the server and the front end's in the page. <strong>Within one side, everybody shares it</strong> — which is the guarantee that matters.</div></div>
     <div class="iface-row"><div class="iface-name">updating</div><div class="iface-desc">Installing is hot; <strong>updating needs a restart</strong>: consumers already running keep the instance they were given. Kwirth tells you so.</div></div>
   </div>
 

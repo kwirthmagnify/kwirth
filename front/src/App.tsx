@@ -27,7 +27,7 @@ import { SettingsUser } from './components/settings/SettingsUser'
 import { MenuTab, MenuTabOption } from './menus/MenuTab'
 import { MenuDrawer, MenuDrawerOption } from './menus/MenuDrawer'
 import { MsgBoxButtons, MsgBoxOk, MsgBoxOkError, MsgBoxYesNo } from './tools/MsgBox'
-import { ERestartAction, restartNotice } from './components/extensions/extensionRestart'
+import { ERestartAction, restartNotice, dceReloadNotice } from './components/extensions/extensionRestart'
 import { IChannelSettings, Settings } from './model/Settings'
 import { FirstTimeLogin } from './components/login/FirstTimeLogin'
 import { IWorkspace, IWorkspaceSummary } from './model/IWorkspace'
@@ -60,6 +60,8 @@ import { makeHomepageDescriptor } from './components/extensions/HomepageDescript
 import { makeDocsDescriptor } from './components/extensions/DocsDescriptor'
 import { ExtensionManagerDialog } from './components/extensions/ExtensionManagerDialog'
 import { makeAiToolsetDescriptor } from './components/extensions/AiToolsetDescriptor'
+import { makeDceDescriptor } from './components/extensions/DceDescriptor'
+import { ensureDcesLoaded, resetDceCache } from './tools/DceLoader'
 import { loginDescriptor } from './components/extensions/LoginDescriptor'
 import { makePackDescriptor } from './components/extensions/PackDescriptor'
 import { LoginExtensionPage } from './components/login/LoginExtensionPage'
@@ -302,6 +304,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showHomepageManagerDialog, setShowHomepageManagerDialog]=useState<boolean>(false)
     const [showDocsManagerDialog, setShowDocsManagerDialog]=useState<boolean>(false)
     const [showAiToolsetManagerDialog, setShowAiToolsetManagerDialog]=useState<boolean>(false)
+    const [showDceManagerDialog, setShowDceManagerDialog]=useState<boolean>(false)
     const [showLoginManagerDialog, setShowLoginManagerDialog]=useState<boolean>(false)
     const [showPackManagerDialog, setShowPackManagerDialog]=useState<boolean>(false)
     const [loginExtError, setLoginExtError]=useState<string|undefined>(undefined)
@@ -342,6 +345,20 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     */
     const onExtensionRestartRequired = (extension: string, action: ERestartAction) =>
         setMsgBox(MsgBoxOkError('Kwirth server restart required', restartNotice(extension, action), setMsgBox))
+
+    /*
+        The DCEs' own notice: besides the server, the PAGE has to be reloaded (plan: plans/dce/PRD.md,
+        RNF4). A DCE is one object every consumer holds a reference to, and the one this tab loaded stays
+        in use until the page is reloaded — so the generic text would be half the truth, and the missing
+        half is the one the user is looking at. Installing is not an error either: the DCE is already
+        there for whoever comes next.
+    */
+    const onDceReloadRequired = (extension: string, action: ERestartAction) => {
+        resetDceCache()
+        const title = action === ERestartAction.INSTALL ? 'DCE installed' : 'Restart and reload required'
+        const box = action === ERestartAction.INSTALL ? MsgBoxOk : MsgBoxOkError
+        setMsgBox(box(title, dceReloadNotice(extension, action), setMsgBox))
+    }
 
     const onHomepageActivate = (id: string | undefined, config: Record<string, any>) => {
         if (id) {
@@ -393,7 +410,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     const pluginVersionsRef = useRef<Map<string, number>>(new Map())
 
-    const loadPluginFront = (id: string): Promise<void> => {
+    // The DCEs, before anything that may consume them (plan: plans/dce/PRD.md, RF7). The loading itself
+    // lives in tools/DceLoader, because the configuration dialog awaits the very same promise.
+    const ensureDces = (): Promise<void> => ensureDcesLoaded(backendUrl, accessString)
+
+    const loadPluginFront = async (id: string): Promise<void> => {
+        // RF7: the DCEs first, always. A plugin may call getDce() while its script is being evaluated.
+        await ensureDces()
         let done: () => void = () => {}
         const p = new Promise<void>(r => { done = r })
         const existing = document.getElementById(`kwirth-plugin-${id}`)
@@ -447,7 +470,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         setPluginVersion(v => v + 1)
     }
 
-    const loadThemeFront = (id: string, onload?: () => void) => {
+    // The DCEs first, as with the plugins (RF7). The signature stays synchronous: the callers only ask
+    // for it to be loaded, and the 'onload' they pass is what tells them it is there.
+    const loadThemeFront = (id: string, onload?: () => void) => { void ensureDces().then(() => loadThemeFrontNow(id, onload)) }
+
+    const loadThemeFrontNow = (id: string, onload?: () => void) => {
         const existing = document.getElementById(`kwirth-theme-${id}`)
         if (existing) existing.remove()
         const script = document.createElement('script')
@@ -465,7 +492,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         document.head.appendChild(script)
     }
 
-    const loadHomepageFront = (id: string, onload?: () => void) => {
+    const loadHomepageFront = (id: string, onload?: () => void) => { void ensureDces().then(() => loadHomepageFrontNow(id, onload)) }
+
+    const loadHomepageFrontNow = (id: string, onload?: () => void) => {
         const existing = document.getElementById(`kwirth-homepage-${id}`)
         if (existing) existing.remove()
         const script = document.createElement('script')
@@ -707,6 +736,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 [EExtensionType.DOCS]:     `${backendUrl}/core/docs`,
                 [EExtensionType.IDP]:      `${backendUrl}/idp/connectors`,
                 [EExtensionType.AITOOLSET]: `${backendUrl}/core/aitoolsets`,
+                [EExtensionType.DCE]:      `${backendUrl}/core/dce`,
             }
             // Coming in through a login extension is a NARROW door: the user lands on a specific login's
             // page and goes straight to its channel, with no marketplace and usually with no Kwirth beyond
@@ -2124,6 +2154,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageAiToolsets:
                 setShowAiToolsetManagerDialog(true)
                 break
+            case MenuDrawerOption.ManageDces:
+                setShowDceManagerDialog(true)
+                break
             case MenuDrawerOption.ManageLogins:
                 setShowLoginManagerDialog(true)
                 break
@@ -2726,6 +2759,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     onClose={() => setShowHomepageManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showDocsManagerDialog && <ExtensionManagerDialog descriptor={makeDocsDescriptor(backendUrl)} onClose={() => setShowDocsManagerDialog(false)} /> }
                 { showAiToolsetManagerDialog && <ExtensionManagerDialog descriptor={makeAiToolsetDescriptor({ loadGrants: loadToolsetGrants, saveGrants: saveToolsetGrants })} onClose={() => setShowAiToolsetManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                {/*
+                    Installing or removing a DCE invalidates the loader's cache, so the next consumer
+                    re-reads what is installed. What it does NOT do is replace the instance whoever is
+                    already running holds — hence the reload notice (plan: plans/dce/PRD.md, RNF4).
+                */}
+                { showDceManagerDialog && <ExtensionManagerDialog descriptor={makeDceDescriptor()} onClose={() => { resetDceCache(); setShowDceManagerDialog(false) }} onRestartRequired={onDceReloadRequired} /> }
                 { showLoginManagerDialog && <ExtensionManagerDialog descriptor={loginDescriptor} onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showPackManagerDialog && <ExtensionManagerDialog
                     descriptor={makePackDescriptor({ onPluginLoad: loadPluginFront, onPluginUnload: unloadPluginFront, onThemeLoad: onThemeInstalled, onThemeUnload: onThemeUninstalled, onHomepageLoad: onHomepageInstalled, onHomepageUnload: onHomepageUninstalled })}

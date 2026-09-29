@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Dialog, DialogContent, Typography } from '@mui/material'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
+import { ensureDcesLoaded } from '../../tools/DceLoader'
 
 /*
     The configuration the extension ITSELF brings in its front.js. It is one of the four ways of
@@ -53,14 +54,24 @@ const ConfigFrontDialog: React.FC<IConfigFrontDialogProps> = ({ extensionId, glo
         const globals = registro(globalName)
         if (globals) delete globals[extensionId]
 
-        const script = document.createElement('script')
-        script.id = scriptId
-        script.src = `${backendUrl}${frontPath}?t=${Date.now()}`
-        script.crossOrigin = 'anonymous'
-        script.onload = () => setCargado(true)
-        script.onerror = () => setError(`Failed to load UI for ${noun} "${extensionId}"`)
-        document.head.appendChild(script)
-    }, [extensionId, globalName, frontPath, noun, backendUrl])
+        /*
+            The DCEs first (plan: plans/dce/PRD.md, RF7). An extension's own UI may call getDce() while
+            its script is being evaluated, and this dialog is the one path that reaches a front.js
+            without going through App's loaders — so it has to await the very same promise they do.
+        */
+        let cancelled = false
+        void ensureDcesLoaded(backendUrl, accessString).then(() => {
+            if (cancelled) return
+            const script = document.createElement('script')
+            script.id = scriptId
+            script.src = `${backendUrl}${frontPath}?t=${Date.now()}`
+            script.crossOrigin = 'anonymous'
+            script.onload = () => setCargado(true)
+            script.onerror = () => setError(`Failed to load UI for ${noun} "${extensionId}"`)
+            document.head.appendChild(script)
+        })
+        return () => { cancelled = true }
+    }, [extensionId, globalName, frontPath, noun, backendUrl, accessString])
 
     if (error) {
         return (

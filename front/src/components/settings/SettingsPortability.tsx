@@ -41,6 +41,7 @@ const groupOf = (type: EExtensionType): string => {
         case EExtensionType.WEBHOOK: return 'Webhooks'
         case EExtensionType.IDP: return 'Identity providers'
         case EExtensionType.AITOOLSET: return 'AI toolsets'
+        case EExtensionType.DCE: return 'DCEs'
         case EExtensionType.THEME: return 'Themes'
         case EExtensionType.HOMEPAGE: return 'Homepages'
         case EExtensionType.LOGIN: return 'Logins'

@@ -14,9 +14,19 @@ A **dynamic core extension** brings **objects**, not data and not screens. Kwirt
 
 1. A DCE's `back.js` exports a **factory**: an object with a `create(host)` method. It does not export the shared object itself.
 2. When the DCE loads, kwirth calls `create()` **once** and stores the result in a registry that hangs off a global.
-3. A consumer — a plugin, a provider, a sender, a webhook, a theme, a homepage, an IdP connector or an AI toolset — gets the instance with `getDce<T>(id)` from `@kwirthmagnify/kwirth-common-back`.
+3. A consumer — a plugin, a provider, a sender, a webhook, a theme, a homepage, an IdP connector or an AI toolset — gets the instance with `getDce<T>(id)`, from `@kwirthmagnify/kwirth-common-back` in the back end and from `@kwirthmagnify/kwirth-common-front` in the front end.
+
+A DCE may bring a `front.js` too, and then the same thing happens in the browser: it registers its factory, kwirth calls it once, and the extensions on the page consume the result.
 
 Two consumers of the same DCE hold **the same object**. That is the whole point: one client, one cache, one registry, downloaded once and instantiated once.
+
+### One instance per side
+
+A DCE is instantiated **once in the kwirth process** and **once in each browser page**. That is not a compromise, it is what there is: the back end's object lives in the server and the front end's in the page, and they cannot be the same one.
+
+What the type guarantees is that, **within one side, everybody shares it**. Two plugins consuming the same DCE in the back end hold the same object; two channel tabs open in the same kwirth page hold the same one too. Open kwirth in a second browser tab and that page will have its own — a different document, a different instance.
+
+Kwirth loads every DCE **before** any other extension family, and the front end does the same before adding any plugin, theme, homepage or configuration UI to the page. So a consumer can ask for its DCE the moment it starts, on either side.
 
 **DCEs load first.** Kwirth loads every DCE before any other extension family, so a consumer can ask for its DCE the moment it starts.
 
@@ -50,7 +60,9 @@ Kwirth enforces it:
 
 ## Restart after an update
 
-A DCE always declares `requiresRestart`. Installing one works hot — its factory runs right away, and a consumer installed afterwards finds it. **Updating** one does not replace what is already running: the consumers that got the previous instance keep it until the core restarts. The manager tells you so after an update; take the prompt seriously.
+A DCE always declares `requiresRestart`. Installing one works hot — its factory runs right away, and a consumer installed afterwards finds it. **Updating** one does not replace what is already running: the consumers that got the previous instance keep it until the core restarts.
+
+And there is a second half the other families do not have: **the page has to be reloaded too**. The front end's instance lives in the browser, so the plugins, themes and homepages loaded in this tab go on using the one the previous version created. The manager says so after an update; take the prompt seriously, because nothing will look broken.
 
 ## When a factory fails
 
@@ -58,7 +70,18 @@ A DCE whose factory throws does **not** take the core down. It is marked **faile
 
 ## Managing DCEs
 
-Like every family, from **☰ → Manage extensions → DCE**: install from the catalog, a URL or a local package; update; remove. The listing shows, next to each DCE, how its back end is right now: **loaded**, or **failed** with its cause.
+Like every family, from **☰ → Manage extensions → DCEs**: install from the catalog, a URL or a local package; update; remove.
+
+![Manage DCEs](../../../_media/guide/manage-dces.png ':class=imageclass80')
+
+Two chips are the type's own, and they are there because a DCE fails differently from the rest:
+
+| chip | what it says |
+|---|---|
+| **back + front** | which sides the package brought. Either may be missing, never both |
+| **Loaded** / **Failed** | how its back end is **right now**. A DCE whose factory threw is installed and useless, and would otherwise look exactly like a healthy one — the **Failed** chip carries the cause in its tooltip, so you do not have to go to the server log to find out what broke |
+
+There is **no gear**: a DCE has no configuration in this version. It brings code and objects, nothing to fill in.
 
 ## Available DCEs
 
@@ -91,9 +114,11 @@ export default dce
 And a consumer:
 
 ```ts
-import { getDce } from '@kwirthmagnify/kwirth-common-back'
+import { getDce } from '@kwirthmagnify/kwirth-common-back'   // or /kwirth-common-front, in the front end
 const icons = getDce<IMyIcons>('my-icons')   // throws if it is not loaded, and says why
 ```
+
+⚠️ **Do not bundle the DCE's package into the consumer.** Install it for its **types** and let the build resolve it against the registry, the same way the common packages are resolved. A bundled DCE is a second copy of the code that builds its own object, and the one instance the type guarantees quietly becomes two. `dces/sample/consumer/build.mjs` in the kwirth repo carries the mapping, ready to copy.
 
 While developing, point kwirth at your build like any other extension:
 

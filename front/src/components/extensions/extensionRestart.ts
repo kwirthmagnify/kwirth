@@ -24,6 +24,27 @@ export enum ERestartAction {
     UPDATE = 'update'
 }
 
+/*
+    A DCE that is updated needs the BROWSER reloaded as well, and that is a fourth case rather than a
+    variant of the third (plan: plans/dce/PRD.md, RNF4).
+
+    The reason is the type's own: a DCE is an object the core instantiates ONCE, and every consumer holds
+    a reference to that very object. Restarting the server rebuilds the back end's, but the front end's
+    lives in the page — the plugins, themes and homepages loaded in this tab go on using the instance the
+    previous version created until the page is reloaded. Saying only "restart the server" would be half
+    the truth, and the half that is missing is the one the user is looking at.
+*/
+export const dceReloadNotice = (extension: string, action: ERestartAction): string => {
+    switch (action) {
+        case ERestartAction.INSTALL:
+            return `DCE '${extension}' has been installed. Extensions that require it will find it from now on; reload the page to use it in this tab.`
+        case ERestartAction.UNINSTALL:
+            return `DCE '${extension}' has been uninstalled, but whatever is already running keeps the instance it was given until the Kwirth server is restarted and the page reloaded.`
+        case ERestartAction.UPDATE:
+            return `DCE '${extension}' has been updated, but the previous instance stays in use until the Kwirth server is restarted and the page reloaded.`
+    }
+}
+
 // The name goes in the message on purpose: when installing or removing several in a row, a "this
 // extension" does not say which of them is the one leaving the server half-done.
 export const restartNotice = (extension: string, action: ERestartAction): string => {
