@@ -1,5 +1,6 @@
 import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel } from '@kwirthmagnify/kwirth-common-back'
-import { EComponentHealth, EComponentKind, EStatusPayload, IStatusComponent, IStatusEdge, IStatusInventory, IStatusMessageResponse } from '../common/StatusTypes'
+import { EComponentHealth, EComponentKind, EStatusPayload, EStatusRouteOwner, IStatusComponent, IStatusEdge, IStatusInventory, IStatusMessageResponse, IStatusRoute } from '../common/StatusTypes'
+import { ProcessProbe } from './ProcessProbe'
 
 /*
     Kwirth Status — the inventory of what Kwirth has mounted (S1).
@@ -72,6 +73,33 @@ interface IClusterInfoView {
      * comes out and the only thing missing is the graph. Better without a diagram than with a broken screen.
      */
     getSubscriptions?(): ISubscriptionLike[]
+    /** The core's route registry. Optional for the same reason: an older core has none. */
+    routes?: IRouteAccessView
+}
+
+/** What this plugin reads of the core's route registry (ClusterInfo.routes). */
+interface IRouteAccessView {
+    listRoutes(): IStatusRoute[]
+}
+
+const ROUTE_OWNERS: ReadonlySet<string> = new Set(Object.values(EStatusRouteOwner))
+
+/*
+    The published routes, or undefined when the core does not expose them — which is "unknown", and the
+    tab says so, never "this Kwirth has no routes". An owner kind this plugin does not know yet (a newer
+    core) is shown as OTHER rather than dropped.
+*/
+export const toStatusRoutes = (access: IRouteAccessView | undefined): IStatusRoute[] | undefined => {
+    if (!access) return undefined
+    try {
+        return access.listRoutes().map(r => ({ ...r, ownerKind: ROUTE_OWNERS.has(r.ownerKind) ? r.ownerKind : EStatusRouteOwner.OTHER }))
+    }
+    catch (err) {
+        // Said in the core's log: swallowing it left the tab claiming the core had no route list, with
+        // nothing anywhere to say why.
+        console.error(`[status] the core's route list failed: ${err}`)
+        return undefined
+    }
 }
 
 /**
@@ -112,6 +140,8 @@ class StatusChannel implements IChannel {
     clusterInfo: IClusterInfoView
     backChannelObject: IBackChannelObject
     webSockets: ISocketEntry[] = []
+    // Exposed for the harness: whether the event-loop sampler is running is part of the contract.
+    readonly probe = new ProcessProbe()
 
     constructor(clusterInfo: IClusterInfoView, backChannelObject: IBackChannelObject) {
         this.clusterInfo = clusterInfo
@@ -154,8 +184,23 @@ class StatusChannel implements IChannel {
             this.webSockets.push(socket)
         }
         if (!socket.instanceIds.includes(instanceConfig.instance)) socket.instanceIds.push(instanceConfig.instance)
+        this.watchProcess()
         this.sendInventory(socket, instanceConfig.instance)
         return true
+    }
+
+    /** The event-loop sampler runs while at least one status tab is open, and only then. */
+    private watchProcess = (): void => {
+        this.probe.watch(this.webSockets.some(s => s.instanceIds.length > 0))
+    }
+
+    /*
+        Called by the core on the OLD channel object when it reloads the plugin in dev. Without it the
+        sampler of the old object would keep running forever, with nobody to read it.
+    */
+    cleanup = (): void => {
+        this.webSockets = []
+        this.probe.watch(false)
     }
 
     deleteObject = async (_webSocket: WebSocket, _instanceConfig: IInstanceConfig, _ns: string, _pod: string, _container: string): Promise<boolean> => true
@@ -178,6 +223,7 @@ class StatusChannel implements IChannel {
         if (!socket) return
         const pos = socket.instanceIds.indexOf(instanceId)
         if (pos >= 0) socket.instanceIds.splice(pos, 1)
+        this.watchProcess()
     }
 
     /*
@@ -201,6 +247,7 @@ class StatusChannel implements IChannel {
     removeConnection = (webSocket: WebSocket): void => {
         const pos = this.webSockets.findIndex(s => s.ws === webSocket)
         if (pos >= 0) this.webSockets.splice(pos, 1)
+        this.watchProcess()
     }
 
     refreshConnection = (webSocket: WebSocket): boolean => {
@@ -367,7 +414,12 @@ class StatusChannel implements IChannel {
             cluster: this.clusterInfo.name ?? '',
             takenAt: Date.now(),
             components,
-            edges
+            edges,
+            process: this.probe.sample(),
+            ...(() => {
+                const routes = toStatusRoutes(this.clusterInfo.routes)
+                return routes ? { routes } : {}
+            })()
         }
     }
 

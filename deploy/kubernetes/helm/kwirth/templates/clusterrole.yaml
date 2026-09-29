@@ -1,0 +1,24 @@
+{{- if .Values.kwirth.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kwirth.fullname" . }}-cr
+  labels:
+    {{- include "kwirth.labels" . | nindent 4 }}
+rules:
+{{- if .Values.kwirth.rbac.clusterAdmin }}
+  - apiGroups: ['*']
+    resources: ['*']
+    verbs: ['*']
+{{- else }}
+  - apiGroups:
+    {{- range concat .Values.kwirth.rbac.apiGroups .Values.kwirth.rbac.extraApiGroups }}
+      - {{ . | quote }}
+    {{- end }}
+    resources: ['*']
+    verbs: ['*']
+{{- end }}
+{{- with .Values.kwirth.rbac.extraRules }}
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}

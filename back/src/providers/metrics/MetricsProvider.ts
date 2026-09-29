@@ -629,7 +629,7 @@ export class MetricsProvider implements IProvider {
 
     readClusterMetrics = async (clusterInfo: ClusterInfo): Promise<IMetricsCluster|undefined> => {
         if (this.loadingClusterMetrics) {
-            this.log.info(`Still loading cluster metrics ${new Date().toTimeString()}`)
+            this.log.warning(`Still loading cluster metrics ${new Date().toTimeString()}`)
             return undefined
         }
 

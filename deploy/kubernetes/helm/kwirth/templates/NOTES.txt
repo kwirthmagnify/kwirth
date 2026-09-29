@@ -1,0 +1,33 @@
+Kwirth {{ .Chart.AppVersion }} (chart {{ .Chart.Version }}) is being deployed to namespace '{{ .Release.Namespace }}'.
+
+  image      : {{ include "kwirth.image" . }}
+  root path  : {{ default "/" (include "kwirth.rootpath" .) }}
+  store      : {{ default "Kubernetes Secrets and ConfigMaps" (include "kwirth.store" .) }}
+  database   : {{ if .Values.kwirth.sql.enabled }}{{ .Values.kwirth.sql.host }}:{{ .Values.kwirth.sql.port }}{{ else }}none (only extensions with data of their own need one){{ end }}
+  license    : {{ if or .Values.kwirth.config.license .Values.kwirth.existingSecret }}configured{{ else }}none, open source mode{{ end }}
+  rbac       : {{ if .Values.kwirth.rbac.clusterAdmin }}cluster-admin{{ else }}{{ len .Values.kwirth.rbac.apiGroups }} API groups{{ with .Values.kwirth.rbac.extraApiGroups }} + {{ len . }} extra{{ end }}{{ end }}
+
+{{- if .Values.kwirth.ingress.enabled }}
+
+Reach it at: http{{ if or .Values.kwirth.ingress.tls .Values.kwirth.ingress.nginx.tls }}s{{ end }}://{{ .Values.kwirth.ingress.hostname }}{{ include "kwirth.ingressPath" . }}
+{{- else }}
+
+No Ingress was created. To try it from your machine:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "kwirth.fullname" . }}-svc {{ .Values.kwirth.service.port }}:{{ .Values.kwirth.service.port }}
+
+and open http://localhost:{{ .Values.kwirth.service.port }}{{ include "kwirth.ingressPath" . }}
+{{- end }}
+
+{{- if .Values.kwirth.users.bootstrap }}
+
+First login: user 'admin', password 'password'. Change it right away from the user management dialog.
+{{- end }}
+
+The users Secret ('kwirth-users') and the API keys ConfigMap ('kwirth.keys') are kept on uninstall so a
+reinstall finds them. Delete them by hand for a clean wipe.
+{{- if and (not .Values.kwirth.persistence.enabled) (include "kwirth.store" .) }}
+
+WARNING: KWIRTH_STORE points at '{{ include "kwirth.store" . }}' but no volume is mounted there by the chart.
+Unless one of your extraVolumeMounts covers it, everything Kwirth remembers dies with the pod.
+{{- end }}

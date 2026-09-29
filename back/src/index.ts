@@ -13,6 +13,7 @@ import { ApiKeyApi } from './api/ApiKeyApi'
 import { SettingsApi } from './api/SettingsApi'
 import { MarketplaceApi } from './api/MarketplaceApi'
 import { MarketplaceManager } from './tools/MarketplaceManager'
+import { ERouteOwnerKind, routeRegistry } from './tools/RouteRegistry'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { readPreviousContainerLog } from './tools/PreviousContainerLog'
 import { failureOrigin } from './tools/FailureOrigin'
@@ -24,10 +25,10 @@ import { ManageKwirthApi } from './api/ManageKwirthApi'
 import { AiConfigApi } from './api/AiConfigApi'
 import { AiToolsetManager } from './tools/AiToolsetManager'
 import { AiToolsetApi } from './api/AiToolsetApi'
-import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
 import { DceManager } from './tools/DceManager'
 import { DceApi } from './api/DceApi'
 import { findConsumers, IRequirer, setInstalledDceSource } from './tools/ExtensionDeps'
+import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
 import { ManageClusterApi } from './api/ManageClusterApi'
 import { AuthorizationManagement } from './tools/AuthorizationManagement'
 import { buildScopeCatalog, validScopeSet } from './tools/ScopeCatalog'
@@ -215,8 +216,8 @@ let loginManager: LoginManager | undefined
 let packManager: PackManager | undefined
 let docsManager: DocsManager | undefined
 let aiToolsetManager: AiToolsetManager | undefined
-const licenseManager = new LicenseManager()
 let dceManager: DceManager | undefined
+const licenseManager = new LicenseManager()
 licenseManager.load()
 
 const registeredProviders = new Map<string, TProviderConstructor>()
@@ -816,8 +817,7 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
         }
 
         if (ri.channels.get(instanceConfig.channel) && ri.channels.get(instanceConfig.channel)?.getChannelData().cluster && instanceConfig.view === EInstanceConfigView.CLUSTER) {
-            logWarning(ELogComponent.CORE, 'A cluster-wide access key has been received for starting instance')
-            logWarning(ELogComponent.CORE, instanceConfig.accessKey.substring(0,8)+'... to access channel ' + instanceConfig.channel)
+            logWarning(ELogComponent.CORE, `A cluster-wide access key has been received for starting instance on channel ${instanceConfig.channel} (${instanceConfig.accessKey.substring(0,8)}...)`)
             let channel = ri.channels.get(instanceConfig.channel)
             if (channel) {
                 instanceConfig.instance = uuid()
@@ -1257,7 +1257,17 @@ const mountProviderConfigRouter = (riRouter:Router, provider:IProvider, apiKeyAp
         },
         provider.configRouter)
     provider.configRouterStarted = true
+    recordRoute(`${envRootPath}${path}`, ERouteOwnerKind.PROVIDER, provider.id, provider.configRouter)
     logInfo(ELogComponent.CORE, `Provider '${provider.id}' config router registered at '${path}'`)
+}
+
+/*
+    Records a mount in the route registry, for the Status channel's Routes tab. It RECORDS, it does not
+    validate or reject: the mount itself is done by the caller, as always. 'path' is the FULL path — the
+    instance router lives at the root path, so its relative mounts are recorded as envRootPath + path.
+*/
+const recordRoute = (path: string, ownerKind: ERouteOwnerKind, ownerId: string, router?: unknown, methods?: string[]): void => {
+    routeRegistry.record({ path, ownerKind, ownerId, ...(router ? { router } : {}), ...(methods ? { methods } : {}) })
 }
 
 const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promise<boolean> => {
@@ -1271,16 +1281,20 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         }
         let apiKeyApi = result
         riRouter.use(`/key`, apiKeyApi.router)
+        recordRoute(`${envRootPath}/key`, ERouteOwnerKind.CORE, 'key', apiKeyApi.router)
         ri.apiKeyApi = apiKeyApi
         for (let provider of ri.clusterInfo.providers) {
             if (provider.requiresApiKeyApi) provider.apiKeyApi = result
         }
         let configApi:ConfigApi = new ConfigApi(apiKeyApi, ri.kwirthData, ri.clusterInfo)
         riRouter.use(`/config`, configApi.router)
+        recordRoute(`${envRootPath}/config`, ERouteOwnerKind.CORE, 'config', configApi.router)
         let storeApi:StoreApi = new StoreApi(ri.configMaps, apiKeyApi)
         riRouter.use(`/store`, storeApi.router)
+        recordRoute(`${envRootPath}/store`, ERouteOwnerKind.CORE, 'store', storeApi.router)
         let userApi:UserApi = new UserApi(ri.secrets, apiKeyApi, () => validScopeSet(registeredChannels))
         riRouter.use(`/user`, userApi.router)
+        recordRoute(`${envRootPath}/user`, ERouteOwnerKind.CORE, 'user', userApi.router)
 
         // Kwirth's own persisted configuration. It applies the metrics interval to the live provider and
         // reflects it in kwirthData, which is what /config/info serves to the front end.
@@ -1307,6 +1321,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             return false
         }
         riRouter.use(`/core/settings`, settingsResult.router)
+        recordRoute(`${envRootPath}/core/settings`, ERouteOwnerKind.CORE, 'settings', settingsResult.router)
 
         // Marketplace resolution: the back end downloads the manifests (the public one + the configured
         // ones), filters by type and applies the precedence, so the rule exists in a single place.
@@ -1315,6 +1330,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         // place before prepareRunningInstance() rehydrates anything, and this runs afterwards.
         let marketplaceApi = new MarketplaceApi(marketplaceManager, apiKeyApi)
         riRouter.use(`/core/marketplace`, marketplaceApi.router)
+        recordRoute(`${envRootPath}/core/marketplace`, ERouteOwnerKind.CORE, 'marketplace', marketplaceApi.router)
         // The global catalogue of RBAC scopes (the core's built-ins + those the channels declare): the
         // security editor consumes it. Admin-gated. It lives under /core because it is cross-cutting
         // vocabulary (it belongs to neither user nor key).
@@ -1322,8 +1338,16 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
             res.json(buildScopeCatalog(registeredChannels))
         })
+        recordRoute(`${envRootPath}/core/scopes`, ERouteOwnerKind.CORE, 'scopes', undefined, ['GET'])
         let loginApi:LoginApi = new LoginApi(ri.secrets, ri.configMaps, ri.apiKeyApi)
         riRouter.use(`/login`, loginApi.router)
+        recordRoute(`${envRootPath}/login`, ERouteOwnerKind.CORE, 'login', loginApi.router)
+        // The DCE manager is created in prepareRunningInstance(), first of all the managers; here only its API.
+        if (dceManager) {
+            let dceApi = new DceApi(dceManager, apiKeyApi)
+            riRouter.use(`/core/dce`, dceApi.router)
+            recordRoute(`${envRootPath}/core/dce`, ERouteOwnerKind.CORE, 'dce', dceApi.router)
+        }
         if (!idpManager) {
             idpManager = new IdpManager(ri.secrets, ri.configMaps, registeredIdps)
             await idpManager.init()
@@ -1334,19 +1358,18 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         }
         let idpApi:IdpApi = new IdpApi(idpManager, apiKeyApi)
         riRouter.use(`/idp`, idpApi.router)
+        recordRoute(`${envRootPath}/idp`, ERouteOwnerKind.CORE, 'idp', idpApi.router)
         let manageKwirthApi:ManageKwirthApi = new ManageKwirthApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, ri.clusterInfo.batchApi, apiKeyApi, ri.kwirthData)
         riRouter.use(`/managekwirth`, manageKwirthApi.router)
+        recordRoute(`${envRootPath}/managekwirth`, ERouteOwnerKind.CORE, 'managekwirth', manageKwirthApi.router)
         let aiConfigApi:AiConfigApi = new AiConfigApi(ri.secrets, ri.configMaps, apiKeyApi)
         riRouter.use(`/core/aiconfig`, aiConfigApi.router)
+        recordRoute(`${envRootPath}/core/aiconfig`, ERouteOwnerKind.CORE, 'aiconfig', aiConfigApi.router)
         let manageCluster:ManageClusterApi = new ManageClusterApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, apiKeyApi)
         riRouter.use(`/managecluster`, manageCluster.router)
+        recordRoute(`${envRootPath}/managecluster`, ERouteOwnerKind.CORE, 'managecluster', manageCluster.router)
         if (pluginManager) {
             const onPluginInstalled = async (id: string) => {
-        // The DCE manager is created in prepareRunningInstance(), first of all the managers; here only its API.
-        if (dceManager) {
-            let dceApi = new DceApi(dceManager, apiKeyApi)
-            riRouter.use(`/core/dce`, dceApi.router)
-        }
                 const activeRI = runningInstances.find(r => r.active)
                 if (!activeRI) return
                 const ChannelClass = registeredChannels.get(id)
@@ -1386,6 +1409,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             if (providerInstance.providesRouter && providerInstance.router && !providerInstance.started) {
                                 const provPath = providerInstance.routerAlias ? `/provider/${providerInstance.routerAlias}` : `/${activeRI.id}/provider/${providerInstance.id}`
                                 riRouter.use(provPath, providerInstance.router)
+                                recordRoute(`${envRootPath}${provPath}`, ERouteOwnerKind.PROVIDER, providerInstance.id, providerInstance.router)
                                 providerInstance.started = true
                                 logInfo(ELogComponent.CORE, `Provider '${providerInstance.id}' HTTP router registered at '${provPath}'`)
                             }
@@ -1445,6 +1469,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             const alias = (channelInstance as any).routerAlias
                             const mountPath = alias ? `${envRootPath}/channel/${alias}` : `${envRootPath}/${activeRI.id}/channel/${id}`
                             expressApp.use(mountPath, (channelInstance as any).router)
+                            recordRoute(mountPath, ERouteOwnerKind.CHANNEL, id, (channelInstance as any).router)
                             logInfo(ELogComponent.CORE, `Plugin '${id}' HTTP router mounted at '${mountPath}'`)
                         }
                         if (!activeRI.kwirthData.channels.some(c => c.id === id))
@@ -1476,6 +1501,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                                     else res.status(405).send()
                                 })
                             expressApp.use(`${envRootPath}/${activeRI.id}/channel/${channelData.id}/${endpoint.name}`, router)
+                            // Its router is a catch-all ('*'): the endpoint is listed by its path and the methods it declares.
+                            recordRoute(`${envRootPath}/${activeRI.id}/channel/${channelData.id}/${endpoint.name}`, ERouteOwnerKind.CHANNEL, id, undefined, endpoint.methods)
                             logInfo(ELogComponent.CORE, `Plugin '${id}' HTTP endpoint registered: ${channelData.id}/${endpoint.name}`)
                         }
                         logInfo(ELogComponent.CORE, `Plugin channel '${id}' instantiated and started`)
@@ -1488,6 +1515,9 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                 const activeRI = runningInstances.find(r => r.active)
                 if (activeRI) {
                     activeRI.channels.delete(id)
+                    // Its routes stop being listed. (Express cannot unmount them: they stay answering until a
+                    // restart, and the registry says what is PUBLISHED by an installed extension.)
+                    routeRegistry.forget(ERouteOwnerKind.CHANNEL, id)
                     // Symmetric to registration: if the plugin was producing, its production is stopped
                     // before taking it out of the registry. Subscribers stop receiving, which is what
                     // should happen — their plugin is gone.
@@ -1504,6 +1534,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             }
             let pluginApi = new PluginApi(pluginManager, registeredChannels, apiKeyApi, { onPluginInstalled, onPluginUninstalled })
             riRouter.use(`/core/plugins`, pluginApi.router)
+            recordRoute(`${envRootPath}/core/plugins`, ERouteOwnerKind.CORE, 'plugins', pluginApi.router)
         }
         if (providerManager) {
             // The getter is evaluated on every request (the array is not frozen): providers are started
@@ -1511,34 +1542,42 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let providerApi = new ProviderApi(providerManager, registeredProviders, apiKeyApi, {}, () => ri.clusterInfo.providers, () => ri.clusterInfo.pluviders,
                 async (pluginId: string) => (await pluginManager?.listInstalled())?.find(p => p.id === pluginId))
             riRouter.use(`/core/providers`, providerApi.router)
+            recordRoute(`${envRootPath}/core/providers`, ERouteOwnerKind.CORE, 'providers', providerApi.router)
         }
         if (senderManager) {
             let senderApi = new SenderApi(senderManager, apiKeyApi)
             riRouter.use(`/core/senders`, senderApi.router)
+            recordRoute(`${envRootPath}/core/senders`, ERouteOwnerKind.CORE, 'senders', senderApi.router)
         }
         if (webhookManager) {
             let webhookApi = new WebhookApi(webhookManager, apiKeyApi)
             riRouter.use(`/core/webhooks`, webhookApi.router)
+            recordRoute(`${envRootPath}/core/webhooks`, ERouteOwnerKind.CORE, 'webhooks', webhookApi.router)
         }
         if (aiToolsetManager) {
             let aiToolsetApi = new AiToolsetApi(aiToolsetManager, apiKeyApi)
             riRouter.use(`/core/aitoolsets`, aiToolsetApi.router)
+            recordRoute(`${envRootPath}/core/aitoolsets`, ERouteOwnerKind.CORE, 'aitoolsets', aiToolsetApi.router)
         }
         if (themeManager) {
             let themeApi = new ThemeApi(themeManager, apiKeyApi)
             riRouter.use(`/core/themes`, themeApi.router)
+            recordRoute(`${envRootPath}/core/themes`, ERouteOwnerKind.CORE, 'themes', themeApi.router)
         }
         if (homepageManager) {
             let homepageApi = new HomepageApi(homepageManager, apiKeyApi)
             riRouter.use(`/core/homepages`, homepageApi.router)
+            recordRoute(`${envRootPath}/core/homepages`, ERouteOwnerKind.CORE, 'homepages', homepageApi.router)
         }
         if (loginManager) {
             let loginExtensionApi = new LoginExtensionApi(loginManager, apiKeyApi)
             riRouter.use(`/core/logins`, loginExtensionApi.router)
+            recordRoute(`${envRootPath}/core/logins`, ERouteOwnerKind.CORE, 'logins', loginExtensionApi.router)
         }
         if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager && docsManager && webhookManager && aiToolsetManager && dceManager) {
             let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, dceManager, apiKeyApi, registeredChannels, registeredProviders })
             riRouter.use(`/core/packs`, packApi.router)
+            recordRoute(`${envRootPath}/core/packs`, ERouteOwnerKind.CORE, 'packs', packApi.router)
         }
         if (pluginManager && providerManager && senderManager && webhookManager && aiToolsetManager && dceManager && idpManager) {
             /*
@@ -1553,6 +1592,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     senderManager: senderManager!,
                     webhookManager: webhookManager!,
                     aiToolsetManager: aiToolsetManager!,
+                    dceManager: dceManager!,
                     idpManager: idpManager!,
                     channels: ri.channels,
                     providers: ri.clusterInfo.providers
@@ -1592,14 +1632,16 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     }
                 },
                 VERSION
-                    dceManager: dceManager!,
             )
-            riRouter.use(`/core/config-bundle`, new ConfigBundleApi(configBundleManager, apiKeyApi).router)
+            const configBundleRouter = new ConfigBundleApi(configBundleManager, apiKeyApi).router
+            riRouter.use(`/core/config-bundle`, configBundleRouter)
+            recordRoute(`${envRootPath}/core/config-bundle`, ERouteOwnerKind.CORE, 'config-bundle', configBundleRouter)
         }
         if (docsManager) {
             const docsifyPath = process.env.KWIRTH_DOCSIFY_PATH || path.join(process.cwd(), 'docsify')
             let docsApi = new DocsApi(docsManager, apiKeyApi, docsifyPath)
             riRouter.use(`/core/docs`, docsApi.router)
+            recordRoute(`${envRootPath}/core/docs`, ERouteOwnerKind.CORE, 'docs', docsApi.router)
         }
         // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
         // riRouter.use(`/metrics`, metricsApi.route)
@@ -1619,6 +1661,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     else
                         path = `/${ri.id}/provider/${provider.id}`
                     riRouter.use(path, provider.router)
+                    recordRoute(`${envRootPath}${path}`, ERouteOwnerKind.PROVIDER, provider.id, provider.router)
                     provider.started = true
                     /*
                         The raw body is decided here, not in the router: by the time the router runs, the
@@ -1722,12 +1765,15 @@ const startChannelEndpoints = (ri:IRunningInstance, expressApp:Application) => {
                             res.status(405).send()
                     })
                 expressApp.use(`${envRootPath}/${ri.id}/channel/${channelData.id}/${endpoint.name}`, router)
+                // Its router is a catch-all ('*'): the endpoint is listed by its path and the methods it declares.
+                recordRoute(`${envRootPath}/${ri.id}/channel/${channelData.id}/${endpoint.name}`, ERouteOwnerKind.CHANNEL, channelData.id, undefined, endpoint.methods)
             }
         }
         if ((channel as any).providesRouter && (channel as any).router) {
             const alias = (channel as any).routerAlias
             const mountPath = alias ? `${envRootPath}/channel/${alias}` : `${envRootPath}/${ri.id}/channel/${channelData.id}`
             expressApp.use(mountPath, (channel as any).router)
+            recordRoute(mountPath, ERouteOwnerKind.CHANNEL, channelData.id, (channel as any).router)
             logInfo(ELogComponent.CORE, `Channel '${channelData.id}' HTTP router mounted at '${mountPath}'`)
         }
     }
@@ -2041,6 +2087,44 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 
 const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstance:IRunningInstance) : Promise<void> => {
     try {
+        /*
+            DCEs go FIRST, before any manager that evaluates extension code (plan: plans/dce/PRD.md, RF6):
+            a consumer's back.js may ask for its DCE at module level, so the instance has to be in the
+            registry before the senders, webhooks, toolsets, providers, IdP connectors and plugins load.
+            Startup is prepareRunningInstance() -> startRunningInstance() -> setUpRoutes(), so this is
+            the earliest point. The dev ones are awaited for the same reason.
+        */
+        if (!dceManager) {
+            dceManager = new DceManager(runningInstance.configMaps, runningInstance.secrets)
+            await dceManager.init()
+            const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
+            if (bundledExtensionsPath) await dceManager.installBundled(bundledExtensionsPath)
+            await dceManager.loadAll()
+            await dceManager.loadDevDces()
+            // From here on, installing an extension that requires a DCE checks it is there (RF8).
+            const manager = dceManager
+            setInstalledDceSource(async () => (await manager.listInstalled()).map(m => ({ id: m.id, version: m.version })))
+            /*
+                Who consumes a DCE: uninstalling one in use and updating one across a major are refused
+                with the list (RF9, RF11). The managers are read on every call, not copied — they do not
+                exist yet at this point, and what is installed changes hot.
+            */
+            manager.setConsumerResolver(async (dceId: string) => {
+                const requirers: IRequirer[] = []
+                const add = (type: EExtensionType, metas: { id: string, requiresExtension?: string[] }[]): void => {
+                    for (const m of metas) requirers.push({ type, id: m.id, requiresExtension: m.requiresExtension })
+                }
+                if (pluginManager) add(EExtensionType.PLUGIN, await pluginManager.listInstalled())
+                if (providerManager) add(EExtensionType.PROVIDER, await providerManager.listInstalled())
+                if (senderManager) add(EExtensionType.SENDER, await senderManager.listInstalled())
+                if (webhookManager) add(EExtensionType.WEBHOOK, await webhookManager.listInstalled())
+                if (themeManager) add(EExtensionType.THEME, await themeManager.listInstalled())
+                if (homepageManager) add(EExtensionType.HOMEPAGE, await homepageManager.listInstalled())
+                if (idpManager) add(EExtensionType.IDP, await idpManager.listInstalledMeta())
+                if (aiToolsetManager) add(EExtensionType.AITOOLSET, await aiToolsetManager.listInstalled())
+                return findConsumers(requirers, EExtensionType.DCE, dceId)
+            })
+        }
         if (!senderManager) {
             senderManager = new SenderManager(runningInstance.configMaps)
             await senderManager.init()
@@ -2087,44 +2171,6 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             aiToolsetManager = new AiToolsetManager(runningInstance.configMaps)
             await aiToolsetManager.init()
             const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
-        /*
-            DCEs go FIRST, before any manager that evaluates extension code (plan: plans/dce/PRD.md, RF6):
-            a consumer's back.js may ask for its DCE at module level, so the instance has to be in the
-            registry before the senders, webhooks, toolsets, providers, IdP connectors and plugins load.
-            Startup is prepareRunningInstance() -> startRunningInstance() -> setUpRoutes(), so this is
-            the earliest point. The dev ones are awaited for the same reason.
-        */
-        if (!dceManager) {
-            dceManager = new DceManager(runningInstance.configMaps, runningInstance.secrets)
-            await dceManager.init()
-            const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
-            if (bundledExtensionsPath) await dceManager.installBundled(bundledExtensionsPath)
-            await dceManager.loadAll()
-            await dceManager.loadDevDces()
-            // From here on, installing an extension that requires a DCE checks it is there (RF8).
-            const manager = dceManager
-            setInstalledDceSource(async () => (await manager.listInstalled()).map(m => ({ id: m.id, version: m.version })))
-            /*
-                Who consumes a DCE: uninstalling one in use and updating one across a major are refused
-                with the list (RF9, RF11). The managers are read on every call, not copied — they do not
-                exist yet at this point, and what is installed changes hot.
-            */
-            manager.setConsumerResolver(async (dceId: string) => {
-                const requirers: IRequirer[] = []
-                const add = (type: EExtensionType, metas: { id: string, requiresExtension?: string[] }[]): void => {
-                    for (const m of metas) requirers.push({ type, id: m.id, requiresExtension: m.requiresExtension })
-                }
-                if (pluginManager) add(EExtensionType.PLUGIN, await pluginManager.listInstalled())
-                if (providerManager) add(EExtensionType.PROVIDER, await providerManager.listInstalled())
-                if (senderManager) add(EExtensionType.SENDER, await senderManager.listInstalled())
-                if (webhookManager) add(EExtensionType.WEBHOOK, await webhookManager.listInstalled())
-                if (themeManager) add(EExtensionType.THEME, await themeManager.listInstalled())
-                if (homepageManager) add(EExtensionType.HOMEPAGE, await homepageManager.listInstalled())
-                if (idpManager) add(EExtensionType.IDP, await idpManager.listInstalledMeta())
-                if (aiToolsetManager) add(EExtensionType.AITOOLSET, await aiToolsetManager.listInstalled())
-                return findConsumers(requirers, EExtensionType.DCE, dceId)
-            })
-        }
             if (bundledExtensionsPath) await aiToolsetManager.installBundled(bundledExtensionsPath)
             await aiToolsetManager.loadAll()
             aiToolsetManager.loadDevAiToolsets()
@@ -2239,6 +2285,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         }
 
         runningInstance.clusterInfo.senders = senderManager
+        runningInstance.clusterInfo.routes = routeRegistry
         runningInstance.clusterInfo.webhooks = webhookManager
         runningInstance.backChannelObject = backChannelObject
         runningInstance.providerStorage = buildProviderStorage(runningInstance.configMaps, runningInstance.secrets)
@@ -2373,6 +2420,9 @@ const launchDesktop = async (localKwirthData:KwirthData, expressApp:Application)
             logInfo(ELogComponent.CORE, `Initial kwirthData`)
             logInfo(ELogComponent.CORE, localKwirthData)
             try {
+                // Desktop only: the kubeconfig the desktop app manages. Recorded together, before mounting.
+                recordRoute('/core/desktop/kubeconfig', ERouteOwnerKind.CORE, 'desktop', undefined, ['GET', 'POST', 'DELETE'])
+                recordRoute('/core/desktop/kube-available', ERouteOwnerKind.CORE, 'desktop', undefined, ['POST'])
                 expressApp.get('/core/desktop/kubeconfig', (req:Request,res:Response) => {
                     try {
                         let kubeConfig = new KubeConfig()
@@ -3035,6 +3085,8 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
             .catch(err => { logError(ELogComponent.CORE, `Webhook receiver error: ${err}`); res.status(500).json({ ok: false }) })
     })
     app.use(`${envRootPath}/webhook`, express.raw({ type: '*/*', limit: '1mb' }), webhookRouter)
+    // Listed as its pattern: '/webhook/:provider/:token' — the token never travels with the route list.
+    recordRoute(`${envRootPath}/webhook`, ERouteOwnerKind.WEBHOOK, 'receiver', webhookRouter)
 
     /*
         An INGEST provider needs the bytes exactly as they arrived: ndjson and msgpack are not JSON, and
@@ -3067,6 +3119,7 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
         logInfo(ELogComponent.CORE, `Front serving is enbaled`)
         logInfo(ELogComponent.CORE, `SPA is available at: ${envRootPath}/front`)
         app.get(`${envRootPath}`, (req, res) => res.redirect(`${envRootPath}/front`))
+        recordRoute(`${envRootPath || '/'}`, ERouteOwnerKind.FRONT, 'redirect', undefined, ['GET'])
     }
     else {
         logInfo(ELogComponent.CORE, 'Front serving not enabled, SPA will not be available')
@@ -3092,10 +3145,12 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
         envAuth
     )
     app.use(`${envRootPath}/core/auth`, authApi.router)
+    recordRoute(`${envRootPath}/core/auth`, ERouteOwnerKind.CORE, 'auth', authApi.router)
 
     if (envFront) {
         if (!fs.existsSync('./front/index.html')) logError(ELogComponent.CORE, `'index.html' file has not been found on 'front' folder`)
         app.use(`${envRootPath}/front/`, express.static('./front'))
+        recordRoute(`${envRootPath}/front`, ERouteOwnerKind.FRONT, 'spa', undefined, ['GET'])
     }
 
     /*
@@ -3105,8 +3160,10 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
     */
     logInfo(ELogComponent.CORE, 'Configuring healthz endpoint')
     app.get(`/healthz`, (_req:Request,res:Response) => { res.status(200).send() })
+    recordRoute('/healthz', ERouteOwnerKind.CORE, 'healthz', undefined, ['GET'])
 
     app.get(`${envRootPath}/core/license`, (_req:Request, res:Response) => { res.json(licenseManager.getPublicInfo() ?? {}) })
+    recordRoute(`${envRootPath}/core/license`, ERouteOwnerKind.CORE, 'license', undefined, ['GET'])
 
     //const fs = require('fs')
     fs.readdir('.', (err:any, folderFiles:any) => {

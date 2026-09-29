@@ -7,6 +7,7 @@ import { isPluviderId, TPluviderChannel } from '../providers/Pluvider'
 import { consumerIdOf, TSubscriptionConsumer } from '../providers/Consumer'
 import { IChannel } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning, providerLogger } from '../tools/Logging'
+import { IRouteAccess } from '../tools/RouteRegistry'
 
 export interface INodeInfo {
     name: string
@@ -127,6 +128,8 @@ export class ClusterInfo {
     public pluviders: Map<string, TPluviderChannel> = new Map()
     public senders?: ISenderAccess
     public webhooks?: IWebhookAccess
+    /** Every published HTTP route, read-only (the Status channel's Routes tab). */
+    public routes?: IRouteAccess
     /*
         Who consumes whom, recorded here because here is where it is known.
 

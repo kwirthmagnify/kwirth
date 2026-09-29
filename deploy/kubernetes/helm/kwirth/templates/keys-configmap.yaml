@@ -1,0 +1,24 @@
+{{- /*
+The API keys ConfigMap ('kwirth.keys', a name the core fixes). The core creates it on its own when it is
+missing, so the chart would not need to; it renders it anyway, with the same look-up-and-keep logic as the
+users Secret, because chart 0.1.x did render it and dropping it from the manifest would make an upgrade
+DELETE the live keys.
+*/ -}}
+{{- $existing := lookup "v1" "ConfigMap" .Release.Namespace "kwirth.keys" }}
+{{- $owned := include "kwirth.ownedByRelease" (dict "obj" $existing "root" $) }}
+{{- if or (not $existing) $owned }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kwirth.keys
+  labels:
+    {{- include "kwirth.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+data:
+{{- if $existing }}
+  {{- toYaml (default (dict "data" "[]") $existing.data) | nindent 2 }}
+{{- else }}
+  data: "[]"
+{{- end }}
+{{- end }}

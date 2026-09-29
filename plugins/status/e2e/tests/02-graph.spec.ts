@@ -244,7 +244,8 @@ test('🔴 con auto-refresco, la linea viva FRENA y se para justo al acabar el i
 })
 
 test('en manual no hay intervalo que agotar: la linea viva se mueve sin parar, como siempre', async () => {
-    await expect(page.getByText(/it does not refresh on its own/)).toBeVisible()
+    // Manual mode, read from the selector itself: the sentence that says it lives on the Home tab now.
+    await expect(page.locator('[aria-label="Auto refresh"]')).toHaveText('Manual')
     const a = await esperarLineaViva()
     expect(a.nombre, 'en manual la linea viva no usa la animacion de serie de React Flow').toBe('dashdraw')
     expect(a.repeticiones).toBe('infinite')

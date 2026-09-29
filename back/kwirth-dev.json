@@ -9,6 +9,7 @@
         "sugarless": "../plugins/sugarless/dist"
     },
     "providers": {
+        "suse-fleet": "../providers/suse-fleet/dist",
         "suse-longhorn": "../providers/suse-longhorn/dist",
         "azure": "../providers/azure/dist",
         "fluentbit": "../providers/fluentbit/dist",
@@ -20,7 +21,8 @@
     "senders": {
         "file": "../senders/file/dist",
         "datadog": "../senders/datadog/dist",
-        "gitlab-issues": "../senders/gitlab-issues/dist"
+        "gitlab-issues": "../senders/gitlab-issues/dist",
+        "email-resend": "../senders/email-resend/dist"
     },
     "webhooks": {
         "gitlab-issues": "../webhooks/gitlab-issues/dist"
@@ -30,7 +32,9 @@
     "themes": {},
     "senderConfigs": {},
     "idps": {},
-    "aitoolsets": {},
+    "aitoolsets": {
+        "suse-fleet": "../aitoolsets/suse-fleet/dist"
+    },
     "dces": {
         "sample": "../dces/sample/dist"
     },

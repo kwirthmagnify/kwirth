@@ -357,3 +357,35 @@ test('cerrar la conexión no deja nada colgando', async () => {
     assert.equal(canal.containsConnection(ws), false)
     assert.equal(canal.containsInstance('i1'), false)
 })
+
+// ── the routes (v2, Routes tab) ────────────────────────────────────────────────
+
+test('🔴 without the core route registry, routes are ABSENT — unknown, not an empty list', async () => {
+    const inv = await inventarioDe({ providers: [] })
+    assert.equal('routes' in inv, false)
+})
+
+test('the routes come from the core registry, with their owners', async () => {
+    const inv = await inventarioDe({
+        providers: [],
+        routes: { listRoutes: () => [{ ownerKind: 'core', ownerId: 'config', method: 'GET', path: '/config/info' }] }
+    })
+    assert.deepEqual(inv.routes, [{ ownerKind: 'core', ownerId: 'config', method: 'GET', path: '/config/info' }])
+})
+
+test('an owner kind this plugin does not know (a newer core) is shown as other, not dropped', async () => {
+    const inv = await inventarioDe({
+        providers: [],
+        routes: { listRoutes: () => [{ ownerKind: 'irq', ownerId: 'ha', method: 'GET', path: '/ha' }] }
+    })
+    assert.equal(inv.routes?.[0].ownerKind, 'other')
+})
+
+test('a registry that blows up leaves the routes unknown and the rest of the snapshot intact', async () => {
+    const inv = await inventarioDe({
+        providers: [{ id: 'metrics', started: true }],
+        routes: { listRoutes: () => { throw new Error('boom') } }
+    })
+    assert.equal('routes' in inv, false)
+    assert.equal(inv.components.length, 1)
+})

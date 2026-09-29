@@ -1,0 +1,16 @@
+# A sample values file for the Kwirth chart (deploy/helm/kwirth). Everything hangs off 'kwirth'.
+kwirth:
+  image:
+    tag: 0.6.38
+  config:
+    rootpath: /kwirth
+    masterkey: change-me
+    channelMetrics: true
+    channelMagnify: true
+  ingress:
+    enabled: true
+    controller: nginx
+    hostname: www.myhost.com
+    nginx:
+      tls: true
+      secret: cert-secret-name

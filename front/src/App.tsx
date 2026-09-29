@@ -814,7 +814,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 const reason = previous.termination?.reason ? ` (${previous.termination.reason})` : ''
                 const lineas = previous.lines?.length ?? 0
                 const donde = lineas > 0
-                    ? `Its last ${lineas} log lines are available in the side menu, About, "Previous container log".`
+                    ? `Its last ${lineas} log lines are available in the Status channel, "Previous log" tab.`
                     : 'Its log is no longer available (the kubelet has already rotated it).'
                 /*
                     A SIGTERM that was attended to exits with 0, which is exactly what happens when the

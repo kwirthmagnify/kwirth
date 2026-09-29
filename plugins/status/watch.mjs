@@ -23,6 +23,7 @@ const kwirthGlobalsPlugin = {
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
             '@kwirthmagnify/kwirth-common-front/icons': 'window.__kwirth__.MUI.icons',
             '@xyflow/react': 'window.__kwirth__.reactFlow',
+            'recharts': 'window.__kwirth__.recharts',
         }
         for (const pkg of Object.keys(globals)) {
             build.onResolve({ filter: new RegExp(`^${pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }, () => ({

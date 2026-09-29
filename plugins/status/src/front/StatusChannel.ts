@@ -4,6 +4,7 @@ import { IChannel, IChannelObject, IChannelRequirements, IChannelMessageAction, 
 import { StatusIcon } from './icons'
 import { EStatusPayload, IStatusMessageResponse } from '../common/StatusTypes'
 import { IStatusData, StatusData } from './StatusData'
+import { appendPoint, pointOf } from './StatusPerformance'
 import { StatusTabContent } from './StatusTabContent'
 
 /*
@@ -52,6 +53,8 @@ export class StatusChannel implements IChannel {
                     // computed. Only ONE is kept; this is not a time series.
                     data.previous = data.inventory
                     data.inventory = msg.inventory
+                    const point = pointOf(data.previous, msg.inventory)
+                    if (point) data.series = appendPoint(data.series, point)
                 }
                 return { action: EChannelRefreshAction.REFRESH }
             case EInstanceMessageType.SIGNAL: {
@@ -91,6 +94,8 @@ export class StatusChannel implements IChannel {
             data.started = false
             data.inventory = undefined
             data.previous = undefined
+            // The session series goes with them: a new start is a new session.
+            data.series = []
         }
         return true
     }

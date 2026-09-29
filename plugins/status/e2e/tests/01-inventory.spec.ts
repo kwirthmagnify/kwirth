@@ -55,6 +55,86 @@ test('al abrir el canal llega el inventario, sin pedir nada', async () => {
     await expect(page.getByText(/\d+ components/)).toBeVisible()
 })
 
+// ── Home (v2) ──────────────────────────────────────────────────────────────────
+
+// By its own aria-label: the tabs are called the same as the boxes.
+const box = (title: string) => page.locator(`[aria-label="${title} summary"]`)
+const tab = (name: string) => page.getByRole('tab', { name, exact: true })
+
+test('🔴 it opens on Home, with one box per tab', async () => {
+    await expect(tab('Home')).toHaveAttribute('aria-selected', 'true')
+    for (const title of ['Providers', 'Graph', 'Performance', 'Plugins', 'Extensions', 'Routes']) {
+        await expect(box(title)).toBeVisible()
+    }
+    // No table on Home: the boxes are the summary, the tables are behind the tabs.
+    await expect(page.locator('table')).toHaveCount(0)
+})
+
+test('🔴 the Providers box counts exactly what the Providers tab lists', async () => {
+    const dicho = (await box('Providers').innerText()).match(/(\d+) producers?/)
+    expect(dicho, 'the box does not say how many producers').not.toBeNull()
+    await tab('Providers').click()
+    await expect(page.locator('table tbody tr').first()).toBeVisible()
+    expect(await page.locator('table tbody tr').count()).toBe(Number(dicho![1]))
+    await tab('Home').click()
+})
+
+test('🔴 the Extensions box counts exactly what the Extensions tab lists', async () => {
+    const dicho = (await box('Extensions').innerText()).match(/(\d+) extensions?/)
+    expect(dicho, 'the box does not say how many extensions').not.toBeNull()
+    await tab('Extensions').click()
+    await page.waitForTimeout(300)
+    expect(await page.locator('table tbody tr').count()).toBe(Number(dicho![1]))
+    await tab('Home').click()
+})
+
+test('the Graph box says how many lines, producers and consumers', async () => {
+    await expect(box('Graph')).toContainText(/\d+ subscriptions?/)
+    await expect(box('Graph')).toContainText(/\d+ producers? · \d+ consumers?/)
+})
+
+test('🔴 the Performance box shows the process with a VALUE, not a label', async () => {
+    const rss = (await box('Performance').innerText()).match(/(\d+) MB RSS/)
+    expect(rss, 'no RSS in MB on the Performance box').not.toBeNull()
+    expect(Number(rss![1])).toBeGreaterThan(0)
+    await expect(box('Performance')).toContainText(/up \d+(s|m|h|d)/)
+})
+
+test('🔴 the boxes are three per row, equal, and fill the whole width', async () => {
+    // Measured on screen: the page is wide enough here for the three-column layout.
+    const cajas = await page.locator('[aria-label$=" summary"]').evaluateAll(els => els.map(e => {
+        const r = e.getBoundingClientRect()
+        return { top: Math.round(r.top), left: r.left, right: r.right, width: r.width }
+    }))
+    expect(cajas.length, 'seven boxes: the six tabs and DCE').toBe(7)
+    const primeraFila = cajas.filter(c => c.top === cajas[0].top)
+    expect(primeraFila.length, 'boxes in the first row').toBe(3)
+    const anchos = cajas.map(c => c.width)
+    expect(Math.max(...anchos) - Math.min(...anchos), 'the boxes are not all the same width').toBeLessThanOrEqual(1)
+    // Full width: the same margin on the right as on the left of the window (the tab strip is no
+    // reference — it is only as wide as its tabs).
+    const ancho = page.viewportSize()!.width
+    const izquierda = primeraFila[0].left
+    const derecha = ancho - primeraFila[2].right
+    expect(Math.abs(izquierda - derecha), `the row does not fill the width: ${izquierda}px left, ${derecha}px right`).toBeLessThanOrEqual(2)
+})
+
+test('the DCE box is reserved: it is shown, but it is not a button', async () => {
+    await expect(box('DCE')).toBeVisible()
+    await expect(box('DCE')).not.toHaveAttribute('role', 'button')
+    await box('DCE').click()
+    await expect(tab('Home'), 'clicking DCE opened some tab').toHaveAttribute('aria-selected', 'true')
+})
+
+test('🔴 a box is a door: clicking it opens its tab', async () => {
+    await box('Graph').click()
+    await expect(tab('Graph')).toHaveAttribute('aria-selected', 'true')
+    await tab('Home').click()
+    await box('Providers').click()
+    await expect(tab('Providers')).toHaveAttribute('aria-selected', 'true')
+    // The table cases below run on the Providers tab.
+})
+
 test('la tabla trae la columna QUE justifica la pantalla', async () => {
     for (const columna of ['Kind', 'Name', 'State', 'Why']) {
         await expect(page.getByRole('columnheader', { name: columna, exact: true })).toBeVisible()
@@ -100,6 +180,8 @@ test('🔴 un provider cableado dice si esta ACTIVO o si emite para nadie', asyn
 })
 
 test('la pantalla dice de cuando es la foto y si se refresca sola', async () => {
+    // What the snapshot is lives on Home since the tabs; the controls stay on every tab.
+    await tab('Home').click()
     // In manual mode — the default — it says it does not refresh by itself. Not a default that hides.
     await expect(page.getByText(/Snapshot taken at .* it does not refresh on its own/)).toBeVisible()
 })
@@ -114,6 +196,20 @@ test('el selector de auto-refresco esta a la izquierda del boton de refrescar', 
     const izq = await selector.boundingBox()
     const der = await page.locator('button[aria-label="Take a new snapshot"]').boundingBox()
     expect(izq!.x + izq!.width, 'el selector no esta a la izquierda del boton').toBeLessThanOrEqual(der!.x + 2)
+})
+
+test('the filter box and the refresh selector are the same height', async () => {
+    // The outlined boxes themselves: the MuiInputBase-root that holds each control, measured in the page.
+    const alturas = await page.evaluate(() => {
+        const box = (el: Element | null) => el?.closest('.MuiInputBase-root')?.getBoundingClientRect().height
+        return {
+            filtro: box(document.querySelector('input[placeholder="Filter…"]')),
+            selector: box(document.querySelector('[aria-label="Auto refresh"]'))
+        }
+    })
+    expect(alturas.filtro, 'no filter box').toBeDefined()
+    expect(alturas.selector, 'no refresh selector box').toBeDefined()
+    expect(Math.abs(alturas.filtro! - alturas.selector!), `filter ${alturas.filtro}px vs selector ${alturas.selector}px`).toBeLessThanOrEqual(1)
 })
 
 test('🔴 al elegir un intervalo, la pantalla deja de decir que no se refresca sola', async () => {
@@ -132,6 +228,7 @@ test('🔴 al elegir un intervalo, la pantalla deja de decir que no se refresca 
     await page.waitForTimeout(500)
     await page.getByRole('option', { name: 'Manual' }).click()
     await expect(page.getByText(/it does not refresh on its own/)).toBeVisible()
+    await tab('Providers').click()
 })
 
 test('la columna de entregas distingue un numero de "no lo dice"', async () => {
@@ -148,6 +245,7 @@ test('la columna de entregas distingue un numero de "no lo dice"', async () => {
 })
 
 test('refrescar trae una foto nueva', async () => {
+    await tab('Home').click()
     const antes = await page.getByText(/Snapshot taken at/).innerText()
     await page.locator('button[aria-label="Take a new snapshot"]').click()
     // The time is drawn with seconds, so one has to pass for the text to change.
@@ -156,6 +254,7 @@ test('refrescar trae una foto nueva', async () => {
     await expect(async () => {
         expect(await page.getByText(/Snapshot taken at/).innerText()).not.toBe(antes)
     }).toPass({ timeout: 15000 })
+    await tab('Providers').click()
 })
 
 test('🔴 la tabla scrollea: con muchos componentes se ven TODOS', async () => {
@@ -191,26 +290,64 @@ test('el filtro deja solo lo que se busca', async () => {
 
 // ── The tabs (v2) ──────────────────────────────────────────────────────────────
 
-test('🔴 the five tabs, in their order', async () => {
+test('🔴 the seven tabs, in their order: Home first', async () => {
     const nombres = await page.getByRole('tablist').last().getByRole('tab').allInnerTexts()
-    expect(nombres.map(n => n.trim())).toEqual(['PROVIDERS', 'GRAPH', 'PERFORMANCE', 'PLUGINS', 'EXTENSIONS'])
+    expect(nombres.map(n => n.trim())).toEqual(['HOME', 'PROVIDERS', 'GRAPH', 'PERFORMANCE', 'PLUGINS', 'EXTENSIONS', 'ROUTES'])
 })
 
-test('the filter only shows on the tabs that are lists', async () => {
-    await page.getByRole('tab', { name: 'Graph', exact: true }).click()
-    await expect(page.getByPlaceholder('Filter…')).toHaveCount(0)
-    await page.getByRole('tab', { name: 'Performance', exact: true }).click()
-    await expect(page.getByPlaceholder('Filter…')).toHaveCount(0)
+test('🔴 the filter is always there, and only ENABLED on the tabs that are lists', async () => {
+    // It must not come and go: a box that disappears moves everything next to it.
+    const filtro = page.getByPlaceholder('Filter…')
+    for (const tab of ['Home', 'Graph', 'Performance']) {
+        await page.getByRole('tab', { name: tab, exact: true }).click()
+        await expect(filtro, `the filter disappears on ${tab}`).toBeVisible()
+        await expect(filtro, `the filter can be typed into on ${tab}`).toBeDisabled()
+    }
     await page.getByRole('tab', { name: 'Providers', exact: true }).click()
-    await expect(page.getByPlaceholder('Filter…')).toBeVisible()
+    await expect(filtro).toBeEnabled()
 })
 
 test('a tab with nothing true to show yet says why, instead of an empty table', async () => {
-    await page.getByRole('tab', { name: 'Performance', exact: true }).click()
-    await expect(page.getByText(/Memory, CPU and event-loop lag of the Kwirth process come in the next version/)).toBeVisible()
     await page.getByRole('tab', { name: 'Plugins', exact: true }).click()
     await expect(page.getByText(/does not tell channels which plugins are installed yet/)).toBeVisible()
     await expect(page.locator('table')).toHaveCount(0)
+})
+
+// ── Performance (v2 S2) ────────────────────────────────────────────────────────
+
+// By its own aria-label: the charts below have titles like 'CPU' too.
+const figure = (label: string) => page.locator(`[aria-label="${label} figure"]`)
+
+test('🔴 Performance shows the Kwirth process with real VALUES', async () => {
+    await page.getByRole('tab', { name: 'Performance', exact: true }).click()
+    // Values, not just labels: an 'MB' figure above zero, a heap as used / reserved, an uptime.
+    const rss = (await figure('Memory (RSS)').innerText()).match(/(\d+) MB/)
+    expect(rss, 'no RSS in MB').not.toBeNull()
+    expect(Number(rss![1])).toBeGreaterThan(0)
+    expect(await figure('JS heap').innerText()).toMatch(/\d+ MB \/ \d+ MB/)
+    expect(await figure('Uptime').innerText()).toMatch(/\d+(s|m|h|d)/)
+    expect(await figure('Uptime').innerText()).toMatch(/pid \d+ · Node v\d+/)
+})
+
+test('🔴 CPU and charts need TWO snapshots: before that they say so, after it they show', async () => {
+    // Taking snapshots until there are two in this channel is what makes a rate and a line possible.
+    await page.locator('button[aria-label="Take a new snapshot"]').click()
+    await page.waitForTimeout(1500)
+    await page.locator('button[aria-label="Take a new snapshot"]').click()
+    await expect(async () => {
+        expect(await figure('CPU').innerText()).toMatch(/\d+\.\d %/)
+    }).toPass({ timeout: 15000 })
+    await expect(page.locator('.recharts-line').first()).toBeVisible({ timeout: 15000 })
+    // Session, not history: the page says how many snapshots it holds and that nothing is kept.
+    await expect(page.getByText(/\d+ snapshots since this channel started, kept only in this browser/)).toBeVisible()
+})
+
+test('the event loop is measured once somebody has been looking', async () => {
+    await page.locator('button[aria-label="Take a new snapshot"]').click()
+    await expect(async () => {
+        expect(await figure('Event loop delay (p99)').innerText()).toMatch(/\d+\.\d ms/)
+    }).toPass({ timeout: 15000 })
+    await page.getByRole('tab', { name: 'Providers', exact: true }).click()
 })
 
 test('🔴 the Extensions tab lists senders and webhooks, without producer columns', async () => {
@@ -227,5 +364,87 @@ test('🔴 no se filtra ninguna URL de webhook: llevan el token dentro', async (
     const texto = await page.locator('table').innerText()
     expect(texto).not.toMatch(/token=/i)
     expect(texto).not.toMatch(/https?:\/\//i)
+    await page.getByRole('tab', { name: 'Providers', exact: true }).click()
+})
+
+// ── Routes (v2) ────────────────────────────────────────────────────────────────
+
+// One line per path: its path (without the 'collision' chip), the labels of its method chips, its owner.
+const routeRows = () => page.locator('table tbody tr').evaluateAll(rows => rows.map(r => {
+    const td = r.querySelectorAll('td')
+    return {
+        path: (td[0]?.querySelector('p')?.textContent ?? '').trim(),
+        methods: [...(td[1]?.querySelectorAll('.MuiChip-label') ?? [])].map(c => (c.textContent ?? '').trim()),
+        owner: (td[2]?.textContent ?? '').trim()
+    }
+}))
+
+test('🔴 Routes lists the core API with real paths, methods and owners', async () => {
+    await page.getByRole('tab', { name: 'Routes', exact: true }).click()
+    const rows = await routeRows()
+    expect(rows.length, 'no routes listed').toBeGreaterThan(10)
+    // VALUES, not presence: routes this Kwirth certainly publishes, each with its method and owner.
+    expect(rows.some(r => r.methods.includes('GET') && /\/config\/info$/.test(r.path) && /^Core config/.test(r.owner)), 'GET …/config/info from Core config').toBe(true)
+    expect(rows.some(r => /\/core\/providers\//.test(r.path) && /^Core providers/.test(r.owner)), 'the providers manager API').toBe(true)
+    expect(rows.some(r => r.path === '/healthz' && r.methods.join(',') === 'GET'), 'GET /healthz').toBe(true)
+    for (const r of rows) {
+        // Every method a real verb, each once; ALL only when it is ALL the route has (it is middleware otherwise).
+        for (const m of r.methods) expect(m).toMatch(/^(GET|POST|PUT|PATCH|DELETE|ALL|OPTIONS|HEAD)$/)
+        expect(new Set(r.methods).size, `repeated method on ${r.path}`).toBe(r.methods.length)
+        if (r.methods.includes('ALL')) expect(r.methods, `ALL next to other methods on ${r.path}`).toEqual(['ALL'])
+        expect(r.path.startsWith('/'), `relative path ${r.path}`).toBe(true)
+    }
+})
+
+test('🔴 ONE line per path and owner: no path repeated for the same owner', async () => {
+    const rows = await routeRows()
+    const keys = rows.map(r => `${r.owner} ${r.path}`)
+    expect(keys.length - new Set(keys).size, 'lines that should have been one').toBe(0)
+})
+
+test('🔴 the path column is readable: a line fits in one row, not a letter per line', async () => {
+    // What went wrong once: the methods cell took the whole width and the path wrapped letter by letter.
+    const alturas = await page.locator('table tbody tr').evaluateAll(rows => rows.slice(0, 20).map(r => r.getBoundingClientRect().height))
+    expect(Math.max(...alturas), 'a route line is taller than two text lines').toBeLessThan(80)
+})
+
+test('🔴 routes are PATTERNS: the webhook receiver shows :token, never a token', async () => {
+    const rows = await routeRows()
+    const webhook = rows.find(r => /\/webhook\//.test(r.path))
+    expect(webhook, 'the webhook receiver is not listed').toBeDefined()
+    expect(webhook!.path).toMatch(/\/webhook\/:provider\/:token$/)
+})
+
+test('the header counts paths (lines) and routes (methods), and says how many each owner published', async () => {
+    const rows = await routeRows()
+    const metodos = rows.reduce((n, r) => n + r.methods.length, 0)
+    await expect(page.getByText(new RegExp(`^${rows.length} paths · ${metodos} routes:$`))).toBeVisible()
+    await expect(page.getByText(/^\d+ Core$/)).toBeVisible()
+})
+
+test('the filter narrows the routes by path and by method', async () => {
+    const filtro = page.getByPlaceholder('Filter…')
+    await expect(filtro).toBeEnabled()
+    await filtro.fill('healthz')
+    await expect(async () => {
+        const rows = await routeRows()
+        expect(rows.length).toBeGreaterThan(0)
+        expect(rows.every(r => r.path.includes('healthz'))).toBe(true)
+    }).toPass({ timeout: 10000 })
+    await filtro.fill('delete')
+    await expect(async () => {
+        const rows = await routeRows()
+        expect(rows.length).toBeGreaterThan(0)
+        // Every line that is left answers DELETE — shown with all its methods, not only that one.
+        expect(rows.every(r => r.methods.includes('DELETE'))).toBe(true)
+    }).toPass({ timeout: 10000 })
+    await filtro.fill('')
+})
+
+test('the Routes box on Home counts exactly what the Routes tab lists', async () => {
+    // Routes, not lines: one per method, the same figure the tab's header gives.
+    const total = (await routeRows()).reduce((n, r) => n + r.methods.length, 0)
+    await page.getByRole('tab', { name: 'Home', exact: true }).click()
+    await expect(box('Routes')).toContainText(`${total} routes`)
     await page.getByRole('tab', { name: 'Providers', exact: true }).click()
 })

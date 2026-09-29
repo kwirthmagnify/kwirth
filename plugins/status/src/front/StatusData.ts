@@ -1,4 +1,6 @@
-import { EStatusTab, IStatusComponent, IStatusInventory } from '../common/StatusTypes'
+import { EStatusTab, IStatusComponent, IStatusCoreLog, IStatusInventory } from '../common/StatusTypes'
+import { IProcessPoint } from './StatusPerformance'
+import { IPreviousLogRead } from './StatusLog'
 
 /*
     The tab's state: the latest snapshot and the previous one, and nothing else.
@@ -33,6 +35,16 @@ export interface IStatusData {
      * be starting a time series, which is explicitly outside the product.
      */
     previous?: IStatusInventory
+    /**
+     * The Performance tab's series: one point per snapshot received while this channel is running. It is
+     * the one exception to "only two snapshots", and a bounded one — it holds only the process figures,
+     * lives in memory, and is thrown away when the channel stops.
+     */
+    series: IProcessPoint[]
+    /** The core's current log, as last read by the Log tab. Undefined until it is read. */
+    coreLog?: IStatusCoreLog
+    /** The previous container's log, as last read. Undefined until it is read. */
+    previousLog?: IPreviousLogRead
     /** Signals to be shown as text: channel errors, above all. */
     signals: string[]
     /** The core accepted the instance's configuration (the reply to the start). */
@@ -61,11 +73,16 @@ export const countUnbrokeredConsumers = (components: IStatusComponent[]): number
     }, 0)
 
 export class StatusData implements IStatusData {
-    view: EStatusTab = EStatusTab.PROVIDERS
+    // It opens on Home: the overview answers "is everything all right?" at a glance, and from there one
+    // box leads to each tab.
+    view: EStatusTab = EStatusTab.HOME
     filter = ''
     autoRefresh = 0
     inventory?: IStatusInventory
     previous?: IStatusInventory
+    series: IProcessPoint[] = []
+    coreLog?: IStatusCoreLog
+    previousLog?: IPreviousLogRead
     signals: string[] = []
     configAccepted = false
     started = false

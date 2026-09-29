@@ -23,6 +23,8 @@ const kwirthGlobalsPlugin = {
             // The diagram: the core publishes React Flow, and the core's front end already loads its
             // CSS in index.tsx, so no style needs importing here.
             '@xyflow/react': 'window.__kwirth__.reactFlow',
+            // The Performance charts: recharts is published by the core too, so it adds no bytes here.
+            'recharts': 'window.__kwirth__.recharts',
         }
         // No namespace in the filter, so it also intercepts whatever arrives from node_modules.
         for (const pkg of Object.keys(globals)) {

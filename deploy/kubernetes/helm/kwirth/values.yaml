@@ -1,0 +1,206 @@
+# Default values for the Kwirth chart.
+#
+# Everything hangs off 'kwirth', so a values file written for chart 0.1.x keeps working: the keys that still
+# mean something are honoured, and the ones the core no longer reads (channelLog, channelAlert, channelOps,
+# channelTrivy, channelEcho, channelFileman) are silently ignored. Those capabilities are plugins now,
+# installed from the marketplace, not switched on at deploy time.
+
+kwirth:
+  # The image. Either the object below or, as in 0.1.x, a full reference as a string
+  # ("kwirthmagnify/kwirth:0.6.38"). With an empty tag the appVersion of the chart is used: that is the image
+  # this chart was tested with. Do not rely on 'latest', it is not moved with every release.
+  image:
+    repository: kwirthmagnify/kwirth
+    tag: ""
+    pullPolicy: IfNotPresent
+  imagePullSecrets: []
+
+  replicas: 1
+  revisionHistoryLimit: 0
+
+  # What the core reads from its environment. Each key maps to one env var of the container.
+  config:
+    # ROOTPATH: the URL path Kwirth is served under. Empty means the root.
+    rootpath: /kwirth
+    # PORT: the port the core listens on (also the container port).
+    port: 3883
+    # MASTERKEY: signs the access keys handed to clients and, with a filesystem store, derives the key that
+    # encrypts secrets at rest. Change it after the first run with a filesystem store and the stored secrets
+    # become unreadable. Delivered through a Secret, never inline in the pod spec.
+    masterkey: Kwirth4Ever
+    # AUTH: 'kwirth' (built-in users) or the id of an installed IdP connector.
+    auth: kwirth
+    # CHANNEL_METRICS / CHANNEL_MAGNIFY: the two channels still built into the core.
+    channelMetrics: true
+    channelMagnify: true
+    # METRICSINTERVAL: seconds between metrics samples.
+    metricsInterval: 15
+    # PREVIOUSLOGLINES: lines of the previous container log shown in the About dialog after a restart.
+    # Empty keeps the core default.
+    previousLogLines: ""
+    # BODYLIMIT: ceiling on a request body (log ingestion through providers).
+    bodyLimit: 8mb
+    # KEEPALIVE: idle HTTP connection keep-alive, in milliseconds.
+    keepAlive: 65000
+    # FRONT: serve the web front end. Set to false for an API-only Kwirth.
+    front: true
+    # ANSILOG / EXITLOG: colour in the core log, and log the reason on exit.
+    ansiLog: true
+    exitLog: true
+    # KWIRTH_CLUSTER_NAME: how this Kwirth names its cluster. Empty derives it from the cluster itself.
+    clusterName: ""
+    # KWIRTH_STORE: where configuration is persisted. Empty or 'etcd' = Kubernetes Secrets and ConfigMaps in
+    # the release namespace (the default). A path = encrypted files under it; use it together with
+    # 'persistence' below or with your own volume in extraVolumes/extraVolumeMounts.
+    store: ""
+    # KWIRTH_LICENSE: the license blob that unlocks paid extensions. Delivered through a Secret. Empty = open
+    # source mode.
+    license: ""
+
+  # Use a Secret of your own instead of the chart-managed one for the sensitive env vars. It must carry the
+  # keys MASTERKEY and, when needed, KWIRTH_LICENSE and KWIRTH_SQL_PASSWORD. When set, 'masterkey', 'license'
+  # and 'sql.password' above are ignored.
+  existingSecret: ""
+
+  # Data persistence: the PostgreSQL server that extensions with data of their own (findings, histories,
+  # conversations) use. Optional and lazy: the core does not connect until an extension asks for its
+  # database. The chart does NOT deploy Postgres; point it at yours.
+  sql:
+    enabled: false
+    client: pg
+    host: ""
+    port: 5432
+    user: postgres
+    password: ""
+    ssl: false
+    maintenanceDb: postgres
+
+  # Configuration persistence on a volume instead of Secrets/ConfigMaps. Enabling it sets KWIRTH_STORE to
+  # 'mountPath' (unless 'config.store' says otherwise), mounts the claim there and switches the Deployment to
+  # the Recreate strategy, since a ReadWriteOnce volume cannot be shared by two pods during a rollout.
+  persistence:
+    enabled: false
+    # An existing PersistentVolumeClaim. Empty creates one.
+    existingClaim: ""
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+    mountPath: /mnt/kwirth-data
+
+  # The users Secret. Its name is fixed ('kwirth-users'): it is what the core reads in its own namespace.
+  # The chart creates it on the first install with the admin below, then never touches it again: users are
+  # managed from Kwirth, and the Secret survives upgrades and even 'helm uninstall' (resource-policy keep).
+  # On a fresh install with 'bootstrap: false' nobody can log in, so only disable it if you create the
+  # Secret yourself.
+  users:
+    bootstrap: true
+    # {"id":"admin","name":"Nicklaus Wirth","password":"password","resources":"cluster,admin::::"}, base64.
+    admin: eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0=
+
+  # Anything else the container should see. Plain EnvVar / EnvFromSource / Volume / VolumeMount lists. IdP
+  # connectors resolve ${VAR} placeholders in their configuration against the environment, which keeps
+  # client secrets out of ConfigMaps.
+  extraEnv: []
+  extraEnvFrom: []
+  extraVolumes: []
+  extraVolumeMounts: []
+
+  resources:
+    limits:
+      cpu: "1"
+      memory: 2Gi
+    requests:
+      cpu: "0"
+      memory: 256Mi
+
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  priorityClassName: ""
+  terminationGracePeriodSeconds: 5
+
+  # All three probes hit GET /healthz on the container port.
+  probes:
+    startup:
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      failureThreshold: 30
+    readiness:
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      timeoutSeconds: 5
+    liveness:
+      periodSeconds: 60
+      timeoutSeconds: 30
+      failureThreshold: 3
+
+  serviceAccount:
+    create: true
+    # Empty = '<fullname>-sa'.
+    name: ""
+    annotations: {}
+  # The 0.1.x home of the same annotations; still honoured.
+  sa:
+    serviceAccount:
+      annotations: {}
+
+  # The ClusterRole the core runs with. By default it gets every verb on every resource of the API groups
+  # below, which is what the core and the built-in channels need. Providers and plugins that watch CRDs of
+  # their own (Fleet, Longhorn, Kubewarden, Trivy...) need their groups added to 'extraApiGroups', or
+  # 'clusterAdmin', which is the 0.1.x behaviour: '*' on '*'.
+  rbac:
+    create: true
+    clusterAdmin: false
+    apiGroups:
+      - ""
+      - apps
+      - batch
+      - autoscaling
+      - policy
+      - coordination.k8s.io
+      - metrics.k8s.io
+      - rbac.authorization.k8s.io
+      - networking.k8s.io
+      - storage.k8s.io
+      - apiextensions.k8s.io
+      - admissionregistration.k8s.io
+      - node.k8s.io
+      - scheduling.k8s.io
+      - events.k8s.io
+      - discovery.k8s.io
+      - aquasecurity.github.io
+    extraApiGroups: []
+    # Whole PolicyRule objects, appended as they are.
+    extraRules: []
+
+  service:
+    type: ClusterIP
+    port: 3883
+    annotations: {}
+
+  ingress:
+    enabled: false
+    # nginx | agic | generic. 'generic' renders className, annotations and tls exactly as given.
+    controller: nginx
+    # Empty picks the class of the controller ('nginx' / 'azure-application-gateway').
+    className: ""
+    # Merged on top of the defaults of the controller (sticky sessions and long timeouts for nginx, the
+    # health probe settings for agic).
+    annotations: {}
+    hostname: www.myhost.com
+    # Generic TLS, the Kubernetes way: [{ secretName, hosts: [] }].
+    tls: []
+    nginx:
+      tls: false
+      secret: cert-secret-name
+    agic:
+      privateip: false
+      timeout: "300"
+
+nameOverride: ""
+fullnameOverride: ""

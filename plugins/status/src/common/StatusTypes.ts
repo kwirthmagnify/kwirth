@@ -98,6 +98,96 @@ export interface IStatusInventory {
      * `provider-debug` does exactly that, on purpose, with its own proxy.
      */
     edges: IStatusEdge[]
+    /** The Kwirth process at the moment of the snapshot (Performance tab). Absent from an older back end. */
+    process?: IStatusProcess
+    /**
+     * Every HTTP route this Kwirth has published (Routes tab), from the core's route registry. Absent when
+     * the core does not expose it (older than the registry): that is "unknown", not "no routes".
+     */
+    routes?: IStatusRoute[]
+}
+
+/**
+ * Who published a route. A mirror of the core's ERouteOwnerKind (back/src/tools/RouteRegistry.ts): a
+ * plugin cannot import the core's back end, so the values are repeated here and must stay the same.
+ */
+export enum EStatusRouteOwner {
+    CORE = 'core',
+    CHANNEL = 'channel',
+    PROVIDER = 'provider',
+    LOGIN = 'login',
+    WEBHOOK = 'webhook',
+    FRONT = 'front',
+    OTHER = 'other'
+}
+
+/*
+    What the core answers at /managekwirth/log and /managekwirth/previouslog. Declared here as a mirror, as
+    the core's own front end does, because a plugin cannot import the core. Both come back with a reason
+    instead of an error when there is nothing to show — not running as a pod, no restart, log gone.
+*/
+
+/** The log of the container running now, or why there is none. */
+export interface IStatusCoreLog {
+    lines: string[]
+    unavailableReason?: string
+}
+
+/** How the previous container ended. */
+export interface IStatusTermination {
+    exitCode?: number
+    reason?: string
+    signal?: number
+    message?: string
+    startedAt?: string
+    finishedAt?: string
+}
+
+/** The previous container's log, when this one is a restart. */
+export interface IStatusPreviousLog {
+    restarted: boolean
+    abnormal: boolean
+    restartCount: number
+    container?: string
+    termination?: IStatusTermination
+    lines: string[]
+    unavailableReason?: string
+}
+
+/** One published route: a PATTERN ('/webhook/:provider/:token'), never a value. */
+export interface IStatusRoute {
+    ownerKind: EStatusRouteOwner
+    ownerId: string
+    method: string
+    path: string
+}
+
+/**
+ * The Kwirth process, read by this channel's back end — which runs INSIDE it, so it is the core's own
+ * process. Cumulative figures (CPU) are sent raw: the rate is computed by whoever holds two snapshots.
+ */
+export interface IStatusProcess {
+    pid: number
+    nodeVersion: string
+    uptimeSeconds: number
+    rssBytes: number
+    heapUsedBytes: number
+    heapTotalBytes: number
+    externalBytes: number
+    /** CPU time since the process started, in microseconds (process.cpuUsage). */
+    cpuUserMicros: number
+    cpuSystemMicros: number
+    /**
+     * Event-loop delay since the previous snapshot. Undefined when it has not been measured yet: the probe
+     * only runs while somebody is looking, so the first snapshot after opening has nothing to report.
+     */
+    eventLoop?: IStatusEventLoop
+}
+
+export interface IStatusEventLoop {
+    meanMs: number
+    p99Ms: number
+    maxMs: number
 }
 
 /**
@@ -124,11 +214,18 @@ export interface IStatusEdge {
  * reordering a tab must not shift the others.
  */
 export enum EStatusTab {
+    /** The overview: what the snapshot is, and one box per tab with its figures. */
+    HOME = 'home',
     PROVIDERS = 'providers',
     GRAPH = 'graph',
     PERFORMANCE = 'performance',
     PLUGINS = 'plugins',
-    EXTENSIONS = 'extensions'
+    EXTENSIONS = 'extensions',
+    ROUTES = 'routes',
+    /** The core's own log: the container running now. */
+    LOG = 'log',
+    /** The log of the previous container, when this one is a restart. */
+    PREVIOUS_LOG = 'previous-log'
 }
 
 /** The core's prefix for a consumer that is a provider (back/src/providers/Consumer.ts). */

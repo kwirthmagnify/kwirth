@@ -1,0 +1,53 @@
+{{- if .Values.kwirth.ingress.enabled }}
+{{- $ing := .Values.kwirth.ingress }}
+{{- $className := $ing.className }}
+{{- $annotations := dict }}
+{{- $tls := list }}
+{{- if eq $ing.controller "nginx" }}
+  {{- $className = default "nginx" $className }}
+  {{- /* sticky sessions for more than one replica; long timeouts because the channels are websockets */}}
+  {{- $annotations = dict "nginx.ingress.kubernetes.io/affinity" "cookie" "nginx.ingress.kubernetes.io/proxy-read-timeout" "3600" "nginx.ingress.kubernetes.io/proxy-send-timeout" "3600" }}
+  {{- if $ing.nginx.tls }}
+    {{- $tls = list (dict "secretName" $ing.nginx.secret "hosts" (list $ing.hostname)) }}
+  {{- end }}
+{{- else if eq $ing.controller "agic" }}
+  {{- $className = default "azure-application-gateway" $className }}
+  {{- $annotations = dict "appgw.ingress.kubernetes.io/use-private-ip" (toString $ing.agic.privateip) "appgw.ingress.kubernetes.io/health-probe-path" "/healthz" "appgw.ingress.kubernetes.io/health-probe-timeout" "10" "appgw.ingress.kubernetes.io/health-probe-interval" "60" "appgw.ingress.kubernetes.io/health-probe-status-codes" "200-999" "appgw.ingress.kubernetes.io/request-timeout" (toString $ing.agic.timeout) }}
+{{- end }}
+{{- $annotations = merge (deepCopy $ing.annotations) $annotations }}
+{{- if $ing.tls }}
+  {{- $tls = $ing.tls }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "kwirth.fullname" . }}-ing
+  labels:
+    {{- include "kwirth.labels" . | nindent 4 }}
+  {{- if $annotations }}
+  annotations:
+    {{- /* annotation values must be strings; a '--set' turns "10" into a number, so every value is stringified */}}
+    {{- range $k, $v := $annotations }}
+    {{ $k }}: {{ $v | toString | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- with $className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if $tls }}
+  tls:
+    {{- toYaml $tls | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ $ing.hostname | quote }}
+      http:
+        paths:
+          - path: {{ include "kwirth.ingressPath" . | quote }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "kwirth.fullname" . }}-svc
+                port:
+                  number: {{ .Values.kwirth.service.port }}
+{{- end }}

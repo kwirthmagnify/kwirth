@@ -38,8 +38,31 @@ test('captura del inventario', async ({ browser }) => {
     await expect(page.getByText('What this Kwirth has inside')).toBeVisible({ timeout: 30000 })
     await page.waitForTimeout(1500)
 
-    await page.screenshot({ path: path.join(MEDIA, `${CHANNEL}-inventory.png`) })
-    console.log(`### captura escrita en ${path.join(MEDIA, `${CHANNEL}-inventory.png`)}`)
+    const shot = async (name: string) => {
+        await page.screenshot({ path: path.join(MEDIA, `${CHANNEL}-${name}.png`) })
+        console.log(`### capture written: ${path.join(MEDIA, `${CHANNEL}-${name}.png`)}`)
+    }
+    const snapshot = async () => {
+        await page.locator('button[aria-label="Take a new snapshot"]').click()
+        await page.waitForTimeout(2500)
+    }
+
+    // A couple of snapshots first, so the Home's CPU and the Performance charts have something to show.
+    await snapshot()
+    await snapshot()
+
+    // Home: where the channel opens.
+    await shot('home')
+
+    // The Providers table: the guide's long-standing image.
+    await page.getByRole('tab', { name: 'Providers', exact: true }).click()
+    await page.waitForTimeout(800)
+    await shot('inventory')
+
+    // Performance, with enough snapshots for every chart to draw a line.
+    await page.getByRole('tab', { name: 'Performance', exact: true }).click()
+    for (let i = 0; i < 6; i++) await snapshot()
+    await shot('performance')
 
     await page.goto('about:blank').catch(() => {})
     await page.context().close().catch(() => {})

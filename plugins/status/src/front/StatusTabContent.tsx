@@ -6,33 +6,12 @@ import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } fr
 import { EComponentHealth, EComponentKind, EStatusCommand, EStatusTab, IStatusComponent } from '../common/StatusTypes'
 import { IStatusData } from './StatusData'
 import { StatusDiagram } from './StatusDiagram'
-
-/*
-    How each state is worded, and in what colour.
-
-    The text goes here and not in the back end on purpose: the back end reports FACTS (started, router
-    mounted) and the front end decides how to tell them. That way, the day a word has to change there is
-    no need to republish the back end or restart the server.
-*/
-const HEALTH_LABEL: Record<EComponentHealth, { label: string, color: 'success' | 'warning' | 'error' | 'default' }> = {
-    [EComponentHealth.ACTIVE]: { label: 'Active', color: 'success' },
-    // Idle is NOT an error, it is information: it works, but it is of use to nobody. Hence 'default' and
-    // not 'warning' — whoever looks must be able to tell "this needs fixing" from "this is superfluous".
-    [EComponentHealth.IDLE]: { label: 'Idle', color: 'default' },
-    [EComponentHealth.INSTANTIATED]: { label: 'Running', color: 'success' },
-    [EComponentHealth.NOT_INSTANTIATED]: { label: 'Not started', color: 'warning' },
-    [EComponentHealth.PENDING_RESTART]: { label: 'Needs restart', color: 'warning' },
-    [EComponentHealth.FAILED]: { label: 'Failed', color: 'error' },
-    [EComponentHealth.UNKNOWN]: { label: 'Not reported', color: 'default' }
-}
-
-const KIND_LABEL: Record<EComponentKind, string> = {
-    [EComponentKind.PROVIDER]: 'Provider',
-    [EComponentKind.PLUVIDER]: 'Pluvider',
-    [EComponentKind.SENDER]: 'Sender',
-    [EComponentKind.WEBHOOK]: 'Webhook',
-    [EComponentKind.CHANNEL]: 'Channel'
-}
+import { StatusPerformanceTab } from './StatusPerformanceTab'
+import { StatusRoutesTab } from './StatusRoutesTab'
+import { StatusCoreLogTab, StatusPreviousLogTab } from './StatusLogTab'
+import { isAdmin, readCoreLog, readPreviousLog } from './StatusLog'
+import { StatusHomeTab } from './StatusHomeTab'
+import { HEALTH_LABEL, HEALTH_ORDER, KIND_LABEL } from './StatusLabels'
 
 /*
     Which kinds each list tab shows. The Providers tab (and its graph) is about producing data; the
@@ -48,8 +27,14 @@ const TAB_OF_KIND: Record<EComponentKind, EStatusTab | undefined> = {
     [EComponentKind.CHANNEL]: undefined
 }
 
+/** The tabs that scroll inside themselves (the graph, the log boxes): the tab area must not scroll too. */
+const SELF_SCROLLING: ReadonlySet<EStatusTab> = new Set([EStatusTab.GRAPH, EStatusTab.LOG, EStatusTab.PREVIOUS_LOG])
+
+/** Height of the controls in the top bar, in px: the same as Excubitor's, so both plugins look alike. */
+const TOP_BAR_HEIGHT = 26
+
 /** The tabs where the filter applies: the ones that are lists. */
-const FILTERABLE: ReadonlySet<EStatusTab> = new Set([EStatusTab.PROVIDERS, EStatusTab.PLUGINS, EStatusTab.EXTENSIONS])
+const FILTERABLE: ReadonlySet<EStatusTab> = new Set([EStatusTab.PROVIDERS, EStatusTab.PLUGINS, EStatusTab.EXTENSIONS, EStatusTab.ROUTES])
 
 interface IPendingTabProps {
     title: string
@@ -113,10 +98,9 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
         It is remeasured on every render because the toolbar above changes height.
     */
     /*
-        The open tab. It starts on PROVIDERS on purpose: answering "is everything all right?" is what one
-        does ten times a day, and the graph is for when you already know something is up and want to see
-        who it drags down. Besides, the diagram downloads the layout engine, and whoever does not open it
-        does not pay for it.
+        The open tab. It starts on HOME: one box per tab, so "is everything all right?" is answered
+        without opening any of them. The graph stays behind its tab on purpose: the diagram downloads the
+        layout engine, and whoever does not open it does not pay for it.
     */
     const vista = data.view
     const setVista = (v: EStatusTab) => { data.view = v; repintar() }
@@ -164,6 +148,28 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
     const inventory = data.inventory
 
     /*
+        The core's log, read with every snapshot so the Log tabs follow the same refresh as the rest.
+
+        The PREVIOUS container's log is read always: the core has held it in memory since it started, the
+        call is cheap, and the Home says from it whether Kwirth has restarted. The CURRENT one is a live
+        read of up to a thousand lines, so it is only asked for while its tab is open.
+
+        Only for administrators: the back end does not serve it to anybody else, and asking would only
+        produce a 403 to show.
+    */
+    const admin = isAdmin(props.channelObject.accessString)
+    React.useEffect(() => {
+        const url = props.channelObject.clusterUrl
+        const access = props.channelObject.accessString
+        if (!admin || !inventory || !url || !access) return
+        let current = true
+        readPreviousLog(url, access).then(r => { if (current) { data.previousLog = r; repintar() } })
+        if (vista === EStatusTab.LOG) readCoreLog(url, access).then(l => { if (current) { data.coreLog = l; repintar() } })
+        return () => { current = false }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [inventory?.takenAt, vista, admin])
+
+    /*
         Deliveries per second between the previous snapshot and this one. It can only be given when there
         are two snapshots, when the component reported in both, and when the counter has not gone
         backwards — which happens when the provider restarts and begins at zero: there is no rate to
@@ -201,27 +207,9 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
         if (antes !== undefined && c.events !== antes) activos.add(c.id)
     }
 
-    /*
-        What needs attention first, and within each state by type and id.
-
-        The BROKEN first, then the SURPLUS (idle: it works, but it is of use to nobody), then what does
-        not report, and at the end what is fine.
-
-        ⚠️ It is a Record and not an array on purpose: with an array, a state somebody adds and forgets to
-        put here returns -1 from indexOf and slips in ABOVE the failures — exactly the opposite of what is
-        wanted. With a Record, TypeScript forces a decision about where it goes.
-    */
-    const ORDEN: Record<EComponentHealth, number> = {
-        [EComponentHealth.FAILED]: 0,
-        [EComponentHealth.PENDING_RESTART]: 1,
-        [EComponentHealth.NOT_INSTANTIATED]: 2,
-        [EComponentHealth.IDLE]: 3,
-        [EComponentHealth.UNKNOWN]: 4,
-        [EComponentHealth.INSTANTIATED]: 5,
-        [EComponentHealth.ACTIVE]: 6
-    }
+    // What needs attention first (HEALTH_ORDER), and within each state by type and id.
     componentes.sort((a, b) => {
-        const d = ORDEN[a.health] - ORDEN[b.health]
+        const d = HEALTH_ORDER[a.health] - HEALTH_ORDER[b.health]
         if (d !== 0) return d
         return a.kind === b.kind ? a.id.localeCompare(b.id) : a.kind.localeCompare(b.kind)
     })
@@ -293,12 +281,31 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
 
     return (
         <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <Stack direction='row' alignItems='center' spacing={1} sx={{ mb: 1 }}>
-                <Typography variant='subtitle2'>What this Kwirth has inside</Typography>
-                <Chip size='small' variant='outlined' label={`${inventory.components.length} components`} />
-                <Box sx={{ flexGrow: 1 }} />
-                {FILTERABLE.has(vista) &&
-                    <TextField size='small' placeholder='Filter…' value={filter} onChange={e => setFilter(e.target.value)} sx={{ width: 220 }} />}
+            {/*
+                One row: the tabs on the left, the controls on the right. The controls are COMMON to every
+                tab — a snapshot is of all of Kwirth, and asking for one from Performance must not mean
+                going back to Home. What the snapshot is (its time, whether it refreshes) is said on Home.
+            */}
+            <Stack direction='row' alignItems='center' spacing={1} sx={{ mb: 1, borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs value={vista} onChange={(_e, v: EStatusTab) => setVista(v)} sx={{ minHeight: 36, flexGrow: 1 }}>
+                    <Tab value={EStatusTab.HOME} label='Home' sx={{ minHeight: 36, py: 0 }} />
+                    <Tab value={EStatusTab.PROVIDERS} label='Providers' sx={{ minHeight: 36, py: 0 }} />
+                    <Tab value={EStatusTab.GRAPH} label='Graph' sx={{ minHeight: 36, py: 0 }} />
+                    <Tab value={EStatusTab.PERFORMANCE} label='Performance' sx={{ minHeight: 36, py: 0 }} />
+                    <Tab value={EStatusTab.PLUGINS} label='Plugins' sx={{ minHeight: 36, py: 0 }} />
+                    <Tab value={EStatusTab.EXTENSIONS} label='Extensions' sx={{ minHeight: 36, py: 0 }} />
+                    <Tab value={EStatusTab.ROUTES} label='Routes' sx={{ minHeight: 36, py: 0 }} />
+                    <Tab value={EStatusTab.LOG} label='Log' sx={{ minHeight: 36, py: 0 }} />
+                    <Tab value={EStatusTab.PREVIOUS_LOG} label='Previous log' sx={{ minHeight: 36, py: 0 }} />
+                </Tabs>
+                {/*
+                    Always there, disabled where it does not apply: a box that comes and goes moves everything
+                    next to it. Fixed height and font — Excubitor's top-bar pattern — so it matches the Select
+                    exactly, whatever padding each control brings of its own.
+                */}
+                <TextField size='small' placeholder='Filter…' value={filter} onChange={e => setFilter(e.target.value)}
+                    disabled={!FILTERABLE.has(vista)}
+                    sx={{ width: 200, '& .MuiInputBase-root': { height: TOP_BAR_HEIGHT, fontSize: 12 } }} />
                 {/*
                     No Tooltip on purpose: the Select already SHOWS its value ('Manual', 'Every 5s'), so the
                     hint was redundant — and when it opened, the tooltip floated OVER the menu and hid the
@@ -306,7 +313,7 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 */}
                 <Select size='small' value={data.autoRefresh} aria-label='Auto refresh'
                         onChange={e => { data.autoRefresh = Number(e.target.value); repintar() }}
-                        sx={{ minWidth: 104, '& .MuiSelect-select': { py: 0.5, fontSize: '0.8rem' } }}>
+                        sx={{ minWidth: 104, height: TOP_BAR_HEIGHT, fontSize: 12, '& .MuiSelect-select': { py: 0.5 } }}>
                         <MenuItem value={0}>Manual</MenuItem>
                         <MenuItem value={5}>Every 5s</MenuItem>
                         <MenuItem value={15}>Every 15s</MenuItem>
@@ -318,28 +325,15 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 </Tooltip>
             </Stack>
 
-            {/* That the snapshot is of one instant is said, not implied. One snapshot is of ALL the tabs. */}
-            <Typography variant='caption' color='text.secondary' sx={{ mb: 1 }}>
-                Snapshot taken at {new Date(inventory.takenAt).toLocaleTimeString()}
-                {data.autoRefresh ? ` — refreshing every ${data.autoRefresh}s while this tab is open` : ' — it does not refresh on its own'}.
-                {' '}Delivered counts since each component started; the rate is measured against your previous snapshot.
-            </Typography>
-
-            <Tabs value={vista} onChange={(_e, v: EStatusTab) => setVista(v)} sx={{ minHeight: 36, mb: 1, borderBottom: 1, borderColor: 'divider' }}>
-                <Tab value={EStatusTab.PROVIDERS} label='Providers' sx={{ minHeight: 36, py: 0 }} />
-                <Tab value={EStatusTab.GRAPH} label='Graph' sx={{ minHeight: 36, py: 0 }} />
-                <Tab value={EStatusTab.PERFORMANCE} label='Performance' sx={{ minHeight: 36, py: 0 }} />
-                <Tab value={EStatusTab.PLUGINS} label='Plugins' sx={{ minHeight: 36, py: 0 }} />
-                <Tab value={EStatusTab.EXTENSIONS} label='Extensions' sx={{ minHeight: 36, py: 0 }} />
-            </Tabs>
-
-            <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: vista === EStatusTab.GRAPH ? 'hidden' : 'auto', overflowX: 'hidden', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
+            <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: SELF_SCROLLING.has(vista) ? 'hidden' : 'auto', overflowX: 'hidden', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
+                {vista === EStatusTab.HOME && <StatusHomeTab inventory={inventory} series={data.series} autoRefresh={data.autoRefresh} onOpen={setVista} admin={admin} previousLog={data.previousLog} />}
                 {vista === EStatusTab.GRAPH && <StatusDiagram inventory={inventory} active={activos} autoRefresh={data.autoRefresh} />}
                 {vista === EStatusTab.PROVIDERS && tabla(filasDe(EStatusTab.PROVIDERS), true)}
                 {vista === EStatusTab.EXTENSIONS && tabla(filasDe(EStatusTab.EXTENSIONS), false)}
-                {vista === EStatusTab.PERFORMANCE &&
-                    <PendingTab title='Performance of this Kwirth'
-                        detail="Memory, CPU and event-loop lag of the Kwirth process come in the next version of this plugin." />}
+                {vista === EStatusTab.ROUTES && <StatusRoutesTab routes={inventory.routes} filter={filter} />}
+                {vista === EStatusTab.LOG && <StatusCoreLogTab admin={admin} log={data.coreLog} />}
+                {vista === EStatusTab.PREVIOUS_LOG && <StatusPreviousLogTab admin={admin} read={data.previousLog} />}
+                {vista === EStatusTab.PERFORMANCE && <StatusPerformanceTab inventory={inventory} series={data.series} />}
                 {vista === EStatusTab.PLUGINS &&
                     <PendingTab title='Plugins'
                         detail="This Kwirth's core does not tell channels which plugins are installed yet, so there is nothing true to show here." />}

@@ -1,0 +1,19 @@
+{{- if and .Values.kwirth.persistence.enabled (not .Values.kwirth.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "kwirth.pvcName" . }}
+  labels:
+    {{- include "kwirth.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    {{- toYaml .Values.kwirth.persistence.accessModes | nindent 4 }}
+  {{- with .Values.kwirth.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.kwirth.persistence.size | quote }}
+{{- end }}
