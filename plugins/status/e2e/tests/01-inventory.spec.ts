@@ -63,7 +63,7 @@ const tab = (name: string) => page.getByRole('tab', { name, exact: true })
 
 test('🔴 it opens on Home, with one box per tab', async () => {
     await expect(tab('Home')).toHaveAttribute('aria-selected', 'true')
-    for (const title of ['Providers', 'Graph', 'Performance', 'Plugins', 'Extensions', 'Routes']) {
+    for (const title of ['Providers', 'Graph', 'Performance', 'Plugins', 'Extensions', 'Routes', 'Log', 'Previous log']) {
         await expect(box(title)).toBeVisible()
     }
     // No table on Home: the boxes are the summary, the tables are behind the tabs.
@@ -106,11 +106,20 @@ test('🔴 the boxes are three per row, equal, and fill the whole width', async 
         const r = e.getBoundingClientRect()
         return { top: Math.round(r.top), left: r.left, right: r.right, width: r.width }
     }))
-    expect(cajas.length, 'seven boxes: the six tabs and DCE').toBe(7)
+    expect(cajas.length, 'nine boxes: the eight tabs and DCE').toBe(9)
     const primeraFila = cajas.filter(c => c.top === cajas[0].top)
     expect(primeraFila.length, 'boxes in the first row').toBe(3)
     const anchos = cajas.map(c => c.width)
     expect(Math.max(...anchos) - Math.min(...anchos), 'the boxes are not all the same width').toBeLessThanOrEqual(1)
+    // And down: the same height for every card, and the grid reaching the bottom of the window.
+    const medidas = await page.locator('[aria-label$=" summary"]').evaluateAll(els => els.map(e => {
+        const r = e.getBoundingClientRect()
+        return { height: r.height, bottom: r.bottom }
+    }))
+    const altos = medidas.map(m => m.height)
+    expect(Math.max(...altos) - Math.min(...altos), 'the cards are not all the same height').toBeLessThanOrEqual(1)
+    const fondo = Math.max(...medidas.map(m => m.bottom))
+    expect(page.viewportSize()!.height - fondo, 'the cards do not fill the height available').toBeLessThanOrEqual(80)
     // Full width: the same margin on the right as on the left of the window (the tab strip is no
     // reference — it is only as wide as its tabs).
     const ancho = page.viewportSize()!.width
@@ -290,9 +299,9 @@ test('el filtro deja solo lo que se busca', async () => {
 
 // ── The tabs (v2) ──────────────────────────────────────────────────────────────
 
-test('🔴 the seven tabs, in their order: Home first', async () => {
+test('🔴 the nine tabs, in their order: Home first', async () => {
     const nombres = await page.getByRole('tablist').last().getByRole('tab').allInnerTexts()
-    expect(nombres.map(n => n.trim())).toEqual(['HOME', 'PROVIDERS', 'GRAPH', 'PERFORMANCE', 'PLUGINS', 'EXTENSIONS', 'ROUTES'])
+    expect(nombres.map(n => n.trim())).toEqual(['HOME', 'PROVIDERS', 'GRAPH', 'PERFORMANCE', 'PLUGINS', 'EXTENSIONS', 'ROUTES', 'LOG', 'PREVIOUS LOG'])
 })
 
 test('🔴 the filter is always there, and only ENABLED on the tabs that are lists', async () => {
@@ -446,5 +455,106 @@ test('the Routes box on Home counts exactly what the Routes tab lists', async ()
     const total = (await routeRows()).reduce((n, r) => n + r.methods.length, 0)
     await page.getByRole('tab', { name: 'Home', exact: true }).click()
     await expect(box('Routes')).toContainText(`${total} routes`)
+    await page.getByRole('tab', { name: 'Providers', exact: true }).click()
+})
+
+// ── Log and Previous log (v2, moved from the About dialog) ─────────────────────
+
+interface ICoreLogBody {
+    lines: string[]
+    unavailableReason?: string
+}
+
+interface IPreviousLogBody {
+    restarted: boolean
+    abnormal: boolean
+    restartCount: number
+    lines: string[]
+    unavailableReason?: string
+}
+
+test('🔴 the Log tab asks the core and it answers its contract', async () => {
+    // The e2e user is an admin: it cannot get a 403. The request goes out when the tab is OPENED.
+    const responsePromise = page.waitForResponse(r => r.url().includes('/managekwirth/log'), { timeout: 15000 })
+    await page.getByRole('tab', { name: 'Log', exact: true }).click()
+    const response = await responsePromise
+    expect(response.status()).toBe(200)
+    const body = await response.json() as ICoreLogBody
+    expect(Array.isArray(body.lines)).toBeTruthy()
+    // With no lines there has to be a written reason: an empty viewer is what makes one think there is no log.
+    if (body.lines.length === 0) expect(typeof body.unavailableReason).toBe('string')
+})
+
+test('🔴 the Log tab paints the log and does not leak the ANSI escapes', async () => {
+    const responsePromise = page.waitForResponse(r => r.url().includes('/managekwirth/log'), { timeout: 15000 })
+    await page.locator('button[aria-label="Take a new snapshot"]').click()
+    const body = await (await responsePromise).json() as ICoreLogBody
+
+    /*
+        🔴 SKIPPED, not passed, when there is nothing to paint. A development kwirth runs from source, NOT as
+        a pod, so the core answers with a reason — which the tab has to show, centred like every empty state.
+    */
+    if (body.lines.length === 0) {
+        await expect(page.locator('[aria-label="Log message"]')).toContainText(body.unavailableReason!)
+    }
+    test.skip(body.lines.length === 0, 'this kwirth does not run as a pod: there is no log to paint')
+
+    await expect(page.getByText(new RegExp(`^Last ${body.lines.length} lines of the container running now`))).toBeVisible()
+    // The escape character must not survive to the DOM (looked for by its code point, never by '[36m').
+    const painted = await page.locator('[aria-label="Log lines"] pre').innerText()
+    expect(painted.includes('\x1b'), 'the ANSI escapes are reaching the screen as text').toBeFalsy()
+})
+
+test('🔴 the Previous log tab tells the states apart, as the core says them', async () => {
+    const responsePromise = page.waitForResponse(r => r.url().includes('/managekwirth/previouslog'), { timeout: 15000 })
+    await page.getByRole('tab', { name: 'Previous log', exact: true }).click()
+    await page.locator('button[aria-label="Take a new snapshot"]').click()
+    const response = await responsePromise
+    expect(response.status()).toBe(200)
+    const body = await response.json() as IPreviousLogBody
+    expect(typeof body.restarted).toBe('boolean')
+    expect(typeof body.abnormal).toBe('boolean')
+    expect(Array.isArray(body.lines)).toBeTruthy()
+
+    if (!body.restarted) {
+        // No restart: neither an abnormal exit nor lines, and the tab says so in words.
+        expect(body.abnormal).toBe(false)
+        expect(body.lines.length).toBe(0)
+        await expect(page.locator('[aria-label="Log message"]')).toContainText('No previous log')
+    }
+    else if (body.lines.length === 0) {
+        // Restarted with nothing to show: said centred, with how it ended.
+        await expect(page.locator('[aria-label="Log message"]')).toContainText(`Restarts: ${body.restartCount}`)
+    }
+    else {
+        await expect(page.getByText(new RegExp(`Restarts: ${body.restartCount}`))).toBeVisible()
+        await expect(page.locator('[aria-label="Log lines"]')).toBeVisible()
+    }
+})
+
+test('🔴 the empty states of both log tabs look the SAME: centred across and down', async () => {
+    // Asked for after seeing them differ: one centred in the middle, the other left and at the top.
+    const posicion = async () => page.locator('[aria-label="Log message"]').evaluate(el => {
+        const r = el.getBoundingClientRect()
+        const t = getComputedStyle(el)
+        return { justify: t.justifyContent, align: t.alignItems, textAlign: t.textAlign, height: r.height }
+    })
+    const previa = await page.locator('[aria-label="Log message"]').count() > 0 ? await posicion() : undefined
+    await page.getByRole('tab', { name: 'Log', exact: true }).click()
+    await page.waitForTimeout(1500)
+    const actual = await page.locator('[aria-label="Log message"]').count() > 0 ? await posicion() : undefined
+    test.skip(!previa || !actual, 'one of the two tabs has lines to show: there are not two empty states to compare')
+    expect(actual).toEqual(previa)
+    expect(actual!.justify).toBe('center')
+    expect(actual!.align).toBe('center')
+    await page.getByRole('tab', { name: 'Providers', exact: true }).click()
+})
+
+test('the Home says whether Kwirth restarted, from the same answer the tab shows', async () => {
+    const responsePromise = page.waitForResponse(r => r.url().includes('/managekwirth/previouslog'), { timeout: 15000 })
+    await page.getByRole('tab', { name: 'Home', exact: true }).click()
+    await page.locator('button[aria-label="Take a new snapshot"]').click()
+    const body = await (await responsePromise).json() as IPreviousLogBody
+    await expect(box('Previous log')).toContainText(body.restarted ? `${body.restartCount} restart` : 'No restarts')
     await page.getByRole('tab', { name: 'Providers', exact: true }).click()
 })

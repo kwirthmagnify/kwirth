@@ -108,4 +108,31 @@ export interface IPreviousLogSummary {
     unknown is said as unknown — '—' — never as "no restarts": that would be a claim.
 */
 export const previousSummary = (admin: boolean, read: IPreviousLogRead | undefined): IPreviousLogSummary => {
-    if (!admin) return { headline: '—', detail: 'only administrators can read the log of the core', abnormal: false 
+    if (!admin) return { headline: '—', detail: 'only administrators can read the log of the core', abnormal: false }
+    if (!read) return { headline: '—', detail: 'checking whether this container has restarted…', abnormal: false }
+    if (read.error || !read.log) return { headline: '—', detail: `the core could not be asked: ${read.error ?? 'no answer'}`, abnormal: false }
+    const log = read.log
+    if (!log.restarted) return { headline: 'No restarts', detail: 'this container has not restarted', abnormal: false }
+    return {
+        headline: `${log.restartCount} restart${log.restartCount === 1 ? '' : 's'}`,
+        detail: log.abnormal
+            ? `the last one ended abnormally (exit code ${log.termination?.exitCode ?? 'unknown'})`
+            : 'the last one ended cleanly',
+        abnormal: log.abnormal
+    }
+}
+
+/*
+    The previous container's log. A failure is kept APART from the answer: turning it into
+    'restarted: false' would claim there was no restart, which is not what anybody knows.
+*/
+export const readPreviousLog = async (clusterUrl: string, accessString: string): Promise<IPreviousLogRead> => {
+    try {
+        const response = await fetch(`${clusterUrl}/managekwirth/previouslog`, authorized(accessString))
+        if (response.ok) return { log: await response.json() as IStatusPreviousLog }
+        return { error: `The core answered HTTP ${response.status}` }
+    }
+    catch (err) {
+        return { error: err instanceof Error ? err.message : String(err) }
+    }
+}

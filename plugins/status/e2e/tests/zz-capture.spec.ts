@@ -39,6 +39,9 @@ test('captura del inventario', async ({ browser }) => {
     await page.waitForTimeout(1500)
 
     const shot = async (name: string) => {
+        // The mouse off the refresh button, or its tooltip ends up in the guide's image.
+        await page.mouse.move(700, 1150)
+        await page.waitForTimeout(600)
         await page.screenshot({ path: path.join(MEDIA, `${CHANNEL}-${name}.png`) })
         console.log(`### capture written: ${path.join(MEDIA, `${CHANNEL}-${name}.png`)}`)
     }
@@ -63,6 +66,11 @@ test('captura del inventario', async ({ browser }) => {
     await page.getByRole('tab', { name: 'Performance', exact: true }).click()
     for (let i = 0; i < 6; i++) await snapshot()
     await shot('performance')
+
+    // Routes: every published HTTP route, one line per path with its methods.
+    await page.getByRole('tab', { name: 'Routes', exact: true }).click()
+    await page.waitForTimeout(800)
+    await shot('routes')
 
     await page.goto('about:blank').catch(() => {})
     await page.context().close().catch(() => {})

@@ -130,16 +130,20 @@ Everything under [How much kwirth writes to its log](02-initial-config#how-much-
 decides **what** kwirth writes. This is where you read it, without leaving kwirth for a `kubectl logs` —
 which is exactly what you do not have at hand when something is going wrong inside the cluster.
 
-**About kwirth…** → **Core log** shows the last **1000 lines** the running container has written, with the
-colour kwirth put there: the timestamp in grey, the component in violet, and the level in its own colour —
-cyan for `INFO`, yellow for `WARN`, red for `ERRO`, green for `TRCE`. **Refresh** re-reads it; the dialog
-does not follow the log by itself, so what you see is a snapshot of the moment you asked for it.
+Open a [Status](../../channels/status.md) channel and go to its **Log** tab. It shows the last **1000 lines**
+the running container has written, with the colour kwirth put there: the timestamp in grey, the component in
+violet, and the level in its own colour — cyan for `INFO`, yellow for `WARN`, red for `ERRO`, green for
+`TRCE`. It is read again with every Status snapshot, so the channel's refresh button — or its auto-refresh —
+brings the latest lines; it does not follow the log by itself.
+
+(It used to live in **About kwirth…** → **Core log**; it moved to Status, which is where an administrator looks
+at how kwirth is doing.)
 
 It is **only for administrators**, for the same reason as the previous container's log below: these are
-kwirth's own internals. The endpoint behind it answers `403` to anybody else.
+kwirth's own internals. The endpoint behind it answers `403` to anybody else, and the tab says so.
 
 ⚠️ **It needs kwirth to be running as a pod.** The lines come from the container's log in Kubernetes, so on
-desktop, on docker or on an ECS task there is nothing to read and the dialog says so rather than showing an
+desktop, on docker or on an ECS task there is nothing to read and the tab says so rather than showing an
 empty box.
 
 ⚠️ **The colour comes from the log itself.** If you turn *Colour the output (ANSI)* off — which is what you
@@ -157,26 +161,27 @@ at its own pod status and, if the container had restarted, it fetches the **last
 container and keeps them **in memory**. Nothing is written to the cluster: each startup reads it again, so
 anything stored would always be older than what is already there.
 
-You get to it from **About kwirth…** → **Previous container log**. Two things are worth knowing about that
-button:
+You get to it from the **Previous log** tab of a [Status](../../channels/status.md) channel (it used to be
+**About kwirth…** → **Previous container log**). Two things are worth knowing about it:
 
 - It is **only for administrators**. That log carries kwirth's own internals — resource names, paths, error
-  traces from extensions — so the button does nothing without the `admin` scope, and the endpoint behind it
+  traces from extensions — so the tab shows nothing without the `admin` scope, and the endpoint behind it
   answers `403` to anybody else.
-- It stays **visible even when it cannot be used**, and the tooltip says why. That matters because there are
-  two different reasons for having nothing to show, and only one of them is worth worrying about:
+- When there is nothing to show, it **says why**. That matters because there are different reasons for
+  having nothing to show, and only one of them is worth worrying about:
 
-  | What the tooltip says | What actually happened |
+  | What the tab says | What actually happened |
   |---|---|
-  | *This container has not restarted…* | Normal. There is no previous container, so there is no log. |
-  | *The previous container ended cleanly* | It restarted, but it was shut down properly (exit code 0). |
-  | *The previous container ended abnormally* | A crash. The log is there, and this is the one to read. |
+  | *No previous log — this container has not restarted* | Normal. There is no previous container, so there is no log. |
+  | *… it ended cleanly* | It restarted, but it was shut down properly (exit code 0). |
+  | *… it ended abnormally* | A crash. The log is there, and this is the one to read. |
+
+  Status's **Home** tab says the same in its **Previous log** card — *No restarts*, *N restarts*, and an
+  *abnormal exit* chip — so a crash is visible without opening anything.
 
 When that last case is detected, kwirth also raises a **notification** on the way in, telling you the exit
-code and pointing at About. You get it **once per restart**, not once per page load: reloading the page does
+code and pointing at Status. You get it **once per restart**, not once per page load: reloading the page does
 not bring it back, and a new one only appears after a new abnormal exit.
-
-![Previous container log](_media/guide/admin-about-previous-log.png)
 
 ⚠️ **This only works when the container restarted inside the same pod** — a crash, an OOM kill, a
 CrashLoopBackOff. After a rollout the pod is a brand new one and the kubelet keeps nothing from the old one,

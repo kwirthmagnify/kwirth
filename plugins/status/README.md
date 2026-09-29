@@ -1,7 +1,8 @@
 # Kwirth Status
 
 A channel for **[Kwirth](https://kwirthmagnify.dev)** that looks inside Kwirth itself: **what is installed,
-how it is doing, who consumes what, and how much it moves.**
+how it is doing, who consumes what, how much it moves, what the process is using, which HTTP routes it
+publishes, and its own log.**
 
 Kwirth knows a lot about your cluster and almost nothing about itself. When a provider does not start, when
 an extension needs a restart, or when something is installed but nothing consumes it, the symptom you see
@@ -12,6 +13,20 @@ rarely looks like the problem. This channel puts that state on a screen — for 
 > Website: **https://kwirthmagnify.dev** · Source: **https://github.com/kwirthmagnify/kwirth**
 
 ## What it shows
+
+Nine tabs, and it opens on the first:
+
+| Tab | What it answers |
+|---|---|
+| **Home** | one card per tab with its figures; click a card to open its tab |
+| **Providers** | each producer of data — providers and pluviders — with its state and why, consumers and deliveries |
+| **Graph** | who consumes whom |
+| **Performance** | the Kwirth process: memory, CPU, event-loop delay and uptime, with charts of the session |
+| **Plugins** | *coming when the core tells channels about plugins* |
+| **Extensions** | senders and webhooks, with their state |
+| **Routes** | every HTTP route published — core API, providers, plugins, webhooks — with its methods, and collisions marked |
+| **Log** | the core's own log (admin only; needs Kwirth running as a pod) |
+| **Previous log** | the log of the previous container after a restart, and how it ended (admin only) |
 
 **The inventory** — every provider, pluvider, sender and webhook this Kwirth has mounted, each with its
 state **and the reason for it**:
@@ -55,7 +70,8 @@ In Kwirth, from the marketplace: **☰ → Extensions → Plugins**, find **Kwir
 https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-status/-/kwirth-plugin-status-<version>.tgz
 ```
 
-No configuration. The inventory is a privileged view: it needs **cluster** scope.
+No configuration. The inventory is a privileged view: it needs **cluster** scope, and the two log tabs
+need **admin**. The Routes tab needs a Kwirth core that lists its routes; with an older one it says so.
 
 ## Development
 

@@ -1,6 +1,6 @@
 # Kwirth Status v2 — Plan
 
-> **ESTADO — VIVO** (2026-09-28). Cuelga de [PRD-v2.md](PRD-v2.md), que manda en el **qué** y el **por qué**.
+> **ESTADO — VIVO** (2026-09-29): S1, S2 y S2b hechos y publicados en `plugin/status@0.3.0`; quedan S3 y S4 (Plugins y el resto de extensiones) y el backlog. Cuelga de [PRD-v2.md](PRD-v2.md), que manda en el **qué** y el **por qué**.
 > Segunda versión tras [PLAN.md](PLAN.md) (cerrado en `plugin/status@0.2.7`).
 >
 > Documento **append-only**: lo que se decide no se borra, se marca. Si algo de aquí contradice lo que ves
@@ -35,7 +35,31 @@ Lo planeado era:
 - Tests (harness + e2e) al día con las pestañas; guía `docs/0.6.31/channels/status.md` y sus capturas.
 - **README dentro del paquete npm** (regla nueva del CL9): el `build.mjs` lo copia a `dist/`.
 
-### S2 — Performance (RF3) · PENDIENTE
+### S2 — Performance (RF3) · ✅ HECHO (2026-09-29, publicado en `plugin/status@0.3.0`)
+
+Cinco cifras del proceso (RSS, heap, CPU, event loop, uptime) en cajas iguales de ancho completo, con icono
+y color, y tres minigráficas de la sesión con recharts del core, del mismo color que su caja. El muestreador
+del event loop solo corre con alguna pestaña abierta, y `cleanup()` lo apaga en las recargas de dev.
+
+### S2b — Home, Routes, Log y Previous log · ✅ HECHO (2026-09-29, `plugin/status@0.3.0`)
+
+Añadido sobre la marcha, a petición del usuario:
+
+- **Home**: una tarjeta por pestaña, tres por fila, misma altura y ocupando todo el espacio; cada una abre
+  su pestaña. Una **DCE** reservada (ver B2).
+- **Routes**: todas las rutas HTTP publicadas, una línea por ruta y dueño con sus métodos, y las
+  **colisiones** marcadas. Exige tocar el core: el `RouteRegistry` que existía (Fase 1a del validador de
+  rutas, sin cablear) se amplía con `record`/`forget`/`listRoutes` y se cablea en **modo solo anotar** en
+  los ~37 puntos donde el core publica una ruta; se expone como `clusterInfo.routes`. Ver B1.
+- **Log** y **Previous log**: el log del core y el del contenedor anterior, que vivían en About. About los
+  pierde y deja de pintar el ASCII art carácter a carácter; el aviso de reinicio remite a Status.
+- La barra superior copia el patrón de Excubitor (26 px; el filtro siempre visible, deshabilitado donde no
+  aplica).
+
+⚠️ Lo que costó: `ConfigApi` declara rutas con un array y `listRoutes()` reventaba entero — Status lo tomaba
+por "este core no lista rutas". Ahora entiende texto, array y RegExp, y cada montaje se lee aparte.
+
+Lo planeado para S2 era:
 
 - Back: foto del proceso en cada refresco (`process.memoryUsage()`, `cpuUsage()` con su delta, retraso del
   event loop con `perf_hooks.monitorEventLoopDelay` solo mientras hay alguien mirando, uptime, versiones).
@@ -57,6 +81,9 @@ Lo planeado era:
 
 | # | Pendiente | Por qué no está hecho |
 |---|---|---|
+| B1 | **Revisar el RECHAZO de colisiones de rutas** (el resto de la Fase 1b del validador) | El usuario eligió *"solo anotar, y en backlog queda revisar el rechazo"*. Hoy el core anota y monta todo; dos dueños en la misma ruta se ven como colisión en Routes, pero ninguno se rechaza. El diseño cerrado del validador (`reserveAndMount` / `tryMountExtension`, rechazo con log) cambiaría el comportamiento: una extensión con un alias repetido dejaría de montarse |
+| B2 | **La tarjeta DCE de la Home está reservada** | Pedida sin contenido: *"añade una en la que añadiremos los DCE"*. Hoy se ve pero no se puede pulsar; su pestaña y sus cifras llegan cuando el tipo `dce` del core lo permita |
+| B3 | **Al desinstalar un provider, sus rutas siguen listándose** | Se hace `forget()` al desinstalar un plugin, no un provider. Express tampoco desmonta: la ruta sigue respondiendo hasta reiniciar, así que listarla no miente — pero conviene decir que es de algo ya desinstalado |
 
 ## Registro de decisiones
 
@@ -67,3 +94,6 @@ Lo planeado era:
 | 2026-09-28 | Pestaña 1 solo providers y pluviders; senders y webhooks, a la 5. |
 | 2026-09-28 | Performance con serie de sesión en el front; nada persistente, nada en segundo plano. |
 | 2026-09-28 | S1 entregado. La v2 no se publica por streams: se hace bbpm al cerrar S4, para no sacar pestañas vacías. |
+| 2026-09-29 | **Se publica antes de S4**, por decisión del usuario, con Home, Performance, Routes y los dos logs: `plugin/status@0.3.0`. Plugins sigue diciendo por qué no tiene datos. |
+| 2026-09-29 | Pestaña **Routes** con cada ruta y su método. El `RouteRegistry` se cablea en **modo solo anotar**: registra y monta como siempre; el rechazo queda en B1. |
+| 2026-09-29 | El log del core y el del contenedor anterior **salen de About** y pasan a Status, en dos pestañas. |

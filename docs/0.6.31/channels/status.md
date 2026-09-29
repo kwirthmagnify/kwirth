@@ -1,9 +1,9 @@
 # Status
-Status channel shows you **what this Kwirth has inside**: every provider, pluvider, sender and webhook it has mounted, what state each one is in, and — the part that matters — **why** it is in that state.
+Status channel shows you **what this Kwirth has inside**: every provider, pluvider, sender and webhook it has mounted, what state each one is in, and — the part that matters — **why** it is in that state. And around that: who consumes whom, how much the Kwirth process is using, every HTTP route it has published, and its own log.
 
 Kwirth knows a great deal about your cluster and almost nothing about itself. When an extension does not work, the symptom you see rarely looks like the cause: a provider nobody consumes is simply absent, an extension waiting for a restart answers `404` on its own routes, and a sender with no configuration looks installed and healthy. This channel puts that state on a screen.
 
-![statusinventory](../_media/ch-images/status-inventory.png ':class=imageclass80')
+![statushome](../_media/ch-images/status-home.png ':class=imageclass80')
 
 ## What for
 With Status channel you can:
@@ -19,7 +19,7 @@ Key features of Status channel:
   - **Real state, not just installed/not installed** — each component is classified and the reason is spelled out in plain words.
   - **A map of who feeds whom** — the same kind of graph the Iter channel draws, applied to Kwirth's own insides.
   - **Sorted by what needs attention** — problems first, healthy components last. You never scroll to find the bad news.
-  - **One tab per question** — providers, the graph, the process's performance, plugins and the rest of the extensions. See [The tabs](#the-tabs).
+  - **One tab per question** — a home with one card per tab, providers, the graph, the process's performance, plugins, the rest of the extensions, the HTTP routes and the core's log. See [The tabs](#the-tabs).
   - **Filter by name or kind** — on the tabs that are lists, type part of a name and only the matches remain.
   - **Zero cost when closed** — no timer, no polling, no background collection. See [Cost](#cost).
   - **No payloads, ever** — it never shows the content of your logs or messages.
@@ -29,22 +29,39 @@ Select the cluster in the resource selector, add a **status** tab and start it. 
 
 ### The tabs
 
-The content is split into five tabs, and it opens on the first one:
+The content is split into nine tabs, and it opens on **Home**:
 
 | Tab | What it answers |
 |---|---|
+| **Home** | the whole of it at a glance: one card per tab with its figures — see [Home](#home) |
 | **Providers** | how is each **producer** of data doing — providers and pluviders, with their state, consumers and deliveries |
 | **Graph** | who consumes whom — see [The graph](#the-graph) |
-| **Performance** | how much the Kwirth **process** itself is using — memory, CPU, event loop. *Coming in the next version.* |
+| **Performance** | how much the Kwirth **process** itself is using — see [Performance](#performance) |
 | **Plugins** | which plugins are installed and what they have running. *Coming when the core tells channels about plugins.* |
 | **Extensions** | the extensions that **do not produce** data — senders and webhooks today, the other kinds next |
+| **Routes** | every HTTP route this Kwirth has published, and who published it — see [Routes](#routes) |
+| **Log** | the core's own log, from the container running now — see [The core's log](#the-cores-log) |
+| **Previous log** | the log of the previous container, when Kwirth has restarted — see [The core's log](#the-cores-log) |
 
 The toolbar above the tabs is shared: the refresh button, the auto-refresh selector and the time of the
-snapshot apply to **all** of them — a snapshot is of the whole Kwirth, not of one tab. The **Filter** box
-only appears on the tabs that are lists. Status remembers the tab you were on when you come back to it.
+snapshot apply to **all** of them — a snapshot is of the whole Kwirth, not of one tab. The **Filter** box is
+always there, and it is **disabled** on the tabs that are not lists (Home, Graph, Performance, the logs) —
+it does not come and go, so nothing next to it moves. Status remembers the tab you were on when you come
+back to it.
 
 A tab whose data this version cannot show says so in words, instead of showing an empty table that could be
 read as *"there is nothing"*.
+
+### Home
+
+Where the channel opens: **one card per tab**, three per row, all the same size and filling the screen. Each
+card gives the figure that tab is about — how many producers and in which states, how many subscriptions, the
+process's memory and CPU, how many routes and whether any collide, whether Kwirth has restarted — and
+**clicking it opens that tab**. It reads the same snapshot the tabs do, so the numbers always match.
+
+The **DCE** card is reserved for a later version: it is shown, but it cannot be pressed.
+
+![statusinventory](../_media/ch-images/status-inventory.png ':class=imageclass80')
 
 ### The Providers table
 
@@ -214,9 +231,81 @@ between them is not measured. When that changes, the lines will be able to speak
 In Manual mode the time under the header will not change while you watch. That is deliberate: press the
 refresh button to take a new one, or pick an interval.
 
+## Performance
+
+How much the **Kwirth process** is using, read by Status's own back end — which runs inside that process.
+
+![statusperformance](../_media/ch-images/status-performance.png ':class=imageclass80')
+
+Five figures on top, each with its own colour and icon:
+
+| Figure | What it is |
+|---|---|
+| **Memory (RSS)** | what the operating system has given the process |
+| **JS heap** | JavaScript memory used / reserved |
+| **CPU** | the share of one core used since the previous snapshot — it can go above 100 %, because Node uses more than one thread |
+| **Event loop delay (p99)** | how late the process answers, with the mean and the maximum below; it is what you feel when Kwirth goes slow |
+| **Uptime** | how long the process has been running, with its pid and Node version |
+
+Below, a small chart per question — memory, CPU, event loop — drawn from the snapshots taken **while the
+channel is running**, in the same colour as their figure. The series lives in your browser and is thrown away
+when you stop the channel: it is a view of the session, not a history. If Kwirth restarts, the series starts
+over — a line joining two different processes would show a drop that happened to neither.
+
+**CPU and the event loop need two snapshots.** The CPU is the difference between two of them, and the
+event-loop delay is measured only while somebody is looking — so the first snapshot shows a dash for both, and
+says why. A dash is not a zero.
+
+Everything here is the whole process: every extension runs inside it, so nothing can be attributed to one of them.
+
+## Routes
+
+Every **HTTP route** this Kwirth has published, **one line per path** with its methods as chips, and who
+published it: the core's own API, a provider's router, a plugin's endpoints, the webhook receiver, the front.
+
+![statusroutes](../_media/ch-images/status-routes.png ':class=imageclass80')
+
+The header counts both **paths** (lines) and **routes** (one per method), and how many each owner published.
+The filter matches a path, an owner, or an exact method — type `delete` and only the lines that answer DELETE
+remain, with all their methods in view.
+
+They are **patterns**, never values: the webhook receiver appears as `/webhook/:provider/:token`, and no
+token, id or secret ever travels with the list.
+
+### Collisions
+
+Two extensions can publish the **same method at the same path** — two providers with the same alias, for
+instance. Express answers with whichever was mounted first, and the other one simply **cannot be reached**,
+with nothing anywhere saying so. Kwirth does not refuse the second one (yet); it records both, and this tab
+marks both lines with a **collision** chip — the Home's Routes card counts them too. That is the thing to fix.
+
+The list comes from the core's route registry. With a core older than it, the tab says the core does not list
+its routes, instead of showing an empty table that would read as *"no routes"*.
+
+## The core's log
+
+The **Log** tab shows the last **1000 lines** the container running now has written, with the colours Kwirth
+put there. It is read when you open the tab and again with every snapshot, so the refresh button and
+auto-refresh bring the latest lines. The **Previous log** tab shows the log of the previous container, when
+Kwirth has restarted — with the restart count, the exit code and whether it ended cleanly or abnormally.
+
+They used to live in **About kwirth…**; both are explained in detail, with what each message means, in
+[Reading the core's own log](../guide/admin/01-deployment#reading-the-cores-own-log) and
+[After an unexpected restart](../guide/admin/01-deployment#after-an-unexpected-restart).
+
+Two things to know:
+
+  - **Only administrators** can read them: the core's log carries its own internals. Without the `admin`
+    scope, both tabs say so.
+  - **They need Kwirth to run as a pod.** On desktop, docker or ECS there is no container log to read, and the
+    tab says why rather than showing an empty box. Every state without lines is said the same way, centred.
+
+The Home's **Previous log** card says *No restarts* or how many there have been, with an **abnormal exit**
+chip when the last one crashed — the one case worth opening the tab for.
+
 ## Cost
 
-**Zero while the tab is closed.** There is no timer, no subscription and no background collection: with the channel closed this plugin does not run a single instruction. When you open it, it reads state that is already in memory and sends one snapshot.
+**Zero while the tab is closed.** There is no timer, no subscription and no background collection: with the channel closed this plugin does not run a single instruction. When you open it, it reads state that is already in memory and sends one snapshot. The only thing that runs over time, the event-loop sampler behind *Performance*, is switched on with the first open tab and off with the last one.
 
 That is a hard requirement, not an optimisation still pending. Kwirth sits in the path of your logs, and a tool that watches it must not slow it down.
 
@@ -227,10 +316,9 @@ That is a hard requirement, not an optimisation still pending. Kwirth sits in th
 
 ## Permissions
 
-The inventory is a privileged view: it lists every extension mounted in the server. Its scope level is **cluster**, so it is not available to users restricted to a namespace.
+The inventory is a privileged view: it lists every extension mounted in the server. Its scope level is **cluster**, so it is not available to users restricted to a namespace. The **Log** and **Previous log** tabs need, on top of that, the **admin** scope.
 
 ## Coming next
 
-  - **Performance** — memory, CPU and event-loop lag of the Kwirth process, with a small series of what you watched while the tab was open.
   - **Plugins** — each installed plugin, the channels it registers and how many instances and connections are live.
   - **All the extensions** — themes, homepages, logins, identity providers, AI toolsets, docs and packs join senders and webhooks on the Extensions tab.

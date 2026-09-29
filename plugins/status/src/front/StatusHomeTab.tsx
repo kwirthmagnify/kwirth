@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Chip, Paper, Stack, Typography, alpha, useTheme } from '@mui/material'
-import { AccountTree, CallSplit, Construction, Hub, Link, RestartAlt, Science, Speed, Terminal } from '@kwirthmagnify/kwirth-common-front/icons'
+import { AccountTree, CallSplit, Construction, Hub, Link, RestartAlt, Science, Speed, Subject } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EComponentHealth, EComponentKind, EStatusRouteOwner, EStatusTab, IStatusInventory } from '../common/StatusTypes'
 import { collisions } from './StatusRoutes'
 import { IPreviousLogRead, previousSummary } from './StatusLog'
@@ -118,7 +118,7 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
     }
 
     return (
-        <Stack spacing={2} sx={{ pb: 2 }}>
+        <Stack spacing={2} sx={{ pb: 2, flex: 1, minHeight: 0 }}>
             <Box>
                 <Stack direction='row' alignItems='center' spacing={1}>
                     <Typography variant='subtitle2'>What this Kwirth has inside</Typography>
@@ -136,7 +136,11 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
                 Three equal columns across the whole width. On narrow screens it drops to two, then one —
                 still equal.
             */}
-            <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' } }}>
+            {/*
+                And down: the grid takes the whole height left, and every row gets the same share ('1fr'),
+                so every card has the same height — never less than its content needs.
+            */}
+            <Box sx={{ display: 'grid', gap: 1.5, flex: 1, minHeight: 0, gridAutoRows: '1fr', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' } }}>
                 <HomeBox tab={EStatusTab.PROVIDERS} title='Providers' icon={<Hub />} color={color.providers} onOpen={onOpen}
                     headline={plural(s.providers.total, 'producer')}
                     detail={`${plural(s.providers.byKind[EComponentKind.PROVIDER], 'provider')} · ${plural(s.providers.byKind[EComponentKind.PLUVIDER], 'pluvider')}`}>
@@ -176,7 +180,8 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
                     {clashes > 0 && <Chip size='small' color='warning' label={plural(clashes, 'collision')} />}
                 </HomeBox>
 
-                <HomeBox tab={EStatusTab.LOG} title='Log' icon={<Terminal />} color={color.log} onOpen={onOpen}
+                {/* The same icon as the log channel ('Subject'): a log reads as a log wherever it is. */}
+                <HomeBox tab={EStatusTab.LOG} title='Log' icon={<Subject />} color={color.log} onOpen={onOpen}
                     headline={admin ? 'Core log' : '—'}
                     detail={admin
                         ? 'the container running now, read live when you open the tab'

@@ -27,11 +27,28 @@ const LogBox: React.FC<ILogBoxProps> = ({ lines }) => (
     </Box>
 )
 
-const NotAdmin: React.FC = () => (
-    <Typography variant='body2' color='text.secondary' sx={{ p: 4, textAlign: 'center' }}>
-        Only administrators can read the log of the core: it carries internal traces. Your access key has no 'admin' scope.
-    </Typography>
+interface ILogMessageProps {
+    title: string
+    detail: string
+    /** A reason something is wrong or missing, painted as a warning; otherwise it is plain information. */
+    warning?: boolean
+}
+
+/*
+    Every state without lines, in BOTH tabs, is said the same way: centred across and down the tab. Two
+    tabs that tell "there is nothing here" differently read as two different kinds of problem.
+*/
+const LogMessage: React.FC<ILogMessageProps> = ({ title, detail, warning }) => (
+    <Stack aria-label='Log message' alignItems='center' justifyContent='center' spacing={1} sx={{ flex: 1, height: '100%', px: 4, textAlign: 'center' }}>
+        <Typography variant='subtitle1' color={warning ? 'warning.main' : 'text.secondary'}>{title}</Typography>
+        <Typography variant='body2' color='text.secondary'>{detail}</Typography>
+    </Stack>
 )
+
+const NOT_ADMIN: ILogMessageProps = {
+    title: 'Only administrators can read the log of the core',
+    detail: "It carries internal traces. Your access key has no 'admin' scope."
+}
 
 interface ICoreLogTabProps {
     admin: boolean
@@ -39,16 +56,16 @@ interface ICoreLogTabProps {
 }
 
 export const StatusCoreLogTab: React.FC<ICoreLogTabProps> = ({ admin, log }) => {
-    if (!admin) return <NotAdmin />
+    if (!admin) return <LogMessage {...NOT_ADMIN} />
+    if (!log) return <LogMessage title='Reading the log…' detail='The last lines of the container running now.' />
+    if (log.unavailableReason) return <LogMessage title='There is no log to show' detail={log.unavailableReason} warning />
+    if (log.lines.length === 0) return <LogMessage title='The log is empty' detail='The container running now has not written any line yet.' />
     return (
         <Stack spacing={1} sx={{ height: '100%', minHeight: 0 }}>
-            {!log && <Typography variant='body2' color='text.secondary'>Reading the log…</Typography>}
-            {log?.unavailableReason && <Typography variant='body2' color='warning.main'>{log.unavailableReason}</Typography>}
-            {log && !log.unavailableReason &&
-                <Typography variant='caption' color='text.secondary'>
-                    Last {log.lines.length} lines of the container running now (at most {CORE_LOG_LINES}). It is read again with every snapshot.
-                </Typography>}
-            {log && log.lines.length > 0 && <LogBox lines={log.lines} />}
+            <Typography variant='caption' color='text.secondary'>
+                Last {log.lines.length} lines of the container running now (at most {CORE_LOG_LINES}). It is read again with every snapshot.
+            </Typography>
+            <LogBox lines={log.lines} />
         </Stack>
     )
 }
@@ -63,18 +80,19 @@ interface IPreviousLogTabProps {
     second is the one that puzzles whoever goes to look: said in words, or it looks as if Kwirth ate it.
 */
 export const StatusPreviousLogTab: React.FC<IPreviousLogTabProps> = ({ admin, read }) => {
-    if (!admin) return <NotAdmin />
-    if (!read) return <Typography variant='body2' color='text.secondary'>Checking whether this container has restarted…</Typography>
-    if (read.error) return <Typography variant='body2' color='warning.main'>The core could not be asked: {read.error}</Typography>
-    const log = read.log!
+    if (!admin) return <LogMessage {...NOT_ADMIN} />
+    if (!read) return <LogMessage title='Checking whether this container has restarted…' detail='The core keeps the previous log in memory since it started.' />
+    if (read.error || !read.log) return <LogMessage title='The core could not be asked' detail={read.error ?? 'No answer.'} warning />
+    const log = read.log
     if (!log.restarted) {
-        return (
-            <Typography variant='body2' color='text.secondary' sx={{ p: 4, textAlign: 'center' }}>
-                This container has not restarted, so there is no previous log. After a rollout the pod is a new one and the kubelet keeps nothing from the old one.
-            </Typography>
-        )
+        return <LogMessage title='No previous log'
+            detail='This container has not restarted. After a rollout the pod is a new one and the kubelet keeps nothing from the old one.' />
     }
     const t = log.termination
+    const how = `Restarts: ${log.restartCount} · exit code ${t?.exitCode ?? 'unknown'}${t?.reason ? ` (${t.reason})` : ''} · ${log.abnormal ? 'it ended abnormally' : 'it ended cleanly'}`
+    // Restarted, but nothing to show: still said centred, with how it ended, like any other empty state.
+    if (log.unavailableReason) return <LogMessage title='The container restarted, but its log is no longer available' detail={`${how}. ${log.unavailableReason}`} warning />
+    if (log.lines.length === 0) return <LogMessage title='The previous container left no log lines' detail={how} warning={log.abnormal} />
     return (
         <Stack spacing={1} sx={{ height: '100%', minHeight: 0 }}>
             <Typography variant='body2'>
@@ -90,11 +108,7 @@ export const StatusPreviousLogTab: React.FC<IPreviousLogTabProps> = ({ admin, re
                 <Typography variant='caption' color='text.secondary'>
                     Ended at {t.finishedAt}{t.startedAt && <>, started at {t.startedAt}</>}
                 </Typography>}
-            {log.unavailableReason &&
-                <Typography variant='body2' color='warning.main'>The container restarted, but its log is no longer available: {log.unavailableReason}</Typography>}
-            {!log.unavailableReason && log.lines.length === 0 &&
-                <Typography variant='body2' color='text.secondary'>The previous container left no log lines.</Typography>}
-            {log.lines.length > 0 && <LogBox lines={log.lines} />}
+            <LogBox lines={log.lines} />
         </Stack>
     )
 }
