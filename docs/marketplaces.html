@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI toolsets — Kwirth</title>
+  <title>Marketplaces — Kwirth</title>
   <link rel="icon" type="image/x-icon" href="_media/favicon.ico">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -137,14 +137,14 @@
     <div class="nav-item"><a href="getting-started.html">Getting Started</a><div class="nav-dropdown"><a href="getting-started.html#prerequisites">Prerequisites</a><a href="getting-started.html#installation">Installation</a><a href="getting-started.html#first-login">First Login</a><a href="getting-started.html#connect-your-first-cluster">Connect a cluster</a><a href="getting-started.html#open-your-first-channel">Open a channel</a></div></div>
     <div class="nav-item"><a href="plugins.html">Plugins</a><div class="nav-dropdown"><a href="plugins.html#what-is-a-plugin">What is a plugin?</a><a href="plugins.html#available-plugins">Available plugins</a><a href="plugins.html#plugin-interface">Plugin interface</a><a href="plugins.html#build-your-own-plugin">Build your own</a></div></div>
     <div class="nav-item"><a href="providers.html">Providers</a><div class="nav-dropdown"><a href="providers.html#what-is-a-provider">What is a provider?</a><a href="providers.html#available-providers">Available providers</a><a href="providers.html#provider-interface">Provider interface</a><a href="providers.html#build-your-own-provider">Build your own</a></div></div>
-    <div class="nav-item"><a href="aitoolsets.html" class="active">AI</a><div class="nav-dropdown"><a href="aitoolsets.html">AI toolsets</a><a href="aitoolsets.html#what-is-an-ai-toolset">What is a toolset?</a><a href="aitoolsets.html#two-axes-not-one">Effect &amp; sensitivity</a><a href="aitoolsets.html#available-toolsets">Available toolsets</a><a href="aitoolsets.html#where-tools-are-switched-on">Where tools are switched on</a><a href="aitoolsets.html#build-your-own-toolset">Build your own</a></div></div>
+    <div class="nav-item"><a href="aitoolsets.html">AI</a><div class="nav-dropdown"><a href="aitoolsets.html">AI toolsets</a><a href="aitoolsets.html#what-is-an-ai-toolset">What is a toolset?</a><a href="aitoolsets.html#two-axes-not-one">Effect &amp; sensitivity</a><a href="aitoolsets.html#available-toolsets">Available toolsets</a><a href="aitoolsets.html#where-tools-are-switched-on">Where tools are switched on</a><a href="aitoolsets.html#build-your-own-toolset">Build your own</a></div></div>
     <div class="nav-item"><a href="dces.html">DCE</a><div class="nav-dropdown"><a href="dces.html#what-is-a-dce">What is a DCE?</a><a href="dces.html#the-rules">The rules</a><a href="dces.html#available-dces">Available DCEs</a><a href="dces.html#build-your-own-dce">Build your own</a></div></div>
     <div class="nav-item"><a href="integration.html#senders">Integration</a><div class="nav-dropdown"><a href="integration.html#senders">Senders</a><a href="integration.html#webhooks">Webhooks</a></div></div>
     <div class="nav-item"><a href="ui.html">UI</a><div class="nav-dropdown"><a href="ui.html#themes">Themes</a><a href="ui.html#homepages">Homepages</a><a href="ui.html#build-theme">Build a theme</a><a href="ui.html#build-homepage">Build a homepage</a></div></div>
     <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
     <div class="nav-item"><a href="security.html">Security</a><div class="nav-dropdown"><a href="idps.html">Identity providers</a><a href="logins.html">Logins</a><a href="security.html#security-model">Security model</a><a href="security.html#authentication">Authentication</a><a href="security.html#single-sign-on-idp">Single Sign-On</a><a href="security.html#access-control-api-keys">API keys</a><a href="security.html#learn-more">Learn more</a></div></div>
     <div class="nav-item"><a href="packages.html#packs">Packages</a><div class="nav-dropdown"><a href="packages.html#packs">Packs</a><a href="packages.html#documentation-packages">Documentation packages</a></div></div>
-    <div class="nav-item"><a href="marketplaces.html">Marketplaces</a><div class="nav-dropdown"><a href="marketplaces.html#how-a-marketplace-works">How they work</a><a href="marketplaces.html#the-public-marketplace">Public marketplace</a><a href="marketplaces.html#private-marketplaces">Private marketplaces</a></div></div>
+    <div class="nav-item"><a href="marketplaces.html" class="active">Marketplaces</a><div class="nav-dropdown"><a href="marketplaces.html#how-a-marketplace-works">How they work</a><a href="marketplaces.html#the-public-marketplace">Public marketplace</a><a href="marketplaces.html#private-marketplaces">Private marketplaces</a></div></div>
     <div class="nav-item"><a href="project.html">Project</a><div class="nav-dropdown"><a href="project.html#origin">Origin</a><a href="project.html#design-principles">Design Principles</a><a href="project.html#technology-stack">Tech Stack</a><a href="project.html#license">License</a><a href="project.html#get-involved">Get Involved</a></div></div>
     <a href="documentation/#/0.6.31/index">Documentation</a>
   </div>
@@ -156,126 +156,56 @@
 
 <div class="container">
   <div class="page-hero">
-    <div class="section-tag">AI toolsets</div>
-    <h1>Kwirth <span class="accent">AI toolsets</span></h1>
-    <p class="lead">An LLM that can only talk is a chatbot. Give it <strong>tools</strong> and it investigates: it lists the pods, describes the one that crashed, reads its logs. AI toolsets are how you install those tools — and, just as important, how you decide which of them a given channel may use.</p>
+    <div class="section-tag">Marketplaces</div>
+    <h1>Where extensions <span class="accent">come from</span></h1>
+    <p class="lead">Kwirth does not ship a fixed set of features — it installs them. A marketplace is the catalogue it installs from: one for the open source extensions anyone can use, and as many of your own as you need for the ones only your organisation should see.</p>
   </div>
 
-  <h2>What is an AI toolset?</h2>
-  <p>A <strong>tool</strong> is a function the model can decide to call — <em>list the pods of a namespace</em>, <em>read the last lines of a log</em>. The model chooses <strong>whether</strong> to call it and <strong>with what arguments</strong>; Kwirth runs it and hands back the result.</p>
-  <p>An <strong>AI toolset</strong> is a packaged, installable group of those tools. It is an extension like any other: an id, a version, a description, installed and removed from its own manager, hot-loaded with no pod restart.</p>
-  <p>Why a group and not individual tools? Because a tool on its own has no useful boundary — <em>delete a pod</em> only makes sense next to <em>list pods</em> and <em>describe pod</em>. Toolsets are <strong>thematic</strong>, and that is what makes them governable: you hand out a theme, not a list of function names. If you ever need to govern one single tool, package a toolset containing exactly that tool — <strong>there is no such thing as a loose tool</strong> in Kwirth.</p>
+  <h2>How a marketplace works</h2>
+  <p>A marketplace is not a server you have to run. It is <strong>one file</strong>: a manifest listing extensions — an id, a name, a version, a description and the URL of the package itself. Kwirth reads that file, shows you what is in it, and downloads a package only when you press install.</p>
+  <p>Two consequences are worth knowing before you set one up.</p>
 
-  <div class="arch-box">  channel (Pinocchio, Censor, yours…)
-       │
-       │  asks the model a question
-       ▼
-  <span class="hl">LLM</span> ──── "I need to look" ────► <span class="hl2">the tools it was GRANTED</span>
-       │                                    │
-       │◄─── result ────────────────────────┘
-       ▼
-  answer with real data
+  <div class="arch-box">  <span class="hl2">your marketplace</span>   ──┐
+  <span class="hl2">another one</span>       ──┼──►  first match by extension id <span class="hl">wins</span>
+  <span class="hl2">public marketplace</span> ──┘        (the public one is always last)
 </div>
 
-  <h2>Two axes, not one</h2>
-  <p>Every tool declares two independent things beyond its name and description. Keeping them apart is how dangerous tools stop being treated as harmless:</p>
+  <p><strong>Your marketplaces take precedence over the public one.</strong> Resolution happens per extension id: the first catalogue in your list that publishes that id is the one that serves it. So you can ship your own build of a public extension, and the clusters that trust your catalogue get yours.</p>
+  <p><strong>Listing and hosting are separate.</strong> The manifest only says where a package lives; it does not hold the package. A public manifest pointing at a private registry is a perfectly normal setup — and the one we recommend, because the manifest then carries no secrets at all.</p>
+  <p>Kwirth reads manifests from the <strong>backend</strong>, not from your browser: a catalogue reachable from the cluster works even if your own machine cannot see it.</p>
 
-  <div class="iface-grid">
-    <div class="iface-row"><div class="iface-name">effect</div><div class="iface-desc"><strong>read</strong> · <strong>write</strong> — whether the tool only observes, or changes something in your cluster.</div></div>
-    <div class="iface-row"><div class="iface-name">sensitivity</div><div class="iface-desc"><strong>public</strong> · <strong>internal</strong> · <strong>secret</strong> — how dangerous the <em>result</em> is, regardless of the effect.</div></div>
-  </div>
+  <h2>The public marketplace</h2>
+  <p>It is already configured — there is nothing to add. It lives in the Kwirth repository itself, one manifest per family of extension, and it is the catalogue every Kwirth falls back to.</p>
+  <p>What is in it today:</p>
 
-  <p style="margin-top:18px;">One axis says <em>what it touches</em>, the other <em>what it reveals</em>, and the real toolsets show how far apart they can be. Deleting a pod is <code>write</code> but <code>public</code>: it changes the cluster and its answer reveals nothing. Reading a ConfigMap is <code>read</code> but <code>secret</code>: it changes nothing and returns raw values — and a ConfigMap is exactly where credentials end up when somebody skips the Secret.</p>
-
-  <h2>Available toolsets</h2>
-  <p>The tools Kwirth has always had, now split so they can be granted separately. Each one declares what it needs from the host, and Kwirth provisions only that: a toolset that does arithmetic never receives a Kubernetes client.</p>
-
-  <div class="cards-grid">
-    <div class="card">
-      <div class="icon">&#x1F4CB;</div>
-      <h3>K8s Inventory</h3>
-      <p>What there is: namespaces, nodes, workloads, services, ingresses, and the ConfigMaps and Secrets a Deployment consumes. All read-only.</p>
-      <span class="badge badge-available">7 tools · available</span>
-    </div>
-    <div class="card">
-      <div class="icon">&#x1F50E;</div>
-      <h3>K8s Describe</h3>
-      <p>What is wrong with one object: <code>describe</code> output and full manifests for pods, controllers, services, ingresses and namespaces, plus rollout history. Where most root causes are found.</p>
-      <span class="badge badge-available">12 tools · available</span>
-    </div>
-    <div class="card">
-      <div class="icon">&#x1F4E1;</div>
-      <h3>K8s Observability</h3>
-      <p>What happened and what the pod said: recent cluster events and container logs.</p>
-      <span class="badge badge-available">3 tools · available</span>
-    </div>
-    <div class="card">
-      <div class="icon">&#x1F4C8;</div>
-      <h3>K8s Metrics</h3>
-      <p>How much it consumes, now and over the recent readings — cluster, node, deployment or namespace.</p>
-      <span class="badge badge-available">7 tools · available</span>
-    </div>
-    <div class="card">
-      <div class="icon">&#x1F510;</div>
-      <h3>K8s Config &amp; Secrets</h3>
-      <p>The configuration a workload really consumes: ConfigMap data, Secret <em>keys</em> and when they changed — never their values — and TLS certificate details.</p>
-      <span class="badge badge-available">3 tools · available</span>
-    </div>
-    <div class="card">
-      <div class="icon">&#x1F9EA;</div>
-      <h3>Playground</h3>
-      <p>Two harmless toy tools. Install it to watch the machinery work end to end before writing your own.</p>
-      <span class="badge badge-dev">2 tools · for trying out</span>
-    </div>
-  </div>
-
-  <h2>Where tools are switched on</h2>
-  <p>Installing a toolset makes it <strong>available</strong>; it does not give it to anybody. Each AI-enabled channel is assigned an <strong>ordered list</strong> of toolsets, and may switch off individual tools inside them:</p>
-
-  <div class="arch-box">  effective tools = (the assigned toolsets, in order) − (the tools switched off)
-                    with the first toolset that provides a name winning it
+  <div class="arch-box">  <span class="hl2">14</span> plugins      log · metrics · alert · ops · trivy · magnify · topology · fileman
+                censor · pinocchio · mirc · news · echo · provider-debug · sender-debug
+  <span class="hl2"> 9</span> providers    events · metrics · kafka · opentelemetry · syslog · trivy · http-pull-push …
+  <span class="hl2">10</span> senders      email (SMTP / Resend) · Teams · file · console · tee · regex · timed …
+  <span class="hl2"> 6</span> AI toolsets  inventory · describe · observability · metrics · secrets · ops
+  <span class="hl2"> 6</span> themes       <span class="hl2">4</span> homepages    <span class="hl2">5</span> identity providers    <span class="hl2">3</span> logins
 </div>
 
-  <p style="margin-top:18px;">So a channel with no configuration has <strong>no</strong> tools at all — an AI channel you just installed can reason and write prose, but it cannot see your cluster until you say so. That is the point: capability is granted, never assumed.</p>
+  <p>Every entry keeps its <strong>older versions</strong> in the manifest too, so installing is not limited to whatever happens to be newest: the extension manager lets you pick the version, and updating is installing on top without losing the extension's configuration.</p>
 
-  <p><strong>The order is configuration, not decoration.</strong> When two toolsets bring the same tool name nothing is renamed — the first one assigned serves it and the other is <em>shadowed</em>. Reordering the list therefore changes <em>which code runs</em>. Every invocation is traced with the toolset that served it, precisely so this is never a guess.</p>
+  <h2>Private marketplaces</h2>
+  <p>You register your own in <strong>Kwirth settings → Marketplaces</strong>: a name, the URL of the manifest, and whether it is consulted at all. That is the whole setup.</p>
+  <p>They exist for two quite different reasons, and both are common:</p>
+  <ul>
+    <li><strong>Extensions you wrote.</strong> A channel that only makes sense inside your company, a provider that reads your own systems, a theme with your brand. They never need to be public to be installable.</li>
+    <li><strong>Extensions you bought.</strong> Commercial extensions are distributed exactly this way — a catalogue you are given access to, served from a registry that checks who you are.</li>
+  </ul>
+  <p>A marketplace can protect <strong>one</strong> thing: reading the manifest. If yours lives in a private GitHub, GitLab or Nexus repository, you tick <em>Manifest needs a token</em>, pick the header that host expects and paste the token. Kwirth stores it encrypted, outside the settings, and the backend is what uses it.</p>
+  <p>Downloading the packages is configured separately, under <strong>Package registries</strong> — which is what lets the recommended setup work: a manifest anyone may read, pointing at packages only your clusters may download.</p>
 
-  <h2>Build your own toolset</h2>
-  <p>A toolset is a small package: a manifest declaring what it needs, and a list of tools with their schema and an <code>execute</code>. Nothing else.</p>
-
-  <div class="code-block"><pre>export const toolset = {
-    id: 'my-toolset',
-    requires: [ECapability.K8S],          // only what you declare is provisioned
-    tools: [
-        {
-            name: 'list_namespaces',
-            description: 'Lists the namespaces of the cluster',
-            effect: EToolEffect.READ,     // observes, changes nothing
-            sensitivity: ESensitivity.PUBLIC,
-            parameters: { /* zod schema the model must fill */ },
-            execute: async (args, host) => {
-                host.trace('list_namespaces', {})          // always available
-                return await host.k8s.coreApi.listNamespace()
-            }
-        }
-    ]
-}</pre></div>
-
-  <p>The Kubernetes clients your tool receives are <strong>the ones Kwirth itself uses</strong> — the same authenticated instances, not new connections. What a toolset does <em>not</em> get is equally deliberate: the service-account token, senders and webhooks stay out. The set can be widened later, but on purpose rather than handed over wholesale.</p>
-
-  <p>Point Kwirth at your build while you develop it, the same way as any other extension:</p>
-
-  <div class="code-block"><pre>{
-  "aitoolsets": {
-    "my-toolset": "../aitoolsets/my-toolset/dist"
-  }
-}</pre></div>
+  <h2>Packs: many extensions, one install</h2>
+  <p>A catalogue can also list a <a href="packages.html#packs">pack</a> — a single entry that brings several extensions at once, with their documentation and their login page if they have one. It is how a product made of four pieces gets installed as one thing, and removed as one thing.</p>
 
   <div class="cta-box">
-    <h2>Ready to build a toolset?</h2>
-    <p>The full reference — the capability table, what each tool receives, packaging and the worked example — is in the documentation.</p>
-    <a class="btn-primary" href="documentation/#/0.6.31/guide/extensions/aitoolsets/index">AI toolset docs &#x2192;</a>
-    <a class="btn-secondary" href="https://github.com/kwirthmagnify/kwirth/tree/master/aitoolsets/k8s-inventory" target="_blank" rel="noopener">Worked example source</a>
+    <h3>The details live in the documentation</h3>
+    <p>Manifest format, the header each host expects, package registries, and how resolution behaves when two catalogues publish the same id.</p>
+    <a class="btn-primary" href="documentation/#/0.6.31/guide/admin/02-initial-config?id=adding-your-own-marketplace">Marketplace docs &#x2192;</a>
+    <a class="btn-secondary" href="https://github.com/kwirthmagnify/kwirth/blob/master/plugins/manifest.json" target="_blank" rel="noopener">See a real manifest</a>
   </div>
 </div>
 
