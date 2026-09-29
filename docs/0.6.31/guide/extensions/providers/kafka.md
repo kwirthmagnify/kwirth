@@ -24,7 +24,7 @@ A Kafka subscription declares one or more **connections**, each with:
 | **groupId** | Consumer group for offset management. |
 | **spaces** | Topic → **space** mapping; each maps a `topic` to a logical space `name`, with an optional `types` whitelist filtering the message payload's `type`. |
 
-Messages are expected to be **JSON**; the `types` filter matches the parsed `type` field. See the reference [Kafka provider](../../providers/reference/kafka) for the exact subscription shape.
+Messages are expected to be **JSON**; the `types` filter matches the parsed `type` field. See the reference [Kafka provider](/0.6.31/providers/reference/kafka) for the exact subscription shape.
 
 ## Notes
 

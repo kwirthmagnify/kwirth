@@ -26,7 +26,7 @@ What you can see in the main kwirth is:
     - **Group**. If your view is 'group' or lower, you can select here what group inside the namespaces you selected you want to work with. In the selector you will see *replica sets*, *stateful sets* and *daemons sets*.
     - **Pod**. If the view is 'pod' or lower, you must select what pod/pods you want to use as source object (from a list made of all the namespaces and groups you selected).
     - **Container**. If the view is 'container', you must decide here what container/containers you want to use as source for the data stream. Available containers are those that live in the pods you selected.
-    - **Channel**. Prior to add a resource to the workspace, you need to specify what kind of information you want to work with. So you must select 'log', 'metrics', 'alert' or whatever channel your kwirth core server have installed. Read information on [channels here](chanels).
+    - **Channel**. Prior to add a resource to the workspace, you need to specify what kind of information you want to work with. So you must select 'log', 'metrics', 'alert' or whatever channel your kwirth core server have installed. Read information on [channels here](channels/index).
   3. The main menu gives you access to several configuration and operation options of your kwirth installation.
 
     ![main menu](./_media/main-menu.png)

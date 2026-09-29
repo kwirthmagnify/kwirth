@@ -23,7 +23,7 @@ http://<kwirth-host>:<port>/otlp/v1/metrics
 http://<kwirth-host>:<port>/otlp/v1/logs
 ```
 
-A subscription declares **spaces**, each mapping a `name` to one or more **signals** (`traces` / `metrics` / `logs`) with an optional **services** filter (by the `service.name` resource attribute). See the reference [OpenTelemetry provider](../../providers/reference/otel).
+A subscription declares **spaces**, each mapping a `name` to one or more **signals** (`traces` / `metrics` / `logs`) with an optional **services** filter (by the `service.name` resource attribute). See the reference [OpenTelemetry provider](/0.6.31/providers/reference/otel).
 
 ## Notes
 

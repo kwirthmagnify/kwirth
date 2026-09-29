@@ -132,7 +132,11 @@ never emits, and the two-layer selection semantics.
 ## Front
 
 `ConfigDialog` registered on `window.__kwirth_providers__['http-pull-push']`, loaded by the provider
-manager's gear ([front/src/components/ProviderManagerDialog.tsx:534](../../front/src/components/ProviderManagerDialog.tsx#L534)).
+manager's gear. ⚠️ El fichero que se citaba aquí, `front/src/components/ProviderManagerDialog.tsx`, **ya no
+existe**: los once gestores se unificaron (ver [extension-managers-ui](../extension-managers-ui/PLAN.md)) y
+hoy quien declara ese global es
+[front/src/components/extensions/ProviderDescriptor.ts:155](../../../front/src/components/extensions/ProviderDescriptor.ts#L155),
+con el diálogo en [ConfigFrontDialog.tsx](../../../front/src/components/extensions/ConfigFrontDialog.tsx).
 
 **Why a custom front and not the generic schema-driven dialog.** The generic one renders a flat form for a
 single object, with field types `string | number | boolean | password` — it cannot represent a list of N
@@ -150,7 +154,7 @@ the generic dialog is out of the question.
 - Fixed dialog size, Cancel on the right, English UI.
 
 > The syslog dialog has the bug we must not repeat: it calls `${backendUrl}/providers/syslog/config`
-> ([SyslogConfigDialog.tsx:33](../../providers/syslog/src/front/SyslogConfigDialog.tsx#L33)) while the
+> ([SyslogConfigDialog.tsx:33](../../../providers/syslog/src/front/SyslogConfigDialog.tsx#L33)) while the
 > endpoint is mounted at `/core/providers/...`. Fixed as part of the provider-contract plan.
 
 ## Docs and release

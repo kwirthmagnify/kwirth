@@ -42,7 +42,6 @@ meses después — que es exactamente lo que pasaba antes de escribir este índi
 | [config-portability](config-portability/PLAN.md) · [PRD](config-portability/PRD.md) | llevarse la configuración de un Kwirth a otro | core, front y las open source con configuración, hechos; quedan Excubitor y Agora, que son la prueba de fuego |
 | [provider-handle](provider-handle/PLAN.md) | lo que el core entrega a un consumidor deja de ser el `IProvider` real: un handle por (canal, instancia) | **en producción lo esencial**: el handle está en el core y el logger de providers cableado y publicado en los 13. Queda H2 a propósito —los diez consumidores que ya pasan por el core se migran cuando se toquen— y, abierto, que `started` significa "router montado" y no "arrancado" |
 | [helm](helm/PLAN.md) | el chart de Helm puesto al día: una única fuente en `deploy/helm/kwirth`, todas las variables que lee el core hoy, imagen pinada, RBAC explícito, persistencia y Postgres, tests | **S1 construido** (chart `0.2.0`, 23 tests unitarios + e2e) y en **gate de QA**. Quedan S2 (guía y README con la URL real del repo, `kwirthmagnify.dev/helm-charts`) y S3 (publicar). Encontrados en 0.1.5: el Secret de usuarios con el nombre de la release (nadie podía entrar salvo con release `kwirth`) y `image: latest`, que en Docker Hub se quedó en abril |
-| [log-settings](log-settings/PLAN.md) | el log del core se configura, y ahora también **se ve desde el front** | **entregado y validado** (2026-09-27): `GET /managekwirth/log` + diálogo *Core log* en el About, con el ANSI interpretado. Queda **solo la captura de la guía**, que no se puede sacar en el dev porque no corre como pod: el spec está escrito y se lanza contra un Kwirth desplegado. ⚠️ el visor solo enseña líneas con Kwirth corriendo como pod |
 
 ## Cerrados
 
@@ -65,6 +64,7 @@ Terminados y en producción. Se consultan para saber **por qué** algo es como e
 | [extension-upgrade](completed/extension-upgrade/PLAN.md) | actualizar una extensión instalando encima, sin desinstalar y sin perder su configuración |
 | [kwirth-status](kwirth-status/PLAN.md) · [PRD](kwirth-status/PRD.md) | una pantalla para echar un ojo a Kwirth por dentro: qué hay montado, cómo está, quién consume a quién y cuánto mueve. ⚠️ **NO está en `completed/`**: su carpeta aloja también la **v2**, que sigue viva |
 | [user-admin-guide](completed/user-admin-guide/USER-ADMIN-GUIDE-PLAN.md) | la guía de usuario y administrador |
+| [log-settings](completed/log-settings/PLAN.md) | el log del core configurable por componente y por id, y el endpoint `GET /managekwirth/log` que lo sirve. El visor se entregó en el `About` y **se mudó al plugin `status`**, a su pestaña *Log*; la configuración se quedó en *Kwirth settings → LOG* |
 
 ## Sin empezar
 

@@ -69,7 +69,7 @@ Channel subsystem started in kwirth 0.3.160. Nowadays, all channels are delivere
 
 It is important to note that **kwirth always includes a basic front React application**, but you can integrate kwirth with your own clients by using kwirth API.
 
-For getting specific information on each channel follow [this link](./list).
+For getting specific information on each channel follow [this link](channels/index).
 
 ## Back channels and front channels: two parts of the same thing
 Starting in kwirth 0.3 and ending in kwirth 0.4, kwirth features are implemented via channels, understanding a channel is an extension to kwirth where capabilities are implemented.

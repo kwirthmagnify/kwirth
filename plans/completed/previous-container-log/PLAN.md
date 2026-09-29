@@ -7,7 +7,7 @@
 > bloqueaba se hizo, y la dependencia está subida en back y front.
 >
 > Lo que sigue a esto no es de este plan: la configuración del **resto** del log del core —qué escribe cada
-> componente y a qué nivel— vive en `plans/log-settings/PLAN.md`.
+> componente y a qué nivel— vive en `plans/completed/log-settings/PLAN.md`.
 
 ## Por qué
 

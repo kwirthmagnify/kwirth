@@ -4,10 +4,16 @@
 > nuevos), 2 specs e2e nuevos (9 casos), guía con dos capturas, histórico de métricas y sus dos PNG.
 > `@kwirthmagnify/kwirth-common` publicado en **0.5.57** y la dependencia subida en back y front.
 >
-> 🟡 **Reabierto para el visor.** El punto pendiente —ver el log del core desde el front— está
-> **entregado y validado** por el usuario el **2026-09-27**, sobre una imagen docker desplegada en el
-> clúster (en el dev no se puede: no corre como pod). Queda **una sola cosa**: la captura de la guía,
-> que necesita ese mismo despliegue. Ver *Pendiente*.
+> ✅ **CERRADO DEL TODO el 2026-09-29**, con el visor entregado, validado y **mudado**. Ver *Pendiente*.
+>
+> El visor se entregó en el `About` el 2026-09-27 y el usuario lo validó sobre una imagen docker
+> desplegada en el clúster. Dos días después **la visualización se movió al plugin `status`**, a su
+> pestaña *Log*: es donde un administrador va a mirar cómo está Kwirth, y el `About` no lo era. **La
+> configuración no se movió** y sigue en *Kwirth settings → LOG*, documentada en la guía de admin.
+>
+> El endpoint del back —`GET /managekwirth/log`, admin-only— **sobrevivió intacto**: lo que cambió es
+> quién lo consume. Es la prueba de que separar «el core sirve el log» de «alguien lo pinta» estaba
+> bien planteado: mover el visor no costó tocar el back.
 
 ## Por qué
 
@@ -74,7 +80,7 @@ bundle de portabilidad, que además lleva lo de las extensiones. Al quitar el pr
 era el **único consumidor de `/core/config-bundle/*` en todo el front**. Se recuperó como diálogo propio
 con su entrada de menú.
 
-## Pendiente
+## Cómo acabó lo que quedaba pendiente
 
 - ✅ **Ver el log del core desde el front** — **ENTREGADO y validado** el 2026-09-27, sobre una imagen
   docker desplegada en el clúster. 🟡 **Queda la captura de la guía** (ver el final de este punto).
@@ -122,11 +128,20 @@ con su entrada de menú.
   2b histórico ✅ · 2c los dos PNG ✅ · 3 QA manual ✅ (el usuario, sobre el clúster) · 4 guía ✅ *sin
   captura* · 5 backlog ✅ · 6 plan ✅ · 7-9 commit y push.
 
-  🟡 **Lo único que queda: la captura.** `capture-about-core-log.spec.ts` está escrito y **no se puede
-  correr en el dev** —no hay líneas que fotografiar—, así que la sección de la guía va **sin imagen**,
-  al revés que su hermana. Se saca apuntando a un Kwirth desplegado:
-  `KWIRTH_E2E_URL=<url> playwright test --config playwright.capture.config.ts capture-about-core-log.spec.ts`
-  y luego se añade `![The core's own log](_media/guide/admin-about-core-log.png)` al final de
-  *Reading the core's own log* en `docs/0.6.31/guide/admin/01-deployment.md`.
+  ✅ **La captura que quedaba pendiente ya no aplica** (2026-09-29). Era la del botón *Core log* del
+  `About`, y ese botón **ya no existe**: la visualización se movió a la pestaña *Log* del plugin
+  `status`. Con ella se fueron sus dos specs —`about-core-log.spec.ts` y el `capture-` — y la sección
+  *Reading the core's own log* de la guía ya apunta a Status.
+
+  Si alguna vez hace falta una imagen de eso, es **del plugin**, no del core, y va a su documentación.
+
+  ⚠️ El aviso sigue valiendo allí igual: el visor **solo enseña líneas con Kwirth corriendo como pod**
+  (`inCluster` solo es `true` en la rama que lee su propio pod), así que tampoco se puede fotografiar
+  desde un dev.
+
+## Hallazgo lateral, fuera del alcance
+
 - **`API Security` junto a `User security`** en el drawer: una con mayúscula y otra sin ella, siendo el
-  mismo tipo de entrada. Señalado y no tocado.
+  mismo tipo de entrada. **No es de este plan** y no se tocó: la cadena llega a **nueve versiones de
+  documentación** y a las capturas que las acompañan, así que arreglarlo es su propio trabajo, no un
+  retoque. Queda escrito aquí para que el día que se haga se sepa desde cuándo se sabía.

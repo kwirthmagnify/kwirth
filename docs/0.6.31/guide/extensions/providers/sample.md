@@ -19,7 +19,7 @@ None for end users — it exists as a **developer scaffold**, not a production d
 ## Notes
 
 - Not meant to run in production; install it only if you're **developing a provider**.
-- See the reference [Providers](../../providers/index) section and its developer API for how to build on it.
+- See the reference [Providers](/0.6.31/providers/index) section and its developer API for how to build on it.
 
 ---
 

@@ -57,7 +57,7 @@ These don't deliver on their own — they **compose or shape** the flow, then pa
 | **[ratelimit](ratelimit)** | **Throttles** delivery to a maximum rate to avoid flooding a destination. | Interval + downstream sender. |
 | **[composite](composite)** | Defines a **complete routing pipeline** as an inline tree of **tee / regex / ref** nodes in a single config. | Pipeline tree (JSON). |
 
-*(Each sender's exhaustive field list lives in the reference [Sender reference](../../senders/reference/index).)*
+*(Each sender's exhaustive field list lives in the reference [Sender reference](/0.6.31/senders/reference/index).)*
 
 ## Managing & configuring senders
 

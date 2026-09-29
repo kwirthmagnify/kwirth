@@ -15,7 +15,7 @@ Why the indirection?
 - **Efficiency** — one stream per provider is fanned out to all subscribers, so load on the source (e.g. the API server) stays low.
 - **Enrichment** — custom providers can inject **external** data (business events, IoT, third-party feeds) into the kwirth ecosystem.
 
-*(For the architecture diagram and the developer API, see the reference [Providers](../../providers/index) section.)*
+*(For the architecture diagram and the developer API, see the reference [Providers](/0.6.31/providers/index) section.)*
 
 ## Built-in providers
 
@@ -42,7 +42,7 @@ Add these from **☰ → Manage extensions → Providers**:
 | **[Trivy](trivy)** | Watches the **Trivy Operator** CRDs and streams vulnerability / config-audit / secret findings. | Backs the **[Trivy](../plugins/trivy)** channel. |
 | **[Sample](sample)** | Reference implementation for **provider developers**. | Starting point for custom providers. |
 
-*(Each provider's exhaustive configuration lives in the reference [Provider reference](../../providers/reference/index).)*
+*(Each provider's exhaustive configuration lives in the reference [Provider reference](/0.6.31/providers/reference/index).)*
 
 ## Managing & configuring providers
 

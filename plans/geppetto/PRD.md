@@ -164,7 +164,7 @@ sincronizan.
 ### 6.2 Modo `json`: el ejemplo como contrato — DECIDIDO: se amplía el inferidor
 
 El usuario pega un **ejemplo de JSON** y Geppetto lo convierte en contrato con
-[`zodFromExample`](common-ai/src/back.ts#L245), el mismo mecanismo que ya usa Censor.
+[`zodFromExample`](../../common-ai/src/back.ts#L245), el mismo mecanismo que ya usa Censor.
 
 Hoy `inferZod` infiere por el primer elemento de cada array y sólo distingue string / number / boolean
 / objeto / array. **No sabe de enums, ni de opcionales, ni de descripciones.** Se amplía en `common-ai`
@@ -512,7 +512,7 @@ de diseño:
 Aquí es donde chocan las dos respuestas — *sólo vivo* y *entregables* — y hay que elegir.
 
 El sender de **Teams** publica una `MessageCard` contra un *incoming webhook*
-([teams/index.ts:46](senders/teams/src/back/index.ts#L46)). Ese formato **no admite adjuntos binarios**:
+([teams/index.ts:46](../../senders/teams/src/back/index.ts#L46)). Ese formato **no admite adjuntos binarios**:
 sólo puede mostrar una imagen si le das una **URL públicamente alcanzable**. Y servir una URL exige
 alojar la imagen en algún sitio durante un tiempo — justo lo que "sólo vivo" dice que no hacemos.
 

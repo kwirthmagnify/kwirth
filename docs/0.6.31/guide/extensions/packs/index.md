@@ -147,7 +147,7 @@ node packs/create-pack.mjs my-pack ./plugins/foo/dist/foo-1.0.0.tgz \
 | `extensionType` | `plugin`, `provider`, `sender`, `theme`, `homepage`, `idp`, `login`, `webhook` or `docs` |
 | `id` | The extension's `id` as declared in its own `package.json` |
 | `tgz` | Filename of the member `.tgz` inside the pack archive |
-| `targetType` | **Documentation only, and required there:** the *type* of the extension the guide documents. A guide's `id` is the id of what it documents, so it repeats across types — the pair identifies it. See [Documentation packages](extensions/docs/index.md). |
+| `targetType` | **Documentation only, and required there:** the *type* of the extension the guide documents. A guide's `id` is the id of what it documents, so it repeats across types — the pair identifies it. See [Documentation packages](../docs/index). |
 
 ## Notes
 
