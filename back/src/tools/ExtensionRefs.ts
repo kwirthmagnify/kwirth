@@ -7,6 +7,7 @@ import { ProviderManager } from './ProviderManager'
 import { SenderManager } from './SenderManager'
 import { WebhookManager } from './WebhookManager'
 import { AiToolsetManager } from './AiToolsetManager'
+import { DceManager } from './DceManager'
 import { IdpManager } from './IdpManager'
 import { combine, pluginInstallConfig, providerInstallConfig, senderConfigs, webhookConfigs, idpInstances, toolsetGrants } from './CoreManagedConfig'
 
@@ -43,6 +44,7 @@ export interface IExtensionRefSources {
     senderManager: SenderManager
     webhookManager: WebhookManager
     aiToolsetManager: AiToolsetManager
+    dceManager: DceManager
     idpManager: IdpManager
     /*
         The LIVE channels. There is not one per installed plugin: only the required ones are
@@ -111,6 +113,12 @@ export const buildExtensionRefs = async (src: IExtensionRefSources): Promise<IEx
     // Toolsets: what travels is their grants. There is no object to ask here either: they are back end only.
     for (const meta of await src.aiToolsetManager.listInstalled()) {
         añadir(EExtensionType.AITOOLSET, meta as IMetaLike, toolsetGrants(src.aiToolsetManager, meta.id))
+    }
+
+    // DCEs: listed, with nothing to export. A DCE has no configuration in V1 (plan: plans/dce/PRD.md,
+    // D3); it is listed all the same, because everything installed is listed.
+    for (const meta of await src.dceManager.listInstalled()) {
+        añadir(EExtensionType.DCE, meta as IMetaLike)
     }
 
     return refs

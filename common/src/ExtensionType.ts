@@ -17,5 +17,9 @@ export enum EExtensionType {
     WEBHOOK = 'webhook',
     // A themed set of tools for the AI models. Back-end only: its front end — the selector and the
     // configuration dialog — is provided by the core and shared by every plugin that uses AI.
-    AITOOLSET = 'aitoolset'
+    AITOOLSET = 'aitoolset',
+    // A dynamic core extension: objects the core instantiates ONCE and hangs off a global, for other
+    // extensions to consume by id. Code shared by several extensions that does not belong in the core
+    // (plan: plans/dce/PRD.md). It produces no data and draws nothing of its own.
+    DCE = 'dce'
 }

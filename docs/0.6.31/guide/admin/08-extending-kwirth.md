@@ -16,6 +16,7 @@ Almost everything in kwirth is an **extension**. Channels, data sources, alert d
 | **Webhooks** | **Inbound HTTP endpoints** that feed external events into kwirth. | [Webhooks](../extensions/webhooks/index) |
 | **Documentation** | **Docsify sites** served by kwirth itself (this guide is one). | [Documentation packages](../extensions/docs/index) |
 | **AI toolsets** | Groups of **tools** an LLM can call from an AI-enabled channel. | [AI toolsets](../extensions/aitoolsets/index) |
+| **DCEs** | **Dynamic core extensions**: shared **objects** kwirth instantiates once and other extensions consume by id — code common to several extensions that does not belong in the core. | [DCEs](../extensions/dces/index) |
 | **Packs** | **Bundles** of multiple extensions installed in one shot. Members cannot be removed individually. | [Packs](../extensions/packs/index) |
 
 Each **individual** extension has its own user + admin manual in [Part III](../extensions/index).
@@ -50,7 +51,9 @@ Every family uses the same manager UI, so once you learn one you know them all:
 > **When an extension needs another one.** Some extensions declare what they **require** (for example a plugin
 > that only works with a given provider) and what they merely **use**. The manager resolves those against what
 > you actually have installed and shows them on the card, so a plugin that will not work until you install its
-> provider says so *before* you wonder why it does nothing.
+> provider says so *before* you wonder why it does nothing. A **DCE** goes one step further: an extension that
+> requires one is **not installed** until the DCE is there, and the DCE **cannot be removed** while somebody
+> requires it — see [DCEs](../extensions/dces/index).
 
 ## Install, configure, remove
 
@@ -152,7 +155,7 @@ Restart the core and it works. A useful distinction while diagnosing: a **404** 
 
 ## Developing your own
 
-This guide covers *using and administering* extensions. If you want to **build** one (a new channel, provider, sender, theme or IdP connector), see the reference developer documentation ([Developing plugins](../../plugins/developing), [providers](../../providers/developing), [senders](../../senders/developing)).
+This guide covers *using and administering* extensions. If you want to **build** one (a new channel, provider, sender, theme, IdP connector or DCE), see the reference developer documentation ([Developing plugins](../../plugins/developing), [providers](../../providers/developing), [senders](../../senders/developing), [DCEs](../extensions/dces/index#writing-your-own)).
 
 ---
 

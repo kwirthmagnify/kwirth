@@ -98,6 +98,8 @@
       * [IRIA K8s Ops](/0.6.31/guide/extensions/aitoolsets/k8s-ops)
       * [IRIA Source Repos](/0.6.31/guide/extensions/aitoolsets/source-repos)
       * [Playground](/0.6.31/guide/extensions/aitoolsets/playground)
+    * [DCEs](/0.6.31/guide/extensions/dces/index)
+      * [Sample](/0.6.31/guide/extensions/dces/sample)
 * [Installation](/0.6.31/installation)
 * [How it works](/0.6.31/how)
 * [Data streaming](/0.6.31/datastreaming)

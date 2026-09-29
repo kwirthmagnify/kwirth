@@ -4,6 +4,8 @@ Although not too exhaustive, this page contains some detail on what has been don
 ## 0.6.31
 Minor but powerful features:
 
+  - **Dynamic core extensions (DCE)**: a new extension type for **objects several extensions share** but that do not belong in the core — a suite's icon set, a client, a cache. Kwirth calls the DCE's factory once, keeps the instance, and any plugin, provider, sender, webhook, theme, homepage, IdP connector or AI toolset gets it with `getDce()`. A consumer declares `dce:<id>:<version>` in `requiresExtension`: it is not installed without its DCE, a DCE in use cannot be removed, and a breaking (major) update is refused while somebody depends on the old one. DCEs load before every other family. Ships with the **Sample** DCE and a scaffold (`tools/create-kwirth-dce.mjs`).
+
   - Pinocchio is now running working with several LLM's through [AI-SDK from Vercel](https://ai-sdk.dev/docs/introduction). It has been tested with OpenRouter, Gemini and Groq. This very first version just audits Kubernetes objects upon creation, but only for information.
   - Improved channel management on front (now added 'cluster' view again).
   - Back channels are now instantiated according to kwirth config (they're on a pre-plugin stated, like providers and front channels). We're ready to start plugin system!!!

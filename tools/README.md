@@ -21,6 +21,7 @@ node tools/create-kwirth-login.mjs --id my-login --name "My Login"
 | `create-kwirth-theme.mjs` | `themes/<id>/` | a palette |
 | `create-kwirth-login.mjs` | `logins/<id>/` | a branded login page — **no TypeScript**, just `login.json` and its images |
 | `create-kwirth-aitoolset.mjs` | `aitoolsets/<id>/` | a package of tools a model can call — back only, no UI at all |
+| `create-kwirth-dce.mjs` | `dces/<id>/` | a dynamic core extension: objects the core instantiates once and other extensions consume by id — back, front or both |
 
 The login one carries the background rule already solved: `background.png` is the one that must fit
 anywhere and the build **fails** if it goes over ~600 KB, while `background-hi.png` is optional and has no

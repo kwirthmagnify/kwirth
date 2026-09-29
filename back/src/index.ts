@@ -25,6 +25,9 @@ import { AiConfigApi } from './api/AiConfigApi'
 import { AiToolsetManager } from './tools/AiToolsetManager'
 import { AiToolsetApi } from './api/AiToolsetApi'
 import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
+import { DceManager } from './tools/DceManager'
+import { DceApi } from './api/DceApi'
+import { findConsumers, IRequirer, setInstalledDceSource } from './tools/ExtensionDeps'
 import { ManageClusterApi } from './api/ManageClusterApi'
 import { AuthorizationManagement } from './tools/AuthorizationManagement'
 import { buildScopeCatalog, validScopeSet } from './tools/ScopeCatalog'
@@ -44,7 +47,7 @@ import { DockerConfigMaps } from './tools/DockerConfigMaps'
 import { NodeConfigMaps } from './tools/NodeConfigMaps'
 import { NodeSecrets } from './tools/NodeSecrets'
 
-import { IUserInfo, IKwirthSettings, EExecutionEnvironment } from '@kwirthmagnify/kwirth-common'
+import { IUserInfo, IKwirthSettings, EExecutionEnvironment, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { EStoreKind, IEnvironmentCapabilities, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType } from './tools/ExecutionEnvironment'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import * as _kwirthCommon from '@kwirthmagnify/kwirth-common'
@@ -213,6 +216,7 @@ let packManager: PackManager | undefined
 let docsManager: DocsManager | undefined
 let aiToolsetManager: AiToolsetManager | undefined
 const licenseManager = new LicenseManager()
+let dceManager: DceManager | undefined
 licenseManager.load()
 
 const registeredProviders = new Map<string, TProviderConstructor>()
@@ -1338,6 +1342,11 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         riRouter.use(`/managecluster`, manageCluster.router)
         if (pluginManager) {
             const onPluginInstalled = async (id: string) => {
+        // The DCE manager is created in prepareRunningInstance(), first of all the managers; here only its API.
+        if (dceManager) {
+            let dceApi = new DceApi(dceManager, apiKeyApi)
+            riRouter.use(`/core/dce`, dceApi.router)
+        }
                 const activeRI = runningInstances.find(r => r.active)
                 if (!activeRI) return
                 const ChannelClass = registeredChannels.get(id)
@@ -1527,11 +1536,11 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let loginExtensionApi = new LoginExtensionApi(loginManager, apiKeyApi)
             riRouter.use(`/core/logins`, loginExtensionApi.router)
         }
-        if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager && docsManager && webhookManager && aiToolsetManager) {
-            let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, apiKeyApi, registeredChannels, registeredProviders })
+        if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager && docsManager && webhookManager && aiToolsetManager && dceManager) {
+            let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, dceManager, apiKeyApi, registeredChannels, registeredProviders })
             riRouter.use(`/core/packs`, packApi.router)
         }
-        if (pluginManager && providerManager && senderManager && webhookManager && aiToolsetManager && idpManager) {
+        if (pluginManager && providerManager && senderManager && webhookManager && aiToolsetManager && dceManager && idpManager) {
             /*
                 Configuration portability. The core gathers its own and asks whoever can answer; what each
                 extension considers its configuration is its own business, and it travels opaque.
@@ -1583,6 +1592,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     }
                 },
                 VERSION
+                    dceManager: dceManager!,
             )
             riRouter.use(`/core/config-bundle`, new ConfigBundleApi(configBundleManager, apiKeyApi).router)
         }
@@ -2077,6 +2087,44 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             aiToolsetManager = new AiToolsetManager(runningInstance.configMaps)
             await aiToolsetManager.init()
             const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
+        /*
+            DCEs go FIRST, before any manager that evaluates extension code (plan: plans/dce/PRD.md, RF6):
+            a consumer's back.js may ask for its DCE at module level, so the instance has to be in the
+            registry before the senders, webhooks, toolsets, providers, IdP connectors and plugins load.
+            Startup is prepareRunningInstance() -> startRunningInstance() -> setUpRoutes(), so this is
+            the earliest point. The dev ones are awaited for the same reason.
+        */
+        if (!dceManager) {
+            dceManager = new DceManager(runningInstance.configMaps, runningInstance.secrets)
+            await dceManager.init()
+            const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
+            if (bundledExtensionsPath) await dceManager.installBundled(bundledExtensionsPath)
+            await dceManager.loadAll()
+            await dceManager.loadDevDces()
+            // From here on, installing an extension that requires a DCE checks it is there (RF8).
+            const manager = dceManager
+            setInstalledDceSource(async () => (await manager.listInstalled()).map(m => ({ id: m.id, version: m.version })))
+            /*
+                Who consumes a DCE: uninstalling one in use and updating one across a major are refused
+                with the list (RF9, RF11). The managers are read on every call, not copied — they do not
+                exist yet at this point, and what is installed changes hot.
+            */
+            manager.setConsumerResolver(async (dceId: string) => {
+                const requirers: IRequirer[] = []
+                const add = (type: EExtensionType, metas: { id: string, requiresExtension?: string[] }[]): void => {
+                    for (const m of metas) requirers.push({ type, id: m.id, requiresExtension: m.requiresExtension })
+                }
+                if (pluginManager) add(EExtensionType.PLUGIN, await pluginManager.listInstalled())
+                if (providerManager) add(EExtensionType.PROVIDER, await providerManager.listInstalled())
+                if (senderManager) add(EExtensionType.SENDER, await senderManager.listInstalled())
+                if (webhookManager) add(EExtensionType.WEBHOOK, await webhookManager.listInstalled())
+                if (themeManager) add(EExtensionType.THEME, await themeManager.listInstalled())
+                if (homepageManager) add(EExtensionType.HOMEPAGE, await homepageManager.listInstalled())
+                if (idpManager) add(EExtensionType.IDP, await idpManager.listInstalledMeta())
+                if (aiToolsetManager) add(EExtensionType.AITOOLSET, await aiToolsetManager.listInstalled())
+                return findConsumers(requirers, EExtensionType.DCE, dceId)
+            })
+        }
             if (bundledExtensionsPath) await aiToolsetManager.installBundled(bundledExtensionsPath)
             await aiToolsetManager.loadAll()
             aiToolsetManager.loadDevAiToolsets()

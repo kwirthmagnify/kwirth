@@ -9,6 +9,7 @@ import { IdpManager } from '../tools/IdpManager'
 import { LoginManager } from '../tools/LoginManager'
 import { DocsManager } from '../tools/DocsManager'
 import { AiToolsetManager } from '../tools/AiToolsetManager'
+import { DceManager } from '../tools/DceManager'
 import { WebhookManager } from '../tools/WebhookManager'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
@@ -36,6 +37,8 @@ interface IPackApiDeps {
     docsManager: DocsManager
     webhookManager: WebhookManager
     aiToolsetManager: AiToolsetManager
+    // For the dependency check only: a member may require a DCE. Packing a DCE itself is S3 of plans/dce/PLAN.md.
+    dceManager: DceManager
     apiKeyApi: ApiKeyApi
     registeredChannels: Map<string, TChannelConstructor>
     registeredProviders: Map<string, TProviderConstructor>
@@ -78,7 +81,7 @@ export class PackApi {
     }
 
     private async installFromTgz(tgzPath: string, installedFrom: string): Promise<IPackMeta> {
-        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, registeredChannels, registeredProviders } = this.deps
+        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, dceManager, registeredChannels, registeredProviders } = this.deps
         const extractDir = path.join(os.tmpdir(), `kwirth-pack-extract-${Date.now()}`)
         fs.mkdirSync(extractDir, { recursive: true })
         try {
@@ -103,7 +106,7 @@ export class PackApi {
             if (await packManager.isInstalled(packId)) throw new Error(`Pack '${packId}' is already installed`)
 
             // check no member extension is already installed (including dev)
-            const [installedPlugins, installedProviders, installedSenders, installedThemes, installedHomepages, installedIdps, installedLogins, installedDocs, installedWebhooks, installedAiToolsets] = await Promise.all([
+            const [installedPlugins, installedProviders, installedSenders, installedThemes, installedHomepages, installedIdps, installedLogins, installedDocs, installedWebhooks, installedAiToolsets, installedDces] = await Promise.all([
                 pluginManager.listInstalled(),
                 providerManager.listInstalled(),
                 senderManager.listInstalled(),
@@ -113,7 +116,8 @@ export class PackApi {
                 loginManager.listInstalled(),
                 docsManager.listInstalled(),
                 webhookManager.listInstalled(),
-                aiToolsetManager.listInstalled()
+                aiToolsetManager.listInstalled(),
+                dceManager.listInstalled()
             ])
 
             for (const ext of extensions) {
@@ -146,7 +150,8 @@ export class PackApi {
                 login:    installedLogins.map(p => ({ id: p.id, version: p.version })),
                 webhook:  installedWebhooks.map(p => ({ id: p.id, version: p.version })),
                 docs:     installedDocs.map(p => ({ id: p.id, version: p.version })),
-                aitoolset: installedAiToolsets.map(p => ({ id: p.id, version: p.version }))
+                aitoolset: installedAiToolsets.map(p => ({ id: p.id, version: p.version })),
+                dce: installedDces.map(p => ({ id: p.id, version: p.version }))
             }
             const allDepErrors: string[] = []
             let packRequiresRestart = false

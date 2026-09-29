@@ -18,7 +18,8 @@ const PUBLIC_FOLDER: Record<EExtensionType, string> = {
     [EExtensionType.PACK]: 'packs',
     [EExtensionType.DOCS]: 'docs',
     [EExtensionType.IDP]: 'idps',
-    [EExtensionType.AITOOLSET]: 'aitoolsets'
+    [EExtensionType.AITOOLSET]: 'aitoolsets',
+    [EExtensionType.DCE]: 'dces'
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000

@@ -31,5 +31,8 @@
     "senderConfigs": {},
     "idps": {},
     "aitoolsets": {},
+    "dces": {
+        "sample": "../dces/sample/dist"
+    },
     "docs": {}
 }

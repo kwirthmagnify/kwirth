@@ -59,6 +59,10 @@ Self-contained docsify sites served directly by kwirth. The `core/kwirth` packag
 
 Packaged groups of **tools** an LLM can call from an AI-enabled channel. Bundled: **K8s Inventory** (what there is), **K8s Describe** (what is wrong with one object), **K8s Observability** (events and logs), **K8s Metrics** (how much it consumes), **K8s Config & Secrets** (the configuration it really uses), **K8s Ops** (the writes), **Source Repos** (the code behind a crash) and **Playground** (toy tools). Installing one makes it **available**, an admin **grants** it to the plugins that may use it, and each channel then picks from what it was granted. A channel with nothing granted has **no** tools at all. → **[AI toolsets manual](aitoolsets/index)**
 
+## [DCEs (dynamic core extensions)](dces/index)
+
+Shared **objects** kwirth instantiates **once** and other extensions consume by id: code common to several extensions that does not belong in the core — a suite's icon set, a client, a cache. A consumer declares `dce:<id>:<version>` in its `requiresExtension`; kwirth refuses to install it without the DCE, and refuses to remove a DCE somebody requires. Bundled: **[Sample](dces/sample)**, a shared counter to see the machinery work. → **[DCEs manual](dces/index)**
+
 ## [Packs (extension bundles)](packs/index)
 
 A single `.tgz` that bundles multiple extensions of any type. Install one pack, get all its members at once. Members installed via a pack cannot be uninstalled individually — uninstall the pack to remove them all. → **[Packs manual](packs/index)**

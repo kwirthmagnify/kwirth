@@ -9,6 +9,7 @@ import zlib from 'zlib'
 import crypto from 'crypto'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
+import { assertDceRequirements } from './ExtensionDeps'
 
 export interface IWebhookMeta {
     id: string
@@ -326,6 +327,8 @@ export class WebhookManager implements IWebhookAccess {
             meta.marketplaceLabel = marketplaceLabel
             meta.requiresRestart = meta.requiresRestart ?? false
             meta.requiresExtension = meta.requiresExtension ?? []
+            // A webhook that requires a DCE is not installed without it (plans/dce/PRD.md, RF8).
+            await assertDceRequirements('Webhook', meta.id, meta.requiresExtension, installedFrom)
             const backJs = fs.readFileSync(backPath, 'utf-8')
 
             const backCompressed = zlib.gzipSync(Buffer.from(backJs, 'utf-8')).toString('base64')
