@@ -190,7 +190,7 @@ export class IdpManager {
                 requiresRestart: pkg.requiresRestart ?? false,
                 requiresExtension: pkg.requiresExtension ?? []
             }
-            // A connector that requires a DCE is not installed without it (plans/dce/PRD.md, RF8).
+            // A connector that requires a DCE is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertDceRequirements('IdP connector', meta.id, meta.requiresExtension, installedFrom)
             const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
             /*

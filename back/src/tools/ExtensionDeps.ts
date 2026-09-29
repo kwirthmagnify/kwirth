@@ -104,6 +104,36 @@ export const consumersBrokenByMajor = (consumers: IDceConsumer[], newVersion: st
 export const describeConsumers = (consumers: IDceConsumer[]): string =>
     consumers.map(c => `${c.type} '${c.id}' (${c.requirement})`).join(', ')
 
+// ── Order inside a pack (PRD RF12) ───────────────────────────────────────────────────────────────────
+
+/** A pack member, seen only through what decides its order. */
+export interface IOrderable {
+    extensionType: EExtensionType
+}
+
+/*
+    A pack may carry a DCE and the extensions that consume it, and a consumer is refused when its DCE is
+    not installed yet. Without reordering, the pack would install or fail depending on the order its
+    members happen to be listed in — and its author has no way of knowing that order matters.
+
+    Only the DCEs move; everything else keeps the order it was written in. Uninstalling is the mirror
+    image: the DCEs go LAST, once the consumers that required them are already gone.
+*/
+const partitionByDce = <T extends IOrderable>(members: T[]): [T[], T[]] => [
+    members.filter(m => m.extensionType === EExtensionType.DCE),
+    members.filter(m => m.extensionType !== EExtensionType.DCE)
+]
+
+export const dcesFirst = <T extends IOrderable>(members: T[]): T[] => {
+    const [dces, rest] = partitionByDce(members)
+    return [...dces, ...rest]
+}
+
+export const dcesLast = <T extends IOrderable>(members: T[]): T[] => {
+    const [dces, rest] = partitionByDce(members)
+    return [...rest, ...dces]
+}
+
 // ── Requirements at install time (PRD RF8) ───────────────────────────────────────────────────────────
 
 /*

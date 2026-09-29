@@ -3,7 +3,7 @@ import { addGetAuthorization } from './AuthorizationManagement'
 
 /*
     The DCEs' front end, loaded ONCE and before any extension that may consume them
-    (plan: plans/dce/PRD.md, RF7).
+    (plan: plans/completed/dce/PRD.md, RF7).
 
     A consumer asks for its DCE with getDce() the moment its script runs, so the instance has to be in
     `window.__kwirth_dce__` BEFORE that script is added to the page. The back end keeps this invariant by

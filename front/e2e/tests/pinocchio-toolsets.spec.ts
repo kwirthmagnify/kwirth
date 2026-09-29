@@ -165,13 +165,32 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
         expect(texto, 'falta get_pod_logs (k8s-observability)').toContain('get_pod_logs')
     })
 
+    /*
+        The invariant is the GRANT, and it is asked of the environment instead of assumed.
+
+        This used to name `times_two` and justify it with "playground is not even installed". The day
+        playground WAS installed — and granted to pinocchio — the test went red while the product was
+        doing exactly the right thing: offering the tools of a toolset somebody had granted. A test that
+        depends on what this particular Kwirth happens to have installed reports its own premise as a bug.
+
+        So the toolsets NOT granted to pinocchio are worked out from the registry, and what is checked is
+        that none of their tools got in. If everything is granted there is nothing to check, and it says
+        so with a skip rather than passing without having tested anything.
+    */
     test('NO ofrece las de los toolsets que no estan a su alcance', async () => {
-        // `delete_pod` belongs to k8s-ops (write): it may be INSTALLED, but the test does not grant it to
-        // itself, and resolution filters by grant. `times_two` belongs to playground, which is not even
-        // installed. Under the old path both showed up, because they came compiled inside the core along
-        // with the rest.
+        const res = await page.request.get(`${acceso.base}/core/aitoolsets/catalog`, { headers: { authorization: acceso.auth } })
+        expect(res.ok(), `no se pudo leer el catalogo de toolsets (${res.status()})`).toBeTruthy()
+        const catalogo = await res.json() as { id: string, tools?: { name: string }[] }[]
+
+        const concedidosAhora = await leerGrants(page.request, acceso)
+        const sinConceder = catalogo.filter(t => !(concedidosAhora[t.id] ?? []).includes(PINOCCHIO))
+        test.skip(sinConceder.length === 0, 'todos los toolsets instalados estan concedidos a pinocchio: no hay nada fuera de alcance que comprobar')
+
         const texto = herramientas.join(' ')
-        expect(texto, 'delete_pod no deberia estar: k8s-ops no esta concedido a pinocchio').not.toContain('delete_pod')
-        expect(texto, 'times_two no deberia estar: playground no esta instalado').not.toContain('times_two')
+        for (const t of sinConceder) {
+            for (const tool of t.tools ?? []) {
+                expect(texto, `'${tool.name}' no deberia estar: el toolset '${t.id}' no esta concedido a ${PINOCCHIO}`).not.toContain(tool.name)
+            }
+        }
     })
 })

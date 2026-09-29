@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { DceManager, dceRegistry, staleDevDces, IDceMeta } from '../../src/tools/DceManager'
-import { assertDceRequirements, consumersBrokenByMajor, findConsumers, majorOf, setInstalledDceSource, IRequirer } from '../../src/tools/ExtensionDeps'
+import { assertDceRequirements, consumersBrokenByMajor, dcesFirst, dcesLast, findConsumers, majorOf, setInstalledDceSource, IRequirer } from '../../src/tools/ExtensionDeps'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { EDceState, EExtensionType, IDceConsumer } from '@kwirthmagnify/kwirth-common'
@@ -11,7 +11,7 @@ import path from 'path'
 import fs from 'fs'
 
 /*
-    Manager of the `dce` type (plan: plans/dce/PLAN.md, S1). What is pinned down here are the type's
+    Manager of the `dce` type (plan: plans/completed/dce/PLAN.md, S1). What is pinned down here are the type's
     own rules: the factory runs ONCE and the instance is shared; a factory that fails leaves a cause
     and tumbles nothing; a DCE in use is not uninstalled; a change of major with consumers on the old
     one is refused; and a consumer is not installed without its DCE.
@@ -220,6 +220,41 @@ test('a change of major breaks only those whose minimum sits on a lower major', 
     assert.equal(majorOf('1.4.2'), 1)
     assert.equal(majorOf(undefined), 0)
     assert.equal(majorOf('garbage'), 0)
+})
+
+// ── RF12: the order inside a pack ──────────────────────────────────────────────────────────────────
+
+test('🔴 a pack installs its DCEs FIRST, whatever order its members are listed in', () => {
+    // Listed the worst possible way: the consumer before the DCE it requires.
+    const members = [
+        { extensionType: EExtensionType.PLUGIN, id: 'consumer' },
+        { extensionType: EExtensionType.THEME, id: 'brand' },
+        { extensionType: EExtensionType.DCE, id: 'icons' },
+        { extensionType: EExtensionType.PROVIDER, id: 'feed' }
+    ]
+    assert.deepEqual(dcesFirst(members).map(m => m.id), ['icons', 'consumer', 'brand', 'feed'])
+    // And uninstalling is the mirror image: the DCE goes once nobody needs it.
+    assert.deepEqual(dcesLast(members).map(m => m.id), ['consumer', 'brand', 'feed', 'icons'])
+})
+
+test('only the DCEs move: everything else keeps the order it was written in', () => {
+    const members = [
+        { extensionType: EExtensionType.SENDER, id: 'a' },
+        { extensionType: EExtensionType.PLUGIN, id: 'b' },
+        { extensionType: EExtensionType.WEBHOOK, id: 'c' }
+    ]
+    assert.deepEqual(dcesFirst(members).map(m => m.id), ['a', 'b', 'c'])
+    assert.deepEqual(dcesLast(members).map(m => m.id), ['a', 'b', 'c'])
+})
+
+test('several DCEs keep their relative order, and an empty pack does not blow up', () => {
+    const members = [
+        { extensionType: EExtensionType.DCE, id: 'first' },
+        { extensionType: EExtensionType.PLUGIN, id: 'p' },
+        { extensionType: EExtensionType.DCE, id: 'second' }
+    ]
+    assert.deepEqual(dcesFirst(members).map(m => m.id), ['first', 'second', 'p'])
+    assert.deepEqual(dcesLast([]), [])
 })
 
 // ── RF8: a consumer is not installed without its DCE ───────────────────────────────────────────────

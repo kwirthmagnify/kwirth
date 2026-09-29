@@ -2,7 +2,7 @@ import { DCE_REGISTRY, EDceState, IDceRegistryEntry, TDceRegistry } from '@kwirt
 import { IExtensionLogger } from './IExtension'
 
 /*
-    The back-end contract of a dynamic core extension (plan: plans/dce/PRD.md).
+    The back-end contract of a dynamic core extension (plan: plans/completed/dce/PRD.md).
 
     A DCE does not export a module for others to import: it exports a FACTORY, and the core calls it
     once. What the factory returns is what is shared — the instance, not the code. Two consumers of the

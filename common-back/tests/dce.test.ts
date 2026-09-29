@@ -1,4 +1,4 @@
-// getDce(): what a consumer gets by id from the registry the core fills (plan: plans/dce/PRD.md, RF4).
+// getDce(): what a consumer gets by id from the registry the core fills (plan: plans/completed/dce/PRD.md, RF4).
 // The rule pinned down here is that it NEVER returns undefined: a missing DCE and a failed one are both
 // errors, each with its own message, because they are fixed in different ways.
 

@@ -1,10 +1,16 @@
 # DCE — dynamic core extension — Plan
 
-> **ESTADO — VIVO** (2026-09-29). Cuelga de [PRD.md](PRD.md), que manda en el **qué** y el **por qué**.
-> Documento **append-only**: lo que se decide no se borra, se marca. Si algo de aquí contradice lo que ves
-> en el producto, gana el producto.
+> **ESTADO — CERRADO** (2026-09-29). Los tres streams públicos entregados y validados: S1 (el tipo en el
+> back), S2 (el front y su gestor) y S3 (packs, scaffold y guía). **S4 no bloquea**: la primera DCE real
+> es `iria-icons`, de pago, y vive en el índice privado — valida el tipo, no lo termina.
+>
+> Cuelga de [PRD.md](PRD.md), que manda en el **qué** y el **por qué**. Documento **append-only**: lo que
+> se decide no se borra, se marca. Si algo de aquí contradice lo que ves en el producto, gana el producto.
 >
 > D9 y D10 **confirmadas** por el usuario el 2026-09-29; el PRD ya las recoge en RF5 y RF11.
+>
+> **Lo que queda vivo está en el backlog**, y nada de ello es del tipo: B1–B4 son V2 por decisión, B5
+> espera al S3 de Status v2, B6 son scaffolds, y B7/B9 son deuda ajena que este plan encontró y anotó.
 
 ## Lo que ya existe y no hay que construir
 
@@ -124,10 +130,15 @@ Lo planeado era:
   que espera; desinstalar bloqueado con el stub instalado, y el diálogo dice quién; actualizar avisa de
   recargar. Capturas de la guía con `capture-managers.spec.ts`.
 
-### S3 — Packs, scaffold de consumidores y guía · PENDIENTE
+### S3 — Packs, scaffold de consumidores y guía · ✅ HECHO (2026-09-29)
 
-**MVP**: un pack con una DCE y su consumidor se instala en orden; un autor tiene guía y scaffold para
-escribir una DCE y para consumirla.
+Entregado, con dos cosas que no estaban en el plan: el **orden inverso al desinstalar** (las DCE las
+últimas, cuando ya no queda quien las requiera) y `DceManager.uninstallFromPack()`, que fuerza la baja
+porque el pack se va entero. El reordenamiento salió a `dcesFirst()`/`dcesLast()` en `ExtensionDeps`
+para poder probarlo: **+3 harness** (564). El `--dce` del scaffold de plugin se validó **construyendo**
+el plugin generado, no solo mirándolo — y menos mal (ver el registro).
+
+Lo planeado era:
 
 - **Packs** (RF12): los tres `switch` de `PackApi`, `dceManager` inyectado, y las DCE **primero** en el
   orden de instalación del pack; `dce: 'dces'` en `TYPE_DIRS` de `create-pack.mjs`.
@@ -163,6 +174,10 @@ Este plan se puede cerrar sin S4: S4 es quien lo valida, no quien lo termina.
 | 2026-09-29 | **Dónde arranca la DCE.** La primera versión la creaba en `setUpRoutes()`, junto a los IdP, creyendo que era lo primero. El orden real es `prepareRunningInstance()` → `startRunningInstance()` → `setUpRoutes()`: senders, webhooks, toolsets y providers cargaban ANTES que la DCE (RF6 roto) y el resolutor de consumidores se cableaba con `dceManager` sin crear, así que desinstalar una DCE en uso devolvía 200. Lo destapó el e2e de RF9, no el harness: el harness no arranca el core. Ahora es lo primero de `prepareRunningInstance()`, y el resolutor se cablea allí mismo con una closure que lee los managers en cada llamada. |
 | 2026-09-29 | S1 cerrado. El tgz de `dces/sample` no se publica hasta S2: sin diálogo no hay desde dónde instalarlo. |
 | 2026-09-29 | **El icono de un canal no puede llevar texto.** El stub devolvía `<span>◎</span>` en `getChannelIcon()`, y el selector de canales construye cada opción con el icono MÁS el nombre: el carácter se convirtió en el nombre accesible y el canal aparecía en la lista como `◎`, sin su id por ninguna parte. Nada parecía roto — la opción estaba ahí — y costó tres corridas del e2e encontrarlo. Un `SvgIcon` no aporta texto, que es por lo que el resto de canales no lo sufren. |
+| 2026-09-29 | **Un scaffold hay que EJECUTARLO, no leerlo.** El `--dce` generaba un `build.mjs` que ni siquiera arrancaba: el escapado de una expresión regular dentro de una plantilla anidada dejaba backticks literales en el fichero emitido. Revisar el generador a ojo no lo habría encontrado; construir el plugin generado, sí. Ahora el filtro de esbuild es fijo (`/^@kwirthmagnify\/kwirth-dce-/`) y decide dentro, así que no hay nada que escapar. |
+| 2026-09-29 | **`aitoolset` está a medias en los packs, y no es de este plan.** El `switch` de "ya instalado" lo contempla, pero los de instalar y desinstalar no: un pack con un aitoolset lo salta en silencio. Se ve al añadir la DCE a esos mismos tres `switch`. Al backlog (B10) — y **corregido después, a petición del usuario**, junto con B11. |
+| 2026-09-29 | 🔴 **Un pack no satisfacía sus propias dependencias.** La validación previa comparaba cada miembro contra lo ya instalado, sin contar lo que el propio pack trae: un pack con una DCE y su consumidor **se rechazaba a sí mismo**, y el mensaje culpaba al consumidor de una dependencia que el pack incluye. Llevaba ahí desde siempre y nadie lo vio porque los packs construidos hasta ahora no tenían miembros que dependieran entre sí; una DCE y su consumidor es justo el caso que lo rompe. Afecta a **todos** los tipos, no solo a `dce`. |
+| 2026-09-29 | 🔴 **Un arreglo puede caer en un camino que no se ejecuta.** El primer intento de B11 estaba en `installBundled()`, que solo corre si existe `BUNDLED_EXTENSIONS_PATH` — y en desarrollo no existe. El harness pasaba (lo llamaba directamente) y el arreglo no servía de nada. Lo destapó el **QA del usuario**, que no vio la línea esperada. El sitio correcto era `loadAll()`, que sí corre en cada arranque, y el test nuevo entra por ahí y **sin** la variable. |
 | 2026-09-29 | **Un e2e no puede elegir el cluster por nombre ni por posición.** Este Kwirth tiene seis clusters conectados y el stub solo está en el local; el primero de la lista dejaba el selector de canales vacío sin error, y la barra de título no sirve de pista porque se renombra con el cluster elegido. El spec prueba cada cluster y se queda con el que ofrece el canal, que además es justo la pregunta que se quiere responder. |
 
 ## Backlog
@@ -178,3 +193,5 @@ Este plan se puede cerrar sin S4: S4 es quien lo valida, no quien lo termina.
 | B7 | Validar `requiresExtension` al instalar cualquier extensión suelta, para **todos** los tipos y no solo para `dce:` | S1 lo introduce por RF8; generalizarlo es un cambio de contrato de los managers que merece su propio QA |
 | B8 | Harness propio para `getDce()` de **common-front** | El paquete no tiene infraestructura de tests, y montarla es abrir un frente nuevo. El código es idéntico al de common-back, que sí tiene sus cuatro casos, y aquí lo cubre el e2e de verdad a través del stub |
 | B9 | **La suite e2e del front arrastra 10 rojos que no son de la DCE** | Estado del entorno (configs de webhooks, `playground` instalado, tamaño del catálogo del marketplace), paquetes docs de plugins desactualizados (pinocchio, 404 en `user/04-triggers`) y preexistentes ya presentes el 2026-09-25. Arreglarlos dentro de este plan sería colar trabajo ajeno en su cierre |
+| B10 | **`aitoolset` no se instala ni se desinstala desde un pack** | Está en el `switch` de "ya instalado" de `PackApi` pero falta en los otros dos, así que un pack que lo lleve lo salta sin decir nada. Descubierto al añadir la DCE a esos mismos `switch`; es un hueco del tipo `aitoolset`, no de este plan |
+| B11 | **El índice de docs sobrevive al directorio extraído** | El índice vive en ConfigMaps y los ficheros en el temporal del sistema. Si se limpia el temporal, el core sigue diciendo "instalado", `installBundled` lo salta por "already installed" y la guía da **404 permanente** — le pasó a la del core el 2026-09-29. Debería reinstalar lo bundled cuando su directorio no está |

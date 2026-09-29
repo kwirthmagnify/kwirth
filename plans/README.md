@@ -28,7 +28,6 @@ meses después — que es exactamente lo que pasaba antes de escribir este índi
 
 | plan | de qué va | qué queda |
 |---|---|---|
-| [dce](dce/PLAN.md) · [PRD](dce/PRD.md) | el tipo `dce`, *dynamic core extension*: objetos instanciados que el core cuelga de un global y que otras extensiones consumen por id; lo común de una suite que no pertenece al core | PRD validado y PLAN escrito (2026-09-29): S1 back, S2 front, S3 packs+guía; S4 (iria-icons) es privado. **S1 y S2 hechos** (2026-09-29): el tipo en el back (`DceManager` arrancando el primero, RF8 en los ocho managers) y en el front (`getDce()` en common-front 0.5.64, gestor `DCEs`, carga en orden en los cuatro cargadores, stub consumidor que demuestra la instancia única). QA validado en ambos. Queda **S3** (packs, `--dce` en el scaffold de plugin) |
 | [kwirth-status v2](kwirth-status/PLAN-v2.md) · [PRD](kwirth-status/PRD-v2.md) | Kwirth Status en nueve pestañas: home, providers, grafo, rendimiento del proceso, plugins, extensiones, rutas HTTP y el log del core | S3–S4 (plugins y el resto de extensiones) y backlog; publicado 0.3.0 |
 | [ai-tools](ai-tools/PLAN.md) | las tools de IA como extensión instalable (`aitoolset`) | S4–S7; las 43 viejas ya retiradas de `common-ai` (2026-09-26) |
 | [icons](icons/PLAN.md) | aligerar el barrel de iconos | los dos que un sender pide por nombre, y el alias `/icons` en 26 `build.mjs` |
@@ -49,6 +48,7 @@ Terminados y en producción. Se consultan para saber **por qué** algo es como e
 
 | plan | entregado |
 |---|---|
+| [dce](completed/dce/PLAN.md) · [PRD](completed/dce/PRD.md) | el tipo `dce`, *dynamic core extension*: objetos que el core instancia **una vez** y otras extensiones consumen por id — lo común de una suite que no pertenece al core. Back, front, gestor, packs y scaffold; el consumidor no se instala sin su DCE y la DCE no se va mientras alguien la use |
 | [previous-container-log](completed/previous-container-log/PLAN.md) | ver en el About el log del contenedor anterior cuando el core reinicia, con las líneas configurables desde los settings |
 | [sso-idp](completed/sso-idp/SSO-IDP-PLAN.md) | el tipo `idp` y seis conectores SSO instalables |
 | [login-extensions](completed/login-extensions/PLAN.md) | el tipo `login`: páginas de acceso con marca y canales limitados, con fondo de alta calidad donde el almacenamiento lo admite |

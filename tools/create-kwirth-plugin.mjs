@@ -21,8 +21,10 @@ prompt and takes the remaining values from the flags (or their defaults).
   --name <text>           
   --publisher <@scope>    
   --description <text>    
-  --icon <MUI name>       
-  --website <url>         
+  --icon <MUI name>
+  --website <url>
+  --dce <id[:version],…>    DCEs this plugin consumes. It leaves the dependency declared and the
+                            build ready to resolve them against the registry (default version 0.1.0)
   --help                    this text
 `)
     process.exit(0)
@@ -42,7 +44,30 @@ const publisher   = flag('publisher') ?? await ask('Publisher name (e.g. @my-sco
 const description = flag('description') ?? await ask('Description', `${name} channel plugin for Kwirth`)
 const icon        = flag('icon') ?? await ask('MUI icon name', 'Extension')
 const website     = flag('website') ?? await ask('Website URL (optional)', '')
+/*
+    The DCEs this plugin consumes (plan: plans/completed/dce/PRD.md).
+
+    Asked for here because getting it right afterwards means touching three places — the dependency in
+    package.json, the mapping in build.mjs and the one in watch.mjs — and forgetting the mapping is the
+    expensive mistake: the plugin BUNDLES the DCE's code, builds its own object, and the single instance
+    the type guarantees quietly becomes two, with nothing failing.
+*/
+const dceRaw      = flag('dce') ?? (interactive ? await ask('DCEs it consumes (id[:version], comma separated; empty for none)', '') : '')
 if (rl) rl.close()
+
+const dces = dceRaw.split(',').map(s => s.trim()).filter(Boolean).map(entry => {
+    const [dceId, version] = entry.split(':')
+    return { id: dceId, version: version || '0.1.0' }
+})
+for (const d of dces) {
+    if (!/^[a-z][a-z0-9-]*$/.test(d.id)) {
+        console.error(`Error: DCE id '${d.id}' must be lowercase kebab-case`)
+        process.exit(1)
+    }
+}
+// What goes into package.json, and the package → registry entry mapping the builds need.
+const requiresExtension = dces.map(d => `"dce:${d.id}:${d.version}"`).join(', ')
+const dceMappings = dces.map(d => `            '@kwirthmagnify/kwirth-dce-${d.id}': '${d.id}',`).join('\n')
 
 if (!id || !/^[a-z][a-z0-9-]*$/.test(id)) {
     console.error('Error: Plugin ID must be lowercase kebab-case (e.g. my-plugin)')
@@ -74,7 +99,7 @@ write('package.json', `{
     "description": "${description}",
     "icon": "${icon}",${websiteLine}
     "requiresRestart": false,
-    "requiresExtension": [],
+    "requiresExtension": [${requiresExtension}],
     "type": "module",
     "scripts": {
         "build": "node build.mjs",
@@ -117,6 +142,39 @@ write('tsconfig.json', `{
     "include": ["src"]
 }
 `)
+
+/*
+    The esbuild plugin that resolves a DCE's package against the REGISTRY instead of bundling it.
+
+    This is the piece that keeps the single instance single: the consumer installs the DCE's package for
+    its TYPES and, at runtime, gets the object kwirth already built. Bundled, it would carry its own copy
+    of the code and build a second object — and nothing would fail, which is what makes it expensive.
+
+    Empty when the plugin consumes no DCE: the scaffold does not leave machinery nobody asked for.
+*/
+const dcePluginSrc = dces.length ? `
+const DCE_PACKAGES = {
+${dceMappings}
+}
+
+const dceGlobal = (registry) => ({
+    name: 'kwirth-dce-globals',
+    setup(build) {
+        // A fixed filter, and the decision inside: every DCE package shares this prefix, so there is no
+        // regex to build per id — and no escaping to get wrong.
+        build.onResolve({ filter: /^@kwirthmagnify\\/kwirth-dce-/ }, (args) => (
+            DCE_PACKAGES[args.path] ? { path: args.path, namespace: 'kwirth-dce' } : undefined
+        ))
+        build.onLoad({ filter: /.*/, namespace: 'kwirth-dce' }, (args) => ({
+            // The instance kwirth built, never a copy of the code.
+            contents: 'const _e = ' + registry + "['" + DCE_PACKAGES[args.path] + "']; module.exports = _e && _e.instance ? _e.instance : {};",
+            loader: 'js',
+        }))
+    },
+})
+` : ''
+const frontPlugins = dces.length ? `[kwirthGlobalsPlugin, dceGlobal('window.__kwirth_dce__')]` : `[kwirthGlobalsPlugin]`
+const backPlugins  = dces.length ? `[kwirthBackGlobalsPlugin, dceGlobal('global.__kwirth_dce__')]` : `[kwirthBackGlobalsPlugin]`
 
 // ─── build.mjs ─────────────────────────────────────────────────────────────
 
@@ -161,7 +219,7 @@ const kwirthBackGlobalsPlugin = {
         }))
     },
 }
-
+${dcePluginSrc}
 // esbuild erases the types without looking at them: without this step the build would pass broken TS.
 // watch.mjs deliberately leaves it out, so that saving stays instantaneous.
 const TSC = 'node_modules/typescript/lib/tsc.js'
@@ -186,7 +244,7 @@ await esbuild.build({
     bundle: true,
     format: 'iife',
     outfile: 'dist/front.js',
-    plugins: [kwirthGlobalsPlugin],
+    plugins: ${frontPlugins},
     loader: { '.tsx': 'tsx', '.ts': 'ts' },
     jsx: 'transform',
     jsxFactory: 'React.createElement',
@@ -203,7 +261,7 @@ await esbuild.build({
     platform: 'node',
     target: 'node20',
     outfile: 'dist/back.js',
-    plugins: [kwirthBackGlobalsPlugin],
+    plugins: ${backPlugins},
     external: ['express'],
     loader: { '.ts': 'ts' },
     minify: false,
@@ -273,7 +331,7 @@ const kwirthBackGlobalsPlugin = {
         }))
     },
 }
-
+${dcePluginSrc}
 fs.mkdirSync('dist', { recursive: true })
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
@@ -289,7 +347,7 @@ const frontCtx = await esbuild.context({
     bundle: true,
     format: 'iife',
     outfile: 'dist/front.js',
-    plugins: [kwirthGlobalsPlugin],
+    plugins: ${frontPlugins},
     loader: { '.tsx': 'tsx', '.ts': 'ts' },
     jsx: 'transform',
     jsxFactory: 'React.createElement',
@@ -305,7 +363,7 @@ const backCtx = await esbuild.context({
     platform: 'node',
     target: 'node20',
     outfile: 'dist/back.js',
-    plugins: [kwirthBackGlobalsPlugin],
+    plugins: ${backPlugins},
     external: ['express'],
     loader: { '.ts': 'ts' },
     minify: false,

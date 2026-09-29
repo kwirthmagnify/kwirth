@@ -6,7 +6,7 @@ import { EDceState, EExtensionType, IDceRegistryEntry } from '@kwirthmagnify/kwi
 import { EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IExtensionVerdict } from './extensionManagerModel'
 
 /*
-    The `dce` type's descriptor (plan: plans/dce/PLAN.md, S2), a client of the generic manager.
+    The `dce` type's descriptor (plan: plans/completed/dce/PLAN.md, S2), a client of the generic manager.
 
     A DCE has NO configuration in this version, so there is no gear here and no dialog of its own: it is
     installed, listed and removed, and that is all the type does. What it does bring that the other

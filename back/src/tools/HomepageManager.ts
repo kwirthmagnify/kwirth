@@ -150,7 +150,7 @@ export class HomepageManager {
                 marketplaceLabel,
             }
 
-            // A homepage that requires a DCE is not installed without it (plans/dce/PRD.md, RF8).
+            // A homepage that requires a DCE is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertDceRequirements('Homepage', meta.id, meta.requiresExtension, installedFrom)
 
             const index = (await this.configMaps.read('kwirth-homepages-index', []) as IHomepageMeta[]) || []

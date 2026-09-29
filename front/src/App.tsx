@@ -347,7 +347,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         setMsgBox(MsgBoxOkError('Kwirth server restart required', restartNotice(extension, action), setMsgBox))
 
     /*
-        The DCEs' own notice: besides the server, the PAGE has to be reloaded (plan: plans/dce/PRD.md,
+        The DCEs' own notice: besides the server, the PAGE has to be reloaded (plan: plans/completed/dce/PRD.md,
         RNF4). A DCE is one object every consumer holds a reference to, and the one this tab loaded stays
         in use until the page is reloaded — so the generic text would be half the truth, and the missing
         half is the one the user is looking at. Installing is not an error either: the DCE is already
@@ -410,7 +410,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     const pluginVersionsRef = useRef<Map<string, number>>(new Map())
 
-    // The DCEs, before anything that may consume them (plan: plans/dce/PRD.md, RF7). The loading itself
+    // The DCEs, before anything that may consume them (plan: plans/completed/dce/PRD.md, RF7). The loading itself
     // lives in tools/DceLoader, because the configuration dialog awaits the very same promise.
     const ensureDces = (): Promise<void> => ensureDcesLoaded(backendUrl, accessString)
 
@@ -2762,7 +2762,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 {/*
                     Installing or removing a DCE invalidates the loader's cache, so the next consumer
                     re-reads what is installed. What it does NOT do is replace the instance whoever is
-                    already running holds — hence the reload notice (plan: plans/dce/PRD.md, RNF4).
+                    already running holds — hence the reload notice (plan: plans/completed/dce/PRD.md, RNF4).
                 */}
                 { showDceManagerDialog && <ExtensionManagerDialog descriptor={makeDceDescriptor()} onClose={() => { resetDceCache(); setShowDceManagerDialog(false) }} onRestartRequired={onDceReloadRequired} /> }
                 { showLoginManagerDialog && <ExtensionManagerDialog descriptor={loginDescriptor} onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }

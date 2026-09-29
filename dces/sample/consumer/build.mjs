@@ -135,7 +135,7 @@ fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
     icon: meta.icon,
     requiresRestart: meta.requiresRestart ?? false,
     // This is what makes the core refuse to install it without its DCE, and refuse to remove the DCE
-    // while it is installed (plan: plans/dce/PRD.md, RF5, RF8, RF9).
+    // while it is installed (plan: plans/completed/dce/PRD.md, RF5, RF8, RF9).
     requiresExtension: meta.requiresExtension ?? [],
 }, null, 2))
 console.log('Wrote dist/package.json')

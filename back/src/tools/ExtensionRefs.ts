@@ -115,7 +115,7 @@ export const buildExtensionRefs = async (src: IExtensionRefSources): Promise<IEx
         añadir(EExtensionType.AITOOLSET, meta as IMetaLike, toolsetGrants(src.aiToolsetManager, meta.id))
     }
 
-    // DCEs: listed, with nothing to export. A DCE has no configuration in V1 (plan: plans/dce/PRD.md,
+    // DCEs: listed, with nothing to export. A DCE has no configuration in V1 (plan: plans/completed/dce/PRD.md,
     // D3); it is listed all the same, because everything installed is listed.
     for (const meta of await src.dceManager.listInstalled()) {
         añadir(EExtensionType.DCE, meta as IMetaLike)

@@ -1,5 +1,5 @@
 /*
-    The `dce` type's shared vocabulary (plan: plans/dce/PRD.md).
+    The `dce` type's shared vocabulary (plan: plans/completed/dce/PRD.md).
 
     A dynamic core extension brings objects, not data: the core calls its factory once and keeps what it
     returns in a registry that hangs off a global — `global.__kwirth_dce__` in the back end,

@@ -32,10 +32,36 @@ test('webhooks: el chip de configs cuenta las que hay, y la URL solo sale en las
     // To begin with, whatever is there: the chip counts configurations, so we start from what exists and
     // check the INCREMENT. That way the test does not depend on a clean environment.
     const chip = dialog.getByText(/^\d+ configs?$/)
+    await dialog.getByRole('button', { name: 'Configure' }).first().click()
+    const cfg = page.getByRole('dialog').filter({ hasText: /^Configure:/ })
+    await expect(cfg).toBeVisible()
+
+    /*
+        ⚠️ ITS OWN LEFTOVERS, FIRST.
+
+        The test is non-destructive and cleans up at the end — but only if it GETS to the end. A run cut
+        short (a timeout, a Ctrl+C) leaves 'e2e-chip-uno' and 'e2e-chip-dos' behind, and from then on the
+        test fails for ever without anything being broken: the initial count already includes them, and
+        creating the same two names again does not raise it. It is exactly what happened, and the failure
+        (expected 6, got 4) points at the counter rather than at the leftovers.
+
+        So it starts by removing its own, which is safe because the prefix is its own and nobody else's.
+    */
+    for (const name of [CFG1, CFG2]) {
+        const previa = cfg.getByText(name, { exact: true })
+        if (await previa.count() > 0) {
+            await previa.first().locator('xpath=ancestor::div[.//button][1]').locator('button').last().click()
+            await expect(cfg.getByText(name, { exact: true })).toHaveCount(0, { timeout: 10000 })
+        }
+    }
+    await cfg.getByRole('button', { name: 'Close', exact: true }).click()
+    await expect(cfg).toHaveCount(0, { timeout: 10000 })
+
+    // Now the starting count is trustworthy: the chip counts configurations, and what is checked is the
+    // INCREMENT, so the test does not depend on how many this Kwirth happens to have.
     const inicial = await chip.count() === 0 ? 0 : Number((await chip.first().textContent())!.replace(/\D/g, ''))
 
     await dialog.getByRole('button', { name: 'Configure' }).first().click()
-    const cfg = page.getByRole('dialog').filter({ hasText: /^Configure:/ })
     await expect(cfg).toBeVisible()
 
     // ── a new configuration, unsaved, has no URL ─────────────────────────────────────────────────────

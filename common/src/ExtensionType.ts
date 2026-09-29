@@ -20,6 +20,6 @@ export enum EExtensionType {
     AITOOLSET = 'aitoolset',
     // A dynamic core extension: objects the core instantiates ONCE and hangs off a global, for other
     // extensions to consume by id. Code shared by several extensions that does not belong in the core
-    // (plan: plans/dce/PRD.md). It produces no data and draws nothing of its own.
+    // (plan: plans/completed/dce/PRD.md). It produces no data and draws nothing of its own.
     DCE = 'dce'
 }

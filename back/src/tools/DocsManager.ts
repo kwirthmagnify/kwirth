@@ -191,6 +191,22 @@ export class DocsManager {
                 logInfo(ELogComponent.CORE, `Bundled docs '${bundleTargetType}/${bundleId}' v${bundleVersion} up to date — skipping`)
                 continue
             }
+            /*
+                ⚠️ THE INDEX SAYS INSTALLED AND THE FILES ARE NOT THERE.
+
+                The index lives in ConfigMaps, which persists, and the extracted files live in the
+                SYSTEM'S TEMPORARY directory, which does not: clean the temp folder and the two stop
+                agreeing. Reinstalling here does not fix it by itself, because install() refuses an id
+                already in the index ('already installed') and that error is swallowed a few lines below
+                as a routine skip — so the guide answers 404 for ever, with nothing saying why.
+
+                The index is the one that is wrong, so its entry is dropped before reinstalling. It is
+                not an uninstall: nothing of the user's is lost, since there is nothing on disk to lose.
+            */
+            if (existing && bundleId && bundleTargetType && !fs.existsSync(destDir)) {
+                logWarning(ELogComponent.CORE, `Bundled docs '${bundleTargetType}/${bundleId}' is in the index but its files are gone (temp cleaned?) — reinstalling`)
+                await this.uninstallFromPack(bundleTargetType, bundleId)
+            }
             try {
                 const meta = await this.install(filePath, 'bundled')
                 logInfo(ELogComponent.CORE, `Bundled docs '${meta.targetType}/${meta.id}' v${meta.version} installed`)
@@ -294,11 +310,49 @@ export class DocsManager {
 
     // On startup, re-downloads all URL-installed docs whose filesystem dir is missing.
     // In k8s /tmp is ephemeral so all URL-installed docs need rehydration after restart.
+    /**
+     * Where the bundled extensions travel. The environment variable in a real deployment; in development
+     * nobody sets it, and the bundle is `bundle/` next to the back end's working directory.
+     *
+     * It is resolved here and not read from the variable alone because of what depended on it: without a
+     * value, `installBundled()` simply never ran, and the bundled documentation could not be restored.
+     */
+    private bundledDocsDir(): string {
+        return process.env.BUNDLED_EXTENSIONS_PATH ?? path.resolve(process.cwd(), 'bundle', 'docs')
+    }
+
+    /*
+        At startup, whatever is in the index but not on disk.
+
+        ⚠️ THE INDEX AND THE FILES LIVE IN DIFFERENT PLACES. The index is in ConfigMaps, which persists;
+        the extracted files are in the SYSTEM'S TEMPORARY directory, which does not. Clean the temp folder
+        and the core goes on saying the guide is installed while every one of its pages answers 404.
+
+        What made it unrecoverable was that BUNDLED documentation fell between two chairs: `rehydrate()`
+        skips it ("installBundled handles it") and `installBundled()` only runs when
+        BUNDLED_EXTENSIONS_PATH is set — which in development it is not. So nobody restored it and nobody
+        said anything. It happened to the core's own guide on 2026-09-29.
+    */
     async loadAll(): Promise<void> {
+        let missingBundled = false
         for (const meta of this.cachedIndex) {
             const destDir = path.join(this.docsPath, meta.targetType, meta.id)
             if (fs.existsSync(destDir)) continue
+            if (meta.installedFrom === 'bundled') {
+                logWarning(ELogComponent.CORE, `Docs '${meta.targetType}/${meta.id}' is bundled and its files are gone (temp cleaned?) — restoring from the bundle`)
+                missingBundled = true
+                continue
+            }
             await this.rehydrate(meta)
         }
+        if (!missingBundled) return
+
+        const dir = this.bundledDocsDir()
+        if (!fs.existsSync(dir)) {
+            // Said out loud rather than left to a 404: the index claims a guide that nobody can serve.
+            logError(ELogComponent.CORE, `Bundled docs are missing from disk and the bundle is not at '${dir}' — their pages will answer 404 until they are reinstalled`)
+            return
+        }
+        await this.installBundled(dir)
     }
 }

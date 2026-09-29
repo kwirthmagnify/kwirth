@@ -1,7 +1,7 @@
 import { DCE_REGISTRY, EDceState, IDceRegistryEntry, TDceRegistry } from '@kwirthmagnify/kwirth-common'
 
 /*
-    The front end's side of a dynamic core extension (plan: plans/dce/PRD.md).
+    The front end's side of a dynamic core extension (plan: plans/completed/dce/PRD.md).
 
     The mirror of `getDce()` in common-back, and deliberately the same shape: a consumer that uses a DCE
     on both ends writes the same line twice, and what changes is only which package it imports from.

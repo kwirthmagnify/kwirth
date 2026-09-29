@@ -17,8 +17,8 @@ tres consecuencias:
 3. Una versión nueva del código común obliga a **republicar todos los consumidores**.
 
 El core ya tiene el mecanismo que resuelve esto para sus propias librerías: publica
-`global.__kwirth_back__` en el back ([back/src/index.ts:121](../../back/src/index.ts#L121)) y
-`window.__kwirth__` en el front ([front/src/index.tsx:69](../../front/src/index.tsx#L69)), y el
+`global.__kwirth_back__` en el back ([back/src/index.ts:121](../../../back/src/index.ts#L121)) y
+`window.__kwirth__` en el front ([front/src/index.tsx:69](../../../front/src/index.tsx#L69)), y el
 plugin de esbuild de cada extensión resuelve `@kwirthmagnify/kwirth-common*` contra esos globales en
 vez de bundlearlo. **Pero solo el core puede poblar esos espacios.** Un tercero no tiene forma de
 colgar nada ahí.
@@ -112,7 +112,7 @@ Tres piezas:
 ### Cómo bundlea el consumidor
 
 El plugin de esbuild que hoy resuelve `@kwirthmagnify/kwirth-common*` contra `__kwirth_back__`
-([plugins/agora/build.mjs:30](../../plugins/agora/build.mjs#L30)) se generaliza: recibe un mapa de
+([plugins/agora/build.mjs:30](../../../plugins/agora/build.mjs#L30)) se generaliza: recibe un mapa de
 **paquete npm → entrada del registro**. El consumidor instala el paquete de la DCE solo por sus
 **tipos**, y en runtime la importación se resuelve contra `__kwirth_dce__['<id>']`. Es el mismo
 patrón que ya evita los 15 MB de `client-node` en cada plugin, aplicado a código de terceros.
@@ -132,7 +132,7 @@ patrón que ya evita los 15 MB de `client-node` en cada plugin, aplicado a códi
 | RF7 | **Orden de carga en el front**: antes de añadir el `<script>` de un consumidor, el core carga y **espera** las DCE que ese consumidor declara. Aplica a los **cuatro cargadores** que corren tras el login, cuando `window.__kwirth__` ya existe: plugins (`loadPluginFront`), diálogos de configuración de providers, senders y webhooks (`ConfigFrontDialog`), themes (`loadThemeFront`) y homepages (`loadHomepageFront`). Los **logins** no pueden consumir una DCE: renderizan antes que el front y con su propio renderer, al que ya sabemos que ni los themes llegan. Los **idps** no tienen front que cargar |
 | RF8 | Instalar un consumidor cuyas DCE no están, o no satisfacen el rango, **se rechaza** con un error visible en la UI que diga qué falta |
 | RF9 | Desinstalar una DCE con consumidores instalados **se bloquea** y la UI dice quiénes son. Es el patrón `usedBy` de las cuentas cloud |
-| RF10 | Kwirth Status lista las DCE con su versión y sus consumidores, como al resto de extensiones. **Depende** del S3 de [Status v2](../kwirth-status/PLAN-v2.md), donde el core expone las extensiones a los canales: se hace cuando aquel llegue, sin prisa, y no bloquea el cierre de este plan |
+| RF10 | Kwirth Status lista las DCE con su versión y sus consumidores, como al resto de extensiones. **Depende** del S3 de [Status v2](../../kwirth-status/PLAN-v2.md), donde el core expone las extensiones a los canales: se hace cuando aquel llegue, sin prisa, y no bloquea el cierre de este plan |
 | RF11 | **Actualizar** una DCE **cambiando de major** (1.x → 2.0) cuando algún consumidor instalado exige un major inferior **se rechaza**, igual que RF9 y con la lista de quién lo impide. La dependencia es versión mínima, así que "salir del rango" solo puede significar romper por major (D10, ajustado desde el PLAN). Sin esto, RF8 valdría solo el día de la instalación |
 | RF12 | En un **pack**, las DCE se instalan **antes** que el resto de sus miembros. Si no, un pack con una DCE y sus consumidores chocaría con RF8 por orden de llegada |
 

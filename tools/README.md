@@ -23,6 +23,12 @@ node tools/create-kwirth-login.mjs --id my-login --name "My Login"
 | `create-kwirth-aitoolset.mjs` | `aitoolsets/<id>/` | a package of tools a model can call — back only, no UI at all |
 | `create-kwirth-dce.mjs` | `dces/<id>/` | a dynamic core extension: objects the core instantiates once and other extensions consume by id — back, front or both |
 
+The plugin one takes `--dce <id[:version],…>` for a plugin that CONSUMES a DCE. It is not a convenience:
+it leaves the dependency declared (`requiresExtension`) **and** the package mapped against the registry in
+`build.mjs` and `watch.mjs`. Without that mapping esbuild bundles the DCE's code, the plugin builds its own
+object, and the single instance the type exists to guarantee silently becomes two — nothing fails, it just
+stops being shared.
+
 The login one carries the background rule already solved: `background.png` is the one that must fit
 anywhere and the build **fails** if it goes over ~600 KB, while `background-hi.png` is optional and has no
 limit — Kwirth uses it wherever the storage allows. Until now a login was created by copying

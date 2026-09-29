@@ -35,6 +35,7 @@ When installed, kwirth:
 | All members must be absent | Prevents silent overwrites and version conflicts |
 | Members inherit `installedFrom: "pack:<id>"` | Enables the pack-ownership badge and the uninstall guard |
 | A pack cannot be installed twice | The pack id must also be absent |
+| **DCEs are installed first, and removed last** | A pack may carry a [DCE](../dces/index) and the extensions that consume it, and a consumer is refused when its DCE is not there yet. Kwirth reorders the members so the author does not have to know that order matters — and on uninstalling it does the opposite, so the DCE goes once nobody needs it |
 
 ## The Packs manager
 

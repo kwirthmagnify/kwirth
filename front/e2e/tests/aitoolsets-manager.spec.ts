@@ -123,9 +123,16 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
         const filters = dialog().getByPlaceholder('Filter…')
         await expect(filters).toHaveCount(2)
 
-        // What the catalogue holds, counted BEFORE filtering: the entries themselves, not the dev wording,
-        // which only exists when a toolset is loaded from kwirth-dev.json.
-        const enCatalogo = dialog().locator('span[aria-label^="Already installed"] button, span[aria-label^="A dev version"] button')
+        /*
+            What the CATALOGUE holds, counted before filtering.
+
+            ⚠️ The tooltips have to be the catalogue's EXACT ones. `aria-label^="A dev version"` also
+            matched the update button of the INSTALLED section ('A dev version is loaded — change it in
+            kwirth-dev.json'), so filtering the installed list made that one disappear — rightly — and
+            the count dropped by one. The test then reported the filter as having eaten the catalogue,
+            with nothing broken. The catalogue's wording is 'A dev version is already loaded'.
+        */
+        const enCatalogo = dialog().locator('span[aria-label^="Already installed"] button, span[aria-label="A dev version is already loaded"] button')
         const antes = await enCatalogo.count()
 
         await filters.first().fill('no-existe-este-toolset')

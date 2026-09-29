@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
 
 /*
-    The `dce` type in the FRONT END (plan: plans/dce/PLAN.md, S2). It needs the dev core with the sample
+    The `dce` type in the FRONT END (plan: plans/completed/dce/PLAN.md, S2). It needs the dev core with the sample
     DCE and its consumer stub loaded (kwirth-dev.json → dces.sample, plugins.dce-consumer).
 
     What it checks is the two things the front end adds to the type:

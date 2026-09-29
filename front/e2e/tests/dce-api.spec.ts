@@ -6,7 +6,7 @@ import os from 'os'
 import path from 'path'
 
 /*
-    The `dce` type through its API (plan: plans/dce/PLAN.md, S1). No UI yet: the manager dialog is S2.
+    The `dce` type through its API (plan: plans/completed/dce/PLAN.md, S1). No UI yet: the manager dialog is S2.
 
     It needs the dev core with the sample DCE loaded (kwirth-dev.json → dces.sample). What is checked
     is the type's own rules, end to end against a real core:
@@ -112,6 +112,69 @@ test.describe('dce: the type through its API', () => {
         expect((await res.json()).error).toMatch(/Theme 'e2e-dce-consumer' cannot be installed: Required dce 'e2e-dce-missing' \(>=1\.0\.0\) is not installed/)
         const themes = await (await api.get('/core/themes', { headers: auth })).json()
         expect(themes.some((t: { id: string }) => t.id === CONSUMER_ID), 'nothing was installed').toBe(false)
+    })
+
+    /*
+        RF12: a pack carries a DCE and a consumer of it, listed in the WORST order — the consumer first.
+
+        Kwirth has to reorder the members, install the DCE before the consumer, and undo it the other way
+        round when the pack is removed. Without that, this very pack would fail to install, and the error
+        would blame the consumer for a dependency the pack itself brings.
+    */
+    test('🔴 RF12: a pack installs its DCE before the consumer that requires it, listed the wrong way round', async () => {
+        const PACK_ID = 'e2e-dce-pack'
+        const packDce = 'e2e-pack-dce'
+        const packConsumer = 'e2e-pack-consumer'
+        const dceTgzName = 'member-dce.tgz'
+        const consumerTgzName = 'member-consumer.tgz'
+
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kwirth-e2e-pack-'))
+        fs.writeFileSync(path.join(dir, dceTgzName), dceTgz(packDce))
+        fs.writeFileSync(path.join(dir, consumerTgzName), themeTgz(packConsumer, [`dce:${packDce}:1.0.0`]))
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({
+            name: `@e2e/${PACK_ID}`, id: PACK_ID, displayName: 'E2E DCE pack', version: '1.0.0',
+            description: 'e2e', extensionType: 'pack'
+        }))
+        // The consumer FIRST: this is the order that only works if kwirth reorders.
+        fs.writeFileSync(path.join(dir, 'pack.json'), JSON.stringify({
+            extensions: [
+                { extensionType: 'theme', id: packConsumer, tgz: consumerTgzName },
+                { extensionType: 'dce', id: packDce, tgz: dceTgzName }
+            ]
+        }))
+        const packTgz = `${dir}.tgz`
+        execFileSync('tar', ['-czf', packTgz, '-C', dir, '.'])
+        const body = fs.readFileSync(packTgz)
+        fs.rmSync(dir, { recursive: true, force: true })
+        fs.rmSync(packTgz, { force: true })
+
+        try {
+            const res = await upload('/core/packs/upload', body)
+            expect(res.status(), await res.text()).toBe(200)
+
+            // Both members are in, and the DCE is loaded — it was installed first.
+            const dces = await (await api.get('/core/dce', { headers: auth })).json()
+            const installedDce = dces.find((d: { id: string }) => d.id === packDce)
+            expect(installedDce, 'the pack did not install its DCE').toBeTruthy()
+            expect(installedDce.back?.state).toBe('loaded')
+            expect(installedDce.installedFrom).toBe(`pack:${PACK_ID}`)
+
+            const themes = await (await api.get('/core/themes', { headers: auth })).json()
+            expect(themes.some((t: { id: string }) => t.id === packConsumer), 'the consumer was refused').toBe(true)
+
+            // And a pack-owned DCE is not removed on its own: the pack owns it.
+            const refused = await api.delete(`/core/dce/${packDce}`, { headers: auth })
+            expect(refused.status(), 'a DCE in use by its own pack was removed').toBe(409)
+        }
+        finally {
+            // Uninstalling the pack takes both, in the opposite order: the DCE goes last.
+            await api.delete(`/core/packs/${PACK_ID}`, { headers: auth }).catch(() => {})
+        }
+
+        const dcesAfter = await (await api.get('/core/dce', { headers: auth })).json()
+        expect(dcesAfter.some((d: { id: string }) => d.id === packDce), 'the pack left its DCE behind').toBe(false)
+        const themesAfter = await (await api.get('/core/themes', { headers: auth })).json()
+        expect(themesAfter.some((t: { id: string }) => t.id === packConsumer), 'the pack left its consumer behind').toBe(false)
     })
 
     test('🔴 RF9: a DCE somebody requires is not uninstalled, and names who; free, it goes', async () => {

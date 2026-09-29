@@ -2088,7 +2088,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstance:IRunningInstance) : Promise<void> => {
     try {
         /*
-            DCEs go FIRST, before any manager that evaluates extension code (plan: plans/dce/PRD.md, RF6):
+            DCEs go FIRST, before any manager that evaluates extension code (plan: plans/completed/dce/PRD.md, RF6):
             a consumer's back.js may ask for its DCE at module level, so the instance has to be in the
             registry before the senders, webhooks, toolsets, providers, IdP connectors and plugins load.
             Startup is prepareRunningInstance() -> startRunningInstance() -> setUpRoutes(), so this is

@@ -149,7 +149,7 @@ export class ThemeManager {
                 requiresRestart: pkg.requiresRestart ?? false,
                 requiresExtension: pkg.requiresExtension ?? []
             }
-            // A theme that requires a DCE is not installed without it (plans/dce/PRD.md, RF8).
+            // A theme that requires a DCE is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertDceRequirements('Theme', meta.id, meta.requiresExtension, installedFrom)
 
             const index = (await this.configMaps.read('kwirth-themes-index', []) as IThemeMeta[]) || []

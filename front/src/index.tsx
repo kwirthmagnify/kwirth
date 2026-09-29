@@ -32,7 +32,7 @@ declare global {
         __kwirth_themes__: Record<string, { displayName: string; getThemeOptions: (mode: 'light' | 'dark') => any }>
         __kwirth_homepages__: Record<string, any>
         /*
-            The DCE registry (plan: plans/dce/PRD.md) and the doorstep its front.js registers on.
+            The DCE registry (plan: plans/completed/dce/PRD.md) and the doorstep its front.js registers on.
 
             Two globals and not one, because they are two different things: `__kwirth_dce_factories__` is
             where a DCE's script LEAVES its factory when it loads, and `__kwirth_dce__` is where the core

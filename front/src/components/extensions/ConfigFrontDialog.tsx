@@ -55,7 +55,7 @@ const ConfigFrontDialog: React.FC<IConfigFrontDialogProps> = ({ extensionId, glo
         if (globals) delete globals[extensionId]
 
         /*
-            The DCEs first (plan: plans/dce/PRD.md, RF7). An extension's own UI may call getDce() while
+            The DCEs first (plan: plans/completed/dce/PRD.md, RF7). An extension's own UI may call getDce() while
             its script is being evaluated, and this dialog is the one path that reaches a front.js
             without going through App's loaders — so it has to await the very same promise they do.
         */

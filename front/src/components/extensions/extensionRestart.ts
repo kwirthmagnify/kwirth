@@ -26,7 +26,7 @@ export enum ERestartAction {
 
 /*
     A DCE that is updated needs the BROWSER reloaded as well, and that is a fourth case rather than a
-    variant of the third (plan: plans/dce/PRD.md, RNF4).
+    variant of the third (plan: plans/completed/dce/PRD.md, RNF4).
 
     The reason is the type's own: a DCE is an object the core instantiates ONCE, and every consumer holds
     a reference to that very object. Restarting the server rebuilds the back end's, but the front end's

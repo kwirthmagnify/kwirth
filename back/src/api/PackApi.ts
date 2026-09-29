@@ -17,7 +17,7 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { ELogComponent, logError, logInfo } from '../tools/Logging'
 import { TChannelConstructor } from '../channels/IChannel'
 import { TProviderConstructor } from '../providers/IProvider'
-import { validateExtensionDeps, IInstalledIndex } from '../tools/ExtensionDeps'
+import { validateExtensionDeps, IInstalledIndex, dcesFirst, dcesLast } from '../tools/ExtensionDeps'
 import tar from 'tar'
 import fs from 'fs'
 import os from 'os'
@@ -37,7 +37,7 @@ interface IPackApiDeps {
     docsManager: DocsManager
     webhookManager: WebhookManager
     aiToolsetManager: AiToolsetManager
-    // For the dependency check only: a member may require a DCE. Packing a DCE itself is S3 of plans/dce/PLAN.md.
+    // For the dependency check only: a member may require a DCE. Packing a DCE itself is S3 of plans/completed/dce/PLAN.md.
     dceManager: DceManager
     apiKeyApi: ApiKeyApi
     registeredChannels: Map<string, TChannelConstructor>
@@ -133,6 +133,7 @@ export class PackApi {
                     case EExtensionType.DOCS:      exists = installedDocs.some(p => p.id === ext.id && p.targetType === ext.targetType); break
                     case EExtensionType.WEBHOOK:   exists = installedWebhooks.some(p => p.id === ext.id); break
                     case EExtensionType.AITOOLSET: exists = installedAiToolsets.some(p => p.id === ext.id); break
+                    case EExtensionType.DCE:       exists = installedDces.some(p => p.id === ext.id); break
                     default: throw new Error(`Unsupported extension type in pack: '${ext.extensionType}'`)
                 }
                 if (exists) throw new Error(`Cannot install pack: extension '${ext.extensionType}:${ext.id}' is already installed`)
@@ -153,21 +154,52 @@ export class PackApi {
                 aitoolset: installedAiToolsets.map(p => ({ id: p.id, version: p.version })),
                 dce: installedDces.map(p => ({ id: p.id, version: p.version }))
             }
+            /*
+                ⚠️ A PACK SATISFIES ITS OWN DEPENDENCIES.
+
+                The check used to compare each member against what was ALREADY installed, so a pack
+                carrying both a provider and the plugin that requires it was rejected for a dependency
+                the pack itself brings — and the message blamed the member, which is the last place
+                anybody would look. It went unnoticed because the only packs built so far bundled
+                extensions that do not depend on each other; a DCE and its consumer is exactly the case
+                that breaks it, and the reason the members are installed in order at all.
+
+                So the index is enriched with the pack's own members before validating. Their metadata
+                is read once here and reused, instead of opening every tgz twice.
+            */
             const allDepErrors: string[] = []
             let packRequiresRestart = false
+            const memberPkgs = new Map<string, Record<string, unknown>>()
             for (const ext of extensions) {
                 const memberTgzPath = path.join(baseDir, ext.tgz)
                 if (!fs.existsSync(memberTgzPath)) continue
                 const memberPkg = await this.readPkgFromMemberTgz(memberTgzPath)
+                memberPkgs.set(`${ext.extensionType}:${ext.id}`, memberPkg)
                 if (memberPkg.requiresRestart) packRequiresRestart = true
+                const family = installedIndex[ext.extensionType as keyof IInstalledIndex]
+                if (family) family.push({ id: ext.id, version: String(memberPkg.version ?? '0.0.0') })
+            }
+            for (const ext of extensions) {
+                const memberPkg = memberPkgs.get(`${ext.extensionType}:${ext.id}`)
+                if (!memberPkg) continue
                 const depErrors = validateExtensionDeps((memberPkg.requiresExtension as string[] | undefined) ?? [], installedIndex)
                 if (depErrors.length) allDepErrors.push(...depErrors.map(e => `[${ext.extensionType}:${ext.id}] ${e}`))
             }
             if (allDepErrors.length) throw new Error(`Pack '${packId}' has unmet dependencies:\n${allDepErrors.join('\n')}`)
 
-            // install each member
+            /*
+                Install each member, DCEs FIRST (plan: plans/completed/dce/PRD.md, RF12).
+
+                A pack may carry a DCE and the extensions that consume it, and a consumer is refused when
+                its DCE is not installed yet. Without this the pack would install or fail depending on the
+                order its members happen to be listed in — and the author of the pack has no way of
+                knowing that order matters.
+
+                The rest keeps the order it was written in: only the DCEs move, because only they are a
+                prerequisite for the others.
+            */
             const packInstalledFrom = `pack:${packId}`
-            for (const ext of extensions) {
+            for (const ext of dcesFirst(extensions)) {
                 const memberTgzPath = path.join(baseDir, ext.tgz)
                 if (!fs.existsSync(memberTgzPath)) throw new Error(`Pack member tgz not found: ${ext.tgz}`)
                 const tmpMemberTgz = path.join(os.tmpdir(), `kwirth-pack-member-${packId}-${ext.id}-${Date.now()}.tgz`)
@@ -183,6 +215,11 @@ export class PackApi {
                         case EExtensionType.LOGIN:     await loginManager.install(tmpMemberTgz, packInstalledFrom); break
                         case EExtensionType.DOCS:      await docsManager.install(tmpMemberTgz, packInstalledFrom); break
                         case EExtensionType.WEBHOOK:   await webhookManager.install(tmpMemberTgz, packInstalledFrom); break
+                        case EExtensionType.DCE:       await dceManager.install(tmpMemberTgz, packInstalledFrom); break
+                        // It was missing here and in the uninstall switch, while the 'already installed'
+                        // check above did contemplate it: a pack carrying a toolset skipped it in
+                        // silence, reporting success without having installed it.
+                        case EExtensionType.AITOOLSET: await aiToolsetManager.install(tmpMemberTgz, packInstalledFrom); break
                     }
                     logInfo(ELogComponent.CORE, `Pack '${packId}': installed ${ext.extensionType} '${ext.id}'`)
                 }
@@ -210,10 +247,12 @@ export class PackApi {
     }
 
     private async uninstallPack(id: string): Promise<void> {
-        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, registeredChannels, registeredProviders } = this.deps
+        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, dceManager, registeredChannels, registeredProviders } = this.deps
         const meta = await packManager.getPackMeta(id)
         if (!meta) throw new Error(`Pack '${id}' is not installed`)
-        for (const ext of meta.extensions) {
+        // The mirror image of installing: the DCEs go LAST, once the consumers that required them are
+        // already gone. Removing one first would trip over its own pack's members.
+        for (const ext of dcesLast(meta.extensions)) {
             try {
                 switch (ext.extensionType) {
                     case EExtensionType.PLUGIN:   await pluginManager.uninstallFromPack(ext.id, registeredChannels); break
@@ -225,6 +264,10 @@ export class PackApi {
                     case EExtensionType.LOGIN:     await loginManager.uninstallFromPack(ext.id); break
                     case EExtensionType.DOCS:      await docsManager.uninstallFromPack(ext.targetType ?? '', ext.id); break
                     case EExtensionType.WEBHOOK:   await webhookManager.uninstallFromPack(ext.id); break
+                    // Last of all, and forced: the pack is going whole, so the consumers it brought are
+                    // already gone by now and there is nobody left to protect from losing its DCE.
+                    case EExtensionType.AITOOLSET: await aiToolsetManager.uninstallFromPack(ext.id); break
+                    case EExtensionType.DCE:       await dceManager.uninstallFromPack(ext.id); break
                 }
                 logInfo(ELogComponent.CORE, `Pack '${id}': uninstalled ${ext.extensionType} '${ext.id}'`)
             }

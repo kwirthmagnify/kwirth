@@ -83,6 +83,18 @@ Two chips are the type's own, and they are there because a DCE fails differently
 
 There is **no gear**: a DCE has no configuration in this version. It brings code and objects, nothing to fill in.
 
+## In a pack
+
+A [pack](../packs/index) can carry a DCE together with the extensions that consume it. Kwirth **installs the DCEs first** and **removes them last**, so a pack works whatever order its members are listed in: a consumer is refused when its DCE is not there yet, and a DCE cannot go while somebody still requires it.
+
+The author declares them like any other member:
+
+```json
+{ "extensionType": "dce", "id": "my-icons", "tgz": "my-scope-kwirth-dce-my-icons-1.0.0.tgz" }
+```
+
+And `packs/create-pack.mjs` takes `--include dce:my-icons`, reading from `dces/my-icons/dist`.
+
 ## Available DCEs
 
 | DCE | what it provides |
@@ -95,6 +107,12 @@ Scaffold one from the repo root:
 
 ```
 node tools/create-kwirth-dce.mjs --id my-icons --name "My Icons" --publisher @my-scope
+```
+
+And a plugin that consumes it, with the dependency and the build mapping already in place:
+
+```
+node tools/create-kwirth-plugin.mjs --id my-plugin --dce my-icons:1.0.0
 ```
 
 That leaves you `dces/my-icons/` with the contract, a back-end factory, a front-end registration, the build with the right globals, a harness and a README. The back end looks like this:

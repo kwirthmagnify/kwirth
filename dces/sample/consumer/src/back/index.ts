@@ -3,7 +3,7 @@ import { EConsumerCommand, IConsumerMessageResponse, IConsumerReading } from '..
 
 /*
     A DEVELOPMENT STUB, not a product: the smallest plugin that consumes a DCE, so the type's guarantees
-    can be seen rather than argued about (plan: plans/dce/PLAN.md, S2).
+    can be seen rather than argued about (plan: plans/completed/dce/PLAN.md, S2).
 
     It declares `requiresExtension: ["dce:sample:0.1.0"]`, which is what makes the core refuse to install
     it without the DCE and refuse to remove the DCE while this is installed. And it calls getDce() on

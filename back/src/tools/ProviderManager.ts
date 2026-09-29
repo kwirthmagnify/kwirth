@@ -227,7 +227,7 @@ export class ProviderManager {
             meta.marketplaceLabel = marketplaceLabel
             meta.requiresRestart = meta.requiresRestart ?? false
             meta.requiresExtension = meta.requiresExtension ?? []
-            // A provider that requires a DCE is not installed without it (plans/dce/PRD.md, RF8).
+            // A provider that requires a DCE is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertDceRequirements('Provider', meta.id, meta.requiresExtension, installedFrom)
             const backJs = fs.readFileSync(backPath, 'utf-8')
 

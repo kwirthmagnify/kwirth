@@ -274,7 +274,7 @@ export class AiToolsetManager {
             meta.marketplaceLabel = marketplaceLabel
             meta.requiresRestart = meta.requiresRestart ?? false
             meta.requiresExtension = meta.requiresExtension ?? []
-            // A toolset that requires a DCE is not installed without it (plans/dce/PRD.md, RF8).
+            // A toolset that requires a DCE is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertDceRequirements('AI toolset', meta.id, meta.requiresExtension, installedFrom)
 
             const backJs = fs.readFileSync(backPath, 'utf-8')
@@ -355,6 +355,31 @@ export class AiToolsetManager {
         this.devToolsets.delete(id)
 
         logInfo(ELogComponent.CORE, `AI toolset '${id}' uninstalled`)
+    }
+
+    /**
+     * Uninstall on behalf of the pack that owns it, skipping the built-in guard the way the other
+     * families do: the pack owns what it installed, and it is going whole.
+     *
+     * A reserved built-in id could never have been installed from a pack in the first place, so the
+     * guard has nothing to protect here.
+     */
+    async uninstallFromPack(id: string): Promise<void> {
+        const grants = await this.listGrants()
+        if (grants[id]) {
+            delete grants[id]
+            await this.configMaps.write(GRANTS_KEY, grants)
+        }
+        unregisterToolset(id)
+        await this.configMaps.write(`kwirth-aitoolset-${id}-meta`, null)
+        await this.configMaps.write(`kwirth-aitoolset-${id}-back`, null)
+
+        const index = ((await this.configMaps.read(INDEX_KEY, []) as IAiToolsetMeta[]) || []).filter(t => t.id !== id)
+        await this.configMaps.write(INDEX_KEY, index)
+        this.cachedIndex = index
+        this.devToolsets.delete(id)
+
+        logInfo(ELogComponent.CORE, `AI toolset '${id}' uninstalled (pack)`)
     }
 
     async installBundled(bundledDir: string): Promise<void> {

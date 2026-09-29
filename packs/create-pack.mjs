@@ -52,6 +52,7 @@ const TYPE_DIRS = {
     idp:      'idps',
     login:    'logins',
     webhook:  'webhooks',
+    dce:      'dces',
     // 'docs' has no folder of its own: every plugin generates its tgz with build-docs-tgz.mjs, so the
     // documentation is passed as a loose tgz path, not with --include.
 }

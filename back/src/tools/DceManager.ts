@@ -14,7 +14,7 @@ import fs from 'fs'
 import zlib from 'zlib'
 
 /*
-    Manager of the `dce` extension type (plan: plans/dce/PLAN.md, S1).
+    Manager of the `dce` extension type (plan: plans/completed/dce/PLAN.md, S1).
 
     A dynamic core extension brings OBJECTS: its back.js exports a factory, this manager calls it once
     and hangs the result off `global.__kwirth_dce__[id]`, and other extensions ask for it with
@@ -391,6 +391,18 @@ export class DceManager {
         this.devDces.delete(id)
 
         logInfo(ELogComponent.CORE, `DCE '${id}' uninstalled`)
+    }
+
+    /**
+     * Uninstall on behalf of the pack that owns it.
+     *
+     * Forced, because the pack goes whole: the consumers it brought have already been removed by the
+     * time this runs, and refusing over one of them would leave the pack half uninstalled. A consumer
+     * that does NOT come from the pack could not have been installed while the DCE belonged to it
+     * without declaring the dependency, and that one is somebody else's problem to reinstall.
+     */
+    async uninstallFromPack(id: string): Promise<void> {
+        await this.uninstall(id, true)
     }
 
     async installBundled(bundledDir: string): Promise<void> {
