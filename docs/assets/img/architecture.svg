@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="490" viewBox="0 0 900 490">
-  <rect width="900" height="490" fill="#060a12"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="524" viewBox="0 0 900 524">
+  <rect width="900" height="524" fill="#060a12"/>
 
   <!-- Title -->
   <text x="450" y="34" font-family="sans-serif" font-size="17" fill="#f0f6fc" text-anchor="middle" font-weight="bold">Kwirth Architecture</text>
@@ -30,7 +30,7 @@
   <line x1="140" y1="405" x2="192" y2="372" stroke="#30363d" stroke-width="1" stroke-dasharray="4,3"/>
 
   <!-- ── CENTER: Kwirth Pod ── -->
-  <rect x="192" y="64" width="450" height="320" rx="10" fill="#0d1117" stroke="#f5820a" stroke-width="2"/>
+  <rect x="192" y="64" width="450" height="354" rx="10" fill="#0d1117" stroke="#f5820a" stroke-width="2"/>
   <text x="417" y="90" font-family="sans-serif" font-size="13" fill="#f5820a" text-anchor="middle" font-weight="bold">KWIRTH POD</text>
   <text x="417" y="108" font-family="sans-serif" font-size="9" fill="#8b949e" text-anchor="middle">namespace: kwirth (configurable)</text>
 
@@ -45,7 +45,7 @@
   <text x="522" y="181" font-family="sans-serif" font-size="8" fill="#8b949e" text-anchor="middle">Express · WebSocket</text>
 
   <!-- EXTENSIBILITY sub-area -->
-  <rect x="205" y="220" width="424" height="152" rx="5" fill="#0f1208" stroke="#3a4820" stroke-width="1"/>
+  <rect x="205" y="220" width="424" height="186" rx="5" fill="#0f1208" stroke="#3a4820" stroke-width="1"/>
   <text x="417" y="236" font-family="sans-serif" font-size="9" fill="#f5820a" text-anchor="middle" font-weight="bold" letter-spacing="2">EXTENSIBILITY</text>
 
   <!-- ===== Category: UI ===== -->
@@ -88,6 +88,16 @@
   <text x="573" y="332" font-family="sans-serif" font-size="7.5" fill="#2dd4bf" text-anchor="middle">Webhooks</text>
   <text x="573" y="345" font-family="sans-serif" font-size="6" fill="#8b949e" text-anchor="middle">inbound HTTP callbacks</text>
 
+  <!--
+    ===== DCE — full width, UNDER the four pillars =====
+    Deliberately not a fifth column: a DCE is not another family of extension, it is code that any of
+    the four above can declare and that Kwirth instantiates once for all of them. Spanning x 213..621
+    (the exact span of UI..INTEGRATION) is what says that visually.
+  -->
+  <rect x="213" y="370" width="408" height="28" rx="4" fill="#1a2332" stroke="#ffa657" stroke-width="1" stroke-dasharray="5,3"/>
+  <text x="417" y="382" font-family="sans-serif" font-size="7.5" fill="#ffa657" text-anchor="middle" font-weight="bold">DCE · Dynamic core extensions</text>
+  <text x="417" y="393" font-family="sans-serif" font-size="6" fill="#8b949e" text-anchor="middle">shared code — instantiated once, used by every family above</text>
+
   <!-- ── RIGHT: K8s Clusters (h=60, gap=34, same grid as left) ── -->
   <line x1="642" y1="175" x2="700" y2="130" stroke="#30363d" stroke-width="1" stroke-dasharray="4,3"/>
   <line x1="642" y1="242" x2="700" y2="224" stroke="#30363d" stroke-width="1" stroke-dasharray="4,3"/>
@@ -114,8 +124,8 @@
   <polyline points="621,300 662,300 700,405" fill="none" stroke="#2dd4bf" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>
 
   <!-- ── BOTTOM CENTER: ConfigMaps ── -->
-  <line x1="417" y1="384" x2="417" y2="406" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3,3"/>
-  <rect x="247" y="406" width="340" height="52" rx="6" fill="#1a2332" stroke="#58a6ff" stroke-width="1" stroke-dasharray="4,3"/>
-  <text x="417" y="428" font-family="sans-serif" font-size="9" fill="#58a6ff" text-anchor="middle">State: ConfigMaps · Secrets · PVC · files</text>
-  <text x="417" y="446" font-family="sans-serif" font-size="8" fill="#8b949e" text-anchor="middle">Users · API keys · Extensions config · Workspaces</text>
+  <line x1="417" y1="418" x2="417" y2="440" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3,3"/>
+  <rect x="247" y="440" width="340" height="52" rx="6" fill="#1a2332" stroke="#58a6ff" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="417" y="462" font-family="sans-serif" font-size="9" fill="#58a6ff" text-anchor="middle">State: ConfigMaps · Secrets · PVC · files</text>
+  <text x="417" y="480" font-family="sans-serif" font-size="8" fill="#8b949e" text-anchor="middle">Users · API keys · Extensions config · Workspaces</text>
 </svg>

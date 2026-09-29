@@ -629,21 +629,25 @@
       </a>
     </div>
 
+    <!--
+      DCE (full width) goes RIGHT BELOW the four pillars, not at the end: it is what the four of them
+      stand on. A plugin, a provider, a theme or a login can all declare the same DCE, so it reads as
+      the shared floor under the pillars rather than as one more family in the queue.
+    -->
+    <div class="feature-card" style="grid-column:1 / -1;">
+      <div style="font-size:0.72rem;font-weight:800;letter-spacing:1.5px;color:var(--teal);text-transform:uppercase;margin-bottom:16px;">Shared code</div>
+      <a href="dces.html" style="text-decoration:none;display:block;">
+        <h3 style="color:var(--text);">&#x1F9E9; Dynamic core extensions <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· one instance, many consumers</span></h3>
+        <p>Code that several extensions share but that belongs in none of them — a suite's icon set, a client, a cache — packaged as a DCE: Kwirth instantiates it <strong style="color:var(--text);">once</strong> and every plugin, provider or homepage that declares it gets the <strong style="color:var(--text);">same object</strong>. A consumer is not installed without its DCE, and a DCE in use cannot be removed.</p>
+      </a>
+    </div>
+
     <!-- AI (full width — the newest family) -->
     <div class="feature-card" style="grid-column:1 / -1;">
       <div style="font-size:0.72rem;font-weight:800;letter-spacing:1.5px;color:var(--orange);text-transform:uppercase;margin-bottom:16px;">AI</div>
       <a href="aitoolsets.html" style="text-decoration:none;display:block;">
         <h3 style="color:var(--text);">&#x1F6E0;&#xFE0F; AI toolsets <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· what the model may do</span></h3>
         <p>Installable groups of <strong style="color:var(--text);">tools</strong> an LLM can call — inventory, describe, events and logs, metrics, config &amp; secrets. Each tool declares whether it <em>reads</em> or <em>writes</em> and how sensitive its answer is, and each channel is granted the toolsets you choose: an AI channel starts with <strong style="color:var(--text);">no</strong> tools until you say otherwise.</p>
-      </a>
-    </div>
-
-    <!-- DCE (full width — shared code that belongs to no extension and not to the core) -->
-    <div class="feature-card" style="grid-column:1 / -1;">
-      <div style="font-size:0.72rem;font-weight:800;letter-spacing:1.5px;color:var(--teal);text-transform:uppercase;margin-bottom:16px;">Shared code</div>
-      <a href="dces.html" style="text-decoration:none;display:block;">
-        <h3 style="color:var(--text);">&#x1F9E9; Dynamic core extensions <span style="color:var(--muted);font-weight:400;font-size:0.85rem;">· one instance, many consumers</span></h3>
-        <p>Code that several extensions share but that belongs in none of them — a suite's icon set, a client, a cache — packaged as a DCE: Kwirth instantiates it <strong style="color:var(--text);">once</strong> and every plugin, provider or homepage that declares it gets the <strong style="color:var(--text);">same object</strong>. A consumer is not installed without its DCE, and a DCE in use cannot be removed.</p>
       </a>
     </div>
 
