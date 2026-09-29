@@ -185,6 +185,12 @@ namespace to keep its state in and an identity; ECS hands neither, so both are c
 - **A health check on `/healthz`.** kwirth answers it in every environment. A target group checking
   something else recycles the task forever without saying why.
 
+If some of your extensions persist to SQL, that is a separate and **optional** decision — see
+[Persistence](persistence). On ECS it means RDS or Aurora, and the two things that catch people out are
+that the user needs `CREATEDB` (kwirth creates a database per extension, it does not take one you hand
+it) and that the RDS security group must allow the **task's** security group, not a CIDR: on Fargate the
+task address changes on every deployment.
+
 What kwirth **observes** there is a separate question, and it depends only on what you mount:
 
 - **With a kubeconfig** (`KUBECONFIG`), it observes that cluster, and the channels behave exactly as they

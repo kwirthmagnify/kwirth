@@ -114,6 +114,100 @@ pointing somewhere else, will keep cycling the task without telling you why.
 | `BODYLIMIT` | max request body (default `8mb`) | raise it if a log collector batches large payloads |
 | `KEEPALIVE` | idle connection timeout in ms (default `65000`) | lower than the load balancer's idle timeout causes resets |
 
+## Optional: SQL persistence
+
+Some extensions keep their data in a relational database instead of in Kwirth's own store. Kwirth
+supports **PostgreSQL**, and on ECS that means RDS or Aurora.
+
+**This is optional, and genuinely so.** The connection is lazy: Kwirth does not open it at startup, only
+when an extension actually asks for a database. If you configure nothing, Kwirth starts and runs
+normally — and if you configure a database that is unreachable, Kwirth *still* starts. What fails is the
+extension that needed it, when it needs it.
+
+### The variables
+
+| variable | what it is | default |
+|---|---|---|
+| `KWIRTH_SQL_HOST` | the RDS endpoint | `localhost` |
+| `KWIRTH_SQL_PORT` | | `5432` |
+| `KWIRTH_SQL_USER` | | `postgres` |
+| `KWIRTH_SQL_PASSWORD` | **through `secrets[]`**, never `environment[]` | empty |
+| `KWIRTH_SQL_SSL` | `true` to connect over TLS | `false` |
+| `KWIRTH_SQL_MAINTDB` | database used to create the others | `postgres` |
+| `KWIRTH_SQL_CLIENT` | engine | `pg` |
+
+How the service works in general — a database per extension, the pools, the schema — is in the
+**Persistence** page of the kwirth guide. What follows is only what changes when the server is RDS.
+
+### The user needs `CREATEDB`, and on RDS that is a decision
+
+Kwirth **creates the databases**; it does not take one you hand it. Each extension gets its own
+`kwirth_<extension>`, created through the maintenance database. So `KWIRTH_SQL_USER` needs `CREATEDB`,
+not just access to an existing schema.
+
+The master user RDS creates with the instance has it. A user you add by hand does not, unless you say so:
+
+```sql
+CREATE ROLE kwirth WITH LOGIN PASSWORD '...' CREATEDB;
+```
+
+There is no "use this database I already made" mode, so if your organisation does not allow `CREATEDB`,
+this does not work as is. Worth checking before you plan the deployment rather than after.
+
+### `KWIRTH_SQL_SSL=true` encrypts, but does not verify
+
+The connection sets `rejectUnauthorized: false`. The traffic is encrypted — better than plaintext — but
+it does not prove you are talking to your RDS instance rather than to something in the middle.
+
+On RDS this matters more than in a cluster, because the database is reachable by address rather than by
+being a neighbour. Treat the network as the control: private subnets, and the RDS security group open
+**only** to the task's security group. Do not treat this flag as authentication.
+
+### Sizing the connections against the instance class
+
+Each extension opens a pool of 2–10 connections, plus one for maintenance. That adds up quickly against
+`max_connections`, which on the smaller RDS classes is not generous — and unlike a Postgres you deploy
+yourself, on RDS it is a parameter-group change, not a config file.
+
+Kwirth warns when the total approaches the limit, **each time an extension opens its database** (nothing
+connects at startup, so the warning cannot appear there). The symptom of ignoring it is an extension that
+works fine until another one starts.
+
+### In the task definition
+
+```json
+"environment": [
+  { "name": "KWIRTH_SQL_HOST", "value": "mydb.abc123.eu-west-1.rds.amazonaws.com" },
+  { "name": "KWIRTH_SQL_PORT", "value": "5432" },
+  { "name": "KWIRTH_SQL_USER", "value": "kwirth" },
+  { "name": "KWIRTH_SQL_SSL", "value": "true" }
+],
+"secrets": [
+  {
+    "name": "KWIRTH_SQL_PASSWORD",
+    "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:kwirth/db-password"
+  }
+]
+```
+
+And on the AWS side, two things that are not Kwirth's business but will stop it working:
+
+- The **RDS security group** has to allow `5432` **from the task's security group** — not from a CIDR, so
+  it keeps working when the task's IP changes, which on Fargate is every deployment.
+- The task needs **network access** to the database: same VPC, and if the subnets are private with no
+  route out, that is fine — RDS is inside too.
+
+### This is not the same as `KWIRTH_STORE`
+
+They are different things and both can be in play at once:
+
+- **`KWIRTH_STORE`** holds Kwirth's own state — users, API keys, settings, installed extensions. Always
+  needed. On files, on EFS.
+- **SQL** holds what certain extensions choose to persist. Optional, and nothing of Kwirth's own goes
+  there.
+
+Configuring SQL does **not** remove the need for a volume.
+
 ## Observing a Kubernetes cluster from here
 
 Put a kubeconfig where the task can read it and point `KUBECONFIG` at it. The EC2 example does exactly
