@@ -3,7 +3,7 @@ import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
     Migration of the `login` and `docs` managers to the generic dialog
-    (plan: plans/extension-managers-ui/PLAN.md).
+    (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     It does not check "that something gets painted": it checks what each type CONTRIBUTES and the generic
     one has to honour, which is exactly what could be lost when throwing away their 624 and 488 lines:

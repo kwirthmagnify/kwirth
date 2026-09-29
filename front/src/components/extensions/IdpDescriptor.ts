@@ -5,7 +5,7 @@ import { EChipIcon, EManagerSection, IExtensionManagerDescriptor, IExtensionCard
 import { IdpConfigDialog, IIdpInstance } from './IdpConfigDialog'
 
 /*
-    The `idp` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
+    The `idp` type's descriptor for the generic manager (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     The plan marked it as the best candidate NOT to migrate, because it has TWO entities: the connector,
     which is what gets installed, and the instance, which is that connector already configured. Reading

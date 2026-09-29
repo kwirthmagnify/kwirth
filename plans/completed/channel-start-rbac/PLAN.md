@@ -44,7 +44,7 @@ hallazgo que justifica este plan por sí solo, independientemente del canal que 
 > **Corrección de lo dicho antes.** En una versión anterior del análisis se afirmó que conceder el
 > scope `none` habilitaba de golpe `echo`, `agora`, `iter` y `provider-debug`. Es falso: el nivel
 > exigido lo fija el `getScope()` de cada canal (agora e iter piden `CLUSTER`), y además en estos
-> canales el scope **no se evalúa**. Ver `plans/instance-view-none/PLAN.md` §1.
+> canales el scope **no se evalúa**. Ver `plans/completed/instance-view-none/PLAN.md` §1.
 
 ---
 

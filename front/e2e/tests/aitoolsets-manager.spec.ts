@@ -149,7 +149,7 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
     })
 
     test('en la lista, las columnas de filas distintas quedan alineadas', async () => {
-        // Rule 6 of the UI criteria (plans/extension-managers-ui/PLAN.md) can only be checked with
+        // Rule 6 of the UI criteria (plans/completed/extension-managers-ui/PLAN.md) can only be checked with
         // SEVERAL rows: `extensionRowCells` returns loose cells — not one container per row — precisely
         // so that they share the grid. With a single row any layout looks correct, and that is why this
         // was noted as pending until there was a second toolset in the catalogue.

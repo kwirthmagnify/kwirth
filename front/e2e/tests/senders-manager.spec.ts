@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migration of the `sender` manager to the generic dialog (plan: plans/extension-managers-ui/PLAN.md).
+    Migration of the `sender` manager to the generic dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     It is the last of the eleven and the one that brought the most. What is watched is what could have
     been left behind when throwing away its 1060 lines:

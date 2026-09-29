@@ -6,7 +6,7 @@ import { ConfigListDialog } from './ConfigListDialog'
 import { WebhookUrlPanel } from './WebhookUrlPanel'
 
 /*
-    The `webhook` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
+    The `webhook` type's descriptor for the generic manager (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     It is the first one to bring NAMED CONFIGURATIONS: a webhook is not configured once, it has one entry
     per system that calls it, hence the 'N configs' chip the generic one already knew how to paint

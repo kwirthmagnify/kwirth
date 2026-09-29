@@ -1,7 +1,7 @@
 /*
     The resource selector: the views and the channel gate.
 
-    This file exists because while wiring up the 'none' view (see plans/instance-view-none/PLAN.md) it
+    This file exists because while wiring up the 'none' view (see plans/completed/instance-view-none/PLAN.md) it
     was found that the ResourceSelector had NO e2e of its own, being the component EVERY channel uses to
     start. Pinocchio's specs touch it in passing (the 'cluster' view), but nobody checked that the five
     resource views are still there nor that the dropdowns get enabled as they should.

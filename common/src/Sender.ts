@@ -47,7 +47,7 @@ export interface ISenderStoredConfig {
 
 // OPTIONAL return of a send: free-form JSON the sender may give back to the caller (a ticketing sender,
 // for instance, returns { issueKey, url } after creating the ticket). Pure notification senders keep
-// returning void; the caller decides whether to use the result. See plans/webhook-extension/PLAN.md.
+// returning void; the caller decides whether to use the result. See plans/completed/webhook-extension/PLAN.md.
 export interface ISenderResult {
     [key: string]: unknown
 }
@@ -68,7 +68,7 @@ export interface ISenderAccess {
     // ticket → its status, say). The pull counterpart of the webhook (push): it allows lost states to be
     // RECONCILED (core down, or no subscriber when the callback arrived). Returns undefined when the
     // sender does not support it, the config does not exist, or it could not be resolved. See
-    // plans/webhook-extension/PLAN.md (H3b-recon).
+    // plans/completed/webhook-extension/PLAN.md (H3b-recon).
     fetchStatus?(senderId: string, configName: string, externalId: string): Promise<string | undefined>
     addConfig(senderId: string, config: ISenderConfig): boolean
     listSenders(): Array<{ id: string; configNames: string[] }>

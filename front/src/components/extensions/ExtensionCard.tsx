@@ -11,7 +11,7 @@ import { TruncatedText } from './TruncatedText'
     The TWO views of an extension —card and row— in a single place, for all eleven types and both
     sections. That is 44 combinations that used to be written by hand and drifted one by one.
 
-    The rules of plans/extension-managers-ui/PLAN.md are met here by construction:
+    The rules of plans/completed/extension-managers-ui/PLAN.md are met here by construction:
       1. installed and available look the same: it is the SAME component, only chips and actions change
       2. provenance always, in both views
       3. a version Select in the catalogue (even with a single one), a Chip on what is installed

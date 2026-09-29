@@ -2,7 +2,7 @@ import { ComponentType, ReactNode } from 'react'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 
 /*
-    The GENERIC extension manager's model (plan: plans/extension-managers-ui/PLAN.md).
+    The GENERIC extension manager's model (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     There were eleven management dialogs with the same skeleton copied eleven times, and the copies
     drifted: every fix had to be applied eleven times and forgetting one was enough for the symptom to

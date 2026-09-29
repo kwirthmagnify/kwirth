@@ -1,7 +1,7 @@
 // The WEBHOOK extension type: inbound HTTP ingestion, the inbound counterpart of senders (which are
 // outbound). A webhook artifact knows how to verify and parse a provider's callbacks (Jira, ServiceNow,
 // GitHub…) and delivers a NORMALISED event to a consumer (a channel/plugin).
-// Addressing: {host}{envRootPath}/webhook/<provider>/<opaque-token>. See plans/webhook-extension/PLAN.md.
+// Addressing: {host}{envRootPath}/webhook/<provider>/<opaque-token>. See plans/completed/webhook-extension/PLAN.md.
 
 // Normalised event a webhook delivers to its consumer. Provider-agnostic.
 export interface IWebhookEvent {

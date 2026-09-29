@@ -22,7 +22,7 @@
   el bbpm bumpea la entrada canónica (primer bloque, la "latest"), como el patrón del último commit de marketplace.
 
 ## Contexto
-El mecanismo de **scopes declarados por plugin** ya existe (ver `plans/plugin-scopes/PLAN.md`):
+El mecanismo de **scopes declarados por plugin** ya existe (ver `plans/completed/plugin-scopes/PLAN.md`):
 cada canal expone su catálogo vía `IChannel.getScopeCatalog()` (front y back), el core lo agrega en
 `GET /core/scopes` y el editor de seguridad (User/API) lo consume.
 

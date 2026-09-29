@@ -12,7 +12,7 @@ the channels subscribed to it. It is the **pull** counterpart of Business/OTLP, 
 push into Kwirth by themselves.
 
 > **Prerequisite:** the provider-owned configuration contract in the core — see
-> [`plans/provider-contract/PLAN.md`](../provider-contract/PLAN.md). That plan carries the core changes
+> [`plans/provider-contract/PLAN.md`](../../provider-contract/PLAN.md). That plan carries the core changes
 > (`configRouter`, injected `IProviderStorage`), the `configure()` deprecation and the syslog migration.
 > Requires `@kwirthmagnify/kwirth-common-back >= 0.5.37`.
 

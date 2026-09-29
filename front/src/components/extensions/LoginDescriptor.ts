@@ -5,7 +5,7 @@ import { EManagerSection, IExtensionAction, IExtensionManagerDescriptor, IExtens
 import { ConfigFormDialog } from './ConfigFormDialog'
 
 /*
-    The `login` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
+    The `login` type's descriptor for the generic manager (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     What the type brings, and only that:
       · opening that login's page in another tab, to see it WITHOUT logging out

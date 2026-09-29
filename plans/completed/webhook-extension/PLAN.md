@@ -57,7 +57,7 @@ Alertmanager, …) and hands a **normalized event** to a **consumer** extension 
 
 Driving use case: **Excubitor ↔ ticketing** (H3b). Excubitor pushes a ticket on finding-assign, and the
 ticketing system calls back on state changes; that callback enters through a `webhook` extension bound to the
-Excubitor channel. See [`plugins/excubitor/docs/plan/h3-integrations-plan.md`](../../plugins/excubitor/docs/plan/h3-integrations-plan.md).
+Excubitor channel. See [`plugins/excubitor/docs/plan/h3-integrations-plan.md`](../../../plugins/excubitor/docs/plan/h3-integrations-plan.md).
 
 This is a **core/platform** feature (open-source repo). It must exist before Excubitor's ticketing connector
 consumes it. Together, `sender` (out) + `webhook` (in) + a per-config binding = a **bidirectional connector**.

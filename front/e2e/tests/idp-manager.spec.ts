@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migration of the `idp` manager to the generic dialog (plan: plans/extension-managers-ui/PLAN.md).
+    Migration of the `idp` manager to the generic dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     It was the one the plan marked as the best candidate NOT to migrate, because it has two entities: the
     CONNECTOR (what gets installed) and the INSTANCE (that connector already configured). Since there is

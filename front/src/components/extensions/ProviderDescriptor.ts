@@ -6,7 +6,7 @@ import { ConfigFormDialog } from './ConfigFormDialog'
 import { ConfigFrontDialog } from './ConfigFrontDialog'
 
 /*
-    The `provider` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
+    The `provider` type's descriptor for the generic manager (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     It is the type with the most quirks of its own among those migrated so far:
 

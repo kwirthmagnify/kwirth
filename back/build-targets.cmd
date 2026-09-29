@@ -1,17 +1,17 @@
 call build.cmd
 
-cd ..\external
+cd ..\deploy\external
 call external-build.cmd
-cd ..\back
+cd ..\..\back
 
 cd ..\docker
 call docker-build.cmd
 cd ..\back
 
-cd ..\electron
+cd ..\deploy\electron
 call electron-build.cmd
-cd ..\back
+cd ..\..\back
 
-cd ..\tauri
+cd ..\deploy\tauri
 call tauri-build.cmd
-cd ..\back
+cd ..\..\back

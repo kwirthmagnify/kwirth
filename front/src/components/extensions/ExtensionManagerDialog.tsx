@@ -13,7 +13,7 @@ import { EChipIcon, EManagerSection, IExtensionAction, IExtensionChip, IExtensio
 import { ExtensionCard, extensionRowCells, EXTENSION_ROW_COLUMNS } from './ExtensionCard'
 
 /*
-    The GENERIC extension management dialog (plan: plans/extension-managers-ui/PLAN.md).
+    The GENERIC extension management dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     It replaces the skeleton that was copied eleven times: two sections with their filter, a card/list
     toggle serving both (rule 5), a catalogue grouped by key with its versions sorted, installation from

@@ -4,7 +4,7 @@ cd ..\back
 
 copy ..\version\version.ts ..\back\src
 copy ..\version\version.ts ..\front\src
-copy ..\version\version.js ..\electron
+copy ..\version\version.js ..\deploy\electron
 
 REM clean targets
 del dist\front\*.* /s /q
@@ -13,10 +13,10 @@ del bundle\*.* /s /q
 md  bundle
 del front\*.* /s /q
 md  front
-del ..\electron\bundle\*.* /s /q
-md  ..\electron\bundle
-del ..\external\bundle\*.* /s /q
-md  ..\external\bundle
+del ..\deploy\electron\bundle\*.* /s /q
+md  ..\deploy\electron\bundle
+del ..\deploy\external\bundle\*.* /s /q
+md  ..\deploy\external\bundle
 del ..\docker\bundle\*.* /s /q
 md  ..\docker\bundle
 
@@ -33,7 +33,7 @@ xcopy ..\front\build\*.* .\bundle\front /s /y
 REM build back
 call npm run build
 
-xcopy .\bundle\*.* ..\electron\bundle /s /y
-xcopy .\bundle\*.* ..\external\bundle /s /y
+xcopy .\bundle\*.* ..\deploy\electron\bundle /s /y
+xcopy .\bundle\*.* ..\deploy\external\bundle /s /y
 xcopy .\bundle\*.* ..\docker\bundle /s /y
 xcopy .\package*.json ..\docker /y

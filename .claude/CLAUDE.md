@@ -16,4 +16,4 @@ front, y el merge "campo vacío = no lo cambies" en el back. Se persiste lo que 
 
 Referencia viva: `providers/http-pull-push/src/back/index.ts` (`GET /configs` devuelve
 `[...this.configs.values()]` con las credenciales dentro). Documentado y validado por e2e en
-`plans/http-pull-push/PLAN.md`.
+`plans/completed/http-pull-push/PLAN.md`.

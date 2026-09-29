@@ -4,7 +4,7 @@
 **Autor:** Julio
 **Componente:** `kwirth-front` (`LoginExtensionPage.tsx`), `kwirth-back` (`LoginManager`, `LoginExtensionApi`), `kwirth-common`
 **Documentos relacionados:**
-- `plans/login-extensions/PLAN.md` — el tipo `login` actual, sus límites verificados y el backlog S5 que este PRD sustituye
+- `plans/completed/login-extensions/PLAN.md` — el tipo `login` actual, sus límites verificados y el backlog S5 que este PRD sustituye
 - `plans/shell/prd-1-shell-extension.md` — mismo patrón (núcleo sin UI + contrato inyectado), aplicado a la vista principal
 
 ---

@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-call ..\version\version.cmd
+call ..\..\version\version.cmd
 set VER=%KWIRTH_VERSION:"=%
 
 del \github\releases\*-e.exe 2>nul

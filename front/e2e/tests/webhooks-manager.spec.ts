@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migration of the `webhook` manager to the generic dialog (plan: plans/extension-managers-ui/PLAN.md).
+    Migration of the `webhook` manager to the generic dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     What webhooks.spec.ts already covers —creating a config, its URL with a token, cloning and deleting—
     is not repeated here: that spec passes UNTOUCHED after the migration, which is the best proof that

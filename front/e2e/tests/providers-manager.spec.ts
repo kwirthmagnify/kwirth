@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migration of the `provider` manager to the generic dialog (plan: plans/extension-managers-ui/PLAN.md).
+    Migration of the `provider` manager to the generic dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     It is the type with the most quirks of its own, and they are exactly what could be lost when throwing
     away its 600 lines:

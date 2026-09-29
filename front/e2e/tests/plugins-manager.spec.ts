@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migration of the `plugin` manager to the generic dialog (plan: plans/extension-managers-ui/PLAN.md).
+    Migration of the `plugin` manager to the generic dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     Plugins are Kwirth's channels, the most visible type, and what is watched here is what changes
     behaviour on migrating it:

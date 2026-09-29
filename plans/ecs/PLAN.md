@@ -1,7 +1,14 @@
 # ECS — plan
 
-> **Estado**: sin empezar. **Bloqueado** por las decisiones abiertas del [PRD §6](PRD.md#6-decisiones-abiertas--a-validar-antes-de-escribir-código).
+> **Estado**: **todos los streams entregados** (2026-09-24) — S1 ✅, S2 absorbido por S3 y S4, S3 ✅,
+> S4 ✅, S5 ✅. **NO está cerrado**: quedan las cuatro tareas de *Pendiente al cerrar el proyecto*, y el
+> QA manual de S1. Las decisiones abiertas del [PRD §6](PRD.md#6-decisiones-abiertas--a-validar-antes-de-escribir-código)
+> que bloqueaban esto se resolvieron por el camino.
 > **Tipo**: core, público. Índice: [plans/README.md](../README.md).
+>
+> ⚠️ Esta cabecera decía **«sin empezar. Bloqueado»** hasta el 2026-09-29, con el plan entero ya
+> entregado debajo. Es exactamente la podredumbre contra la que avisa el índice: lo que no se actualiza
+> al cerrar un stream miente durante meses, y a quien llega nuevo le miente con autoridad.
 
 Append-only. Lo que se decida y lo que se descarte se queda escrito aquí, aunque luego cambie.
 

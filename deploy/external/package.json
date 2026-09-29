@@ -18,7 +18,7 @@
     "copy-bundle": "node -e \"const fs = require('fs'); const s = fs.readFileSync('shebang.txt', 'utf8'); const b = fs.readFileSync('./bundle/bundle.js'); fs.writeFileSync('dist/bundle.js', Buffer.concat([Buffer.from(s), b]));\"",
     "copy-front": "node -e \"const fs = require('fs'); fs.cpSync('./bundle/front', './dist/front', { recursive: true });\"",
     "copy-main": "node -e \"const fs = require('fs'); fs.cpSync('./main.js', './dist/main.js');\"",
-    "copy-version": "node -e \"const fs = require('fs'); fs.cpSync('../version/version.js', './dist/version.js');\"",
+    "copy-version": "node -e \"const fs = require('fs'); fs.cpSync('../../version/version.js', './dist/version.js');\"",
     "dist": "npm run clean && npm run copy-bundle && npm run copy-front && npm run copy-main && npm run copy-version"
   },
   "dependencies": {

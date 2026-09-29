@@ -4,7 +4,7 @@ setlocal
 del c:\github\releases\*-t.deb 2>nul
 del c:\github\releases\*-t.AppImage 2>nul
 
-call ..\version\version.cmd
+call ..\..\version\version.cmd
 set VER=%KWIRTH_VERSION:"=%
 :trimver
 if "%VER:~-1%"==" " set VER=%VER:~0,-1%& goto trimver

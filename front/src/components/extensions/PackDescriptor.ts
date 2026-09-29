@@ -3,7 +3,7 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionVerdict } from './extensionManagerModel'
 
 /*
-    The `pack` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
+    The `pack` type's descriptor for the generic manager (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     The plan marked it as a candidate NOT to migrate, along with IdP, because a pack CONTAINS other
     extensions and installing it means loading each one's front. Migrated, it turns out that fits

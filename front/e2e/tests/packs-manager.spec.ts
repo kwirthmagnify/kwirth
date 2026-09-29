@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Migration of the `pack` manager to the generic dialog (plan: plans/extension-managers-ui/PLAN.md).
+    Migration of the `pack` manager to the generic dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     The plan marked packs as a candidate NOT to migrate: it is the only type that CONTAINS other
     extensions and installing it means loading each member's front. What is watched here is exactly what

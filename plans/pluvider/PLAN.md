@@ -326,7 +326,7 @@ ambos, con las dos extensiones direccionables (`XX` y `plugin:XX`).
   de un provider instalado y marcado como **no desinstalable por separado** (se va con su plugin).
 - ⚠️ El gestor de extensiones son **once** vistas (instalados/disponibles × tarjeta/lista): auditar
   por script **antes** de tocar nada, según el criterio de
-  [plans/extension-managers-ui/PLAN.md](../extension-managers-ui/PLAN.md).
+  [plans/completed/extension-managers-ui/PLAN.md](../completed/extension-managers-ui/PLAN.md).
 - `provider-debug` debe poder explicar la suscripción a partir de `getSubscriptionHelp()` sin mirar
   código (criterio de aceptación 5).
 

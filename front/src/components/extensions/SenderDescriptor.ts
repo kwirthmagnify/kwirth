@@ -6,7 +6,7 @@ import { ConfigListDialog } from './ConfigListDialog'
 import { ConfigFrontDialog } from './ConfigFrontDialog'
 
 /*
-    The `sender` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
+    The `sender` type's descriptor for the generic manager (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     The last of the eleven, and the one that brought the most. Almost all of it turned out to belong to
     everybody and is already in the generic one or in the common dialogs:

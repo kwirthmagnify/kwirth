@@ -3,7 +3,7 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { EChipIcon, EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IExtensionVerdict } from './extensionManagerModel'
 
 /*
-    The `theme` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
+    The `theme` type's descriptor for the generic manager (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     The FIRST bespoke manager to be migrated, and that is why it matters: `aitoolset` was new code with
     nothing to break; themes is used by people. What this file has to achieve is that the screen looks

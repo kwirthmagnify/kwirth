@@ -160,7 +160,7 @@ big-bang: el camino antiguo muere en S3, cuando ya hay dónde aterrizar.
 
 🛑 **PARADA OBLIGATORIA antes de crear `AiToolsetManagerDialog`** (orden del usuario, 2026-09-17). Un
 diálogo de manager no se escribe a ojo: hay once managers y el criterio de UI —instalados/disponibles ×
-card/lista— vive en `plans/extension-managers-ui/PLAN.md`. Se para, se audita y se acuerda antes de
+card/lista— vive en `plans/completed/extension-managers-ui/PLAN.md`. Se para, se audita y se acuerda antes de
 escribir el componente.
 
 #### Cómo cerró S1 (2026-09-16)
@@ -169,7 +169,7 @@ La parada se resolvió **no escribiendo** un `AiToolsetManagerDialog`: el usuari
 gestor **genérico dirigido por descriptor** (`ExtensionManagerDialog` + `extensionManagerModel` +
 `ExtensionCard`) que acabará sustituyendo a los diez a medida, y estrenarlo con `aitoolset` —el único tipo
 sin diálogo propio, así que estrenarlo no podía romper nada—. Detalle en
-`plans/extension-managers-ui/PLAN.md`.
+`plans/completed/extension-managers-ui/PLAN.md`.
 
 Entregado: contrato en `common-ai` (`EToolEffect`, `EToolSensitivity`, `ECapability`, `toolRef`/`parseToolRef`,
 `IAiToolInfo`/`IAiToolsetInfo`/`IToolsetConfig`), registro único con ids reservados en `common-ai/back`,

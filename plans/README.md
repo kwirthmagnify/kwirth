@@ -16,6 +16,14 @@ meses después — que es exactamente lo que pasaba antes de escribir este índi
 > *Vivos* a *Cerrados*. Este índice cubre los planes del **core**; los de la suite y los productos de
 > pago van al índice **privado**, y nada de aquel entra aquí.
 
+> **Los cerrados viven en [`completed/`](completed/)** desde el 2026-09-29: la carpeta de `plans/` se
+> había vuelto una lista de veintitantos directorios donde lo vivo y lo terminado pesaban igual, y lo
+> que se abre a diario es lo primero. Mover un plan ahí es el último gesto de su cierre.
+>
+> ⚠️ Se mueve la carpeta **solo si TODO lo que hay dentro está cerrado**. `kwirth-status` es el
+> contraejemplo y por eso sigue fuera: su `PLAN.md` está entregado, pero comparte carpeta con la **v2**,
+> que está viva. Un plan vivo escondido bajo `completed/` es peor que no tener la carpeta.
+
 ## Vivos
 
 | plan | de qué va | qué queda |
@@ -30,7 +38,7 @@ meses después — que es exactamente lo que pasaba antes de escribir este índi
 | [geppetto](geppetto/PRD.md) | analizador LLM de propósito general (PRD) | la decisión 6; sin código todavía |
 | [pluvider](pluvider/PLAN.md) · [PRD](pluvider/PRD.md) | un plugin que además expone su información in-process | MVP en producción (agora y montag publican, provider-debug consume). **F6 cerrada**: la dirección simétrica — un **provider** puede ahora suscribirse a otro, con su fase de cableado `onProvidersReady()`. **F7 cerrada**: un provider declara a qué providers consume y el core los crea aunque ningún canal los pida. Queda la fase 2: `ask()`, `publications[]` y el descubrimiento en runtime |
 | [gate](gate/PRD.md) | la pantalla de acceso como extensión programable | borrador |
-| [ecs](ecs/PLAN.md) · [PRD](ecs/PRD.md) | desplegar Kwirth en AWS ECS (Fargate y EC2) con la misma imagen | **S1 hecho**: el core ya arranca sin Kubernetes, y de paso se retiró Docker como fuente de recursos (12 artefactos republicados). Quedan S2 (qué se observa), S3 (el proyecto `ecs/` con los ejemplos) y S4 (documentación). Pendientes del cierre: publicar el back y una corrida e2e completa |
+| [ecs](ecs/PLAN.md) · [PRD](ecs/PRD.md) | desplegar Kwirth en AWS ECS (Fargate y EC2) con la misma imagen | **todos los streams entregados** (2026-09-24): el core arranca sin Kubernetes, se retiró Docker como fuente de recursos (12 artefactos republicados), y S2 quedó absorbido por S3 y S4. **No está cerrado**: falta el QA manual de S1 y las cuatro tareas de cierre — publicar el back, la corrida e2e completa, que `agora` vuelva a compilar (aparcado, ajeno) y actualizar los plugins instalados |
 | [config-portability](config-portability/PLAN.md) · [PRD](config-portability/PRD.md) | llevarse la configuración de un Kwirth a otro | core, front y las open source con configuración, hechos; quedan Excubitor y Agora, que son la prueba de fuego |
 | [provider-handle](provider-handle/PLAN.md) | lo que el core entrega a un consumidor deja de ser el `IProvider` real: un handle por (canal, instancia) | **en producción lo esencial**: el handle está en el core y el logger de providers cableado y publicado en los 13. Queda H2 a propósito —los diez consumidores que ya pasan por el core se migran cuando se toquen— y, abierto, que `started` significa "router montado" y no "arrancado" |
 | [helm](helm/PLAN.md) | el chart de Helm puesto al día: una única fuente en `deploy/helm/kwirth`, todas las variables que lee el core hoy, imagen pinada, RBAC explícito, persistencia y Postgres, tests | **S1 construido** (chart `0.2.0`, 23 tests unitarios + e2e) y en **gate de QA**. Quedan S2 (guía y README con la URL real del repo, `kwirthmagnify.dev/helm-charts`) y S3 (publicar). Encontrados en 0.1.5: el Secret de usuarios con el nombre de la release (nadie podía entrar salvo con release `kwirth`) y `image: latest`, que en Docker Hub se quedó en abril |
@@ -42,21 +50,21 @@ Terminados y en producción. Se consultan para saber **por qué** algo es como e
 
 | plan | entregado |
 |---|---|
-| [previous-container-log](previous-container-log/PLAN.md) | ver en el About el log del contenedor anterior cuando el core reinicia, con las líneas configurables desde los settings |
-| [sso-idp](sso-idp/SSO-IDP-PLAN.md) | el tipo `idp` y seis conectores SSO instalables |
-| [login-extensions](login-extensions/PLAN.md) | el tipo `login`: páginas de acceso con marca y canales limitados, con fondo de alta calidad donde el almacenamiento lo admite |
-| [webhook-extension](webhook-extension/PLAN.md) | el tipo `webhook`: la entrada de eventos, contraparte de los senders |
-| [private-marketplace](private-marketplace/PLAN.md) | marketplaces privados, con el manifest autenticado aparte de los paquetes |
-| [plugin-scopes](plugin-scopes/PLAN.md) | cada plugin publica sus scopes RBAC en runtime |
-| [ops-trivy-scopes](ops-trivy-scopes/PLAN.md) | la primera aplicación de lo anterior |
-| [channel-start-rbac](channel-start-rbac/PLAN.md) | el arranque de canal gateado por la API key que lo pide |
-| [instance-view-none](instance-view-none/PLAN.md) | la view `none`, para canales que no necesitan el clúster |
-| [business-provider](business-provider/PLAN.md) | `business` fuera del core, instalable, y `/provider/{alias}` |
-| [http-pull-push](http-pull-push/PLAN.md) | el provider que sondea HTTP y empuja a sus suscriptores |
-| [extension-managers-ui](extension-managers-ui/PLAN.md) | los once gestores de extensiones en un único diálogo |
-| [extension-upgrade](extension-upgrade/PLAN.md) | actualizar una extensión instalando encima, sin desinstalar y sin perder su configuración |
-| [kwirth-status](kwirth-status/PLAN.md) · [PRD](kwirth-status/PRD.md) | una pantalla para echar un ojo a Kwirth por dentro: qué hay montado, cómo está, quién consume a quién y cuánto mueve. Sigue en la **v2** |
-| [user-admin-guide](user-admin-guide/USER-ADMIN-GUIDE-PLAN.md) | la guía de usuario y administrador |
+| [previous-container-log](completed/previous-container-log/PLAN.md) | ver en el About el log del contenedor anterior cuando el core reinicia, con las líneas configurables desde los settings |
+| [sso-idp](completed/sso-idp/SSO-IDP-PLAN.md) | el tipo `idp` y seis conectores SSO instalables |
+| [login-extensions](completed/login-extensions/PLAN.md) | el tipo `login`: páginas de acceso con marca y canales limitados, con fondo de alta calidad donde el almacenamiento lo admite |
+| [webhook-extension](completed/webhook-extension/PLAN.md) | el tipo `webhook`: la entrada de eventos, contraparte de los senders |
+| [private-marketplace](completed/private-marketplace/PLAN.md) | marketplaces privados, con el manifest autenticado aparte de los paquetes |
+| [plugin-scopes](completed/plugin-scopes/PLAN.md) | cada plugin publica sus scopes RBAC en runtime |
+| [ops-trivy-scopes](completed/ops-trivy-scopes/PLAN.md) | la primera aplicación de lo anterior |
+| [channel-start-rbac](completed/channel-start-rbac/PLAN.md) | el arranque de canal gateado por la API key que lo pide |
+| [instance-view-none](completed/instance-view-none/PLAN.md) | la view `none`, para canales que no necesitan el clúster |
+| [business-provider](completed/business-provider/PLAN.md) | `business` fuera del core, instalable, y `/provider/{alias}` |
+| [http-pull-push](completed/http-pull-push/PLAN.md) | el provider que sondea HTTP y empuja a sus suscriptores |
+| [extension-managers-ui](completed/extension-managers-ui/PLAN.md) | los once gestores de extensiones en un único diálogo |
+| [extension-upgrade](completed/extension-upgrade/PLAN.md) | actualizar una extensión instalando encima, sin desinstalar y sin perder su configuración |
+| [kwirth-status](kwirth-status/PLAN.md) · [PRD](kwirth-status/PRD.md) | una pantalla para echar un ojo a Kwirth por dentro: qué hay montado, cómo está, quién consume a quién y cuánto mueve. ⚠️ **NO está en `completed/`**: su carpeta aloja también la **v2**, que sigue viva |
+| [user-admin-guide](completed/user-admin-guide/USER-ADMIN-GUIDE-PLAN.md) | la guía de usuario y administrador |
 
 ## Sin empezar
 
@@ -71,7 +79,7 @@ Documentados a propósito, para no volver a pensarlos desde cero el día que toq
 
 - [icons/ICONS-AUDIT.md](icons/ICONS-AUDIT.md) — inventario **generado**: `node tools/icons-audit.mjs`.
 - [pluvider/DECISIONS.md](pluvider/DECISIONS.md) — las decisiones que sostienen ese plan.
-- [user-admin-guide/GUIDE-REVIEW-2026-07.md](user-admin-guide/GUIDE-REVIEW-2026-07.md) — una revisión puntual
+- [completed/user-admin-guide/GUIDE-REVIEW-2026-07.md](completed/user-admin-guide/GUIDE-REVIEW-2026-07.md) — una revisión puntual
   de coherencia entre código y documentación.
 
 > Los planes de las **extensiones** no están aquí: viven en el `docs/plan/` de cada una, junto a su código.

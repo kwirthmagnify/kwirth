@@ -26,7 +26,7 @@ En Windows 11 ya viene preinstalado. No hay que hacer nada.
 
 Una vez instalado todo, para buildear:
 
-cd tauri
+cd deploy/tauri
 tauri-build.cmd
 Aviso: la primera vez que ejecutes el build, Cargo descarga y compila Tauri y todas sus dependencias (~200 crates). Tarda entre 5 y 15 minutos. Las builds siguientes son mucho más rápidas.
 

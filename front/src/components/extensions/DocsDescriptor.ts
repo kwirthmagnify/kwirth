@@ -4,7 +4,7 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { EManagerSection, IExtensionAction, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionVerdict } from './extensionManagerModel'
 
 /*
-    The `docs` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
+    The `docs` type's descriptor for the generic manager (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     It is the type that made the generic one have a `keyOf` instead of assuming the `id`: a piece of
     documentation is identified by the PAIR (targetType, id), because the id is that of the DOCUMENTED

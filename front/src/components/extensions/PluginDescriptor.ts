@@ -5,7 +5,7 @@ import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionRequirement
 import { ConfigJsonDialog } from './ConfigJsonDialog'
 
 /*
-    The `plugin` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
+    The `plugin` type's descriptor for the generic manager (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     Plugins are Kwirth's channels, the most visible type of them all, and almost everything of theirs
     turned out to belong to everybody:

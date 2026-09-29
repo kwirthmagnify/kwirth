@@ -18,7 +18,7 @@ sedi() {
 }
 
 # grep -oP is Linux-only; use portable sed extraction instead
-VER=$(sed -n 's/.*KWIRTH_VERSION="\([^"]*\)".*/\1/p' ../version/version.cmd 2>/dev/null | tr -d '\r' || echo "0.0.0")
+VER=$(sed -n 's/.*KWIRTH_VERSION="\([^"]*\)".*/\1/p' ../../version/version.cmd 2>/dev/null | tr -d '\r' || echo "0.0.0")
 echo "[tauri-build] Updating version to ${VER}..."
 sedi "s/^version = \"[0-9.]*\"/version = \"${VER}\"/" src-tauri/Cargo.toml
 sedi "s/\"version\": \"[0-9.]*\"/\"version\": \"${VER}\"/" src-tauri/tauri.conf.json
@@ -29,7 +29,7 @@ npm install
 
 echo "[tauri-build] Copying front assets..."
 rm -rf src-tauri/resources/front
-cp -r ../back/bundle/front src-tauri/resources/front
+cp -r ../../back/bundle/front src-tauri/resources/front
 
 echo "[tauri-build] Generating Tauri icons from electron source..."
 cp ../electron/kwirth-transparent.png src-tauri/icons/source.png
@@ -37,7 +37,7 @@ cp ../electron/kwirth-transparent.png src-tauri/resources/kwirth-transparent.png
 npx @tauri-apps/cli icon src-tauri/icons/source.png
 
 echo "[tauri-build] Downloading bundled extensions..."
-node ../tools/scripts/fetch-bundled.mjs ../back/kwirth-bundled.json src-tauri/resources/bundled
+node ../../tools/scripts/fetch-bundled.mjs ../../back/kwirth-bundled.json src-tauri/resources/bundled
 
 echo "[tauri-build] Detecting platform..."
 UNAME=$(uname -s)
@@ -57,11 +57,11 @@ else
 fi
 
 echo "[tauri-build] Building kwirth-backend sidecar (${TRIPLE})..."
-cp back-bundle-pkg.json ../back/bundle/package.json
-cd ../back/bundle
-npx --yes @yao-pkg/pkg bundle.js --target "$PKG_TARGET" --output "../../tauri/src-tauri/binaries/kwirth-backend-${TRIPLE}"
+cp back-bundle-pkg.json ../../back/bundle/package.json
+cd ../../back/bundle
+npx --yes @yao-pkg/pkg bundle.js --target "$PKG_TARGET" --output "../../deploy/tauri/src-tauri/binaries/kwirth-backend-${TRIPLE}"
 rm -f package.json
-cd ../../tauri
+cd ../../deploy/tauri
 
 echo "[tauri-build] Building Tauri application..."
 export CARGO_TARGET_DIR="$HOME/.kwirth-tauri-target"

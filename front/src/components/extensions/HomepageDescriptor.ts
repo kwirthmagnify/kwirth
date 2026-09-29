@@ -4,7 +4,7 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { EChipIcon, EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IExtensionVerdict } from './extensionManagerModel'
 
 /*
-    The `homepage` type's descriptor for the generic manager (plan: plans/extension-managers-ui/PLAN.md).
+    The `homepage` type's descriptor for the generic manager (plan: plans/completed/extension-managers-ui/PLAN.md).
 
     What the type brings:
       · the `active` chip of the homepage in use

@@ -16,7 +16,7 @@ instead of receiving an opaque blob from the core through `configure()`. It brin
 - **Published**: `@kwirthmagnify/kwirth-common-back` (0.5.37 at the time of this work; 0.5.40 at the time of
   writing), needed so an external provider can *compile* against the new contract.
 - **Validated live** against the dev core by **two independent providers**, one of them in this repo
-  (`http-pull-push`, see `plans/http-pull-push/PLAN.md`): `configRouter` mounted and answering **403 without
+  (`http-pull-push`, see `plans/completed/http-pull-push/PLAN.md`): `configRouter` mounted and answering **403 without
   an accessKey**, serving `GET`/`PUT` with one, hot-apply taking effect with no restart, and the
   sensitivity split landing in real Kubernetes objects — the ConfigMap holding the non-sensitive fields and
   the Secret the credentials, with **zero occurrences of the credential in the ConfigMap**.

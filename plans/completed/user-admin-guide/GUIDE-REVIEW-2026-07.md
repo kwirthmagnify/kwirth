@@ -36,7 +36,7 @@ search/viewoptions, extension managers ×6 (plugins now shows the ⚙ gear), adm
 (api-security with key ids blurred, correct manage-extensions menu, workspaces menu). login.png
 confirmed current. Remaining dialog/form/selector/chrome recaptures are pending — blocked mid-session
 by permission prompts on `node` runs; the affected screenshots differ only by cosmetic dialog padding
-(content accurate). Capture scripts live under `plans/user-admin-guide/_cap/` (delete before shipping).
+(content accurate). Capture scripts live under `plans/completed/user-admin-guide/_cap/` (delete before shipping).
 
 ## Applied fixes (committed)
 
