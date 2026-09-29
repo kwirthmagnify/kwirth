@@ -11,7 +11,46 @@ What is in this folder:
 | [`task-definition-fargate.json`](task-definition-fargate.json) | the real one: EFS for storage, Secrets Manager for the master key, behind a load balancer |
 | [`task-definition-ec2.json`](task-definition-ec2.json) | the same on the EC2 launch type, and with a **kubeconfig mounted** so Kwirth observes a cluster |
 | [`cloudformation.yaml`](cloudformation.yaml) | everything around the task: EFS, security groups, target group, IAM roles |
+| [`iam-deploy-policy.json`](iam-deploy-policy.json) | the permissions **you** need to deploy all of the above |
 | [`firelens-sidecar.json`](firelens-sidecar.json) | how **another** task ships its log into this Kwirth |
+
+## What the deploying account needs
+
+There are **two different sets of permissions** here, and mixing them up is the usual source of
+confusion:
+
+- **The task's roles** — what Kwirth itself may do once running. Already in
+  [`cloudformation.yaml`](cloudformation.yaml): the execution role reads one secret, the task role mounts
+  EFS through its access point, and nothing else.
+- **Your deploying identity** — what the human or the pipeline needs in order to *create* all that. That
+  is [`iam-deploy-policy.json`](iam-deploy-policy.json), and it is what this section is about.
+
+Attach that policy to the user or role you deploy with. It is derived from the resource types the
+template actually declares — ECS service and task definition, EFS file system, access point and mount
+target, security groups, target group, IAM roles, log group and secret — plus CloudFormation itself.
+
+Four entries in it are worth knowing about, because they are the ones that fail in ways that do not say
+what is wrong:
+
+- **`iam:PassRole`** is the one everyone forgets. Creating the service means handing ECS the roles the
+  task will assume, and without this the failure talks about the *service*, not about a missing
+  permission. It is scoped to the kwirth roles and to `ecs-tasks.amazonaws.com`.
+- **`secretsmanager:GetRandomPassword`** is needed because the template generates the `MASTERKEY` with
+  `GenerateSecretString`. It takes no resource, so it lives in its own statement with `"*"`.
+- **`iam:CreateServiceLinkedRole`** only matters the **first** time ECS or the load balancer are used in
+  an account. On an account that already runs services it is dead weight; on a fresh one, its absence
+  stops the deployment.
+- **Adding SQL adds RDS permissions**, which are *not* in this policy: creating a database instance is a
+  separate decision, often made by someone else, and bundling it here would ask for more than the
+  deployment needs.
+
+> **This policy has not been exercised against a real deployment yet.** It is derived from the template,
+> which is a good starting point and not a guarantee: a first run may still stop on something specific to
+> your account — an SCP, a permissions boundary, or a resource the template touches indirectly. When that
+> happens, the CloudFormation event says exactly which action was denied. Send it and it gets added here.
+
+If your organisation prefers not to grant this, the alternative is to deploy the pieces by hand with the
+permissions each team already has, and use the template as the specification of what to create.
 
 ## Choosing which Kwirth you run
 

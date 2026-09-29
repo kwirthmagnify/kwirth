@@ -1,0 +1,194 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CloudFormationStack",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:CreateStack",
+        "cloudformation:UpdateStack",
+        "cloudformation:DeleteStack",
+        "cloudformation:DescribeStacks",
+        "cloudformation:DescribeStackEvents",
+        "cloudformation:DescribeStackResource",
+        "cloudformation:DescribeStackResources",
+        "cloudformation:GetTemplateSummary",
+        "cloudformation:ValidateTemplate"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "EcsTaskAndService",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:RegisterTaskDefinition",
+        "ecs:DeregisterTaskDefinition",
+        "ecs:DescribeTaskDefinition",
+        "ecs:ListTaskDefinitions",
+        "ecs:CreateService",
+        "ecs:UpdateService",
+        "ecs:DeleteService",
+        "ecs:DescribeServices",
+        "ecs:ListServices",
+        "ecs:DescribeTasks",
+        "ecs:ListTasks",
+        "ecs:StopTask",
+        "ecs:DescribeClusters",
+        "ecs:ListClusters",
+        "ecs:CreateCluster",
+        "ecs:TagResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "EfsForTheStore",
+      "Effect": "Allow",
+      "Action": [
+        "elasticfilesystem:CreateFileSystem",
+        "elasticfilesystem:DeleteFileSystem",
+        "elasticfilesystem:DescribeFileSystems",
+        "elasticfilesystem:CreateAccessPoint",
+        "elasticfilesystem:DeleteAccessPoint",
+        "elasticfilesystem:DescribeAccessPoints",
+        "elasticfilesystem:CreateMountTarget",
+        "elasticfilesystem:DeleteMountTarget",
+        "elasticfilesystem:DescribeMountTargets",
+        "elasticfilesystem:DescribeMountTargetSecurityGroups",
+        "elasticfilesystem:ModifyMountTargetSecurityGroups",
+        "elasticfilesystem:TagResource",
+        "elasticfilesystem:PutBackupPolicy",
+        "elasticfilesystem:DescribeBackupPolicy"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "NetworkingLookupAndSecurityGroups",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeAvailabilityZones",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DescribeSecurityGroups",
+        "ec2:CreateSecurityGroup",
+        "ec2:DeleteSecurityGroup",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:CreateTags",
+        "ec2:DescribeTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "LoadBalancerTargetGroup",
+      "Effect": "Allow",
+      "Action": [
+        "elasticloadbalancing:CreateTargetGroup",
+        "elasticloadbalancing:DeleteTargetGroup",
+        "elasticloadbalancing:DescribeTargetGroups",
+        "elasticloadbalancing:DescribeTargetGroupAttributes",
+        "elasticloadbalancing:ModifyTargetGroupAttributes",
+        "elasticloadbalancing:DescribeTargetHealth",
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "elasticloadbalancing:DescribeListeners",
+        "elasticloadbalancing:DescribeRules",
+        "elasticloadbalancing:CreateRule",
+        "elasticloadbalancing:ModifyRule",
+        "elasticloadbalancing:DeleteRule",
+        "elasticloadbalancing:AddTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "LogGroup",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:DeleteLogGroup",
+        "logs:DescribeLogGroups",
+        "logs:PutRetentionPolicy",
+        "logs:TagResource",
+        "logs:DescribeLogStreams",
+        "logs:GetLogEvents",
+        "logs:FilterLogEvents"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "MasterKeySecret",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:DeleteSecret",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:PutSecretValue",
+        "secretsmanager:UpdateSecret",
+        "secretsmanager:TagResource"
+      ],
+      "Resource": "arn:aws:secretsmanager:*:*:secret:kwirth/*"
+    },
+    {
+      "Sid": "GenerateSecretStringNeedsThisAndItTakesNoResource",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetRandomPassword"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RolesForTheTask",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:GetRole",
+        "iam:TagRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:GetRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:ListAttachedRolePolicies"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:role/kwirth*",
+        "arn:aws:iam::*:role/*kwirth*"
+      ]
+    },
+    {
+      "Sid": "PassRoleIsTheOneEveryoneForgets",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:role/kwirth*",
+        "arn:aws:iam::*:role/*kwirth*",
+        "arn:aws:iam::*:role/ecsTaskExecutionRole"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "ecs-tasks.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "EcsNeedsItsServiceLinkedRoleTheFirstTime",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateServiceLinkedRole"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "iam:AWSServiceName": [
+            "ecs.amazonaws.com",
+            "elasticloadbalancing.amazonaws.com"
+          ]
+        }
+      }
+    }
+  ]
+}
