@@ -198,6 +198,15 @@ export class CensorChannel {
         const stored: ILlmProvider[] = (await this.backChannelObject.readStorageCommon!(STORAGE_KEY_PROVIDERS, true)) ?? []
         this.providers = stored
         await loadModels(this.providers, this.backChannelObject)
+        /*
+            Provider 'events': pod add/remove for cluster-scoped instances. Listing it in
+            'requirements' only makes the core INSTANTIATE it — nothing is delivered until somebody
+            subscribes, and nobody did: 'handleClusterPodEvent' was unreachable and a cluster-scoped
+            instance never saw a pod appear or go away. Only 'Pod' is asked for, which is the one kind
+            that handler reads.
+        */
+        const core = this.clusterInfo as { addSubscriber: (id: string, c: unknown, config: unknown) => void }
+        core.addSubscriber('events', this, { kinds: ['Pod'], syncInstances: false })
     }
 
     private rebuildBusinessSubscription(): void {

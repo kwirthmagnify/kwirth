@@ -47,7 +47,7 @@ const PODS: IPodSpec[] = [
 
 // A resource instance (namespace view): the core registers one object per container
 const setupResource = async (cfgs: ICensorInstanceConfig[] = [logCfg()], pods: IPodSpec[] = PODS) => {
-    const { ci, calls, setFailure } = makeClusterInfo(pods)
+    const { ci, calls, subs, setFailure } = makeClusterInfo(pods)
     const { obj, own, warnings } = makeBackObj()
     own.set('censor-configs', cfgs)
     const ch = new CensorChannel(ci, obj as never)
@@ -61,12 +61,12 @@ const setupResource = async (cfgs: ICensorInstanceConfig[] = [logCfg()], pods: I
     const stop = () => ch.processCommand(ws as never, cmd('i1', ECensorCommand.ANALYZESTOP) as never)
     // Without a teardown, reconnection timers would stay alive and the test process would never finish
     const teardown = () => ch.stopInstance(ws as never, instanceConfig as never)
-    return { ch, ws, instanceConfig, calls, warnings, setFailure, start, stop, teardown }
+    return { ch, ws, instanceConfig, calls, subs, warnings, setFailure, start, stop, teardown }
 }
 
 // A cluster instance: censor discovers the pods on its own
 const setupCluster = async (cfgs: ICensorInstanceConfig[] = [logCfg()], pods: IPodSpec[] = PODS) => {
-    const { ci, calls, setFailure } = makeClusterInfo(pods)
+    const { ci, calls, subs, setFailure } = makeClusterInfo(pods)
     const { obj, own, warnings } = makeBackObj()
     own.set('censor-configs', cfgs)
     const ch = new CensorChannel(ci, obj as never)
@@ -75,7 +75,7 @@ const setupCluster = async (cfgs: ICensorInstanceConfig[] = [logCfg()], pods: IP
     const instanceConfig = instanceConfigFor('i1', EInstanceConfigView.CLUSTER)
     await ch.addObject(ws as never, instanceConfig as never, '*all', '*all', '*all')
     const teardown = () => ch.stopInstance(ws as never, instanceConfig as never)
-    return { ch, ws, instanceConfig, calls, warnings, setFailure, teardown }
+    return { ch, ws, instanceConfig, calls, subs, warnings, setFailure, teardown }
 }
 
 const assetsMessages = (ws: MockWs) => ws.of('assets')
@@ -247,6 +247,22 @@ test('restarting the analysis reopens the streams of the same inventory', async 
 
     assert.equal(calls.length, 6, '3 streams opened, closed and opened again')
     assert.ok(getInstance(ch).assets.every(a => a.state === ECensorAssetState.STREAMING))
+})
+
+/*
+    The two tests below hand 'processProviderEvent' the event themselves, which proves the handler and
+    nothing else. For a long time nobody subscribed to 'events', so in a real cluster that handler was
+    never called and the pod add/remove those tests describe did not happen: listing the provider in
+    'requirements' makes the core INSTANTIATE it, never deliver to it. This one covers the wiring, which
+    is the half the others cannot see.
+*/
+test('starting the channel subscribes to the events provider, asking for pods', async (t) => {
+    const { subs, teardown } = await setupCluster()
+    t.after(teardown)
+
+    const sub = subs.find(s => s.providerId === 'events')
+    assert.ok(sub, 'without this subscription no pod event ever reaches the channel')
+    assert.deepEqual((sub!.data as { kinds: string[] }).kinds, ['Pod'], 'only Pod is read by handleClusterPodEvent')
 })
 
 test('a deleted pod leaves the inventory and its stream is aborted', async (t) => {

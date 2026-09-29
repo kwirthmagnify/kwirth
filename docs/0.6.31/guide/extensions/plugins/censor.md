@@ -72,6 +72,8 @@ The tabs break the pipeline apart. Counts update live.
 
 The **inventory** of pods/containers this session covers: every container matched by the active configurations (or, in a resource view, every container you selected). An object stays on this list while it matches — it does **not** disappear because its log stream had a hiccup.
 
+The list **keeps up with the cluster on its own**, with no refresh: in a **cluster** session a pod created after you opened the tab joins the inventory as soon as Kubernetes reports it, and in **any** session a pod that goes away leaves the list and its stream is closed. Which is what you want from a deployment that scales or a rollout that replaces its pods — the objects that appear are analyzed too, without reopening the channel.
+
 Each row carries a dot with the state of its **log stream**, which is a separate thing from being inventoried:
 
 | Dot | State | Meaning |
