@@ -687,11 +687,25 @@ export class MetricsProvider implements IProvider {
         this.prevRead = this.lastRead
         this.lastRead = await this.readClusterMetrics(clusterInfo)
         if (this.lastRead) {
+            /*
+                The usage is recomputed HERE, and not where readClusterMetrics builds it.
+
+                Network throughput is the only figure worked out as a difference between two reads
+                (`tx - prevtx`). readClusterMetrics calls getClusterUsage() from inside this await, so
+                at that point `lastRead` has not been reassigned yet while `prevRead` already points at
+                that very same object: the subtraction is a read minus itself, and subscribers got
+                **zero traffic, always**.
+
+                The HTTP endpoint never showed it because it asks between ticks, when the state is
+                settled -- which is why the homepage displayed real numbers while every subscriber saw
+                zeros. CPU and memory are unaffected: they are absolute values from a single read.
+            */
+            this.lastRead.cluster = this.getClusterUsage()
+
             for (let [channel, _config] of this.subscribers) {
                 this.deliveries++
                 channel.processProviderEvent(this.id, this.lastRead)
             }
-            this.getClusterUsage()
         }
     }
 
