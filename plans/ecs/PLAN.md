@@ -192,16 +192,38 @@ reescrita — documentaba un `docker run` **sin store**, que es exactamente el f
 
 ## Pendiente al cerrar el proyecto
 
-- **Publicar el back.** Lleva el bump de `kwirth-common` a `0.5.56` en su `package.json` desde el
-  2026-09-24, pero su publish en npm se hace **al terminar ECS**, no stream a stream. Decisión del
-  2026-09-24.
+### Lo que queda
+
+- 🔴 **Desplegar en ECS de verdad.** Es lo único que contesta a "¿se puede ejecutar Kwirth en ECS?".
+  Todo lo demás está verificado por sintaxis y contra el código —los JSON parsean, `wget` existe en la
+  imagen, la URI de ingesta sale del `routerAlias` del provider—, pero **EFS, los roles IAM, el target
+  group y la detección por metadata en una tarea real no los ha visto funcionar nadie**. El usuario
+  habilita una cuenta de AWS para esto (2026-09-29).
+- 🔴 **Documentar la configuración completa de ECS** una vez desplegado, con foco en:
+  - **Storage** — ya escrito, pero hay que confirmarlo contra un EFS real: el access point, los permisos
+    POSIX y que `KWIRTH_STORE` sobrevive al reciclado de la tarea.
+  - **Persistencia SQL, como opcional** — sin cubrir todavía. El core lee `KWIRTH_SQL_CLIENT`, `_HOST`,
+    `_PORT`, `_USER`, `_PASSWORD`, `_SSL` y `_MAINTDB`, y es lo que usan los plugins que guardan en
+    Postgres. En ECS eso significa RDS o Aurora: security group que permita a la tarea alcanzar la base,
+    la contraseña por Secrets Manager y no por `environment[]`, y qué pasa cuando la base no está.
+    Pedido por el usuario el 2026-09-29.
 - **Corrida e2e completa.** Aplazada el 2026-09-24 para agruparla con otros cambios: tarda ~33 min y dos
   tandas se invalidaron por reinicios del back en mitad. Los 4 casos del spec nuevo sí pasan.
-- **`agora` no compila**, por `EInfraSource.CLOUD` —que el enum no declara— en `azureSignals.ts` y su
-  test. Es trabajo previo, ajeno a esto, y quedó **aparcado por decisión del usuario**. Mientras no
-  compile no se puede reconstruir su `dist`, así que seguirá mostrando el hueco en sus `sources`.
-- **Actualizar los plugins instalados.** Publicar no actualiza lo que un Kwirth tiene puesto: en el dev,
-  `log` seguía en 0.2.23 y por eso mostraba `[,kubernetes]`. Hay que actualizarlos desde el gestor.
+
+### Resuelto
+
+- ~~**Publicar el back**~~ — no aplica. `kwirth-back` no es un paquete de npm: está despublicado desde
+  2024 y es la aplicación, no una librería. La nota estaba mal puesta. Su dependencia de
+  `kwirth-common` ya va por `^0.5.59`, subida por el usuario.
+- ~~**`agora` no compila**~~ — resuelto el 2026-09-29. Compila y su `dist` está reconstruido: ya declara
+  `sources: [KUBERNETES]` y no queda hueco en la lista.
+- ~~**Actualizar los plugins instalados**~~ — hecho en el dev.
+
+### Sin regresión a los 5 días
+
+Comprobado el 2026-09-29 con la imagen **0.6.40**, con el repo ya muy movido: un contenedor sin
+kubeconfig arranca, da `clusterType: none`, responde `/healthz` con 200 y su log no contiene ni una
+coincidencia de `No currently active cluster`, `localhost:8080` o `Cannot get a running instance`.
 
 ## Hallazgos laterales, al backlog
 

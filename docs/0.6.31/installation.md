@@ -207,7 +207,7 @@ Execution environment capabilities:
 
 Ready-to-use task definitions, a CloudFormation template for the surrounding resources (EFS, security
 groups, target group, IAM roles) and a FireLens example live in the
-[`ecs/` folder](https://github.com/kwirthmagnify/kwirth/tree/master/ecs) of the repository.
+[`deploy/ecs/` folder](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/ecs) of the repository.
 
 > kwirth does **not** manage ECS tasks or containers as if they were a cluster. To get the log of your
 > other tasks, ship it in through an ingestion provider.
