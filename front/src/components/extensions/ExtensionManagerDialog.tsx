@@ -6,7 +6,7 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../../tools/AuthorizationManagement'
-import { MarketplaceBadge, compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
+import { compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { ERestartAction } from './extensionRestart'
 import { useKeyboard } from '../../tools/useKeyboard'
 import { EChipIcon, EManagerSection, IExtensionAction, IExtensionChip, IExtensionManagerDescriptor, IExtensionRequirement } from './extensionManagerModel'
@@ -709,7 +709,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
             </DialogContent>
             {error && <Box sx={{ px: 3, pb: 1 }}><Typography variant='caption' color='error'>{error}</Typography></Box>}
             <DialogActions>
-                <Button onClick={props.onClose}>CLOSE</Button>
+                <Button variant='outlined' onClick={props.onClose}>CLOSE</Button>
             </DialogActions>
         </Dialog>
 

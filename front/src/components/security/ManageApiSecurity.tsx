@@ -6,6 +6,7 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { AccessKey, accessKeySerialize, ApiKey, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { ResourceEditor } from './ResourceEditor'
+import { useKeyboard } from '../../tools/useKeyboard'
 import { v4 as uuid } from 'uuid'
 import copy from 'clipboard-copy'
 
@@ -26,7 +27,8 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
     const [filterText, setFilterText] = useState<string>('')
     const [allResources, setAllResources] = useState<string[]>([])
     const [scopeCatalog, setScopeCatalog] = useState<IExtensionScope[]>([])
-
+    useKeyboard(() => props.onClose())
+    
     const getKeys = async () => {
         let response = await fetch(`${backendUrl}/key`, addGetAuthorization(accessString))
         let data = await response.json()

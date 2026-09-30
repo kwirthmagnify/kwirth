@@ -2,6 +2,7 @@ import { useState, useContext } from 'react'
 import { Stack, Button, Dialog, DialogActions, DialogContent, TextField } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
+import { useKeyboard } from '../../tools/useKeyboard'
 
 interface ISaveWorkspaceProps {
     onClose:(name?:string, description?:string) => void
@@ -19,6 +20,7 @@ const SaveWorkspace: React.FC<ISaveWorkspaceProps> = (props:ISaveWorkspaceProps)
     const [newname, setNewname] = useState(props.name)
     const [desc, setDesc] = useState(props.description)
     const { backendUrl } = useContext(SessionContext) as SessionContextType
+    useKeyboard(() => props.onClose())
 
     return (
         <Dialog open={true} disableRestoreFocus={true}>

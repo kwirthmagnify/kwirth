@@ -206,7 +206,7 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                 <Button startIcon={<Download fontSize='small' />} onClick={() => downloadJson(llms, 'kwirth-llms.json')}>Export</Button>
                 <Box flex={1} />
                 <Button onClick={() => props.onClose(llms)} variant='contained'>OK</Button>
-                <Button onClick={() => props.onClose(undefined)} color='inherit'>Cancel</Button>
+                <Button onClick={() => props.onClose(undefined)} variant='outlined'>Cancel</Button>
             </DialogActions>
         </Dialog>
     )
@@ -373,8 +373,8 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                 <Button startIcon={<Upload fontSize='small' />} onClick={() => importProvRef.current?.click()}>Import</Button>
                 <Button startIcon={<Download fontSize='small' />} onClick={() => downloadJson(providers.map(p => ({ name: p.name, type: p.type ?? p.name, key: p.key, ...(p.endpoint ? { endpoint: p.endpoint } : {}) })), 'kwirth-providers.json')}>Export</Button>
                 <Box flex={1} />
-                <Button onClick={() => props.onClose(providers)} color='primary' variant='contained'>Save</Button>
-                <Button onClick={() => props.onClose(undefined)} color='inherit'>Cancel</Button>
+                <Button onClick={() => props.onClose(providers)} variant='contained'>Save</Button>
+                <Button onClick={() => props.onClose(undefined)} variant='outlined'>Cancel</Button>
             </DialogActions>
         </Dialog>
     )

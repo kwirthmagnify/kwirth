@@ -250,7 +250,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
             sx={(theme) => ({ color: '#fff', zIndex: theme.zIndex.drawer + 10000 })}
             open={true}
             >
-            <CircularProgress color="inherit" />
+            <CircularProgress color='inherit'  />
         </Backdrop>}
     </>)
 }

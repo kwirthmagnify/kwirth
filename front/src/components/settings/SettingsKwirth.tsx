@@ -13,6 +13,7 @@ import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthTy
 import type { ELogLevel, ILogComponentInfo } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
+import { useKeyboard } from '../../tools/useKeyboard'
 
 /*
     The levels of the log, as LITERALS and not as `ELogLevel.X`.
@@ -112,6 +113,8 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const { backendUrl } = useContext(SessionContext) as SessionContextType
+
+    useKeyboard(() => props.onClose())
 
     // the dialog fetches its own data: it asks Kwirth for the effective values that rule right now
     useEffect(() => {

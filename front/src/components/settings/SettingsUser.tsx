@@ -3,6 +3,7 @@ import { Button, Checkbox, Dialog, DialogActions, DialogContent, FormControl, Fo
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { Settings } from '../../model/Settings'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
+import { useKeyboard } from '../../tools/useKeyboard'
 
 interface ISettingsUserProps {
     onClose:(ok:boolean) => void
@@ -32,6 +33,7 @@ const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) =>
             props.onClose(true)
         }
     }
+    useKeyboard(() => props.onClose(false))
 
     return (<>
         <Dialog open={true} fullWidth maxWidth='xs' disableRestoreFocus={true}>
