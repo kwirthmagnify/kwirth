@@ -1,4 +1,5 @@
 import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel, ISenderMessage, ISenderResult } from '@kwirthmagnify/kwirth-common-back'
+import { IChannelInstances } from '@kwirthmagnify/kwirth-common'
 import { ESenderDebugCommand, ESenderDebugKind, ESenderDebugPayload, ISenderDebugCommandMessage, ISenderDebugMessageResponse, ISenderDebugResult, ISenderDebugSendRequest, ISenderDebugSenderInfo } from '../common/SenderDebugTypes'
 
 /**
@@ -78,6 +79,16 @@ class SenderDebugChannel implements IChannel {
         this.clusterInfo = clusterInfo
         this.backChannelObject = backChannelObject
     }
+
+    /*
+        What this channel has running right now, for Status's Plugins tab. Instances are counted
+        across EVERY connection: one browser carries one instance per open tab, and a user may have
+        several browsers. Connections carrying no instance mean the channel is open but unused.
+    */
+    getInstances = (): IChannelInstances => ({
+        instances: this.webSockets.reduce((total, socket) => total + socket.instances.length, 0),
+        connections: this.webSockets.length
+    })
 
     getChannelData = (): BackChannelData => ({
         id: 'sender-debug',

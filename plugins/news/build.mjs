@@ -133,5 +133,9 @@ const distMeta = { type: 'commonjs', extensionType: 'plugin',
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
+// The package page on npm is this README: publishing without it leaves a page that says nothing.
+fs.copyFileSync('README.md', path.join('dist', 'README.md'))
+console.log('Copied README.md to dist/')
+
 console.log(`Done. Run 'npm publish' on your 'dist' folder in order to publish your package to npmjs.`)
 console.log(`Pacakge will be accesible (and installable on Kwirth) via this URL: https://registry.npmjs.org/${meta.publisher}/kwirth-plugin-${meta.id}/-/kwirth-plugin-${meta.id}-${meta.version}.tgz`)

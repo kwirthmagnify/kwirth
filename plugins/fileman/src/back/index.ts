@@ -1,4 +1,4 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, BackChannelData, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, EClusterType, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IChannelInstances, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, BackChannelData, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, EClusterType, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { Readable, Writable } from 'stream'
 import { Request, Response } from 'express'
@@ -64,6 +64,16 @@ class FilemanChannel implements IChannel {
         this.clusterInfo = clusterInfo
         this.backChannelObject = backChannelObject
     }
+
+    /*
+        What this channel has running right now, for Status's Plugins tab. Instances are counted
+        across EVERY connection: one browser carries one instance per open tab, and a user may have
+        several browsers. Connections carrying no instance mean the channel is open but unused.
+    */
+    getInstances = (): IChannelInstances => ({
+        instances: this.webSockets.reduce((total, socket) => total + socket.instances.length, 0),
+        connections: this.webSockets.length
+    })
 
     getChannelData = (): BackChannelData => ({
         id: 'fileman',

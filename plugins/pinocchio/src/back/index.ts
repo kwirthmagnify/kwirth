@@ -1,4 +1,4 @@
-import { IExtensionImportResult, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { IChannelInstances, IExtensionImportResult, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage } from './PinocchioConfig'
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
@@ -123,6 +123,16 @@ export class PinocchioChannel implements IChannel {
         } catch { /* shared LLMs not yet configured */ }
         loadModels(this.providers, this.backChannelObject)
     }
+
+    /*
+        What this channel has running right now, for Status's Plugins tab. Instances are counted
+        across EVERY connection: one browser carries one instance per open tab, and a user may have
+        several browsers. Connections carrying no instance mean the channel is open but unused.
+    */
+    getInstances = (): IChannelInstances => ({
+        instances: this.connections.reduce((total, connection) => total + connection.instances.length, 0),
+        connections: this.connections.length
+    })
 
     getChannelData = (): BackChannelData => {
         return {

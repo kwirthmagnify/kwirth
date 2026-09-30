@@ -1,7 +1,7 @@
 // Standalone backend plugin for the News channel.
 // Adapted from back/src/channels/news/NewsChannel.ts.
 // Does not depend on ClusterInfo or internal logging tools.
-import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { IChannelInstances, IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import https from 'https'
 import http from 'http'
@@ -38,6 +38,16 @@ class NewsChannel implements IChannel {
         this.clusterInfo = clusterInfo
         this.backChannelObject = backChannelObject
     }
+
+    /*
+        What this channel has running right now, for Status's Plugins tab. Instances are counted
+        across EVERY connection: one browser carries one instance per open tab, and a user may have
+        several browsers. Connections carrying no instance mean the channel is open but unused.
+    */
+    getInstances = (): IChannelInstances => ({
+        instances: this.webSockets.reduce((total, socket) => total + socket.instances.length, 0),
+        connections: this.webSockets.length
+    })
 
     getChannelData = (): BackChannelData => ({
         id: 'news',

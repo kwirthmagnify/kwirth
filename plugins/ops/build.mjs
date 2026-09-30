@@ -119,3 +119,7 @@ const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = { type: 'commonjs', extensionType: 'plugin', id: meta.id, name: `@kwirthmagnify/kwirth-plugin-${meta.id}`, displayName: meta.displayName, version: meta.version, description: meta.description, icon: meta.icon, ...(meta.website ? { website: meta.website } : {}), requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? [] }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
+
+// The package page on npm is this README: publishing without it leaves a page that says nothing.
+fs.copyFileSync('README.md', path.join('dist', 'README.md'))
+console.log('Copied README.md to dist/')
