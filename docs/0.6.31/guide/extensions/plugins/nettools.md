@@ -40,6 +40,7 @@ Without this, finding that out means `kubectl exec` into some pod that happens t
 | **Resolve** | the records of a name, of the type picked in **Record** | `nettools.resolve()` |
 | **Reverse** | the PTR names of an IP address | `nettools.reverse()` |
 | **Check port** | whether the TCP **Port** answers, three times | `nettools.ping()` |
+| **Latency** | opens a chart of the DNS round trips so far | the DCE's own `LatencyDialog` |
 
 The **Record** dropdown covers `A`, `AAAA`, `CNAME`, `MX`, `NS`, `PTR`, `SOA`, `SRV` and `TXT`. Records are shown as text whatever the type, in the order a zone file writes them: an `MX` reads `10 mail.example.com`, an `SRV` reads `0 5 5060 sip.example.com`.
 
@@ -61,6 +62,16 @@ The verdict for a port check reads `3/3 answered · 0% loss · min/avg/max`, plu
 | Red, `DCE 'nettools' is not loaded…` | The DCE is missing or its factory failed. **This** is the broken one |
 
 The distinction is the point: everything the network tells you is data, and red is kept for the one thing that is really wrong.
+
+## The latency chart
+
+**Latency** opens a chart of every DNS lookup made on this page: how many, and the fastest, the average and the slowest. The x axis is the **sequence** of lookups and not the clock — these are measurements taken by hand at irregular moments, so numbering them is the honest encoding; hovering a point gives its name, record type and the exact time.
+
+Only lookups the resolver **answered** are on it. A name that did not resolve measured a refusal, not a round trip, and mixing the two would make the chart lie about the network. An **empty answer is** on it: the name resolved and simply has no record of that type, and how long that took is the same question.
+
+> 🔴 **The chart is not this plugin's, and neither is the history behind it.** Both come from the [Net Tools DCE](/0.6.31/guide/extensions/dces/nettools), and the history is shared by **everything on the page that consumes it**. Open a second Net Tools tab, resolve a name there, and it shows up on the chart of the first one. That is the guarantee of the type, seen with your own eyes: one instance per side, not a copy per consumer.
+
+**Clear** empties it for everybody, not just for the tab you pressed it in.
 
 ## Installing
 

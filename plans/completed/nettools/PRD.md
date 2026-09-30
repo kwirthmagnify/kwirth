@@ -34,7 +34,8 @@ copiar.
 - **No es un provider.** No emite, no tiene suscriptores y no tiene ciclo de vida propio: se le
   pregunta y contesta. Si algo tuviera que emitir latencias periódicamente, eso sería un provider que
   *consume* esta DCE.
-- **La DCE no tiene front.** No hay nada que pintar: lo pinta quien la consume. Solo `back.js`.
+- ~~**La DCE no tiene front.**~~ **Revocado el 2026-09-30 (D6).** Lo tiene: el icono y un gráfico de
+  latencias con el historial compartido. Ver §4.
 - **No tiene configuración.** Como toda DCE en V1 (PRD del tipo, D3): ni diálogo, ni `configRouter`,
   ni secretos.
 - 🔴 **No lanza procesos.** Ni `ping`, ni `dig`, ni `nslookup`. Ver §4.
@@ -113,6 +114,27 @@ contrario de `getDce()`, que **sí** lanza — y a propósito: que la DCE no est
 instalación, que un host no conteste es un dato. El plugin consumidor pinta las dos cosas **distinto**,
 que es la prueba de que la distinción sirve para algo.
 
+### El front de la DCE (D6, 2026-09-30)
+
+La DCE nació solo de back porque «no hay nada que pintar». Lo que faltaba no era pintura: era el
+**otro lado del mecanismo**. El tipo `dce` promete una instancia por lado, y en el navegador eso solo
+lo ejercitaba el contador del `sample`. Así que la DCE aporta ahora, además:
+
+| qué | por qué en la DCE y no en cada consumidor |
+|---|---|
+| el **icono** | una definición; un cambio llega a todos sin republicar ninguno |
+| un **diálogo de latencias** (recharts) | ningún consumidor escribe una línea de código de gráfico |
+| el **historial** de roundtrips DNS | 🔴 **lo comparten todos**: lo que anota un plugin lo ve otro, en la misma página |
+
+El historial es lo que de verdad se valida. Es el equivalente en el navegador del contador del
+`sample`, pero con algo que sirve: dos consumidores escriben en una lista y leen la misma, y un
+`subscribe()` hace que el gráfico siga vivo mientras está abierto. Dos copias bundleadas tendrían cada
+una la suya y el gráfico diría algo distinto en cada pestaña **sin que nada pareciera roto**, que es el
+fallo caro que este tipo de extensión existe para impedir.
+
+**Y recharts no se bundlea**: el core ya lo publica en `window.__kwirth__`, igual que React y MUI, así
+que el `front.js` de la DCE pesa 12 KB.
+
 ### El plugin consumidor
 
 Un canal `nettools` con un nombre, un tipo de registro y un puerto, y tres botones: **Resolve**,
@@ -135,8 +157,11 @@ publica**: es a la vez el banco de pruebas del QA y el ejemplo de cómo se escri
 | RF6 | `reverse(ip, options?)`: PTR de una IP, con las mismas opciones. Devuelve `hostnames[]` |
 | RF7 | El destino se **valida** antes de abrir nada. Inválido = `error` en el resultado, sin socket ni consulta. El valor está en el **mensaje**: decir que `https://example.com` no es un nombre de host es más útil que un `EBADNAME` del resolutor |
 | RF8 | Ningún fallo de red lanza: viaja en `error`. Las opciones imposibles no lanzan tampoco: se normalizan |
-| RF9 | La DCE es **solo back**: el paquete no trae `front.js` |
-| RF10 | Un **plugin consumidor** con front declara `requiresExtension: ["dce:nettools:0.1.0"]`, pide la instancia con `getDce()` en el back y pinta los tres resultados, distinguiendo un fallo **dentro** del resultado de la DCE ausente |
+| ~~RF9~~ | ~~La DCE es **solo back**~~. Revocado por D6: trae los dos lados |
+| RF10 | Un **plugin consumidor** con front declara `requiresExtension`, pide la instancia con `getDce()` en el back y pinta los tres resultados, distinguiendo un fallo **dentro** del resultado de la DCE ausente |
+| RF11 | El front de la DCE aporta el **icono** y un **diálogo de latencias**, ya construidos: un consumidor no posee ni el SVG ni una línea de código de gráfico |
+| RF12 | El front de la DCE guarda un **historial compartido** de roundtrips DNS, acotado, con `record()`, `samples()`, `clear()` y `subscribe()`. `samples()` devuelve una **copia** y el **tiempo lo estampa la DCE** |
+| RF13 | Un consumidor que puede seguir sin la DCE usa `hasDce()` y no `getDce()`. Es el caso del icono, que se pinta mientras se construye el selector de canales |
 
 ### No funcionales
 
@@ -167,6 +192,8 @@ publica**: es a la vez el banco de pruebas del QA y el ejemplo de cómo se escri
 | D3 | Los errores de red viajan en el resultado; no se lanza | 2026-09-29 |
 | D4 | Los registros DNS se normalizan a `string[]` para todos los tipos (`MX` da `"10 mail.example.com"`, y un NULL MX da `"0 ."`) | 2026-09-29 |
 | D5 | Hay un **plugin consumidor** con front, en la carpeta de la DCE y sin publicar, como el stub del `sample`. Es el QA manual y el ejemplo a la vez | usuario, 2026-09-29 |
+| D6 | 🔴 **La DCE gana un front**: icono, diálogo de latencias con recharts e historial compartido. Revoca el no objetivo «no tiene front» de la versión anterior de este PRD. El motivo es validar el mecanismo de DCE **en el navegador**, que hasta ahora solo ejercitaba el contador del `sample` | usuario, 2026-09-30 |
+| D7 | El diálogo sigue el patrón de `ProviderDebugSetup` (Dialog/Title/Content/Actions, botones `outlined`, cierre a la derecha), sin botón de ayuda | usuario, 2026-09-30 |
 
 ## 8. Qué NO entra, y dónde queda anotado
 

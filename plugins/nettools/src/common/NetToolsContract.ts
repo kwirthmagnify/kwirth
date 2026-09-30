@@ -1,3 +1,6 @@
+import type React from 'react'
+import type { SvgIconProps } from '@mui/material'
+
 /*
     The contract of DCE `nettools`, declared here instead of imported.
 
@@ -74,9 +77,48 @@ export interface IReverseResult {
     error?: string
 }
 
+/** The BACK end's side of the DCE: what does the network work. */
 export interface INetTools {
     readonly id: string
     ping(target: string, options?: IPingOptions): Promise<IPingResult>
     resolve(name: string, options?: IDnsOptions): Promise<IDnsResult>
     reverse(address: string, options?: IReverseOptions): Promise<IReverseResult>
+}
+
+/* ── the FRONT end's side ───────────────────────────────────────────────────────────────────────── */
+
+/** One DNS round trip, as the back end measured it. The DCE stamps `at` itself. */
+export interface IDnsSample {
+    at: number
+    name: string
+    type: EDnsRecordType
+    timeMs: number
+    records: number
+}
+
+export type TDnsSampleInput = Omit<IDnsSample, 'at'>
+
+export interface ILatencyDialogProps {
+    open: boolean
+    onClose: () => void
+}
+
+/**
+ * What the DCE keeps in `window.__kwirth_dce__['nettools']`.
+ *
+ * `Icon` and `LatencyDialog` come ready built: this plugin draws them without owning an SVG path or a
+ * line of chart code, and a change to either reaches every consumer without republishing any of them.
+ *
+ * The history behind the chart is SHARED: what this plugin records, any other consumer on the page
+ * sees, and the other way round. Two bundled copies would each keep their own and the chart would
+ * differ per tab with nothing looking broken.
+ */
+export interface INetToolsFront {
+    readonly id: string
+    readonly Icon: React.FC<SvgIconProps>
+    readonly LatencyDialog: React.FC<ILatencyDialogProps>
+    record(sample: TDnsSampleInput): void
+    samples(): IDnsSample[]
+    clear(): void
+    subscribe(listener: () => void): () => void
 }

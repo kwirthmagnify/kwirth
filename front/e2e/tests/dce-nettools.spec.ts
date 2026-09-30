@@ -9,12 +9,13 @@ import path from 'path'
     The `nettools` DCE against a real core (plan: plans/completed/nettools/PLAN.md, S1.10).
 
     It needs the dev core with the DCE loaded (kwirth-dev.json → dces.nettools). What is checked here is
-    what only a running core can answer — that the package the build produces is loaded, that it is
-    back only, and that a consumer's declared version is honoured against it. What the tools DO is the
-    DCE's own harness: 60 unit tests that need no network.
+    what only a running core can answer — that the package the build produces is loaded, that both sides
+    are served, and that a consumer's declared version is honoured against it. What the tools DO is the
+    DCE's own harness, which needs no network; what its FRONT end does is `nettools-channel.spec.ts`,
+    through the plugin that consumes it.
 
-    There is no HTTP way to call a DCE, and that is by design: a DCE is consumed in-process by another
-    extension, with getDce(). Pinging from here would be testing Playwright, not Kwirth.
+    There is no HTTP way to call a DCE's back end, and that is by design: it is consumed in-process by
+    another extension, with getDce(). Pinging from here would be testing Playwright, not Kwirth.
 
     NON-destructive: the only thing it installs is a theme with the `e2e-nettools-` prefix, removed at
     the end even on failure. Nothing that is already installed is touched.
@@ -60,7 +61,7 @@ const consumerTgz = (requires: string[]): Buffer => makeTgz({
 
 test.describe.configure({ mode: 'serial' })
 
-test.describe('dce nettools: loaded, back only, and consumable by version', () => {
+test.describe('dce nettools: loaded, both sides served, and consumable by version', () => {
     let api: APIRequestContext
     let auth: Record<string, string>
 
@@ -93,11 +94,22 @@ test.describe('dce nettools: loaded, back only, and consumable by version', () =
         expect(nettools?.version).toMatch(/^\d+\.\d+\.\d+$/)
     })
 
-    test('🔴 it is back only: no front is declared and none is served', async () => {
+    test('🔴 it brings both sides, and its front.js registers a factory instead of building its own object', async () => {
         const nettools = await listed()
         expect(nettools?.hasBack).toBe(true)
-        expect(nettools?.hasFront, 'a front slipped into a back-only DCE').toBe(false)
-        expect((await api.get(`/core/dce/${DCE_ID}/front`)).status()).toBe(404)
+        expect(nettools?.hasFront, 'the front end of the DCE is not installed').toBe(true)
+
+        const front = await api.get(`/core/dce/${DCE_ID}/front`)
+        expect(front.status()).toBe(200)
+        expect(front.headers()['content-type']).toContain('javascript')
+        const code = await front.text()
+        // The script REGISTERS; the core calls it. That is what makes 'loaded' mean the factory ran.
+        expect(code).toMatch(/DCE_FRONT_FACTORIES|__kwirth_dce_factories__/)
+        expect(code).toContain('factories["nettools"]')
+        // And it bundles neither recharts nor React: both resolve against the globals the core publishes.
+        expect(code).toContain('window.__kwirth__.recharts')
+        expect(code).toContain('window.__kwirth__.React')
+        expect(code.length, 'the front bundle carries a copy of recharts').toBeLessThan(80_000)
     })
 
     test('a consumer that requires the version installed goes in', async () => {

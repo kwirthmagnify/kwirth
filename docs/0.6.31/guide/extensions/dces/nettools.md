@@ -6,8 +6,15 @@ The first **utility** [dynamic core extension](index): DNS resolution and TCP re
 |---|---|
 | id | `nettools` |
 | package | `@kwirthmagnify/kwirth-dce-nettools` |
-| sides | back only |
+| sides | back **and** front |
 | source | `dces/nettools` in the kwirth repo |
+
+Each side does a different job, and together they are the clearest worked example of what the type is for:
+
+| side | what it provides |
+|---|---|
+| **back** | the network itself — `ping()`, `resolve()`, `reverse()`. One implementation, one shape of result |
+| **front** | the **icon**, a **latency chart**, and the **shared history** behind it. No consumer owns an SVG path or a line of chart code |
 
 It is consumed by the [Net Tools plugin](/0.6.31/guide/extensions/plugins/nettools), which is also the worked example of how a consumer is written.
 
@@ -60,6 +67,46 @@ Records come back **as text for every type**, in the canonical order a zone file
 
 An **empty answer is not an error**: the name resolves and has no record of that type, so `records` is empty and `error` is absent.
 
+## The front end
+
+The browser resolves nothing — that is the back end's job, and deliberately: what matters is what **kwirth** sees from inside the cluster. What the front end shares is everything around it.
+
+```ts
+interface INetToolsFront {
+    readonly id: string
+    readonly Icon: FC<SvgIconProps>              // the net tools icon
+    readonly LatencyDialog: FC<ILatencyDialogProps>   // the chart, ready to open
+    record(sample: TDnsSampleInput): void        // a consumer adds a round trip
+    samples(): IDnsSample[]                      // a COPY of the history
+    clear(): void
+    subscribe(listener: () => void): () => void  // and the function that stops it
+}
+```
+
+```ts
+import { getDce, hasDce } from '@kwirthmagnify/kwirth-common-front'
+const nettools = getDce<INetToolsFront>('nettools')
+nettools.record({ name: 'example.com', type: EDnsRecordType.A, timeMs: 14, records: 2 })
+```
+
+### The history is the point
+
+`record()` and `samples()` read and write **one list for the whole page**. What one plugin records, another sees; open the chart from any of them and it is drawing the same thing. Two bundled copies would each keep their own, and the chart would say something different in every tab **with nothing looking broken** — which is the expensive failure this type of extension exists to prevent.
+
+Three details that are not decoration:
+
+- **`samples()` returns a copy.** A consumer that sorted or spliced it in place would be editing what everybody else reads.
+- **The DCE stamps the time**, not the consumer. Two consumers with two clocks would draw a line that jumps backwards.
+- **`subscribe()`** is what keeps the chart right while it is open. A shared object that cannot be listened to is a snapshot.
+
+### `hasDce()` where the DCE is optional
+
+The plugin draws the channel icon with `hasDce()` and not `getDce()`, and falls back to its own if it is missing. That code runs while the **channel selector** is being built, and a throw there would leave the channel out of the list with nothing saying why. Everywhere the answer actually matters it uses `getDce()`, which throws with the cause.
+
+### recharts is not bundled
+
+The chart uses recharts, and the core already publishes it in `window.__kwirth__` along with React and MUI — so the DCE's `front.js` maps it instead of bundling it, and weighs about **12 KB**. A DCE that bundled its own would put a second copy of a ~500 KB library on the page, per extension. That is the arithmetic the whole type is built on.
+
 ## Nothing throws
 
 This is the part worth reading twice, because it is the opposite of `getDce()`.
@@ -109,3 +156,9 @@ npm run try
 ```
 
 It loads **the very bundle the core loads** with a host in memory and resolves and connects for real. It takes optional arguments — `node try.mjs <target> <name-to-resolve> <ip-to-reverse>`.
+
+It covers the back end only: the front end needs a browser, and it is exercised through the plugin.
+
+## Updating it
+
+A DCE's factory runs **once**, so a new version needs the back end **restarted** — and, because the front-end instance lives in the page, the browser **reloaded**. Whoever already holds an instance keeps it until then.

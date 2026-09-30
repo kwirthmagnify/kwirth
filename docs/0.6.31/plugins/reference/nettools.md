@@ -15,6 +15,8 @@ It does no networking of its own. Every answer comes from the [`nettools` DCE](/
 | `port` | `number` | `443` | TCP port. Only for **Check port** |
 | `count` | `number` | `3` | Attempts. Only for **Check port** |
 
+**What it draws with the DCE's front end:** the channel icon (`Icon`, read through `hasDce()` so a missing DCE leaves the channel in the selector rather than out of it) and the **Latency** dialog (`LatencyDialog`). Every answered DNS lookup is recorded into the DCE's **shared history** with `record()`, from `processChannelMessage` — so an answer that arrives while another tab is on screen is still on the chart. The plugin owns neither the SVG path nor a line of chart code, and does not depend on recharts at all.
+
 **What it answers with:** the DCE's own result, untouched — `IDnsResult`, `IReverseResult` or `IPingResult`. It is not flattened into strings on the back end: every consumer of the DCE gets the same shape, and turning it into text there would hide exactly what is worth looking at.
 
 A failure **inside** the result (a port that refuses, a name that does not resolve) and a **missing DCE** are painted differently, and that is the contract of the type made visible: network failures are data and travel in the result, while `getDce()` throws.

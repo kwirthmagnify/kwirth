@@ -1,10 +1,25 @@
 import React, { FC } from 'react'
 import { EInstanceConfigScope, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, ISignalMessage } from '@kwirthmagnify/kwirth-common'
-import { IChannel, IChannelObject, IChannelRequirements, IChannelMessageAction, IContentProps, ISetupProps, EChannelRefreshAction } from '@kwirthmagnify/kwirth-common-front'
-import { EDnsRecordType } from '../common/NetToolsContract'
+import { IChannel, IChannelObject, IChannelRequirements, IChannelMessageAction, IContentProps, ISetupProps, EChannelRefreshAction, getDce, hasDce } from '@kwirthmagnify/kwirth-common-front'
+import { EDnsRecordType, INetToolsFront } from '../common/NetToolsContract'
 import { INetToolsMessageResponse, INetToolsReading } from '../common/NetToolsMessages'
 import { NetToolsTabContent } from './NetToolsTabContent'
 import { NetToolsIcon } from './icons'
+
+/*
+    Records the round trip in the DCE's shared history, when there was one.
+
+    Only what the resolver really answered is recorded — a reading that carries the result's own error
+    did not measure a round trip, it measured a refusal, and mixing the two would make the chart lie
+    about what the network is doing. An empty answer IS recorded: the name resolved, it just has no
+    record of that type, and how long that took is the same question.
+*/
+export const recordRoundTrip = (nettools: INetToolsFront, reading: INetToolsReading): void => {
+    if (reading.dns && !reading.dns.error)
+        nettools.record({ name: reading.dns.name, type: reading.dns.type, timeMs: reading.dns.timeMs, records: reading.dns.records.length })
+    if (reading.reverse && !reading.reverse.error)
+        nettools.record({ name: reading.reverse.address, type: EDnsRecordType.PTR, timeMs: reading.reverse.timeMs, records: reading.reverse.hostnames.length })
+}
 
 /** What the tab holds between renders: the form as it is being typed, and the last few answers. */
 export interface INetToolsData {
@@ -57,7 +72,20 @@ export class NetToolsChannel implements IChannel {
     }
 
     getScope() { return EInstanceConfigScope.NONE }
-    getChannelIcon(): JSX.Element { return React.createElement(NetToolsIcon) }
+
+    /*
+        The icon comes from the DCE, so this plugin does not own a copy of the path and a change to it
+        reaches every consumer at once.
+
+        `hasDce()` and not `getDce()`: this runs while the channel selector is being painted, and a
+        throw there would leave the channel out of the list with nothing saying why. A missing DCE is
+        already reported where it matters — the moment a question is asked — so here it falls back and
+        carries on. It is the one place in this plugin where the DCE is optional.
+    */
+    getChannelIcon(): JSX.Element {
+        const icon = hasDce('nettools') ? getDce<INetToolsFront>('nettools').Icon : NetToolsIcon
+        return React.createElement(icon)
+    }
 
     getSetupVisibility(): boolean { return this.setupVisible }
     setSetupVisibility(visibility: boolean): void { this.setupVisible = visibility }
@@ -70,6 +98,9 @@ export class NetToolsChannel implements IChannel {
             case EInstanceMessageType.DATA:
                 data.waiting = false
                 data.readings = [msg.reading, ...data.readings].slice(0, MAX_READINGS)
+                // Recorded HERE and not in the tab's content: an answer that arrives while the tab is
+                // not the one on screen is still a round trip, and the chart has to have it.
+                if (hasDce('nettools')) recordRoundTrip(getDce<INetToolsFront>('nettools'), msg.reading)
                 return { action: EChannelRefreshAction.REFRESH }
             case EInstanceMessageType.SIGNAL: {
                 const signal: ISignalMessage = JSON.parse(wsEvent.data)

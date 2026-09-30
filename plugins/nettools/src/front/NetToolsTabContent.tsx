@@ -1,8 +1,8 @@
 import React from 'react'
 import { Box, Button, Chip, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material'
-import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { IContentProps, getDce, hasDce } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
-import { EDnsRecordType } from '../common/NetToolsContract'
+import { EDnsRecordType, INetToolsFront } from '../common/NetToolsContract'
 import { ENetToolsCommand, INetToolsReading, INetToolsRequest } from '../common/NetToolsMessages'
 import { INetToolsData } from './NetToolsChannel'
 
@@ -111,7 +111,18 @@ const Reading: React.FC<{ reading: INetToolsReading }> = ({ reading }) => {
 export const NetToolsTabContent: React.FC<IContentProps> = (props) => {
     const data: INetToolsData = props.channelObject.data
     const [, force] = React.useState(0)
+    const [latencyOpen, setLatencyOpen] = React.useState(false)
     const repaint = () => force(value => value + 1)
+
+    /*
+        The DCE's front end, or nothing.
+
+        The chart and the icon come from it already built — this plugin owns neither an SVG path nor a
+        line of recharts. `hasDce()` rather than a try: a consumer that can carry on without it says so
+        by asking, and the button is disabled instead of throwing when somebody presses it.
+    */
+    const nettools: INetToolsFront | undefined = hasDce('nettools') ? getDce<INetToolsFront>('nettools') : undefined
+    const LatencyDialog = nettools?.LatencyDialog
 
     const ask = (command: ENetToolsCommand): void => {
         const request: INetToolsRequest = { command, target: data.target, recordType: data.type, port: data.port, count: 3 }
@@ -168,6 +179,11 @@ export const NetToolsTabContent: React.FC<IContentProps> = (props) => {
                     onClick={() => ask(ENetToolsCommand.REVERSE)}>Reverse</Button>
                 <Button variant='outlined' size='small' disabled={noTarget || data.waiting}
                     onClick={() => ask(ENetToolsCommand.CHECK)}>Check port</Button>
+                {/*
+                    The chart is the DCE's, not this plugin's: what opens is a component that came out of
+                    the registry, drawing a history every consumer on the page writes into.
+                */}
+                <Button variant='text' size='small' disabled={!nettools} onClick={() => setLatencyOpen(true)}>Latency</Button>
             </Stack>
 
             {data.readings.length === 0 &&
@@ -180,6 +196,8 @@ export const NetToolsTabContent: React.FC<IContentProps> = (props) => {
             {data.signals.length > 0 &&
                 <Box>{data.signals.map((signal, index) =>
                     <Typography key={index} variant='caption' color='error' display='block'>{signal}</Typography>)}</Box>}
+
+            {LatencyDialog && <LatencyDialog open={latencyOpen} onClose={() => setLatencyOpen(false)} />}
         </Stack>
     )
 }

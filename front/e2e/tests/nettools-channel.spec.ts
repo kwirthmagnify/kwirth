@@ -153,4 +153,65 @@ test.describe('nettools: the channel that consumes the DCE', () => {
         // It is the RESULT that carries it. The plugin's own error line is for the DCE being missing.
         await expect(page.locator('[aria-label="reading error"]')).toHaveCount(0)
     })
+
+    /*
+        ── The DCE's FRONT end ──────────────────────────────────────────────────────────────────────
+
+        Everything below is drawn by code that came out of `window.__kwirth_dce__['nettools']`: the
+        plugin owns neither the icon's path nor a line of chart code. That is the half of the type the
+        back-end tests cannot reach, and the reason this DCE grew a front at all.
+    */
+
+    const dialog = () => page.getByRole('dialog').filter({ hasText: 'DNS round trips' })
+
+    test("🔴 the Latency button opens a dialog the DCE provides, drawing the DCE's shared history", async () => {
+        await page.getByRole('button', { name: 'Latency', exact: true }).click()
+        await expect(dialog()).toBeVisible({ timeout: 15000 })
+
+        // recharts, resolved against the core's global rather than bundled by the DCE.
+        await expect(dialog().locator('.recharts-surface')).toBeVisible()
+        await expect(dialog().locator('.recharts-line')).toHaveCount(1)
+
+        /*
+            The history has the lookups made EARLIER IN THIS FILE, which is the whole point: the plugin
+            recorded them into the DCE as the answers arrived, and this dialog — which the plugin did
+            not write — is reading the same object back.
+
+            Three of them resolved: example.com A, the reverse of 8.8.8.8, and 8.8.8.8 A. The two port
+            checks are not DNS, and the invalid name never reached a resolver.
+        */
+        await expect(dialog().getByText('lookups')).toBeVisible()
+        const lookups = Number(await dialog().locator('text=lookups').locator('xpath=following-sibling::*[1]').innerText())
+        expect(lookups, 'the plugin did not record its round trips into the DCE').toBeGreaterThan(0)
+
+        for (const headline of ['min', 'avg', 'max']) await expect(dialog().getByText(headline, { exact: true })).toBeVisible()
+    })
+
+    test('🔴 a lookup made while the dialog is OPEN reaches the chart: the history is listened to, not copied', async () => {
+        const countOf = async (): Promise<number> =>
+            Number(await dialog().locator('text=lookups').locator('xpath=following-sibling::*[1]').innerText())
+        const before = await countOf()
+
+        // The dialog stays up; the question is asked behind it, from the tab.
+        await dialog().getByRole('button', { name: 'CLOSE', exact: true }).click()
+        await expect(dialog()).toBeHidden()
+        await type('Host or IP', 'example.com')
+        await ask('Resolve')
+        await page.getByRole('button', { name: 'Latency', exact: true }).click()
+        await expect(dialog()).toBeVisible()
+
+        await expect(async () => expect(await countOf()).toBe(before + 1)).toPass({ timeout: 15000 })
+    })
+
+    test('CLEAR empties the shared history, and the dialog says so instead of drawing an empty chart', async () => {
+        await dialog().getByRole('button', { name: 'CLEAR', exact: true }).click()
+
+        await expect(dialog().getByText('No lookups yet')).toBeVisible({ timeout: 10000 })
+        await expect(dialog().locator('.recharts-surface')).toHaveCount(0)
+        // Nothing to clear any more, so the button says so rather than staying live.
+        await expect(dialog().getByRole('button', { name: 'CLEAR', exact: true })).toBeDisabled()
+
+        await dialog().getByRole('button', { name: 'CLOSE', exact: true }).click()
+        await expect(dialog()).toBeHidden()
+    })
 })

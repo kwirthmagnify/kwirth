@@ -13,6 +13,13 @@ const kwirthFrontGlobalsPlugin = {
     name: 'kwirth-globals',
     setup(build) {
         const globals = {
+            'react': 'window.__kwirth__.React',
+            '@mui/material': 'window.__kwirth__.MUI.material',
+            '@mui/icons-material': 'window.__kwirth__.MUI.icons',
+            // The chart. The core publishes recharts too, so it costs this bundle nothing — and a DCE
+            // that bundled its own would put a second copy of it on the page, which is the very thing
+            // this type exists to stop.
+            'recharts': 'window.__kwirth__.recharts',
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
         }
@@ -20,7 +27,7 @@ const kwirthFrontGlobalsPlugin = {
             build.onResolve({ filter: new RegExp(`^${pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }, () => ({ path: pkg, namespace: 'kwirth-globals' }))
         }
         build.onLoad({ filter: /.*/, namespace: 'kwirth-globals' }, (args) => ({
-            contents: `const _m = ${globals[args.path]}; module.exports = Object.assign({}, _m, { default: _m, __esModule: true });`,
+            contents: `const _m = ${globals[args.path]}; let _d = (_m != null && 'default' in Object(_m)) ? _m.default : _m; if (typeof _d !== 'function' && _d != null && typeof _d.default !== 'undefined') _d = _d.default; module.exports = Object.assign({}, (typeof _m === 'object' && _m !== null) ? _m : {}, {default: _d, __esModule: true});`,
             loader: 'js',
         }))
     },
@@ -61,6 +68,20 @@ else {
 
 fs.mkdirSync('dist', { recursive: true })
 
+await esbuild.build({
+    entryPoints: ['src/front/index.ts'],
+    bundle: true,
+    format: 'iife',
+    outfile: 'dist/front.js',
+    plugins: [kwirthFrontGlobalsPlugin],
+    loader: { '.tsx': 'tsx', '.ts': 'ts' },
+    jsx: 'transform',
+    jsxFactory: 'React.createElement',
+    jsxFragment: 'React.Fragment',
+    target: 'es2020',
+    minify: false,
+})
+console.log('Built dist/front.js')
 
 await esbuild.build({
     entryPoints: ['src/back/index.ts'],

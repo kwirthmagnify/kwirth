@@ -19,17 +19,26 @@ Everything is answered by the **Kwirth process**, not by your browser. That is t
 | **Resolve** | the records of a name — `A`, `AAAA`, `CNAME`, `MX`, `NS`, `PTR`, `SOA`, `SRV`, `TXT` |
 | **Reverse** | the PTR names of an IP address |
 | **Check port** | whether a TCP port answers, three times, with the times and the packet loss |
+| **Latency** | a chart of the DNS round trips made on this page |
 
 Answers stack up newest first, each one saying what was asked and of what.
 
 A **port that refuses** and a **name that does not resolve** are shown as readings, not as errors — because that is what they are. The plugin keeps red for the one thing that really is broken: its dependency missing.
+
+## The chart is not this plugin's
+
+**Latency** opens a dialog that comes out of the DCE, drawing a history the DCE keeps. This plugin owns neither the SVG of its own icon nor a line of chart code, and does not depend on recharts at all.
+
+And that history is **shared by everything on the page that consumes the DCE**. Open a second Net Tools tab, resolve a name there, and it appears on the first one's chart. Two bundled copies would each keep their own and the two tabs would disagree with nothing looking broken — which is what the DCE type exists to prevent.
+
+Only lookups the resolver answered are on it: a name that did not resolve measured a refusal, not a round trip. An empty answer **is** on it — the name resolved and has no record of that type, and how long that took is the same question.
 
 ## Requirements
 
 It needs the [`nettools` DCE](https://www.npmjs.com/package/@kwirthmagnify/kwirth-dce-nettools), which is where the actual work happens:
 
 ```json
-"requiresExtension": ["dce:nettools:0.1.0"]
+"requiresExtension": ["dce:nettools:0.2.0"]
 ```
 
 Kwirth enforces it: this plugin will not install without the DCE, and the DCE will not be removed while this is installed. Install the DCE from **☰ → Manage extensions → DCEs** first, then this from **☰ → Manage extensions → Plugins**.
