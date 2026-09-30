@@ -1,6 +1,6 @@
 import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel } from '@kwirthmagnify/kwirth-common-back'
-import { IDceRegistryEntry } from '@kwirthmagnify/kwirth-common'
-import { EComponentHealth, EComponentKind, EStatusPayload, EStatusRouteOwner, IStatusComponent, IStatusDce, IStatusDceConsumer, IStatusEdge, IStatusInventory, IStatusMessageResponse, IStatusRoute } from '../common/StatusTypes'
+import { ERouteOwnerKind, IChannelInstances, IDceAccess, IDceMeta, IPluginAccess, IPluginStatus, IPublishedRoute, IRouteAccess } from '@kwirthmagnify/kwirth-common'
+import { EComponentHealth, EComponentKind, EStatusPayload, IStatusComponent, IStatusDce, IStatusDceConsumer, IStatusEdge, IStatusInventory, IStatusMessageResponse } from '../common/StatusTypes'
 import { ProcessProbe } from './ProcessProbe'
 
 /*
@@ -75,45 +75,24 @@ interface IClusterInfoView {
      */
     getSubscriptions?(): ISubscriptionLike[]
     /** The core's route registry. Optional for the same reason: an older core has none. */
-    routes?: IRouteAccessView
+    routes?: IRouteAccess
     /** The core's DCE manager. Optional for the same reason. */
-    dces?: IDceAccessView
+    dces?: IDceAccess
+    /** The core's installed plugins. Optional for the same reason. */
+    plugins?: IPluginAccess
 }
 
-/** What this plugin reads of the core's DCE manager (ClusterInfo.dces). */
-interface IDceAccessView {
-    listInstalled(): Promise<IDceMetaView[]>
-    status(id: string): IDceRegistryEntry | undefined
-    consumers(id: string): Promise<IStatusDceConsumer[]>
-}
-
-/** The part of the core's IDceMeta this plugin shows. */
-interface IDceMetaView {
-    id: string
-    name: string
-    displayName?: string
-    version: string
-    installedFrom?: string
-    hasBack: boolean
-    hasFront: boolean
-}
-
-/** What this plugin reads of the core's route registry (ClusterInfo.routes). */
-interface IRouteAccessView {
-    listRoutes(): IStatusRoute[]
-}
-
-const ROUTE_OWNERS: ReadonlySet<string> = new Set(Object.values(EStatusRouteOwner))
+const ROUTE_OWNERS: ReadonlySet<string> = new Set(Object.values(ERouteOwnerKind))
 
 /*
     The published routes, or undefined when the core does not expose them — which is "unknown", and the
     tab says so, never "this Kwirth has no routes". An owner kind this plugin does not know yet (a newer
     core) is shown as OTHER rather than dropped.
 */
-export const toStatusRoutes = (access: IRouteAccessView | undefined): IStatusRoute[] | undefined => {
+export const toStatusRoutes = (access: IRouteAccess | undefined): IPublishedRoute[] | undefined => {
     if (!access) return undefined
     try {
-        return access.listRoutes().map(r => ({ ...r, ownerKind: ROUTE_OWNERS.has(r.ownerKind) ? r.ownerKind : EStatusRouteOwner.OTHER }))
+        return access.listRoutes().map(r => ({ ...r, ownerKind: ROUTE_OWNERS.has(r.ownerKind) ? r.ownerKind : ERouteOwnerKind.OTHER }))
     }
     catch (err) {
         // Said in the core's log: swallowing it left the tab claiming the core had no route list, with
@@ -131,9 +110,9 @@ export const toStatusRoutes = (access: IRouteAccessView | undefined): IStatusRou
     A consumer lookup that fails leaves THAT DCE with no consumers and says so in the log; the rest of
     the list still comes out.
 */
-export const toStatusDces = async (access: IDceAccessView | undefined): Promise<IStatusDce[] | undefined> => {
+export const toStatusDces = async (access: IDceAccess | undefined): Promise<IStatusDce[] | undefined> => {
     if (!access) return undefined
-    let metas: IDceMetaView[]
+    let metas: IDceMeta[]
     try {
         metas = await access.listInstalled()
     }
@@ -161,6 +140,22 @@ export const toStatusDces = async (access: IDceAccessView | undefined): Promise<
             consumers
         }
     }))
+}
+
+/*
+    The installed plugins, or undefined when the core does not expose them — "unknown", like the routes
+    and the DCEs. The core already guards each plugin's own figures; what is guarded here is the listing
+    as a whole, so a core that fails at it leaves the rest of the snapshot intact.
+*/
+export const toStatusPlugins = async (access: IPluginAccess | undefined): Promise<IPluginStatus[] | undefined> => {
+    if (!access) return undefined
+    try {
+        return await access.listPlugins()
+    }
+    catch (err) {
+        console.error(`[status] the core's plugin list failed: ${err}`)
+        return undefined
+    }
 }
 
 /**
@@ -272,6 +267,15 @@ class StatusChannel implements IChannel {
 
     containsInstance = (instanceId: string): boolean =>
         this.webSockets.some(socket => socket.instanceIds.includes(instanceId))
+
+    // A connection counts while it carries an instance: one left with none is on its way out.
+    getInstances = (): IChannelInstances => {
+        const carrying = this.webSockets.filter(s => s.instanceIds.length > 0)
+        return {
+            instances: carrying.reduce((n, s) => n + s.instanceIds.length, 0),
+            connections: carrying.length
+        }
+    }
 
     containsAsset = (_webSocket: WebSocket, _podNamespace: string, _podName: string, _containerName: string): boolean => false
 
@@ -473,6 +477,7 @@ class StatusChannel implements IChannel {
 
         const routes = toStatusRoutes(this.clusterInfo.routes)
         const dces = await toStatusDces(this.clusterInfo.dces)
+        const plugins = await toStatusPlugins(this.clusterInfo.plugins)
         return {
             cluster: this.clusterInfo.name ?? '',
             takenAt: Date.now(),
@@ -480,7 +485,8 @@ class StatusChannel implements IChannel {
             edges,
             process: this.probe.sample(),
             ...(routes ? { routes } : {}),
-            ...(dces ? { dces } : {})
+            ...(dces ? { dces } : {}),
+            ...(plugins ? { plugins } : {})
         }
     }
 

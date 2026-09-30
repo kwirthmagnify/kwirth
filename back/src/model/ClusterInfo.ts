@@ -1,5 +1,5 @@
 import { AdmissionregistrationV1Api, ApiextensionsV1Api, ApisApi, AppsV1Api, AutoscalingV2Api, BatchV1Api, CoordinationV1Api, CoreV1Api, CustomObjectsApi, Exec, KubeConfig, KubernetesObjectApi, Log, NetworkingV1Api, NodeV1Api, PolicyV1Api, RbacAuthorizationV1Api, SchedulingV1Api, StorageV1Api, V1Node, VersionApi } from '@kubernetes/client-node'
-import { EClusterType, EClusterFlavour, ERancherRole, IInstanceConfig, ISenderAccess, IWebhookAccess } from '@kwirthmagnify/kwirth-common'
+import { EClusterType, EClusterFlavour, ERancherRole, IDceAccess, IInstanceConfig, IPluginAccess, IRouteAccess, ISenderAccess, IWebhookAccess } from '@kwirthmagnify/kwirth-common'
 import { IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
@@ -7,8 +7,6 @@ import { isPluviderId, TPluviderChannel } from '../providers/Pluvider'
 import { consumerIdOf, TSubscriptionConsumer } from '../providers/Consumer'
 import { IChannel } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning, providerLogger } from '../tools/Logging'
-import { IRouteAccess } from '../tools/RouteRegistry'
-import { IDceAccess } from '../tools/DceManager'
 
 export interface INodeInfo {
     name: string
@@ -133,6 +131,8 @@ export class ClusterInfo {
     public routes?: IRouteAccess
     /** The installed DCEs, their state and who consumes them, read-only (the Status channel's DCE tab). */
     public dces?: IDceAccess
+    /** The installed plugins, their state and what their channels have running, read-only (Status). */
+    public plugins?: IPluginAccess
     /*
         Who consumes whom, recorded here because here is where it is known.
 

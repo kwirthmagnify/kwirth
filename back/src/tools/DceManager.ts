@@ -1,4 +1,4 @@
-import { DCE_REGISTRY, EDceState, EExtensionType, IDceConsumer, IDceRegistryEntry, TDceRegistry } from '@kwirthmagnify/kwirth-common'
+import { DCE_REGISTRY, EDceState, EExtensionType, IDceAccess, IDceConsumer, IDceMeta, IDceRegistryEntry, TDceRegistry } from '@kwirthmagnify/kwirth-common'
 import { IDceBack, IDceBackHost, IDceStore } from '@kwirthmagnify/kwirth-common-back'
 import { IConfigMaps } from './IConfigMap'
 import { ISecrets } from './ISecrets'
@@ -33,35 +33,9 @@ import zlib from 'zlib'
         getDce() throws it to whoever asks.
 */
 
-export interface IDceMeta {
-    id: string
-    name: string
-    displayName?: string
-    version: string
-    description: string
-    website?: string
-    installedFrom?: string
-    marketplaceId?: string
-    marketplaceLabel?: string
-    /** Which sides the package brought. Either may be missing, never both. */
-    hasBack: boolean
-    hasFront: boolean
-    backStored?: boolean
-    frontStored?: boolean
-    /** Always true (PRD RNF3): consumers keep the previous instance until the server restarts. */
-    requiresRestart?: boolean
-    requiresExtension?: string[]
-}
-
 /** Who consumes a DCE right now. The core builds it from every manager's installed metadata. */
 export type TDceConsumerResolver = (dceId: string) => Promise<IDceConsumer[]>
 
-/** What the core lends of its DCEs, read-only (ClusterInfo.dces; the Status channel's DCE tab). */
-export interface IDceAccess {
-    listInstalled(): Promise<IDceMeta[]>
-    status(id: string): IDceRegistryEntry | undefined
-    consumers(id: string): Promise<IDceConsumer[]>
-}
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 const INDEX_KEY = 'kwirth-dces-index'
@@ -90,7 +64,7 @@ export const dceRegistry = (): TDceRegistry => {
     return (g[DCE_REGISTRY] ??= {})
 }
 
-export class DceManager {
+export class DceManager implements IDceAccess {
     private configMaps: IConfigMaps
     private secrets: ISecrets
     private cachedIndex: IDceMeta[] = []

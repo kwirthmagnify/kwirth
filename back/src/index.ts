@@ -13,7 +13,7 @@ import { ApiKeyApi } from './api/ApiKeyApi'
 import { SettingsApi } from './api/SettingsApi'
 import { MarketplaceApi } from './api/MarketplaceApi'
 import { MarketplaceManager } from './tools/MarketplaceManager'
-import { ERouteOwnerKind, routeRegistry } from './tools/RouteRegistry'
+import { routeRegistry } from './tools/RouteRegistry'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { buildPreviousContainerMessage, logPreviousContainerBanner, readPreviousContainerLog } from './tools/PreviousContainerLog'
 import { failureOrigin } from './tools/FailureOrigin'
@@ -26,6 +26,7 @@ import { AiConfigApi } from './api/AiConfigApi'
 import { AiToolsetManager } from './tools/AiToolsetManager'
 import { AiToolsetApi } from './api/AiToolsetApi'
 import { DceManager } from './tools/DceManager'
+import { buildPluginStatuses } from './tools/PluginStatus'
 import { DceApi } from './api/DceApi'
 import { findConsumers, IRequirer, setInstalledDceSource } from './tools/ExtensionDeps'
 import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
@@ -48,7 +49,7 @@ import { DockerConfigMaps } from './tools/DockerConfigMaps'
 import { NodeConfigMaps } from './tools/NodeConfigMaps'
 import { NodeSecrets } from './tools/NodeSecrets'
 
-import { IUserInfo, IKwirthSettings, EExecutionEnvironment, EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { IUserInfo, IKwirthSettings, EExecutionEnvironment, EExtensionType, ERouteOwnerKind } from '@kwirthmagnify/kwirth-common'
 import { EStoreKind, IEnvironmentCapabilities, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType } from './tools/ExecutionEnvironment'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import * as _kwirthCommon from '@kwirthmagnify/kwirth-common'
@@ -2287,6 +2288,25 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         runningInstance.clusterInfo.senders = senderManager
         runningInstance.clusterInfo.routes = routeRegistry
         runningInstance.clusterInfo.dces = dceManager
+        /*
+            Read at the moment of asking, not copied: plugins are installed, reloaded and removed hot.
+
+            ⚠️ Not guarded on pluginManager HERE: on the first start it does not exist yet — it is created
+            in setKubernetesClusterKwirthRequirements(), right below — and a guard left the access unset
+            for good, so Status said the core did not list its plugins. Asked before it exists, it throws:
+            "unknown", never an empty list that would read as "no plugins".
+        */
+        runningInstance.clusterInfo.plugins = {
+            listPlugins: async () => {
+                if (!pluginManager) throw new Error('the plugin manager is not ready yet')
+                return buildPluginStatuses({
+                    metas: await pluginManager.listInstalled(),
+                    registered: new Set(registeredChannels.keys()),
+                    running: runningInstance.channels,
+                    remote: new Set(runningInstance.remoteChannels.map(c => c.id))
+                })
+            }
+        }
         runningInstance.clusterInfo.webhooks = webhookManager
         runningInstance.backChannelObject = backChannelObject
         runningInstance.providerStorage = buildProviderStorage(runningInstance.configMaps, runningInstance.secrets)

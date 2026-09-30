@@ -1,6 +1,6 @@
 import React from 'react'
 import { Chip, Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material'
-import { IStatusRoute } from '../common/StatusTypes'
+import { IPublishedRoute } from '@kwirthmagnify/kwirth-common'
 import { OWNER_LABEL, collisions, countByOwner, filterLines, toLines } from './StatusRoutes'
 
 /*
@@ -9,7 +9,7 @@ import { OWNER_LABEL, collisions, countByOwner, filterLines, toLines } from './S
 */
 
 interface IRoutesTabProps {
-    routes: IStatusRoute[] | undefined
+    routes: IPublishedRoute[] | undefined
     filter: string
 }
 

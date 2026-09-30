@@ -4,7 +4,7 @@
     It lives in 'common' because both sides share it: were these loose string unions on each side, a
     change in one would be discovered at runtime and not at compile time.
 */
-import { EDceState } from '@kwirthmagnify/kwirth-common'
+import { EDceState, IPluginStatus, IPublishedRoute } from '@kwirthmagnify/kwirth-common'
 
 /** What kind of piece it is. It determines where it comes from in ClusterInfo and how it is drawn. */
 export enum EComponentKind {
@@ -105,12 +105,17 @@ export interface IStatusInventory {
      * Every HTTP route this Kwirth has published (Routes tab), from the core's route registry. Absent when
      * the core does not expose it (older than the registry): that is "unknown", not "no routes".
      */
-    routes?: IStatusRoute[]
+    routes?: IPublishedRoute[]
     /**
      * The installed DCEs (DCE tab), from the core's DCE manager. Absent when the core does not expose
      * them (older than ClusterInfo.dces): that is "unknown", not "no DCEs".
      */
     dces?: IStatusDce[]
+    /**
+     * The installed plugins (Plugins tab), from the core. Absent when the core does not expose them
+     * (older than ClusterInfo.plugins): that is "unknown", not "no plugins".
+     */
+    plugins?: IPluginStatus[]
 }
 
 /** How one half (back or front) of a DCE is right now. */
@@ -137,20 +142,6 @@ export interface IStatusDce {
     /** The back end's state; absent when it has no back end or it has not been loaded. */
     back?: IStatusDcePart
     consumers: IStatusDceConsumer[]
-}
-
-/**
- * Who published a route. A mirror of the core's ERouteOwnerKind (back/src/tools/RouteRegistry.ts): a
- * plugin cannot import the core's back end, so the values are repeated here and must stay the same.
- */
-export enum EStatusRouteOwner {
-    CORE = 'core',
-    CHANNEL = 'channel',
-    PROVIDER = 'provider',
-    LOGIN = 'login',
-    WEBHOOK = 'webhook',
-    FRONT = 'front',
-    OTHER = 'other'
 }
 
 /*
@@ -184,14 +175,6 @@ export interface IStatusPreviousLog {
     termination?: IStatusTermination
     lines: string[]
     unavailableReason?: string
-}
-
-/** One published route: a PATTERN ('/webhook/:provider/:token'), never a value. */
-export interface IStatusRoute {
-    ownerKind: EStatusRouteOwner
-    ownerId: string
-    method: string
-    path: string
 }
 
 /**

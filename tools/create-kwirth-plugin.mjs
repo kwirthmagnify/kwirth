@@ -106,8 +106,8 @@ write('package.json', `{
         "watch": "node watch.mjs"
     },
     "dependencies": {
-        "@kwirthmagnify/kwirth-common": "^0.5.46",
-        "@kwirthmagnify/kwirth-common-back": "^0.5.42",
+        "@kwirthmagnify/kwirth-common": "^0.5.62",
+        "@kwirthmagnify/kwirth-common-back": "^0.6.0",
         "@kwirthmagnify/kwirth-common-front": "^0.5.52"
     },
     "devDependencies": {
@@ -402,7 +402,8 @@ write('src/back/index.ts', `import {
     EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel,
     IBackChannelRequirements
 } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
+import { IChannelInstances } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { Request, Response } from 'express'
 import { I${className}InstanceConfig, I${className}MessageResponse } from '../common/${className}Types'
 
@@ -420,7 +421,9 @@ interface IInstance {
     assets: IAsset[]
 }
 
-export class ${className}Channel {
+// 'implements IChannel' is what makes the compiler hold this class to the contract: without it, a method
+// the core requires (getInstances, for instance) can be missing and the build still passes.
+export class ${className}Channel implements IChannel {
     readonly channelId = '${id}'
     readonly requirements: IBackChannelRequirements = { storage: false, providers: [] }
 
@@ -543,6 +546,13 @@ export class ${className}Channel {
 
     containsInstance = (instanceId: string): boolean =>
         this.webSockets.some(s => s.instances.some(i => i.instanceId === instanceId))
+
+    // What this channel has running, for the Status channel's Plugins tab. A connection counts while it
+    // carries an instance: one left with none is on its way out.
+    getInstances = (): IChannelInstances => {
+        const carrying = this.webSockets.filter(s => s.instances.length > 0)
+        return { instances: carrying.reduce((n, s) => n + s.instances.length, 0), connections: carrying.length }
+    }
 
     containsConnection = (webSocket: WebSocket): boolean =>
         Boolean(this.webSockets.find(s => s.ws === webSocket))

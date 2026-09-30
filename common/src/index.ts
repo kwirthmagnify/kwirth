@@ -21,6 +21,7 @@ export * from './InstanceMessage'
 export * from './InstanceConfig'
 
 export * from './RouteMessage'
+export * from './PublishedRoute'
 
 export * from './SignalMessage'
 
@@ -30,6 +31,7 @@ export * from './Global'
 export * from './AuthMethod'
 export * from './ExtensionType'
 export * from './Dce'
+export * from './Plugin'
 export * from './ConfigBundle'
 export * from './ExtensionScope'
 export * from './Logging'

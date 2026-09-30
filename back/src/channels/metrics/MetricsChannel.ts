@@ -1,6 +1,6 @@
 import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, InstanceConfigScopeEnum, parseResources, accessKeyDeserialize, BackChannelData, EInstanceMessageFlow, EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageType, ESignalMessageLevel, EInstanceMessageChannel, EClusterType } from '@kwirthmagnify/kwirth-common'
 import { ClusterInfo } from '../../model/ClusterInfo'
-import { IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelRequirements, IChannelInstances } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { IChannel } from '../IChannel'
 import { Request, Response } from 'express'
@@ -159,6 +159,12 @@ class MetricsChannel implements IChannel {
             if (instances) return instances.some(i => i.assets.some(a => a.podNamespace===podNamespace && a.podName===podName && a.containerName===containerName))
         }
         return false
+    }
+
+    // A connection counts while it carries an instance: one left with none is on its way out.
+    getInstances(): IChannelInstances {
+        const carrying = this.webSockets.filter(s => s.instances.length > 0)
+        return { instances: carrying.reduce((n, s) => n + s.instances.length, 0), connections: carrying.length }
     }
 
     containsInstance(instanceId: string): boolean {

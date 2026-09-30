@@ -28,6 +28,7 @@ interface IChannel {
     pauseContinueInstance (webSocket: WebSocket, instanceConfig: IInstanceConfig, action:EInstanceMessageAction) : void
     modifyInstance (webSocket: WebSocket, instanceConfig: IInstanceConfig) : void
     containsInstance (instanceId:string) : boolean
+    getInstances () : IChannelInstances
     containsAsset (webSocket: WebSocket, podNamespace:string, podName:string, containerName:string) : boolean
     stopInstance (webSocket:WebSocket, instanceConfig:IInstanceConfig) : void
     removeInstance (webSocket:WebSocket, instanceId:string) : void
@@ -53,6 +54,14 @@ And this is a short explanation on each function:
   - `pauseContinueInstance`. This function will be invoked when the client connected to the channel wants to pause receiving data (but not stopping the instance) or continue receiving data if the instance has been previously paused.
   - `modifyInstance`. Modify instance (if enabled for your channel) will be invoked if the connected client wants to make some changes on instance configuration.
   - `containsInstance`. This function provides kwirth core with the ability to discover which type of channel a WebSocket belongs to.
+  - `getInstances`. Returns what your channel has running right now: `{ instances, connections }` — the instances started, and the WebSockets carrying them (count a connection only while it carries at least one instance). The **Status** channel shows it in its Plugins tab, to answer *"is anybody using this plugin?"*. **Required since `kwirth-common-back` 0.6.0**, and your channel class must declare `implements IChannel` for the compiler to hold it to that: a plugin moving to 0.6.0 does not build without it. Plugins built against 0.5.x do not have it, and Status shows them as *not reporting* — never as zero, which would read as "nobody uses it".
+
+    ```typescript
+    getInstances = (): IChannelInstances => {
+        const carrying = this.webSockets.filter(s => s.instances.length > 0)
+        return { instances: carrying.reduce((n, s) => n + s.instances.length, 0), connections: carrying.length }
+    }
+    ```
   - `containsAsset`. This function provides kwirth core with the ability to discover if a channel instance has already received information about a specific asset (an asset is in fact an object uniquely identified by 'namespace/pod/container' names).
   - `stopInstance`. stopInstance is invoked when the client wants to stop an instance.
   - `removeInstance`. Kwirth core may invoke your channel's removeInstance function for helping your channel keep healthy information on your clients.

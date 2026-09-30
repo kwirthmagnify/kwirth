@@ -26,9 +26,16 @@ interface IFigureProps {
     color: string
 }
 
+/*
+    Taller than their content alone (~78px: two captions, the value and the padding), at the user's
+    request: first 30% (102px), then 25% more on top of that (128px). A minimum and not a height, so a
+    hint that wraps is never clipped; the content is centred so the extra room splits above and below.
+*/
+const FIGURE_MIN_HEIGHT = 128
+
 const Figure: React.FC<IFigureProps> = ({ label, value, hint, icon, color }) => (
     <Paper variant='outlined' aria-label={`${label} figure`} sx={{
-        px: 1.5, py: 1, minWidth: 0,
+        px: 1.5, py: 1, minWidth: 0, minHeight: FIGURE_MIN_HEIGHT, display: 'flex', alignItems: 'center',
         borderLeft: `4px solid ${color}`,
         backgroundColor: alpha(color, 0.08)
     }}>

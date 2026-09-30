@@ -9,6 +9,7 @@ import { StatusDiagram } from './StatusDiagram'
 import { StatusPerformanceTab } from './StatusPerformanceTab'
 import { StatusRoutesTab } from './StatusRoutesTab'
 import { StatusDceTab } from './StatusDceTab'
+import { StatusPluginsTab } from './StatusPluginsTab'
 import { StatusCoreLogTab, StatusPreviousLogTab } from './StatusLogTab'
 import { isAdmin, readCoreLog, readPreviousLog } from './StatusLog'
 import { StatusHomeTab } from './StatusHomeTab'
@@ -36,19 +37,6 @@ const TOP_BAR_HEIGHT = 26
 
 /** The tabs where the filter applies: the ones that are lists. */
 const FILTERABLE: ReadonlySet<EStatusTab> = new Set([EStatusTab.PROVIDERS, EStatusTab.PLUGINS, EStatusTab.EXTENSIONS, EStatusTab.ROUTES, EStatusTab.DCE])
-
-interface IPendingTabProps {
-    title: string
-    detail: string
-}
-
-/** A tab whose data this version cannot show yet: it says why, instead of an empty table. */
-const PendingTab: React.FC<IPendingTabProps> = ({ title, detail }) => (
-    <Stack alignItems='center' justifyContent='center' spacing={1} sx={{ flex: 1, px: 4, py: 6, textAlign: 'center' }}>
-        <Typography variant='subtitle1' color='text.secondary'>{title}</Typography>
-        <Typography variant='body2' color='text.secondary'>{detail}</Typography>
-    </Stack>
-)
 
 interface IEmptyStateProps {
     title: string
@@ -342,9 +330,7 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 {vista === EStatusTab.LOG && <StatusCoreLogTab admin={admin} log={data.coreLog} />}
                 {vista === EStatusTab.PREVIOUS_LOG && <StatusPreviousLogTab admin={admin} read={data.previousLog} />}
                 {vista === EStatusTab.PERFORMANCE && <StatusPerformanceTab inventory={inventory} series={data.series} />}
-                {vista === EStatusTab.PLUGINS &&
-                    <PendingTab title='Plugins'
-                        detail="This Kwirth's core does not tell channels which plugins are installed yet, so there is nothing true to show here." />}
+                {vista === EStatusTab.PLUGINS && <StatusPluginsTab plugins={inventory.plugins} filter={filter} />}
             </Box>
 
             {data.signals.length > 0 && (

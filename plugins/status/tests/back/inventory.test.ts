@@ -453,3 +453,45 @@ test('a DCE list that blows up leaves the dces unknown and the rest of the snaps
     assert.equal('dces' in inv, false)
     assert.equal(inv.components.length, 1)
 })
+
+// ── the plugins (v2, Plugins tab) ──────────────────────────────────────────────
+
+test('🔴 without the core plugin access, plugins are ABSENT — unknown, not an empty list', async () => {
+    const inv = await inventarioDe({ providers: [] })
+    assert.equal('plugins' in inv, false)
+})
+
+test('the plugins come from the core as they are', async () => {
+    const list = [
+        { id: 'status', name: 'Kwirth Status', version: '0.5.0', source: 'dev', requiresRestart: false, state: 'running', instances: { instances: 1, connections: 1 } },
+        { id: 'agora', name: 'agora', version: '2.0.0', requiresRestart: true, state: 'failed' }
+    ]
+    const inv = await inventarioDe({ plugins: { listPlugins: async () => list } })
+    assert.deepEqual(inv.plugins, list)
+})
+
+test('a plugin list that blows up leaves the plugins unknown and the rest of the snapshot intact', async () => {
+    const inv = await inventarioDe({
+        providers: [{ id: 'metrics', started: true }],
+        plugins: { listPlugins: async () => { throw new Error('boom') } }
+    })
+    assert.equal('plugins' in inv, false)
+    assert.equal(inv.components.length, 1)
+})
+
+// ── getInstances (the channel's own figures) ───────────────────────────────────
+
+test('🔴 getInstances counts instances and the connections that carry them', async () => {
+    const canal = new StatusChannel({} as never, {} as never)
+    assert.deepEqual(canal.getInstances(), { instances: 0, connections: 0 })
+    const a = socketFalso({ mensajes: [] })
+    const b = socketFalso({ mensajes: [] })
+    await canal.addObject(a, configFalsa('i1'), '', '', '')
+    await canal.addObject(a, configFalsa('i2'), '', '', '')
+    await canal.addObject(b, configFalsa('i3'), '', '', '')
+    assert.deepEqual(canal.getInstances(), { instances: 3, connections: 2 })
+    // A connection left with no instance does not count: it is on its way out.
+    canal.removeInstance(b, 'i3')
+    assert.deepEqual(canal.getInstances(), { instances: 2, connections: 1 })
+    canal.cleanup?.()
+})

@@ -37,7 +37,7 @@ The content is split into ten tabs, and it opens on **Home**:
 | **Providers** | how is each **producer** of data doing — providers and pluviders, with their state, consumers and deliveries |
 | **Graph** | who consumes whom — see [The graph](#the-graph) |
 | **Performance** | how much the Kwirth **process** itself is using — see [Performance](#performance) |
-| **Plugins** | which plugins are installed and what they have running. *Coming when the core tells channels about plugins.* |
+| **Plugins** | which plugins are installed, whether they run here, and how many instances and connections each has open — see [Plugins](#plugins) |
 | **Extensions** | the extensions that **do not produce** data — senders and webhooks today, the other kinds next |
 | **Routes** | every HTTP route this Kwirth has published, and who published it — see [Routes](#routes) |
 | **DCE** | the installed DCEs: whether each one loaded, where it came from and who consumes it — see [DCE](#dce) |
@@ -50,8 +50,8 @@ always there, and it is **disabled** on the tabs that are not lists (Home, Graph
 it does not come and go, so nothing next to it moves. Status remembers the tab you were on when you come
 back to it.
 
-A tab whose data this version cannot show says so in words, instead of showing an empty table that could be
-read as *"there is nothing"*.
+A tab whose data the core does not give — an older core, for instance — says so in words, instead of showing
+an empty table that could be read as *"there is nothing"*.
 
 ### Home
 
@@ -62,6 +62,10 @@ process's memory and CPU, how many routes and whether any collide, whether Kwirt
 
 The **DCE** card counts the installed DCEs, how many extensions consume them and how many nobody uses, with a
 red **broken** chip when one of them did not load — see [DCE](#dce).
+
+The **Plugins** card counts the installed plugins and the instances open among those that report them, says
+how many do not report, and shows a red **failed** chip when a plugin could not register its channel — see
+[Plugins](#plugins).
 
 ![statusinventory](../_media/ch-images/status-inventory.png ':class=imageclass80')
 
@@ -260,6 +264,41 @@ says why. A dash is not a zero.
 
 Everything here is the whole process: every extension runs inside it, so nothing can be attributed to one of them.
 
+## Plugins
+
+Every **installed plugin**, one line each — the question it answers is *"is anybody using this?"*:
+
+![statusplugins](../_media/ch-images/status-plugins.png ':class=imageclass80')
+
+| Column | What it says |
+|---|---|
+| **Plugin** | its display name, with its id underneath when they differ |
+| **Version** | the version installed |
+| **State** | **Running** · **Remote** · **Not started** · **Failed**, and a **restart** chip when installing or updating it needs a core restart |
+| **Instances** | tabs of this plugin open right now, across every user |
+| **Connections** | the browser connections carrying them — one browser can carry several instances |
+| **Source** | where it was installed from: a marketplace URL, `dev`, `bundled`, `local` |
+
+The four states come from what the core already knows about the plugin:
+
+| State | Meaning |
+|---|---|
+| **Running** | its channel is up in this Kwirth, serving tabs |
+| **Remote** | a *single* channel: the in-cluster Kwirth hosts it, and this one only announces it |
+| **Not started** | its channel is registered but has not been started here |
+| **Failed** | it is installed, but its back end registered no channel: it cannot run. Reinstalling or updating it is the thing to try |
+
+**The figures come from the plugin itself.** Kwirth does not count the tabs of a plugin from outside: each
+plugin's channel answers how many instances and connections it has. A plugin that does not answer yet shows a
+**dash** — never a zero, because a zero would say *"nobody uses it"*, and that is exactly the reading that gets
+something in use uninstalled. The header counts them apart as **not reporting**, so the *instances open* figure
+is never taken for the whole. Plugins answer as they are updated; if you write one, see
+[Back Channel development](../developing/back.md), `getInstances`.
+
+Failed plugins sort first, then those not started. The filter matches the id, the name, the version or the
+state (`running`, `failed`…). With a core older than this list, the tab says the core does not list its
+plugins, instead of an empty table that would read as *"no plugins"*.
+
 ## Routes
 
 Every **HTTP route** this Kwirth has published, **one line per path** with its methods as chips, and who
@@ -352,5 +391,4 @@ The inventory is a privileged view: it lists every extension mounted in the serv
 
 ## Coming next
 
-  - **Plugins** — each installed plugin, the channels it registers and how many instances and connections are live.
   - **All the extensions** — themes, homepages, logins, identity providers, AI toolsets, docs and packs join senders and webhooks on the Extensions tab.

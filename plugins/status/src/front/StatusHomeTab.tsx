@@ -1,13 +1,15 @@
 import React from 'react'
 import { Box, Chip, Paper, Stack, Typography, alpha, useTheme } from '@mui/material'
 import { AccountTree, CallSplit, Construction, Hub, Link, RestartAlt, Science, Speed, Subject } from '@kwirthmagnify/kwirth-common-front/icons'
-import { EComponentHealth, EComponentKind, EStatusRouteOwner, EStatusTab, IStatusInventory } from '../common/StatusTypes'
+import { ERouteOwnerKind } from '@kwirthmagnify/kwirth-common'
+import { EComponentHealth, EComponentKind, EStatusTab, IStatusInventory } from '../common/StatusTypes'
 import { collisions } from './StatusRoutes'
 import { IPreviousLogRead, previousSummary } from './StatusLog'
 import { IProcessPoint, formatMb, formatUptime } from './StatusPerformance'
 import { HEALTH_LABEL, HEALTH_SEQUENCE } from './StatusLabels'
 import { IListSummary, summarize } from './StatusHome'
 import { readFrontRegistry, summarizeDces } from './StatusDces'
+import { summarizePlugins } from './StatusPlugins'
 
 /*
     The Home tab: what the snapshot is, and one box per tab with its figures. Each box is a door: click
@@ -100,11 +102,13 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
     const cpu = last?.takenAt === inventory.takenAt ? last.cpuPercent : undefined
     // Undefined when the core does not expose its routes: unknown, not zero.
     const routes = inventory.routes
-    const coreRoutes = routes?.filter(r => r.ownerKind === EStatusRouteOwner.CORE).length ?? 0
+    const coreRoutes = routes?.filter(r => r.ownerKind === ERouteOwnerKind.CORE).length ?? 0
     const clashes = routes ? collisions(routes).size : 0
     const previous = previousSummary(admin, previousLog)
     // Undefined when the core does not expose its DCEs: unknown, not zero.
     const dce = inventory.dces ? summarizeDces(inventory.dces, readFrontRegistry()) : undefined
+    // Undefined when the core does not expose its plugins: unknown, not zero.
+    const plugins = inventory.plugins ? summarizePlugins(inventory.plugins) : undefined
 
     // One colour per box; none of them red, since these are figures and not alarms.
     const color = {
@@ -164,8 +168,12 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
                         : 'this back end does not report the process yet'} />
 
                 <HomeBox tab={EStatusTab.PLUGINS} title='Plugins' icon={<Construction />} color={color.plugins} onOpen={onOpen}
-                    headline='—'
-                    detail='the core does not tell channels which plugins are installed yet' />
+                    headline={plugins ? plural(plugins.total, 'plugin') : '—'}
+                    detail={plugins
+                        ? `${plural(plugins.instances, 'instance')} open${plugins.unreported > 0 ? ` · ${plugins.unreported} not reporting` : ''}`
+                        : 'the core does not list its plugins yet'}>
+                    {plugins && plugins.failed > 0 && <Chip size='small' color='error' label={`${plugins.failed} failed`} />}
+                </HomeBox>
 
                 <HomeBox tab={EStatusTab.EXTENSIONS} title='Extensions' icon={<Link />} color={color.extensions} onOpen={onOpen}
                     headline={plural(s.extensions.total, 'extension')}

@@ -10,16 +10,10 @@
 // It also RECORDS what is actually mounted ('record' + 'listRoutes'), for the Status channel's Routes tab.
 // Recording validates nothing and rejects nothing — every mount is recorded and mounted as always; turning
 // collisions into rejections is the pending rest of the validator (see the Status v2 plan's backlog).
+//
+// What channels read of it (ERouteOwnerKind, IPublishedRoute, IRouteAccess) lives in kwirth-common.
 
-export enum ERouteOwnerKind {
-    CORE = 'core',
-    CHANNEL = 'channel',
-    PROVIDER = 'provider',
-    LOGIN = 'login',
-    WEBHOOK = 'webhook',
-    FRONT = 'front',
-    OTHER = 'other'
-}
+import { ERouteOwnerKind, IPublishedRoute, IRouteAccess } from '@kwirthmagnify/kwirth-common'
 
 export interface IRegisteredRoute {
     path: string
@@ -35,18 +29,6 @@ export interface IRecordedMount extends IRegisteredRoute {
     methods?: string[]
 }
 
-/** One published route: who owns it, its method and its full path — a PATTERN, never a value. */
-export interface IPublishedRoute {
-    ownerKind: ERouteOwnerKind
-    ownerId: string
-    method: string
-    path: string
-}
-
-/** What channels see of the registry (ClusterInfo.routes). */
-export interface IRouteAccess {
-    listRoutes(): IPublishedRoute[]
-}
 
 // The shapes of Express 4's internal stack, as far as they are read here.
 interface IExpressRoute {

@@ -1,4 +1,4 @@
-import { EStatusRouteOwner, IStatusRoute } from '../common/StatusTypes'
+import { ERouteOwnerKind, IPublishedRoute } from '@kwirthmagnify/kwirth-common'
 
 /*
     The Routes tab's logic, apart from the component so it can be tested: order, filter, counts and — the
@@ -10,27 +10,27 @@ import { EStatusRouteOwner, IStatusRoute } from '../common/StatusTypes'
 */
 
 /** How each owner kind is named on screen, in the order the table groups them. */
-export const OWNER_LABEL: Record<EStatusRouteOwner, string> = {
-    [EStatusRouteOwner.CORE]: 'Core',
-    [EStatusRouteOwner.PROVIDER]: 'Provider',
-    [EStatusRouteOwner.CHANNEL]: 'Plugin',
-    [EStatusRouteOwner.WEBHOOK]: 'Webhook',
-    [EStatusRouteOwner.LOGIN]: 'Login',
-    [EStatusRouteOwner.FRONT]: 'Front',
-    [EStatusRouteOwner.OTHER]: 'Other'
+export const OWNER_LABEL: Record<ERouteOwnerKind, string> = {
+    [ERouteOwnerKind.CORE]: 'Core',
+    [ERouteOwnerKind.PROVIDER]: 'Provider',
+    [ERouteOwnerKind.CHANNEL]: 'Plugin',
+    [ERouteOwnerKind.WEBHOOK]: 'Webhook',
+    [ERouteOwnerKind.LOGIN]: 'Login',
+    [ERouteOwnerKind.FRONT]: 'Front',
+    [ERouteOwnerKind.OTHER]: 'Other'
 }
 
-const OWNER_ORDER: EStatusRouteOwner[] = Object.keys(OWNER_LABEL) as EStatusRouteOwner[]
+const OWNER_ORDER: ERouteOwnerKind[] = Object.keys(OWNER_LABEL) as ERouteOwnerKind[]
 
-const key = (r: IStatusRoute): string => `${r.method} ${r.path}`
+const key = (r: IPublishedRoute): string => `${r.method} ${r.path}`
 
 /**
  * The 'METHOD path' pairs published by more than one owner. ALL answers every method, so an ALL and a
  * GET at the same path collide too.
  */
-export const collisions = (routes: IStatusRoute[]): Set<string> => {
+export const collisions = (routes: IPublishedRoute[]): Set<string> => {
     const owners = new Map<string, Set<string>>()
-    const byPath = new Map<string, IStatusRoute[]>()
+    const byPath = new Map<string, IPublishedRoute[]>()
     for (const r of routes) {
         const list = byPath.get(r.path) ?? []
         list.push(r)
@@ -51,10 +51,10 @@ export const collisions = (routes: IStatusRoute[]): Set<string> => {
     return new Set([...owners.entries()].filter(([, s]) => s.size > 1).map(([k]) => k))
 }
 
-export const isColliding = (route: IStatusRoute, clashes: Set<string>): boolean => clashes.has(key(route))
+export const isColliding = (route: IPublishedRoute, clashes: Set<string>): boolean => clashes.has(key(route))
 
 /** By owner kind (Core first), then path, then method: the same order every time, so it can be scanned. */
-export const sortRoutes = (routes: IStatusRoute[]): IStatusRoute[] =>
+export const sortRoutes = (routes: IPublishedRoute[]): IPublishedRoute[] =>
     [...routes].sort((a, b) =>
         OWNER_ORDER.indexOf(a.ownerKind) - OWNER_ORDER.indexOf(b.ownerKind)
         || a.path.localeCompare(b.path)
@@ -62,7 +62,7 @@ export const sortRoutes = (routes: IStatusRoute[]): IStatusRoute[] =>
 
 /** One line of the Routes table: a path of one owner, with every method it answers there. */
 export interface IRouteLine {
-    ownerKind: EStatusRouteOwner
+    ownerKind: ERouteOwnerKind
     ownerId: string
     path: string
     methods: string[]
@@ -81,7 +81,7 @@ const methodRank = (m: string): number => {
     One line per path and owner, with its methods together. Two owners at the same path stay on two lines:
     they are two different things — and that is exactly the collision the line is flagged with.
 */
-export const toLines = (routes: IStatusRoute[]): IRouteLine[] => {
+export const toLines = (routes: IPublishedRoute[]): IRouteLine[] => {
     const clashes = collisions(routes)
     const lines = new Map<string, IRouteLine>()
     for (const r of sortRoutes(routes)) {
@@ -106,5 +106,5 @@ export const filterLines = (lines: IRouteLine[], text: string): IRouteLine[] => 
 }
 
 /** How many routes each owner kind published, only for the kinds that have some. */
-export const countByOwner = (routes: IStatusRoute[]): [EStatusRouteOwner, number][] =>
-    OWNER_ORDER.map(k => [k, routes.filter(r => r.ownerKind === k).length] as [EStatusRouteOwner, number]).filter(([, n]) => n > 0)
+export const countByOwner = (routes: IPublishedRoute[]): [ERouteOwnerKind, number][] =>
+    OWNER_ORDER.map(k => [k, routes.filter(r => r.ownerKind === k).length] as [ERouteOwnerKind, number]).filter(([, n]) => n > 0)

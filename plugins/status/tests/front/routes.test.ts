@@ -5,13 +5,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { collisions, countByOwner, filterLines, isColliding, sortRoutes, toLines } from '../../src/front/StatusRoutes'
-import { EStatusRouteOwner, IStatusRoute } from '../../src/common/StatusTypes'
+import { ERouteOwnerKind, IPublishedRoute } from '@kwirthmagnify/kwirth-common'
 
-const route = (ownerKind: EStatusRouteOwner, ownerId: string, method: string, path: string): IStatusRoute => ({ ownerKind, ownerId, method, path })
+const route = (ownerKind: ERouteOwnerKind, ownerId: string, method: string, path: string): IPublishedRoute => ({ ownerKind, ownerId, method, path })
 
 test('🔴 two owners at the same method and path collide; each side is flagged', () => {
-    const a = route(EStatusRouteOwner.PROVIDER, 'events-a', 'GET', '/provider/events')
-    const b = route(EStatusRouteOwner.PROVIDER, 'events-b', 'GET', '/provider/events')
+    const a = route(ERouteOwnerKind.PROVIDER, 'events-a', 'GET', '/provider/events')
+    const b = route(ERouteOwnerKind.PROVIDER, 'events-b', 'GET', '/provider/events')
     const clashes = collisions([a, b])
     assert.deepEqual([...clashes], ['GET /provider/events'])
     assert.equal(isColliding(a, clashes), true)
@@ -20,31 +20,31 @@ test('🔴 two owners at the same method and path collide; each side is flagged'
 
 test('the same owner at one path with two methods is NOT a collision', () => {
     const clashes = collisions([
-        route(EStatusRouteOwner.CORE, 'config', 'GET', '/config'),
-        route(EStatusRouteOwner.CORE, 'config', 'POST', '/config')
+        route(ERouteOwnerKind.CORE, 'config', 'GET', '/config'),
+        route(ERouteOwnerKind.CORE, 'config', 'POST', '/config')
     ])
     assert.equal(clashes.size, 0)
 })
 
 test('different methods at one path from two owners do not collide — ALL collides with any', () => {
     assert.equal(collisions([
-        route(EStatusRouteOwner.CORE, 'a', 'GET', '/x'),
-        route(EStatusRouteOwner.PROVIDER, 'b', 'POST', '/x')
+        route(ERouteOwnerKind.CORE, 'a', 'GET', '/x'),
+        route(ERouteOwnerKind.PROVIDER, 'b', 'POST', '/x')
     ]).size, 0)
     const clashes = collisions([
-        route(EStatusRouteOwner.WEBHOOK, 'receiver', 'ALL', '/x'),
-        route(EStatusRouteOwner.PROVIDER, 'b', 'POST', '/x')
+        route(ERouteOwnerKind.WEBHOOK, 'receiver', 'ALL', '/x'),
+        route(ERouteOwnerKind.PROVIDER, 'b', 'POST', '/x')
     ])
-    assert.equal(isColliding(route(EStatusRouteOwner.PROVIDER, 'b', 'POST', '/x'), clashes), true)
-    assert.equal(isColliding(route(EStatusRouteOwner.WEBHOOK, 'receiver', 'ALL', '/x'), clashes), true)
+    assert.equal(isColliding(route(ERouteOwnerKind.PROVIDER, 'b', 'POST', '/x'), clashes), true)
+    assert.equal(isColliding(route(ERouteOwnerKind.WEBHOOK, 'receiver', 'ALL', '/x'), clashes), true)
 })
 
 test('the order is by owner kind (core first), then path, then method', () => {
     const sorted = sortRoutes([
-        route(EStatusRouteOwner.PROVIDER, 'otel', 'POST', '/provider/otlp'),
-        route(EStatusRouteOwner.CORE, 'config', 'POST', '/config'),
-        route(EStatusRouteOwner.CORE, 'config', 'GET', '/config'),
-        route(EStatusRouteOwner.CORE, 'auth', 'GET', '/auth')
+        route(ERouteOwnerKind.PROVIDER, 'otel', 'POST', '/provider/otlp'),
+        route(ERouteOwnerKind.CORE, 'config', 'POST', '/config'),
+        route(ERouteOwnerKind.CORE, 'config', 'GET', '/config'),
+        route(ERouteOwnerKind.CORE, 'auth', 'GET', '/auth')
     ])
     assert.deepEqual(sorted.map(r => `${r.ownerId} ${r.method} ${r.path}`), [
         'auth GET /auth', 'config GET /config', 'config POST /config', 'otel POST /provider/otlp'
@@ -53,35 +53,35 @@ test('the order is by owner kind (core first), then path, then method', () => {
 
 test('🔴 one line per path and owner, with all its methods together and in CRUD order', () => {
     const lines = toLines([
-        route(EStatusRouteOwner.CORE, 'config', 'DELETE', '/config'),
-        route(EStatusRouteOwner.CORE, 'config', 'GET', '/config'),
-        route(EStatusRouteOwner.CORE, 'config', 'POST', '/config'),
-        route(EStatusRouteOwner.CORE, 'config', 'GET', '/config/info')
+        route(ERouteOwnerKind.CORE, 'config', 'DELETE', '/config'),
+        route(ERouteOwnerKind.CORE, 'config', 'GET', '/config'),
+        route(ERouteOwnerKind.CORE, 'config', 'POST', '/config'),
+        route(ERouteOwnerKind.CORE, 'config', 'GET', '/config/info')
     ])
     assert.deepEqual(lines.map(l => `${l.path} ${l.methods.join(',')}`), ['/config GET,POST,DELETE', '/config/info GET'])
 })
 
 test('🔴 two owners at the same path stay on two lines, both flagged as colliding', () => {
     const lines = toLines([
-        route(EStatusRouteOwner.PROVIDER, 'events-a', 'GET', '/provider/events'),
-        route(EStatusRouteOwner.PROVIDER, 'events-b', 'GET', '/provider/events'),
-        route(EStatusRouteOwner.CORE, 'config', 'GET', '/config')
+        route(ERouteOwnerKind.PROVIDER, 'events-a', 'GET', '/provider/events'),
+        route(ERouteOwnerKind.PROVIDER, 'events-b', 'GET', '/provider/events'),
+        route(ERouteOwnerKind.CORE, 'config', 'GET', '/config')
     ])
     assert.equal(lines.length, 3)
     assert.deepEqual(lines.filter(l => l.colliding).map(l => l.ownerId).sort(), ['events-a', 'events-b'])
 })
 
 test('a method repeated for one path and owner is shown once', () => {
-    const lines = toLines([route(EStatusRouteOwner.CORE, 'a', 'GET', '/x'), route(EStatusRouteOwner.CORE, 'a', 'GET', '/x')])
+    const lines = toLines([route(ERouteOwnerKind.CORE, 'a', 'GET', '/x'), route(ERouteOwnerKind.CORE, 'a', 'GET', '/x')])
     assert.deepEqual(lines[0].methods, ['GET'])
 })
 
 test('the filter matches the path, an exact method, the owner id and the owner kind — and keeps the whole line', () => {
     const lines = toLines([
-        route(EStatusRouteOwner.CORE, 'config', 'GET', '/kwirth/config/info'),
-        route(EStatusRouteOwner.PROVIDER, 'otel', 'POST', '/provider/otlp'),
-        route(EStatusRouteOwner.PROVIDER, 'otel', 'GET', '/provider/otlp'),
-        route(EStatusRouteOwner.CHANNEL, 'agora', 'GET', '/channel/agora/report')
+        route(ERouteOwnerKind.CORE, 'config', 'GET', '/kwirth/config/info'),
+        route(ERouteOwnerKind.PROVIDER, 'otel', 'POST', '/provider/otlp'),
+        route(ERouteOwnerKind.PROVIDER, 'otel', 'GET', '/provider/otlp'),
+        route(ERouteOwnerKind.CHANNEL, 'agora', 'GET', '/channel/agora/report')
     ])
     assert.deepEqual(filterLines(lines, 'otlp').map(l => l.ownerId), ['otel'])
     // Filtering by a method keeps the line WITH all its methods, not only the one typed.
@@ -96,9 +96,9 @@ test('the filter matches the path, an exact method, the owner id and the owner k
 
 test('counts only the owner kinds that have routes, in the table order', () => {
     const counts = countByOwner([
-        route(EStatusRouteOwner.PROVIDER, 'otel', 'POST', '/a'),
-        route(EStatusRouteOwner.CORE, 'config', 'GET', '/b'),
-        route(EStatusRouteOwner.CORE, 'config', 'POST', '/b')
+        route(ERouteOwnerKind.PROVIDER, 'otel', 'POST', '/a'),
+        route(ERouteOwnerKind.CORE, 'config', 'GET', '/b'),
+        route(ERouteOwnerKind.CORE, 'config', 'POST', '/b')
     ])
-    assert.deepEqual(counts, [[EStatusRouteOwner.CORE, 2], [EStatusRouteOwner.PROVIDER, 1]])
+    assert.deepEqual(counts, [[ERouteOwnerKind.CORE, 2], [ERouteOwnerKind.PROVIDER, 1]])
 })

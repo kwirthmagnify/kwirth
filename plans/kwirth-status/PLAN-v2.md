@@ -1,6 +1,6 @@
 # Kwirth Status v2 — Plan
 
-> **ESTADO — VIVO** (2026-09-30): S1, S2, S2b y S2c (la pestaña DCE) hechos; publicado `plugin/status@0.4.0`. Quedan S3 y S4 (Plugins y el resto de extensiones) y el backlog (B1, B3, B4, B5). Cuelga de [PRD-v2.md](PRD-v2.md), que manda en el **qué** y el **por qué**.
+> **ESTADO — VIVO** (2026-09-30): S1, S2, S2b, S2c (DCE), S3 y S4 (Plugins) hechos; publicado `plugin/status@0.5.0`. Queda S5 (el resto de extensiones) y el backlog (B1, B3, B4, B5; B7 forzado por contrato). Cuelga de [PRD-v2.md](PRD-v2.md), que manda en el **qué** y el **por qué**.
 > Segunda versión tras [PLAN.md](PLAN.md) (cerrado en `plugin/status@0.2.7`).
 >
 > Documento **append-only**: lo que se decide no se borra, se marca. Si algo de aquí contradice lo que ves
@@ -82,17 +82,41 @@ Lo planeado para S2 era:
   event loop con `perf_hooks.monitorEventLoopDelay` solo mientras hay alguien mirando, uptime, versiones).
 - Front: serie en memoria de la sesión y minigráficas con recharts. CPU % solo con dos fotos.
 
-### S3 — El core expone plugins y extensiones (RF6) · PENDIENTE
+> **Re-partido el 2026-09-30** a petición del usuario: *"arranquemos con plugins de momento, que es la parte
+> más delicada, y crea un stream nuevo para el resto de extensiones"*. S3 y S4 quedan **solo para plugins**;
+> los otros siete tipos pasan a S5.
 
-- Accesos de solo lectura en `clusterInfo` por tipo, siguiendo el de senders/webhooks: plugins (con sus
-  canales e instancias vivas), themes, homepages, logins, idps, aitoolsets, docs y packs.
-- Tests en el back del core. Sin secretos ni URLs con token en lo expuesto.
+### S3 — El core expone los plugins (RF6, parte plugins) · ✅ HECHO (2026-09-30)
 
-### S4 — Plugins y Extensions (RF4, RF5) · PENDIENTE
+- `ClusterInfo.plugins` (`IPluginAccess`) con, por plugin, metadatos, estado —**RUNNING**, **REMOTE**,
+  **NOT_STARTED**, **FAILED**, deducido de lo que el core ya sabía— y las cifras de su canal.
+- Las cifras las da **el propio canal** con `getInstances()`, elegido por el usuario frente a recontar
+  websockets en el core. Nació opcional y, por decisión del usuario, pasó a **obligatorio** en
+  `kwirth-common-back@0.6.0` (ver B7). Un plugin que no lo trae sale como "no lo dice", nunca como cero; uno
+  que lanza o contesta algo que no son dos contadores deja sin cifras solo a sí mismo.
+- Los tipos, en **`kwirth-common`** (`Plugin.ts`), no en el core: decisión del usuario al diseñarlo, que
+  además arrastró el B6.
+- ⚠️ Lo que costó: el acceso se condicionó a que `pluginManager` existiera, y en el primer arranque se crea
+  justo después — Status decía que el core no listaba plugins. Lo cazó el QA, no el harness (que prueba la
+  función, no el cableado). Ahora se asigna siempre y se lee al preguntar.
 
-- Pestaña 4: plugins, canales, instancias y conexiones.
-- Pestaña 5: senders y webhooks (movidos de la 1) + los siete tipos de S3.
-- Con un core sin S3, cada tipo que falte se dice como no disponible.
+### S4 — La pestaña Plugins (RF4) · ✅ HECHO (2026-09-30, `plugin/status@0.5.0`)
+
+- La pestaña Plugins (se va el `PendingTab`, que se quedó sin uso) y la tarjeta de la Home con sus cifras:
+  instancias abiertas de quien informa, y *not reporting* aparte.
+- Con un core sin S3, lo dice en vez de enseñar una tabla vacía.
+- De paso, a petición del usuario: las cinco figuras de Performance más altas (+30 % y luego +25 %, 128 px).
+- ⚠️ El spec de capturas heredaba `trace: 'retain-on-failure'` y el cierre del contexto se colgaba volcando
+  la traza: tardaba 2,6–3,1 min y a veces fallaba por timeout con todo hecho. Con la traza apagada, 1,2 min.
+  La captura de Plugins tapa la URL de un registro privado (el usuario lo pidió; los nombres de producto sí
+  pueden salir).
+
+### S5 — El resto de extensiones (RF5, RF6) · PENDIENTE
+
+- Core: accesos de solo lectura en `clusterInfo` para themes, homepages, logins, idps, aitoolsets, docs y
+  packs, siguiendo el de senders/webhooks. Sin secretos ni URLs con token en lo expuesto.
+- Pestaña 5: senders y webhooks + esos siete tipos. Con un core sin ellos, cada tipo que falte se dice como
+  no disponible.
 
 ## Backlog
 
@@ -103,6 +127,8 @@ Lo planeado para S2 era:
 | B3 | **Al desinstalar un provider, sus rutas siguen listándose** | Se hace `forget()` al desinstalar un plugin, no un provider. Express tampoco desmonta: la ruta sigue respondiendo hasta reiniciar, así que listarla no miente — pero conviene decir que es de algo ya desinstalado |
 | B4 | **Los conectores IdP de dev no salen en `listInstalledMeta()`** (core) | Encontrado en S2c. `IdpManager.listInstalledMeta()` lee solo el índice: un conector de `kwirth-dev.json` no aparece, así que el resolutor de consumidores de DCE no lo ve aunque declare `requiresExtension`. Es mayor que el hueco de los otros seis managers (a esos les faltaba solo el campo): cambiar el listado afecta también a quien lo pinta |
 | B5 | **Aristas consumidor → DCE en el grafo** | La pestaña DCE dice quién consume a quién; el grafo aún no lo dibuja. Una capa más, por debajo de los providers |
+| B6 | ✅ **Llevar a `kwirth-common` los contratos que hoy viven en el core** — HECHO 2026-09-30 dentro de S3 (`kwirth-common@0.5.62`): `ERouteOwnerKind`, `IPublishedRoute` e `IRouteAccess` en `PublishedRoute.ts`; `IDceMeta` e `IDceAccess` en `Dce.ts` (y `DceManager implements IDceAccess`). Status pierde `EStatusRouteOwner`, `IStatusRoute` y las vistas `IRouteAccessView`/`IDceAccessView`/`IDceMetaView` | Decidido al diseñar S3: lo que el core presta a los canales va en common (como `IPluginAccess` o `EDceState`), y así el back, el front y Status comparten el mismo tipo en vez de un espejo que hay que mantener igual a mano. Quedan fuera por ahora: `ERouteOwnerKind` (core, con su espejo `EStatusRouteOwner` en Status) e `IDceAccess` (solo en el core, con la vista privada `IDceAccessView` en Status) |
+| B7 | **Que el resto de plugins implemente `getInstances()`** — **FORZADO** desde 2026-09-30 | Lo implementan Status, `magnify` y `metrics` (core) y el consumidor de ejemplo. Por decisión del usuario, *"a medida que los plugins vayan teniendo actualizaciones, se fuerce a que implementen ese interfaz"*: es **obligatorio en `IChannel` desde `kwirth-common-back@0.6.0`**, y la CL9 (punto 8) y la regla del bbpm exigen, al actualizar un plugin, subir common-back a la última **y** declarar `implements IChannel` —el `tsc --noEmit` de su `build.mjs` hace el resto—. El scaffold (`tools/create-kwirth-plugin.mjs`) ya genera la clase con `implements IChannel` y el método; comprobado en los dos sentidos: compila con él y falla con `TS2420` sin él. ⚠️ **12 de 23 plugins no declaran `implements IChannel`** (alert, censor, excubitor, fileman, iter, log, montag, news, ops, pinocchio, topology, trivy): en ellos subir la dependencia no obliga a nada hasta añadirlo. Mientras tanto, la pestaña los enseña como "no lo dice", nunca como cero; el core no rechaza instalarlos, porque rompería todos los publicados |
 
 ## Registro de decisiones
 
@@ -117,3 +143,7 @@ Lo planeado para S2 era:
 | 2026-09-29 | Pestaña **Routes** con cada ruta y su método. El `RouteRegistry` se cablea en **modo solo anotar**: registra y monta como siempre; el rechazo queda en B1. |
 | 2026-09-29 | El log del core y el del contenedor anterior **salen de About** y pasan a Status, en dos pestañas. |
 | 2026-09-30 | Pestaña **DCE**. Los datos vienen del `DceManager` prestado en `clusterInfo.dces` (dos líneas en el core), no de que el front pida los ocho listados y recalcule los consumidores: eso duplicaría `findConsumers`. El estado del front se lee de la página. |
+| 2026-09-30 | S3/S4 **solo para plugins**; el resto de extensiones pasa a un S5 nuevo (*"arranquemos con plugins, que es la parte más delicada"*). |
+| 2026-09-30 | Las cifras de un plugin las da **su canal** (`getInstances()`), no el core recontando websockets. |
+| 2026-09-30 | Los contratos que el core presta van en **`kwirth-common`**, compartidos por back, front y Status, en vez de un espejo por lado. Se aplica también a rutas y DCE (B6). |
+| 2026-09-30 | `getInstances()` **obligatorio** desde `kwirth-common-back@0.6.0`, y la CL9 exige, al actualizar un plugin, subir common-back y declarar `implements IChannel`: *"a medida que los plugins vayan teniendo actualizaciones, se fuerce a que implementen ese interfaz"*. El core no rechaza instalar los viejos. |

@@ -109,6 +109,7 @@ interface IChannel {
     pauseContinueInstance (webSocket: WebSocket, instanceConfig: IInstanceConfig, action:EInstanceMessageAction) : void
     modifyInstance (webSocket: WebSocket, instanceConfig: IInstanceConfig) : void
     containsInstance (instanceId:string) : boolean
+    getInstances () : IChannelInstances    // required since kwirth-common-back 0.6.0 — see Back Channel development
     containsAsset (webSocket: WebSocket, podNamespace:string, podName:string, containerName:string) : boolean
     stopInstance (webSocket:WebSocket, instanceConfig:IInstanceConfig) : void
     removeInstance (webSocket:WebSocket, instanceId:string) : void

@@ -316,10 +316,80 @@ test('🔴 the filter is always there, and only ENABLED on the tabs that are lis
     await expect(filtro).toBeEnabled()
 })
 
-test('a tab with nothing true to show yet says why, instead of an empty table', async () => {
+// ── Plugins (v2, S4) ───────────────────────────────────────────────────────────
+
+// One line per plugin: the cells by column.
+const pluginRows = () => page.locator('table tbody tr').evaluateAll(rows => rows.map(r => {
+    const td = r.querySelectorAll('td')
+    return {
+        label: r.getAttribute('aria-label') ?? '',
+        name: (td[0]?.querySelector('p')?.textContent ?? '').trim(),
+        version: (td[1]?.textContent ?? '').trim(),
+        state: (td[2]?.querySelector('.MuiChip-label')?.textContent ?? '').trim(),
+        instances: (td[3]?.textContent ?? '').trim(),
+        connections: (td[4]?.textContent ?? '').trim(),
+        source: (td[5]?.textContent ?? '').trim()
+    }
+}))
+
+test('🔴 the Plugins tab lists the dev plugins, and Status reports ITSELF with real figures', async () => {
     await page.getByRole('tab', { name: 'Plugins', exact: true }).click()
-    await expect(page.getByText(/does not tell channels which plugins are installed yet/)).toBeVisible()
-    await expect(page.locator('table')).toHaveCount(0)
+    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 })
+    const rows = await pluginRows()
+    const status = rows.find(r => r.label === 'Plugin status')
+    test.skip(!status, 'this Kwirth does not run the Status plugin from kwirth-dev.json')
+    // This very tab is one open instance of Status, over at least one connection.
+    expect(status).toMatchObject({ name: 'Kwirth Status', state: 'Running', source: 'dev' })
+    expect(status!.version).toMatch(/^\d+\.\d+\.\d+/)
+    expect(Number(status!.instances), 'instances of Status').toBeGreaterThanOrEqual(1)
+    expect(Number(status!.connections), 'connections of Status').toBeGreaterThanOrEqual(1)
+    expect(Number(status!.connections)).toBeLessThanOrEqual(Number(status!.instances))
+})
+
+test('🔴 a plugin whose channel does not report shows a dash, never a zero', async () => {
+    const rows = await pluginRows()
+    // Nettools does not implement getInstances() yet (B7 of the plan).
+    const nettools = rows.find(r => r.label === 'Plugin nettools')
+    test.skip(!nettools || nettools.state !== 'Running', 'this Kwirth does not run the dev nettools plugin')
+    expect(nettools!.instances).toBe('—')
+    expect(nettools!.connections).toBe('—')
+})
+
+test('every state is one of the four, and figures are counts or a dash', async () => {
+    const rows = await pluginRows()
+    expect(rows.length).toBeGreaterThan(1)
+    for (const r of rows) {
+        expect(['Running', 'Remote', 'Not started', 'Failed'], `state of ${r.label}`).toContain(r.state)
+        expect(r.instances, `instances of ${r.label}`).toMatch(/^(\d+|—)$/)
+        expect(r.connections, `connections of ${r.label}`).toMatch(/^(\d+|—)$/)
+    }
+})
+
+test('the Plugins header and the Home box count exactly what the tab lists', async () => {
+    const rows = await pluginRows()
+    const instances = rows.reduce((n, r) => n + (/^\d+$/.test(r.instances) ? Number(r.instances) : 0), 0)
+    await expect(page.getByText(new RegExp(`^${rows.length} plugins?:$`))).toBeVisible()
+    await expect(page.getByText(new RegExp(`^${instances} instances? open$`))).toBeVisible()
+    await tab('Home').click()
+    await expect(box('Plugins')).toContainText(`${rows.length} plugin${rows.length === 1 ? '' : 's'}`)
+    await expect(box('Plugins')).toContainText(`${instances} instance${instances === 1 ? '' : 's'} open`)
+    await tab('Plugins').click()
+})
+
+test('the filter narrows the plugins by name and by state', async () => {
+    const filtro = page.getByPlaceholder('Filter…')
+    await expect(filtro).toBeEnabled()
+    await filtro.fill('kwirth status')
+    await expect(async () => {
+        expect((await pluginRows()).map(r => r.label)).toEqual(['Plugin status'])
+    }).toPass({ timeout: 10000 })
+    await filtro.fill('running')
+    await expect(async () => {
+        const rows = await pluginRows()
+        expect(rows.length).toBeGreaterThan(0)
+        expect(rows.every(r => r.state === 'Running')).toBe(true)
+    }).toPass({ timeout: 10000 })
+    await filtro.fill('')
 })
 
 // ── Performance (v2 S2) ────────────────────────────────────────────────────────
@@ -336,6 +406,14 @@ test('🔴 Performance shows the Kwirth process with real VALUES', async () => {
     expect(await figure('JS heap').innerText()).toMatch(/\d+ MB \/ \d+ MB/)
     expect(await figure('Uptime').innerText()).toMatch(/\d+(s|m|h|d)/)
     expect(await figure('Uptime').innerText()).toMatch(/pid \d+ · Node v\d+/)
+})
+
+test('the five figures are as tall as asked, and all the same height', async () => {
+    // ~78px of content, +30% (102px) and then +25% on top (128px), both asked for by the user.
+    const alturas = await page.locator('[aria-label$=" figure"]').evaluateAll(els => els.map(e => e.getBoundingClientRect().height))
+    expect(alturas.length).toBe(5)
+    for (const h of alturas) expect(h, `a figure is ${h}px tall`).toBeGreaterThanOrEqual(127)
+    expect(Math.max(...alturas) - Math.min(...alturas), 'figures of different heights').toBeLessThanOrEqual(1)
 })
 
 test('🔴 CPU and charts need TWO snapshots: before that they say so, after it they show', async () => {

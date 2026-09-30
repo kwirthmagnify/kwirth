@@ -11,6 +11,9 @@ import path from 'path'
 
 const MEDIA = path.resolve(__dirname, '../../../../docs/0.6.31/_media/ch-images')
 
+// No trace: with the config's 'retain-on-failure' the context close hangs writing it out (see zz-capture).
+test.use({ trace: 'off', screenshot: 'off', video: 'off' })
+
 test('captura del grafo', async ({ browser }) => {
     test.setTimeout(240000)
     const page: Page = await browser.newPage({ viewport: { width: 1400, height: 900 } })

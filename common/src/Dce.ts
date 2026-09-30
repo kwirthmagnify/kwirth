@@ -48,3 +48,31 @@ export interface IDceConsumer {
     /** The requirement as declared: 'dce:<id>:<minimum version>'. */
     requirement: string
 }
+
+/** An installed DCE, as the core's DCE manager keeps it in its index. */
+export interface IDceMeta {
+    id: string
+    name: string
+    displayName?: string
+    version: string
+    description: string
+    website?: string
+    installedFrom?: string
+    marketplaceId?: string
+    marketplaceLabel?: string
+    /** Which sides the package brought. Either may be missing, never both. */
+    hasBack: boolean
+    hasFront: boolean
+    backStored?: boolean
+    frontStored?: boolean
+    /** Always true (PRD RNF3): consumers keep the previous instance until the server restarts. */
+    requiresRestart?: boolean
+    requiresExtension?: string[]
+}
+
+/** What the core lends of its DCEs, read-only (ClusterInfo.dces; the Status channel's DCE tab). */
+export interface IDceAccess {
+    listInstalled(): Promise<IDceMeta[]>
+    status(id: string): IDceRegistryEntry | undefined
+    consumers(id: string): Promise<IDceConsumer[]>
+}

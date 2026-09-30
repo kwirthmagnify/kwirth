@@ -1,4 +1,4 @@
-import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel, getDce } from '@kwirthmagnify/kwirth-common-back'
+import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel, IChannelInstances, getDce } from '@kwirthmagnify/kwirth-common-back'
 import { EConsumerCommand, IConsumerMessageResponse, IConsumerReading } from '../common/ConsumerTypes'
 
 /*
@@ -129,6 +129,13 @@ class DceConsumerChannel implements IChannel {
 
     containsInstance = (instanceId: string): boolean =>
         this.webSockets.some(s => s.instances.includes(instanceId))
+
+    // What this channel has running, for the Status channel's Plugins tab. A connection counts while it
+    // carries an instance: one left with none is on its way out.
+    getInstances = (): IChannelInstances => {
+        const carrying = this.webSockets.filter(s => s.instances.length > 0)
+        return { instances: carrying.reduce((n, s) => n + s.instances.length, 0), connections: carrying.length }
+    }
 
     containsAsset = (): boolean => false
 

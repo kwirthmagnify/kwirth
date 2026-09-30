@@ -12,8 +12,8 @@
         "watch": "node watch.mjs"
     },
     "dependencies": {
-        "@kwirthmagnify/kwirth-common": "^0.5.59",
-        "@kwirthmagnify/kwirth-common-back": "^0.5.56",
+        "@kwirthmagnify/kwirth-common": "^0.5.62",
+        "@kwirthmagnify/kwirth-common-back": "^0.6.0",
         "@kwirthmagnify/kwirth-common-front": "^0.5.64"
     },
     "devDependencies": {
@@ -25,5 +25,7 @@
         "typescript": "^5.4.0"
     },
     "requiresRestart": false,
-    "requiresExtension": ["dce:sample:0.1.0"]
+    "requiresExtension": [
+        "dce:sample:0.1.0"
+    ]
 }

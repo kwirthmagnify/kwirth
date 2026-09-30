@@ -5,7 +5,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import express from 'express'
-import { RouteRegistry, ERouteOwnerKind } from '../../src/tools/RouteRegistry'
+import { ERouteOwnerKind } from '@kwirthmagnify/kwirth-common'
+import { RouteRegistry } from '../../src/tools/RouteRegistry'
 
 test('registro OK y aparece en list()', () => {
     const r = new RouteRegistry()

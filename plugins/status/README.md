@@ -22,7 +22,7 @@ Ten tabs, and it opens on the first:
 | **Providers** | each producer of data — providers and pluviders — with its state and why, consumers and deliveries |
 | **Graph** | who consumes whom |
 | **Performance** | the Kwirth process: memory, CPU, event-loop delay and uptime, with charts of the session |
-| **Plugins** | *coming when the core tells channels about plugins* |
+| **Plugins** | every installed plugin: running, remote, not started or failed, and how many instances and connections its channel reports (a dash when it does not report — never a zero) |
 | **Extensions** | senders and webhooks, with their state |
 | **Routes** | every HTTP route published — core API, providers, plugins, webhooks — with its methods, and collisions marked |
 | **DCE** | every installed DCE: version, source, whether its back and front loaded (with the error), and who consumes it |
@@ -72,7 +72,7 @@ https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-status/-/kwirth-plugin-s
 ```
 
 No configuration. The inventory is a privileged view: it needs **cluster** scope, and the two log tabs
-need **admin**. The Routes and DCE tabs need a Kwirth core that lists its routes and its DCEs; with an older one they say so.
+need **admin**. The Plugins, Routes and DCE tabs need a Kwirth core that lists its plugins, routes and DCEs; with an older one they say so.
 
 ## Development
 
