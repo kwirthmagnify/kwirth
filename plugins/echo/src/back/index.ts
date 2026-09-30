@@ -1,4 +1,5 @@
 import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
+import { IChannelInstances } from '@kwirthmagnify/kwirth-common'
 import { IEchoInstanceConfig, IEchoMessageResponse } from '../front/EchoTypes'
 
 interface IAsset {
@@ -27,6 +28,18 @@ class EchoChannel implements IChannel {
         this.clusterInfo = clusterInfo
         this.backChannelObject = backChannelObject
     }
+
+    /*
+        What this channel has running right now, for Status's Plugins tab.
+
+        Instances are counted across EVERY connection, not per user: one browser carries one instance
+        per open tab, and a user may have several browsers. The two numbers say different things —
+        connections carrying no instance mean somebody has the channel open without using it.
+    */
+    getInstances = (): IChannelInstances => ({
+        instances: this.webSockets.reduce((total, socket) => total + socket.instances.length, 0),
+        connections: this.webSockets.length
+    })
 
     getChannelData = (): BackChannelData => ({
         id: 'echo',

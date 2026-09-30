@@ -120,6 +120,10 @@ const distMeta = { type: 'commonjs', extensionType: 'plugin',
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
+// The package page on npm is this README: publishing without it leaves a page that says nothing.
+fs.copyFileSync('README.md', path.join('dist', 'README.md'))
+console.log('Copied README.md to dist/')
+
 // Docs: the user/admin guide is packaged as a 'docs' extension (docs/pinocchio.tgz). A single
 // 'npm run build' leaves all three pieces ready: front.js, back.js and the guide's tarball.
 await import('./build-docs-tgz.mjs')

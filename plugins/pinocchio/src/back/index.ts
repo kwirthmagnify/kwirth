@@ -83,7 +83,13 @@ export class PinocchioChannel implements IChannel {
         this.startTime = Date.now()
     }
 
-    startChannel = () => {
+    /*
+        IChannel wants a Promise, and this returns one that is ALREADY resolved: the real startup is
+        fired and deliberately not awaited here, so the core is not held up by it. Whoever needs it
+        finished awaits 'startChannelReady' (see below). Awaiting '_startChannelImpl()' here instead
+        would turn a non-blocking start into a blocking one, which is the opposite of the point.
+    */
+    startChannel = async (): Promise<void> => {
         this.startChannelReady = this._startChannelImpl()
     }
 
