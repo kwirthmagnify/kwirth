@@ -1,5 +1,5 @@
-import { IExtensionImportResult, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, EInstanceConfigView, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
+import { IChannelInstances, IExtensionImportResult, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, EInstanceConfigView, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { ILlm, ILlmProvider, STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
 import { loadModels, buildModel, zodFromExample, generateText, Output } from '@kwirthmagnify/kwirth-common-ai/back'
 import { PassThrough } from 'stream'
@@ -178,7 +178,7 @@ interface IInstance {
     assetsTimer?: NodeJS.Timeout
 }
 
-export class CensorChannel {
+export class CensorChannel implements IChannel {
     readonly channelId = 'censor'
     readonly requirements = {
         storage: true,
@@ -258,6 +258,19 @@ export class CensorChannel {
     getChannelScopeLevel = (scope: string): number => {
         return ['', 'filter', 'view', 'cluster'].indexOf(scope)
     }
+
+    /*
+        What this channel has running right now, for the Status channel's Plugins tab.
+
+        Instances are counted across EVERY connection, not per user: one browser can carry several
+        instances —one per open tab— and a single user can have several browsers. The two numbers
+        therefore say different things, and both are worth seeing: connections that carry no instance
+        mean somebody has the channel open without using it.
+    */
+    getInstances = (): IChannelInstances => ({
+        instances: this.connections.reduce((total, connection) => total + connection.instances.length, 0),
+        connections: this.connections.length
+    })
 
     processProviderEvent(providerId: string, event: unknown): void {
         switch (providerId) {

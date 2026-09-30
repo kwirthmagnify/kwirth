@@ -92,38 +92,6 @@ class MagnifyChannel implements IChannel {
         instances: IInstance[] 
     }[] = []
 
-    // +++ convert to abstract and implement common code like this
-    /*
-
-        abstract class BaseChannel implements IChannel {
-            // 1. A constructor forced on everybody
-            constructor(
-                protected clusterInfo: ClusterInfo, 
-                protected kwirthData: KwirthData
-            ) {}
-
-            // 2. A COMMON function with a default implementation
-            // If this code will do for the child class, it need write nothing.
-            containsConnection(webSocket: WebSocket): boolean {
-                this.log.info('Running the common verification logic...');
-                // Suppose a standard logic that works for nearly all of them
-                return true; 
-            }
-
-            // 3. A method the child MAY optionally override
-            removeConnection(webSocket: WebSocket): void {
-                this.log.info('Connection removed the standard way');
-            }
-
-            // 4. Methods the child MUST implement no matter what
-            abstract getChannelData(): BackChannelData;
-            abstract processEvent(type: string, obj: any): void;
-            
-            // ... the rest of IChannel's methods marked as abstract
-        }
-
-    */
-
     // +++ add dispose/destroy (conterpart of initChannel) to IChannel (and implement in this channel a remove from "events subscription")
 
     // constructor (clusterInfo:ClusterInfo, kwirthData : KwirthData) {

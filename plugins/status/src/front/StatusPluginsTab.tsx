@@ -23,7 +23,7 @@ const NOT_REPORTED = "This plugin's channel does not report what it has running.
 
 /** A figure, or a dash with the reason when the plugin does not give it: never a made-up zero. */
 const CountCell: React.FC<ICountCellProps> = ({ value, label }) => (
-    <TableCell align='right' sx={{ width: '1%', whiteSpace: 'nowrap' }} aria-label={label}>
+    <TableCell align='right' sx={{ whiteSpace: 'nowrap' }} aria-label={label}>
         {value === undefined
             ? <Tooltip title={NOT_REPORTED}><Typography variant='body2' color='text.disabled'>—</Typography></Tooltip>
             : <Typography variant='body2' sx={{ fontVariantNumeric: 'tabular-nums' }}>{value}</Typography>}
@@ -57,7 +57,20 @@ export const StatusPluginsTab: React.FC<IPluginsTabProps> = ({ plugins, filter }
                 {s.unreported > 0 &&
                     <Tooltip title={NOT_REPORTED}><Chip size='small' label={`${s.unreported} not reporting`} /></Tooltip>}
             </Stack>
-            <Table size='small' stickyHeader>
+            {/*
+                Fixed layout with a width per column: with the automatic one the browser sizes each column
+                from the rows on screen, so every letter typed in the filter changed the rows and moved
+                every column. Source takes what is left, and its URLs wrap inside it.
+            */}
+            <Table size='small' stickyHeader sx={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                    <col style={{ width: '22%' }} />
+                    <col style={{ width: 90 }} />
+                    <col style={{ width: 180 }} />
+                    <col style={{ width: 100 }} />
+                    <col style={{ width: 120 }} />
+                    <col />
+                </colgroup>
                 <TableHead>
                     <TableRow>
                         <TableCell>Plugin</TableCell>
@@ -78,8 +91,8 @@ export const StatusPluginsTab: React.FC<IPluginsTabProps> = ({ plugins, filter }
                                     {p.name !== p.id &&
                                         <Typography variant='caption' color='text.secondary' sx={{ fontFamily: 'monospace' }}>{p.id}</Typography>}
                                 </TableCell>
-                                <TableCell sx={{ width: '1%', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{p.version}</TableCell>
-                                <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }} aria-label='State'>
+                                <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{p.version}</TableCell>
+                                <TableCell sx={{ whiteSpace: 'nowrap' }} aria-label='State'>
                                     <Chip size='small' label={l.label} color={l.color} variant={l.color === 'success' ? 'outlined' : 'filled'} />
                                     {p.requiresRestart &&
                                         <Tooltip title='Installing or updating this plugin needs a restart of the core'>

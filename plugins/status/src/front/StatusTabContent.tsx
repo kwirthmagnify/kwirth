@@ -320,7 +320,13 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 </Tooltip>
             </Stack>
 
-            <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: SELF_SCROLLING.has(vista) ? 'hidden' : 'auto', overflowX: 'hidden', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
+            {/*
+                scrollbarGutter 'stable' on the list tabs: the room of the vertical scrollbar is kept whether
+                it shows or not. Without it, a filter that left few rows removed the bar, the table grew by its
+                width and the columns moved as you typed. Only there: on Home it left the cards off-centre
+                (the room on the right only), and Home's rows never come and go.
+            */}
+            <Box ref={boxRef} aria-label='Tab content' sx={{ display: 'flex', flexDirection: 'column', overflowY: SELF_SCROLLING.has(vista) ? 'hidden' : 'auto', overflowX: 'hidden', scrollbarGutter: FILTERABLE.has(vista) ? 'stable' : 'auto', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
                 {vista === EStatusTab.HOME && <StatusHomeTab inventory={inventory} series={data.series} autoRefresh={data.autoRefresh} onOpen={setVista} admin={admin} previousLog={data.previousLog} />}
                 {vista === EStatusTab.GRAPH && <StatusDiagram inventory={inventory} active={activos} autoRefresh={data.autoRefresh} />}
                 {vista === EStatusTab.PROVIDERS && tabla(filasDe(EStatusTab.PROVIDERS), true)}

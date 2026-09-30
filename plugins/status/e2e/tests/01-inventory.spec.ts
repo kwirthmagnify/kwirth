@@ -347,12 +347,20 @@ test('🔴 the Plugins tab lists the dev plugins, and Status reports ITSELF with
 })
 
 test('🔴 a plugin whose channel does not report shows a dash, never a zero', async () => {
+    /*
+        Not tied to one plugin: which ones report changes as they are updated (B7 — nettools did, mid-way).
+        What must hold is that the header and the rows agree: "M not reporting" is exactly the running rows
+        with a dash in BOTH columns, and a dash never sits next to a number.
+    */
     const rows = await pluginRows()
-    // Nettools does not implement getInstances() yet (B7 of the plan).
-    const nettools = rows.find(r => r.label === 'Plugin nettools')
-    test.skip(!nettools || nettools.state !== 'Running', 'this Kwirth does not run the dev nettools plugin')
-    expect(nettools!.instances).toBe('—')
-    expect(nettools!.connections).toBe('—')
+    const header = await page.getByText(/^\d+ not reporting$/).textContent().catch(() => null)
+    const declared = header ? Number(header.split(' ')[0]) : 0
+    const dashed = rows.filter(r => r.state === 'Running' && r.instances === '—')
+    test.skip(declared === 0, 'every running plugin in this Kwirth reports its instances: no dash to check')
+    expect(dashed.length, 'running rows with a dash vs the header').toBe(declared)
+    for (const r of rows) {
+        expect(r.instances === '—', `${r.label}: a dash on one column and a number on the other`).toBe(r.connections === '—')
+    }
 })
 
 test('every state is one of the four, and figures are counts or a dash', async () => {
@@ -374,6 +382,29 @@ test('the Plugins header and the Home box count exactly what the tab lists', asy
     await expect(box('Plugins')).toContainText(`${rows.length} plugin${rows.length === 1 ? '' : 's'}`)
     await expect(box('Plugins')).toContainText(`${instances} instance${instances === 1 ? '' : 's'} open`)
     await tab('Plugins').click()
+})
+
+test('🔴 filtering does not move the Plugins columns', async () => {
+    /*
+        Two causes, both seen by the user: the automatic table layout (each column sized to the rows on
+        screen), and the vertical scrollbar coming and going with the number of rows — the table lost or
+        gained its width. The scrollbar room is now always kept ('scrollbar-gutter: stable').
+    */
+    const box = page.locator('[aria-label="Tab content"]')
+    await expect(box).toHaveCSS('scrollbar-gutter', 'stable')
+    const medida = async () => ({
+        columns: await page.locator('table thead th').evaluateAll(ths => ths.map(th => Math.round(th.getBoundingClientRect().width))),
+        table: await page.locator('table').first().evaluate(t => Math.round(t.getBoundingClientRect().width))
+    })
+    const antes = await medida()
+    const filtro = page.getByPlaceholder('Filter…')
+    for (const texto of ['k', 'kwirth status', 'net', 'zzz-nothing']) {
+        await filtro.fill(texto)
+        await page.waitForTimeout(300)
+        const gutter = await box.evaluate(e => e.offsetWidth - e.clientWidth)
+        expect(await medida(), `columns or table moved with filter '${texto}' (scrollbar room: ${gutter}px)`).toEqual(antes)
+    }
+    await filtro.fill('')
 })
 
 test('the filter narrows the plugins by name and by state', async () => {
