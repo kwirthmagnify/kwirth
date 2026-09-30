@@ -11,6 +11,7 @@ const TOKENS_KEY = 'kwirth.marketplace.tokens'             // token de lectura d
 const REGISTRY_KEY = 'kwirth.registry.credentials'         // contraseña de descarga, por registro de paquetes
 const DEFAULT_METRICS_INTERVAL = 15
 const DEFAULT_PREVIOUS_LOG_LINES = 1000
+const DEFAULT_PREVIOUS_LOG_SENDER_LINES = 200
 
 // Secrets travel inside manifestAuth.token / auth.password, like any other field: the GET returns them
 // and the PUT accepts them. What changes is where they are stored at rest — never in the settings
@@ -69,6 +70,17 @@ export class SettingsApi {
         const fromEnv = Number(process.env.PREVIOUSLOGLINES)
         if (!isNaN(fromEnv) && fromEnv > 0) return Math.floor(fromEnv)
         return DEFAULT_PREVIOUS_LOG_LINES
+    }
+
+    /*
+        How many of the recovered lines go INSIDE the message sent to the sender, which is not the same
+        number as the one that is read: the window that has to contain the cause is wide on purpose,
+        and what a destination will accept is not. No environment variable here — this one is only ever
+        set from the dialog, next to the sender it belongs to.
+    */
+    public static resolvePreviousLogSenderLines(settings: IKwirthSettings): number {
+        if (settings.previousLogSenderLines && settings.previousLogSenderLines > 0) return Math.floor(settings.previousLogSenderLines)
+        return DEFAULT_PREVIOUS_LOG_SENDER_LINES
     }
 
     // A package registry's password, for whoever has to download a tarball of its. Back end only.
@@ -222,7 +234,8 @@ export class SettingsApi {
                         configured the stored value is undefined, and the dialog would open with
                         everything blank while the core is writing under its defaults.
                     */
-                    res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(stored), previousLogLines: SettingsApi.resolvePreviousLogLines(stored), log: currentLogSettings() })
+                    res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(stored), previousLogLines: SettingsApi.resolvePreviousLogLines(stored),
+                        previousLogSenderLines: SettingsApi.resolvePreviousLogSenderLines(stored), log: currentLogSettings() })
                 }
                 catch (err) {
                     logError(ELogComponent.CORE, `Error reading kwirth settings: ${err}`)

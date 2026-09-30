@@ -52,8 +52,6 @@ const About: React.FC<IAboutProps> = (props:IAboutProps) => {
             </DialogContent>
             <DialogActions>
                 <Stack direction='row' flex={1} sx={{ml:2, mr:2}} alignItems='center'>
-                    {/* Where the log went: said here, since this is where people used to look for it. */}
-                    <Typography variant='caption' color='text.secondary'>The core's log is now in the Status channel.</Typography>
                     <Typography sx={{ flexGrow:1}}></Typography>
                     <Button onClick={props.onClose}>OK</Button>
                 </Stack>

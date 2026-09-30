@@ -214,4 +214,44 @@ env:
     value: '3000'
 ```
 
+### Being told, instead of having to look
+
+Everything above waits for somebody to open something. Nobody opens a dialog because things are going well,
+so a restart at four in the morning was a restart nobody heard about. Two things now happen on their own.
+
+**It is shouted into the core log.** When kwirth starts and finds that its previous container left a log
+behind, it writes this before anything else:
+
+```
+[10:22:41] [core] [ERRO] ********************************************************************************
+[10:22:41] [core] [ERRO] KWIRTH RESTARTED — the previous container left a log behind
+[10:22:41] [core] [ERRO]   ended with exit code 137 (OOMKilled) · restarts: 3 · container: kwirth
+[10:22:41] [core] [ERRO]   1000 lines recovered — Status channel, Previous log tab
+[10:22:41] [core] [ERRO] ********************************************************************************
+```
+
+It goes out at **error** level on purpose. A warning from the `core` component can be filtered away in
+**Kwirth settings → Log**, and this is the one message that has to survive somebody having turned the log
+down. Errors are never filtered. If the restart happened but the log is already gone, the fourth line says
+*its log could NOT be read* and why — which is a different thing from having read nothing.
+
+**And it can be sent.** In **Kwirth settings → General** (the dialog shown in
+[Initial configuration](02-initial-config)), pick a **sender** and one of its **configurations**. From then
+on, a restart also puts a message on its way out — one message, not one per line, with the cause
+in the subject and the tail of the log in the body. Anything kwirth can send through reaches you this way:
+an email, a Teams channel, a file, a ticket.
+
+| Field | What it is |
+|---|---|
+| **Sender** | Which sender delivers it. `(none — only the core log)` leaves the banner and sends nothing, which is the default. |
+| **Config** | One of that sender's configurations. It only lists the ones belonging to the sender you picked, and changing the sender clears it: a config name means nothing without its sender. |
+| **Lines to include in that message** | How many of the recovered lines travel, counting from the end. **200** by default. |
+
+⚠️ **That last number is not the one above it.** Up to a thousand lines are *read*, so that the cause does not
+fall outside the window; two hundred are *sent*, because a thousand lines in an email is not read by anybody
+and a Teams webhook rejects a payload that size outright. They answer different questions and are set apart.
+
+⚠️ **The settings are read when kwirth starts**, like the rest of this page: configure the sender **before**
+the restart you want to hear about, not after.
+
 Next: [Initial configuration →](02-initial-config)

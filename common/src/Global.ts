@@ -60,6 +60,24 @@ interface IKwirthSettings {
     */
     previousLogLines?: number
     /*
+        Where the previous container's log is SENT when the core finds one at startup: the same
+        (senderId, configName) pair every channel uses, kept as two flat fields because that is how
+        alert, censor and echo already carry it and a pair type would be the only one of its kind.
+
+        Empty means nobody is told, which is what happened before this existed: the log sat in memory
+        waiting for someone to open the About. A restart at four in the morning is precisely the one
+        nobody is going to see.
+    */
+    previousLogSenderId?: string
+    previousLogSenderConfigName?: string
+    /*
+        How many of the recovered lines travel in that message. Its own number, apart from
+        'previousLogLines': up to a thousand are read so the cause does not fall outside the window,
+        but a thousand lines in an email is not read by anyone and a Teams webhook rejects the payload
+        outright. 200 by default.
+    */
+    previousLogSenderLines?: number
+    /*
         How talkative the core's own log is, per component. Until this existed, the enabled components
         were a constant in the module: 'auth' and 'stor' were off and there was no way of turning them on
         without recompiling, and there was no level filter at all.

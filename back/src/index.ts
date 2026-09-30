@@ -15,7 +15,7 @@ import { MarketplaceApi } from './api/MarketplaceApi'
 import { MarketplaceManager } from './tools/MarketplaceManager'
 import { ERouteOwnerKind, routeRegistry } from './tools/RouteRegistry'
 import { configurePackageRegistries } from './tools/PackageRegistries'
-import { readPreviousContainerLog } from './tools/PreviousContainerLog'
+import { buildPreviousContainerMessage, logPreviousContainerBanner, readPreviousContainerLog } from './tools/PreviousContainerLog'
 import { failureOrigin } from './tools/FailureOrigin'
 import { LoginApi } from './api/LoginApi'
 
@@ -2315,9 +2315,39 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             startup— which is why readPreviousContainerLog() never throws.
         */
         if (localKwirthData.inCluster && process.env.HOSTNAME) {
+            const settings = await SettingsApi.read(runningInstance.configMaps)
             // How many lines, from Kwirth's settings (or from PREVIOUSLOGLINES, or 1000)
-            const lineas = SettingsApi.resolvePreviousLogLines(await SettingsApi.read(runningInstance.configMaps))
-            await readPreviousContainerLog(runningInstance.clusterInfo.coreApi, localKwirthData.namespace, process.env.HOSTNAME, lineas)
+            const lines = SettingsApi.resolvePreviousLogLines(settings)
+            const previous = await readPreviousContainerLog(runningInstance.clusterInfo.coreApi, localKwirthData.namespace, process.env.HOSTNAME, lines)
+
+            /*
+                Nobody opens the About because things are going well. The restart is shouted at the
+                console and, if a sender is configured, sent out — which is the only half that reaches
+                whoever is not looking at a terminal at four in the morning.
+            */
+            if (previous.restarted) {
+                logPreviousContainerBanner(previous)
+                const senderId = settings.previousLogSenderId
+                const configName = settings.previousLogSenderConfigName
+                if (senderId && configName && senderManager) {
+                    const message = buildPreviousContainerMessage(previous, SettingsApi.resolvePreviousLogSenderLines(settings), localKwirthData.namespace, process.env.HOSTNAME)
+                    /*
+                        SenderManager.send() SWALLOWS the failure: it logs and returns undefined, which
+                        is also what a notification sender returns when it worked. So the outcome is
+                        said here, or a misconfigured sender is indistinguishable from a delivered one.
+                    */
+                    try {
+                        await senderManager.send(senderId, configName, message)
+                        logInfo(ELogComponent.CORE, `Previous container log sent to sender '${senderId}::${configName}' (${message.metadata?.linesSent} lines)`)
+                    }
+                    catch (err) {
+                        logError(ELogComponent.CORE, `Could not send the previous container log to '${senderId}::${configName}': ${err}`)
+                    }
+                }
+                else if (senderId && configName) {
+                    logError(ELogComponent.CORE, `Previous container log NOT sent: sender '${senderId}::${configName}' is configured but the sender manager is not available`)
+                }
+            }
         }
 
         if (envForward) {

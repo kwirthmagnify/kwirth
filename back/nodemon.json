@@ -1,0 +1,9 @@
+{
+  "//": "Without this, nodemon watches the WHOLE of back/ and restarts the core for things the core does not read: editing a test, regenerating the docsify bundle or touching a build script would take the running Kwirth down, in the middle of whatever was being tried on it.",
+  "//watch": "src is what the process actually runs. kwirth-dev.json stays because it maps the extensions loaded from dist and is read ONLY at startup, so a change there does need a restart to take effect.",
+  "watch": [
+    "src",
+    "kwirth-dev.json"
+  ],
+  "ext": "ts,json"
+}

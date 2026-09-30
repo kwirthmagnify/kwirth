@@ -53,6 +53,18 @@ interface IPackageRegistryRow extends IPackageRegistry {
     revealed?: boolean
 }
 
+// What 'GET /senders' answers with, of which only these two are read here.
+interface ISenderListEntry {
+    id: string
+    configNames?: string[]
+}
+
+// One sender and one of its configurations: the pair flattened, as AlertSetup does it.
+interface ISenderEntry {
+    senderId: string
+    configName: string
+}
+
 /*
     This dialog used to carry its own export/import of the settings, with its own file format
     ('kwirth-settings'), its own selection list and its own two sub-dialogs. It is gone: Kwirth
@@ -75,6 +87,16 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const [tab, setTab] = useState<ESettingsKwirthTab>(ESettingsKwirthTab.GENERAL)
     const [metricsInterval, setMetricsInterval] = useState<number>(0)
     const [previousLogLines, setPreviousLogLines] = useState<number>(0)
+    /*
+        Where the previous container's log is sent when the core finds one at startup: the sender, and
+        then one of ITS configurations. Two pickers, as everywhere else a sender is chosen (see the
+        Alert channel's setup) — the second one lists only the configs of the sender picked, because
+        a config name means nothing without its sender.
+    */
+    const [previousLogSenderId, setPreviousLogSenderId] = useState<string>('')
+    const [previousLogSenderConfigName, setPreviousLogSenderConfigName] = useState<string>('')
+    const [previousLogSenderLines, setPreviousLogSenderLines] = useState<number>(0)
+    const [senderEntries, setSenderEntries] = useState<ISenderEntry[]>([])
     /*
         How talkative the core's log is, per component.
 
@@ -103,6 +125,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 const settings = await response.json() as IKwirthSettings
                 setMetricsInterval(settings.metricsInterval ?? 0)
                 setPreviousLogLines(settings.previousLogLines ?? 0)
+                setPreviousLogSenderLines(settings.previousLogSenderLines ?? 0)
+                setPreviousLogSenderId(settings.previousLogSenderId ?? '')
+                setPreviousLogSenderConfigName(settings.previousLogSenderConfigName ?? '')
                 setMarketplaces((settings.marketplaces ?? []).map(m => ({ ...m })))
                 setRegistries((settings.packageRegistries ?? []).map(r => ({ ...r })))
                 /*
@@ -115,6 +140,16 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 // If this fails the screen does not break: the tab simply has nothing to draw.
                 const components = await fetch(`${props.clusterUrl}/core/settings/log/components`, addGetAuthorization(props.accessString))
                 if (components.ok) setLogComponents(await components.json() as ILogComponentInfo[])
+                /*
+                    The installed senders and their configs, for the picker. Same source the channels
+                    use for their own 'Sender config' selector. If it fails the dialog still works: the
+                    picker is simply left empty, and whatever was already configured stays saved.
+                */
+                const senders = await fetch(`${props.clusterUrl}/core/senders`, addGetAuthorization(props.accessString))
+                if (senders.ok) {
+                    const list = await senders.json() as ISenderListEntry[]
+                    setSenderEntries(list.flatMap(s => (s.configNames ?? []).map(name => ({ senderId: s.id, configName: name }))))
+                }
             }
             catch {
                 setError('Could not reach Kwirth to read its settings.')
@@ -226,7 +261,12 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         : { password: r.auth.password ?? '' })
                 } } : {})
             }))
+            // a sender without a config delivers nowhere, so it is stored as nobody rather than half set
+            const senderChosen = previousLogSenderId !== '' && previousLogSenderConfigName !== ''
             const payload = JSON.stringify({ metricsInterval, previousLogLines, marketplaces: cleaned, packageRegistries: cleanedRegistries,
+                previousLogSenderId: senderChosen ? previousLogSenderId : '',
+                previousLogSenderConfigName: senderChosen ? previousLogSenderConfigName : '',
+                previousLogSenderLines,
                 log: { levels: logLevels, ansi: logAnsi } })
             const response = await fetch(`${props.clusterUrl}/core/settings`, addPutAuthorization(props.accessString, payload))
             if (!response.ok) {
@@ -413,9 +453,32 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                     <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
                         <Typography variant='body2'>Configuration of Kwirth itself on cluster <b>{props.clusterName}</b>. These settings are stored by Kwirth and survive a restart.</Typography>
                         <TextField value={metricsInterval} onChange={(e) => setMetricsInterval(+e.target.value)} variant='standard' label='Cluster metrics read interval (seconds)' type='number' sx={{ width: '40%' }} disabled={loading || error!==''} />
-                        {/* El log del contenedor anterior se lee UNA vez, al arrancar: cambiar esto no
-                            tiene efecto hasta el siguiente arranque del core. */}
+                        {/* The previous container's log is read ONCE, at startup: changing this has no
+                            effect until the core starts again. */}
                         <TextField value={previousLogLines} onChange={(e) => setPreviousLogLines(+e.target.value)} variant='standard' label='Previous container log lines to keep (on startup)' type='number' sx={{ width: '40%' }} disabled={loading || error!==''} helperText='Read once when kwirth starts, so a change applies from the next restart' />
+                        <Typography variant='body2' sx={{ mt: 1 }}>When kwirth starts and finds that its previous container left a log behind, it always shouts it into the core log. It can also <b>send it</b>, which is the only half that reaches somebody who is not watching a terminal.</Typography>
+                        <Stack direction='row' spacing={2} alignItems='flex-end'>
+                            {/* Sender first, then one of ITS configs: the same two pickers used wherever
+                                a sender is chosen. 'shrink' keeps the label above the value — without it
+                                displayEmpty paints the chosen text on top of the label. */}
+                            <FormControl variant='standard' sx={{ flex: 1 }} disabled={loading || error!==''}>
+                                <InputLabel id='previous-log-sender-label' shrink>Sender for the previous container log</InputLabel>
+                                <Select labelId='previous-log-sender-label' displayEmpty value={previousLogSenderId}
+                                    onChange={(e) => { setPreviousLogSenderId(e.target.value); setPreviousLogSenderConfigName('') }}>
+                                    <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none — only the core log)</Typography></MenuItem>
+                                    { Array.from(new Set(senderEntries.map(e => e.senderId))).map(sid => <MenuItem key={sid} value={sid}>{sid}</MenuItem>) }
+                                </Select>
+                            </FormControl>
+                            <FormControl variant='standard' sx={{ flex: 1 }} disabled={loading || error!=='' || previousLogSenderId===''}>
+                                <InputLabel id='previous-log-sender-config-label' shrink>Config</InputLabel>
+                                <Select labelId='previous-log-sender-config-label' displayEmpty value={previousLogSenderConfigName}
+                                    onChange={(e) => setPreviousLogSenderConfigName(e.target.value)}>
+                                    <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
+                                    { senderEntries.filter(e => e.senderId === previousLogSenderId).map(e => <MenuItem key={e.configName} value={e.configName}>{e.configName}</MenuItem>) }
+                                </Select>
+                            </FormControl>
+                        </Stack>
+                        <TextField value={previousLogSenderLines} onChange={(e) => setPreviousLogSenderLines(+e.target.value)} variant='standard' label='Lines to include in that message' type='number' sx={{ width: '40%' }} disabled={loading || error!=='' || previousLogSenderId==='' || previousLogSenderConfigName===''} helperText='The last N of the lines read above. 200 by default: a thousand lines is rejected by a webhook and read by nobody' />
                     </Stack>
                 </Box>
 

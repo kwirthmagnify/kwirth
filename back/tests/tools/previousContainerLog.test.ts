@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { CoreV1Api } from '@kubernetes/client-node'
-import { getPreviousContainerLog, readPreviousContainerLog, resolvePreviousLogLines } from '../../src/tools/PreviousContainerLog'
+import { buildPreviousContainerMessage, getPreviousContainerLog, IPreviousContainerLog, logPreviousContainerBanner, readPreviousContainerLog, resolvePreviousLogLines } from '../../src/tools/PreviousContainerLog'
 
 /*
     When the core dies inside the cluster, what explains the death stays in the previous container and
@@ -203,4 +203,108 @@ test('un valor invalido cae al del entorno/default en vez de pedir cero lineas',
     await readPreviousContainerLog(api, NS, POD, 0)
 
     assert.equal(logCalls[0].tailLines, 1000, 'tailLines 0 dejaria el diagnostico vacio')
+})
+
+/*
+    What the restart PRODUCES, which is the half nobody sees until it matters: the banner in the core
+    log and the message that goes out to a sender. Reading the log is useless if the only way to learn
+    about it is to open a dialog nobody opens when things are going well.
+*/
+
+const restartedLog = (over: Partial<IPreviousContainerLog> = {}): IPreviousContainerLog => ({
+    restarted: true,
+    abnormal: true,
+    restartCount: 3,
+    container: 'kwirth',
+    termination: { exitCode: 137, reason: 'OOMKilled', finishedAt: '2026-09-30T02:11:00.000Z' },
+    lines: Array.from({ length: 500 }, (_, i) => `line ${i + 1}`),
+    ...over,
+})
+
+// The banner goes to console.error, so that is what has to be captured to read it back
+const captureErrors = async (fn: () => void): Promise<string[]> => {
+    const captured: string[] = []
+    const original = console.error
+    console.error = (...args: unknown[]) => { captured.push(args.map(String).join(' ')) }
+    try { fn() } finally { console.error = original }
+    return captured
+}
+
+test('the banner frames the restart between two rows of asterisks', async () => {
+    const output = await captureErrors(() => logPreviousContainerBanner(restartedLog()))
+
+    assert.ok(output.length >= 4, 'the banner is several lines, one call each')
+    assert.match(output[0], /\*{80}/, 'it opens with a rule')
+    assert.match(output[output.length - 1], /\*{80}/, 'and closes with another')
+    assert.ok(output.some(l => l.includes('KWIRTH RESTARTED')), 'it says what happened')
+    assert.ok(output.some(l => l.includes('exit code 137 (OOMKilled)')), 'and why')
+    assert.ok(output.some(l => l.includes('restarts: 3')), 'and how many times')
+})
+
+test('every banner line is a call of its own, so none comes out without its prefix', async () => {
+    const output = await captureErrors(() => logPreviousContainerBanner(restartedLog()))
+
+    for (const line of output) {
+        assert.ok(!line.includes('\n'), `a line with \n would print unprefixed and ungreppable: ${line}`)
+    }
+})
+
+test('the banner goes out at ERROR, which no level filter can silence', async () => {
+    // console.log is left in place: if the banner went out as info or warning, nothing would be captured
+    const output = await captureErrors(() => logPreviousContainerBanner(restartedLog()))
+
+    assert.ok(output.length > 0, 'a warning can be filtered out by lowering the core component')
+    assert.ok(output.every(l => l.includes('[ERRO]')), 'and only the error level is never filtered')
+})
+
+test('with no restart there is no banner at all', async () => {
+    const output = await captureErrors(() => logPreviousContainerBanner({ restarted: false, abnormal: false, restartCount: 0, lines: [] }))
+
+    assert.equal(output.length, 0, 'a normal startup must not shout')
+})
+
+test('the banner says the log is gone instead of claiming zero lines', async () => {
+    const output = await captureErrors(() => logPreviousContainerBanner(restartedLog({ lines: [], unavailableReason: 'log rotated' })))
+
+    assert.ok(output.some(l => l.includes('could NOT be read') && l.includes('log rotated')))
+    assert.ok(!output.some(l => l.includes('0 lines recovered')), '"0 lines" reads as "it wrote nothing", which is a different thing')
+})
+
+test('the message carries only the LAST lines, up to the cap', async () => {
+    const message = buildPreviousContainerMessage(restartedLog(), 200, NS, POD)
+
+    assert.equal(message.metadata?.linesSent, 200)
+    assert.equal(message.metadata?.linesRecovered, 500)
+    assert.ok(message.body.includes('line 500'), 'the tail is what explains the death')
+    assert.ok(message.body.includes('line 301'), 'the last 200 start here')
+    assert.ok(!message.body.includes('line 300\n'), 'and nothing older travels')
+})
+
+test('an abnormal exit travels as error and a clean one as warning', () => {
+    assert.equal(buildPreviousContainerMessage(restartedLog(), 10).level, 'error')
+    assert.equal(buildPreviousContainerMessage(restartedLog({ abnormal: false, termination: { exitCode: 0 } }), 10).level, 'warning')
+})
+
+test('the subject says the cause, so it is readable without opening the message', () => {
+    const message = buildPreviousContainerMessage(restartedLog(), 10)
+
+    assert.equal(message.subject, 'Kwirth restarted — exit code 137 (OOMKilled)')
+    assert.equal(message.origin?.namespace, undefined, 'not passed in this call')
+    assert.equal(message.origin?.source, 'core', 'the core is what is speaking, not a provider')
+})
+
+test('the origin travels when it is known, so the destination can label it', () => {
+    const message = buildPreviousContainerMessage(restartedLog(), 10, NS, POD)
+
+    assert.equal(message.origin?.namespace, NS)
+    assert.equal(message.origin?.pod, POD)
+    assert.equal(message.origin?.container, 'kwirth')
+})
+
+test('with no lines the message is still worth sending: the cause is the news', () => {
+    const message = buildPreviousContainerMessage(restartedLog({ lines: [], unavailableReason: 'log rotated' }), 200)
+
+    assert.equal(message.metadata?.linesSent, 0)
+    assert.ok(message.body.includes('could not be read'))
+    assert.ok(message.body.includes('exit code 137'), 'the termination is known even when the log is not')
 })

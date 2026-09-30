@@ -552,3 +552,30 @@ test('previousLogLines: un valor absurdo no deja al core sin log', () => {
     // and a decimal is truncated: tailLines is an integer for the Kubernetes API
     assert.equal(SettingsApi.resolvePreviousLogLines({ previousLogLines: 120.7 }), 120)
 })
+
+/*
+    How many of the recovered lines travel to the sender. Its own number, and on purpose: the window
+    that has to contain the cause is wide, and what a destination accepts is not. No environment
+    variable — this one is only ever set next to the sender it belongs to.
+*/
+
+test('previousLogSenderLines: 200 by default, which is what a destination takes', () => {
+    assert.equal(SettingsApi.resolvePreviousLogSenderLines({}), 200)
+})
+
+test('previousLogSenderLines: what is stored wins', () => {
+    assert.equal(SettingsApi.resolvePreviousLogSenderLines({ previousLogSenderLines: 50 }), 50)
+})
+
+test('previousLogSenderLines: an absurd value does not send an empty message', () => {
+    assert.equal(SettingsApi.resolvePreviousLogSenderLines({ previousLogSenderLines: 0 }), 200)
+    assert.equal(SettingsApi.resolvePreviousLogSenderLines({ previousLogSenderLines: -5 }), 200)
+    assert.equal(SettingsApi.resolvePreviousLogSenderLines({ previousLogSenderLines: 80.4 }), 80)
+})
+
+test('previousLogSenderLines is independent of how many are READ', () => {
+    // a thousand in the viewer, two hundred in the message: the two numbers answer different questions
+    const settings = { previousLogLines: 1000, previousLogSenderLines: 200 }
+    assert.equal(SettingsApi.resolvePreviousLogLines(settings), 1000)
+    assert.equal(SettingsApi.resolvePreviousLogSenderLines(settings), 200)
+})

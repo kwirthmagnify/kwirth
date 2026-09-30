@@ -1,5 +1,6 @@
 import { CoreV1Api } from '@kubernetes/client-node'
-import { ELogComponent, logInfo, logWarning } from './Logging'
+import { ISenderMessage } from '@kwirthmagnify/kwirth-common'
+import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 
 /*
     The PREVIOUS container's log, read once at startup.
@@ -19,6 +20,8 @@ import { ELogComponent, logInfo, logWarning } from './Logging'
 */
 
 const DEFAULT_LINES = 1000
+// Wide enough that the row cannot be mistaken for a message, and it still fits a normal terminal
+const BANNER_RULE = '*'.repeat(80)
 
 export interface IPreviousContainerTermination {
     exitCode?: number
@@ -135,5 +138,71 @@ export const readPreviousContainerLog = async (coreApi: CoreV1Api, namespace: st
         previousContainerLog = { ...NOTHING, unavailableReason: err instanceof Error ? err.message : String(err) }
         logWarning(ELogComponent.CORE, `Could not check the previous container: ${previousContainerLog.unavailableReason}`)
         return previousContainerLog
+    }
+}
+
+/** 'exit code 137 (OOMKilled)', or 'exit code 0' when there is no reason to add. */
+const describeTermination = (log: IPreviousContainerLog): string => {
+    const t = log.termination
+    if (!t) return 'an unknown cause'
+    return `exit code ${t.exitCode ?? '?'}${t.reason ? ` (${t.reason})` : ''}`
+}
+
+/*
+    The restart, written where it cannot be missed: a rule of asterisks, the facts, another rule.
+
+    One call PER LINE, never one with '\n' inside. Every line in this log carries its timestamp, its
+    component and its level, and a multi-line message would print the rules naked — unprefixed,
+    ungreppable, which is exactly what logGeneric goes out of its way to avoid.
+
+    It goes out at ERROR, not at warning, and that is deliberate: a level filter can silence a warning
+    from 'core', and this is the one message that must survive somebody having turned the log down.
+    Errors are never filtered.
+*/
+export const logPreviousContainerBanner = (log: IPreviousContainerLog): void => {
+    if (!log.restarted) return
+    logError(ELogComponent.CORE, BANNER_RULE)
+    logError(ELogComponent.CORE, `KWIRTH RESTARTED — the previous container left a log behind`)
+    logError(ELogComponent.CORE, `  ended with ${describeTermination(log)} · restarts: ${log.restartCount}${log.container ? ` · container: ${log.container}` : ''}`)
+    if (log.unavailableReason)
+        logError(ELogComponent.CORE, `  its log could NOT be read: ${log.unavailableReason}`)
+    else
+        logError(ELogComponent.CORE, `  ${log.lines.length} lines recovered — Status channel, Previous log tab`)
+    logError(ELogComponent.CORE, BANNER_RULE)
+}
+
+/*
+    The message that goes to the sender: ONE, with the tail in the body, not one per line. What happened
+    is a restart, not the arrival of N log lines — and a batch against email or Teams would turn a single
+    restart into N notifications.
+
+    Only the LAST `maxLines` travel. Up to a thousand are read so that the cause does not fall outside
+    the window, but a thousand lines is not something anybody reads in an email, and a Teams webhook
+    rejects the payload outright.
+*/
+export const buildPreviousContainerMessage = (log: IPreviousContainerLog, maxLines: number, namespace?: string, pod?: string): ISenderMessage => {
+    const tail = maxLines > 0 ? log.lines.slice(-maxLines) : log.lines
+    const header = [
+        `Kwirth restarted: the previous container ended with ${describeTermination(log)}.`,
+        `Restarts: ${log.restartCount}${log.container ? ` · container: ${log.container}` : ''}`,
+        log.termination?.finishedAt ? `Finished at: ${log.termination.finishedAt}` : undefined,
+        log.unavailableReason
+            ? `Its log could not be read: ${log.unavailableReason}`
+            : `Last ${tail.length} of ${log.lines.length} recovered lines:`,
+    ].filter(Boolean).join('\n')
+
+    return {
+        subject: `Kwirth restarted — ${describeTermination(log)}`,
+        // an exit 0 after a restart is an orderly stop; anything else is what somebody has to look at
+        level: log.abnormal ? 'error' : 'warning',
+        body: tail.length > 0 ? `${header}\n\n${tail.join('\n')}` : header,
+        origin: { namespace, pod, container: log.container, source: 'core' },
+        metadata: {
+            restartCount: log.restartCount,
+            abnormal: log.abnormal,
+            termination: log.termination,
+            linesRecovered: log.lines.length,
+            linesSent: tail.length,
+        },
     }
 }

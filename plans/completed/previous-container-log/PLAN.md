@@ -1,5 +1,8 @@
 # Log del contenedor anterior
 
+> ✅ **Ampliado el 2026-09-30**: un reinicio ya no espera a que alguien mire — sale como **banner a nivel
+> error** en el log del core y, si hay sender configurado, **se envía**. Ver *Lo que vino después*, al final.
+>
 > **Estado: CERRADO.** S1, S3 y S4 cerrados el **2026-09-20** (CL9 completo: 344 tests en el core, +1 spec
 > e2e con 2 casos, guía y captura). **S2 cerrado**: el número de líneas está en la pestaña *General* de
 > *kwirth settings* (`Previous container log lines to keep`), con la precedencia de siempre — lo guardado
@@ -120,3 +123,55 @@ Lo que se decidió mientras se escribía, y que el plan no preveía:
   reiniciar el proceso. Ahora se borra al instalar y al desinstalar, con el nombre en un solo sitio
   (`cachedExtensionFile` / `dropCachedExtensionFiles`) para que el borrado y la lectura no puedan
   divergir.
+
+## Lo que vino después (2026-09-30): dejar de esperar a que alguien mire
+
+Este plan entregó la LECTURA del log anterior y su visor. Lo que no resolvía —y se vio con el tiempo— es
+que **todo lo anterior espera a que alguien abra algo**, y nadie abre un diálogo porque las cosas vayan
+bien. Un reinicio a las cuatro de la mañana era un reinicio del que no se enteraba nadie.
+
+Ahora un arranque que encuentra log anterior produce dos cosas:
+
+- **Un banner en el log del core**, entre dos reglas de 80 asteriscos, con la causa, los reinicios y las
+  líneas recuperadas. 🔴 **A nivel `error`, no `warning`**, y a propósito: el filtro por componente de
+  *Kwirth settings → Log* puede silenciar un warning de `core`, y este es justo el mensaje que tiene que
+  sobrevivir a que alguien haya bajado el log. Los `error` no se filtran nunca.
+  🔴 **Una llamada de log por línea**, jamás una con un salto embebido: `logGeneric` emite una línea por
+  llamada con su timestamp, componente y nivel, y un mensaje multilínea imprimiría las reglas **desnudas**,
+  sin prefijo y sin poder grepearse. Hay un test que lo fija.
+- **El envío a un sender**, configurable en *Kwirth settings → General* con el par (sender, config) y su
+  propio tope de líneas (200). **Un mensaje, no N**: el hecho es «Kwirth se reinició», no «llegan 500
+  líneas», y un `sendBatch` contra email o Teams convertiría un reinicio en N notificaciones.
+  ⚠️ `SenderManager.send()` **se traga la excepción** y devuelve `undefined`, que es también lo que
+  devuelve un envío correcto de un sender de notificación: el core loguea el resultado por su cuenta, o un
+  sender mal configurado sería indistinguible de uno que funciona.
+
+⚠️ **Dos números distintos y no se arrastran**: `previousLogLines` (1000) es lo que se LEE, para que la
+causa no caiga fuera de la ventana; `previousLogSenderLines` (200) es lo que se ENVÍA, porque mil líneas
+en un correo no las lee nadie y un webhook de Teams rechaza el payload entero.
+
+En `common` (`IKwirthSettings`) van tres campos nuevos —`previousLogSenderId`,
+`previousLogSenderConfigName`, `previousLogSenderLines`—, publicados en `@kwirthmagnify/kwirth-common`
+**0.5.61** (y 0.5.62 encima, de otra sesión). +14 tests en el back (601) y un spec e2e nuevo
+(`previous-log-sender`, 2 casos).
+
+### Pendiente que deja
+
+- **Los otros tres `Select` de `SettingsKwirth.tsx` no tienen `labelId`**, así que no tienen nombre
+  accesible y solo se alcanzan por posición — que es justo por lo que los e2e existentes los eligen con
+  `pickCombo(page, idx)`. El de este trabajo sí lo lleva. Arreglarlos es trivial y toca los tests que hoy
+  van por índice; no se hizo aquí para no mezclar.
+- **Los nombres de los tests de `previousContainerLog.test.ts` están en español**, de cuando se escribió;
+  los añadidos ahora van en inglés, como manda el repo OSS. No se tradujeron los viejos: es otro frente.
+
+### Tres defectos que no cazó ningún test, sino el usuario mirando la pantalla
+
+Vale la pena dejarlos escritos, porque los tres eran de la misma familia — **dar por bueno un patrón sin
+comprobarlo**:
+
+1. El diálogo salió con **un solo selector** de pares `sender::config` pegados, cuando el patrón de la casa
+   —escrito en `AlertSetup`, y leído antes de empezar— son **dos**: sender, y luego una de SUS configs.
+2. `displayEmpty` **sin `shrink`** en la `InputLabel` pintaba el valor **encima** de la etiqueta.
+3. 🔴 La lista de senders salía **vacía**: el fetch iba a `/senders` y el endpoint es **`/core/senders`**.
+   La ruta se copió de un consumidor con otra base. Y se reportó dos veces como «en este dev no hay senders
+   instalados», que era **falso** —había ocho—: se dio por hecho del entorno en vez de mirar el 404.
