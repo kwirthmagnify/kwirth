@@ -1,6 +1,6 @@
 # Kwirth Status v2 — Plan
 
-> **ESTADO — VIVO** (2026-09-29): S1, S2 y S2b hechos y publicados en `plugin/status@0.3.0`; quedan S3 y S4 (Plugins y el resto de extensiones) y el backlog. Cuelga de [PRD-v2.md](PRD-v2.md), que manda en el **qué** y el **por qué**.
+> **ESTADO — VIVO** (2026-09-30): S1, S2, S2b y S2c (la pestaña DCE) hechos; publicado `plugin/status@0.4.0`. Quedan S3 y S4 (Plugins y el resto de extensiones) y el backlog (B1, B3, B4, B5). Cuelga de [PRD-v2.md](PRD-v2.md), que manda en el **qué** y el **por qué**.
 > Segunda versión tras [PLAN.md](PLAN.md) (cerrado en `plugin/status@0.2.7`).
 >
 > Documento **append-only**: lo que se decide no se borra, se marca. Si algo de aquí contradice lo que ves
@@ -59,6 +59,23 @@ Añadido sobre la marcha, a petición del usuario:
 ⚠️ Lo que costó: `ConfigApi` declara rutas con un array y `listRoutes()` reventaba entero — Status lo tomaba
 por "este core no lista rutas". Ahora entiende texto, array y RegExp, y cada montaje se lee aparte.
 
+### S2c — La pestaña DCE · ✅ HECHO (2026-09-30, `plugin/status@0.4.0`)
+
+Cierra B2, a petición del usuario en cuanto el tipo `dce` estuvo disponible:
+
+- **Core**: `DceManager.consumers(id)` público (responde por el resolutor que ya existía) y el manager
+  prestado en `clusterInfo.dces` (`IDceAccess`: `listInstalled`, `status`, `consumers`), igual que las rutas.
+- **Pestaña DCE**: versión, origen, estado del **back** (viaja en la foto) y del **front** (leído del
+  registro de la página, porque es este navegador el que lo cargó) por separado, el error escrito, y quién
+  la consume. La instancia viva **no viaja**: solo estado y error.
+- **Home**: la tarjeta DCE pasa a ser una puerta — DCEs, consumidores, sin uso y un chip de rotas.
+- Con diez pestañas la barra deja de caber en 1400 px: pasa a `variant='scrollable'` (lo destapó la captura
+  de la guía, después del QA; revalidado aparte).
+
+⚠️ Lo que costó: **el e2e cazó un fallo del core**. Las extensiones de `kwirth-dev.json` construían su
+metadato a mano y dejaban fuera `requiresExtension`: en dev nadie consumía ninguna DCE, y una DCE en uso se
+podía desinstalar. Arreglado en plugin, provider, sender, webhook, theme y homepage (el IdP es B4).
+
 Lo planeado para S2 era:
 
 - Back: foto del proceso en cada refresco (`process.memoryUsage()`, `cpuUsage()` con su delta, retraso del
@@ -82,8 +99,10 @@ Lo planeado para S2 era:
 | # | Pendiente | Por qué no está hecho |
 |---|---|---|
 | B1 | **Revisar el RECHAZO de colisiones de rutas** (el resto de la Fase 1b del validador) | El usuario eligió *"solo anotar, y en backlog queda revisar el rechazo"*. Hoy el core anota y monta todo; dos dueños en la misma ruta se ven como colisión en Routes, pero ninguno se rechaza. El diseño cerrado del validador (`reserveAndMount` / `tryMountExtension`, rechazo con log) cambiaría el comportamiento: una extensión con un alias repetido dejaría de montarse |
-| B2 | **La tarjeta DCE de la Home está reservada** | Pedida sin contenido: *"añade una en la que añadiremos los DCE"*. Hoy se ve pero no se puede pulsar; su pestaña y sus cifras llegan cuando el tipo `dce` del core lo permita |
+| B2 | ✅ **La tarjeta DCE de la Home está reservada** — CERRADO 2026-09-30 en S2c (`0.4.0`) | Pedida sin contenido: *"añade una en la que añadiremos los DCE"*. Ya es una puerta a la pestaña DCE |
 | B3 | **Al desinstalar un provider, sus rutas siguen listándose** | Se hace `forget()` al desinstalar un plugin, no un provider. Express tampoco desmonta: la ruta sigue respondiendo hasta reiniciar, así que listarla no miente — pero conviene decir que es de algo ya desinstalado |
+| B4 | **Los conectores IdP de dev no salen en `listInstalledMeta()`** (core) | Encontrado en S2c. `IdpManager.listInstalledMeta()` lee solo el índice: un conector de `kwirth-dev.json` no aparece, así que el resolutor de consumidores de DCE no lo ve aunque declare `requiresExtension`. Es mayor que el hueco de los otros seis managers (a esos les faltaba solo el campo): cambiar el listado afecta también a quien lo pinta |
+| B5 | **Aristas consumidor → DCE en el grafo** | La pestaña DCE dice quién consume a quién; el grafo aún no lo dibuja. Una capa más, por debajo de los providers |
 
 ## Registro de decisiones
 
@@ -97,3 +116,4 @@ Lo planeado para S2 era:
 | 2026-09-29 | **Se publica antes de S4**, por decisión del usuario, con Home, Performance, Routes y los dos logs: `plugin/status@0.3.0`. Plugins sigue diciendo por qué no tiene datos. |
 | 2026-09-29 | Pestaña **Routes** con cada ruta y su método. El `RouteRegistry` se cablea en **modo solo anotar**: registra y monta como siempre; el rechazo queda en B1. |
 | 2026-09-29 | El log del core y el del contenedor anterior **salen de About** y pasan a Status, en dos pestañas. |
+| 2026-09-30 | Pestaña **DCE**. Los datos vienen del `DceManager` prestado en `clusterInfo.dces` (dos líneas en el core), no de que el front pida los ocho listados y recalcule los consumidores: eso duplicaría `findConsumers`. El estado del front se lee de la página. |

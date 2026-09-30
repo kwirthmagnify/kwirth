@@ -8,6 +8,7 @@ import { IStatusData } from './StatusData'
 import { StatusDiagram } from './StatusDiagram'
 import { StatusPerformanceTab } from './StatusPerformanceTab'
 import { StatusRoutesTab } from './StatusRoutesTab'
+import { StatusDceTab } from './StatusDceTab'
 import { StatusCoreLogTab, StatusPreviousLogTab } from './StatusLogTab'
 import { isAdmin, readCoreLog, readPreviousLog } from './StatusLog'
 import { StatusHomeTab } from './StatusHomeTab'
@@ -34,7 +35,7 @@ const SELF_SCROLLING: ReadonlySet<EStatusTab> = new Set([EStatusTab.GRAPH, EStat
 const TOP_BAR_HEIGHT = 26
 
 /** The tabs where the filter applies: the ones that are lists. */
-const FILTERABLE: ReadonlySet<EStatusTab> = new Set([EStatusTab.PROVIDERS, EStatusTab.PLUGINS, EStatusTab.EXTENSIONS, EStatusTab.ROUTES])
+const FILTERABLE: ReadonlySet<EStatusTab> = new Set([EStatusTab.PROVIDERS, EStatusTab.PLUGINS, EStatusTab.EXTENSIONS, EStatusTab.ROUTES, EStatusTab.DCE])
 
 interface IPendingTabProps {
     title: string
@@ -287,7 +288,12 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 going back to Home. What the snapshot is (its time, whether it refreshes) is said on Home.
             */}
             <Stack direction='row' alignItems='center' spacing={1} sx={{ mb: 1, borderBottom: 1, borderColor: 'divider' }}>
-                <Tabs value={vista} onChange={(_e, v: EStatusTab) => setVista(v)} sx={{ minHeight: 36, flexGrow: 1 }}>
+                {/*
+                    Scrollable: with ten tabs, a window narrower than they are clipped the last one under the
+                    filter. minWidth 0 lets the flex row shrink it so the arrows appear instead.
+                */}
+                <Tabs value={vista} onChange={(_e, v: EStatusTab) => setVista(v)} variant='scrollable' scrollButtons='auto'
+                    sx={{ minHeight: 36, flexGrow: 1, minWidth: 0 }}>
                     <Tab value={EStatusTab.HOME} label='Home' sx={{ minHeight: 36, py: 0 }} />
                     <Tab value={EStatusTab.PROVIDERS} label='Providers' sx={{ minHeight: 36, py: 0 }} />
                     <Tab value={EStatusTab.GRAPH} label='Graph' sx={{ minHeight: 36, py: 0 }} />
@@ -295,6 +301,7 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                     <Tab value={EStatusTab.PLUGINS} label='Plugins' sx={{ minHeight: 36, py: 0 }} />
                     <Tab value={EStatusTab.EXTENSIONS} label='Extensions' sx={{ minHeight: 36, py: 0 }} />
                     <Tab value={EStatusTab.ROUTES} label='Routes' sx={{ minHeight: 36, py: 0 }} />
+                    <Tab value={EStatusTab.DCE} label='DCE' sx={{ minHeight: 36, py: 0 }} />
                     <Tab value={EStatusTab.LOG} label='Log' sx={{ minHeight: 36, py: 0 }} />
                     <Tab value={EStatusTab.PREVIOUS_LOG} label='Previous log' sx={{ minHeight: 36, py: 0 }} />
                 </Tabs>
@@ -331,6 +338,7 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 {vista === EStatusTab.PROVIDERS && tabla(filasDe(EStatusTab.PROVIDERS), true)}
                 {vista === EStatusTab.EXTENSIONS && tabla(filasDe(EStatusTab.EXTENSIONS), false)}
                 {vista === EStatusTab.ROUTES && <StatusRoutesTab routes={inventory.routes} filter={filter} />}
+                {vista === EStatusTab.DCE && <StatusDceTab dces={inventory.dces} filter={filter} />}
                 {vista === EStatusTab.LOG && <StatusCoreLogTab admin={admin} log={data.coreLog} />}
                 {vista === EStatusTab.PREVIOUS_LOG && <StatusPreviousLogTab admin={admin} read={data.previousLog} />}
                 {vista === EStatusTab.PERFORMANCE && <StatusPerformanceTab inventory={inventory} series={data.series} />}

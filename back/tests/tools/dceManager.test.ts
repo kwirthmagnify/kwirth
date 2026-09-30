@@ -173,6 +173,14 @@ test('🔴 a DCE somebody requires is not uninstalled, and the message says who'
     assert.equal(dceRegistry()['inuse'], undefined)
 })
 
+test('consumers() answers through the resolver, and is empty before the core sets one', async () => {
+    const { manager } = await newManager()
+    assert.deepEqual(await manager.consumers('any'), [])
+    manager.setConsumerResolver(async id => id === 'inuse' ? [consumer(EExtensionType.PLUGIN, 'status', 'dce:inuse:1.0.0')] : [])
+    assert.deepEqual(await manager.consumers('inuse'), [consumer(EExtensionType.PLUGIN, 'status', 'dce:inuse:1.0.0')])
+    assert.deepEqual(await manager.consumers('other'), [])
+})
+
 test('🔴 updating across a major with consumers on the old one is refused; within a major it goes through', async () => {
     const { manager } = await newManager()
     await manager.install(await makeDceTgz('major', { version: '1.2.0' }), 'local')

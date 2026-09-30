@@ -72,6 +72,11 @@ test('captura del inventario', async ({ browser }) => {
     await page.waitForTimeout(800)
     await shot('routes')
 
+    // DCE: every installed DCE, the state of each half and who consumes it.
+    await page.getByRole('tab', { name: 'DCE', exact: true }).click()
+    await page.waitForTimeout(800)
+    await shot('dce')
+
     await page.goto('about:blank').catch(() => {})
     await page.context().close().catch(() => {})
 })

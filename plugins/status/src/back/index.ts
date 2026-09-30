@@ -1,5 +1,6 @@
 import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel } from '@kwirthmagnify/kwirth-common-back'
-import { EComponentHealth, EComponentKind, EStatusPayload, EStatusRouteOwner, IStatusComponent, IStatusEdge, IStatusInventory, IStatusMessageResponse, IStatusRoute } from '../common/StatusTypes'
+import { IDceRegistryEntry } from '@kwirthmagnify/kwirth-common'
+import { EComponentHealth, EComponentKind, EStatusPayload, EStatusRouteOwner, IStatusComponent, IStatusDce, IStatusDceConsumer, IStatusEdge, IStatusInventory, IStatusMessageResponse, IStatusRoute } from '../common/StatusTypes'
 import { ProcessProbe } from './ProcessProbe'
 
 /*
@@ -75,6 +76,26 @@ interface IClusterInfoView {
     getSubscriptions?(): ISubscriptionLike[]
     /** The core's route registry. Optional for the same reason: an older core has none. */
     routes?: IRouteAccessView
+    /** The core's DCE manager. Optional for the same reason. */
+    dces?: IDceAccessView
+}
+
+/** What this plugin reads of the core's DCE manager (ClusterInfo.dces). */
+interface IDceAccessView {
+    listInstalled(): Promise<IDceMetaView[]>
+    status(id: string): IDceRegistryEntry | undefined
+    consumers(id: string): Promise<IStatusDceConsumer[]>
+}
+
+/** The part of the core's IDceMeta this plugin shows. */
+interface IDceMetaView {
+    id: string
+    name: string
+    displayName?: string
+    version: string
+    installedFrom?: string
+    hasBack: boolean
+    hasFront: boolean
 }
 
 /** What this plugin reads of the core's route registry (ClusterInfo.routes). */
@@ -100,6 +121,46 @@ export const toStatusRoutes = (access: IRouteAccessView | undefined): IStatusRou
         console.error(`[status] the core's route list failed: ${err}`)
         return undefined
     }
+}
+
+/*
+    The installed DCEs, or undefined when the core does not expose them — "unknown", like the routes.
+    Only the state and the error of the back end are taken from the registry entry: the instance is the
+    DCE's live object, and it has no business in a message to the browser.
+
+    A consumer lookup that fails leaves THAT DCE with no consumers and says so in the log; the rest of
+    the list still comes out.
+*/
+export const toStatusDces = async (access: IDceAccessView | undefined): Promise<IStatusDce[] | undefined> => {
+    if (!access) return undefined
+    let metas: IDceMetaView[]
+    try {
+        metas = await access.listInstalled()
+    }
+    catch (err) {
+        console.error(`[status] the core's DCE list failed: ${err}`)
+        return undefined
+    }
+    return Promise.all(metas.map(async (m): Promise<IStatusDce> => {
+        const entry = access.status(m.id)
+        let consumers: IStatusDceConsumer[] = []
+        try {
+            consumers = (await access.consumers(m.id)).map(c => ({ type: c.type, id: c.id }))
+        }
+        catch (err) {
+            console.error(`[status] the consumers of DCE '${m.id}' could not be resolved: ${err}`)
+        }
+        return {
+            id: m.id,
+            name: m.displayName || m.name || m.id,
+            version: m.version,
+            ...(m.installedFrom ? { source: m.installedFrom } : {}),
+            hasBack: m.hasBack,
+            hasFront: m.hasFront,
+            ...(entry ? { back: { state: entry.state, ...(entry.error ? { error: entry.error } : {}) } } : {}),
+            consumers
+        }
+    }))
 }
 
 /**
@@ -185,7 +246,7 @@ class StatusChannel implements IChannel {
         }
         if (!socket.instanceIds.includes(instanceConfig.instance)) socket.instanceIds.push(instanceConfig.instance)
         this.watchProcess()
-        this.sendInventory(socket, instanceConfig.instance)
+        await this.sendInventory(socket, instanceConfig.instance)
         return true
     }
 
@@ -238,7 +299,7 @@ class StatusChannel implements IChannel {
             this.sendSignalMessage(webSocket, instanceMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceMessage.instance, 'Status instance not found')
             return false
         }
-        this.sendInventory(socket, instanceMessage.instance)
+        await this.sendInventory(socket, instanceMessage.instance)
         return true
     }
 
@@ -333,7 +394,7 @@ class StatusChannel implements IChannel {
         }
     }
 
-    private buildInventory = (): IStatusInventory => {
+    private buildInventory = async (): Promise<IStatusInventory> => {
         const components: IStatusComponent[] = []
         /*
             The edges are asked for ONCE and counted per producer, rather than walked inside the loop:
@@ -410,16 +471,16 @@ class StatusChannel implements IChannel {
             })
         }
 
+        const routes = toStatusRoutes(this.clusterInfo.routes)
+        const dces = await toStatusDces(this.clusterInfo.dces)
         return {
             cluster: this.clusterInfo.name ?? '',
             takenAt: Date.now(),
             components,
             edges,
             process: this.probe.sample(),
-            ...(() => {
-                const routes = toStatusRoutes(this.clusterInfo.routes)
-                return routes ? { routes } : {}
-            })()
+            ...(routes ? { routes } : {}),
+            ...(dces ? { dces } : {})
         }
     }
 
@@ -437,7 +498,8 @@ class StatusChannel implements IChannel {
         }
     }
 
-    private sendInventory = (socket: ISocketEntry, instanceId: string): void => {
+    private sendInventory = async (socket: ISocketEntry, instanceId: string): Promise<void> => {
+        const inventory = await this.buildInventory()
         const msg: IStatusMessageResponse = {
             msgtype: 'statusmessageresponse',
             channel: this.channelId,
@@ -446,7 +508,7 @@ class StatusChannel implements IChannel {
             type: EInstanceMessageType.DATA,
             instance: instanceId,
             payloadType: EStatusPayload.INVENTORY,
-            inventory: this.buildInventory()
+            inventory
         }
         socket.ws.send(JSON.stringify(msg))
     }

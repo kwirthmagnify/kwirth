@@ -63,7 +63,7 @@ const tab = (name: string) => page.getByRole('tab', { name, exact: true })
 
 test('🔴 it opens on Home, with one box per tab', async () => {
     await expect(tab('Home')).toHaveAttribute('aria-selected', 'true')
-    for (const title of ['Providers', 'Graph', 'Performance', 'Plugins', 'Extensions', 'Routes', 'Log', 'Previous log']) {
+    for (const title of ['Providers', 'Graph', 'Performance', 'Plugins', 'Extensions', 'Routes', 'Log', 'Previous log', 'DCE']) {
         await expect(box(title)).toBeVisible()
     }
     // No table on Home: the boxes are the summary, the tables are behind the tabs.
@@ -128,11 +128,11 @@ test('🔴 the boxes are three per row, equal, and fill the whole width', async 
     expect(Math.abs(izquierda - derecha), `the row does not fill the width: ${izquierda}px left, ${derecha}px right`).toBeLessThanOrEqual(2)
 })
 
-test('the DCE box is reserved: it is shown, but it is not a button', async () => {
-    await expect(box('DCE')).toBeVisible()
-    await expect(box('DCE')).not.toHaveAttribute('role', 'button')
+test('🔴 the DCE box is a door now: it opens the DCE tab', async () => {
+    await expect(box('DCE')).toHaveAttribute('role', 'button')
     await box('DCE').click()
-    await expect(tab('Home'), 'clicking DCE opened some tab').toHaveAttribute('aria-selected', 'true')
+    await expect(tab('DCE')).toHaveAttribute('aria-selected', 'true')
+    await tab('Home').click()
 })
 
 test('🔴 a box is a door: clicking it opens its tab', async () => {
@@ -299,9 +299,9 @@ test('el filtro deja solo lo que se busca', async () => {
 
 // ── The tabs (v2) ──────────────────────────────────────────────────────────────
 
-test('🔴 the nine tabs, in their order: Home first', async () => {
+test('🔴 the ten tabs, in their order: Home first', async () => {
     const nombres = await page.getByRole('tablist').last().getByRole('tab').allInnerTexts()
-    expect(nombres.map(n => n.trim())).toEqual(['HOME', 'PROVIDERS', 'GRAPH', 'PERFORMANCE', 'PLUGINS', 'EXTENSIONS', 'ROUTES', 'LOG', 'PREVIOUS LOG'])
+    expect(nombres.map(n => n.trim())).toEqual(['HOME', 'PROVIDERS', 'GRAPH', 'PERFORMANCE', 'PLUGINS', 'EXTENSIONS', 'ROUTES', 'DCE', 'LOG', 'PREVIOUS LOG'])
 })
 
 test('🔴 the filter is always there, and only ENABLED on the tabs that are lists', async () => {
@@ -456,6 +456,79 @@ test('the Routes box on Home counts exactly what the Routes tab lists', async ()
     await page.getByRole('tab', { name: 'Home', exact: true }).click()
     await expect(box('Routes')).toContainText(`${total} routes`)
     await page.getByRole('tab', { name: 'Providers', exact: true }).click()
+})
+
+// ── DCE (v2) ───────────────────────────────────────────────────────────────────
+
+// One line per DCE: the cells by column, the consumer chips by label.
+const dceRows = () => page.locator('table tbody tr').evaluateAll(rows => rows.map(r => {
+    const td = r.querySelectorAll('td')
+    return {
+        label: r.getAttribute('aria-label') ?? '',
+        name: (td[0]?.querySelector('p')?.textContent ?? '').trim(),
+        version: (td[1]?.textContent ?? '').trim(),
+        back: (td[2]?.querySelector('.MuiChip-label, p')?.textContent ?? '').trim(),
+        front: (td[3]?.querySelector('.MuiChip-label, p')?.textContent ?? '').trim(),
+        source: (td[4]?.textContent ?? '').trim(),
+        consumers: [...(td[5]?.querySelectorAll('.MuiChip-label') ?? [])].map(c => (c.textContent ?? '').trim())
+    }
+}))
+
+test('🔴 the DCE tab lists the dev DCEs with their REAL version, state and consumers', async () => {
+    await tab('DCE').click()
+    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 })
+    const rows = await dceRows()
+    // kwirth-dev.json declares 'nettools' and 'sample', and the plugins that require each one.
+    const nettools = rows.find(r => r.label === 'DCE nettools')
+    const sample = rows.find(r => r.label === 'DCE sample')
+    test.skip(!nettools || !sample, 'this Kwirth does not run the dev DCEs nettools and sample')
+    expect(nettools).toMatchObject({ name: 'Net Tools', version: '0.2.0', source: 'dev', consumers: ['plugin nettools'] })
+    expect(sample).toMatchObject({ name: 'Sample DCE', version: '0.1.0', source: 'dev', consumers: ['plugin dce-consumer'] })
+    // Both have a back end that loaded in the core.
+    expect(nettools!.back).toBe('Loaded')
+    expect(sample!.back).toBe('Loaded')
+})
+
+test('🔴 the front half is read from THIS page: what the tab says is what the page loaded', async () => {
+    const rows = await dceRows()
+    const nettools = rows.find(r => r.label === 'DCE nettools')
+    const sample = rows.find(r => r.label === 'DCE sample')
+    test.skip(!nettools || !sample, 'this Kwirth does not run the dev DCEs nettools and sample')
+    const registry = await page.evaluate(() => {
+        const r = (window as unknown as Record<string, Record<string, { state: string }> | undefined>)['__kwirth_dce__'] ?? {}
+        return Object.fromEntries(Object.entries(r).map(([id, e]) => [id, e.state]))
+    })
+    // Both dev DCEs ship a front.js: the core's front loaded them into this page before any plugin.
+    expect(registry).toMatchObject({ nettools: 'loaded', sample: 'loaded' })
+    expect(nettools!.front).toBe('Loaded')
+    expect(sample!.front).toBe('Loaded')
+})
+
+test('the header counts DCEs and distinct consumers', async () => {
+    const rows = await dceRows()
+    const consumers = new Set(rows.flatMap(r => r.consumers)).size
+    await expect(page.getByText(new RegExp(`^${rows.length} DCEs?:$`))).toBeVisible()
+    await expect(page.getByText(new RegExp(`^${consumers} consumers?$`))).toBeVisible()
+})
+
+test('the filter narrows the DCEs by id and by consumer', async () => {
+    const filtro = page.getByPlaceholder('Filter…')
+    await expect(filtro).toBeEnabled()
+    await filtro.fill('dce-consumer')
+    await expect(async () => {
+        const rows = await dceRows()
+        expect(rows.map(r => r.label)).toEqual(['DCE sample'])
+    }).toPass({ timeout: 10000 })
+    await filtro.fill('')
+})
+
+test('the DCE box on Home counts exactly what the DCE tab lists', async () => {
+    const rows = await dceRows()
+    const consumers = new Set(rows.flatMap(r => r.consumers)).size
+    await tab('Home').click()
+    await expect(box('DCE')).toContainText(`${rows.length} DCE${rows.length === 1 ? '' : 's'}`)
+    await expect(box('DCE')).toContainText(`${consumers} consumer${consumers === 1 ? '' : 's'}`)
+    await tab('Providers').click()
 })
 
 // ── Log and Previous log (v2, moved from the About dialog) ─────────────────────

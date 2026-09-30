@@ -89,6 +89,8 @@ export class HomepageManager {
             meta.version = pkg.version ?? 'dev'
             meta.description = pkg.description ?? ''
             meta.website = pkg.website
+            // Without it a dev homepage required no DCE: nobody saw it as a consumer.
+            meta.requiresExtension = pkg.requiresExtension ?? []
         } catch {}
         this.devHomepages.set(id, { distPath: absPath, meta })
         if (!this.installedIds.includes(id)) this.installedIds.push(id)
@@ -100,7 +102,7 @@ export class HomepageManager {
         const devMetas = Array.from(this.devHomepages.entries()).map(([id, dev]) => {
             try {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
-                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website }
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: pkg.requiresExtension ?? [] }
             } catch { return dev.meta }
         })
         const devIds = new Set(devMetas.map(m => m.id))

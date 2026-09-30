@@ -2286,6 +2286,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
 
         runningInstance.clusterInfo.senders = senderManager
         runningInstance.clusterInfo.routes = routeRegistry
+        runningInstance.clusterInfo.dces = dceManager
         runningInstance.clusterInfo.webhooks = webhookManager
         runningInstance.backChannelObject = backChannelObject
         runningInstance.providerStorage = buildProviderStorage(runningInstance.configMaps, runningInstance.secrets)

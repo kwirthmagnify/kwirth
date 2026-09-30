@@ -219,6 +219,8 @@ export class SenderManager implements ISenderAccess {
             meta.version = pkg.version ?? 'dev'
             meta.description = pkg.description ?? ''
             meta.website = pkg.website
+            // Without it a dev sender required no DCE: nobody saw it as a consumer.
+            meta.requiresExtension = pkg.requiresExtension ?? []
         } catch {}
 
         this.devSenders.set(id, { distPath: absPath, meta })
@@ -442,7 +444,7 @@ export class SenderManager implements ISenderAccess {
         const devMetas = Array.from(this.devSenders.entries()).map(([id, dev]) => {
             try {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
-                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website }
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: pkg.requiresExtension ?? [] }
             } catch {
                 return dev.meta
             }

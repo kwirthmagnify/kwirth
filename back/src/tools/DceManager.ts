@@ -56,6 +56,13 @@ export interface IDceMeta {
 /** Who consumes a DCE right now. The core builds it from every manager's installed metadata. */
 export type TDceConsumerResolver = (dceId: string) => Promise<IDceConsumer[]>
 
+/** What the core lends of its DCEs, read-only (ClusterInfo.dces; the Status channel's DCE tab). */
+export interface IDceAccess {
+    listInstalled(): Promise<IDceMeta[]>
+    status(id: string): IDceRegistryEntry | undefined
+    consumers(id: string): Promise<IDceConsumer[]>
+}
+
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 const INDEX_KEY = 'kwirth-dces-index'
 /** The key prefix a DCE's own persisted data goes under, so it neither clashes with the core nor with another DCE. */
@@ -120,6 +127,11 @@ export class DceManager {
     /** How the back end of a DCE is right now, or undefined when it has none or has not been loaded. */
     status(id: string): IDceRegistryEntry | undefined {
         return dceRegistry()[id]
+    }
+
+    /** Who requires a DCE right now. Empty until the core sets the resolver, which it does at startup. */
+    async consumers(id: string): Promise<IDceConsumer[]> {
+        return this.consumersOf ? this.consumersOf(id) : []
     }
 
     // ── Loading ─────────────────────────────────────────────────────────────────

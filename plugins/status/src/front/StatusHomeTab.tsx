@@ -7,6 +7,7 @@ import { IPreviousLogRead, previousSummary } from './StatusLog'
 import { IProcessPoint, formatMb, formatUptime } from './StatusPerformance'
 import { HEALTH_LABEL, HEALTH_SEQUENCE } from './StatusLabels'
 import { IListSummary, summarize } from './StatusHome'
+import { readFrontRegistry, summarizeDces } from './StatusDces'
 
 /*
     The Home tab: what the snapshot is, and one box per tab with its figures. Each box is a door: click
@@ -102,6 +103,8 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
     const coreRoutes = routes?.filter(r => r.ownerKind === EStatusRouteOwner.CORE).length ?? 0
     const clashes = routes ? collisions(routes).size : 0
     const previous = previousSummary(admin, previousLog)
+    // Undefined when the core does not expose its DCEs: unknown, not zero.
+    const dce = inventory.dces ? summarizeDces(inventory.dces, readFrontRegistry()) : undefined
 
     // One colour per box; none of them red, since these are figures and not alarms.
     const color = {
@@ -113,8 +116,7 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
         routes: theme.palette.primary.light,
         log: theme.palette.info.light,
         previousLog: theme.palette.secondary.light,
-        // Neutral until it has figures of its own.
-        dce: theme.palette.text.secondary
+        dce: theme.palette.success.light
     }
 
     return (
@@ -192,10 +194,14 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
                     {previous.abnormal && <Chip size='small' color='warning' label='abnormal exit' />}
                 </HomeBox>
 
-                {/* Reserved: no tab behind it yet, so it is shown but cannot be pressed. */}
-                <HomeBox title='DCE' icon={<Science />} color={color.dce} onOpen={onOpen}
-                    headline='—'
-                    detail='coming in a later version of this plugin' />
+                <HomeBox tab={EStatusTab.DCE} title='DCE' icon={<Science />} color={color.dce} onOpen={onOpen}
+                    headline={dce ? plural(dce.total, 'DCE') : '—'}
+                    detail={dce
+                        ? `${plural(dce.consumers, 'consumer')} · ${dce.unused} unused`
+                        : 'the core does not list its DCEs yet'}>
+                    {/* A broken DCE fails every consumer that asks for it: said here too. */}
+                    {dce && dce.broken > 0 && <Chip size='small' color='error' label={`${dce.broken} broken`} />}
+                </HomeBox>
             </Box>
         </Stack>
     )

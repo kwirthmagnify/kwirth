@@ -14,7 +14,7 @@ rarely looks like the problem. This channel puts that state on a screen — for 
 
 ## What it shows
 
-Nine tabs, and it opens on the first:
+Ten tabs, and it opens on the first:
 
 | Tab | What it answers |
 |---|---|
@@ -25,6 +25,7 @@ Nine tabs, and it opens on the first:
 | **Plugins** | *coming when the core tells channels about plugins* |
 | **Extensions** | senders and webhooks, with their state |
 | **Routes** | every HTTP route published — core API, providers, plugins, webhooks — with its methods, and collisions marked |
+| **DCE** | every installed DCE: version, source, whether its back and front loaded (with the error), and who consumes it |
 | **Log** | the core's own log (admin only; needs Kwirth running as a pod) |
 | **Previous log** | the log of the previous container after a restart, and how it ended (admin only) |
 
@@ -71,7 +72,7 @@ https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-status/-/kwirth-plugin-s
 ```
 
 No configuration. The inventory is a privileged view: it needs **cluster** scope, and the two log tabs
-need **admin**. The Routes tab needs a Kwirth core that lists its routes; with an older one it says so.
+need **admin**. The Routes and DCE tabs need a Kwirth core that lists its routes and its DCEs; with an older one they say so.
 
 ## Development
 

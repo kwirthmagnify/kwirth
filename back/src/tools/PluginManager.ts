@@ -125,6 +125,9 @@ export class PluginManager {
             meta.description = pkg.description ?? ''
             meta.icon = pkg.icon
             meta.website = pkg.website
+            // Without it a dev plugin required no DCE: nobody saw it as a consumer, and the DCE it uses
+            // could be uninstalled from under it.
+            meta.requiresExtension = pkg.requiresExtension ?? []
             if (Array.isArray(pkg.configSchema)) meta.configSchema = pkg.configSchema
         } catch {}
 
@@ -205,7 +208,7 @@ export class PluginManager {
         const devMetas = Array.from(this.devPlugins.entries()).map(([id, dev]) => {
             try {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
-                return { ...dev.meta, name: pkg.name ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', icon: pkg.icon, website: pkg.website }
+                return { ...dev.meta, name: pkg.name ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', icon: pkg.icon, website: pkg.website, requiresExtension: pkg.requiresExtension ?? [] }
             } catch {
                 return dev.meta
             }

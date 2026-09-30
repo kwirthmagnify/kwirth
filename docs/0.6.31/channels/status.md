@@ -19,7 +19,7 @@ Key features of Status channel:
   - **Real state, not just installed/not installed** — each component is classified and the reason is spelled out in plain words.
   - **A map of who feeds whom** — the same kind of graph the Iter channel draws, applied to Kwirth's own insides.
   - **Sorted by what needs attention** — problems first, healthy components last. You never scroll to find the bad news.
-  - **One tab per question** — a home with one card per tab, providers, the graph, the process's performance, plugins, the rest of the extensions, the HTTP routes and the core's log. See [The tabs](#the-tabs).
+  - **One tab per question** — a home with one card per tab, providers, the graph, the process's performance, plugins, the rest of the extensions, the HTTP routes, the DCEs and the core's log. See [The tabs](#the-tabs).
   - **Filter by name or kind** — on the tabs that are lists, type part of a name and only the matches remain.
   - **Zero cost when closed** — no timer, no polling, no background collection. See [Cost](#cost).
   - **No payloads, ever** — it never shows the content of your logs or messages.
@@ -29,7 +29,7 @@ Select the cluster in the resource selector, add a **status** tab and start it. 
 
 ### The tabs
 
-The content is split into nine tabs, and it opens on **Home**:
+The content is split into ten tabs, and it opens on **Home**:
 
 | Tab | What it answers |
 |---|---|
@@ -40,6 +40,7 @@ The content is split into nine tabs, and it opens on **Home**:
 | **Plugins** | which plugins are installed and what they have running. *Coming when the core tells channels about plugins.* |
 | **Extensions** | the extensions that **do not produce** data — senders and webhooks today, the other kinds next |
 | **Routes** | every HTTP route this Kwirth has published, and who published it — see [Routes](#routes) |
+| **DCE** | the installed DCEs: whether each one loaded, where it came from and who consumes it — see [DCE](#dce) |
 | **Log** | the core's own log, from the container running now — see [The core's log](#the-cores-log) |
 | **Previous log** | the log of the previous container, when Kwirth has restarted — see [The core's log](#the-cores-log) |
 
@@ -59,7 +60,8 @@ card gives the figure that tab is about — how many producers and in which stat
 process's memory and CPU, how many routes and whether any collide, whether Kwirth has restarted — and
 **clicking it opens that tab**. It reads the same snapshot the tabs do, so the numbers always match.
 
-The **DCE** card is reserved for a later version: it is shown, but it cannot be pressed.
+The **DCE** card counts the installed DCEs, how many extensions consume them and how many nobody uses, with a
+red **broken** chip when one of them did not load — see [DCE](#dce).
 
 ![statusinventory](../_media/ch-images/status-inventory.png ':class=imageclass80')
 
@@ -281,6 +283,36 @@ marks both lines with a **collision** chip — the Home's Routes card counts the
 
 The list comes from the core's route registry. With a core older than it, the tab says the core does not list
 its routes, instead of showing an empty table that would read as *"no routes"*.
+
+## DCE
+
+A **DCE** (*dynamic core extension*) is an object the core creates **once** and other extensions use by its
+id — the shared part of a suite, which does not belong to the core. This tab lists every installed DCE, one
+line each:
+
+![statusdce](../_media/ch-images/status-dce.png ':class=imageclass80')
+
+| Column | What it says |
+|---|---|
+| **DCE** | its display name, with its id underneath when they differ |
+| **Version** | the version installed |
+| **Back** | whether its back end loaded in the core: **Loaded**, **Failed** (with the reason written underneath), **Not loaded**, or **—** when it has none |
+| **Front** | the same for its front end, **in this browser** |
+| **Source** | where it was installed from: a marketplace URL, `dev`, `bundled`, `local` |
+| **Consumed by** | the extensions that require it (`plugin nettools`), or *nobody* |
+
+**Back and front are two states, not one.** The back end loads in the Kwirth process and comes with the
+snapshot; the front end loads in your browser, and this tab reads it from the page you are looking at. One
+half can be fine and the other broken — and whichever is broken fails every consumer that asks for it, with
+nothing else on screen saying so. Broken DCEs sort first.
+
+**Consumed by** is what the core itself uses to refuse uninstalling a DCE that is in use, or updating one
+across a major version: it is the list of extensions whose package declares `dce:<id>:<version>` in
+`requiresExtension`. A DCE nobody consumes is counted as **unused** in the header and on the Home card —
+not a fault, but worth knowing before you keep it around.
+
+The filter matches the id, the name, the version or a consumer. With a core older than this list, the tab
+says the core does not list its DCEs, instead of an empty table that would read as *"no DCEs"*.
 
 ## The core's log
 

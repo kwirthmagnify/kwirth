@@ -389,3 +389,67 @@ test('a registry that blows up leaves the routes unknown and the rest of the sna
     assert.equal('routes' in inv, false)
     assert.equal(inv.components.length, 1)
 })
+
+// ── the DCEs (v2, DCE tab) ─────────────────────────────────────────────────────
+
+const meta = (id: string, over: Record<string, unknown> = {}) => ({ id, name: id, version: '1.0.0', hasBack: true, hasFront: false, ...over })
+
+test('🔴 without the core DCE manager, dces are ABSENT — unknown, not an empty list', async () => {
+    const inv = await inventarioDe({ providers: [] })
+    assert.equal('dces' in inv, false)
+})
+
+test('the DCEs come from the core manager: name, version, source, back state and consumers', async () => {
+    const inv = await inventarioDe({
+        dces: {
+            listInstalled: async () => [meta('nettools', { displayName: 'Net Tools', version: '0.1.0', installedFrom: 'dev', hasFront: true })],
+            status: () => ({ state: 'loaded', instance: { resolve: () => 'must not travel' } }),
+            consumers: async () => [{ type: 'plugin', id: 'nettools', requirement: 'dce:nettools:0.1.0' }]
+        }
+    })
+    // 🔴 No instance and no requirement: only what the tab shows goes to the browser.
+    assert.deepEqual(inv.dces, [{
+        id: 'nettools',
+        name: 'Net Tools',
+        version: '0.1.0',
+        source: 'dev',
+        hasBack: true,
+        hasFront: true,
+        back: { state: 'loaded' },
+        consumers: [{ type: 'plugin', id: 'nettools' }]
+    }])
+})
+
+test('a failed back end keeps its error; one never loaded has no back state; no displayName falls back to name', async () => {
+    const inv = await inventarioDe({
+        dces: {
+            listInstalled: async () => [meta('a'), meta('b', { name: 'B pkg' })],
+            status: (id: string) => id === 'a' ? { state: 'failed', error: 'factory threw' } : undefined,
+            consumers: async () => []
+        }
+    })
+    assert.deepEqual(inv.dces?.[0].back, { state: 'failed', error: 'factory threw' })
+    assert.equal(inv.dces?.[1].name, 'B pkg')
+    assert.equal('back' in inv.dces![1], false)
+    assert.equal('source' in inv.dces![1], false)
+})
+
+test('a consumer lookup that blows up leaves THAT DCE with none, and the rest intact', async () => {
+    const inv = await inventarioDe({
+        dces: {
+            listInstalled: async () => [meta('a'), meta('b')],
+            status: () => ({ state: 'loaded' }),
+            consumers: async (id: string) => { if (id === 'a') throw new Error('boom'); return [{ type: 'provider', id: 'p', requirement: 'dce:b:1' }] }
+        }
+    })
+    assert.deepEqual(inv.dces?.map(d => d.consumers), [[], [{ type: 'provider', id: 'p' }]])
+})
+
+test('a DCE list that blows up leaves the dces unknown and the rest of the snapshot intact', async () => {
+    const inv = await inventarioDe({
+        providers: [{ id: 'metrics', started: true }],
+        dces: { listInstalled: async () => { throw new Error('boom') }, status: () => undefined, consumers: async () => [] }
+    })
+    assert.equal('dces' in inv, false)
+    assert.equal(inv.components.length, 1)
+})

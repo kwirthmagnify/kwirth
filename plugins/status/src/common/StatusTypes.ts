@@ -4,6 +4,7 @@
     It lives in 'common' because both sides share it: were these loose string unions on each side, a
     change in one would be discovered at runtime and not at compile time.
 */
+import { EDceState } from '@kwirthmagnify/kwirth-common'
 
 /** What kind of piece it is. It determines where it comes from in ClusterInfo and how it is drawn. */
 export enum EComponentKind {
@@ -105,6 +106,37 @@ export interface IStatusInventory {
      * the core does not expose it (older than the registry): that is "unknown", not "no routes".
      */
     routes?: IStatusRoute[]
+    /**
+     * The installed DCEs (DCE tab), from the core's DCE manager. Absent when the core does not expose
+     * them (older than ClusterInfo.dces): that is "unknown", not "no DCEs".
+     */
+    dces?: IStatusDce[]
+}
+
+/** How one half (back or front) of a DCE is right now. */
+export interface IStatusDcePart {
+    state: EDceState
+    error?: string
+}
+
+/** An extension that requires a DCE, as the core resolves it from the installed metadata. */
+export interface IStatusDceConsumer {
+    type: string
+    id: string
+}
+
+/** One installed DCE. */
+export interface IStatusDce {
+    id: string
+    name: string
+    version: string
+    /** Where it was installed from: a URL, 'dev', 'bundled', 'local'… */
+    source?: string
+    hasBack: boolean
+    hasFront: boolean
+    /** The back end's state; absent when it has no back end or it has not been loaded. */
+    back?: IStatusDcePart
+    consumers: IStatusDceConsumer[]
 }
 
 /**
@@ -222,6 +254,8 @@ export enum EStatusTab {
     PLUGINS = 'plugins',
     EXTENSIONS = 'extensions',
     ROUTES = 'routes',
+    /** The DCEs: what is installed, whether it loaded, and who consumes it. */
+    DCE = 'dce',
     /** The core's own log: the container running now. */
     LOG = 'log',
     /** The log of the previous container, when this one is a restart. */

@@ -99,6 +99,8 @@ export class ProviderManager {
             meta.version = pkg.version ?? 'dev'
             meta.description = pkg.description ?? ''
             meta.website = pkg.website
+            // Without it a dev provider required no DCE: nobody saw it as a consumer.
+            meta.requiresExtension = pkg.requiresExtension ?? []
         } catch {}
 
         this.devProviders.set(id, { distPath: absPath, meta })
@@ -171,7 +173,7 @@ export class ProviderManager {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
                 const hasFront = fs.existsSync(path.join(dev.distPath, 'front.js'))
                 const hasSchema = this.devSchemas.has(id)
-                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, hasFront, hasSchema }
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: pkg.requiresExtension ?? [], hasFront, hasSchema }
             } catch {
                 return dev.meta
             }
