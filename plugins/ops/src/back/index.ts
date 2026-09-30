@@ -1,5 +1,5 @@
 import { IInstanceConfig, InstanceMessageChannelEnum, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, IRouteMessageResponse, AccessKey, accessKeyDeserialize, parseResources, ResourceIdentifier, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EClusterType, IBackChannelRequirements, IExtensionScope } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
+import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { WebSocket as NonNativeWebSocket } from 'ws'
 import { PassThrough, Readable, Writable } from 'stream'
 import { execCommandDescribe } from './GetCommand'
@@ -31,7 +31,7 @@ export interface IInstance {
     assets: IAsset[]
 }
 
-class OpsChannel {
+class OpsChannel implements IChannel {
     readonly channelId = 'ops'
     readonly requirements: IBackChannelRequirements = { storage: false, providers: [] }
     clusterInfo: any

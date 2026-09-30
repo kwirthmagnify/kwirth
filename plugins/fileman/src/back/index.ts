@@ -1,5 +1,5 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, BackChannelData, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, EClusterType, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
+import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { Readable, Writable } from 'stream'
 import { Request, Response } from 'express'
 import { v4 as uuid } from 'uuid'
@@ -50,7 +50,7 @@ interface IDirectoryEntry {
     otherPermissions: { read: boolean, write: boolean, exec: boolean }
 }
 
-class FilemanChannel {
+class FilemanChannel implements IChannel {
     readonly channelId = 'fileman'
     readonly requirements: IBackChannelRequirements = {
         storage: false,

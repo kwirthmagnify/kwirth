@@ -10,7 +10,7 @@ import {
     IInstanceMessage,
     ISignalMessage,
 } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
+import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { ETopoAction, ETopologyNodeKind, ETopologyNodeStatus } from '../common/TopologyTypes'
 
 interface ITopologyWsMessage {
@@ -100,7 +100,7 @@ function pvcStatus(p: any): ETopologyNodeStatus {
     }
 }
 
-export class TopologyChannel {
+export class TopologyChannel implements IChannel {
     readonly channelId = 'topology'
     readonly requirements = {
         storage: false,

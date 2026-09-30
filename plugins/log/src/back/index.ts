@@ -1,5 +1,5 @@
 import { IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageChannel, ESignalMessageLevel, EInstanceMessageType, EClusterType, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
+import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import * as stream from 'stream'
 import { PassThrough } from 'stream'
 import { Request, Response } from 'express'
@@ -24,7 +24,7 @@ interface IInstance {
     assets: IAsset[]
 }
 
-class LogChannel {
+class LogChannel implements IChannel {
     readonly channelId = 'log'
     readonly requirements: IBackChannelRequirements = { storage: false, providers: [] }
     clusterInfo: any

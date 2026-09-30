@@ -1,5 +1,5 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType, EClusterType, IBackChannelRequirements, IExtensionScope } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
+import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { Request, Response } from 'express'
 import { applyAllResources, deleteAllResources } from '@kwirthmagnify/kwirth-common-back'
 import { ETrivyCommand, ETrivyScope, TRIVY_SCOPES, IKnown, ITrivyMessage, ITrivyMessageResponse, ITrivyProviderEvent } from '../common/TrivyTypes'
@@ -37,7 +37,7 @@ export interface IInstance {
     maxLow: number
 }
 
-class TrivyChannel {
+class TrivyChannel implements IChannel {
     readonly channelId = 'trivy'
     readonly requirements: IBackChannelRequirements = { storage: false, providers: ['trivy'] }
     clusterInfo: any

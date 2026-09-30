@@ -2,7 +2,7 @@
 // Adapted from back/src/channels/news/NewsChannel.ts.
 // Does not depend on ClusterInfo or internal logging tools.
 import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
+import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import https from 'https'
 import http from 'http'
 
@@ -27,7 +27,7 @@ interface IInstance {
     pollInterval?: ReturnType<typeof setInterval>
 }
 
-class NewsChannel {
+class NewsChannel implements IChannel {
     readonly channelId = 'news'
     readonly requirements = { storage: false, providers: [] }
     clusterInfo: any

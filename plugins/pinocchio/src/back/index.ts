@@ -1,5 +1,5 @@
 import { IExtensionImportResult, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
+import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage } from './PinocchioConfig'
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
 import { buildModel, loadModels, IToolContext, buildAgentTools, listToolsets, resolveTools } from '@kwirthmagnify/kwirth-common-ai/back'
@@ -53,7 +53,7 @@ const TRAZA_MAX = 400
 /** The id the channel identifies itself with when asking for tools: the one the admin sees when granting a toolset. */
 const PINOCCHIO_ID = 'pinocchio'
 
-export class PinocchioChannel {
+export class PinocchioChannel implements IChannel {
     readonly channelId = 'pinocchio'
     readonly requirements = {
         storage: true,
