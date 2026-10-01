@@ -54,7 +54,7 @@ class LogChannel implements IChannel {
         }
     }
 
-    getChannelScopeLevel(scope: string): number { return ['', 'filter', 'view', 'cluster'].indexOf(scope) }
+    getChannelScopeLevel(scope: string): number { return ['', 'filter', 'view', 'cluster', 'admin'].indexOf(scope) }
     startChannel = async () => { }
     processProviderEvent(_providerId: string, _obj: any): void { }
     async processCommand(_webSocket: WebSocket, _instanceMessage: IInstanceMessage): Promise<boolean> { return false }

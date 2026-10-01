@@ -146,7 +146,7 @@ export class TopologyChannel implements IChannel {
     }
 
     getChannelScopeLevel(scope: string): number {
-        return ['', 'filter', 'view', 'cluster'].indexOf(scope)
+        return ['', 'filter', 'view', 'cluster', 'admin'].indexOf(scope)
     }
 
     startChannel = async (): Promise<void> => {

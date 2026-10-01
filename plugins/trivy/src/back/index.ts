@@ -66,7 +66,7 @@ class TrivyChannel implements IChannel {
         websocket: false, cluster: false, resourced: true
     })
 
-    getChannelScopeLevel = (scope: string): number => ['', ETrivyScope.WORKLOAD, ETrivyScope.KUBERNETES, 'cluster'].indexOf(scope)
+    getChannelScopeLevel = (scope: string): number => ['', ETrivyScope.WORKLOAD, ETrivyScope.KUBERNETES, 'cluster', 'admin'].indexOf(scope)
 
     getScopeCatalog = (): IExtensionScope[] => TRIVY_SCOPES   // RBAC: scopes que declara Trivy (validar/gestionar)
 

@@ -223,7 +223,7 @@ class StatusChannel implements IChannel {
         state. That is why the minimum level is 'cluster' and there is no per-namespace rung — an
         inventory "of a namespace" would make no sense, and leaving it at 'none' would open it to anyone.
     */
-    getChannelScopeLevel = (scope: string): number => ['', 'none', 'cluster'].indexOf(scope)
+    getChannelScopeLevel = (scope: string): number => ['', 'none', 'cluster', 'admin'].indexOf(scope)
 
     startChannel = async () => {}
 

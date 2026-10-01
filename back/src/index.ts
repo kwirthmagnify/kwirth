@@ -559,7 +559,7 @@ const addObject = async (webSocket:WebSocket, instanceConfig:IInstanceConfig, po
                 logInfo(ELogComponent.CORE, `Existing asset '${instanceConfig.channel}': ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
             }
             else {
-                logInfo(ELogComponent.CORE, `addObject '${instanceConfig.channel}': ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
+                logInfo(ELogComponent.CORE, `addObject on channel '${instanceConfig.channel}': ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view}) (instance: ${instanceConfig.instance})`)
                 await channel.addObject(webSocket, instanceConfig, podNamespace, podName, containerName)
                 sendChannelSignalAsset(webSocket, ESignalMessageLevel.INFO, ESignalMessageEvent.ADD, `Container ADDED: ${podNamespace}/${podName}/${containerName}`, instanceConfig, ri, podNamespace, podName, containerName)
             }

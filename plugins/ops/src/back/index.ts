@@ -61,7 +61,7 @@ class OpsChannel implements IChannel {
     }
 
     getChannelScopeLevel(scope: string): number {
-        return ['', EOpsScope.GET, EOpsScope.RESTART, 'cluster'].indexOf(scope)
+        return ['', EOpsScope.GET, EOpsScope.RESTART, 'cluster', 'admin'].indexOf(scope)
     }
 
     getScopeCatalog = (): IExtensionScope[] => OPS_SCOPES   // RBAC: scopes que declara Ops (validar/gestionar)

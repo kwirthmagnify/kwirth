@@ -55,7 +55,7 @@ class EchoChannel implements IChannel {
         resourced: true
     })
 
-    getChannelScopeLevel = (scope: string): number => ['', 'none', 'cluster'].indexOf(scope)
+    getChannelScopeLevel = (scope: string): number => ['', 'none', 'cluster', 'admin'].indexOf(scope)
 
     /*
         Subscribing through the core, not by grabbing the provider object and calling it directly.

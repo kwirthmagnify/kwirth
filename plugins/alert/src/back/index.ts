@@ -72,7 +72,7 @@ class AlertChannel implements IChannel {
         }
     }
 
-    getChannelScopeLevel(scope: string): number { return ['', 'view', 'create', 'cluster'].indexOf(scope) }
+    getChannelScopeLevel(scope: string): number { return ['', 'view', 'create', 'cluster', 'admin'].indexOf(scope) }
 
     startChannel = async () => { this.clusterInfo.addSubscriber('metrics', this, {}) }
 

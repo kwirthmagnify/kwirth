@@ -59,7 +59,7 @@ class NetToolsChannel implements IChannel {
         resourced: false
     })
 
-    getChannelScopeLevel = (scope: string): number => ['', 'none', 'cluster'].indexOf(scope)
+    getChannelScopeLevel = (scope: string): number => ['', 'none', 'cluster', 'admin'].indexOf(scope)
 
     startChannel = async () => {}
     processProviderEvent(_providerId: string, _obj: unknown): void {}

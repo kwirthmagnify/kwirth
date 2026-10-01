@@ -151,7 +151,7 @@ export class PinocchioChannel implements IChannel {
     }
 
     getChannelScopeLevel = (scope: string): number => {
-        return ['', 'none', 'cluster'].indexOf(scope)
+        return ['', 'none', 'cluster', 'admin'].indexOf(scope)
     }
 
     /**

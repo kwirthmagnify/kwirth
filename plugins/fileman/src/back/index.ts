@@ -95,7 +95,7 @@ class FilemanChannel implements IChannel {
     })
 
     getChannelScopeLevel = (scope: string): number => {
-        return ['', 'fileman$read', 'fileman$write', 'cluster'].indexOf(scope)
+        return ['', 'fileman$read', 'fileman$write', 'cluster', 'admin'].indexOf(scope)
     }
 
     startChannel = async () => { }
