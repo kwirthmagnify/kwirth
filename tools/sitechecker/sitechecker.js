@@ -2,7 +2,7 @@ import { URL } from 'url';
 import * as cheerio from 'cheerio';
 
 // Configuración inicial
-const START_URL = 'https://kwirthmagnify.dev/documentation/'; // Cambia esto por tu web
+const START_URL = 'https://kwirthmagnify.dev/'; // Cambia esto por tu web
 const MAX_CONCURRENT = 5; // Límite de peticiones simultáneas para no saturar
 
 const visited = new Set();
