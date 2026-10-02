@@ -3,7 +3,6 @@ import { Avatar, Box, Card, CardContent, CardHeader, CardMedia, Divider, IconBut
 import { MoreVert, Visibility as VisibilityIcon, Replay as ReplayIcon } from '@mui/icons-material'
 import { assetAvatarColor, getAvatarContent } from '../TrivyCommon'
 import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
-import { ITrivyInstanceConfig } from '../../common/TrivyTypes'
 import { EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { IAsset, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_VULN_PLURAL } from '../TrivyData'
 import { ETrivyCommand, ITrivyMessage } from '../../common/TrivyTypes'
@@ -19,19 +18,19 @@ interface ITrivyTabContentAssetProps {
     onRescan: (asset: IAsset) => void
 }
 
-export const getTotalIssues = (trivyInstanceConfig: ITrivyInstanceConfig, plural: string, asset: IAsset) => {
+export const getTotalIssues = (plural: string, asset: IAsset) => {
     let sum = (asset as any)[plural]?.report?.summary
-    let c = trivyInstanceConfig.ignoreCritical ? 0 : sum?.criticalCount
-    let h = trivyInstanceConfig.ignoreHigh ? 0 : sum?.highCount
-    let m = trivyInstanceConfig.ignoreMedium ? 0 : sum?.mediumCount
-    let l = trivyInstanceConfig.ignoreLow ? 0 : sum?.lowCount
+    let c = sum?.criticalCount
+    let h = sum?.highCount
+    let m = sum?.mediumCount
+    let l = sum?.lowCount
     return (c + h + m + l) || 0
 }
 
-const simpleBarChart = (asset: IAsset, trivyInstanceConfig: ITrivyInstanceConfig) => {
-    const vulns = getTotalIssues(trivyInstanceConfig, TRIVY_API_VULN_PLURAL, asset)
-    const audit = getTotalIssues(trivyInstanceConfig, TRIVY_API_AUDIT_PLURAL, asset)
-    const exposed = getTotalIssues(trivyInstanceConfig, TRIVY_API_EXPOSED_PLURAL, asset)
+const simpleBarChart = (asset: IAsset) => {
+    const vulns = getTotalIssues(TRIVY_API_VULN_PLURAL, asset)
+    const audit = getTotalIssues(TRIVY_API_AUDIT_PLURAL, asset)
+    const exposed = getTotalIssues(TRIVY_API_EXPOSED_PLURAL, asset)
     const sbom = (asset.sbomreports.report?.components?.components?.length) || 0
     const maxHeightPx = 100
     const maxDataValue = Math.max(vulns, audit, sbom, exposed, 1)
@@ -55,7 +54,6 @@ const simpleBarChart = (asset: IAsset, trivyInstanceConfig: ITrivyInstanceConfig
 }
 
 const TrivyTabContentAsset: React.FC<ITrivyTabContentAssetProps> = (props: ITrivyTabContentAssetProps) => {
-    let trivyInstanceConfig: ITrivyInstanceConfig = props.channelObject.instanceConfig
     const [anchorMenu, setAnchorMenu] = useState<HTMLElement | undefined>(undefined)
 
     const rescan = (asset: IAsset) => {
@@ -75,9 +73,9 @@ const TrivyTabContentAsset: React.FC<ITrivyTabContentAssetProps> = (props: ITriv
     const assetMenu = (
         <Menu anchorEl={anchorMenu} open={Boolean(anchorMenu)} onClose={() => setAnchorMenu(undefined)}>
             <MenuList dense sx={{ minWidth: 200 }}>
-                <MenuItem onClick={() => { setAnchorMenu(undefined); props.onShowVulns(props.asset) }} disabled={!props.asset.vulnerabilityreports.report || getTotalIssues(trivyInstanceConfig, TRIVY_API_VULN_PLURAL, props.asset) === 0}><VisibilityIcon />&nbsp;&nbsp;Vulnerabilities</MenuItem>
-                <MenuItem onClick={() => { setAnchorMenu(undefined); props.onShowAudit(props.asset) }} disabled={!props.asset.configauditreports.report || getTotalIssues(trivyInstanceConfig, TRIVY_API_AUDIT_PLURAL, props.asset) === 0}><VisibilityIcon />&nbsp;&nbsp;Config audit</MenuItem>
-                <MenuItem onClick={() => { setAnchorMenu(undefined); props.onShowExposed(props.asset) }} disabled={!props.asset.exposedsecretreports.report || getTotalIssues(trivyInstanceConfig, TRIVY_API_EXPOSED_PLURAL, props.asset) === 0}><VisibilityIcon />&nbsp;&nbsp;Exposed secrets</MenuItem>
+                <MenuItem onClick={() => { setAnchorMenu(undefined); props.onShowVulns(props.asset) }} disabled={!props.asset.vulnerabilityreports.report || getTotalIssues(TRIVY_API_VULN_PLURAL, props.asset) === 0}><VisibilityIcon />&nbsp;&nbsp;Vulnerabilities</MenuItem>
+                <MenuItem onClick={() => { setAnchorMenu(undefined); props.onShowAudit(props.asset) }} disabled={!props.asset.configauditreports.report || getTotalIssues(TRIVY_API_AUDIT_PLURAL, props.asset) === 0}><VisibilityIcon />&nbsp;&nbsp;Config audit</MenuItem>
+                <MenuItem onClick={() => { setAnchorMenu(undefined); props.onShowExposed(props.asset) }} disabled={!props.asset.exposedsecretreports.report || getTotalIssues(TRIVY_API_EXPOSED_PLURAL, props.asset) === 0}><VisibilityIcon />&nbsp;&nbsp;Exposed secrets</MenuItem>
                 <MenuItem onClick={() => { setAnchorMenu(undefined); props.onShowSbom(props.asset) }} disabled={!props.asset.sbomreports.report}><VisibilityIcon />&nbsp;&nbsp;SBOM</MenuItem>
                 <MenuItem onClick={() => { setAnchorMenu(undefined); rescan(props.asset) }}><ReplayIcon />&nbsp;&nbsp;Re-scan</MenuItem>
             </MenuList>
@@ -91,7 +89,7 @@ const TrivyTabContentAsset: React.FC<ITrivyTabContentAssetProps> = (props: ITriv
                 title={<><Typography variant='body2'>{`${props.asset.name?.substring(0, 20)}...`}</Typography><Typography variant='body2'>{`${props.asset.container?.substring(0, 20) || 'NA'}...`}</Typography></>}
                 action={<IconButton onClick={(event) => setAnchorMenu(event?.currentTarget)}><MoreVert /></IconButton>}
             />
-            <CardMedia>{simpleBarChart(props.asset, trivyInstanceConfig)}</CardMedia>
+            <CardMedia>{simpleBarChart(props.asset)}</CardMedia>
             <CardContent sx={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'divider' }}>
                 <Stack direction='row'><Divider /><Stack direction='column' sx={{ flex: 1 }}>
                     <Typography variant='body2'><b>Date:&nbsp;</b>{props.asset.vulnerabilityreports?.report?.updateTimestamp || props.asset.configauditreports?.report?.updateTimestamp}</Typography>
@@ -107,13 +105,13 @@ const TrivyTabContentAsset: React.FC<ITrivyTabContentAssetProps> = (props: ITriv
                 <Stack direction='row' width='50%' p={1} alignItems='center'>
                     <Avatar sx={{ background: assetAvatarColor(props.asset.vulnerabilityreports?.report?.os?.family || 'X') }}>{getAvatarContent(props.asset.vulnerabilityreports?.report?.os?.family || 'X')}</Avatar>
                     <Stack direction='column' ml={1}>
-                        <Typography variant='body2'><b>{`${props.asset.name.substring(0, 20)}.../${props.asset.container.substring(0, 10)}...`}</b></Typography>
+                        <Typography variant='body2'><b>{`${props.asset.name?.substring(0, 20) ?? 'NA'}.../${props.asset.container?.substring(0, 10) ?? 'NA'}...`}</b></Typography>
                         <Typography variant='body2'>{`${props.asset.vulnerabilityreports?.report?.updateTimestamp || props.asset.configauditreports?.report?.updateTimestamp}`}</Typography>
                     </Stack>
                 </Stack>
                 {[TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL].map((plural, i) => (
                     <Stack key={i} direction='column' sx={{ width: '10%' }} alignItems='center'>
-                        <Typography sx={{ fontSize: '1.125rem' }}>{getTotalIssues(trivyInstanceConfig, plural, props.asset)}</Typography>
+                        <Typography sx={{ fontSize: '1.125rem' }}>{getTotalIssues(plural, props.asset)}</Typography>
                         <Typography variant='caption' sx={{ fontSize: '0.5rem' }}>{['Vulnerabilities', 'ConfigAudit', 'ExposedSecrets'][i]}</Typography>
                     </Stack>
                 ))}

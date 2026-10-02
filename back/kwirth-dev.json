@@ -8,7 +8,8 @@
         "dce-consumer": "../dces/sample/consumer/dist",
         "nettools": "../plugins/nettools/dist",
         "situs": "../plugins/situs/dist",
-        "sugarless": "../plugins/sugarless/dist"
+        "sugarless": "../plugins/sugarless/dist",
+        "trivy": "../plugins/trivy/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",

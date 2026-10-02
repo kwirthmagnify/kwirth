@@ -37,7 +37,7 @@ const TrivyOperator: React.FC<ISettingsTrivyProps> = (props: ISettingsTrivyProps
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button variant='outlined' onClick={() => props.onClose()}>CANCEL</Button>
+                <Button variant='outlined' onClick={() => props.onClose()}>CLOSE</Button>
             </DialogActions>
         </Dialog>
     )

@@ -1,7 +1,10 @@
 import React from 'react'
 import { red } from '@mui/material/colors'
+import { VerifiedUser } from '@mui/icons-material'
 
 export type TReportType = 'vulnerabilityreports' | 'configauditreports' | 'sbomreports' | 'exposedsecretreports'
+
+export const TrivyIcon = <VerifiedUser />
 
 type IconProps = { size: string }
 

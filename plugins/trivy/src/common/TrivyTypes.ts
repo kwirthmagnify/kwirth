@@ -42,16 +42,6 @@ export interface ITrivyMessageResponse extends IInstanceMessage {
     data?: any
 }
 
-export interface ITrivyConfig {
-}
-
-export interface ITrivyInstanceConfig {
-    ignoreCritical: boolean
-    ignoreHigh: boolean
-    ignoreMedium: boolean
-    ignoreLow: boolean
-}
-
 export interface IKnown {
     name: string
     namespace: string

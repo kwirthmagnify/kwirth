@@ -87,4 +87,6 @@ const backCtx = await esbuild.context({
 
 await frontCtx.watch()
 await backCtx.watch()
-console.log('[watch] Watching src/ — rebuilds on every change.')
+console.log('[watch] Watching src/ — front.js and back.js rebuild on every change.')
+console.log('[watch] kwirth backend hot-reloads back.js automatically.')
+console.log('[watch] kwirth frontend polls for front.js changes every 2s.')

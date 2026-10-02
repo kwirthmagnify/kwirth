@@ -2,15 +2,16 @@ import React, { FC } from 'react'
 import { EChannelRefreshAction, IChannel, IChannelObject, IChannelRequirements, IContentProps, ISetupProps, ENotifyLevel } from '@kwirthmagnify/kwirth-common-front'
 import { IChannelMessageAction } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageType, ISignalMessage, EInstanceMessageFlow, ESignalMessageLevel, IInstanceMessage, EInstanceConfigView, IExtensionScope } from '@kwirthmagnify/kwirth-common'
-import { TrivyIcon, TrivySetup } from './TrivySetup'
+import { TrivyIcon } from './TrivyCommon'
 import { TrivyTabContent } from './TrivyTabContent'
 import { ITrivyData, IAsset, TrivyData } from './TrivyData'
-import { TrivyConfig, TrivyInstanceConfig } from './TrivyConfig'
 import { ITrivyMessageResponse, ETrivyScope, TRIVY_SCOPES } from '../common/TrivyTypes'
+
+const TrivySetupStub: FC<ISetupProps> = () => React.createElement('div', null, 'Trivy has nothing to configure.')
 
 export class TrivyChannel implements IChannel {
     private setupVisible = false
-    SetupDialog: FC<ISetupProps> = TrivySetup
+    SetupDialog: FC<ISetupProps> = TrivySetupStub
     TabContent: FC<IContentProps> = TrivyTabContent
     channelId = 'trivy'
 
@@ -23,7 +24,7 @@ export class TrivyChannel implements IChannel {
         metrics: false,
         notifier: true,
         notifications: true,
-        setup: true,
+        setup: false,
         settings: false,
         palette: false,
         userSettings: false,
@@ -106,8 +107,6 @@ export class TrivyChannel implements IChannel {
 
     async initChannel(channelObject: IChannelObject): Promise<boolean> {
         channelObject.data = new TrivyData()
-        channelObject.instanceConfig = new TrivyInstanceConfig()
-        channelObject.config = new TrivyConfig()
         return false
     }
 
@@ -128,8 +127,8 @@ export class TrivyChannel implements IChannel {
     prepareExternalChannel(_view: EInstanceConfigView, _selectedResources: any[], _container: string): { data: any; config: any; instanceConfig: any; formConfig: any } {
         return {
             data: new TrivyData(),
-            config: new TrivyConfig(),
-            instanceConfig: new TrivyInstanceConfig(),
+            config: undefined,
+            instanceConfig: undefined,
             formConfig: {}
         }
     }

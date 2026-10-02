@@ -1,4 +1,4 @@
-import { IChannelInstances, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType, EClusterType, IBackChannelRequirements, IExtensionScope } from '@kwirthmagnify/kwirth-common'
+import { IChannelInstances, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType, EClusterType, IBackChannelRequirements, IExtensionScope, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { Request, Response } from 'express'
 import { applyAllResources, deleteAllResources } from '@kwirthmagnify/kwirth-common-back'
@@ -17,24 +17,13 @@ const TRIVY_API_SBOM_PLURAL = 'sbomreports'
 const TRIVY_API_EXPOSED_PLURAL = 'exposedsecretreports'
 const ALL_PLURALS = [TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL]
 
-export interface IAsset {
-    podNamespace: string
-    podName: string
-    containerName: string
-    // Name of the resource that owns the Trivy report (the workload: a ReplicaSet, or
-    // the pod itself when it has no controller). It is what matches the `resource.name`
-    // the provider stamps, with no need for prefixes.
-    workloadName: string
-}
-
 export interface IInstance {
     instanceId: string
     accessKey: AccessKey
-    assets: IAsset[]
-    maxCritical: number
-    maxHigh: number
-    maxMedium: number
-    maxLow: number
+    view: EInstanceConfigView
+    namespace: string           // comma-separated namespaces (from instanceConfig)
+    workloadNames: string[]     // resolved workload names (for POD/CONTAINER views)
+    container: string           // selected container (for CONTAINER view)
 }
 
 class TrivyChannel implements IChannel {
@@ -63,7 +52,7 @@ class TrivyChannel implements IChannel {
         id: this.channelId, routable: false, pauseable: false, modifiable: false, reconnectable: false,
         metrics: false, sources: [EClusterType.KUBERNETES],
         endpoints: [{ name: 'operator', methods: ['GET'], requiresAccessKey: true }],
-        websocket: false, cluster: false, resourced: true
+        websocket: false, cluster: false, resourced: false
     })
 
     getChannelScopeLevel = (scope: string): number => ['', ETrivyScope.WORKLOAD, ETrivyScope.KUBERNETES, 'cluster', 'admin'].indexOf(scope)
@@ -80,38 +69,13 @@ class TrivyChannel implements IChannel {
         if (providerId !== 'trivy') return
         const pe = obj as ITrivyProviderEvent
         // The provider sends pe.podName = `resource.name` (the workload that owns the
-        // report, a ReplicaSet for instance), not the real pod. We match by exact
-        // equality against the asset's resolved workload. config-audit reports carry
-        // no container.
+        // report, a ReplicaSet for instance), not the real pod. We match by scope
+        // (namespace + workload + container) against the instance's selectors.
         const isAudit = pe.plural === TRIVY_API_AUDIT_PLURAL
         for (const socket of this.webSockets) {
             for (const instance of socket.instances) {
-                const asset = instance.assets.find(a =>
-                    a.podNamespace === pe.namespace &&
-                    a.workloadName === pe.podName &&
-                    (isAudit || a.containerName === pe.containerName)
-                )
-                if (!asset) continue
-                const payload: ITrivyMessageResponse = {
-                    msgtype: 'trivymessageresponse',
-                    msgsubtype: pe.event,
-                    id: '',
-                    namespace: asset.podNamespace,
-                    group: '',
-                    pod: asset.podName,
-                    container: asset.containerName,
-                    action: EInstanceMessageAction.NONE,
-                    flow: EInstanceMessageFlow.UNSOLICITED,
-                    type: EInstanceMessageType.DATA,
-                    channel: EInstanceMessageChannel.TRIVY,
-                    instance: instance.instanceId
-                }
-                if (pe.event === 'delete') {
-                    payload.data = { resource: pe.plural, known: { name: asset.podName, namespace: asset.podNamespace, container: asset.containerName, report: undefined } satisfies IKnown }
-                }
-                else {
-                    payload.data = { resource: pe.plural, known: { name: asset.podName, namespace: asset.podNamespace, container: asset.containerName, report: pe.report } }
-                }
+                if (!this.matchesScope(instance, pe.namespace, pe.podName, pe.containerName, isAudit)) continue
+                const payload = this.buildDataPayload(instance.instanceId, pe.namespace, pe.podName, pe.containerName, pe.plural, pe.event, pe.report)
                 socket.ws.send(JSON.stringify(payload))
             }
         }
@@ -153,10 +117,7 @@ class TrivyChannel implements IChannel {
 
     async websocketRequest(_newWebSocket: WebSocket): Promise<void> { }
 
-    containsAsset = (webSocket: WebSocket, podNamespace: string, podName: string, containerName: string): boolean => {
-        const socket = this.webSockets.find(s => s.ws === webSocket)
-        return socket?.instances.some(i => i.assets.some(a => a.podNamespace === podNamespace && a.podName === podName && a.containerName === containerName)) ?? false
-    }
+    containsAsset = (_webSocket: WebSocket, _podNamespace: string, _podName: string, _containerName: string): boolean => false
 
     containsInstance = (instanceId: string): boolean => this.webSockets.some(s => s.instances.find(i => i.instanceId === instanceId))
 
@@ -174,7 +135,7 @@ class TrivyChannel implements IChannel {
         return Boolean(resp)
     }
 
-    addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
+    addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, _podNamespace: string, _podName: string, _containerName: string): Promise<boolean> => {
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
             const len = this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] })
@@ -182,46 +143,66 @@ class TrivyChannel implements IChannel {
         }
         let instance = socket.instances.find(i => i.instanceId === instanceConfig.instance)
         if (!instance) {
-            instance = { accessKey: accessKeyDeserialize(instanceConfig.accessKey), instanceId: instanceConfig.instance, assets: [], maxCritical: 0, maxHigh: 0, maxMedium: 0, maxLow: 0 }
+            instance = {
+                accessKey: accessKeyDeserialize(instanceConfig.accessKey),
+                instanceId: instanceConfig.instance,
+                view: instanceConfig.view,
+                namespace: instanceConfig.namespace ?? '',
+                workloadNames: [],
+                container: instanceConfig.container ?? ''
+            }
             socket.instances.push(instance)
         }
-        const ic = instanceConfig.data
-        if (ic) { instance.maxCritical = ic.maxCritical; instance.maxHigh = ic.maxHigh; instance.maxMedium = ic.maxMedium; instance.maxLow = ic.maxLow }
-        const workloadName = await this.resolveWorkloadName(podNamespace, podName)
-        const asset: IAsset = { podNamespace, podName, containerName, workloadName }
 
-        const trivyProv = (this.clusterInfo as any).providers?.find((p: any) => p.id === 'trivy')
-        if (trivyProv?.getReportsForAsset) {
-            const initialReports = await trivyProv.getReportsForAsset(podNamespace, podName, containerName, ALL_PLURALS) as ITrivyProviderEvent[]
-            for (const pe of initialReports) {
-                const payload: ITrivyMessageResponse = {
-                    msgtype: 'trivymessageresponse',
-                    msgsubtype: 'add',
-                    id: '',
-                    namespace: podNamespace,
-                    group: '',
-                    pod: podName,
-                    container: containerName,
-                    action: EInstanceMessageAction.NONE,
-                    flow: EInstanceMessageFlow.UNSOLICITED,
-                    type: EInstanceMessageType.DATA,
-                    channel: EInstanceMessageChannel.TRIVY,
-                    instance: instance!.instanceId
+        // For POD/CONTAINER views: resolve each selected pod to its workload name
+        // (Trivy names reports by the workload, e.g. ReplicaSet, not by the pod).
+        if (instanceConfig.view === EInstanceConfigView.POD || instanceConfig.view === EInstanceConfigView.CONTAINER) {
+            const podNames = (instanceConfig.pod ?? '').split(',').filter(Boolean)
+            for (const podName of podNames) {
+                const ns = instanceConfig.namespace ?? ''
+                if (ns && podName) {
+                    const workloadName = await this.resolveWorkloadName(ns, podName)
+                    instance.workloadNames.push(workloadName)
                 }
-                payload.data = { resource: pe.plural, known: { container: containerName, name: podName, namespace: podNamespace, report: pe.report } }
-                webSocket.send(JSON.stringify(payload))
             }
         }
-        instance.assets.push(asset)
+
+        // Prime from cluster: list CRDs directly (like Excubitor's primeFromCluster).
+        const namespaces = (instanceConfig.namespace ?? '').split(',').filter(Boolean)
+        const isClusterView = instanceConfig.view === EInstanceConfigView.CLUSTER || instanceConfig.view === EInstanceConfigView.NONE || namespaces.length === 0
+        for (const plural of ALL_PLURALS) {
+            try {
+                let items: any[] = []
+                if (isClusterView) {
+                    const res: any = await this.clusterInfo.crdApi.listCustomObjectForAllNamespaces({ group: TRIVY_API_GROUP, version: TRIVY_API_VERSION, plural })
+                    items = res?.items ?? res?.body?.items ?? []
+                }
+                else {
+                    for (const ns of namespaces) {
+                        const res: any = await this.clusterInfo.crdApi.listNamespacedCustomObject({ group: TRIVY_API_GROUP, version: TRIVY_API_VERSION, namespace: ns, plural })
+                        const nsItems = res?.items ?? res?.body?.items ?? []
+                        items = items.concat(nsItems)
+                    }
+                }
+                for (const obj of items) {
+                    const labels = obj.metadata?.labels ?? {}
+                    const ns = labels['trivy-operator.resource.namespace']
+                    const workloadName = labels['trivy-operator.resource.name']
+                    const containerName = labels['trivy-operator.container.name']
+                    const isAudit = plural === TRIVY_API_AUDIT_PLURAL
+                    if (!this.matchesScope(instance, ns, workloadName, containerName, isAudit)) continue
+                    const payload = this.buildDataPayload(instance.instanceId, ns, workloadName, containerName, plural, 'add', obj.report)
+                    webSocket.send(JSON.stringify(payload))
+                }
+            }
+            catch (err) {
+                console.error(`[trivy] prime error (${plural}):`, err)
+            }
+        }
         return true
     }
 
-    deleteObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
-        const socket = this.webSockets.find(s => s.ws === webSocket)
-        const instance = socket?.instances.find(i => i.instanceId === instanceConfig.instance)
-        if (instance) instance.assets = instance.assets.filter(a => !(a.podNamespace === podNamespace && a.podName === podName && (containerName === '' || a.containerName === containerName)))
-        return true
-    }
+    deleteObject = async (_webSocket: WebSocket, _instanceConfig: IInstanceConfig, _podNamespace: string, _podName: string, _containerName: string): Promise<boolean> => true
 
     pauseContinueInstance(_webSocket: WebSocket, _instanceConfig: IInstanceConfig, _action: EInstanceMessageAction): void { }
     modifyInstance(_webSocket: WebSocket, _instanceConfig: IInstanceConfig): void { }
@@ -268,6 +249,47 @@ class TrivyChannel implements IChannel {
     updateConnection = (_newWebSocket: WebSocket, _instanceId: string): boolean => false
 
     // ─── PRIVATE ────────────────────────────────────────────────────────────────
+
+    private matchesScope = (instance: IInstance, namespace: string, workloadName: string, containerName: string, isAudit: boolean): boolean => {
+        switch (instance.view) {
+            case EInstanceConfigView.CLUSTER:
+            case EInstanceConfigView.NONE:
+                return true
+            case EInstanceConfigView.NAMESPACE:
+            case EInstanceConfigView.GROUP:
+                return instance.namespace.split(',').includes(namespace)
+            case EInstanceConfigView.POD:
+                return instance.namespace.split(',').includes(namespace) && instance.workloadNames.includes(workloadName)
+            case EInstanceConfigView.CONTAINER:
+                return instance.namespace.split(',').includes(namespace) && instance.workloadNames.includes(workloadName) && (isAudit || containerName === instance.container)
+            default:
+                return true
+        }
+    }
+
+    private buildDataPayload = (instanceId: string, namespace: string, podName: string, containerName: string, plural: string, event: string, report: any): ITrivyMessageResponse => {
+        const payload: ITrivyMessageResponse = {
+            msgtype: 'trivymessageresponse',
+            msgsubtype: event,
+            id: '',
+            namespace,
+            group: '',
+            pod: podName,
+            container: containerName,
+            action: EInstanceMessageAction.NONE,
+            flow: EInstanceMessageFlow.UNSOLICITED,
+            type: EInstanceMessageType.DATA,
+            channel: EInstanceMessageChannel.TRIVY,
+            instance: instanceId
+        }
+        if (event === 'delete') {
+            payload.data = { resource: plural, known: { name: podName, namespace, container: containerName, report: undefined } satisfies IKnown }
+        }
+        else {
+            payload.data = { resource: plural, known: { name: podName, namespace, container: containerName, report } }
+        }
+        return payload
+    }
 
     private sendSignalMessage = (ws: WebSocket, action: EInstanceMessageAction, flow: EInstanceMessageFlow, level: ESignalMessageLevel, instanceId: string, text: string): void => {
         ws.send(JSON.stringify({ action, flow, channel: EInstanceMessageChannel.TRIVY, instance: instanceId, type: EInstanceMessageType.SIGNAL, text, level } as ISignalMessage))
