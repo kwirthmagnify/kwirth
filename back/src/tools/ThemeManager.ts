@@ -7,7 +7,7 @@ import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertDceRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements } from './ExtensionDeps'
 
 export interface IThemeMeta {
     id: string
@@ -151,8 +151,8 @@ export class ThemeManager {
                 requiresRestart: pkg.requiresRestart ?? false,
                 requiresExtension: pkg.requiresExtension ?? []
             }
-            // A theme that requires a DCE is not installed without it (plans/completed/dce/PRD.md, RF8).
-            await assertDceRequirements('Theme', meta.id, meta.requiresExtension, installedFrom)
+            // A theme that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
+            await assertExtensionRequirements('Theme', meta.id, meta.requiresExtension, installedFrom)
 
             const index = (await this.configMaps.read('kwirth-themes-index', []) as IThemeMeta[]) || []
             // Installed is what installedIds says, not the index: a dev one is loaded without appearing there.

@@ -28,7 +28,7 @@ import { AiToolsetApi } from './api/AiToolsetApi'
 import { DceManager } from './tools/DceManager'
 import { buildPluginStatuses } from './tools/PluginStatus'
 import { DceApi } from './api/DceApi'
-import { findConsumers, IRequirer, setInstalledDceSource } from './tools/ExtensionDeps'
+import { findConsumers, IRequirer, setInstalledExtensionsSource, emptyInstalledIndex } from './tools/ExtensionDeps'
 import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
 import { ManageClusterApi } from './api/ManageClusterApi'
 import { AuthorizationManagement } from './tools/AuthorizationManagement'
@@ -2104,9 +2104,24 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             if (bundledExtensionsPath) await dceManager.installBundled(bundledExtensionsPath)
             await dceManager.loadAll()
             await dceManager.loadDevDces()
-            // From here on, installing an extension that requires a DCE checks it is there (RF8).
+            // From here on, installing an extension that requires another checks it is there (RF8).
             const manager = dceManager
-            setInstalledDceSource(async () => (await manager.listInstalled()).map(m => ({ id: m.id, version: m.version })))
+            setInstalledExtensionsSource(async () => {
+                const idx = emptyInstalledIndex()
+                const add = async (type: keyof typeof idx, mgr: { listInstalled(): Promise<{ id: string, version: string }[]> } | undefined): Promise<void> => {
+                    if (mgr) for (const m of await mgr.listInstalled()) idx[type].push({ id: m.id, version: m.version })
+                }
+                await add('dce', dceManager)
+                if (pluginManager) await add('plugin', pluginManager)
+                if (providerManager) await add('provider', providerManager)
+                if (senderManager) await add('sender', senderManager)
+                if (webhookManager) await add('webhook', webhookManager)
+                if (themeManager) await add('theme', themeManager)
+                if (homepageManager) await add('homepage', homepageManager)
+                if (idpManager) for (const m of await idpManager.listInstalledMeta()) idx.idp.push({ id: m.id, version: m.version })
+                if (aiToolsetManager) await add('aitoolset', aiToolsetManager)
+                return idx
+            })
             /*
                 Who consumes a DCE: uninstalling one in use and updating one across a major are refused
                 with the list (RF9, RF11). The managers are read on every call, not copied — they do not

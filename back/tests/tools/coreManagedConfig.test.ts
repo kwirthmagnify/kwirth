@@ -63,11 +63,18 @@ test('si el fichero no trae la parte propia, solo se aplica la del core', async 
 
 // ─── senders: emptying the secrets ─────────────────────────────────────────────
 
-const senderFalso = (schema: unknown, configs: unknown[]): SenderManager => ({
-    getConfigs: () => configs,
-    getSender: () => schema === undefined ? undefined : ({ getConfigSchema: () => schema }),
-    addConfig: () => true
-} as unknown as SenderManager)
+// The mock returns the stored config (base fields + configs array) the way SenderManager does.
+// getSenderStoredConfig returns both; setSenderStoredConfig captures what was written for import tests.
+const senderFalso = (schema: unknown, configs: unknown[]): SenderManager => {
+    let written: unknown
+    return {
+        getConfigs: () => configs,
+        getSenderStoredConfig: () => ({ configs }),
+        setSenderStoredConfig: (_id: string, stored: unknown) => { written = stored },
+        getSender: () => schema === undefined ? undefined : ({ getConfigSchema: () => schema }),
+        addConfig: () => true
+    } as unknown as SenderManager
+}
 
 const CONFIG_SMTP = { name: 'correo', host: 'smtp.example.com', user: 'kwirth', password: 'la-buena' }
 const SCHEMA_SMTP = [
@@ -79,31 +86,31 @@ const SCHEMA_SMTP = [
 
 test('con credenciales, la configuracion de un sender viaja entera', async () => {
     const e = senderConfigs(senderFalso(SCHEMA_SMTP, [CONFIG_SMTP]), 'email')
-    const r = await e.exportConfig!(opts(true)) as { configs: { password: string }[] }
-    assert.equal(r.configs[0].password, 'la-buena')
+    const r = await e.exportConfig!(opts(true)) as { stored: { configs: { password: string }[] } }
+    assert.equal(r.stored.configs[0].password, 'la-buena')
 })
 
 test('sin credenciales, el campo secreto se VACIA — no se omite', async () => {
     // Emptying it rather than removing it is deliberate: the destination has to be able to say which one to fill in.
     const e = senderConfigs(senderFalso(SCHEMA_SMTP, [CONFIG_SMTP]), 'email')
-    const r = await e.exportConfig!(opts(false)) as { configs: Record<string, unknown>[] }
-    assert.equal(r.configs[0].password, '')
-    assert.ok('password' in r.configs[0])
-    assert.equal(r.configs[0].host, 'smtp.example.com', 'lo que no es secreto no se toca')
+    const r = await e.exportConfig!(opts(false)) as { stored: { configs: Record<string, unknown>[] } }
+    assert.equal(r.stored.configs[0].password, '')
+    assert.ok('password' in r.stored.configs[0])
+    assert.equal(r.stored.configs[0].host, 'smtp.example.com', 'lo que no es secreto no se toca')
 })
 
 test('un sender SIN esquema no exporta nada, en vez de arriesgarse', async () => {
     // With no schema the core does not know which field is the password. Between omitting the
     // configuration and writing a secret in the clear into a file that ends up in Downloads, it omits.
     const e = senderConfigs(senderFalso(undefined, [CONFIG_SMTP]), 'email')
-    const r = await e.exportConfig!(opts(false)) as { configs: unknown[], omitted: number }
-    assert.deepEqual(r.configs, [])
+    const r = await e.exportConfig!(opts(false)) as { stored: { configs: unknown[] }, omitted: number }
+    assert.deepEqual(r.stored.configs, [])
     assert.equal(r.omitted, 1)
 })
 
 test('y quien importe ese fichero se entera de que faltan', async () => {
     const e = senderConfigs(senderFalso(SCHEMA_SMTP, []), 'email')
-    const r = await e.importConfig!({ configs: [], omitted: 2 })
+    const r = await e.importConfig!({ stored: { configs: [] }, omitted: 2 })
     assert.ok(r.warnings[0].includes('does not declare which of its fields are secret'))
 })
 

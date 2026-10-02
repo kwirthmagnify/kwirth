@@ -8,7 +8,7 @@ import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertDceRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements } from './ExtensionDeps'
 
 export interface ISenderMeta {
     id: string
@@ -343,8 +343,8 @@ export class SenderManager implements ISenderAccess {
             meta.marketplaceLabel = marketplaceLabel
             meta.requiresRestart = meta.requiresRestart ?? false
             meta.requiresExtension = meta.requiresExtension ?? []
-            // A sender that requires a DCE is not installed without it (plans/completed/dce/PRD.md, RF8).
-            await assertDceRequirements('Sender', meta.id, meta.requiresExtension, installedFrom)
+            // A sender that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
+            await assertExtensionRequirements('Sender', meta.id, meta.requiresExtension, installedFrom)
             const backJs = fs.readFileSync(backPath, 'utf-8')
 
             const backCompressed = zlib.gzipSync(Buffer.from(backJs, 'utf-8')).toString('base64')

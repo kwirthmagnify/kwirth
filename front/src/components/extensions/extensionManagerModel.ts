@@ -1,5 +1,6 @@
 import { ComponentType, ReactNode } from 'react'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+export type { IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 
 /*
     The GENERIC extension manager's model (plan: plans/completed/extension-managers-ui/PLAN.md).
@@ -119,20 +120,6 @@ export interface IPluginSelectorSpec<TInstalled> {
     load: () => Promise<Record<string, string[]>>
     /** Persist THAT entry's new selection. If it throws, the generic dialog undoes it and shows the reason. */
     save: (entry: TInstalled, pluginIds: string[]) => Promise<void>
-}
-
-/**
- * A dependency between extensions, exactly as it comes in the manifest.
- *
- * `requires` is mandatory — without it the extension does not work, so installing is refused — and `uses`
- * is optional: if it is there, it is taken advantage of. Any extension declared them, but only plugins
- * and providers looked at them, each with its own copy. Now the generic dialog understands them for all
- * ELEVEN types.
- */
-export interface IExtensionRequirement {
-    extensionType: EExtensionType
-    id: string
-    minVersion: string
 }
 
 /*

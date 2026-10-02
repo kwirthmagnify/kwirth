@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { DceManager, dceRegistry, staleDevDces } from '../../src/tools/DceManager'
-import { assertDceRequirements, consumersBrokenByMajor, dcesFirst, dcesLast, findConsumers, majorOf, setInstalledDceSource, IRequirer } from '../../src/tools/ExtensionDeps'
+import { assertExtensionRequirements, consumersBrokenByMajor, dcesFirst, dcesLast, findConsumers, majorOf, setInstalledExtensionsSource, emptyInstalledIndex, IRequirer } from '../../src/tools/ExtensionDeps'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { EDceState, EExtensionType, IDceConsumer, IDceMeta } from '@kwirthmagnify/kwirth-common'
@@ -267,30 +267,32 @@ test('several DCEs keep their relative order, and an empty pack does not blow up
 
 // ── RF8: a consumer is not installed without its DCE ───────────────────────────────────────────────
 
-test('🔴 a consumer whose DCE is missing or too old is refused, with the reason', async () => {
-    setInstalledDceSource(async () => [{ id: 'iria-icons', version: '1.1.0' }])
+test('🔴 a consumer whose dependency is missing or too old is refused, with the reason', async () => {
+    setInstalledExtensionsSource(async () => ({ ...emptyInstalledIndex(), dce: [{ id: 'iria-icons', version: '1.1.0' }] }))
     try {
-        await assert.rejects(assertDceRequirements('Plugin', 'excubitor', ['dce:iria-icons:1.2.0'], 'local'),
+        await assert.rejects(assertExtensionRequirements('Plugin', 'excubitor', ['dce:iria-icons:1.2.0'], 'local'),
             /Plugin 'excubitor' cannot be installed: Required dce 'iria-icons' version >=1\.2\.0, found 1\.1\.0/)
-        await assert.rejects(assertDceRequirements('Homepage', 'iria', ['dce:missing:1.0.0'], 'https://x/y.tgz'),
+        await assert.rejects(assertExtensionRequirements('Homepage', 'iria', ['dce:missing:1.0.0'], 'https://x/y.tgz'),
             /Required dce 'missing' \(>=1\.0\.0\) is not installed/)
-        await assertDceRequirements('Plugin', 'excubitor', ['dce:iria-icons:1.0.0', 'webhook:jira:9.9.9'], 'local')   // only dce: is checked
+        // ALL types are checked now, not just dce:
+        await assert.rejects(assertExtensionRequirements('Plugin', 'excubitor', ['dce:iria-icons:1.0.0', 'webhook:jira:9.9.9'], 'local'),
+            /Required webhook 'jira' \(>=9\.9\.9\) is not installed/)
     }
     finally {
-        setInstalledDceSource(undefined)
+        setInstalledExtensionsSource(undefined)
     }
 })
 
 test('dev, bundled and pack installs are not checked here: they have their own rules', async () => {
-    setInstalledDceSource(async () => [])
+    setInstalledExtensionsSource(async () => emptyInstalledIndex())
     try {
-        await assertDceRequirements('Plugin', 'p', ['dce:missing:1.0.0'], 'dev')
-        await assertDceRequirements('Plugin', 'p', ['dce:missing:1.0.0'], 'bundled')
-        await assertDceRequirements('Plugin', 'p', ['dce:missing:1.0.0'], 'pack:suite')
+        await assertExtensionRequirements('Plugin', 'p', ['dce:missing:1.0.0'], 'dev')
+        await assertExtensionRequirements('Plugin', 'p', ['dce:missing:1.0.0'], 'bundled')
+        await assertExtensionRequirements('Plugin', 'p', ['dce:missing:1.0.0'], 'pack:suite')
     }
     finally {
-        setInstalledDceSource(undefined)
+        setInstalledExtensionsSource(undefined)
     }
     // And with no source registered yet (startup), nothing is refused either.
-    await assertDceRequirements('Plugin', 'p', ['dce:missing:1.0.0'], 'local')
+    await assertExtensionRequirements('Plugin', 'p', ['dce:missing:1.0.0'], 'local')
 })

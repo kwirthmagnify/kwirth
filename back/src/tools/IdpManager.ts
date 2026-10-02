@@ -11,7 +11,7 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType } from './BundledExtensions'
 import { downloadFile, packageHeaders } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertDceRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements } from './ExtensionDeps'
 
 const IDPS_SECRET = 'kwirth-idps'
 const CONNECTORS_INDEX = 'kwirth-idp-connectors-index'
@@ -190,8 +190,8 @@ export class IdpManager {
                 requiresRestart: pkg.requiresRestart ?? false,
                 requiresExtension: pkg.requiresExtension ?? []
             }
-            // A connector that requires a DCE is not installed without it (plans/completed/dce/PRD.md, RF8).
-            await assertDceRequirements('IdP connector', meta.id, meta.requiresExtension, installedFrom)
+            // A connector that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
+            await assertExtensionRequirements('IdP connector', meta.id, meta.requiresExtension, installedFrom)
             const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
             /*
                 This was the only one of the eleven that let an installation be overwritten without asking

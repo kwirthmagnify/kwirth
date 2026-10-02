@@ -137,36 +137,37 @@ export const dcesLast = <T extends IOrderable>(members: T[]): T[] => {
 // ── Requirements at install time (PRD RF8) ───────────────────────────────────────────────────────────
 
 /*
-    Until the DCE type, `requiresExtension` was only validated when installing a PACK: an extension
-    installed on its own could declare anything and nobody looked. For a DCE that would mean installing
-    a consumer whose DCE is missing and finding out at runtime, from a `getDce()` that throws.
+    An extension installed on its own can declare `requiresExtension` and nobody would look — a pack
+    validates its members together, but a standalone install did not. Finding out at runtime that a
+    dependency is missing (a `getDce()` that throws, a provider that is not there) is the worst time to
+    find out, so the managers ask here before installing.
 
-    So the managers ask here before installing. Only the `dce:` requirements are checked (generalising
-    it to every type is a change of contract for extensions already out there — plan backlog B7), and
-    the source of what is installed is REGISTERED by the core once its DCE manager exists: a manager does
+    The source of what is installed is REGISTERED by the core once its managers exist: a manager does
     not get to know about the others.
 */
-type TInstalledDceSource = () => Promise<IInstalledRef[]>
-let installedDceSource: TInstalledDceSource | undefined
+type TInstalledExtensionsSource = () => Promise<IInstalledIndex>
+let installedExtensionsSource: TInstalledExtensionsSource | undefined
 
-export const setInstalledDceSource = (source: TInstalledDceSource | undefined): void => { installedDceSource = source }
+export const setInstalledExtensionsSource = (source: TInstalledExtensionsSource | undefined): void => { installedExtensionsSource = source }
 
 /** The `dce:` requirements among a list, if any. */
 export const dceRequirementsOf = (requiresExtension: string[] | undefined): string[] =>
     (requiresExtension ?? []).filter(r => r.startsWith(`${EExtensionType.DCE}:`))
 
 /**
- * Refuses to install `kind` `id` when a DCE it requires is missing or too old.
+ * Refuses to install `kind` `id` when an extension it requires is missing or too old.
+ *
+ * Validates ALL requirement types (provider, plugin, sender, dce, etc.), not just `dce:` — a standalone
+ * install of a plugin requiring a provider is checked the same way a pack install is.
  *
  * Skipped for what comes from dev, bundled or a pack: a pack validates all its members together before
  * installing any; dev is declarative and the developer's own; bundled is the image's, and it is
  * installed before anything else exists to check against.
  */
-export const assertDceRequirements = async (kind: string, id: string, requiresExtension: string[] | undefined, installedFrom: string | undefined): Promise<void> => {
-    const requirements = dceRequirementsOf(requiresExtension)
-    if (!requirements.length) return
+export const assertExtensionRequirements = async (kind: string, id: string, requiresExtension: string[] | undefined, installedFrom: string | undefined): Promise<void> => {
+    if (!requiresExtension?.length) return
     if (installedFrom === 'dev' || installedFrom === 'bundled' || installedFrom?.startsWith('pack:')) return
-    if (!installedDceSource) return
-    const errors = validateExtensionDeps(requirements, { ...emptyInstalledIndex(), dce: await installedDceSource() })
+    if (!installedExtensionsSource) return
+    const errors = validateExtensionDeps(requiresExtension, await installedExtensionsSource())
     if (errors.length) throw new Error(`${kind} '${id}' cannot be installed: ${errors.join('; ')}`)
 }

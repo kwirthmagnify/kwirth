@@ -3,6 +3,7 @@ import { IDceBack, IDceBackHost, IDceStore } from '@kwirthmagnify/kwirth-common-
 import { IConfigMaps } from './IConfigMap'
 import { ISecrets } from './ISecrets'
 import { ELogComponent, componentLogger, logError, logInfo, logWarning } from './Logging'
+import { assertExtensionRequirements } from './ExtensionDeps'
 import { assertInstallable } from './ExtensionInstallGuard'
 import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
 import { listBundledOfType } from './BundledExtensions'
@@ -281,6 +282,8 @@ export class DceManager implements IDceAccess {
                 requiresExtension: pkg.requiresExtension ?? []
             }
             if (!meta.id) throw new Error('Invalid DCE bundle: package.json has no id')
+            // A DCE that requires another extension is not installed without it.
+            await assertExtensionRequirements('DCE', meta.id, meta.requiresExtension, installedFrom)
 
             const index = (await this.configMaps.read(INDEX_KEY, []) as IDceMeta[]) || []
             const existing = index.find(m => m.id === meta.id)

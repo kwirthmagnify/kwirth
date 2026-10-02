@@ -34,6 +34,20 @@ export interface IMarketplace {
     manifestAuth?: IMarketplaceManifestAuth
 }
 
+/**
+ * A dependency between extensions, exactly as it comes in the manifest.
+ *
+ * `requires` is mandatory — without it the extension does not work, so installing is refused — and `uses`
+ * is optional: if it is there, it is taken advantage of. Any extension declared them, but only plugins
+ * and providers looked at them, each with its own copy. Now the generic dialog understands them for all
+ * ELEVEN types.
+ */
+export interface IExtensionRequirement {
+    extensionType: EExtensionType
+    id: string
+    minVersion: string
+}
+
 // A manifest entry already resolved by the back end, with its provenance stamped on. An undefined
 // marketplaceId means it comes from the public OSS marketplace.
 export interface IMarketplaceEntry {
@@ -51,4 +65,8 @@ export interface IMarketplaceEntry {
     website?: string
     marketplaceId?: string
     marketplaceLabel?: string
+    /** Mandatory dependencies: install is refused while these are missing or too old. */
+    requires?: IExtensionRequirement[]
+    /** Optional dependencies: taken advantage of if present, but not required to install. */
+    uses?: IExtensionRequirement[]
 }

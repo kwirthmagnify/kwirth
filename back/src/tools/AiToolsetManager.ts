@@ -2,7 +2,7 @@ import { IAiToolset, registerToolset, unregisterToolset, isBuiltInToolsetId, get
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertDceRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements } from './ExtensionDeps'
 import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
 import { listBundledOfType } from './BundledExtensions'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
@@ -274,8 +274,8 @@ export class AiToolsetManager {
             meta.marketplaceLabel = marketplaceLabel
             meta.requiresRestart = meta.requiresRestart ?? false
             meta.requiresExtension = meta.requiresExtension ?? []
-            // A toolset that requires a DCE is not installed without it (plans/completed/dce/PRD.md, RF8).
-            await assertDceRequirements('AI toolset', meta.id, meta.requiresExtension, installedFrom)
+            // A toolset that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
+            await assertExtensionRequirements('AI toolset', meta.id, meta.requiresExtension, installedFrom)
 
             const backJs = fs.readFileSync(backPath, 'utf-8')
             const backCompressed = zlib.gzipSync(Buffer.from(backJs, 'utf-8')).toString('base64')

@@ -9,7 +9,7 @@ import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertDceRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements } from './ExtensionDeps'
 
 /**
  * @deprecated use IProviderFieldDef from kwirth-common-back, which is the contract common to every
@@ -229,8 +229,8 @@ export class ProviderManager {
             meta.marketplaceLabel = marketplaceLabel
             meta.requiresRestart = meta.requiresRestart ?? false
             meta.requiresExtension = meta.requiresExtension ?? []
-            // A provider that requires a DCE is not installed without it (plans/completed/dce/PRD.md, RF8).
-            await assertDceRequirements('Provider', meta.id, meta.requiresExtension, installedFrom)
+            // A provider that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
+            await assertExtensionRequirements('Provider', meta.id, meta.requiresExtension, installedFrom)
             const backJs = fs.readFileSync(backPath, 'utf-8')
 
             const backCompressed = zlib.gzipSync(Buffer.from(backJs, 'utf-8')).toString('base64')

@@ -11,7 +11,7 @@ import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertDceRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements } from './ExtensionDeps'
 
 export interface IPluginMeta {
     id: string
@@ -269,8 +269,8 @@ export class PluginManager {
             meta.marketplaceLabel = marketplaceLabel
             meta.requiresRestart = meta.requiresRestart ?? false
             meta.requiresExtension = meta.requiresExtension ?? []
-            // A plugin that requires a DCE is not installed without it (plans/completed/dce/PRD.md, RF8).
-            await assertDceRequirements('Plugin', meta.id, meta.requiresExtension, installedFrom)
+            // A plugin that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
+            await assertExtensionRequirements('Plugin', meta.id, meta.requiresExtension, installedFrom)
             const backJs = fs.readFileSync(backPath, 'utf-8')
             const frontJs = fs.readFileSync(frontPath, 'utf-8')
 

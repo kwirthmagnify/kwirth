@@ -7,7 +7,7 @@ import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertDceRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements } from './ExtensionDeps'
 
 export interface IHomepageMeta {
     id: string
@@ -152,8 +152,8 @@ export class HomepageManager {
                 marketplaceLabel,
             }
 
-            // A homepage that requires a DCE is not installed without it (plans/completed/dce/PRD.md, RF8).
-            await assertDceRequirements('Homepage', meta.id, meta.requiresExtension, installedFrom)
+            // A homepage that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
+            await assertExtensionRequirements('Homepage', meta.id, meta.requiresExtension, installedFrom)
 
             const index = (await this.configMaps.read('kwirth-homepages-index', []) as IHomepageMeta[]) || []
             // Installed is what installedIds says, not the index: a dev one is loaded without appearing there.
