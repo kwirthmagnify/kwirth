@@ -25,7 +25,7 @@ import type { IProviderAccess } from './IProvider'
 */
 /**
  * What an extension writes its log with. The core builds it knowing who the extension is, so the
- * line comes out identified — '[prov] [ERRO] [longhorn] ...' — and the extension only writes the
+ * line comes out identified — '[prov] [ERROR  ] [longhorn] ...' — and the extension only writes the
  * message.
  *
  * It lives here, and not next to one family's contract, because the need is the same for all of

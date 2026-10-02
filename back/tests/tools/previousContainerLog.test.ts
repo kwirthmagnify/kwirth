@@ -254,7 +254,7 @@ test('the banner goes out at ERROR, which no level filter can silence', async ()
     const output = await captureErrors(() => logPreviousContainerBanner(restartedLog()))
 
     assert.ok(output.length > 0, 'a warning can be filtered out by lowering the core component')
-    assert.ok(output.every(l => l.includes('[ERRO]')), 'and only the error level is never filtered')
+    assert.ok(output.every(l => l.includes('[ERROR  ]')), 'and only the error level is never filtered')
 })
 
 test('with no restart there is no banner at all', async () => {

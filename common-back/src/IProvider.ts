@@ -220,7 +220,7 @@ export interface IProvider extends IExtension {
      * Why it exists: channels get a 'backChannelObject' to log with, providers got nothing, so the
      * only thing left to them was 'console.log'. That comes out with no timestamp, no level and no
      * component — an error from a provider looks exactly like an informational line, and nothing can
-     * be filtered. With this, a provider's line reads '[prov] [ERRO] [longhorn] ...' and the
+     * be filtered. With this, a provider's line reads '[prov] [ERROR  ] [longhorn] ...' and the
      * provider does not even have to write its own id: the core puts it there.
      */
     setLogger?(logger: IExtensionLogger): void

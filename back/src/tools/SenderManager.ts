@@ -513,7 +513,7 @@ export class SenderManager implements ISenderAccess {
         const instance = new Ctor()
         /*
             Same as providers: the sender is handed a logger that already knows its id, so whatever it
-            says about itself comes out identified and with a level — '[send] [ERRO] [teams] ...' —
+            says about itself comes out identified and with a level — '[send] [ERROR  ] [teams] ...' —
             instead of a console line that reads like any other. Optional, so a sender built before
             this simply does not get called.
         */

@@ -133,15 +133,18 @@ const colors = {
 } as const
 
 /*
-    Four letters each, like the component tags, so both columns line up and the message always starts
-    at the same place. 'TRACE' and 'ERROR' are the only ones that did not already fit.
+    Full words, padded to the width of the longest ('WARNING') so the closing ']' lines up and the
+    message always starts at the same place. The component tags are still four letters each; the
+    severity column is wider, but both columns still line up on their own.
 */
 const LEVEL_LABEL = {
-    trace: 'TRCE',
+    trace: 'TRACE',
     info: 'INFO',
-    warn: 'WARN',
-    error: 'ERRO'
+    warn: 'WARNING',
+    error: 'ERROR'
 } as const
+
+const SEVERITY_WIDTH = 7 // 'WARNING' is the longest label
 
 const logGeneric = (
         level: 'trace' | 'info' | 'warn' | 'error',
@@ -163,7 +166,7 @@ const logGeneric = (
     if (level !== 'error' && SEVERITY.indexOf(LEVEL_OF[level]) < SEVERITY.indexOf(threshold)) return
 
     const timestamp = new Date().toLocaleTimeString(undefined, { hour12: false})
-    const label = LEVEL_LABEL[level]
+    const label = LEVEL_LABEL[level].padEnd(SEVERITY_WIDTH)
     
     /*
         An object goes out ON ONE LINE. Indenting it looked nicer on screen but turned a single event
