@@ -34,6 +34,7 @@ import { ICustomAction } from './components/UserPreferences'
 import { MenuNotification } from '@kwirthmagnify/kwirth-common-front'
 import { getIconFromKind } from '../../tools/Constants-React'
 import { generateMinimalFromCRD } from './Tools'
+import { MagnifyAppBar } from './components/MagnifyAppBar'
 const InputBox: React.FC<{ title?: any; default?: any; message?: any; password?: boolean; width: string; onClose: () => void; onResult?: (result: any) => void }> = (props) => {
     const inputRef = useRef<HTMLInputElement>(null)
     if (!props.title) return null
@@ -1430,6 +1431,7 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         )
 
     return <>
+        <MagnifyAppBar channelObject={props.channelObject} />
         { magnifyData.started &&
             <Box ref={magnifyBoxRef} sx={{ display:'flex', flexDirection:'column', overflowY:'auto', overflowX:'hidden', flexGrow:1, height: `${magnifyBoxHeight}px`, ml:1, mr:1, mt:1 }}>
                 <FileManager

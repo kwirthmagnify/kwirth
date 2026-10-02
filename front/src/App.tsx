@@ -2682,7 +2682,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                 // channels that wire handlers once — e.g. magnify's create/edit/delete — would otherwise
                                 // capture a stale copy whose webSocket is undefined.
                                 const co = selectedTab.current?.channelObject
-                                if (co) co.isFullscreen = fullscreenTab !== undefined
+                                if (co) { co.isFullscreen = fullscreenTab !== undefined; co.exitFullscreen = () => setFullscreenTab(undefined) }
                                 const content = <TabContent key={selectedTab.current?.name} channel={selectedTab.current?.channel} channelObject={co} />
                                 const assignedId = themeAssignments[selectedTab.current?.channel.channelId ?? '']
                                 // read themeScriptsVersion so this IIFE re-runs each time a theme script finishes loading

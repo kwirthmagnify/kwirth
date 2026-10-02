@@ -17,6 +17,7 @@ interface IChannelObject extends IChannelObjectBase {
     createTab?: (resource: IResourceSelected, start: boolean, settings: any) => void
     frontChannels?: Map<string, TChannelConstructor>
     backChannels?: BackChannelData[]
+    exitFullscreen?: () => void
 }
 
 interface ISetupProps extends ISetupPropsBase {
