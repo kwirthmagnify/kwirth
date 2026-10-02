@@ -28,7 +28,7 @@ const coreFalso = (): ICorePortableConfig & { settings: unknown, sharedAi: unkno
     const estado = {
         settings: { metricsInterval: 30 } as unknown,
         sharedAi: { llms: ['uno'] } as unknown,
-        readSettings: async () => estado.settings,
+        readSettings: async (_cred: boolean) => estado.settings,
         writeSettings: async (d: unknown) => { estado.settings = d },
         readSharedAi: async (cred: boolean) => cred ? estado.sharedAi : { llms: ['uno'], apiKey: '' },
         writeSharedAi: async (d: unknown) => { estado.sharedAi = d }
@@ -105,6 +105,19 @@ test('el export lleva lo del core y solo las extensiones que pueden responder', 
     assert.deepEqual(bundle.core.settings, { metricsInterval: 30 })
     assert.equal(bundle.extensions.length, 1)
     assert.equal(bundle.extensions[0].id, 'si')
+})
+
+test('readSettings recibe includeCredentials, para que el core sepa si sacar los secrets', async () => {
+    let recibioCred = undefined as boolean | undefined
+    const core = coreFalso()
+    core.readSettings = async (cred: boolean) => { recibioCred = cred; return core.settings }
+    const manager = new ConfigBundleManager(async () => [], core, '0.6.31')
+
+    await manager.export({ includeCredentials: false })
+    assert.equal(recibioCred, false)
+
+    await manager.export({ includeCredentials: true })
+    assert.equal(recibioCred, true)
 })
 
 test('sin credenciales, lo que se pide a la extension es SIN credenciales', async () => {

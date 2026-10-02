@@ -1,5 +1,5 @@
 import { IExtension } from '@kwirthmagnify/kwirth-common-back'
-import { IExtensionImportResult, ISenderConfig, IWebhookConfig } from '@kwirthmagnify/kwirth-common'
+import { IExtensionImportResult, ISenderConfig, ISenderStoredConfig, IWebhookConfig } from '@kwirthmagnify/kwirth-common'
 import { IIdpInstanceConfig } from '@kwirthmagnify/kwirth-common-back'
 import { PluginManager } from './PluginManager'
 import { ProviderManager } from './ProviderManager'
@@ -79,6 +79,12 @@ export const providerInstallConfig = (manager: ProviderManager, id: string): IEx
     A sender's configurations. They live in the core (`kwirth-sender-configs`), not in the sender, which
     only receives its own when using it.
 
+    A sender stores TWO things: a set of named configs and, optionally, a BASE config — common fields
+    shared by all of them (an SMTP host, a default from). The base is merged into each config before the
+    sender sees it. Both travel together as `ISenderStoredConfig`: the base as top-level fields, the
+    configs as a `configs` array. Exporting only the array (as `getConfigs` does) loses the base, and
+    importing config-by-config with `addConfig` never restores it.
+
     ⚠️ They can carry credentials inside (an SMTP's password, a Teams token), and the core does not know
     which of their fields are secret — the sender's schema declares that. Without credentials they are
     emptied by schema; if the sender publishes no schema, the whole configuration is left out rather than
@@ -86,35 +92,41 @@ export const providerInstallConfig = (manager: ProviderManager, id: string): IEx
 */
 export const senderConfigs = (manager: SenderManager, id: string): IExtension => ({
     exportConfig: async (options) => {
-        const configs = manager.getConfigs(id)
-        if (options.includeCredentials) return { configs }
+        const stored = manager.getSenderStoredConfig(id)
+        if (options.includeCredentials) return { stored }
 
         const schema = manager.getSender(id)?.getConfigSchema?.()
         if (!schema) {
-            return { configs: [], omitted: configs.length }
+            return { stored: { configs: [] }, omitted: stored.configs.length }
         }
         const secretos = schema.filter(f => f.type === 'password').map(f => f.name)
+        // Strip secrets from BOTH the base fields and each named config.
+        const { configs, ...common } = stored
+        const cleanCommon: Record<string, unknown> = {}
+        for (const [k, v] of Object.entries(common)) cleanCommon[k] = secretos.includes(k) ? '' : v
         return {
-            configs: configs.map(c => {
-                const limpio = { ...c } as ISenderConfig & Record<string, unknown>
-                for (const campo of secretos) if (campo in limpio) limpio[campo] = ''
-                return limpio
-            })
+            stored: {
+                ...cleanCommon,
+                configs: configs.map(c => {
+                    const limpio = { ...c } as ISenderConfig & Record<string, unknown>
+                    for (const campo of secretos) if (campo in limpio) limpio[campo] = ''
+                    return limpio
+                })
+            }
         }
     },
     importConfig: async (data) => {
-        const entrantes = (data as { configs?: unknown })?.configs
-        if (!Array.isArray(entrantes)) return nada()
+        const stored = (data as { stored?: unknown })?.stored
+        if (!stored || typeof stored !== 'object') return nada()
+        const storedConfig = stored as ISenderStoredConfig
+        if (!Array.isArray(storedConfig.configs)) return nada()
         const warnings: string[] = []
         const omitidas = (data as { omitted?: number })?.omitted
         if (omitidas) warnings.push(`${omitidas} configuration(s) were left out of the file because this sender does not declare which of its fields are secret`)
-        let applied = 0
-        let skipped = 0
-        for (const config of entrantes as ISenderConfig[]) {
-            if (manager.addConfig(id, config)) applied++
-            else skipped++
-        }
-        return { applied, skipped, warnings }
+        // setSenderStoredConfig replaces the base AND the configs in one shot: the base is not
+        // recoverable from the configs alone, so a config-by-config addConfig would leave it empty.
+        manager.setSenderStoredConfig(id, storedConfig)
+        return { applied: storedConfig.configs.length, skipped: 0, warnings }
     }
 })
 

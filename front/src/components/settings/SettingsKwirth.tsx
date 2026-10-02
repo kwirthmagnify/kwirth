@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
-import { Add, Delete, Refresh, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Add, Delete, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
 /*
@@ -52,6 +52,8 @@ interface IMarketplaceRow extends IMarketplace {
 
 interface IPackageRegistryRow extends IPackageRegistry {
     revealed?: boolean
+    testing?: boolean
+    testResult?: string
 }
 
 // What 'GET /senders' answers with, of which only these two are read here.
@@ -238,6 +240,38 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             (r.auth?.type !== EPackageRegistryAuthType.BASIC || (r.auth.username ?? '').trim() !== '')
         )
 
+    // Same pattern as the marketplace test: the back end does the fetch, because a private registry is
+    // behind CORS and the browser does not have the credentials.
+    const testRegistry = async (index: number) => {
+        const row = registries[index]
+        patchRegistry(index, { testing: true, testResult: undefined })
+        try {
+            const payload = JSON.stringify({
+                url: row.url.trim(),
+                ...(row.auth ? { auth: {
+                    type: row.auth.type,
+                    ...(row.auth.username ? { username: row.auth.username.trim() } : {}),
+                    ...(row.auth.type === EPackageRegistryAuthType.BEARER
+                        ? { token: row.auth.token ?? '' }
+                        : { password: row.auth.password ?? '' })
+                } } : {})
+            })
+            const response = await fetch(`${props.clusterUrl}/core/settings/registry/test`, addPostAuthorization(props.accessString, payload))
+            if (!response.ok) {
+                patchRegistry(index, { testing: false, testResult: `Test failed (HTTP ${response.status})` })
+                return
+            }
+            const result = await response.json() as { ok: boolean, error?: string }
+            patchRegistry(index, {
+                testing: false,
+                testResult: result.ok ? 'Registry reachable' : result.error ?? 'Registry could not be reached'
+            })
+        }
+        catch {
+            patchRegistry(index, { testing: false, testResult: 'Could not reach Kwirth to run the test' })
+        }
+    }
+
 
     const ok = async () => {
         setError('')
@@ -293,21 +327,17 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         const tokenAuth = m.manifestAuth !== undefined && m.manifestAuth.type !== EManifestAuthType.NONE
         return (
             <Box key={m.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
-                <Stack direction='row' spacing={1} alignItems='center'>
-                    <TextField value={m.label} onChange={e => patchRow(index, { label: e.target.value })} variant='standard' label='Name' sx={{ width: '25%' }} />
+                <Stack direction='row' spacing={1} alignItems='baseline'>
+                    <TextField value={m.label} onChange={e => patchRow(index, { label: e.target.value })} variant='standard' label='Name' sx={{ width: '18%' }} />
                     <TextField value={m.url} onChange={e => patchRow(index, { url: e.target.value })} variant='standard' label='Manifest URL' sx={{ flexGrow: 1 }} placeholder='https://…/manifest.json' />
-                    <FormControlLabel control={<Checkbox checked={m.enabled} onChange={e => patchRow(index, { enabled: e.target.checked })} />} label='Enabled' />
-                    <Tooltip title='Check the manifest can be read'>
-                        <span><IconButton size='small' onClick={() => testRow(index)} disabled={m.testing || !/^https?:\/\/.+/i.test(m.url)}><Refresh fontSize='small' /></IconButton></span>
-                    </Tooltip>
-                    <Tooltip title='Remove this marketplace'>
-                        <IconButton size='small' color='error' onClick={() => setMarketplaces(prev => prev.filter((_, i) => i !== index))}><Delete fontSize='small' /></IconButton>
-                    </Tooltip>
+                    <Button size='small' variant='outlined' onClick={() => testRow(index)} disabled={m.testing || !/^https?:\/\/.+/i.test(m.url)}>TEST</Button>
                 </Stack>
-                <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}>
-                    <FormControlLabel
-                        control={<Checkbox checked={tokenAuth} onChange={e => patchManifestAuth(index, { type: e.target.checked ? EManifestAuthType.PRIVATE_TOKEN : EManifestAuthType.NONE })} />}
-                        label='Manifest needs a token' />
+                <Stack direction='row' spacing={1} sx={{ mt: 1, alignItems: 'last-baseline' }}>
+                    <Box sx={{ width: '18%' }}>
+                        <FormControlLabel
+                            control={<Checkbox checked={tokenAuth} onChange={e => patchManifestAuth(index, { type: e.target.checked ? EManifestAuthType.PRIVATE_TOKEN : EManifestAuthType.NONE })} />}
+                            label='Credentials' />
+                    </Box>
                     <FormControl variant='standard' sx={{ width: '22%' }} disabled={!tokenAuth}>
                         <InputLabel>Header</InputLabel>
                         <Select value={m.manifestAuth?.type ?? EManifestAuthType.NONE}
@@ -332,6 +362,15 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                                 </IconButton>
                             </InputAdornment>) } }} />
                 </Stack>
+                <Stack direction='row' spacing={1} sx={{ mt: 1, alignItems: 'last-baseline' }}>
+                    <Box sx={{ width: '18%' }}>
+                        <FormControlLabel control={<Checkbox checked={m.enabled} onChange={e => patchRow(index, { enabled: e.target.checked })} />} label='Enabled' />
+                    </Box>
+                    <Typography sx={{ flexGrow: 1 }}></Typography>
+                    <Tooltip title='Remove this marketplace'>
+                        <IconButton size='small' color='error' onClick={() => setMarketplaces(prev => prev.filter((_, i) => i !== index))}><Delete fontSize='small' /></IconButton>
+                    </Tooltip>
+                </Stack>
                 { m.testing && <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}><CircularProgress size={14} /><Typography variant='caption'>Reading manifest…</Typography></Stack> }
                 { m.testResult && <Typography variant='caption' color={m.testResult.startsWith('Manifest OK') ? 'success.main' : 'error.main'}>{m.testResult}</Typography> }
             </Box>
@@ -345,18 +384,17 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         const bearer = type === EPackageRegistryAuthType.BEARER
         return (
             <Box key={r.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
-                <Stack direction='row' spacing={1} alignItems='center'>
-                    <TextField value={r.label} onChange={e => patchRegistry(index, { label: e.target.value })} variant='standard' label='Name' sx={{ width: '25%' }} />
+                <Stack direction='row' spacing={1} alignItems='baseline'>
+                    <TextField value={r.label} onChange={e => patchRegistry(index, { label: e.target.value })} variant='standard' label='Name' sx={{ width: '18%' }} />
                     <TextField value={r.url} onChange={e => patchRegistry(index, { url: e.target.value })} variant='standard' label='Base URL' sx={{ flexGrow: 1 }} placeholder='https://…/repository/my-repo' />
-                    <FormControlLabel control={<Checkbox checked={r.enabled} onChange={e => patchRegistry(index, { enabled: e.target.checked })} />} label='Enabled' />
-                    <Tooltip title='Remove this registry'>
-                        <IconButton size='small' color='error' onClick={() => setRegistries(prev => prev.filter((_, i) => i !== index))}><Delete fontSize='small' /></IconButton>
-                    </Tooltip>
+                    <Button size='small' variant='outlined' onClick={() => testRegistry(index)} disabled={r.testing || !/^https?:\/\/.+/i.test(r.url)}>TEST</Button>
                 </Stack>
-                <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}>
-                    <FormControlLabel
-                        control={<Checkbox checked={needsAuth} onChange={e => patchRegistryAuth(index, { type: e.target.checked ? EPackageRegistryAuthType.BEARER : EPackageRegistryAuthType.NONE })} />}
-                        label='Needs credentials' />
+                <Stack direction='row' spacing={1} sx={{ mt: 1, alignItems: 'last-baseline' }}>
+                    <Box sx={{ width: '18%' }}>
+                        <FormControlLabel
+                            control={<Checkbox checked={needsAuth} onChange={e => patchRegistryAuth(index, { type: e.target.checked ? EPackageRegistryAuthType.BEARER : EPackageRegistryAuthType.NONE })} />}
+                            label='Credentials' />
+                    </Box>
                     { /* Bearer y Basic NO son intercambiables: el endpoint npm de un Nexus con user tokens
                          acepta el token como Bearer y rechaza esa misma credencial como Basic. */ }
                     <FormControl variant='standard' sx={{ width: '22%' }} disabled={!needsAuth}>
@@ -383,6 +421,17 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                                 </IconButton>
                             </InputAdornment>) } }} />
                 </Stack>
+                <Stack direction='row' spacing={1} sx={{ mt: 1, alignItems: 'last-baseline' }}>
+                    <Box sx={{ width: '18%' }}>
+                        <FormControlLabel control={<Checkbox checked={r.enabled} onChange={e => patchRegistry(index, { enabled: e.target.checked })} />} label='Enabled' />
+                    </Box>
+                    <Typography sx={{ flexGrow: 1 }}></Typography>
+                    <Tooltip title='Remove this registry'>
+                        <IconButton size='small' color='error' onClick={() => setRegistries(prev => prev.filter((_, i) => i !== index))}><Delete fontSize='small' /></IconButton>
+                    </Tooltip>
+                </Stack>
+                { r.testing && <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}><CircularProgress size={14} /><Typography variant='caption'>Testing registry…</Typography></Stack> }
+                { r.testResult && <Typography variant='caption' color={r.testResult.startsWith('Registry reachable') ? 'success.main' : 'error.main'}>{r.testResult}</Typography> }
             </Box>
         )
     }

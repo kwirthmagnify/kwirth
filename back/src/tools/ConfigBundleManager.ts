@@ -47,7 +47,7 @@ export type TExtensionSource = () => Promise<IExtensionRef[]>
 
 /** What the core contributes on its own account. Injected for the same reason. */
 export interface ICorePortableConfig {
-    readSettings: () => Promise<unknown>
+    readSettings: (includeCredentials: boolean) => Promise<unknown>
     writeSettings: (data: unknown) => Promise<void>
     readSharedAi: (includeCredentials: boolean) => Promise<unknown>
     writeSharedAi: (data: unknown) => Promise<void>
@@ -144,7 +144,7 @@ export class ConfigBundleManager {
             extensions: []
         }
 
-        if (quiere(CORE_SETTINGS_KEY)) bundle.core.settings = await this.core.readSettings()
+        if (quiere(CORE_SETTINGS_KEY)) bundle.core.settings = await this.core.readSettings(request.includeCredentials)
         if (quiere(CORE_SHARED_AI_KEY)) bundle.core.sharedAi = await this.core.readSharedAi(request.includeCredentials)
 
         for (const ref of await this.extensionSource()) {

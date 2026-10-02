@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Collapse, Divider, MenuItem, MenuList } from "@mui/material"
-import { ChevronRight, Delete, Description, Edit, ExpandMore, ExitToApp, FolderOpen, Home, Https, Hub, ImportExport, Info, Key, LockPerson, Memory, Palette, Person, RestartAlt, Save, SaveAs, Send, Settings, SmartToy, Construction } from '@kwirthmagnify/kwirth-common-front/icons'
+import { ChevronRight, Delete, Description, Download, Edit, ExpandMore, ExitToApp, FolderOpen, Home, Https, Hub, ImportExport, Info, Key, LockPerson, Memory, Palette, Person, RestartAlt, Save, SaveAs, Send, Settings, SmartToy, Upload, Construction } from '@kwirthmagnify/kwirth-common-front/icons'
 import { Extension, Factory } from '../icons'
 import { CreateNewFolder, FolderZip } from './icons'
 
@@ -14,7 +14,8 @@ enum MenuDrawerOption {
     ExportWorkspaces,
     SettingsUser,
     SettingsKwirth,
-    SettingsPortability,
+    SettingsExport,
+    SettingsImport,
     ManageCluster,
     UserSecurity,
     ApiSecurity,
@@ -90,10 +91,10 @@ const MenuDrawer: React.FC<IMenuDrawerProps> = (props:IMenuDrawerProps) => {
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsKwirth)} disabled={props.selectedClusterName===undefined}><Settings/>&nbsp;Kwirth settings</MenuItem>
             {/*
                 Portability is not a setting: it is an operation over the whole installation, extensions
-                included, and it used to be hidden behind two buttons at the foot of the settings dialog.
-                It sits next to them because that is where one looks for it, but on its own entry.
+                included. Two separate entries so each opens its own dialog directly.
             */}
-            <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsPortability)} disabled={props.selectedClusterName===undefined}><ImportExport/>&nbsp;Kwirth portability</MenuItem>
+            <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsExport)} disabled={props.selectedClusterName===undefined}><Download/>&nbsp;Kwirth export</MenuItem>
+            <MenuItem onClick={() => optionSelected(MenuDrawerOption.SettingsImport)} disabled={props.selectedClusterName===undefined}><Upload/>&nbsp;Kwirth import</MenuItem>
             <MenuItem onClick={() => optionSelected(MenuDrawerOption.ManageCluster)}><Edit/>&nbsp;Manage cluster list</MenuItem>
             <Divider/>
             { props.hasAdminScope &&

@@ -1,10 +1,12 @@
 import React, { useContext, useState } from 'react'
 import { useKeyboard } from '../../tools/useKeyboard'
-import { Button, Dialog, DialogActions, DialogContent, List, ListItem, ListItemButton, Stack, TextField, Typography} from '@mui/material'
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, List, ListItem, ListItemButton, Stack, TextField, Typography } from '@mui/material'
+import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline'
+import ErrorOutline from '@mui/icons-material/ErrorOutline'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { Cluster } from '../../model/Cluster'
-import { MsgBoxButtons, MsgBoxOk, MsgBoxWaitCancel, MsgBoxYesNo } from '../../tools/MsgBox'
+import { MsgBoxButtons, MsgBoxWaitCancel, MsgBoxYesNo } from '../../tools/MsgBox'
 import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { ENotifyLevel, readClusterInfo } from '../../tools/Global'
 import { KwirthData } from '@kwirthmagnify/kwirth-common'
@@ -15,15 +17,29 @@ interface IManageClustersProps {
   clusters?: Cluster[]
 }
 
+/*
+    What the TEST button leaves behind when it finishes: either the cluster data and its channels, or
+    an error message. It is drawn by a Dialog of our own instead of MsgBoxOk/MsgBoxOkError so the layout
+    — icon on the first line, a clean label/value list, MUI Chips for channel capabilities — can use the
+    theme instead of hardcoded HTML colours.
+*/
+interface ITestResult {
+    success: boolean
+    data?: KwirthData
+    clusterId?: string
+    error?: string
+}
+
 const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersProps) => {
     const { backendUrl } = useContext(SessionContext) as SessionContextType
-    const [clusters, setClusters] = useState<Cluster[]>(props.clusters || [])
+    const [clusters, setClusters] = useState<Cluster[]>(props.clusters ? [...props.clusters] : [])
     const [selectedCluster, setSelectedCluster] = useState<Cluster|null>()
     const [name, setName] = useState<string>('')
     const [url, setUrl] = useState<string>('')
     const [accessKey, setAccessKey] = useState<string>('')
-    const [msgBox, setMsgBox] =useState(<></>)
+    const [msgBox, setMsgBox] = useState(<></>)
     const [refresh, setRefresh] = useState(0)
+    const [testResult, setTestResult] = useState<ITestResult | null>(null)
 
     useKeyboard(() => props.onClose(clusters))
 
@@ -40,9 +56,9 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             selectedCluster.name = name
             selectedCluster.url = url
             selectedCluster.kwirthData = undefined
-            clusters.splice(clusters.indexOf(selectedCluster),1)
-            clusters.push(selectedCluster)
+            const updated = [...clusters.filter(c => c !== selectedCluster), selectedCluster]
             await readClusterInfo(selectedCluster, props.notify)
+            setClusters(updated)
             setRefresh(Math.random())
         }
         else {
@@ -51,53 +67,41 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             c.name = name
             c.url = url
             c.kwirthData = undefined
-            clusters.push(c)
+            const updated = [...clusters, c]
             await readClusterInfo(c, props.notify)
+            setClusters(updated)
             setRefresh(Math.random())
         }
         setName('')
         setUrl('')
         setAccessKey('')
-        setClusters(clusters)
     }
 
-    const onClickTest= async () => {
+    const onClickTest = async () => {
         try {
-            let kwirthOk = false
-            setMsgBox (MsgBoxWaitCancel('Test cluster','In order to add cluster to your cluster list we must first ensure we can connect with it and, if so, test if Kwirth is available and, if so, if evaluate Kwirth version for knowing if it is suitable for being connected to this Kwirth server.', setMsgBox))
-            let kwirthResponse = await fetch(`${url}/config/info`, addGetAuthorization(accessKey))
-            let clusterId = (await (await (await fetch(`${url}/config/cluster`, addGetAuthorization(accessKey))).json())).id
-            let data = await kwirthResponse.json() as KwirthData
-            kwirthOk = true
-           
-            let status = `Name: ${data.clusterName}<br/>`
-            status += `Id: ${clusterId}<br/>`
-            status += `Namespace: ${data.namespace}<br/>`
-            status += `Deployment: ${data.deployment}<br/>`
-            status += `inCluster: ${data.inCluster}<br/>`
-            status += `Version: ${data.version}<br/>`
-            status += `Last version: ${data.lastVersion}<br/>`
-            status += `Cluster type: ${data.clusterType}<br/>`
-            status += `Metrics interval: ${data.metricsInterval}`
+            setMsgBox(MsgBoxWaitCancel('Test cluster', 'Connecting to cluster and verifying Kwirth availability...', setMsgBox))
 
-            if (kwirthOk) {
-                let suppChannels  = data.channels.map(channel => {
-                    let suppSources  = '['+channel.sources.join(',')+']'
-                    return `<b>${channel.id}</b>: ${channel.routable?'route ':''}${channel.pauseable?'pause ':''}${channel.modifiable?'modify ':''}${channel.reconnectable?'reconnect ':''}${channel.metrics?'metrics ':''} ${suppSources}`
-                }).join('<br/>')
-                setMsgBox(MsgBoxOk('Test cluster',`Connection to cluster and API key have been <font color=green>succesfully tested</font>. This is cluster data: <br/><br/>${status}<br/><br/>And these are supported channels: <br/>${suppChannels}`, setMsgBox))
+            const [infoResponse, clusterResponse] = await Promise.all([
+                fetch(`${url}/config/info`, addGetAuthorization(accessKey)),
+                fetch(`${url}/config/cluster`, addGetAuthorization(accessKey))
+            ])
+
+            if (infoResponse.status !== 200 || clusterResponse.status !== 200) {
+                const status = infoResponse.status !== 200 ? infoResponse.status : clusterResponse.status
+                setMsgBox(<></>)
+                setTestResult({ success: false, error: `Connection failed (HTTP ${status}). Check the URL and API key.` })
+                return
             }
-            else {
-                if (kwirthOk) {
-                    setMsgBox(MsgBoxOk('Test cluster',`Connection to cluster has been <font color=green>succesfully tested</font>:<br/><br/>${status}<br/><br/>But, Kwirth API key you've entered <font color=red>seems not to be correct</font>.`, setMsgBox))
-                }
-                else {
-                    setMsgBox(MsgBoxOk('Test cluster',`Connection to cluster nor API key <font color='red'>couldn't be tested</font>.`, setMsgBox))
-                }
-            }
+
+            const data = await infoResponse.json() as KwirthData
+            const clusterId = (await clusterResponse.json()).id
+
+            setMsgBox(<></>)
+            setTestResult({ success: true, data, clusterId })
         }
         catch (error) {
-            setMsgBox(MsgBoxOk('Test cluster',`Couldn't test connection. Error: <br/><br/>${error}`, setMsgBox))
+            setMsgBox(<></>)
+            setTestResult({ success: false, error: `Could not test connection: ${error}` })
         }
     }
 
@@ -114,7 +118,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
 
     const onConfirmDelete= async () => {
         if (selectedCluster) {
-            clusters.splice(clusters.indexOf(selectedCluster),1)
+            setClusters(clusters.filter(c => c !== selectedCluster))
             setName('')
             setUrl('')
             setAccessKey('')
@@ -122,13 +126,25 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         }
     }
 
+    /*
+        The channel capabilities that earn a chip: the order is fixed so the same channel always shows
+        them in the same order, regardless of how the flags arrive.
+    */
+    const channelCaps = (ch: KwirthData['channels'][number]): string[] => [
+        ch.routable ? 'route' : null,
+        ch.pauseable ? 'pause' : null,
+        ch.modifiable ? 'modify' : null,
+        ch.reconnectable ? 'reconnect' : null,
+        ch.metrics ? 'metrics' : null
+    ].filter(Boolean) as string[]
+
     return (<>
         <Dialog open={true} fullWidth maxWidth='md' disableEnforceFocus>
             <DialogTitleHelp section='guide/admin/06-cluster-management?id=add-a-remote-cluster' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Manage clusters</DialogTitleHelp>
             <DialogContent data-refresh={refresh}>
                 <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
                     <List sx={{flexGrow:1, mr:2, width:'50vh' }}>
-                        { clusters?.map(c => 
+                        { clusters?.map(c =>
                             <ListItemButton key={c.url} selected={c===selectedCluster} onClick={() => onClusterSelected(c)}>
                                 <ListItem>
                                   <Stack direction={'column'} sx={{width:'100%'}}>
@@ -163,6 +179,91 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
               <Button onClick={() => props.onClose(clusters)}>CLOSE</Button>
             </DialogActions>
         </Dialog>
+
+        {/*
+            Test result dialog. The icon sits on the first line, next to the success/error message;
+            the cluster data is a clean label/value list; the channels use MUI Chips that follow the
+            theme. Nothing here is hardcoded HTML — every colour comes from the palette.
+        */}
+        {testResult && (
+            <Dialog open={true} onClose={() => setTestResult(null)} fullWidth maxWidth='sm'>
+                <DialogTitle>Test cluster</DialogTitle>
+                <DialogContent>
+                    {testResult.success ? (
+                        <Stack spacing={2}>
+                            {/* Success header: icon and message on the same line */}
+                            <Stack direction='row' alignItems='center' spacing={1}>
+                                <CheckCircleOutline color='success' />
+                                <Typography color='success.main' fontWeight={600}>
+                                    Connection and API key successfully tested
+                                </Typography>
+                            </Stack>
+
+                            <Divider />
+
+                            {/* Cluster data as label/value rows */}
+                            <Box>
+                                <Stack direction='row' spacing={2}>
+                                    <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Name</Typography>
+                                    <Typography>{testResult.data!.clusterName}</Typography>
+                                </Stack>
+                                <Stack direction='row' spacing={2}>
+                                    <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Id</Typography>
+                                    <Typography>{testResult.clusterId}</Typography>
+                                </Stack>
+                                <Stack direction='row' spacing={2}>
+                                    <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Workload</Typography>
+                                    <Typography>{testResult.data!.namespace}/{testResult.data!.deployment}</Typography>
+                                </Stack>
+                                <Stack direction='row' spacing={2}>
+                                    <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>inCluster</Typography>
+                                    <Typography>{String(testResult.data!.inCluster)}</Typography>
+                                </Stack>
+                                <Stack direction='row' spacing={2}>
+                                    <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Version</Typography>
+                                    <Typography>{testResult.data!.version}</Typography>
+                                </Stack>
+                                <Stack direction='row' spacing={2}>
+                                    <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Metrics interval</Typography>
+                                    <Typography>{testResult.data!.metricsInterval}</Typography>
+                                </Stack>
+                            </Box>
+
+                            <Divider />
+
+                            {/* Supported channels */}
+                            <Typography fontWeight={600}>Supported channels</Typography>
+                            <Stack spacing={1}>
+                                {testResult.data!.channels.map(ch => {
+                                    const caps = channelCaps(ch)
+                                    return (
+                                        <Stack direction='row' alignItems='center' spacing={1} key={ch.id}>
+                                            <Typography fontWeight={600}>{ch.id}</Typography>
+                                            {caps.map(cap => (
+                                                <Chip key={cap} label={cap} size='small' variant='outlined' />
+                                            ))}
+                                            <Typography variant='caption' color='text.secondary'>
+                                                [{ch.sources.join(', ')}]
+                                            </Typography>
+                                        </Stack>
+                                    )
+                                })}
+                            </Stack>
+                        </Stack>
+                    ) : (
+                        /* Error: icon and message on the same line */
+                        <Stack direction='row' alignItems='center' spacing={1}>
+                            <ErrorOutline color='error' />
+                            <Typography color='error.main'>{testResult.error}</Typography>
+                        </Stack>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setTestResult(null)}>ok</Button>
+                </DialogActions>
+            </Dialog>
+        )}
+
         {msgBox}
     </>)
 }

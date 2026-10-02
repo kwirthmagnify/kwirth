@@ -51,6 +51,41 @@ export class SettingsApi {
         return (await configMaps.read(SETTINGS_KEY, {})) as IKwirthSettings ?? {}
     }
 
+    /*
+        Writes settings splitting credentials into ISecrets, the same the PUT handler does. Used by the
+        config-bundle import, which cannot go through the HTTP route: it has the data, not a Request.
+        The log is applied hot for the same reason as the PUT.
+    */
+    public async writeWithSecrets(incoming: IKwirthSettings): Promise<void> {
+        const stored = await SettingsApi.read(this.configMaps)
+        const merged: IKwirthSettings = { ...stored, ...incoming }
+        if (incoming.metricsInterval !== undefined) merged.metricsInterval = +incoming.metricsInterval
+
+        if (incoming.marketplaces !== undefined) {
+            const problem = SettingsApi.validateMarketplaces(incoming.marketplaces)
+            if (problem) throw new Error(problem)
+            const { clean, tokens } = this.splitCredentials(incoming.marketplaces)
+            merged.marketplaces = clean
+            for (const [id, token] of tokens) await this.secrets.writeKey(TOKENS_KEY, id, token)
+            const removed = (stored.marketplaces ?? []).filter(old => !clean.some(m => m.id === old.id))
+            for (const old of removed) await this.secrets.writeKey(TOKENS_KEY, old.id, null)
+        }
+
+        if (incoming.packageRegistries !== undefined) {
+            const problem = SettingsApi.validatePackageRegistries(incoming.packageRegistries)
+            if (problem) throw new Error(problem)
+            const { clean, secrets } = this.splitRegistryCredentials(incoming.packageRegistries)
+            merged.packageRegistries = clean
+            for (const [id, password] of secrets) await this.secrets.writeKey(REGISTRY_KEY, id, password)
+            const removed = (stored.packageRegistries ?? []).filter(old => !clean.some(r => r.id === old.id))
+            for (const old of removed) await this.secrets.writeKey(REGISTRY_KEY, old.id, null)
+        }
+
+        await this.configMaps.write(SETTINGS_KEY, merged)
+        if (incoming.log !== undefined) applyLogSettings(merged.log)
+        if (this.onSettingsChanged) this.onSettingsChanged(merged)
+    }
+
     // The metrics interval's effective value: what is stored wins, then METRICSINTERVAL, then the default.
     public static resolveMetricsInterval(settings: IKwirthSettings): number {
         if (settings.metricsInterval && settings.metricsInterval > 0) return settings.metricsInterval
@@ -176,7 +211,7 @@ export class SettingsApi {
 
     // Fills every marketplace with its stored secret. They travel to the front end like any other field:
     // the form pre-fills them masked and the eye reveals them, with no separate endpoint.
-    private async withSecrets(settings: IKwirthSettings): Promise<IKwirthSettings> {
+    public async withSecrets(settings: IKwirthSettings): Promise<IKwirthSettings> {
         if (!settings.marketplaces?.length && !settings.packageRegistries?.length) return settings
         const [tokens, passwords] = await Promise.all([
             this.secrets.readAllKeys(TOKENS_KEY),
@@ -215,6 +250,49 @@ export class SettingsApi {
             .get( async (req:Request, res:Response) => {
                 if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
                 res.status(200).json(logComponentCatalog())
+            })
+
+        /*
+            A package registry's reachability test. Same reason as the marketplace manifest test: the
+            browser cannot reach a private registry (CORS, and it does not have the credentials), so the
+            back end does it. The credentials travel in the body as they do in the PUT — the GET already
+            returned them to the form.
+        */
+        this.router.route('/registry/test')
+            .all( async (req:Request, res:Response, next) => {
+                if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+                if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
+                next()
+            })
+            .post( async (req:Request, res:Response) => {
+                try {
+                    const body = req.body as { url?: string, auth?: IPackageRegistry['auth'] }
+                    if (!body?.url) { res.status(200).json({ ok: false, error: 'a registry url is required' }); return }
+                    const headers: Record<string, string> = {}
+                    if (body.auth?.type === EPackageRegistryAuthType.BASIC) {
+                        const credentials = `${body.auth.username ?? ''}:${body.auth.password ?? ''}`
+                        headers['Authorization'] = `Basic ${Buffer.from(credentials).toString('base64')}`
+                    }
+                    else if (body.auth?.type === EPackageRegistryAuthType.BEARER) {
+                        headers['Authorization'] = `Bearer ${body.auth.token ?? ''}`
+                    }
+                    const response = await fetch(body.url, { headers })
+                    if (response.status === 401 || response.status === 403) {
+                        res.status(200).json({ ok: false, error: `Authentication failed (HTTP ${response.status})` })
+                        return
+                    }
+                    /*
+                        Any other HTTP status means the registry IS reachable: a bare GET to an npm
+                        registry base URL routinely returns 400 (it expects a package path) or 404,
+                        yet npm install works perfectly. The only real failures are a network error
+                        (caught below) and bad credentials (handled above).
+                    */
+                    res.status(200).json({ ok: true, status: response.status })
+                }
+                catch (err) {
+                    logError(ELogComponent.CORE, `Error testing package registry: ${err}`)
+                    res.status(500).json({ ok: false, error: 'unexpected error' })
+                }
             })
 
         this.router.route('/')

@@ -1599,7 +1599,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     providers: ri.clusterInfo.providers
                 }),
                 {
-                    readSettings: () => SettingsApi.read(ri.configMaps),
+                    readSettings: async (includeCredentials: boolean) => {
+                        const settings = await SettingsApi.read(ri.configMaps)
+                        return includeCredentials ? settingsResult!.withSecrets(settings) : settings
+                    },
                     /*
                         Imported settings are APPLIED, not just written. The log travels inside like any
                         other field, and writing it into the configmap alone would leave it stored but not
@@ -1607,8 +1610,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                         writing another, which is precisely the kind of lie this setting exists to avoid.
                     */
                     writeSettings: async (data: unknown) => {
-                        await ri.configMaps.write('kwirth.settings', data)
-                        applyKwirthSettings(data as IKwirthSettings)
+                        await settingsResult!.writeWithSecrets(data as IKwirthSettings)
                     },
                     // The common AI store: the models in a configmap and the providers in a secret,
                     // exactly as AiConfigApi stores them. The providers carry keys, so they only come out
