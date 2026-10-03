@@ -32,8 +32,8 @@ const SaveWorkspace: React.FC<ISaveWorkspaceProps> = (props:ISaveWorkspaceProps)
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => props.onClose(newname, desc)} disabled={Boolean(props.values.find(b => b.name === newname))}>OK</Button>
-                <Button onClick={() => props.onClose()}>CANCEL</Button>
+                <Button variant='outlined' onClick={() => props.onClose(newname, desc)} disabled={Boolean(props.values.find(b => b.name === newname))}>OK</Button>
+                <Button variant='outlined' onClick={() => props.onClose()}>CANCEL</Button>
             </DialogActions>
         </Dialog>
     )

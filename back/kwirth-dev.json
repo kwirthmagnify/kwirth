@@ -2,30 +2,18 @@
     "plugins": {
         "agora": "../plugins/agora/dist",
         "excubitor": "../plugins/excubitor/dist",
-        "montag": "../plugins/montag/dist",
-        "provider-debug": "../plugins/provider-debug/dist",
-        "status": "../plugins/status/dist",
-        "dce-consumer": "../dces/sample/consumer/dist",
-        "nettools": "../plugins/nettools/dist",
-        "situs": "../plugins/situs/dist",
-        "sugarless": "../plugins/sugarless/dist",
-        "trivy": "../plugins/trivy/dist"
+        "montag": "../plugins/montag/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",
         "suse-longhorn": "../providers/suse-longhorn/dist",
-        "azure": "../providers/azure/dist",
         "fluentbit": "../providers/fluentbit/dist",
-        "sugarless": "../providers/sugarless/dist",
         "aws": "../providers/aws/dist",
-        "cloud-config": "../providers/cloud-config/dist",
-        "flight-status": "../providers/flight-status/dist"
+        "cloud-config": "../providers/cloud-config/dist"
     },
     "senders": {
-        "file": "../senders/file/dist",
         "datadog": "../senders/datadog/dist",
-        "gitlab-issues": "../senders/gitlab-issues/dist",
-        "email-resend": "../senders/email-resend/dist"
+        "gitlab-issues": "../senders/gitlab-issues/dist"
     },
     "webhooks": {
         "gitlab-issues": "../webhooks/gitlab-issues/dist"
@@ -39,8 +27,7 @@
         "suse-fleet": "../aitoolsets/suse-fleet/dist"
     },
     "dces": {
-        "sample": "../dces/sample/dist",
-        "nettools": "../dces/nettools/dist"
+        "sample": "../dces/sample/dist"
     },
     "docs": {}
 }

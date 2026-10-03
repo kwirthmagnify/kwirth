@@ -43,10 +43,10 @@ const WorkspacePickerDialog: React.FC<IWorkspacePickerDialogProps> = ({ title, w
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button onClick={onCancel}>Cancel</Button>
                 <Button onClick={() => onConfirm(selected)} variant='contained' disabled={selected.length === 0}>
                     Confirm
                 </Button>
+                <Button variant='outlined' onClick={onCancel}>Cancel</Button>
             </DialogActions>
         </Dialog>
     )

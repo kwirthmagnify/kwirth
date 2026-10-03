@@ -40,7 +40,7 @@ const SelectWorkspace: React.FC<ISelectWorkspaceProps> = (props:ISelectWorkspace
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => props.onSelect(props.action)}>{props.action === 'load'? 'CANCEL':'CLOSE'}</Button>
+                <Button variant='outlined' onClick={() => props.onSelect(props.action)}>{props.action === 'load'? 'CANCEL':'CLOSE'}</Button>
             </DialogActions>
         </Dialog>
     )

@@ -15,7 +15,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const repoRoot = path.resolve(here, '..', '..', '..')
+const repoRoot = path.resolve(here, '..', '..', '..', '..')
 const chartDir = path.resolve(here, '..', 'kwirth')
 const yaml = createRequire(path.join(repoRoot, 'back', 'package.json'))('js-yaml')
 const chartMeta = yaml.load(readFileSync(path.join(chartDir, 'Chart.yaml'), 'utf8'))

@@ -170,13 +170,13 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             </DialogContent>
             <DialogActions>
               <Stack direction='row' spacing={1}>
-                <Button onClick={onClickNew}>NEW</Button>
-                <Button onClick={onClickSave} disabled={selectedCluster?.home || name==='' || url==='' || accessKey==='' }>SAVE</Button>
-                <Button onClick={onClickTest} disabled={!url || !url.toLocaleLowerCase().startsWith('http') || !accessKey}>TEST</Button>
-                <Button onClick={onClickDelete} disabled={selectedCluster===undefined || selectedCluster?.home}>DELETE</Button>
+                <Button variant='outlined' onClick={onClickNew}>NEW</Button>
+                <Button variant='outlined' onClick={onClickSave} disabled={selectedCluster?.home || name==='' || url==='' || accessKey==='' }>SAVE</Button>
+                <Button variant='outlined' onClick={onClickTest} disabled={!url || !url.toLocaleLowerCase().startsWith('http') || !accessKey}>TEST</Button>
+                <Button variant='outlined' onClick={onClickDelete} disabled={selectedCluster===undefined || selectedCluster?.home}>DELETE</Button>
               </Stack>
               <Typography sx={{flexGrow:1}}></Typography>
-              <Button onClick={() => props.onClose(clusters)}>CLOSE</Button>
+              <Button variant='outlined' onClick={() => props.onClose(clusters)}>CLOSE</Button>
             </DialogActions>
         </Dialog>
 
@@ -259,7 +259,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setTestResult(null)}>ok</Button>
+                    <Button variant='outlined' onClick={() => setTestResult(null)}>ok</Button>
                 </DialogActions>
             </Dialog>
         )}

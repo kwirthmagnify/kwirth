@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const chartDir = path.join(here, 'kwirth')
-const repoDir = path.resolve(here, '..', '..', 'docs', 'helm-charts')
+const repoDir = path.resolve(here, '..', '..', '..', 'docs', 'helm-charts')
 const repoUrl = 'https://kwirthmagnify.dev/helm-charts'
 
 const run = (cmd, args) => {
