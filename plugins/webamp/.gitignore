@@ -1,0 +1,5 @@
+node_modules/
+dist/
+tests/.out/
+docs/*.tgz
+e2e/test-results/
