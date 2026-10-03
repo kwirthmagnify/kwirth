@@ -13,7 +13,7 @@
   "dependencies": {
     "@kwirthmagnify/kwirth-common": "^0.5.62",
     "@kwirthmagnify/kwirth-common-back": "^0.6.0",
-    "@kwirthmagnify/kwirth-common-front": "^0.5.64"
+    "@kwirthmagnify/kwirth-common-front": "^0.5.65"
   },
   "devDependencies": {
     "@mui/material": "7.1.2",

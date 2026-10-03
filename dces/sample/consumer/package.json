@@ -1,31 +1,31 @@
 {
-    "id": "dce-consumer",
-    "displayName": "DCE Consumer",
-    "publisher": "@kwirthmagnify",
-    "version": "0.1.0",
-    "description": "Development stub: a plugin that consumes the sample DCE on both ends, to prove there is ONE instance. Not published",
-    "private": true,
-    "icon": "<svg viewBox='0 0 24 24'><g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='3'/><path d='M12 2v4M12 18v4M2 12h4M18 12h4'/></g></svg>",
-    "type": "module",
-    "scripts": {
-        "build": "node build.mjs",
-        "watch": "node watch.mjs"
-    },
-    "dependencies": {
-        "@kwirthmagnify/kwirth-common": "^0.5.62",
-        "@kwirthmagnify/kwirth-common-back": "^0.6.0",
-        "@kwirthmagnify/kwirth-common-front": "^0.5.64"
-    },
-    "devDependencies": {
-        "@mui/material": "7.1.2",
-        "@types/node": "^20.12.13",
-        "@types/react": "^18.3.0",
-        "esbuild": "^0.27.2",
-        "react": "^18.3.0",
-        "typescript": "^5.4.0"
-    },
-    "requiresRestart": false,
-    "requiresExtension": [
-        "dce:sample:0.1.0"
-    ]
+  "id": "dce-consumer",
+  "displayName": "DCE Consumer",
+  "publisher": "@kwirthmagnify",
+  "version": "0.1.0",
+  "description": "Development stub: a plugin that consumes the sample DCE on both ends, to prove there is ONE instance. Not published",
+  "private": true,
+  "icon": "<svg viewBox='0 0 24 24'><g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='3'/><path d='M12 2v4M12 18v4M2 12h4M18 12h4'/></g></svg>",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node watch.mjs"
+  },
+  "dependencies": {
+    "@kwirthmagnify/kwirth-common": "^0.5.62",
+    "@kwirthmagnify/kwirth-common-back": "^0.6.0",
+    "@kwirthmagnify/kwirth-common-front": "^0.5.65"
+  },
+  "devDependencies": {
+    "@mui/material": "7.1.2",
+    "@types/node": "^20.12.13",
+    "@types/react": "^18.3.0",
+    "esbuild": "^0.27.2",
+    "react": "^18.3.0",
+    "typescript": "^5.4.0"
+  },
+  "requiresRestart": false,
+  "requiresExtension": [
+    "dce:sample:0.1.0"
+  ]
 }

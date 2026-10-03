@@ -13,7 +13,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-ai": "^0.5.53"
+    "@kwirthmagnify/kwirth-common-ai": "^0.5.64"
   },
   "devDependencies": {
     "@types/node": "^20.12.13",
