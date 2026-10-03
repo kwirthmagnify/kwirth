@@ -100,7 +100,14 @@
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.26.tgz",
     "description": "Echo channel plugin for Kwirth - sends periodic test messages from watched resources",
-    "icon": "Science"
+    "icon": "Science",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "otel",
+        "minVersion": "0.1.10"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -109,7 +116,14 @@
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.25.tgz",
     "description": "Echo channel plugin for Kwirth - sends periodic test messages from watched resources",
-    "icon": "Science"
+    "icon": "Science",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "otel",
+        "minVersion": "0.1.10"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -267,7 +281,14 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.52.tgz",
     "description": "Censor channel plugin for Kwirth - LLM-based log noise filtering",
     "icon": "FilterList",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -277,7 +298,14 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.51.tgz",
     "description": "Censor channel plugin for Kwirth - LLM-based log noise filtering",
     "icon": "FilterList",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -287,7 +315,14 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.50.tgz",
     "description": "Censor channel plugin for Kwirth - LLM-based log noise filtering",
     "icon": "FilterList",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -297,7 +332,14 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.49.tgz",
     "description": "Censor channel plugin for Kwirth - LLM-based log noise filtering",
     "icon": "FilterList",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -350,7 +392,14 @@
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.23.tgz",
     "description": "Echo channel plugin for Kwirth - sends periodic test messages from watched resources",
-    "icon": "Science"
+    "icon": "Science",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "otel",
+        "minVersion": "0.1.10"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -485,7 +534,39 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.38.tgz",
     "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
     "icon": "AutoFixHigh",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-inventory",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-describe",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-observability",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-metrics",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-secrets",
+        "minVersion": "0.1.0"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -496,7 +577,39 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.37.tgz",
     "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
     "icon": "AutoFixHigh",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-inventory",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-describe",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-observability",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-metrics",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-secrets",
+        "minVersion": "0.1.0"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -507,7 +620,39 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.36.tgz",
     "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
     "icon": "AutoFixHigh",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-inventory",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-describe",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-observability",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-metrics",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-secrets",
+        "minVersion": "0.1.0"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -518,7 +663,39 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.33.tgz",
     "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
     "icon": "AutoFixHigh",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-inventory",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-describe",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-observability",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-metrics",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-secrets",
+        "minVersion": "0.1.0"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -529,7 +706,39 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.32.tgz",
     "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
     "icon": "AutoFixHigh",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-inventory",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-describe",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-observability",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-metrics",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-secrets",
+        "minVersion": "0.1.0"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -597,7 +806,14 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.27.tgz",
     "description": "Trivy security scanning channel plugin for Kwirth",
     "icon": "VerifiedUser",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "trivy",
+        "minVersion": "0.1.7"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -608,7 +824,14 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.26.tgz",
     "description": "Trivy security scanning channel plugin for Kwirth",
     "icon": "VerifiedUser",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "trivy",
+        "minVersion": "0.1.7"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -664,7 +887,14 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.21.tgz",
     "description": "Trivy security scanning channel plugin for Kwirth",
     "icon": "VerifiedUser",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "trivy",
+        "minVersion": "0.1.7"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -684,7 +914,14 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.15.tgz",
     "description": "Trivy security scanning channel plugin for Kwirth",
     "icon": "VerifiedUser",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "trivy",
+        "minVersion": "0.1.7"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -768,7 +1005,14 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.22.tgz",
     "description": "Trivy security scanning channel plugin for Kwirth",
     "icon": "VerifiedUser",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "trivy",
+        "minVersion": "0.1.7"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -849,7 +1093,14 @@
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.24.tgz",
     "description": "Echo channel plugin for Kwirth - sends periodic test messages from watched resources",
-    "icon": "Science"
+    "icon": "Science",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "otel",
+        "minVersion": "0.1.10"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -869,7 +1120,39 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.34.tgz",
     "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
     "icon": "AutoFixHigh",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-inventory",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-describe",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-observability",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-metrics",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-secrets",
+        "minVersion": "0.1.0"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -879,7 +1162,14 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-nettools/-/kwirth-plugin-nettools-0.2.1.tgz",
     "description": "Net tools channel for Kwirth - resolves DNS names and checks TCP ports from where Kwirth runs, and charts the round trips, through the nettools DCE",
     "icon": "<svg viewBox='0 0 24 24'><g fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='9'/><path d='M3 12h18'/><path d='M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z'/></g></svg>",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "dce",
+        "id": "nettools",
+        "minVersion": "0.2.0"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
@@ -889,7 +1179,14 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-nettools/-/kwirth-plugin-nettools-0.2.0.tgz",
     "description": "Net tools channel for Kwirth - resolves DNS names and checks TCP ports from where Kwirth runs, and charts the round trips, through the nettools DCE",
     "icon": "<svg viewBox='0 0 24 24'><g fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='9'/><path d='M3 12h18'/><path d='M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z'/></g></svg>",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "dce",
+        "id": "nettools",
+        "minVersion": "0.2.0"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
