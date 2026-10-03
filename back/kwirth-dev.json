@@ -9,7 +9,9 @@
         "nettools": "../plugins/nettools/dist",
         "situs": "../plugins/situs/dist",
         "sugarless": "../plugins/sugarless/dist",
-        "trivy": "../plugins/trivy/dist"
+        "trivy": "../plugins/trivy/dist",
+        "webamp": "../plugins/webamp/dist",
+        "rallyx": "../plugins/rallyx/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",

@@ -1,0 +1,150 @@
+// Rally-X main entry point.
+// Modified from upstream: cookies → localStorage, added postMessage bridge for parent communication.
+requirejs.config({
+    baseUrl: '.',
+    paths: {}
+});
+
+requirejs([
+    "solo",
+], function (
+    Solo
+) {
+    game = new Phaser.Game(1280, 960, Phaser.CANVAS, "Rally-X");
+    var highScore;
+    var highScoreRound;
+
+    // Replaced cookie-based persistence with localStorage (more reliable in iframe srcdoc).
+    var setCookie = function(cname, cvalue, exdays) {
+        try { localStorage.setItem('rallyx_' + cname, cvalue); } catch(e) {}
+    };
+
+    var getCookie = function(cname) {
+        try { return localStorage.getItem('rallyx_' + cname) || ""; } catch(e) { return ""; }
+    };
+
+    var deleteCookie = function(cname) {
+        try { localStorage.removeItem('rallyx_' + cname); } catch(e) {}
+    };
+
+    var Init = function (game) {
+
+        this.init = function (args) {
+            highScore = getCookie("highScore") || 0;
+            highScoreRound = getCookie("highScoreRound") || 0;
+        };
+
+        this.preload = function () {
+            game.scale.pageAlignHorizontally = true;
+            game.scale.pageAlignVertically = true;
+            // game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+
+            //game.load.audio('default', ['captured.wav']);
+        };
+
+        this.create = function () {
+
+            // var backgroundMusic = game.add.audio('default');
+            // backgroundMusic.loop = true;
+            // backgroundMusic.play();
+
+            // starting ARCADE physics
+            game.physics.startSystem(Phaser.Physics.ARCADE);
+            game.state.start("title", true, false, {
+                highScore: highScore,
+                highScoreRound: highScoreRound
+            });
+        };
+    };
+
+    var Title = function (game) {
+
+        this.init = function (args) {
+            if (args.endGame === true) {
+                if (args.score > highScore) {
+                    highScore = args.score;
+                    highScoreRound = args.round;
+                    setCookie("highScore", highScore);
+                    setCookie("highScoreRound", highScoreRound);
+                }
+                // Report game-over score to parent (Kwirth plugin) via postMessage.
+                try { parent.postMessage({ type: 'rallyx-gameover', score: args.score, round: args.round }, '*'); } catch(e) {}
+            }
+        };
+
+        this.preload = function () {
+            game.load.image("title", "assets/title.png");
+        };
+
+        this.start = function () {
+            game.state.start("solo", true, false, {
+                highScore: highScore,
+                highScoreRound: highScoreRound
+            });
+        };
+
+        this.create = function () {
+            var self = this;
+            game.add.sprite(0, 0, 'title');
+
+            game.input.onDown.add(function (e) {
+                self.start();
+            }, self);
+
+            // handle keyboard
+            game.input.keyboard.onDownCallback = function (ev) {
+                switch (ev.keyCode) {
+                    case 17:
+                    case 32:
+                        self.start();
+                        break;
+                }
+            };
+        };
+    };
+
+    game.state.add("init", new Init(game));
+    game.state.add("title", new Title(game));
+    game.state.add("solo", new Solo(game));
+    game.state.start("init");
+
+    // ── postMessage bridge: poll game state and report to parent ──────────
+    // The parent (RallyxMachine) reads HUD values from these messages.
+    var lastState = '';
+    setInterval(function() {
+        try {
+            var state = game.state.current;
+            var payload = { type: 'rallyx-state', state: state };
+
+            if (state === 'solo') {
+                var solo = game.state.states['solo'];
+                if (solo && solo.player) {
+                    payload.score = solo.player.score || 0;
+                    payload.lives = solo.player.lives !== undefined ? solo.player.lives : 0;
+                    payload.fuel = solo.player.fuel !== undefined ? Math.round(solo.player.fuel) : 0;
+                    payload.round = solo.round || 1;
+                    payload.highScore = solo.highScore || 0;
+                }
+            } else if (state === 'title') {
+                payload.highScore = parseInt(highScore) || 0;
+            }
+
+            var sig = JSON.stringify(payload);
+            if (sig !== lastState) {
+                lastState = sig;
+                parent.postMessage(payload, '*');
+            }
+        } catch(e) {}
+    }, 250);
+
+    // Listen for commands from parent (pause/continue/start).
+    window.addEventListener('message', function(ev) {
+        try {
+            var msg = ev.data;
+            if (!msg || typeof msg !== 'object') return;
+            if (msg.type === 'rallyx-start' && game.state.current === 'title') {
+                game.state.start("solo", true, false, { highScore: highScore, highScoreRound: highScoreRound });
+            }
+        } catch(e) {}
+    });
+});
