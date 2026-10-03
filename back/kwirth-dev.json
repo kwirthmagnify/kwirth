@@ -10,8 +10,7 @@
         "situs": "../plugins/situs/dist",
         "sugarless": "../plugins/sugarless/dist",
         "trivy": "../plugins/trivy/dist",
-        "webamp": "../plugins/webamp/dist",
-        "rallyx": "../plugins/rallyx/dist"
+        "webamp": "../plugins/webamp/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",
