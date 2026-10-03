@@ -1,111 +1,194 @@
-# Default values for the Kwirth chart.
+# Default values for the Kwirth Helm chart.
 #
 # Everything hangs off 'kwirth', so a values file written for chart 0.1.x keeps working: the keys that still
 # mean something are honoured, and the ones the core no longer reads (channelLog, channelAlert, channelOps,
 # channelTrivy, channelEcho, channelFileman) are silently ignored. Those capabilities are plugins now,
 # installed from the marketplace, not switched on at deploy time.
+#
+# After install, first login is admin / password — change it immediately from the UI or by editing the
+# kwirth-users Secret. See the chart README for the full parameter table.
 
 kwirth:
-  # The image. Either the object below or, as in 0.1.x, a full reference as a string
-  # ("kwirthmagnify/kwirth:0.6.38"). With an empty tag the appVersion of the chart is used: that is the image
-  # this chart was tested with. Do not rely on 'latest', it is not moved with every release.
+  # ---------------------------------------------------------------------------
+  # Container image
+  # ---------------------------------------------------------------------------
+  # The image can be given as the object below OR, for 0.1.x compatibility, as a plain string
+  # ("kwirthmagnify/kwirth:0.6.38"). A string form sets pullPolicy to Always.
   image:
+    # The registry/repo. Change this to use a mirror or a private registry.
     repository: kwirthmagnify/kwirth
+    # The tag. Empty ("") resolves to the chart appVersion — the image this chart was tested with.
+    # Do NOT use "latest": it is not moved with every release and you lose reproducibility.
+    # Example: "0.6.38" to pin a specific Kwirth version.
     tag: ""
+    # When to pull. IfNotPresent is right for a pinned tag. Always is forced when a string image is used.
     pullPolicy: IfNotPresent
+
+  # Pull secrets for a private registry. List of { name: "my-secret" } objects.
+  # The Secret must exist in the release namespace; create it with kubectl create secret docker-registry.
   imagePullSecrets: []
 
+  # Number of pod replicas. More than one requires sticky sessions at the Ingress (the nginx controller
+  # defaults in this chart set them). With persistence enabled (ReadWriteOnce volume) this is effectively 1.
   replicas: 1
+  # How many old ReplicaSets to keep. 0 = only the current revision.
   revisionHistoryLimit: 0
 
-  # What the core reads from its environment. Each key maps to one env var of the container.
+  # ---------------------------------------------------------------------------
+  # Core configuration (config.* — each key maps to one env var of the container)
+  # ---------------------------------------------------------------------------
   config:
-    # ROOTPATH: the URL path Kwirth is served under. Empty means the root.
+    # ROOTPATH — the URL path Kwirth is served under. Must match the Ingress path if you use one.
+    # Empty means the root (/). Common values: /kwirth, /observability.
     rootpath: /kwirth
-    # PORT: the port the core listens on (also the container port).
+    # PORT — the port the core listens on. Also the container port and the default service port.
+    # Change it only if you have a reason; the service.port is what the cluster sees.
     port: 3883
-    # MASTERKEY: signs the access keys handed to clients and, with a filesystem store, derives the key that
-    # encrypts secrets at rest. Change it after the first run with a filesystem store and the stored secrets
-    # become unreadable. Delivered through a Secret, never inline in the pod spec.
+    # MASTERKEY — signs the access keys handed to clients and, with a filesystem store, derives the
+    # encryption key for secrets at rest. Delivered through a Secret, never inline in the pod spec.
+    # IMPORTANT: changing it after the first run with a filesystem store makes stored secrets unreadable.
+    # With the default store (Secrets/ConfigMaps) it is safe to change.
     masterkey: Kwirth4Ever
-    # AUTH: 'kwirth' (built-in users) or the id of an installed IdP connector.
+    # AUTH — the authentication backend. "kwirth" = built-in users (the kwirth-users Secret).
+    # Any other value = the id of an installed IdP connector (e.g. "entraid", "github", "gitlab").
+    # The connector must be installed and configured before you switch.
     auth: kwirth
-    # CHANNEL_METRICS / CHANNEL_MAGNIFY: the two channels still built into the core.
+    # CHANNEL_METRICS — the built-in metrics channel (cluster metrics, node/pod resource usage).
+    # CHANNEL_MAGNIFY — the built-in magnify channel (log magnification, live tail).
+    # Both are core channels; everything else is a plugin from the marketplace.
     channelMetrics: true
     channelMagnify: true
-    # METRICSINTERVAL: seconds between metrics samples.
+    # METRICSINTERVAL — seconds between metrics samples. Lower = more granular but more load on the
+    # Kubernetes metrics API. 15 is a good default; 5 for near-real-time, 60 for low-traffic clusters.
     metricsInterval: 15
-    # PREVIOUSLOGLINES: lines of the previous container log shown in the About dialog after a restart.
-    # Empty keeps the core default.
+    # PREVIOUSLOGLINES — how many lines of the previous container log to show in the About dialog
+    # after a restart. Empty = core default (200). 0 = none.
     previousLogLines: ""
-    # BODYLIMIT: ceiling on a request body (log ingestion through providers).
+    # BODYLIMIT — ceiling on a single request body. Mainly affects log ingestion through providers.
+    # Format: a number + unit, e.g. "8mb", "1gb". Too low will reject large log batches.
     bodyLimit: 8mb
-    # KEEPALIVE: idle HTTP connection keep-alive, in milliseconds.
+    # KEEPALIVE — idle HTTP connection keep-alive in milliseconds. 65000 is ~65s; raise it for
+    # long-lived websocket connections behind a proxy that allows it.
     keepAlive: 65000
-    # FRONT: serve the web front end. Set to false for an API-only Kwirth.
+    # FRONT — serve the web front end (the SPA). Set to false for an API-only Kwirth (headless,
+    # extensions-only). The front end is ~10MB; disabling it saves a little memory.
     front: true
-    # ANSILOG / EXITLOG: colour in the core log, and log the reason on exit.
+    # ANSILOG — colour codes in the core log output. Set to false if your log collector strips them
+    # and you see escape sequences in your log viewer.
     ansiLog: true
+    # EXITLOG — log the reason when the process exits. Useful for diagnosing OOMKills and crashes.
     exitLog: true
-    # KWIRTH_CLUSTER_NAME: how this Kwirth names its cluster. Empty derives it from the cluster itself.
+    # KWIRTH_CLUSTER_NAME — the name Kwirth uses for its cluster in the UI and in stored data.
+    # Empty = derived from the cluster itself (cluster API server name or a cloud provider tag).
+    # Set it explicitly in multi-cluster setups to tell them apart.
     clusterName: ""
-    # KWIRTH_STORE: where configuration is persisted. Empty or 'etcd' = Kubernetes Secrets and ConfigMaps in
-    # the release namespace (the default). A path = encrypted files under it; use it together with
-    # 'persistence' below or with your own volume in extraVolumes/extraVolumeMounts.
+    # KWIRTH_STORE — where Kwirth persists its configuration (users, API keys, extension configs).
+    #   "" or "etcd" = Kubernetes Secrets and ConfigMaps in the release namespace (the default).
+    #   A path (e.g. "/mnt/kwirth-data") = encrypted files under that path. Use it together with
+    #   'persistence' below or with your own volume in extraVolumes/extraVolumeMounts.
+    # When persistence.enabled is true and store is empty, the chart sets it to persistence.mountPath.
     store: ""
-    # KWIRTH_LICENSE: the license blob that unlocks paid extensions. Delivered through a Secret. Empty = open
-    # source mode.
+    # KWIRTH_LICENSE — the license blob that unlocks paid extensions (Excubitor, Agora, etc.).
+    # Delivered through a Secret, never inline. Empty = open-source mode (no paid extensions).
+    # Get a license at https://kwirthmagnify.dev.
     license: ""
 
-  # Use a Secret of your own instead of the chart-managed one for the sensitive env vars. It must carry the
-  # keys MASTERKEY and, when needed, KWIRTH_LICENSE and KWIRTH_SQL_PASSWORD. When set, 'masterkey', 'license'
-  # and 'sql.password' above are ignored.
+  # ---------------------------------------------------------------------------
+  # External Secret for sensitive env vars
+  # ---------------------------------------------------------------------------
+  # Use a Secret of your own instead of the chart-managed one. It must carry:
+  #   MASTERKEY          — always
+  #   KWIRTH_LICENSE     — if you use a license
+  #   KWIRTH_SQL_PASSWORD — if sql.enabled and you set sql.password
+  # When set, the chart renders no Secret and ignores 'masterkey', 'license' and 'sql.password'.
+  # This is the recommended path for production: manage secrets with External Secrets, Sealed Secrets,
+  # or your platform's secret manager, and point Kwirth at them.
   existingSecret: ""
 
-  # Data persistence: the PostgreSQL server that extensions with data of their own (findings, histories,
-  # conversations) use. Optional and lazy: the core does not connect until an extension asks for its
-  # database. The chart does NOT deploy Postgres; point it at yours.
+  # ---------------------------------------------------------------------------
+  # Data persistence — PostgreSQL for extensions that store data
+  # ---------------------------------------------------------------------------
+  # Extensions with data of their own (findings, histories, conversations, AI chats) use a PostgreSQL
+  # server. The chart does NOT deploy Postgres — point it at yours. The core connects lazily: it does
+  # not open a connection until an extension asks for its database, so 'enabled: true' with an empty
+  # host is harmless until an extension tries to use it.
   sql:
     enabled: false
+    # KWIRTH_SQL_CLIENT — the client driver. "pg" is the only supported value today.
     client: pg
+    # KWIRTH_SQL_HOST — the PostgreSQL host. A service DNS name (e.g. "postgres.data.svc") or an IP.
     host: ""
+    # KWIRTH_SQL_PORT — the PostgreSQL port. 5432 is the default; 5433 if you use the Kwirth dev image.
     port: 5432
+    # KWIRTH_SQL_USER — the role Kwirth connects as. It needs CREATE on the maintenance database
+    # (extensions create their own schemas/tables).
     user: postgres
+    # KWIRTH_SQL_PASSWORD — the password. Goes into the Secret as KWIRTH_SQL_PASSWORD, never inline.
+    # Ignored when existingSecret is set.
     password: ""
+    # KWIRTH_SQL_SSL — require TLS to Postgres. "true" or "false". Set to true in production.
     ssl: false
+    # KWIRTH_SQL_MAINTDB — the database Kwirth connects to for maintenance (creating extension databases).
+    # "postgres" is the standard default.
     maintenanceDb: postgres
 
-  # Configuration persistence on a volume instead of Secrets/ConfigMaps. Enabling it sets KWIRTH_STORE to
-  # 'mountPath' (unless 'config.store' says otherwise), mounts the claim there and switches the Deployment to
-  # the Recreate strategy, since a ReadWriteOnce volume cannot be shared by two pods during a rollout.
+  # ---------------------------------------------------------------------------
+  # Configuration persistence on a volume
+  # ---------------------------------------------------------------------------
+  # By default Kwirth keeps its configuration in Secrets and ConfigMaps of its own namespace. Where that
+  # is not wanted (e.g. GitOps purges unknown resources, or you want encryption at rest), enable a volume.
+  # Enabling it sets KWIRTH_STORE to 'mountPath' (unless 'config.store' says otherwise), mounts the claim
+  # there and switches the Deployment to the Recreate strategy, since a ReadWriteOnce volume cannot be
+  # shared by two pods during a rollout.
   persistence:
     enabled: false
-    # An existing PersistentVolumeClaim. Empty creates one.
+    # Use an existing PersistentVolumeClaim instead of creating one. Empty = the chart creates one.
+    # When set, no PVC is rendered and storageClass/accessModes/size are ignored.
     existingClaim: ""
+    # Storage class for the created claim. Empty = the cluster default. Use a fast class (SSD) for
+    # best responsiveness; configuration reads are frequent.
     storageClass: ""
     accessModes:
       - ReadWriteOnce
+    # Size of the created claim. 1Gi is plenty for configuration; raise it if you store large extension
+    # data on the same volume.
     size: 1Gi
+    # Where the volume is mounted in the container. This becomes KWIRTH_STORE when persistence is enabled.
     mountPath: /mnt/kwirth-data
 
-  # The users Secret. Its name is fixed ('kwirth-users'): it is what the core reads in its own namespace.
-  # The chart creates it on the first install with the admin below, then never touches it again: users are
-  # managed from Kwirth, and the Secret survives upgrades and even 'helm uninstall' (resource-policy keep).
-  # On a fresh install with 'bootstrap: false' nobody can log in, so only disable it if you create the
-  # Secret yourself.
+  # ---------------------------------------------------------------------------
+  # Users — the bootstrap admin
+  # ---------------------------------------------------------------------------
+  # The users Secret has a fixed name ('kwirth-users'): it is what the core reads in its own namespace.
+  # The chart creates it on the first install with the admin below, then never touches it again: users
+  # are managed from Kwirth's UI, and the Secret survives upgrades and even 'helm uninstall'
+  # (helm.sh/resource-policy: keep). On a fresh install with 'bootstrap: false' nobody can log in,
+  # so only disable it if you create the Secret yourself.
   users:
     bootstrap: true
-    # {"id":"admin","name":"Nicklaus Wirth","password":"password","resources":"cluster,admin::::"}, base64.
+    # The bootstrap admin user, base64-encoded JSON. The default is:
+    #   {"id":"admin","name":"Nicklaus Wirth","password":"password","resources":"cluster,admin::::"}
+    # The "resources" field grants both cluster-wide and admin scopes. To change the initial password,
+    # encode your own JSON and put it here — but it is simpler to install with the default and change
+    # the password from the UI immediately after first login.
     admin: eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0=
 
-  # Anything else the container should see. Plain EnvVar / EnvFromSource / Volume / VolumeMount lists. IdP
-  # connectors resolve ${VAR} placeholders in their configuration against the environment, which keeps
-  # client secrets out of ConfigMaps.
+  # ---------------------------------------------------------------------------
+  # Extra pod configuration
+  # ---------------------------------------------------------------------------
+  # Anything else the container should see. Plain Kubernetes lists, passed through as-is.
+  # extraEnv: EnvVar objects — e.g. { name: "OIDC_SECRET", valueFrom: { secretKeyRef: { name: "oidc", key: "secret" } } }
+  # extraEnvFrom: EnvFromSource objects — e.g. { configMapRef: { name: "my-cm" } }
+  # IdP connectors resolve ${VAR} placeholders in their configuration against the environment, so this
+  # is where their client secrets go (referenced from a Secret, not hardcoded).
   extraEnv: []
   extraEnvFrom: []
   extraVolumes: []
   extraVolumeMounts: []
 
+  # Pod resource requests and limits. The defaults are conservative; raise them for production.
+  # Kwirth is light on CPU (mostly waiting on the Kubernetes API) but can spike on memory with many
+  # extensions or large log magnifications. 256Mi request / 2Gi limit is a safe starting point.
   resources:
     limits:
       cpu: "1"
@@ -114,48 +197,76 @@ kwirth:
       cpu: "0"
       memory: 256Mi
 
+  # Annotations and labels on the pod template (not the Deployment). Useful for hashiCorp Vault injection,
+  # Datadog admission, linkerd, etc.
   podAnnotations: {}
   podLabels: {}
+  # Pod-level and container-level security contexts. The defaults are empty; set them to match your
+  # platform policy. Example: { runAsNonRoot: true, runAsUser: 1000, fsGroup: 1000 }
   podSecurityContext: {}
   securityContext: {}
+  # Scheduling constraints — all passed through as-is.
   nodeSelector: {}
   tolerations: []
   affinity: {}
   priorityClassName: ""
+  # Grace period for pod termination. Kwirth shuts down fast (closes its store, stops watchers);
+  # 5s is enough. Raise it if you have extensions that need to flush on shutdown.
   terminationGracePeriodSeconds: 5
 
-  # All three probes hit GET /healthz on the container port.
+  # ---------------------------------------------------------------------------
+  # Health probes — all three hit GET /healthz on the named container port
+  # ---------------------------------------------------------------------------
+  # The startup probe gates the others: until it passes, readiness and liveness are not run.
+  # failureThreshold * periodSeconds = how long Kubernetes waits before giving up.
   probes:
     startup:
       initialDelaySeconds: 20
       periodSeconds: 10
+      # 30 * 10 = 300s max startup time. Kwirth starts in ~10s normally; raise if extensions are slow.
       failureThreshold: 30
     readiness:
       initialDelaySeconds: 20
       periodSeconds: 10
       timeoutSeconds: 5
     liveness:
+      # 60s cadence — Kwirth is healthy if it answers /healthz once a minute.
       periodSeconds: 60
       timeoutSeconds: 30
+      # 3 * 60 = 180s before a healthy pod is marked unhealthy. Conservative for production.
       failureThreshold: 3
 
+  # ---------------------------------------------------------------------------
+  # Service account
+  # ---------------------------------------------------------------------------
   serviceAccount:
     create: true
-    # Empty = '<fullname>-sa'.
+    # Empty = '<release>-sa'. Set to use an existing ServiceAccount (create must be false).
     name: ""
+    # Annotations on the ServiceAccount. This is where IRSA (AWS) and Workload Identity (GCP/Azure)
+    # annotations go, e.g. { eks.amazonaws.com/role-arn: arn:aws:iam::... }
     annotations: {}
-  # The 0.1.x home of the same annotations; still honoured.
+  # The 0.1.x home of the same annotations; still honoured for backwards compatibility.
   sa:
     serviceAccount:
       annotations: {}
 
-  # The ClusterRole the core runs with. By default it gets every verb on every resource of the API groups
-  # below, which is what the core and the built-in channels need. Providers and plugins that watch CRDs of
-  # their own (Fleet, Longhorn, Kubewarden, Trivy...) need their groups added to 'extraApiGroups', or
-  # 'clusterAdmin', which is the 0.1.x behaviour: '*' on '*'.
+  # ---------------------------------------------------------------------------
+  # RBAC — the ClusterRole the core runs with
+  # ---------------------------------------------------------------------------
+  # By default the core gets every verb on every resource of the API groups listed below. That is what
+  # the core and the built-in channels (metrics, magnify) need. Providers and plugins that watch CRDs
+  # of their own (Fleet, Longhorn, Kubewarden, Trivy...) need their groups added to 'extraApiGroups',
+  # or set 'clusterAdmin: true' for the 0.1.x behaviour: '*' on '*' (not recommended for production).
   rbac:
     create: true
+    # true = a single rule { apiGroups: ['*'], resources: ['*'], verbs: ['*'] } (cluster-admin equivalent).
+    # Convenient but over-permissive; prefer extraApiGroups for least privilege.
     clusterAdmin: false
+    # The API groups the core needs. Each gets resources: ['*'], verbs: ['*'].
+    # This list covers: core resources, Deployments, Jobs, HPA, PodDisruptionBudgets, leases, metrics,
+    # RBAC (for extension service accounts), Ingresses, StorageClasses, CRDs, webhooks, node/scheduling,
+    # events, discovery, and Trivy vulnerability reports (aquasecurity.github.io).
     apiGroups:
       - ""
       - apps
@@ -174,33 +285,59 @@ kwirth:
       - events.k8s.io
       - discovery.k8s.io
       - aquasecurity.github.io
+    # Extra API groups to add to the rule, for providers that watch CRDs.
+    # Examples: "fleet.cattle.io" (Fleet/GitOps), "longhorn.io" (Longhorn storage),
+    # "openreports.io" (Kubewarden), "external-secrets.io" (External Secrets).
     extraApiGroups: []
-    # Whole PolicyRule objects, appended as they are.
+    # Whole PolicyRule objects, appended as-is. Use this for non-resource URLs or fine-grained rules.
+    # Example: [{ nonResourceURLs: ["/metrics"], verbs: ["get"] }]
     extraRules: []
 
+  # ---------------------------------------------------------------------------
+  # Service — how the pod is exposed inside the cluster
+  # ---------------------------------------------------------------------------
   service:
+    # ClusterIP is the default. NodePort or LoadBalancer if you have no Ingress controller.
     type: ClusterIP
+    # The port the Service listens on. Defaults to config.port. Change it if you want a different
+    # external port (e.g. 80) while keeping the container on 3883.
     port: 3883
+    # Annotations on the Service. E.g. for a cloud LB: { service.beta.kubernetes.io/aws-load-balancer-type: "nlb" }
     annotations: {}
 
+  # ---------------------------------------------------------------------------
+  # Ingress — how Kwirth is exposed outside the cluster
+  # ---------------------------------------------------------------------------
   ingress:
     enabled: false
-    # nginx | agic | generic. 'generic' renders className, annotations and tls exactly as given.
+    # Controller type. Determines the ingress class and default annotations.
+    #   nginx  — nginx-ingress. Gets sticky sessions (cookie) and a 3600s proxy-read-timeout (websockets).
+    #   agic   — Azure Application Gateway Ingress Controller. Gets health-probe and timeout annotations.
+    #   generic — renders className, annotations and tls exactly as given, with no defaults.
     controller: nginx
     # Empty picks the class of the controller ('nginx' / 'azure-application-gateway').
+    # Required for 'generic'. Set to your controller's class (e.g. 'traefik', 'haproxy').
     className: ""
-    # Merged on top of the defaults of the controller (sticky sessions and long timeouts for nginx, the
-    # health probe settings for agic).
+    # Annotations merged on top of the controller defaults. Yours win over the defaults.
+    # Example: { nginx.ingress.kubernetes.io/proxy-read-timeout: "10" } overrides the 3600 default.
     annotations: {}
+    # The hostname. Required for TLS; without it, the rule matches any host.
     hostname: www.myhost.com
-    # Generic TLS, the Kubernetes way: [{ secretName, hosts: [] }].
+    # Generic TLS, the Kubernetes way: a list of { secretName, hosts: [] }.
+    # Example: [{ secretName: "kwirth-tls", hosts: ["kwirth.example.com"] }]
     tls: []
+    # nginx-specific TLS (the 0.1.x way). Prefer 'tls' above for new installs.
     nginx:
       tls: false
       secret: cert-secret-name
+    # agic-specific options.
     agic:
+      # Use a private frontend IP instead of the public one.
       privateip: false
+      # Request timeout in seconds. Maps to the appgw request-timeout annotation.
       timeout: "300"
 
-nameOverride: ""
-fullnameOverride: ""
+  # Override the chart name and the full release name. Leave empty for defaults
+  # (name = "kwirth", fullname = "<release>-kwirth").
+  nameOverride: ""
+  fullnameOverride: ""
