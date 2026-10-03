@@ -2,7 +2,8 @@
     "plugins": {
         "agora": "../plugins/agora/dist",
         "excubitor": "../plugins/excubitor/dist",
-        "montag": "../plugins/montag/dist"
+        "montag": "../plugins/montag/dist",
+        "pacman": "../plugins/pacman/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",

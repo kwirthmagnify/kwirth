@@ -1,0 +1,35 @@
+{
+    "id": "pacman",
+    "name": "Pac-Man",
+    "displayName": "Pac-Man",
+    "extensionType": "plugin",
+    "publisher": "@kwirthmagnify",
+    "version": "0.1.0",
+    "description": "Pac-Man channel plugin for Kwirth - the classic arcade game playable in a Kwirth tab, with per-tab persistent game state",
+    "icon": "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20.32 8.56A9 9 0 1 0 20.32 15.44L12 12Z' fill='currentColor' stroke='none'/></svg>",
+    "requiresRestart": false,
+    "requiresExtension": [],
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs",
+        "postbuild": "node build-docs-tgz.mjs",
+        "watch": "node watch.mjs",
+        "docs": "node build-docs-tgz.mjs"
+    },
+    "dependencies": {
+        "@kwirthmagnify/kwirth-common": "^0.5.62",
+        "@kwirthmagnify/kwirth-common-back": "^0.6.0",
+        "@kwirthmagnify/kwirth-common-front": "^0.5.65"
+    },
+    "devDependencies": {
+        "@mui/icons-material": "7.1.2",
+        "@mui/material": "7.1.2",
+        "@types/node": "^20.12.13",
+        "@types/react": "^18.3.0",
+        "esbuild": "^0.27.2",
+        "react": "^18.3.0",
+        "react-dom": "^18.3.0",
+        "tar": "^7.5.22",
+        "typescript": "^5.4.0"
+    }
+}
