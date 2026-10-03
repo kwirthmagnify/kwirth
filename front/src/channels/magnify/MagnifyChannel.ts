@@ -36,6 +36,8 @@ class MagnifyChannel implements IChannel {
         accessString: true,
         clusterUrl: true,
         clusterInfo: true,
+        clusterManagement: true,
+        multiCluster: true,
         exit: true,
         frontChannels: true,
         metrics: true,
@@ -308,6 +310,7 @@ class MagnifyChannel implements IChannel {
         magnifyData.paused = false
         magnifyData.started = false
         this.tasks.forEach( (id) => clearInterval(id))
+        this.tasks = []
         return true
     }
 

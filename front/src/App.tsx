@@ -1318,6 +1318,55 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 tabs.current = tabs.current.filter(t => t !== newTab)
                 populateTabObject(user, tabName, channelId, target, view, namespace, group, pod, container, wasStarted, fullscreen, cfg)
             }
+            // In-place cluster switch: same tab, same channel instance, fresh WS against the target cluster.
+            // Available to any channel with clusterManagement — the channel decides whether to call this
+            // or selectCluster (which recreates the tab). No channelId branching here.
+            newTab.channelObject.switchCluster = (clusterName: string) => {
+                const target = clustersRef.current.find(c => c.name === clusterName)
+                if (!target || target.name === newTab.channelObject.clusterName) return
+                // 1. Stop the channel (clears task intervals, sets started=false)
+                newTab.channel.stopChannel(newTab.channelObject)
+                // 2. Close the old WebSocket properly
+                if (newTab.ws) {
+                    newTab.ws.onopen = null
+                    newTab.ws.onerror = null
+                    newTab.ws.onmessage = null
+                    newTab.ws.onclose = null
+                    newTab.ws.close()
+                }
+                clearInterval(newTab.keepAliveRef)
+                if (newTab.reconnectRef) clearInterval(newTab.reconnectRef)
+                newTab.keepAliveRef = undefined
+                newTab.reconnectRef = undefined
+                // 3. Repoint the channelObject at the target cluster
+                newTab.channelObject.clusterName = target.name
+                newTab.channelObject.clusterUrl = target.url
+                newTab.channelObject.accessString = target.accessString
+                newTab.channelObject.clusterInfo = target.clusterInfo
+                newTab.channelObject.instanceId = ''
+                // 4. Reset cluster-specific data IN-PLACE (do NOT replace the object — React useEffect
+                //    closures captured the reference). Do NOT clear files: startChannel filters them to
+                //    keep the static top-level menu (Overview, Workloads, etc.) which was pushed once
+                //    on mount by useEffect([]) and is NOT re-pushed. LIST responses will repopulate
+                //    the cluster-specific items under those sections.
+                const magnifyData = newTab.channelObject.data as any
+                if (magnifyData) {
+                    magnifyData.clusterInfo = undefined
+                    magnifyData.clusterEvents = []
+                    magnifyData.metricsCluster = []
+                    magnifyData.started = false
+                    magnifyData.currentPath = '/overview'
+                    magnifyData.pendingWebSocketRequests = new Map()
+                }
+                // 5. Open a fresh WS and start the channel on connect
+                newTab.channelStarted = false
+                startSocket(newTab, target, () => {
+                    if (newTab.channel.requirements.webSocket) newTab.channelObject.webSocket = newTab.ws
+                    setKeepAlive(newTab)
+                    startTabChannel(newTab, target)
+                    setChannelMessageAction({action: EChannelRefreshAction.REFRESH})
+                })
+            }
         }
         if (newTab.channel.requirements.exit) newTab.channelObject.exit = () => {
             setBackendUrl(props.backendUrl)

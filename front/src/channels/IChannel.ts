@@ -18,6 +18,8 @@ interface IChannelObject extends IChannelObjectBase {
     frontChannels?: Map<string, TChannelConstructor>
     backChannels?: BackChannelData[]
     exitFullscreen?: () => void
+    /** In-place cluster switch — set up by the framework for any channel with clusterManagement. */
+    switchCluster?: (clusterName: string) => void
 }
 
 interface ISetupProps extends ISetupPropsBase {

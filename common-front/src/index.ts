@@ -88,6 +88,8 @@ export interface IChannelObject {
     clusters?: IClusterSummary[]
     selectedClusterName?: string
     selectCluster?: (clusterName: string) => void
+    /** In-place cluster switch: closes the current WS, resets the channel and opens a fresh one against the target cluster — same tab, no recreation. */
+    switchCluster?: (clusterName: string) => void
     openClusterManager?: () => void
     getClusters?: () => IClusterEndpoint[]   // clusters with an endpoint (url+accessString) for multi-cluster federation
     // Opens a channel connection to each cluster (by name), already started; the core handles the
