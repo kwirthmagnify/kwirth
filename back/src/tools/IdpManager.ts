@@ -7,11 +7,11 @@ import { ISecrets } from './ISecrets'
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo } from './Logging'
 import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, IIdpInstanceConfig, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
-import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType } from './BundledExtensions'
 import { downloadFile, packageHeaders } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertExtensionRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 
 const IDPS_SECRET = 'kwirth-idps'
 const CONNECTORS_INDEX = 'kwirth-idp-connectors-index'
@@ -54,7 +54,7 @@ interface IIdpConnectorMeta {
     marketplaceLabel?: string
     backStored?: boolean
     requiresRestart?: boolean
-    requiresExtension?: string[]
+    requiresExtension?: IExtensionRequirement[]
 }
 
 /*
@@ -188,7 +188,7 @@ export class IdpManager {
                 marketplaceId,
                 marketplaceLabel,
                 requiresRestart: pkg.requiresRestart ?? false,
-                requiresExtension: pkg.requiresExtension ?? []
+                requiresExtension: normalizeRequires(pkg.requiresExtension)
             }
             // A connector that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertExtensionRequirements('IdP connector', meta.id, meta.requiresExtension, installedFrom)

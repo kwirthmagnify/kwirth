@@ -1,4 +1,4 @@
-import { IProviderFieldDef } from '@kwirthmagnify/kwirth-common-back'
+import { IProviderFieldDef, IExtensionRequirement } from '@kwirthmagnify/kwirth-common-back'
 import { IConfigMaps } from './IConfigMap'
 import { TProviderConstructor } from '../providers/IProvider'
 import { ELogComponent, logError, logInfo } from './Logging'
@@ -9,7 +9,7 @@ import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertExtensionRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 
 /**
  * @deprecated use IProviderFieldDef from kwirth-common-back, which is the contract common to every
@@ -35,7 +35,7 @@ export interface IProviderMeta {
     frontStored?: boolean
     hasSchema?: boolean
     requiresRestart?: boolean
-    requiresExtension?: string[]
+    requiresExtension?: IExtensionRequirement[]
 }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
@@ -100,7 +100,7 @@ export class ProviderManager {
             meta.description = pkg.description ?? ''
             meta.website = pkg.website
             // Without it a dev provider required no DCE: nobody saw it as a consumer.
-            meta.requiresExtension = pkg.requiresExtension ?? []
+            meta.requiresExtension = normalizeRequires(pkg.requiresExtension)
         } catch {}
 
         this.devProviders.set(id, { distPath: absPath, meta })
@@ -173,7 +173,7 @@ export class ProviderManager {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
                 const hasFront = fs.existsSync(path.join(dev.distPath, 'front.js'))
                 const hasSchema = this.devSchemas.has(id)
-                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: pkg.requiresExtension ?? [], hasFront, hasSchema }
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: normalizeRequires(pkg.requiresExtension), hasFront, hasSchema }
             } catch {
                 return dev.meta
             }

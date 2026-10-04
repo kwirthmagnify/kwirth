@@ -1,4 +1,8 @@
 import 'dotenv/config';
+// LogBuffer monkey-patches console.log/error to capture stdout in a ring buffer. Must be imported BEFORE
+// any log line is written so nothing is lost. The buffer is always capturing; the CoreLogProvider exposes
+// it only when there is no Kubernetes API.
+import './tools/LogBuffer'
 import { ApisApi, CoreV1Api, AppsV1Api, KubeConfig, KubernetesObjectApi, Log, Watch, Exec, V1Pod, CustomObjectsApi, RbacAuthorizationV1Api, ApiextensionsV1Api, VersionApi, NetworkingV1Api, StorageV1Api, BatchV1Api, AutoscalingV2Api, NodeV1Api, SchedulingV1Api, CoordinationV1Api, AdmissionregistrationV1Api, PolicyV1Api, V1ConfigMap } from '@kubernetes/client-node'
 import { ConfigApi } from './api/ConfigApi'
 import { KubernetesSecrets } from './tools/KubernetesSecrets'
@@ -28,7 +32,7 @@ import { AiToolsetApi } from './api/AiToolsetApi'
 import { DceManager } from './tools/DceManager'
 import { buildPluginStatuses } from './tools/PluginStatus'
 import { DceApi } from './api/DceApi'
-import { findConsumers, IRequirer, setInstalledExtensionsSource, emptyInstalledIndex } from './tools/ExtensionDeps'
+import { findConsumers, IRequirer, setInstalledExtensionsSource, emptyInstalledIndex, normalizeRequires } from './tools/ExtensionDeps'
 import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
 import { ManageClusterApi } from './api/ManageClusterApi'
 import { AuthorizationManagement } from './tools/AuthorizationManagement'
@@ -49,7 +53,7 @@ import { DockerConfigMaps } from './tools/DockerConfigMaps'
 import { NodeConfigMaps } from './tools/NodeConfigMaps'
 import { NodeSecrets } from './tools/NodeSecrets'
 
-import { IUserInfo, IKwirthSettings, EExecutionEnvironment, EExtensionType, ERouteOwnerKind } from '@kwirthmagnify/kwirth-common'
+import { IUserInfo, IKwirthSettings, EExecutionEnvironment, EExtensionType, ERouteOwnerKind, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import { EStoreKind, IEnvironmentCapabilities, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType } from './tools/ExecutionEnvironment'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import * as _kwirthCommon from '@kwirthmagnify/kwirth-common'
@@ -83,6 +87,7 @@ import { resolveConsumedProviders, wireProviderConsumers, wireExtensionConsumers
 import { buildProviderStorage } from './tools/ProviderStorage'
 import { EventsProvider } from './providers/events/EventsProvider'
 import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
+import { CoreLogProvider } from './providers/corelog/CoreLogProvider'
 
 import { applyLogSettings, ELogComponent, logError, logInfo, logTrace, logWarning, providerLogger, setLogConfig } from './tools/Logging'
 import { PluginManager } from './tools/PluginManager'
@@ -224,6 +229,9 @@ licenseManager.load()
 const registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
 registeredProviders.set('metrics', MetricsProvider)
+// 'corelog' is registered conditionally after capabilities are resolved: only when there is no Kubernetes
+// API. In a pod the kubelet keeps the log and the REST endpoint serves it; everywhere else this provider
+// takes that role through the Status plugin's WebSocket.
 
 // registry of IdP connectors (bundled ones are registered in code; dev ones through loadDevIdps; installable ones in EPIC G)
 const registeredIdps = new Map<string, TIdpConnectorConstructor>()
@@ -2019,6 +2027,25 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         }
 
         /*
+            Internal provider: the core's own log buffer. Only when there is no Kubernetes API — in a pod
+            the kubelet keeps the container log and the REST endpoint serves it. No channel declares it
+            (the Status plugin observes, it does not consume) and it has no router, so neither loop above
+            creates it; it is instantiated here.
+        */
+        if (!capabilities.kubernetes && !localClusterInfo.providers.some(p => p.id === 'corelog')) {
+            try {
+                const coreLogInstance = createProviderInstance(CoreLogProvider, localClusterInfo, localKwirthData, runningInstance.providerStorage)
+                if (coreLogInstance) {
+                    localClusterInfo.providers.push(coreLogInstance)
+                    await coreLogInstance.startProvider()
+                    logInfo(ELogComponent.CORE, `Provider 'corelog' started (in-memory log capture for non-Kubernetes environments)`)
+                }
+            } catch (err) {
+                logError(ELogComponent.CORE, `Provider 'corelog' failed to start: ${err}`)
+            }
+        }
+
+        /*
             Providers that only ANOTHER provider needs: no channel lists them and they may expose no
             router, so neither loop above creates them. Resolved transitively over everything already
             running (see Consumer.ts), before the wiring phase so onProvidersReady() finds them.
@@ -2129,7 +2156,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             */
             manager.setConsumerResolver(async (dceId: string) => {
                 const requirers: IRequirer[] = []
-                const add = (type: EExtensionType, metas: { id: string, requiresExtension?: string[] }[]): void => {
+                const add = (type: EExtensionType, metas: { id: string, requiresExtension?: IExtensionRequirement[] }[]): void => {
                     for (const m of metas) requirers.push({ type, id: m.id, requiresExtension: m.requiresExtension })
                 }
                 if (pluginManager) add(EExtensionType.PLUGIN, await pluginManager.listInstalled())

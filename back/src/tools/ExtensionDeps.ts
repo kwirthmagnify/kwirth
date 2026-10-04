@@ -1,4 +1,4 @@
-import { EExtensionType, IDceConsumer } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IDceConsumer, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 
 export interface IInstalledRef {
     id: string
@@ -37,26 +37,36 @@ function semverGte(installed: string, required: string): boolean {
 /** '1.4.2' → 1. Nothing, or something that is not a version, → 0. */
 export const majorOf = (version: string | undefined): number => parseInt((version ?? '0').split('.')[0], 10) || 0
 
-export function validateExtensionDeps(requirements: string[], installed: IInstalledIndex): string[] {
+/**
+ * Accepts `requiresExtension` in either the old string format (`"type:id:version"`) or the new object
+ * format (`IExtensionRequirement`), and always returns `IExtensionRequirement[]`. This lets the managers
+ * read package.json stored before the unification without breaking.
+ */
+export const normalizeRequires = (raw: unknown[] | undefined): IExtensionRequirement[] => {
+    if (!raw?.length) return []
+    return raw.map((item): IExtensionRequirement => {
+        if (typeof item === 'string') {
+            const parts = item.split(':')
+            return { extensionType: parts[0] as EExtensionType, id: parts[1], minVersion: parts[2] }
+        }
+        return item as IExtensionRequirement
+    })
+}
+
+export function validateExtensionDeps(requirements: IExtensionRequirement[], installed: IInstalledIndex): string[] {
     const errors: string[] = []
     for (const req of requirements) {
-        const parts = req.split(':')
-        if (parts.length !== 3) {
-            errors.push(`Invalid requirement format: '${req}'`)
-            continue
-        }
-        const [extType, extName, minVersion] = parts
-        const list = installed[extType as keyof IInstalledIndex]
+        const list = installed[req.extensionType as keyof IInstalledIndex]
         if (!list) {
-            errors.push(`Unknown extension type: '${extType}'`)
+            errors.push(`Unknown extension type: '${req.extensionType}'`)
             continue
         }
-        const found = list.find(e => e.id === extName)
+        const found = list.find(e => e.id === req.id)
         if (!found) {
-            errors.push(`Required ${extType} '${extName}' (>=${minVersion}) is not installed`)
+            errors.push(`Required ${req.extensionType} '${req.id}' (>=${req.minVersion}) is not installed`)
         }
-        else if (!semverGte(found.version, minVersion)) {
-            errors.push(`Required ${extType} '${extName}' version >=${minVersion}, found ${found.version}`)
+        else if (!semverGte(found.version, req.minVersion)) {
+            errors.push(`Required ${req.extensionType} '${req.id}' version >=${req.minVersion}, found ${found.version}`)
         }
     }
     return errors
@@ -68,7 +78,7 @@ export function validateExtensionDeps(requirements: string[], installed: IInstal
 export interface IRequirer {
     type: EExtensionType
     id: string
-    requiresExtension?: string[]
+    requiresExtension?: IExtensionRequirement[]
 }
 
 /**
@@ -79,11 +89,11 @@ export interface IRequirer {
  * through eleven managers for the culprit.
  */
 export const findConsumers = (installed: IRequirer[], type: EExtensionType, id: string): IDceConsumer[] => {
-    const prefix = `${type}:${id}:`
     const consumers: IDceConsumer[] = []
     for (const ext of installed) {
         for (const requirement of ext.requiresExtension ?? []) {
-            if (requirement.startsWith(prefix)) consumers.push({ type: ext.type, id: ext.id, requirement })
+            if (requirement.extensionType === type && requirement.id === id)
+                consumers.push({ type: ext.type, id: ext.id, requirement })
         }
     }
     return consumers
@@ -97,12 +107,12 @@ export const findConsumers = (installed: IRequirer[], type: EExtensionType, id: 
  */
 export const consumersBrokenByMajor = (consumers: IDceConsumer[], newVersion: string): IDceConsumer[] => {
     const newMajor = majorOf(newVersion)
-    return consumers.filter(c => majorOf(c.requirement.split(':')[2]) < newMajor)
+    return consumers.filter(c => majorOf(c.requirement.minVersion) < newMajor)
 }
 
 /** 'plugin excubitor (dce:iria-icons:1.0.0), homepage iria (dce:iria-icons:1.2.0)' */
 export const describeConsumers = (consumers: IDceConsumer[]): string =>
-    consumers.map(c => `${c.type} '${c.id}' (${c.requirement})`).join(', ')
+    consumers.map(c => `${c.type} '${c.id}' (${c.requirement.extensionType}:${c.requirement.id}:${c.requirement.minVersion})`).join(', ')
 
 // ── Order inside a pack (PRD RF12) ───────────────────────────────────────────────────────────────────
 
@@ -151,8 +161,8 @@ let installedExtensionsSource: TInstalledExtensionsSource | undefined
 export const setInstalledExtensionsSource = (source: TInstalledExtensionsSource | undefined): void => { installedExtensionsSource = source }
 
 /** The `dce:` requirements among a list, if any. */
-export const dceRequirementsOf = (requiresExtension: string[] | undefined): string[] =>
-    (requiresExtension ?? []).filter(r => r.startsWith(`${EExtensionType.DCE}:`))
+export const dceRequirementsOf = (requiresExtension: IExtensionRequirement[] | undefined): IExtensionRequirement[] =>
+    (requiresExtension ?? []).filter(r => r.extensionType === EExtensionType.DCE)
 
 /**
  * Refuses to install `kind` `id` when an extension it requires is missing or too old.
@@ -164,7 +174,7 @@ export const dceRequirementsOf = (requiresExtension: string[] | undefined): stri
  * installing any; dev is declarative and the developer's own; bundled is the image's, and it is
  * installed before anything else exists to check against.
  */
-export const assertExtensionRequirements = async (kind: string, id: string, requiresExtension: string[] | undefined, installedFrom: string | undefined): Promise<void> => {
+export const assertExtensionRequirements = async (kind: string, id: string, requiresExtension: IExtensionRequirement[] | undefined, installedFrom: string | undefined): Promise<void> => {
     if (!requiresExtension?.length) return
     if (installedFrom === 'dev' || installedFrom === 'bundled' || installedFrom?.startsWith('pack:')) return
     if (!installedExtensionsSource) return

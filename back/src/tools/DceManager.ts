@@ -3,7 +3,7 @@ import { IDceBack, IDceBackHost, IDceStore } from '@kwirthmagnify/kwirth-common-
 import { IConfigMaps } from './IConfigMap'
 import { ISecrets } from './ISecrets'
 import { ELogComponent, componentLogger, logError, logInfo, logWarning } from './Logging'
-import { assertExtensionRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 import { assertInstallable } from './ExtensionInstallGuard'
 import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
 import { listBundledOfType } from './BundledExtensions'
@@ -279,7 +279,7 @@ export class DceManager implements IDceAccess {
                 hasFront,
                 // Forced, whatever the package says (PRD RNF3): consumers keep the previous instance.
                 requiresRestart: true,
-                requiresExtension: pkg.requiresExtension ?? []
+                requiresExtension: normalizeRequires(pkg.requiresExtension)
             }
             if (!meta.id) throw new Error('Invalid DCE bundle: package.json has no id')
             // A DCE that requires another extension is not installed without it.

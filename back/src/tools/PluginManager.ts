@@ -1,5 +1,5 @@
 import { IConfigMaps } from './IConfigMap'
-import { EExtensionType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IConfigFieldDef, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType } from './BundledExtensions'
 import { TChannelConstructor } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
@@ -11,7 +11,7 @@ import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertExtensionRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 
 export interface IPluginMeta {
     id: string
@@ -32,7 +32,7 @@ export interface IPluginMeta {
     backStored?: boolean
     frontStored?: boolean
     requiresRestart?: boolean
-    requiresExtension?: string[]
+    requiresExtension?: IExtensionRequirement[]
     /*
         The plugin DECLARES that it accepts installation configuration, and with which fields.
 
@@ -127,7 +127,7 @@ export class PluginManager {
             meta.website = pkg.website
             // Without it a dev plugin required no DCE: nobody saw it as a consumer, and the DCE it uses
             // could be uninstalled from under it.
-            meta.requiresExtension = pkg.requiresExtension ?? []
+            meta.requiresExtension = normalizeRequires(pkg.requiresExtension)
             if (Array.isArray(pkg.configSchema)) meta.configSchema = pkg.configSchema
         } catch {}
 
@@ -208,7 +208,7 @@ export class PluginManager {
         const devMetas = Array.from(this.devPlugins.entries()).map(([id, dev]) => {
             try {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
-                return { ...dev.meta, name: pkg.name ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', icon: pkg.icon, website: pkg.website, requiresExtension: pkg.requiresExtension ?? [] }
+                return { ...dev.meta, name: pkg.name ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', icon: pkg.icon, website: pkg.website, requiresExtension: normalizeRequires(pkg.requiresExtension) }
             } catch {
                 return dev.meta
             }

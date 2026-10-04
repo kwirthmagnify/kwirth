@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { EExtensionType, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import { PluginManager } from '../../src/tools/PluginManager'
 import { ProviderManager } from '../../src/tools/ProviderManager'
 import { SenderManager } from '../../src/tools/SenderManager'
@@ -30,10 +31,10 @@ const makeConfigMaps = () => {
     }
 }
 
-const REQUIRES = ['dce:nettools:0.2.0']
+const REQUIRES: IExtensionRequirement[] = [{ extensionType: EExtensionType.DCE, id: 'nettools', minVersion: '0.2.0' }]
 
 /** A real dev workspace with one extension in `section`, and the cwd there while `body` runs. */
-const withDevWorkspace = async (section: string, id: string, requiresExtension: string[] | undefined, body: () => Promise<void>): Promise<void> => {
+const withDevWorkspace = async (section: string, id: string, requiresExtension: IExtensionRequirement[] | undefined, body: () => Promise<void>): Promise<void> => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kwirth-dev-req-'))
     const dist = path.join(root, id, 'dist')
     fs.mkdirSync(dist, { recursive: true })
@@ -55,7 +56,7 @@ const withDevWorkspace = async (section: string, id: string, requiresExtension: 
 interface IDevCase {
     section: string
     /** Builds the manager, loads its dev section and lists what is installed. */
-    list: () => Promise<{ id: string, requiresExtension?: string[] }[]>
+    list: () => Promise<{ id: string, requiresExtension?: IExtensionRequirement[] }[]>
 }
 
 const CASES: Record<string, IDevCase> = {

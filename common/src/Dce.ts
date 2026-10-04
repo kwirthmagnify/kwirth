@@ -1,3 +1,5 @@
+import type { IExtensionRequirement } from './Marketplace'
+
 /*
     The `dce` type's shared vocabulary (plan: plans/completed/dce/PRD.md).
 
@@ -45,8 +47,8 @@ export type TDceRegistry = Record<string, IDceRegistryEntry>
 export interface IDceConsumer {
     type: string
     id: string
-    /** The requirement as declared: 'dce:<id>:<minimum version>'. */
-    requirement: string
+    /** The requirement as declared: which extension, at which minimum version. */
+    requirement: IExtensionRequirement
 }
 
 /** An installed DCE, as the core's DCE manager keeps it in its index. */
@@ -67,7 +69,7 @@ export interface IDceMeta {
     frontStored?: boolean
     /** Always true (PRD RNF3): consumers keep the previous instance until the server restarts. */
     requiresRestart?: boolean
-    requiresExtension?: string[]
+    requiresExtension?: IExtensionRequirement[]
 }
 
 /** What the core lends of its DCEs, read-only (ClusterInfo.dces; the Status channel's DCE tab). */

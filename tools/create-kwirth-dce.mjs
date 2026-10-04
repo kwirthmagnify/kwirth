@@ -444,7 +444,7 @@ A DCE brings **objects**, not data and not screens: Kwirth calls its factory **o
 Declare the dependency in the consumer's \`package.json\`, with the minimum version:
 
 \`\`\`json
-"requiresExtension": ["dce:${id}:0.1.0"]
+"requiresExtension": [{ "extensionType": "dce", "id": "${id}", "minVersion": "0.1.0" }]
 \`\`\`
 ${hasBack ? `
 In the back end:

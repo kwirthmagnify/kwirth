@@ -3,7 +3,7 @@
   "name": "topology",
   "displayName": "Topology",
   "publisher": "@kwirthmagnify",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "website": "https://kwirthmagnify.dev",
   "description": "Topology channel plugin for Kwirth - 3D visualization of Kubernetes cluster topology",
   "icon": "AccountTree",
@@ -30,5 +30,5 @@
     "typescript": "^5.4.0"
   },
   "requiresRestart": false,
-  "requiresExtension": ["dce:three:0.1.0"]
+  "requiresExtension": [{ "extensionType": "dce", "id": "three", "minVersion": "0.1.0" }]
 }

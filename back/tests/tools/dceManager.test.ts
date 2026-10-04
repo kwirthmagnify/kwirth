@@ -4,7 +4,7 @@ import { DceManager, dceRegistry, staleDevDces } from '../../src/tools/DceManage
 import { assertExtensionRequirements, consumersBrokenByMajor, dcesFirst, dcesLast, findConsumers, majorOf, setInstalledExtensionsSource, emptyInstalledIndex, IRequirer } from '../../src/tools/ExtensionDeps'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
-import { EDceState, EExtensionType, IDceConsumer, IDceMeta } from '@kwirthmagnify/kwirth-common'
+import { EDceState, EExtensionType, IDceConsumer, IDceMeta, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import tar from 'tar'
 import os from 'os'
 import path from 'path'
@@ -160,12 +160,12 @@ test('what is stored is reloaded at startup: a new manager over the same store l
 
 // ── in use: uninstall and breaking updates ─────────────────────────────────────────────────────────
 
-const consumer = (type: EExtensionType, id: string, requirement: string): IDceConsumer => ({ type, id, requirement })
+const consumer = (type: EExtensionType, id: string, requirement: IExtensionRequirement): IDceConsumer => ({ type, id, requirement })
 
 test('🔴 a DCE somebody requires is not uninstalled, and the message says who', async () => {
     const { manager } = await newManager()
     await manager.install(await makeDceTgz('inuse'), 'local')
-    manager.setConsumerResolver(async id => id === 'inuse' ? [consumer(EExtensionType.PLUGIN, 'excubitor', 'dce:inuse:1.0.0')] : [])
+    manager.setConsumerResolver(async id => id === 'inuse' ? [consumer(EExtensionType.PLUGIN, 'excubitor', { extensionType: EExtensionType.DCE, id: 'inuse', minVersion: '1.0.0' })] : [])
     await assert.rejects(manager.uninstall('inuse'), /DCE 'inuse' is in use and cannot be uninstalled: required by plugin 'excubitor' \(dce:inuse:1\.0\.0\)/)
     assert.equal(dceRegistry()['inuse'].state, EDceState.LOADED, 'still there')
     // force is for the dev reconciliation only
@@ -176,8 +176,8 @@ test('🔴 a DCE somebody requires is not uninstalled, and the message says who'
 test('consumers() answers through the resolver, and is empty before the core sets one', async () => {
     const { manager } = await newManager()
     assert.deepEqual(await manager.consumers('any'), [])
-    manager.setConsumerResolver(async id => id === 'inuse' ? [consumer(EExtensionType.PLUGIN, 'status', 'dce:inuse:1.0.0')] : [])
-    assert.deepEqual(await manager.consumers('inuse'), [consumer(EExtensionType.PLUGIN, 'status', 'dce:inuse:1.0.0')])
+    manager.setConsumerResolver(async id => id === 'inuse' ? [consumer(EExtensionType.PLUGIN, 'status', { extensionType: EExtensionType.DCE, id: 'inuse', minVersion: '1.0.0' })] : [])
+    assert.deepEqual(await manager.consumers('inuse'), [consumer(EExtensionType.PLUGIN, 'status', { extensionType: EExtensionType.DCE, id: 'inuse', minVersion: '1.0.0' })])
     assert.deepEqual(await manager.consumers('other'), [])
 })
 
@@ -185,7 +185,7 @@ test('🔴 updating across a major with consumers on the old one is refused; wit
     const { manager } = await newManager()
     await manager.install(await makeDceTgz('major', { version: '1.2.0' }), 'local')
     const before = dceRegistry()['major'].instance
-    manager.setConsumerResolver(async () => [consumer(EExtensionType.HOMEPAGE, 'iria', 'dce:major:1.0.0')])
+    manager.setConsumerResolver(async () => [consumer(EExtensionType.HOMEPAGE, 'iria', { extensionType: EExtensionType.DCE, id: 'major', minVersion: '1.0.0' })])
 
     await assert.rejects(manager.install(await makeDceTgz('major', { version: '2.0.0' }), 'local', undefined, undefined, true),
         /cannot be updated from v1\.2\.0 to v2\.0\.0: it changes major and is required by homepage 'iria' \(dce:major:1\.0\.0\)/)
@@ -208,10 +208,10 @@ test('installing on top without upgrade is refused, as with every type', async (
 
 test('findConsumers lists every installed extension that requires the DCE, whatever its type', () => {
     const installed: IRequirer[] = [
-        { type: EExtensionType.PLUGIN, id: 'excubitor', requiresExtension: ['dce:iria-icons:1.0.0', 'webhook:jira:0.1.0'] },
-        { type: EExtensionType.HOMEPAGE, id: 'iria', requiresExtension: ['dce:iria-icons:1.2.0'] },
+        { type: EExtensionType.PLUGIN, id: 'excubitor', requiresExtension: [{ extensionType: EExtensionType.DCE, id: 'iria-icons', minVersion: '1.0.0' }, { extensionType: EExtensionType.WEBHOOK, id: 'jira', minVersion: '0.1.0' }] },
+        { type: EExtensionType.HOMEPAGE, id: 'iria', requiresExtension: [{ extensionType: EExtensionType.DCE, id: 'iria-icons', minVersion: '1.2.0' }] },
         { type: EExtensionType.PLUGIN, id: 'status' },
-        { type: EExtensionType.SENDER, id: 'teams', requiresExtension: ['dce:other:1.0.0'] }
+        { type: EExtensionType.SENDER, id: 'teams', requiresExtension: [{ extensionType: EExtensionType.DCE, id: 'other', minVersion: '1.0.0' }] }
     ]
     const consumers = findConsumers(installed, EExtensionType.DCE, 'iria-icons')
     assert.deepEqual(consumers.map(c => `${c.type}:${c.id}`), ['plugin:excubitor', 'homepage:iria'])
@@ -220,8 +220,8 @@ test('findConsumers lists every installed extension that requires the DCE, whate
 
 test('a change of major breaks only those whose minimum sits on a lower major', () => {
     const consumers = [
-        consumer(EExtensionType.PLUGIN, 'old', 'dce:x:1.4.0'),
-        consumer(EExtensionType.PLUGIN, 'new', 'dce:x:2.0.0')
+        consumer(EExtensionType.PLUGIN, 'old', { extensionType: EExtensionType.DCE, id: 'x', minVersion: '1.4.0' }),
+        consumer(EExtensionType.PLUGIN, 'new', { extensionType: EExtensionType.DCE, id: 'x', minVersion: '2.0.0' })
     ]
     assert.deepEqual(consumersBrokenByMajor(consumers, '2.1.0').map(c => c.id), ['old'])
     assert.deepEqual(consumersBrokenByMajor(consumers, '1.9.0'), [], 'within the major nobody breaks')
@@ -270,12 +270,12 @@ test('several DCEs keep their relative order, and an empty pack does not blow up
 test('🔴 a consumer whose dependency is missing or too old is refused, with the reason', async () => {
     setInstalledExtensionsSource(async () => ({ ...emptyInstalledIndex(), dce: [{ id: 'iria-icons', version: '1.1.0' }] }))
     try {
-        await assert.rejects(assertExtensionRequirements('Plugin', 'excubitor', ['dce:iria-icons:1.2.0'], 'local'),
+        await assert.rejects(assertExtensionRequirements('Plugin', 'excubitor', [{ extensionType: EExtensionType.DCE, id: 'iria-icons', minVersion: '1.2.0' }], 'local'),
             /Plugin 'excubitor' cannot be installed: Required dce 'iria-icons' version >=1\.2\.0, found 1\.1\.0/)
-        await assert.rejects(assertExtensionRequirements('Homepage', 'iria', ['dce:missing:1.0.0'], 'https://x/y.tgz'),
+        await assert.rejects(assertExtensionRequirements('Homepage', 'iria', [{ extensionType: EExtensionType.DCE, id: 'missing', minVersion: '1.0.0' }], 'https://x/y.tgz'),
             /Required dce 'missing' \(>=1\.0\.0\) is not installed/)
         // ALL types are checked now, not just dce:
-        await assert.rejects(assertExtensionRequirements('Plugin', 'excubitor', ['dce:iria-icons:1.0.0', 'webhook:jira:9.9.9'], 'local'),
+        await assert.rejects(assertExtensionRequirements('Plugin', 'excubitor', [{ extensionType: EExtensionType.DCE, id: 'iria-icons', minVersion: '1.0.0' }, { extensionType: EExtensionType.WEBHOOK, id: 'jira', minVersion: '9.9.9' }], 'local'),
             /Required webhook 'jira' \(>=9\.9\.9\) is not installed/)
     }
     finally {
@@ -285,14 +285,15 @@ test('🔴 a consumer whose dependency is missing or too old is refused, with th
 
 test('dev, bundled and pack installs are not checked here: they have their own rules', async () => {
     setInstalledExtensionsSource(async () => emptyInstalledIndex())
+    const dep = [{ extensionType: EExtensionType.DCE, id: 'missing', minVersion: '1.0.0' }]
     try {
-        await assertExtensionRequirements('Plugin', 'p', ['dce:missing:1.0.0'], 'dev')
-        await assertExtensionRequirements('Plugin', 'p', ['dce:missing:1.0.0'], 'bundled')
-        await assertExtensionRequirements('Plugin', 'p', ['dce:missing:1.0.0'], 'pack:suite')
+        await assertExtensionRequirements('Plugin', 'p', dep, 'dev')
+        await assertExtensionRequirements('Plugin', 'p', dep, 'bundled')
+        await assertExtensionRequirements('Plugin', 'p', dep, 'pack:suite')
     }
     finally {
         setInstalledExtensionsSource(undefined)
     }
     // And with no source registered yet (startup), nothing is refused either.
-    await assertExtensionRequirements('Plugin', 'p', ['dce:missing:1.0.0'], 'local')
+    await assertExtensionRequirements('Plugin', 'p', dep, 'local')
 })

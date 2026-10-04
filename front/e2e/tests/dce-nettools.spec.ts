@@ -51,7 +51,7 @@ const makeTgz = (files: Record<string, string>): Buffer => {
 }
 
 /** A theme is the lightest extension that can declare `requiresExtension`, so it stands in for a consumer. */
-const consumerTgz = (requires: string[]): Buffer => makeTgz({
+const consumerTgz = (requires: unknown[]): Buffer => makeTgz({
     'package.json': JSON.stringify({
         name: `@e2e/kwirth-theme-${CONSUMER_ID}`, id: CONSUMER_ID, version: '1.0.0',
         description: 'e2e nettools consumer', extensionType: 'theme', requiresExtension: requires
@@ -115,7 +115,7 @@ test.describe('dce nettools: loaded, both sides served, and consumable by versio
     test('a consumer that requires the version installed goes in', async () => {
         const res = await api.post('/core/themes/upload', {
             headers: { ...auth, 'Content-Type': 'application/octet-stream' },
-            data: consumerTgz([`dce:${DCE_ID}:0.1.0`])
+            data: consumerTgz([{ extensionType: 'dce', id: DCE_ID, minVersion: '0.1.0' }])
         })
         expect(res.status(), await res.text()).toBe(200)
 
@@ -127,7 +127,7 @@ test.describe('dce nettools: loaded, both sides served, and consumable by versio
     test('🔴 a consumer that asks for a version this DCE does not reach is refused, and the message says so', async () => {
         const res = await api.post('/core/themes/upload', {
             headers: { ...auth, 'Content-Type': 'application/octet-stream' },
-            data: consumerTgz([`dce:${DCE_ID}:9.0.0`])
+            data: consumerTgz([{ extensionType: 'dce', id: DCE_ID, minVersion: '9.0.0' }])
         })
         expect(res.status()).toBe(500)
         expect((await res.json()).error).toMatch(new RegExp(`dce '${DCE_ID}'`))

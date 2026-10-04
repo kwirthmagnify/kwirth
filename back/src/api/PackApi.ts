@@ -17,7 +17,7 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { ELogComponent, logError, logInfo } from '../tools/Logging'
 import { TChannelConstructor } from '../channels/IChannel'
 import { TProviderConstructor } from '../providers/IProvider'
-import { validateExtensionDeps, IInstalledIndex, dcesFirst, dcesLast } from '../tools/ExtensionDeps'
+import { validateExtensionDeps, IInstalledIndex, dcesFirst, dcesLast, normalizeRequires } from '../tools/ExtensionDeps'
 import tar from 'tar'
 import fs from 'fs'
 import os from 'os'
@@ -182,7 +182,7 @@ export class PackApi {
             for (const ext of extensions) {
                 const memberPkg = memberPkgs.get(`${ext.extensionType}:${ext.id}`)
                 if (!memberPkg) continue
-                const depErrors = validateExtensionDeps((memberPkg.requiresExtension as string[] | undefined) ?? [], installedIndex)
+                const depErrors = validateExtensionDeps(normalizeRequires(memberPkg.requiresExtension as unknown[] | undefined), installedIndex)
                 if (depErrors.length) allDepErrors.push(...depErrors.map(e => `[${ext.extensionType}:${ext.id}] ${e}`))
             }
             if (allDepErrors.length) throw new Error(`Pack '${packId}' has unmet dependencies:\n${allDepErrors.join('\n')}`)

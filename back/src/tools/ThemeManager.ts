@@ -7,7 +7,8 @@ import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertExtensionRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
+import { IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 
 export interface IThemeMeta {
     id: string
@@ -24,7 +25,7 @@ export interface IThemeMeta {
     marketplaceLabel?: string
     frontStored?: boolean
     requiresRestart?: boolean
-    requiresExtension?: string[]
+    requiresExtension?: IExtensionRequirement[]
 }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
@@ -90,7 +91,7 @@ export class ThemeManager {
             meta.description = pkg.description ?? ''
             meta.website = pkg.website
             // Without it a dev theme required no DCE: nobody saw it as a consumer.
-            meta.requiresExtension = pkg.requiresExtension ?? []
+            meta.requiresExtension = normalizeRequires(pkg.requiresExtension)
         } catch {}
         this.devThemes.set(id, { distPath: absPath, meta })
         if (!this.installedIds.includes(id)) this.installedIds.push(id)
@@ -102,7 +103,7 @@ export class ThemeManager {
         const devMetas = Array.from(this.devThemes.entries()).map(([id, dev]) => {
             try {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
-                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: pkg.requiresExtension ?? [] }
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: normalizeRequires(pkg.requiresExtension) }
             } catch { return dev.meta }
         })
         const devIds = new Set(devMetas.map(m => m.id))
@@ -149,7 +150,7 @@ export class ThemeManager {
                 marketplaceId,
                 marketplaceLabel,
                 requiresRestart: pkg.requiresRestart ?? false,
-                requiresExtension: pkg.requiresExtension ?? []
+                requiresExtension: normalizeRequires(pkg.requiresExtension)
             }
             // A theme that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertExtensionRequirements('Theme', meta.id, meta.requiresExtension, installedFrom)

@@ -1,8 +1,8 @@
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo } from './Logging'
-import { assertExtensionRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 import { ILoginFieldDef } from '@kwirthmagnify/kwirth-common-back'
-import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType } from './BundledExtensions'
 import { downloadFile, packageHeaders } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
@@ -25,7 +25,7 @@ export interface ILoginMeta {
     marketplaceId?: string
     marketplaceLabel?: string
     requiresRestart?: boolean
-    requiresExtension?: string[]
+    requiresExtension?: IExtensionRequirement[]
     configSchema?: ILoginFieldDef[]
 }
 
@@ -174,7 +174,7 @@ export class LoginManager {
                 marketplaceId,
                 marketplaceLabel,
                 requiresRestart: pkg.requiresRestart ?? false,
-                requiresExtension: pkg.requiresExtension ?? [],
+                requiresExtension: normalizeRequires(pkg.requiresExtension),
                 configSchema: Array.isArray(pkg.configSchema) ? pkg.configSchema : undefined
             }
             // A login that requires an extension is not installed without it.

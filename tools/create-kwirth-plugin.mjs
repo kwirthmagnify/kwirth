@@ -66,7 +66,7 @@ for (const d of dces) {
     }
 }
 // What goes into package.json, and the package → registry entry mapping the builds need.
-const requiresExtension = dces.map(d => `"dce:${d.id}:${d.version}"`).join(', ')
+const requiresExtension = dces.map(d => `{ "extensionType": "dce", "id": "${d.id}", "minVersion": "${d.version}" }`).join(', ')
 const dceMappings = dces.map(d => `            '@kwirthmagnify/kwirth-dce-${d.id}': '${d.id}',`).join('\n')
 
 if (!id || !/^[a-z][a-z0-9-]*$/.test(id)) {

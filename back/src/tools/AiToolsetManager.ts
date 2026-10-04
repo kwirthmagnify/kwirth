@@ -2,10 +2,10 @@ import { IAiToolset, registerToolset, unregisterToolset, isBuiltInToolsetId, get
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertExtensionRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
 import { listBundledOfType } from './BundledExtensions'
-import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import tar from 'tar'
 import os from 'os'
 import path from 'path'
@@ -33,7 +33,7 @@ export interface IAiToolsetMeta {
     marketplaceLabel?: string
     backStored?: boolean
     requiresRestart?: boolean
-    requiresExtension?: string[]
+    requiresExtension?: IExtensionRequirement[]
 }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024

@@ -47,7 +47,7 @@ const dceTgz = (id: string, version = '1.0.0'): Buffer => makeTgz({
     'front.js': `window.__kwirth_dce_factories__ = window.__kwirth_dce_factories__ || {}; window.__kwirth_dce_factories__['${id}'] = { create: () => ({ id: '${id}' }) }`
 })
 
-const themeTgz = (id: string, requires: string[]): Buffer => makeTgz({
+const themeTgz = (id: string, requires: unknown[]): Buffer => makeTgz({
     'package.json': JSON.stringify({ id, name: `@e2e/kwirth-theme-${id}`, version: '1.0.0', description: 'e2e consumer', extensionType: 'theme', requiresExtension: requires }),
     'front.js': `window.__kwirth_themes__ = window.__kwirth_themes__ || {}; window.__kwirth_themes__['${id}'] = { displayName: '${id}', getThemeOptions: () => ({}) }`
 })
@@ -107,7 +107,7 @@ test.describe('dce: the type through its API', () => {
     })
 
     test('🔴 RF8: a consumer requiring a DCE that is not there is refused, and the message says which', async () => {
-        const res = await upload('/core/themes/upload', themeTgz(CONSUMER_ID, ['dce:e2e-dce-missing:1.0.0']))
+        const res = await upload('/core/themes/upload', themeTgz(CONSUMER_ID, [{ extensionType: 'dce', id: 'e2e-dce-missing', minVersion: '1.0.0' }]))
         expect(res.status()).toBe(500)
         expect((await res.json()).error).toMatch(/Theme 'e2e-dce-consumer' cannot be installed: Required dce 'e2e-dce-missing' \(>=1\.0\.0\) is not installed/)
         const themes = await (await api.get('/core/themes', { headers: auth })).json()
@@ -130,7 +130,7 @@ test.describe('dce: the type through its API', () => {
 
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kwirth-e2e-pack-'))
         fs.writeFileSync(path.join(dir, dceTgzName), dceTgz(packDce))
-        fs.writeFileSync(path.join(dir, consumerTgzName), themeTgz(packConsumer, [`dce:${packDce}:1.0.0`]))
+        fs.writeFileSync(path.join(dir, consumerTgzName), themeTgz(packConsumer, [{ extensionType: 'dce', id: packDce, minVersion: '1.0.0' }]))
         fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({
             name: `@e2e/${PACK_ID}`, id: PACK_ID, displayName: 'E2E DCE pack', version: '1.0.0',
             description: 'e2e', extensionType: 'pack'
@@ -178,7 +178,7 @@ test.describe('dce: the type through its API', () => {
     })
 
     test('🔴 RF9: a DCE somebody requires is not uninstalled, and names who; free, it goes', async () => {
-        const installed = await upload('/core/themes/upload', themeTgz(CONSUMER_ID, [`dce:${DCE_ID}:1.0.0`]))
+        const installed = await upload('/core/themes/upload', themeTgz(CONSUMER_ID, [{ extensionType: 'dce', id: DCE_ID, minVersion: '1.0.0' }]))
         expect(installed.status(), await installed.text()).toBe(200)
 
         const refused = await api.delete(`/core/dce/${DCE_ID}`, { headers: auth })

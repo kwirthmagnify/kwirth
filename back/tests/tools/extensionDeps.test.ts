@@ -1,10 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { validateExtensionDeps, IInstalledIndex } from '../../src/tools/ExtensionDeps'
-import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 
-// A pack member declares its dependencies as '<type>:<id>:<minimum version>'. The installed index has to
-// know EVERY installable type, or a legitimate dependency is rejected with
+// A pack member declares its dependencies as IExtensionRequirement objects: { extensionType, id, minVersion }.
+// The installed index has to know EVERY installable type, or a legitimate dependency is rejected with
 // 'Unknown extension type'.
 
 const empty = (): IInstalledIndex =>
@@ -12,6 +12,9 @@ const empty = (): IInstalledIndex =>
 
 const withOne = (type: keyof IInstalledIndex, id: string, version: string): IInstalledIndex =>
     ({ ...empty(), [type]: [{ id, version }] })
+
+const req = (extensionType: EExtensionType, id: string, minVersion: string): IExtensionRequirement =>
+    ({ extensionType, id, minVersion })
 
 test('el indice de instalados cubre todos los tipos que se pueden instalar', () => {
     const index = empty()
@@ -23,38 +26,32 @@ test('el indice de instalados cubre todos los tipos que se pueden instalar', () 
 })
 
 test('una dependencia de webhook se resuelve', () => {
-    assert.deepEqual(validateExtensionDeps(['webhook:jira:0.1.0'], withOne('webhook', 'jira', '0.1.1')), [])
+    assert.deepEqual(validateExtensionDeps([req(EExtensionType.WEBHOOK, 'jira', '0.1.0')], withOne('webhook', 'jira', '0.1.1')), [])
 })
 
 test('una dependencia de docs se resuelve', () => {
-    assert.deepEqual(validateExtensionDeps(['docs:excubitor:0.1.0'], withOne('docs', 'excubitor', '0.1.191')), [])
+    assert.deepEqual(validateExtensionDeps([req(EExtensionType.DOCS, 'excubitor', '0.1.0')], withOne('docs', 'excubitor', '0.1.191')), [])
 })
 
 test('la version instalada tiene que llegar al minimo pedido', () => {
-    const errors = validateExtensionDeps(['webhook:jira:0.2.0'], withOne('webhook', 'jira', '0.1.9'))
+    const errors = validateExtensionDeps([req(EExtensionType.WEBHOOK, 'jira', '0.2.0')], withOne('webhook', 'jira', '0.1.9'))
     assert.equal(errors.length, 1)
     assert.match(errors[0], /version >=0\.2\.0, found 0\.1\.9/)
 })
 
 test('una dependencia que no esta instalada se reporta', () => {
-    const errors = validateExtensionDeps(['webhook:teams:0.1.0'], empty())
+    const errors = validateExtensionDeps([req(EExtensionType.WEBHOOK, 'teams', '0.1.0')], empty())
     assert.equal(errors.length, 1)
     assert.match(errors[0], /not installed/)
 })
 
 test('un tipo inexistente se reporta como tal, no como falta de instalacion', () => {
-    const errors = validateExtensionDeps(['gadget:foo:1.0.0'], empty())
+    const errors = validateExtensionDeps([req('gadget' as EExtensionType, 'foo', '1.0.0')], empty())
     assert.equal(errors.length, 1)
     assert.match(errors[0], /Unknown extension type/)
 })
 
-test('un formato mal escrito no se confunde con una dependencia sin instalar', () => {
-    const errors = validateExtensionDeps(['webhook:jira'], empty())
-    assert.equal(errors.length, 1)
-    assert.match(errors[0], /Invalid requirement format/)
-})
-
 test('se acumulan los errores de todas las dependencias, no solo la primera', () => {
-    const errors = validateExtensionDeps(['webhook:teams:0.1.0', 'docs:nada:1.0.0'], empty())
+    const errors = validateExtensionDeps([req(EExtensionType.WEBHOOK, 'teams', '0.1.0'), req(EExtensionType.DOCS, 'nada', '1.0.0')], empty())
     assert.equal(errors.length, 2)
 })

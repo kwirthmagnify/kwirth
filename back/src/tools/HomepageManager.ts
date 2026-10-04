@@ -7,7 +7,8 @@ import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertExtensionRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
+import { IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 
 export interface IHomepageMeta {
     id: string
@@ -24,7 +25,7 @@ export interface IHomepageMeta {
     marketplaceLabel?: string
     frontStored?: boolean
     requiresRestart?: boolean
-    requiresExtension?: string[]
+    requiresExtension?: IExtensionRequirement[]
 }
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
@@ -90,7 +91,7 @@ export class HomepageManager {
             meta.description = pkg.description ?? ''
             meta.website = pkg.website
             // Without it a dev homepage required no DCE: nobody saw it as a consumer.
-            meta.requiresExtension = pkg.requiresExtension ?? []
+            meta.requiresExtension = normalizeRequires(pkg.requiresExtension)
         } catch {}
         this.devHomepages.set(id, { distPath: absPath, meta })
         if (!this.installedIds.includes(id)) this.installedIds.push(id)
@@ -102,7 +103,7 @@ export class HomepageManager {
         const devMetas = Array.from(this.devHomepages.entries()).map(([id, dev]) => {
             try {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
-                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: pkg.requiresExtension ?? [] }
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: normalizeRequires(pkg.requiresExtension) }
             } catch { return dev.meta }
         })
         const devIds = new Set(devMetas.map(m => m.id))
@@ -145,7 +146,7 @@ export class HomepageManager {
                 version: pkg.version,
                 description: pkg.description ?? '',
                 requiresRestart: pkg.requiresRestart ?? false,
-                requiresExtension: pkg.requiresExtension ?? [],
+                requiresExtension: normalizeRequires(pkg.requiresExtension),
                 website: pkg.website,
                 installedFrom: installedFrom ?? tarGzUrl,
                 marketplaceId,

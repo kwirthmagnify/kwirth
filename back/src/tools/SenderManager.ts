@@ -1,4 +1,5 @@
 import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage, ISenderResult, ISenderStoredConfig, TSenderConstructor } from '@kwirthmagnify/kwirth-common-back'
+import { IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import { IConfigMaps } from './IConfigMap'
 import { componentLogger, ELogComponent, IComponentLogger, logError, logInfo, logWarning } from './Logging'
 import tar from 'tar'
@@ -8,7 +9,7 @@ import fs from 'fs'
 import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
-import { assertExtensionRequirements } from './ExtensionDeps'
+import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 
 export interface ISenderMeta {
     id: string
@@ -26,7 +27,7 @@ export interface ISenderMeta {
     backStored?: boolean
     frontStored?: boolean
     requiresRestart?: boolean
-    requiresExtension?: string[]
+    requiresExtension?: IExtensionRequirement[]
 }
 
 // 'export type' and not 'export': they are interfaces. Re-exporting them as values makes the bundler
@@ -220,7 +221,7 @@ export class SenderManager implements ISenderAccess {
             meta.description = pkg.description ?? ''
             meta.website = pkg.website
             // Without it a dev sender required no DCE: nobody saw it as a consumer.
-            meta.requiresExtension = pkg.requiresExtension ?? []
+            meta.requiresExtension = normalizeRequires(pkg.requiresExtension)
         } catch {}
 
         this.devSenders.set(id, { distPath: absPath, meta })
@@ -444,7 +445,7 @@ export class SenderManager implements ISenderAccess {
         const devMetas = Array.from(this.devSenders.entries()).map(([id, dev]) => {
             try {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
-                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: pkg.requiresExtension ?? [] }
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: normalizeRequires(pkg.requiresExtension) }
             } catch {
                 return dev.meta
             }
