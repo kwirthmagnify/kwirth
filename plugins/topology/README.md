@@ -22,6 +22,8 @@ something you watch happen rather than something you reconstruct afterwards.
 
 From Kwirth: **☰ → Manage extensions → Plugins**, find **Topology** in the marketplace and install it.
 It consumes Kwirth's **events** provider to keep the map current, which the core provides.
+The 3D rendering uses [three.js](https://threejs.org/), shared via the **DCE `three`** — the marketplace
+installs it automatically as a dependency.
 
 ## Development
 

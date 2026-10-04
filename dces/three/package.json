@@ -1,0 +1,27 @@
+{
+    "id": "three",
+    "name": "@kwirthmagnify/kwirth-dce-three",
+    "publisher": "@kwirthmagnify",
+    "version": "0.1.0",
+    "displayName": "Three.js",
+    "description": "Shared three.js 3D library for Kwirth extensions: consumers get the THREE namespace via getDce(), without each bundling its own copy",
+    "website": "https://kwirthmagnify.dev",
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs",
+        "watch": "node watch.mjs",
+        "test": "node tests/run.mjs"
+    },
+    "dependencies": {
+        "@kwirthmagnify/kwirth-common": "^0.5.59"
+    },
+    "devDependencies": {
+        "@types/node": "^20.12.13",
+        "@types/three": "^0.184.0",
+        "esbuild": "^0.27.2",
+        "three": "^0.184.0",
+        "typescript": "^5.4.0"
+    },
+    "requiresRestart": true,
+    "requiresExtension": []
+}

@@ -11,27 +11,9 @@ const kwirthGlobalsPlugin = {
             '@mui/icons-material': 'window.__kwirth__.MUI.icons',
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
-            '@codemirror/view': 'window.__kwirth__.codeMirrorView',
-            '@codemirror/state': 'window.__kwirth__.codeMirrorState',
-            '@codemirror/commands': 'window.__kwirth__.codeMirrorCommands',
-            '@codemirror/search': 'window.__kwirth__.codeMirrorSearch',
-            '@codemirror/language': 'window.__kwirth__.codeMirrorLanguage',
-            '@codemirror/lang-yaml': 'window.__kwirth__.codeMirrorLangYaml',
-            '@codemirror/theme-one-dark': 'window.__kwirth__.codeMirrorThemeOneDark',
-            '@uiw/react-codemirror': 'window.__kwirth__.uiwReactCodeMirror',
-            '@jfvilas/react-file-manager': 'window.__kwirth__.jfvilasReactFileManager',
-
-            '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
-            '@codemirror/view': 'window.__kwirth__.codeMirrorView',
-            '@codemirror/state': 'window.__kwirth__.codeMirrorState',
-            '@codemirror/commands': 'window.__kwirth__.codeMirrorCommands',
-            '@codemirror/search': 'window.__kwirth__.codeMirrorSearch',
-            '@codemirror/language': 'window.__kwirth__.codeMirrorLanguage',
-            '@codemirror/lang-yaml': 'window.__kwirth__.codeMirrorLangYaml',
-            '@codemirror/theme-one-dark': 'window.__kwirth__.codeMirrorThemeOneDark',
-            '@uiw/react-codemirror': 'window.__kwirth__.uiwReactCodeMirror',
-            '@jfvilas/react-file-manager': 'window.__kwirth__.jfvilasReactFileManager',
-
+            '@kwirthmagnify/kwirth-common-front/icons': 'window.__kwirth__.MUI.icons',
+            // three.js is shared via DCE 'three' — not bundled, resolved from the DCE instance at runtime.
+            'three': "window.__kwirth_dce__['three'].instance.THREE",
         }
         for (const pkg of Object.keys(globals)) {
             build.onResolve({ filter: new RegExp(`^${pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }, () => ({
@@ -84,7 +66,7 @@ const frontCtx = await esbuild.context({
     minify: false,
 })
 
-// three.js is bundled (not externalized) since the host does not provide it
+// three.js is resolved from DCE 'three' at runtime — see the globals map above.
 const backCtx = await esbuild.context({
     entryPoints: ['src/back/index.ts'],
     bundle: true,

@@ -18,5 +18,15 @@
     "description": "Network primitives shared by Kwirth extensions: TCP reachability and DNS resolution in the back end, and the icon and a shared latency chart in the front end. No binary is spawned",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-nettools/-/kwirth-dce-nettools-0.2.0.tgz",
     "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "dce",
+    "id": "three",
+    "name": "@kwirthmagnify/kwirth-dce-three",
+    "displayName": "Three.js",
+    "version": "0.1.0",
+    "description": "Shared three.js 3D library for Kwirth extensions: consumers get the THREE namespace via getDce(), without each bundling its own copy",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-three/-/kwirth-dce-three-0.1.0.tgz",
+    "website": "https://kwirthmagnify.dev"
   }
 ]

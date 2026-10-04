@@ -3,7 +3,7 @@
   "name": "topology",
   "displayName": "Topology",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.21",
+  "version": "0.3.0",
   "website": "https://kwirthmagnify.dev",
   "description": "Topology channel plugin for Kwirth - 3D visualization of Kubernetes cluster topology",
   "icon": "AccountTree",
@@ -17,6 +17,7 @@
     "@kwirthmagnify/kwirth-common-back": "^0.6.0"
   },
   "devDependencies": {
+    "@kwirthmagnify/kwirth-dce-three": "file:../../dces/three",
     "@mui/icons-material": "7.1.2",
     "@mui/material": "7.1.2",
     "@types/node": "^20.12.13",
@@ -29,5 +30,5 @@
     "typescript": "^5.4.0"
   },
   "requiresRestart": false,
-  "requiresExtension": []
+  "requiresExtension": ["dce:three:0.1.0"]
 }

@@ -3,7 +3,8 @@
         "agora": "../plugins/agora/dist",
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
-        "pacman": "../plugins/pacman/dist"
+        "status": "../plugins/status/dist",
+        "topology": "../plugins/topology/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",
@@ -28,7 +29,7 @@
         "suse-fleet": "../aitoolsets/suse-fleet/dist"
     },
     "dces": {
-        "sample": "../dces/sample/dist"
+        "three": "../dces/three/dist"
     },
     "docs": {}
 }

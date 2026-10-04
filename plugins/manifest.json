@@ -770,6 +770,19 @@
   {
     "extensionType": "plugin",
     "id": "topology",
+    "version": "0.3.0",
+    "name": "Topology",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.3.0.tgz",
+    "description": "Topology channel plugin for Kwirth - 3D visualization of Kubernetes cluster topology",
+    "icon": "AccountTree",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      { "extensionType": "dce", "id": "three", "minVersion": "0.1.0" }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "topology",
     "version": "0.2.21",
     "name": "Topology",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.2.21.tgz",
