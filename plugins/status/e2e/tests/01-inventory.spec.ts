@@ -63,7 +63,7 @@ const tab = (name: string) => page.getByRole('tab', { name, exact: true })
 
 test('🔴 it opens on Home, with one box per tab', async () => {
     await expect(tab('Home')).toHaveAttribute('aria-selected', 'true')
-    for (const title of ['Providers', 'Graph', 'Performance', 'Plugins', 'Extensions', 'Routes', 'Log', 'Previous log', 'DCE']) {
+    for (const title of ['Providers', 'Graph', 'Performance', 'Plugins & extensions', 'Routes', 'Log', 'Previous log', 'DCE', 'SQL']) {
         await expect(box(title)).toBeVisible()
     }
     // No table on Home: the boxes are the summary, the tables are behind the tabs.
@@ -79,8 +79,9 @@ test('🔴 the Providers box counts exactly what the Providers tab lists', async
     await tab('Home').click()
 })
 
-test('🔴 the Extensions box counts exactly what the Extensions tab lists', async () => {
-    const dicho = (await box('Extensions').innerText()).match(/(\d+) extensions?/)
+test('🔴 the Extensions count in the unified box matches the Extensions tab', async () => {
+    // The Plugins and Extensions boxes were unified; the extensions count lives in "Plugins & extensions".
+    const dicho = (await box('Plugins & extensions').innerText()).match(/(\d+) extensions?/)
     expect(dicho, 'the box does not say how many extensions').not.toBeNull()
     await tab('Extensions').click()
     await page.waitForTimeout(300)

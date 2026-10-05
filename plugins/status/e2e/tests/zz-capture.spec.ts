@@ -108,6 +108,11 @@ test('captura del inventario', async ({ browser }) => {
     await page.waitForTimeout(800)
     await shot('dce')
 
+    // SQL: the core's PostgreSQL/knex support — connection config and database list.
+    await page.getByRole('tab', { name: 'SQL', exact: true }).click()
+    await page.waitForTimeout(800)
+    await shot('sql')
+
     await page.goto('about:blank').catch(() => {})
     mark('left the page')
     await page.context().close().catch(() => {})

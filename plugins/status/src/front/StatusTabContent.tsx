@@ -10,6 +10,7 @@ import { StatusPerformanceTab } from './StatusPerformanceTab'
 import { StatusRoutesTab } from './StatusRoutesTab'
 import { StatusDceTab } from './StatusDceTab'
 import { StatusPluginsTab } from './StatusPluginsTab'
+import { StatusSqlTab } from './StatusSqlTab'
 import { StatusCoreLogTab, StatusPreviousLogTab } from './StatusLogTab'
 import { isAdmin, readCoreLog, readPreviousLog } from './StatusLog'
 import { StatusHomeTab } from './StatusHomeTab'
@@ -36,7 +37,7 @@ const SELF_SCROLLING: ReadonlySet<EStatusTab> = new Set([EStatusTab.GRAPH, EStat
 const TOP_BAR_HEIGHT = 26
 
 /** The tabs where the filter applies: the ones that are lists. */
-const FILTERABLE: ReadonlySet<EStatusTab> = new Set([EStatusTab.PROVIDERS, EStatusTab.PLUGINS, EStatusTab.EXTENSIONS, EStatusTab.ROUTES, EStatusTab.DCE])
+const FILTERABLE: ReadonlySet<EStatusTab> = new Set([EStatusTab.PROVIDERS, EStatusTab.PLUGINS, EStatusTab.EXTENSIONS, EStatusTab.ROUTES, EStatusTab.DCE, EStatusTab.SQL])
 
 interface IEmptyStateProps {
     title: string
@@ -153,7 +154,12 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
         if (!admin || !inventory || !url || !access) return
         let current = true
         readPreviousLog(url, access).then(r => { if (current) { data.previousLog = r; repintar() } })
-        if (vista === EStatusTab.LOG) readCoreLog(url, access).then(l => { if (current) { data.coreLog = l; repintar() } })
+        // When the inventory carries coreLogLines (non-Kubernetes environments), the Log tab already has
+        // them from processChannelMessage — no REST call needed. Only fetch from the REST endpoint when
+        // the core has Kubernetes (the inventory does NOT include coreLogLines).
+        if (vista === EStatusTab.LOG && !inventory.coreLogLines) {
+            readCoreLog(url, access).then(l => { if (current) { data.coreLog = l; repintar() } })
+        }
         return () => { current = false }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [inventory?.takenAt, vista, admin])
@@ -292,6 +298,7 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                     <Tab value={EStatusTab.DCE} label='DCE' sx={{ minHeight: 36, py: 0 }} />
                     <Tab value={EStatusTab.LOG} label='Log' sx={{ minHeight: 36, py: 0 }} />
                     <Tab value={EStatusTab.PREVIOUS_LOG} label='Previous log' sx={{ minHeight: 36, py: 0 }} />
+                    <Tab value={EStatusTab.SQL} label='SQL' sx={{ minHeight: 36, py: 0 }} />
                 </Tabs>
                 {/*
                     Always there, disabled where it does not apply: a box that comes and goes moves everything
@@ -337,6 +344,7 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 {vista === EStatusTab.PREVIOUS_LOG && <StatusPreviousLogTab admin={admin} read={data.previousLog} />}
                 {vista === EStatusTab.PERFORMANCE && <StatusPerformanceTab inventory={inventory} series={data.series} />}
                 {vista === EStatusTab.PLUGINS && <StatusPluginsTab plugins={inventory.plugins} filter={filter} />}
+                {vista === EStatusTab.SQL && <StatusSqlTab sql={inventory.sql} filter={filter} />}
             </Box>
 
             {data.signals.length > 0 && (

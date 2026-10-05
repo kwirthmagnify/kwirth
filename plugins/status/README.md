@@ -14,20 +14,21 @@ rarely looks like the problem. This channel puts that state on a screen — for 
 
 ## What it shows
 
-Ten tabs, and it opens on the first:
+Eleven tabs, and it opens on the first:
 
 | Tab | What it answers |
 |---|---|
-| **Home** | one card per tab with its figures; click a card to open its tab |
+| **Home** | one card per tab with its figures; click a card to open its tab. The **Plugins & extensions** card unifies both (it opens Plugins; an "extensions" chip opens Extensions) |
 | **Providers** | each producer of data — providers and pluviders — with its state and why, consumers and deliveries |
 | **Graph** | who consumes whom |
 | **Performance** | the Kwirth process: memory, CPU, event-loop delay and uptime, with charts of the session |
-| **Plugins** | every installed plugin: running, remote, not started or failed, and how many instances and connections its channel reports (a dash when it does not report — never a zero) |
+| **Plugins** | every installed plugin: running, remote, not started or failed, and how many instances and connections its channel reportsG (a dash when it does not report — never a zero) |
 | **Extensions** | senders and webhooks, with their state |
 | **Routes** | every HTTP route published — core API, providers, plugins, webhooks — with its methods, and collisions marked |
 | **DCE** | every installed DCE: version, source, whether its back and front loaded (with the error), and who consumes it |
 | **Log** | the core's own log (admin only; needs Kwirth running as a pod) |
 | **Previous log** | the log of the previous container after a restart, and how it ended (admin only) |
+| **SQL** | the core's relational storage — PostgreSQL via knex: connection config (no password), driver versions, reachability, the list of databases and per-consumer connection pool stats (used / free / max) |
 
 **The inventory** — every provider, pluvider, sender and webhook this Kwirth has mounted, each with its
 state **and the reason for it**:

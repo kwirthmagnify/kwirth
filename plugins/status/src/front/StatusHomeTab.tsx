@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Chip, Paper, Stack, Typography, alpha, useTheme } from '@mui/material'
-import { AccountTree, CallSplit, Construction, Hub, Link, RestartAlt, Science, Speed, Subject } from '@kwirthmagnify/kwirth-common-front/icons'
+import { AccountTree, CallSplit, Construction, DataObjectOutlined, Hub, Link, RestartAlt, Science, Speed, Subject } from '@kwirthmagnify/kwirth-common-front/icons'
 import { ERouteOwnerKind } from '@kwirthmagnify/kwirth-common'
 import { EComponentHealth, EComponentKind, EStatusTab, IStatusInventory } from '../common/StatusTypes'
 import { collisions } from './StatusRoutes'
@@ -109,6 +109,8 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
     const dce = inventory.dces ? summarizeDces(inventory.dces, readFrontRegistry()) : undefined
     // Undefined when the core does not expose its plugins: unknown, not zero.
     const plugins = inventory.plugins ? summarizePlugins(inventory.plugins) : undefined
+    // Undefined when the core does not expose SQL info: unknown, not "no SQL".
+    const sql = inventory.sql
 
     // One colour per box; none of them red, since these are figures and not alarms.
     const color = {
@@ -120,7 +122,8 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
         routes: theme.palette.primary.light,
         log: theme.palette.info.light,
         previousLog: theme.palette.secondary.light,
-        dce: theme.palette.success.light
+        dce: theme.palette.success.light,
+        sql: theme.palette.warning.light
     }
 
     return (
@@ -167,18 +170,19 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
                         ? `CPU ${cpu === undefined ? 'needs two snapshots' : `${cpu.toFixed(1)} %`} · up ${formatUptime(p.uptimeSeconds)}`
                         : 'this back end does not report the process yet'} />
 
-                <HomeBox tab={EStatusTab.PLUGINS} title='Plugins' icon={<Construction />} color={color.plugins} onOpen={onOpen}
-                    headline={plugins ? plural(plugins.total, 'plugin') : '—'}
-                    detail={plugins
-                        ? `${plural(plugins.instances, 'instance')} open${plugins.unreported > 0 ? ` · ${plugins.unreported} not reporting` : ''}`
-                        : 'the core does not list its plugins yet'}>
+                {/*
+                    Plugins and extensions in one card. The card opens the Plugins tab (the primary one); the
+                    "extensions" chip opens the Extensions tab directly so both entry points are kept. The two
+                    tabs remain separate in the strip — this is only the Home summary.
+                */}
+                <HomeBox tab={EStatusTab.PLUGINS} title='Plugins & extensions' icon={<Construction />} color={color.plugins} onOpen={onOpen}
+                    headline={`${plugins ? plural(plugins.total, 'plugin') : '—'} · ${plural(s.extensions.total, 'extension')}`}
+                    detail={`${plugins ? `${plural(plugins.instances, 'instance')} open` : 'no plugins yet'} · ${plural(s.extensions.byKind[EComponentKind.SENDER], 'sender')} · ${plural(s.extensions.byKind[EComponentKind.WEBHOOK], 'webhook')}`}>
                     {plugins && plugins.failed > 0 && <Chip size='small' color='error' label={`${plugins.failed} failed`} />}
-                </HomeBox>
-
-                <HomeBox tab={EStatusTab.EXTENSIONS} title='Extensions' icon={<Link />} color={color.extensions} onOpen={onOpen}
-                    headline={plural(s.extensions.total, 'extension')}
-                    detail={`${plural(s.extensions.byKind[EComponentKind.SENDER], 'sender')} · ${plural(s.extensions.byKind[EComponentKind.WEBHOOK], 'webhook')}`}>
                     {healthChips(s.extensions)}
+                    <Chip size='small' variant='outlined' clickable
+                        onClick={(e) => { e.stopPropagation(); onOpen(EStatusTab.EXTENSIONS) }}
+                        label={`${plural(s.extensions.total, 'extension')} →`} />
                 </HomeBox>
 
                 <HomeBox tab={EStatusTab.ROUTES} title='Routes' icon={<CallSplit />} color={color.routes} onOpen={onOpen}
@@ -209,6 +213,14 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
                         : 'the core does not list its DCEs yet'}>
                     {/* A broken DCE fails every consumer that asks for it: said here too. */}
                     {dce && dce.broken > 0 && <Chip size='small' color='error' label={`${dce.broken} broken`} />}
+                </HomeBox>
+
+                <HomeBox tab={EStatusTab.SQL} title='SQL' icon={<DataObjectOutlined />} color={color.sql} onOpen={onOpen}
+                    headline={sql ? (sql.reachable ? plural(sql.databases.length, 'database') : 'Not reachable') : '—'}
+                    detail={sql
+                        ? `${sql.client} · ${sql.host}:${sql.port}${sql.ssl ? ' · ssl' : ''}`
+                        : 'the core does not expose SQL info yet'}>
+                    {sql && !sql.reachable && <Chip size='small' color='error' label='unreachable' />}
                 </HomeBox>
             </Box>
         </Stack>

@@ -1,6 +1,6 @@
 # Kwirth Status v2 — Plan
 
-> **ESTADO — VIVO** (2026-09-30): S1, S2, S2b, S2c (DCE), S3 y S4 (Plugins) hechos; publicado `plugin/status@0.5.0`. Queda S5 (el resto de extensiones) y el backlog (B1, B3, B4, B5; B7 forzado por contrato). Cuelga de [PRD-v2.md](PRD-v2.md), que manda en el **qué** y el **por qué**.
+> **ESTADO — VIVO** (2026-10-05): S1, S2, S2b, S2c (DCE), S3, S4 (Plugins) y S6 (SQL) hechos; publicado `plugin/status@0.6.0` + `common-sql@0.3.0`. Queda S5 (el resto de extensiones) y el backlog (B1, B3, B4, B5; B7 forzado por contrato). Cuelga de [PRD-v2.md](PRD-v2.md), que manda en el **qué** y el **por qué**.
 > Segunda versión tras [PLAN.md](PLAN.md) (cerrado en `plugin/status@0.2.7`).
 >
 > Documento **append-only**: lo que se decide no se borra, se marca. Si algo de aquí contradice lo que ves
@@ -117,6 +117,13 @@ Lo planeado para S2 era:
   packs, siguiendo el de senders/webhooks. Sin secretos ni URLs con token en lo expuesto.
 - Pestaña 5: senders y webhooks + esos siete tipos. Con un core sin ellos, cada tipo que falte se dice como
   no disponible.
+
+### S6 — La pestaña SQL · ✅ HECHO (2026-10-05, `plugin/status@0.6.0` + `common-sql@0.3.0`)
+
+- **Home**: las tarjetas de Plugins y Extensions se unifican en una (la card abre Plugins; un chip "extensions →" abre Extensions). Nueva tarjeta **SQL**.
+- **Tab SQL**: config de conexión del core (client, host, port, user, ssl, maintenanceDb — **sin password**), versiones de knex y pg, reachability, lista de BDD y **pools de conexión** por consumidor (used/free/max).
+- **Back**: lee `common-sql` vía `global.__kwirth_back__.kwirthCommonSql`. Nuevo export `listPools()` en `common-sql@0.3.0` para exponer los stats del pool (el `pools` Map era interno).
+- **+5 harness**, **+1 spec e2e** (4 casos). Captura `status-sql.png` añadida al spec manual.
 
 ## Backlog
 

@@ -9,7 +9,7 @@
 
 import knexFactory from 'knex'
 import type { Knex } from 'knex'
-import { ISqlServer } from './index'
+import { ISqlServer, IPoolInfo } from './index'
 
 // Re-exported so extensions do not bundle the driver.
 export { default as knex } from 'knex'
@@ -217,4 +217,26 @@ export const closeDb = async (consumerId?: string): Promise<void> => {
     if (adminPool) { await adminPool.destroy(); adminPool = undefined }
     schemaReady.clear()
     configuredMax.clear()
+}
+
+/**
+ * Runtime stats of every open connection pool, for observability (the Status plugin's SQL tab). Reads the
+ * live tarn pool each Knex instance holds. Pools that have not been opened (ensureDb not called) do not
+ * appear: this is what is running NOW, not what could run.
+ */
+export const listPools = (): IPoolInfo[] => {
+    const result: IPoolInfo[] = []
+    for (const [consumerId, k] of pools) {
+        // knex's pool is tarn: numUsed()/numFree() are the live counts. The shape is narrowed here rather
+        // than importing tarn's types, so this library does not drag them into its public surface.
+        const pool = (k.client as unknown as { pool?: { numUsed?: () => number, numFree?: () => number } }).pool
+        result.push({
+            consumerId,
+            dbName: physicalDbName(consumerId),
+            used: pool?.numUsed?.() ?? 0,
+            free: pool?.numFree?.() ?? 0,
+            max: configuredMax.get(consumerId) ?? POOL_DEFAULT.max
+        })
+    }
+    return result
 }

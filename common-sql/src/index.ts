@@ -16,3 +16,17 @@ export interface ISqlServer {
     ssl: boolean
     maintenanceDb?: string   // BD de mantenimiento para CREATE/DROP/list DATABASE (default 'postgres')
 }
+
+/** Runtime stats of one consumer's connection pool, for observability (Status plugin). */
+export interface IPoolInfo {
+    /** The consumer id (as passed to ensureDb). */
+    consumerId: string
+    /** The physical database name (`kwirth_<consumerId>`). */
+    dbName: string
+    /** Connections currently acquired (in use). */
+    used: number
+    /** Connections currently idle in the pool. */
+    free: number
+    /** The pool's max (ceiling of simultaneous connections for this pool). */
+    max: number
+}

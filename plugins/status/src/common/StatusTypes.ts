@@ -116,6 +116,56 @@ export interface IStatusInventory {
      * (older than ClusterInfo.plugins): that is "unknown", not "no plugins".
      */
     plugins?: IPluginStatus[]
+    /**
+     * The core's own log lines, from the in-memory ring buffer. Only present when there is no Kubernetes
+     * API (ECS, ACI, Cloud Run, bare OS): in a pod the REST endpoint serves the log instead. Absent on
+     * older cores that do not have the 'corelog' provider.
+     */
+    coreLogLines?: string[]
+    /**
+     * The core's SQL/Postgres support (SQL tab): connection config, driver versions, reachability and the
+     * list of databases. Absent when the core does not expose it (older than the common-sql wiring): that
+     * is "unknown", not "no SQL".
+     */
+    sql?: IStatusSqlInfo
+}
+
+/**
+ * What the status plugin reports about the core's relational storage (PostgreSQL via knex).
+ *
+ * The connection config comes from the same `KWIRTH_SQL_*` env vars the core reads at startup. The password
+ * is deliberately NOT included: this is an observability view, not a config dialog.
+ */
+export interface IStatusSqlInfo {
+    /** The knex client in use ('pg' today). */
+    client: string
+    host: string
+    port: number
+    user: string
+    ssl: boolean
+    /** Maintenance DB for CREATE/DROP/list DATABASE (default 'postgres'). */
+    maintenanceDb: string
+    /** Whether a connection could be established and the databases listed. */
+    reachable: boolean
+    /** Physical database names from `listDbs()`. Empty when not reachable. */
+    databases: string[]
+    /** Best-effort version of the knex package, when it can be read. */
+    knexVersion?: string
+    /** Best-effort version of the pg driver, when it can be read. */
+    pgVersion?: string
+    /** When not reachable, a one-line description of what happened (common-sql's describeError). */
+    error?: string
+    /** Per-pool runtime stats (connections in use / idle / max), one per consumer with an open pool. */
+    pools: IStatusSqlPool[]
+}
+
+/** Runtime stats of one consumer's connection pool. */
+export interface IStatusSqlPool {
+    consumerId: string
+    dbName: string
+    used: number
+    free: number
+    max: number
 }
 
 /** How one half (back or front) of a DCE is right now. */
@@ -242,7 +292,9 @@ export enum EStatusTab {
     /** The core's own log: the container running now. */
     LOG = 'log',
     /** The log of the previous container, when this one is a restart. */
-    PREVIOUS_LOG = 'previous-log'
+    PREVIOUS_LOG = 'previous-log',
+    /** The core's SQL/Postgres support: connection config, driver and databases. */
+    SQL = 'sql'
 }
 
 /** The core's prefix for a consumer that is a provider (back/src/providers/Consumer.ts). */

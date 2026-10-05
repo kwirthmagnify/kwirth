@@ -1,6 +1,6 @@
 import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { ERouteOwnerKind, IChannelInstances, IDceAccess, IDceMeta, IPluginAccess, IPluginStatus, IPublishedRoute, IRouteAccess } from '@kwirthmagnify/kwirth-common'
-import { EComponentHealth, EComponentKind, EStatusPayload, IStatusComponent, IStatusDce, IStatusDceConsumer, IStatusEdge, IStatusInventory, IStatusMessageResponse } from '../common/StatusTypes'
+import { EComponentHealth, EComponentKind, EStatusPayload, IStatusComponent, IStatusDce, IStatusDceConsumer, IStatusEdge, IStatusInventory, IStatusMessageResponse, IStatusSqlInfo, IStatusSqlPool } from '../common/StatusTypes'
 import { ProcessProbe } from './ProcessProbe'
 
 /*
@@ -30,6 +30,11 @@ interface IProviderLike {
      * providers do not have it. Whoever does not implement it shows up as "not reported".
      */
     getStats?(): { subscribers: number, events?: number }
+    /**
+     * Only on the core's internal 'corelog' provider: returns the last N lines from the in-memory ring
+     * buffer. Absent on every other provider and on older cores that do not have it.
+     */
+    getLogLines?(count?: number): string[]
 }
 
 interface IListing {
@@ -478,6 +483,15 @@ class StatusChannel implements IChannel {
         const routes = toStatusRoutes(this.clusterInfo.routes)
         const dces = await toStatusDces(this.clusterInfo.dces)
         const plugins = await toStatusPlugins(this.clusterInfo.plugins)
+        /*
+            The core's own log lines, from the internal 'corelog' provider. Only present when the core has
+            no Kubernetes API (the provider is instantiated conditionally). In a pod the Status plugin
+            reads the log through the REST endpoint instead, and this field is absent.
+        */
+        const coreLogProvider = (this.clusterInfo.providers ?? []).find(p => p.id === 'corelog')
+        const coreLogLines = coreLogProvider?.getLogLines?.()
+        const sql = await this.buildSqlInfo()
+
         return {
             cluster: this.clusterInfo.name ?? '',
             takenAt: Date.now(),
@@ -486,7 +500,48 @@ class StatusChannel implements IChannel {
             process: this.probe.sample(),
             ...(routes ? { routes } : {}),
             ...(dces ? { dces } : {}),
-            ...(plugins ? { plugins } : {})
+            ...(plugins ? { plugins } : {}),
+            ...(coreLogLines ? { coreLogLines } : {}),
+            ...(sql ? { sql } : {})
+        }
+    }
+
+    /**
+     * The core's SQL/Postgres support: connection config (from the same `KWIRTH_SQL_*` env the core reads),
+     * driver/ORM versions, reachability and the list of databases.
+     *
+     * It reaches `common-sql` through the `__kwirth_back__` global the core exposes, so nothing is bundled.
+     * When the global is absent (an older core without common-sql) this returns `undefined` and the field
+     * stays absent from the inventory — "unknown", not "no SQL". The password is never read or sent.
+     */
+    private buildSqlInfo = async (): Promise<IStatusSqlInfo | undefined> => {
+        const sqlLib = (global as { __kwirth_back__?: { kwirthCommonSql?: { listDbs: () => Promise<string[]>, listPools: () => IStatusSqlPool[], describeError: (err: unknown) => string } } }).__kwirth_back__?.kwirthCommonSql
+        if (!sqlLib) return undefined
+
+        const client = process.env.KWIRTH_SQL_CLIENT || 'pg'
+        const host = process.env.KWIRTH_SQL_HOST || 'localhost'
+        const port = Number(process.env.KWIRTH_SQL_PORT || 5432)
+        const user = process.env.KWIRTH_SQL_USER || 'postgres'
+        const ssl = process.env.KWIRTH_SQL_SSL === 'true'
+        const maintenanceDb = process.env.KWIRTH_SQL_MAINTDB || 'postgres'
+
+        let knexVersion: string | undefined
+        let pgVersion: string | undefined
+        try { knexVersion = require('knex/package.json').version } catch { /* best-effort */ }
+        try { pgVersion = require('pg/package.json').version } catch { /* best-effort */ }
+
+        // Pool stats are always available (listPools is synchronous and reads the live pools Map); they do
+        // not depend on the server being reachable. A pool that is open but whose connection is stale still
+        // reports its used/free counts.
+        let pools: IStatusSqlPool[] = []
+        try { pools = sqlLib.listPools() } catch { /* best-effort */ }
+
+        try {
+            const databases = await sqlLib.listDbs()
+            return { client, host, port, user, ssl, maintenanceDb, reachable: true, databases, pools, ...(knexVersion ? { knexVersion } : {}), ...(pgVersion ? { pgVersion } : {}) }
+        }
+        catch (err) {
+            return { client, host, port, user, ssl, maintenanceDb, reachable: false, databases: [], pools, ...(knexVersion ? { knexVersion } : {}), ...(pgVersion ? { pgVersion } : {}), error: sqlLib.describeError(err) }
         }
     }
 
