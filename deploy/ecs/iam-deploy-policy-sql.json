@@ -118,6 +118,23 @@
       "Resource": "*"
     },
     {
+      "Sid": "RdsForSql",
+      "Effect": "Allow",
+      "Action": [
+        "rds:CreateDBInstance",
+        "rds:DeleteDBInstance",
+        "rds:ModifyDBInstance",
+        "rds:DescribeDBInstances",
+        "rds:CreateDBSubnetGroup",
+        "rds:DeleteDBSubnetGroup",
+        "rds:DescribeDBSubnetGroups",
+        "rds:DescribeDBSecurityGroups",
+        "rds:ListTagsForResource",
+        "rds:AddTagsToResource"
+      ],
+      "Resource": "*"
+    },
+    {
       "Sid": "LoadBalancerAndListener",
       "Effect": "Allow",
       "Action": [

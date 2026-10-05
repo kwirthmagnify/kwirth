@@ -110,6 +110,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const [logComponents, setLogComponents] = useState<ILogComponentInfo[]>([])
     const [logLevels, setLogLevels] = useState<Record<string, ELogLevel>>({})
     const [logAnsi, setLogAnsi] = useState(true)
+    const [logBufferLines, setLogBufferLines] = useState<number>(5000)
     const [marketplaces, setMarketplaces] = useState<IMarketplaceRow[]>([])
     const [registries, setRegistries] = useState<IPackageRegistryRow[]>([])
     const [loading, setLoading] = useState(true)
@@ -142,6 +143,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 */
                 setLogLevels(settings.log?.levels ?? {})
                 setLogAnsi(settings.log?.ansi ?? true)
+                setLogBufferLines(settings.log?.bufferLines ?? 5000)
                 // If this fails the screen does not break: the tab simply has nothing to draw.
                 const components = await fetch(`${props.clusterUrl}/core/settings/log/components`, addGetAuthorization(props.accessString))
                 if (components.ok) setLogComponents(await components.json() as ILogComponentInfo[])
@@ -304,7 +306,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 previousLogSenderId: senderChosen ? previousLogSenderId : '',
                 previousLogSenderConfigName: senderChosen ? previousLogSenderConfigName : '',
                 previousLogSenderLines,
-                log: { levels: logLevels, ansi: logAnsi } })
+                log: { levels: logLevels, ansi: logAnsi, bufferLines: logBufferLines } })
             const response = await fetch(`${props.clusterUrl}/core/settings`, addPutAuthorization(props.accessString, payload))
             if (!response.ok) {
                 const detail = await response.json().catch(() => ({}))
@@ -450,6 +452,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const resetLog = () => {
         setLogLevels({})
         setLogAnsi(true)
+        setLogBufferLines(5000)
     }
 
     /*
@@ -563,6 +566,14 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                             Helpful on a terminal, in the way anywhere else: collected into a file or forwarded to a log service,
                             the colour codes travel as rubbish in the middle of the message.
                         </Typography>
+                        {/*
+                            The in-memory ring buffer for environments without Kubernetes (ECS, ACI, Cloud
+                            Run, bare OS). In a pod the kubelet keeps the container log; elsewhere this
+                            buffer takes its place and the Status plugin reads it over its WebSocket.
+                        */}
+                        <TextField value={logBufferLines} onChange={(e) => setLogBufferLines(+e.target.value)} variant='standard'
+                            label='In-memory log buffer lines' type='number' sx={{ width: '40%', mt: 2 }} disabled={loading || error!==''}
+                            helperText='Last N lines kept for the Status plugin Log tab when there is no Kubernetes API. 5000 by default' />
                     </Stack>
                 </Box>
 

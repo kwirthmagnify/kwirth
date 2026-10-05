@@ -40,6 +40,12 @@ export interface IKwirthLogSettings {
         survive a restart, which is what storing it here adds.
     */
     ansi?: boolean
+    /*
+        How many log lines the core keeps in its in-memory ring buffer, for the Status plugin's Log tab
+        when there is no Kubernetes API (ECS, ACI, Cloud Run, bare OS). In a pod the kubelet keeps the
+        container log and this buffer is not exposed. Defaults to 5000. Applied hot, like the rest.
+    */
+    bufferLines?: number
 }
 
 /** A component as the back end publishes it, so the front end can draw it without knowing the enum. */

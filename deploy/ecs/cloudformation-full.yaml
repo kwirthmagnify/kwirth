@@ -1,0 +1,450 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Kwirth on ECS Fargate, from scratch. Creates the VPC, subnets, NAT gateway, load balancer, ECS
+  cluster, EFS, and the Kwirth task itself. Use this when the AWS account has nothing yet.
+  For an account that already has a VPC, cluster and ALB, use cloudformation.yaml instead.
+
+Parameters:
+  ImageTag:
+    Type: String
+    Default: 'develop'
+    Description: Tag of kwirthmagnify/kwirth to run. Pin a version; avoid 'latest' outside demos
+  VpcCidr:
+    Type: String
+    Default: '10.0.0.0/16'
+    Description: CIDR block for the VPC
+  AlbPort:
+    Type: Number
+    Default: 80
+    Description: Port the load balancer listens on (use 443 with a certificate in production)
+
+Resources:
+
+  # ── VPC and subnets ──────────────────────────────────────────────────────────────────────────────
+  # Two public subnets (for the ALB) and two private subnets (for the task and EFS), across two AZs.
+
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [0, !Cidr [!Ref VpcCidr, 4, 12]]
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags: [{ Key: Name, Value: !Sub '${AWS::StackName}-public-1' }]
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [1, !Cidr [!Ref VpcCidr, 4, 12]]
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags: [{ Key: Name, Value: !Sub '${AWS::StackName}-public-2' }]
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [2, !Cidr [!Ref VpcCidr, 4, 12]]
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags: [{ Key: Name, Value: !Sub '${AWS::StackName}-private-1' }]
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [3, !Cidr [!Ref VpcCidr, 4, 12]]
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags: [{ Key: Name, Value: !Sub '${AWS::StackName}-private-2' }]
+
+  # ── Internet gateway and NAT ─────────────────────────────────────────────────────────────────────
+  # The private subnets need a route to the internet so Fargate can pull the image from Docker Hub.
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  NatGatewayEip:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEip.AllocationId
+      SubnetId: !Ref PublicSubnet1
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  # ── Security groups ──────────────────────────────────────────────────────────────────────────────
+
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP to the load balancer
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref AlbPort
+          ToPort: !Ref AlbPort
+          CidrIp: '0.0.0.0/0'
+
+  TaskSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Kwirth task
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3883
+          ToPort: 3883
+          SourceSecurityGroupId: !GetAtt AlbSecurityGroup.GroupId
+
+  FileSystemSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: NFS from the Kwirth task only
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !GetAtt TaskSecurityGroup.GroupId
+
+  # ── Load balancer ────────────────────────────────────────────────────────────────────────────────
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub '${AWS::StackName}-alb'
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !GetAtt AlbSecurityGroup.GroupId
+
+  # The listener starts with a default 404; the real rule forwards to the Kwirth target group.
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: !Ref AlbPort
+      Protocol: HTTP
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: '404'
+            ContentType: text/plain
+            MessageBody: 'No rule matched'
+
+  # ── ECS cluster ──────────────────────────────────────────────────────────────────────────────────
+
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub '${AWS::StackName}-cluster'
+      CapacityProviders:
+        - FARGATE
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+
+  # ── EFS for the store ───────────────────────────────────────────────────────────────────────────
+  # Without this, everything Kwirth writes - users, API keys, installed extensions - dies with the task.
+
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: true
+      PerformanceMode: generalPurpose
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-store'
+
+  AccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref FileSystem
+      PosixUser:
+        Uid: '0'
+        Gid: '0'
+      RootDirectory:
+        Path: /kwirth
+        CreationInfo:
+          OwnerUid: '0'
+          OwnerGid: '0'
+          Permissions: '0755'
+
+  MountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Ref PrivateSubnet1
+      SecurityGroups:
+        - !GetAtt FileSystemSecurityGroup.GroupId
+
+  MountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Ref PrivateSubnet2
+      SecurityGroups:
+        - !GetAtt FileSystemSecurityGroup.GroupId
+
+  # ── Target group ─────────────────────────────────────────────────────────────────────────────────
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref Vpc
+      Port: 3883
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: /healthz
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: 'true'
+        - Key: stickiness.type
+          Value: lb_cookie
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+
+  # Forward everything to Kwirth. In production you might route by path and keep other services on
+  # the same ALB.
+  ListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref Listener
+      Priority: 1
+      Conditions:
+        - Field: path-pattern
+          Values: ['/*']
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # ── Identity ─────────────────────────────────────────────────────────────────────────────────────
+
+  MasterKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'kwirth/${AWS::StackName}-masterkey'
+      Description: >-
+        Derives the encryption key for Kwirth secrets at rest. Changing it makes everything already
+        written unreadable - there is no migration.
+      GenerateSecretString:
+        PasswordLength: 48
+        ExcludePunctuation: true
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: read-masterkey
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref MasterKeySecret
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: efs-access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - elasticfilesystem:ClientMount
+                  - elasticfilesystem:ClientWrite
+                Resource: !GetAtt FileSystem.Arn
+                Condition:
+                  StringEquals:
+                    elasticfilesystem:AccessPointArn: !GetAtt AccessPoint.Arn
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/${AWS::StackName}-kwirth'
+      RetentionInDays: 30
+
+  # ── The task ─────────────────────────────────────────────────────────────────────────────────────
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub '${AWS::StackName}-kwirth'
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      Cpu: '1024'
+      Memory: '2048'
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      Volumes:
+        - Name: kwirth-store
+          EFSVolumeConfiguration:
+            FilesystemId: !Ref FileSystem
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              AccessPointId: !Ref AccessPoint
+              IAM: ENABLED
+      ContainerDefinitions:
+        - Name: kwirth
+          Image: !Sub 'kwirthmagnify/kwirth:${ImageTag}'
+          Essential: true
+          PortMappings:
+            - ContainerPort: 3883
+              Protocol: tcp
+          MountPoints:
+            - SourceVolume: kwirth-store
+              ContainerPath: /data/kwirth
+              ReadOnly: false
+          Environment:
+            - Name: KWIRTH_STORE
+              Value: /data/kwirth
+            - Name: KWIRTH_CLUSTER_NAME
+              Value: !Ref AWS::StackName
+          Secrets:
+            - Name: MASTERKEY
+              ValueFrom: !Ref MasterKeySecret
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - wget -q -O - http://localhost:3883/healthz || exit 1
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: kwirth
+
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: ListenerRule
+    Properties:
+      Cluster: !Ref EcsCluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 0
+        MaximumPercent: 100
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
+          SecurityGroups:
+            - !GetAtt TaskSecurityGroup.GroupId
+          AssignPublicIp: DISABLED
+      LoadBalancers:
+        - ContainerName: kwirth
+          ContainerPort: 3883
+          TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+  LoadBalancerDns:
+    Description: URL where Kwirth is reachable
+    Value: !Sub 'http://${LoadBalancer.DNSName}:${AlbPort}'
+  FileSystemId:
+    Description: EFS holding the Kwirth store
+    Value: !Ref FileSystem
+  MasterKeySecretArn:
+    Description: Generated MASTERKEY. Do not change it once Kwirth has written secrets.
+    Value: !Ref MasterKeySecret
+  EcsClusterName:
+    Description: ECS cluster running Kwirth
+    Value: !Ref EcsCluster

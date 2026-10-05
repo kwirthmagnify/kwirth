@@ -35,6 +35,26 @@ export class ConfigApi {
             })
             .get( async (req:Request, res:Response) => {
                 try {
+                    // No Kubernetes API (ECS, ACI, Cloud Run, bare OS): return what we know without
+                    // calling k8s clients that do not exist. The front end shows the type as 'none'.
+                    if (!this.clusterInfo.coreApi || !this.clusterInfo.versionApi) {
+                        res.status(200).json({
+                            name: this.clusterInfo.name,
+                            id: this.clusterInfo.id,
+                            type: this.clusterInfo.type,
+                            flavour: this.clusterInfo.flavour,
+                            rancherManaged: this.clusterInfo.rancherManaged,
+                            rancherRole: this.clusterInfo.rancherRole,
+                            memory: this.clusterInfo.memory,
+                            vcpu: this.clusterInfo.vcpus,
+                            reportedName: clusterInfo?.name,
+                            reportedServer: undefined,
+                            version: undefined,
+                            platform: undefined,
+                            nodes: []
+                        })
+                        return
+                    }
                     const versionInfo = await this.clusterInfo.versionApi.getCode()
                     const currentCluster = this.clusterInfo.kubeConfig.getCurrentCluster()
 
@@ -73,6 +93,11 @@ export class ConfigApi {
                     try {
                         let accessKey = await AuthorizationManagement.getKey(req,res, this.apiKeyApi)
                         if (accessKey) {
+                            // No Kubernetes API: there are no namespaces to list.
+                            if (!this.clusterInfo.coreApi) {
+                                res.status(200).json([])
+                                return
+                            }
                             let list = await AuthorizationManagement.getAllowedNamespaces(this.clusterInfo.coreApi, accessKey)
                             res.status(200).json(list)
                         }
@@ -103,6 +128,7 @@ export class ConfigApi {
                     try {
                         let accessKey = await AuthorizationManagement.getKey(req,res, this.apiKeyApi)
                         if (accessKey) {
+                            if (!this.clusterInfo.coreApi) { res.status(200).json([]); return }
                             let list = await AuthorizationManagement.getAllowedClusterPods(this.clusterInfo.coreApi, this.clusterInfo.appsApi, accessKey)
                             res.status(200).json(list)
                         }
@@ -132,6 +158,7 @@ export class ConfigApi {
                 try {
                     let accessKey = await AuthorizationManagement.getKey(req,res, this.apiKeyApi)
                     if (accessKey) {
+                        if (!this.clusterInfo.coreApi) { res.status(200).json([]); return }
                         let result = await AuthorizationManagement.getAllowedControllers(this.clusterInfo.coreApi, this.clusterInfo.appsApi, this.clusterInfo.batchApi, req.params.namespace, accessKey)
                         res.status(200).json(result)
                     }

@@ -7,12 +7,64 @@ What is in this folder:
 
 | file | what it is |
 |---|---|
+| [`cloudformation-full.yaml`](cloudformation-full.yaml) | **start here on an empty account**: VPC, subnets, NAT, ALB, ECS cluster, EFS, and Kwirth — one stack, nothing else needed |
 | [`task-definition-minimal.json`](task-definition-minimal.json) | the smallest thing that runs. Nothing persists. Start here to see it come up |
 | [`task-definition-fargate.json`](task-definition-fargate.json) | the real one: EFS for storage, Secrets Manager for the master key, behind a load balancer |
 | [`task-definition-ec2.json`](task-definition-ec2.json) | the same on the EC2 launch type, and with a **kubeconfig mounted** so Kwirth observes a cluster |
-| [`cloudformation.yaml`](cloudformation.yaml) | everything around the task: EFS, security groups, target group, IAM roles |
+| [`cloudformation.yaml`](cloudformation.yaml) | EFS, security groups, target group, IAM roles — for an account that **already has** a VPC, cluster and ALB |
 | [`iam-deploy-policy.json`](iam-deploy-policy.json) | the permissions **you** need to deploy all of the above |
 | [`firelens-sidecar.json`](firelens-sidecar.json) | how **another** task ships its log into this Kwirth |
+
+## Quick start: empty account
+
+If your AWS account has nothing yet, deploy [`cloudformation-full.yaml`](cloudformation-full.yaml)
+in one command. It creates the VPC, two public and two private subnets, a NAT gateway, an Application
+Load Balancer, an ECS cluster, EFS, and the Kwirth task itself.
+
+```bash
+aws cloudformation create-stack \
+  --stack-name kwirth \
+  --template-body file://deploy/ecs/cloudformation-full.yaml \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region eu-west-1
+```
+
+Wait for it to finish (about 5 minutes — EFS mount targets are the slow part):
+
+```bash
+aws cloudformation wait stack-create-complete --stack-name kwirth --region eu-west-1
+```
+
+Then read the output to get the URL:
+
+```bash
+aws cloudformation describe-stacks \
+  --stack-name kwirth \
+  --query 'Stacks[0].Outputs[?OutputKey==`LoadBalancerDns`].OutputValue' \
+  --output text \
+  --region eu-west-1
+```
+
+Open that URL in a browser. Log in with `admin` / `password` and **change the password immediately**.
+
+That is the whole deployment. What the template created for you:
+
+- **VPC** `10.0.0.0/16` with two public subnets (ALB) and two private subnets (task + EFS)
+- **NAT gateway** so the private subnets can pull the image from Docker Hub
+- **ALB** on port 80 forwarding everything to Kwirth
+- **EFS** with an access point at `/kwirth`, mounted at `/data/kwirth` — the store survives task recycles
+- **MASTERKEY** generated in Secrets Manager, injected as a secret (not visible in the console)
+- **Log group** `/ecs/kwirth-kwirth` with 30-day retention
+
+When you are done:
+
+```bash
+aws cloudformation delete-stack --stack-name kwirth --region eu-west-1
+```
+
+> **Cost.** The NAT gateway and EFS are the items that cost while idle: roughly $32/month for the NAT
+> plus its EIP, and a few dollars for EFS. The ALB is ~$16/month. Fargate bills per second of task
+> runtime. `delete-stack` removes all of it.
 
 ## What the deploying account needs
 
@@ -59,14 +111,14 @@ wrong thing for anything you keep:
 
 | tag | what it is | when |
 |---|---|---|
-| `0.5.228` (any released version) | that exact build, forever | **production.** You decide when to move |
+| `0.6.49` (any released version) | that exact build, forever | **production.** You decide when to move |
 | `latest` | whatever was released last | trying it out, demos |
 | `develop` | the development build | testing something unreleased. Do not run it for real |
 
 The tag lives in `image` inside the container definition:
 
 ```json
-"image": "kwirthmagnify/kwirth:0.5.228"
+"image": "kwirthmagnify/kwirth:0.6.49"
 ```
 
 In [`cloudformation.yaml`](cloudformation.yaml) it is the `ImageTag` parameter instead, so you move

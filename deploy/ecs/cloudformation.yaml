@@ -19,7 +19,7 @@ Parameters:
     Description: Security group of the load balancer that will reach the task
   ImageTag:
     Type: String
-    Default: '0.5.228'
+    Default: '0.6.49'
     # Pin a released version. 'latest' in a task definition throws away the one thing a task definition
     # is for: two tasks from the same revision can end up on different builds, and rolling back the
     # revision does not roll back the image.
@@ -131,6 +131,7 @@ Resources:
   MasterKeySecret:
     Type: AWS::SecretsManager::Secret
     Properties:
+      Name: !Sub 'kwirth/${AWS::StackName}-masterkey'
       Description: >-
         Derives the encryption key for Kwirth secrets at rest. Changing it makes everything already
         written unreadable - there is no migration.

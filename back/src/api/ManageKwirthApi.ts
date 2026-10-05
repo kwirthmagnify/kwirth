@@ -4,6 +4,7 @@ import { KwirthData } from '@kwirthmagnify/kwirth-common'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 import { getPreviousContainerLog } from '../tools/PreviousContainerLog'
+import { ELogComponent, logInfo } from '../tools/Logging'
 
 export class ManageKwirthApi {
     public router = express.Router()
@@ -24,6 +25,19 @@ export class ManageKwirthApi {
             })
             .get( async (req:Request, res:Response) => {
                 try {
+                    /*
+                        No Kubernetes API (ECS, ACI, Cloud Run, bare OS): there is no deployment to
+                        restart. The way to restart is to exit the process — the scheduler (ECS service,
+                        ACI, systemd…) starts a new task, and on Fargate that means a fresh image pull
+                        from the registry, so a newly pushed tag is picked up. The response is sent first
+                        so the client gets it before the process goes away.
+                    */
+                    if (!this.coreApi) {
+                        logInfo(ELogComponent.CORE, 'Restart requested in a non-Kubernetes environment: exiting the process so the scheduler starts a new task')
+                        res.status(200).json({ restarted: true, method: 'process-exit' })
+                        setTimeout(() => process.exit(0), 500)
+                        return
+                    }
                     this.restartController(this.coreApi, this.appsApi, this.batchApi, kwirthData.namespace, 'deployment+' + kwirthData.deployment)
                     res.status(200).json()
                 }

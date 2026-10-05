@@ -1149,7 +1149,7 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
         let accessKeyResources = parseResources(accessKeyDeserialize(instanceConfig.accessKey).resources)
 
         let validNamespaces:string[] = []
-        if (instanceConfig.namespace) validNamespaces = await AuthorizationManagement.getValidNamespaces(ri.clusterInfo.coreApi, accessKey, instanceConfig.namespace.split(','))
+        if (instanceConfig.namespace && ri.clusterInfo.coreApi) validNamespaces = await AuthorizationManagement.getValidNamespaces(ri.clusterInfo.coreApi, accessKey, instanceConfig.namespace.split(','))
         /*
             These four are TRACE and not info: they dump internal lists on every instance start, which is
             detail for debugging permissions, not something to tell. As info they could not be silenced
@@ -1158,15 +1158,15 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
         logTrace(ELogComponent.AUTH, 'validNamespaces: ' + validNamespaces)
 
         let validControllers:string[] = []
-        if (instanceConfig.group) validControllers = await AuthorizationManagement.getValidControllers(ri.clusterInfo.coreApi,ri.clusterInfo.appsApi, ri.clusterInfo.batchApi, accessKey, validNamespaces, instanceConfig.group.split(','))
+        if (instanceConfig.group && ri.clusterInfo.coreApi) validControllers = await AuthorizationManagement.getValidControllers(ri.clusterInfo.coreApi,ri.clusterInfo.appsApi, ri.clusterInfo.batchApi, accessKey, validNamespaces, instanceConfig.group.split(','))
         logTrace(ELogComponent.AUTH, 'validControllers:' + validControllers)
 
         let validPodNames:string[] = []
-        if (instanceConfig.pod) validPodNames = await AuthorizationManagement.getValidPods(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, validNamespaces, accessKey, instanceConfig.pod.split(','))
+        if (instanceConfig.pod && ri.clusterInfo.coreApi) validPodNames = await AuthorizationManagement.getValidPods(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, validNamespaces, accessKey, instanceConfig.pod.split(','))
         logTrace(ELogComponent.AUTH, 'validPods:' + validPodNames)
 
         let validContainers:string[] = []
-        if (instanceConfig.container) validContainers = await  AuthorizationManagement.getValidContainers(ri.clusterInfo.coreApi, accessKey, validNamespaces, validPodNames, instanceConfig.container.split(','))
+        if (instanceConfig.container && ri.clusterInfo.coreApi) validContainers = await  AuthorizationManagement.getValidContainers(ri.clusterInfo.coreApi, accessKey, validNamespaces, validPodNames, instanceConfig.container.split(','))
         logTrace(ELogComponent.AUTH, 'validContainers:' + validContainers)
         
         switch (instanceConfig.action) {
@@ -2354,8 +2354,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         runningInstance.clusterInfo.webhooks = webhookManager
         runningInstance.backChannelObject = backChannelObject
         runningInstance.providerStorage = buildProviderStorage(runningInstance.configMaps, runningInstance.secrets)
-        await setKubernetesClusterKwirthRequirements(runningInstance, localKwirthData, runningInstance.clusterInfo, backChannelObject)
         runningInstance.clusterInfo.type = localKwirthData.clusterType
+        await setKubernetesClusterKwirthRequirements(runningInstance, localKwirthData, runningInstance.clusterInfo, backChannelObject)
 
         // this '.channels' object is sent to clients when they want to know something about support channels on the backend they're connected to.
         // Hosted channels are announced as LOCAL; 'single' channels not hosted here (see gate) are announced as REMOTE.

@@ -55,6 +55,12 @@ export class StatusChannel implements IChannel {
                     data.inventory = msg.inventory
                     const point = pointOf(data.previous, msg.inventory)
                     if (point) data.series = appendPoint(data.series, point)
+                    // When the core has no Kubernetes API, the log lines travel in the inventory itself
+                    // (from the internal 'corelog' provider). They are set here so the Log tab shows them
+                    // without calling the REST endpoint.
+                    if (msg.inventory.coreLogLines) {
+                        data.coreLog = { lines: msg.inventory.coreLogLines }
+                    }
                 }
                 return { action: EChannelRefreshAction.REFRESH }
             case EInstanceMessageType.SIGNAL: {

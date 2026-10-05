@@ -1,4 +1,5 @@
 import { ELogLevel, IKwirthLogSettings, ILogComponentInfo } from '@kwirthmagnify/kwirth-common'
+import { coreLogBuffer } from './LogBuffer'
 
 /*
     Four letters each, so the tag column lines up and the eye can skip it: what you are looking for is
@@ -117,10 +118,11 @@ export const applyLogSettings = (settings?: IKwirthLogSettings): void => {
         ;(levels as Record<string, ELogLevel>)[key] = level
     }
     if (settings?.ansi !== undefined) ansiLog = settings.ansi
+    if (settings?.bufferLines !== undefined && settings.bufferLines > 0) coreLogBuffer.resize(settings.bufferLines)
 }
 
 /** The levels in force, for the GET of the settings to return what actually rules. */
-export const currentLogSettings = (): IKwirthLogSettings => ({ levels: { ...levels }, ansi: ansiLog })
+export const currentLogSettings = (): IKwirthLogSettings => ({ levels: { ...levels }, ansi: ansiLog, bufferLines: coreLogBuffer.getMaxSize() })
 
 const colors = {
   reset: '\x1b[0m',

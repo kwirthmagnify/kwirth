@@ -25,7 +25,7 @@
   "containerDefinitions": [
     {
       "name": "kwirth",
-      "image": "kwirthmagnify/kwirth:0.5.228",
+      "image": "kwirthmagnify/kwirth:0.6.49",
       "essential": true,
       "portMappings": [
         {

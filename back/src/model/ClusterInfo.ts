@@ -189,7 +189,14 @@ export class ClusterInfo {
             log.info(`Subscriber '${c.getChannelData().id}' added`)
         }
         else
-            log.error(`Cannot subscribe channel '${c.getChannelData().id}': this provider does not exist`)
+            /*
+                A warning, not an error: the channel goes on working, it just receives no events from this
+                provider. In a non-Kubernetes environment (ECS, ACI, bare OS) the 'metrics' and 'events'
+                providers are not registered, and the built-in channels subscribing to them is expected, not
+                a misconfiguration. A plugin that truly requires a provider is caught by the separate
+                requirements check at startup.
+            */
+            log.warning(`Cannot subscribe channel '${c.getChannelData().id}': provider '${providerId}' does not exist`)
     }
 
     updateSubscriber = (providerId: string, c:IChannel, data:any) => {
@@ -216,7 +223,7 @@ export class ClusterInfo {
             log.info(`Subscriber '${c.getChannelData().id}' removed`)
         }
         else
-            log.error(`Cannot remove the subscription of channel '${c.getChannelData().id}': this provider does not exist`)
+            log.warning(`Cannot remove the subscription of channel '${c.getChannelData().id}': provider '${providerId}' does not exist`)
     }
 
     /*
