@@ -601,8 +601,10 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     }
     const separator = (key: string) => <Box key={`${key}-sep`} sx={{ gridColumn: '1 / -1', borderBottom: 1, borderColor: 'divider', mx: -1.5 }} />
 
-    const shownInstalled = installed.filter(e => matches(e, installedFilter))
-    const shownKeys = Object.keys(grouped).filter(k => matches(grouped[k][0], availableFilter))
+    // Alphabetical by the name the card paints, so an update (reload of the list) keeps every card in place.
+    const byName = (a: TInstalled | TEntry, b: TInstalled | TEntry) => d.toModel(a).name.localeCompare(d.toModel(b).name, undefined, { sensitivity: 'base' })
+    const shownInstalled = installed.filter(e => matches(e, installedFilter)).sort(byName)
+    const shownKeys = Object.keys(grouped).filter(k => matches(grouped[k][0], availableFilter)).sort((a, b) => byName(grouped[a][0], grouped[b][0]))
 
     return (<>
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
