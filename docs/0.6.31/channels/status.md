@@ -132,6 +132,8 @@ The **Graph** tab is a **map of who feeds whom**.
 It reads top to bottom: **producers on top** — providers and pluviders — and **the channels that consume
 them underneath**. A line from one to the other means that channel is subscribed to that provider.
 
+The graph is drawn with React Flow and laid out with ELK, both from the [XYFlow DCE](/0.6.31/guide/extensions/dces/xyflow). Status declares it in its `requiresExtension`, so Status cannot be installed without the DCE, and the DCE cannot be removed while Status is installed.
+
 ### When a provider consumes another provider
 
 A provider can subscribe to another provider — for example, one that enriches or aggregates what another

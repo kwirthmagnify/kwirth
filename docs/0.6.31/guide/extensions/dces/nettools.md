@@ -123,12 +123,14 @@ A host that does not answer is **data**. A missing DCE is an **installation erro
 ## Consuming it
 
 ```json
-"requiresExtension": ["dce:nettools:0.1.0"]
+"requiresExtension": [{ "extensionType": "dce", "id": "nettools", "minVersion": "0.1.0" }]
 ```
+
+The published package carries no types, so the consumer keeps **its own copy of the contract**, as the Net Tools plugin does (`src/common/NetToolsContract.ts`). It never links to the DCE's sources with a `file:` dependency.
 
 ```ts
 import { getDce } from '@kwirthmagnify/kwirth-common-back'
-import { INetTools } from '@kwirthmagnify/kwirth-dce-nettools/src/common/NetTools'
+import { INetTools } from '../common/NetToolsContract'
 
 const nettools = getDce<INetTools>('nettools')
 const postgres = await nettools.ping('kwirth-postgres', { port: 5432, count: 3 })

@@ -125,6 +125,12 @@ Lo planeado para S2 era:
 - **Back**: lee `common-sql` vía `global.__kwirth_back__.kwirthCommonSql`. Nuevo export `listPools()` en `common-sql@0.3.0` para exponer los stats del pool (el `pools` Map era interno).
 - **+5 harness**, **+1 spec e2e** (4 casos). Captura `status-sql.png` añadida al spec manual.
 
+### S7 — El grafo, del DCE `xyflow` · ✅ HECHO (2026-10-05, `plugin/status@0.7.0` + `dce/xyflow@0.1.0`)
+
+- El core deja de publicar React Flow y elk; los trae el DCE público `xyflow`. El grafo mapea `@xyflow/react` a la instancia del DCE y pide elk con `getDce<IXyflow>('xyflow').loadElk()`.
+- `requiresExtension` = `dce:xyflow:0.1.0`. Tipos desde el paquete **publicado** del DCE (`index.d.ts`), sin `file:`.
+- Harness sin cambios (front). `02-graph` 12 ✅ con layout real de elk.
+
 ## Backlog
 
 | # | Pendiente | Por qué no está hecho |
@@ -150,6 +156,7 @@ Lo planeado para S2 era:
 | 2026-09-29 | Pestaña **Routes** con cada ruta y su método. El `RouteRegistry` se cablea en **modo solo anotar**: registra y monta como siempre; el rechazo queda en B1. |
 | 2026-09-29 | El log del core y el del contenedor anterior **salen de About** y pasan a Status, en dos pestañas. |
 | 2026-09-30 | Pestaña **DCE**. Los datos vienen del `DceManager` prestado en `clusterInfo.dces` (dos líneas en el core), no de que el front pida los ocho listados y recalcule los consumidores: eso duplicaría `findConsumers`. El estado del front se lee de la página. |
+| 2026-10-05 | React Flow y elk **salen del core** a un DCE (`xyflow`), que Status declara en `requiresExtension`. El core publica `ReactDOM` para los portales del DCE. |
 | 2026-09-30 | S3/S4 **solo para plugins**; el resto de extensiones pasa a un S5 nuevo (*"arranquemos con plugins, que es la parte más delicada"*). |
 | 2026-09-30 | Las cifras de un plugin las da **su canal** (`getInstances()`), no el core recontando websockets. |
 | 2026-09-30 | Los contratos que el core presta van en **`kwirth-common`**, compartidos por back, front y Status, en vez de un espejo por lado. Se aplica también a rutas y DCE (B6). |

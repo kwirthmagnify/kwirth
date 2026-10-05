@@ -49,7 +49,7 @@ A DCE has **no configuration dialog** in this version: it is code and objects on
 A consumer declares the DCEs it needs in its `package.json`, with the **minimum version**, using the same `requiresExtension` every extension already has:
 
 ```json
-"requiresExtension": ["dce:sample:0.1.0"]
+"requiresExtension": [{ "extensionType": "dce", "id": "sample", "minVersion": "0.1.0" }]
 ```
 
 Kwirth enforces it:

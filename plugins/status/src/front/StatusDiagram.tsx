@@ -1,6 +1,8 @@
 import React from 'react'
 import { Box, Chip, Stack, Typography, useTheme } from '@mui/material'
 import { ReactFlow, Background, Controls, Node, Edge, MarkerType, Position } from '@xyflow/react'
+import { getDce, hasDce } from '@kwirthmagnify/kwirth-common-front'
+import type { IXyflow } from '@kwirthmagnify/kwirth-dce-xyflow'
 import { EComponentHealth, EComponentKind, EGraphLayer, IStatusInventory } from '../common/StatusTypes'
 import { countUnbrokeredConsumers } from './StatusData'
 import { CHANNEL_NODE_PREFIX, channelsOf, consumerNodeId, elkGraphOf, layerOf } from './StatusGraph'
@@ -12,8 +14,8 @@ import { CHANNEL_NODE_PREFIX, channelsOf, consumerNodeId, elkGraphOf, layerOf } 
     subscription goes through the core with the channel in front, so both are known there. A provider only
     knows how many subscribers it has, not who they are.
 
-    React Flow and the layout engine come from the globals the core publishes, just as in Iter: they add
-    not one byte to this plugin's bundle.
+    React Flow and the layout engine come from DCE `xyflow`, just as in Iter: they add not one byte to
+    this plugin's bundle.
 */
 
 /** The state colours, aligned with the table's chips so there are not two languages. */
@@ -27,14 +29,16 @@ const COLOR: Record<EComponentHealth, string> = {
     [EComponentHealth.UNKNOWN]: '#616161'
 }
 
+/** The DCE that brings React Flow and elk. Declared in package.json's requiresExtension. */
+const XYFLOW_DCE = 'xyflow'
+
 interface IPosicion {
     x: number
     y: number
 }
 
 /**
- * Lays the graph out with elk, which the core serves lazily (~1.4 MB in its own chunk): whoever never
- * opens this view never downloads it.
+ * Lays the graph out with elk, which DCE `xyflow` serves.
  *
  * If it fails — it does not load, or the graph is odd — it falls back to two columns. A badly laid out
  * diagram still says who consumes whom; a blank screen does not.
@@ -57,16 +61,16 @@ const colocar = async (nodos: Node[], aristas: Edge[]): Promise<Record<string, I
         return pos
     }
 
-    const loadElk = (window as unknown as { __kwirth__?: { loadElk?: () => Promise<unknown> } }).__kwirth__?.loadElk
-    if (!loadElk) return filas()
+    if (!hasDce(XYFLOW_DCE)) return filas()
 
     try {
-        const ELK = await loadElk() as new () => { layout(g: unknown): Promise<{ children?: { id: string, x: number, y: number }[] }> }
+        const ELK = await getDce<IXyflow>(XYFLOW_DCE).loadElk()
         const elk = new ELK()
         // The graph elk lays out is built in StatusGraph, where a test runs it through real elk.
         const g = await elk.layout(elkGraphOf(nodos.map(n => n.id), aristas))
         const pos: Record<string, IPosicion> = {}
-        for (const c of g.children ?? []) pos[c.id] = { x: c.x, y: c.y }
+        // A node elk left without a position is skipped: the count below then falls back to rows.
+        for (const c of g.children ?? []) if (c.x !== undefined && c.y !== undefined) pos[c.id] = { x: c.x, y: c.y }
         return Object.keys(pos).length === nodos.length ? pos : filas()
     }
     catch {

@@ -2,7 +2,7 @@
 
 The **Net Tools** plugin is a diagnostic channel: it resolves DNS names and checks TCP ports **from the kwirth process**, which is the only vantage point that answers whether a cluster-internal name resolves and whether a service is reachable from where the workloads are.
 
-It does no networking of its own. Every answer comes from the [`nettools` DCE](/0.6.31/guide/extensions/dces/nettools), declared as `requiresExtension: ["dce:nettools:0.1.0"]` — so the core refuses to install the plugin without it, and refuses to remove it while the plugin is installed.
+It does no networking of its own. Every answer comes from the [`nettools` DCE](/0.6.31/guide/extensions/dces/nettools), declared in its `requiresExtension` as `{ "extensionType": "dce", "id": "nettools", "minVersion": "0.1.0" }` — so the core refuses to install the plugin without it, and refuses to remove it while the plugin is installed.
 
 **Instance config:** none. The channel is cluster-scoped (set **View** to `cluster`) and is started from the tab's **⚙️ → Start**. There is nothing to configure: the form lives in the tab.
 

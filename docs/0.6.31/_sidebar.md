@@ -103,6 +103,7 @@
     * [DCEs](/0.6.31/guide/extensions/dces/index)
       * [Sample](/0.6.31/guide/extensions/dces/sample)
       * [Net Tools](/0.6.31/guide/extensions/dces/nettools)
+      * [XYFlow](/0.6.31/guide/extensions/dces/xyflow)
 * [Installation](/0.6.31/installation)
 * [How it works](/0.6.31/how)
 * [Data streaming](/0.6.31/datastreaming)

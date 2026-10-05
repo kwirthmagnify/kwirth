@@ -28,5 +28,15 @@
     "description": "Shared three.js 3D library for Kwirth extensions: consumers get the THREE namespace via getDce(), without each bundling its own copy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-three/-/kwirth-dce-three-0.1.0.tgz",
     "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "dce",
+    "id": "xyflow",
+    "name": "@kwirthmagnify/kwirth-dce-xyflow",
+    "displayName": "XYFlow",
+    "version": "0.1.0",
+    "description": "Shared React Flow (@xyflow/react) and ELK (elkjs) graph libraries for Kwirth extensions: consumers get both via getDce(), without each bundling its own copy",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-xyflow/-/kwirth-dce-xyflow-0.1.0.tgz",
+    "website": "https://kwirthmagnify.dev"
   }
 ]

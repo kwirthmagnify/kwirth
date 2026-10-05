@@ -25,7 +25,7 @@ interface ISampleDce {
 ## Consuming it
 
 ```json
-"requiresExtension": ["dce:sample:0.1.0"]
+"requiresExtension": [{ "extensionType": "dce", "id": "sample", "minVersion": "0.1.0" }]
 ```
 
 ```ts

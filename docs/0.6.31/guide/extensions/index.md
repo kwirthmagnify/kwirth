@@ -62,7 +62,7 @@ Packaged groups of **tools** an LLM can call from an AI-enabled channel. Bundled
 
 ## [DCEs (dynamic core extensions)](dces/index)
 
-Shared **objects** kwirth instantiates **once** and other extensions consume by id: code common to several extensions that does not belong in the core — a suite's icon set, a client, a cache. A consumer declares `dce:<id>:<version>` in its `requiresExtension`; kwirth refuses to install it without the DCE, and refuses to remove a DCE somebody requires. Bundled: **[Sample](dces/sample)**, a shared counter to see the machinery work. → **[DCEs manual](dces/index)**
+Shared **objects** kwirth instantiates **once** and other extensions consume by id: code common to several extensions that does not belong in the core — a suite's icon set, a client, a cache. A consumer declares `{ "extensionType": "dce", "id": "<id>", "minVersion": "<version>" }` in its `requiresExtension`; kwirth refuses to install it without the DCE, and refuses to remove a DCE somebody requires. Bundled: **[Sample](dces/sample)**, a shared counter to see the machinery work. → **[DCEs manual](dces/index)**
 
 ## [Packs (extension bundles)](packs/index)
 

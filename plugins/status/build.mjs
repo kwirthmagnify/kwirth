@@ -20,9 +20,9 @@ const kwirthGlobalsPlugin = {
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
             '@kwirthmagnify/kwirth-common-front/icons': 'window.__kwirth__.MUI.icons',
-            // The diagram: the core publishes React Flow, and the core's front end already loads its
-            // CSS in index.tsx, so no style needs importing here.
-            '@xyflow/react': 'window.__kwirth__.reactFlow',
+            // The diagram: React Flow comes from DCE `xyflow` (requiresExtension), which also puts its
+            // CSS on the page, so no style needs importing here.
+            '@xyflow/react': "window.__kwirth_dce__['xyflow'].instance.reactFlow",
             // The Performance charts: recharts is published by the core too, so it adds no bytes here.
             'recharts': 'window.__kwirth__.recharts',
         }

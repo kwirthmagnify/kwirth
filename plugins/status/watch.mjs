@@ -22,7 +22,7 @@ const kwirthGlobalsPlugin = {
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
             '@kwirthmagnify/kwirth-common-front/icons': 'window.__kwirth__.MUI.icons',
-            '@xyflow/react': 'window.__kwirth__.reactFlow',
+            '@xyflow/react': "window.__kwirth_dce__['xyflow'].instance.reactFlow",
             'recharts': 'window.__kwirth__.recharts',
         }
         for (const pkg of Object.keys(globals)) {
