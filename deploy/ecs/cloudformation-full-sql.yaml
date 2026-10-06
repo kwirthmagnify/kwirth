@@ -442,6 +442,10 @@ Resources:
       ContainerDefinitions:
         - Name: kwirth
           Image: !Sub 'kwirthmagnify/kwirth:${ImageTag}'
+          # ECS pins the tag to a digest per deployment by default, so a task restarted by Kwirth's own
+          # "Restart Kwirth" (process exit) would run the same image again. Disabled, every task resolves
+          # the tag when it starts and a newly pushed image is picked up on restart.
+          VersionConsistency: disabled
           Essential: true
           PortMappings:
             - ContainerPort: 3883
