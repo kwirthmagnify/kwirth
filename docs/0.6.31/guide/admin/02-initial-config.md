@@ -81,6 +81,49 @@ Changes apply **immediately**, with no restart — which is the point, because t
 
 **Colour the output (ANSI)** adds colour codes to each line. They help when you are reading the log on a terminal and get in the way everywhere else: collected into a file or forwarded to a log service, they travel as rubbish in the middle of the message.
 
+### AI: the providers, the models, and what they are allowed to spend
+
+Several channels use an LLM — Pinocchio analyses workloads with one, Censor reads logs with one, Agora answers with one. They do not each carry their own: kwirth holds the **providers** (☰ → *AI providers*) and the **models** (☰ → *AI models*) once, and every channel uses those.
+
+A **provider** is an account with an LLM vendor: its type, its API key, and — for OpenAI-compatible endpoints — its base URL. A **model** points at one of those providers and adds the model id, the temperature and, optionally, what a million tokens cost in and out.
+
+#### Putting a ceiling on the spending
+
+Kwirth can **stop** calling an LLM when it has spent enough. The limits live where the key lives, because the key is what the vendor bills:
+
+- On a **provider**, they cover every model that borrows its key. Two models on the same key share one budget, exactly as the invoice does.
+- On a **model**, only when it has a **key of its own**. With a borrowed key the budget is the provider's, and the dialog says so instead of offering a ceiling that nothing would enforce.
+
+Four units, each switched on or off by itself: **cost**, **calls**, **input tokens** and **output tokens**. Each one takes a ceiling **per day**, **per month**, or both. Under each field you can see what has been spent so far in that window.
+
+**The rule is one**: a call goes out only if **no** enabled ceiling is reached. Whichever is passed first blocks it, whatever unit it was, and the channel is told which.
+
+> ⚠️ **A calls ceiling stops the call that would exceed it. A tokens or cost ceiling stops the *next* one.**
+>
+> This is not an implementation shortcut: the model reports how much it consumed **with its answer**, never before. So the call that crosses the line has already been made and already been paid for, and what the ceiling prevents is the one after it. If you need a hard wall, limit **calls**.
+
+Turning a limit **off** is not the same as deleting it: the numbers stay, so switching it back on does not mean working them out again.
+
+The windows reset by themselves — a new day and a new month start at zero, with nothing to press.
+
+#### What the person using the channel sees
+
+The block is always written to kwirth's own log, with the unit, the window and the figures:
+
+```
+[core] [WARN] AI call BLOCKED: the day limit of calls on llmkey is reached (3 of 3)
+```
+
+What reaches the **screen** depends on the channel. Agora, being a conversation, answers in the chat that it has no quota left and that an administrator can raise it. Channels that show their errors show it as an error. ⚠️ A channel that quietly ignores a failed AI call will quietly ignore this one too — the call is still blocked and still logged, but nobody is told in the browser.
+
+#### Where the counters live, and what they cover
+
+With **SQL configured**, the counters are in the database and survive a restart. Without it, kwirth counts **in memory** — it says so at startup and in red in the dialog — and those totals go back to zero every time the process restarts. Kwirth works without a database, so the choice is counting imperfectly or not limiting at all.
+
+> ⚠️ **The ceilings are of THIS kwirth.** Each cluster runs its own kwirth, makes its own calls and keeps its own counters, and they are deliberately not shared: clusters may not even be able to reach each other, and pointing them all at one database would tie together things that are independent today.
+>
+> So if the **same API key** is configured in several kwirths, the vendor bills it whole and no single kwirth sees that total. A ceiling for the whole fleet belongs where the key does — in the **quota of the LLM vendor itself**, which is the only place that can see it.
+
 ### Taking the configuration to another kwirth
 
 **☰ → kwirth portability** exports this installation's configuration to a file, and applies one from another kwirth.

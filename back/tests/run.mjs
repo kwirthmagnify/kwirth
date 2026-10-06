@@ -70,7 +70,11 @@ await esbuild.build({
     // The back end's runtime deps externalised: esbuild only bundles the TS from src/ and the tests.
     external: [
         '@jfvilas/parse-listing', '@kubernetes/client-node',
+        // kwirth-common-sql belongs with its three siblings: without it esbuild tries to bundle knex,
+        // which pulls every dialect it supports (mysql, mariadb, tedious…) and fails on the ones that
+        // are not installed. The back end's own build externalises exactly the same thing.
         '@kwirthmagnify/kwirth-common', '@kwirthmagnify/kwirth-common-ai', '@kwirthmagnify/kwirth-common-back',
+        '@kwirthmagnify/kwirth-common-sql',
         'body-parser', 'cookie-parser', 'cors', 'dockerode', 'dotenv', 'express', 'express-fileupload',
         'http-proxy-middleware', 'request-ip', 'tar', 'ts-semaphore', 'uuid', 'ws', 'cpu-features', 'bcrypt'
     ],

@@ -17,8 +17,9 @@ import { IdpConfigDialog, IIdpInstance } from './IdpConfigDialog'
         IdP that is configured but switched off and one that is not configured look different, because
         they are different things.
       · its configuration, which is the instance (see IdpConfigDialog).
-      · that it does NOT hang off /core/<plural>: the connectors live under /idp, hence the model having
-        the endpoints explicit rather than guessing them.
+      · that it has TWO resources, which no other type has: the connector (the installed extension, at
+        /core/idps like every other type) and its instances (/core/idps/instances), because one connector
+        can be configured several times — two GitHub orgs, two tenants.
 */
 
 interface IIdpConnector {
@@ -95,10 +96,10 @@ const makeIdpDescriptor = (deps: IIdpDescriptorDeps): IExtensionManagerDescripto
     helpSection: 'guide/admin/07-idp-integration?id=enabling-an-idp',
     icon: Key,
     endpoints: {
-        installed: '/idp/connectors',
-        install: '/idp/connectors/install',
-        upload: '/idp/connectors/upload',
-        remove: c => `/idp/connectors/${c.id}`
+        installed: '/core/idps',
+        install: '/core/idps/install',
+        upload: '/core/idps/upload',
+        remove: c => `/core/idps/${c.id}`
     },
     keyOf: e => e.id,
     toModel,

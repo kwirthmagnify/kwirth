@@ -20,6 +20,8 @@ import { MarketplaceManager } from './tools/MarketplaceManager'
 import { routeRegistry } from './tools/RouteRegistry'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { buildPreviousContainerMessage, logPreviousContainerBanner, readPreviousContainerLog } from './tools/PreviousContainerLog'
+import { createUsageService } from './tools/AiUsage'
+import { setUsageService } from '@kwirthmagnify/kwirth-common-ai/back'
 import { failureOrigin } from './tools/FailureOrigin'
 import { LoginApi } from './api/LoginApi'
 
@@ -1385,8 +1387,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         // The DCE manager is created in prepareRunningInstance(), first of all the managers; here only its API.
         if (dceManager) {
             let dceApi = new DceApi(dceManager, apiKeyApi)
-            riRouter.use(`/core/dce`, dceApi.router)
-            recordRoute(`${envRootPath}/core/dce`, ERouteOwnerKind.CORE, 'dce', dceApi.router)
+            riRouter.use(`/core/dces`, dceApi.router)
+            recordRoute(`${envRootPath}/core/dces`, ERouteOwnerKind.CORE, 'dce', dceApi.router)
         }
         if (!idpManager) {
             idpManager = new IdpManager(ri.secrets, ri.configMaps, registeredIdps)
@@ -1397,8 +1399,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             idpManager.loadDevIdps()     // conectores en dev (kwirth-dev.json); la config del IdP se gestiona desde el front (UI)
         }
         let idpApi:IdpApi = new IdpApi(idpManager, apiKeyApi)
-        riRouter.use(`/idp`, idpApi.router)
-        recordRoute(`${envRootPath}/idp`, ERouteOwnerKind.CORE, 'idp', idpApi.router)
+        riRouter.use(`/core/idps`, idpApi.router)
+        recordRoute(`${envRootPath}/core/idps`, ERouteOwnerKind.CORE, 'idp', idpApi.router)
         let manageKwirthApi:ManageKwirthApi = new ManageKwirthApi(ri.clusterInfo.coreApi, ri.clusterInfo.appsApi, ri.clusterInfo.batchApi, apiKeyApi, ri.kwirthData)
         riRouter.use(`/managekwirth`, manageKwirthApi.router)
         recordRoute(`${envRootPath}/managekwirth`, ERouteOwnerKind.CORE, 'managekwirth', manageKwirthApi.router)
@@ -2402,6 +2404,17 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             logInfo(ELogComponent.CORE, `Detected own deployment: ${localKwirthData.deployment}`)
         else
             logInfo(ELogComponent.CORE, `No deployment detected. Kwirth is not running inside a cluster`)
+
+        /*
+            AI usage control. common-ai wraps every LLM call but stores nothing: it counts against
+            whoever is registered here. Registered once, at startup, because the plugins execute THIS
+            copy of common-ai — they map it to global.__kwirth_back__ — so one registration covers every
+            channel without any of them knowing.
+
+            It never throws: with no SQL it falls back to counting in memory and says so. An AI service
+            that refuses to start because it cannot count is worse than one that counts badly.
+        */
+        setUsageService(await createUsageService())
 
         /*
             If the previous container died, its log is the only thing that explains why, and it is only

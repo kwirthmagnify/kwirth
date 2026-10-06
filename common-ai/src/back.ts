@@ -1,4 +1,4 @@
-import { ILlm, ILlmModel, ILlmProvider, ECapability, EToolEffect, EToolSensitivity, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, parseToolRef, toolRef } from './index'
+import { ILlm, ILlmModel, ILlmProvider, ECapability, EToolEffect, EToolSensitivity, EUsagePeriod, EUsageUnit, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, IUsageAmounts, IUsageLimits, IUsageWindows, parseToolRef, toolRef } from './index'
 // TYPES ONLY: the compiler erases them, so common-ai does not drag the Kubernetes client (~6.6 MB) into
 // any bundle. That is why @kubernetes/client-node is an optional peer and not a dependency.
 import type { AppsV1Api, CoreV1Api, CustomObjectsApi, NetworkingV1Api } from '@kubernetes/client-node'
@@ -8,9 +8,12 @@ interface ILogChannel {
     logWarning?: (msg: string) => void
     logError?: (msg: string) => void
 }
-import { LanguageModel, tool, Tool, ToolSet, generateText, Output } from 'ai'
+// Aliased on purpose: the generateText this module EXPORTS is the wrapped one, and nothing below should
+// be able to reach the raw SDK call by accident — that is exactly how a call would escape the counters.
+import { LanguageModel, tool, Tool, ToolSet, generateText as sdkGenerateText, Output } from 'ai'
 import { z } from 'zod'
 import { AsyncLocalStorage } from 'async_hooks'
+import { createHash } from 'crypto'
 
 import { createOpenAI } from '@ai-sdk/openai'
 import { createGroq } from '@ai-sdk/groq'
@@ -27,6 +30,12 @@ export const buildModel = (llm: ILlm, providers: ILlmProvider[]): LanguageModel 
         console.log('Could not find a key')
         return null
     }
+    // Whatever the switch returns is annotated with what it was built from, so generateText knows which
+    // budget to count it against. Wrapping here and not at each 'return' keeps the two in step.
+    return rememberOrigin(buildSdkModel(llm, prov, key), llm, prov, key)
+}
+
+const buildSdkModel = (llm: ILlm, prov: ILlmProvider | undefined, key: string): LanguageModel | null => {
     const type = prov?.type ?? prov?.name ?? llm.provider
     switch (type) {
         case 'openai': return createOpenAI({ apiKey: key })(llm.model)
@@ -47,6 +56,195 @@ export const buildModel = (llm: ILlm, providers: ILlmProvider[]): LanguageModel 
             console.log('Invalid provider type', type)
             return null
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────
+// Usage control (plan: plans/ai-usage-control/PLAN.md, S1)
+//
+// Every LLM call in Kwirth goes through the generateText below. Not by convention: the plugins map
+// '@kwirthmagnify/kwirth-common-ai' to global.__kwirth_back__ in their build, so what they execute is the
+// CORE's copy of this module. Counting here counts everything, and nothing in a plugin has to change.
+//
+// What this file does NOT do is store anything: the counters need SQL, and dragging that into common-ai
+// would put a database client inside the contract every extension imports. The core implements
+// IUsageService and registers it; without one, nothing is counted and nothing is cut.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/* Which of the two axes a limit belongs to. */
+export enum EUsageScope {
+    LLM_KEY = 'llmkey',
+    CHANNEL = 'channel'
+}
+
+/*
+    IUsageAmounts lives in the isomorphic contract, because the front end renders what was spent next to
+    the ceiling it is measured against. Re-exported so whoever imports it from here keeps working.
+*/
+export type { IUsageAmounts, IUsageTotals } from './index'
+
+/* Which ceiling was passed, so the message can say it instead of 'the model failed'. */
+export interface IUsageLimitExceeded {
+    scope: EUsageScope
+    unit: EUsageUnit
+    period: EUsagePeriod
+    limit: number
+    current: number
+}
+
+/*
+    What the CORE implements and this module consumes. Injected rather than imported so that common-ai
+    keeps no dependency on SQL, and so its own harness can run without a core behind it.
+*/
+export interface IUsageService {
+    read(scope: EUsageScope, subject: string): Promise<{ daily: IUsageAmounts, monthly: IUsageAmounts }>
+    add(scope: EUsageScope, subject: string, amounts: IUsageAmounts): Promise<void>
+    /* false when the counters live in memory: they are lost on restart, and the UI has to say so. */
+    readonly durable: boolean
+    /* Called when a ceiling cuts a call, so the core logs the warning and whoever watches finds out. */
+    onCut?(detail: IUsageLimitExceeded): void
+}
+
+/*
+    Thrown instead of calling the model. A subclass and not a plain Error because a channel has to be able
+    to tell 'you have no quota left' from 'the model answered badly', and a string message cannot be
+    inspected without parsing it.
+*/
+export class UsageLimitError extends Error {
+    readonly detail: IUsageLimitExceeded
+    constructor(detail: IUsageLimitExceeded) {
+        super(`AI usage limit reached: ${detail.unit} ${detail.period} on ${detail.scope} (${detail.current} of ${detail.limit})`)
+        this.name = 'UsageLimitError'
+        this.detail = detail
+    }
+}
+
+let usageService: IUsageService | undefined
+
+/* The core calls this at startup. Without it everything below is a no-op and the LLM is reached as ever. */
+export const setUsageService = (service: IUsageService | undefined): void => { usageService = service }
+
+export const getUsageService = (): IUsageService | undefined => usageService
+
+/*
+    What a model was built from. A WeakMap and not a field on the model because the model belongs to the
+    SDK: adding properties to someone else's object is how you find out, two versions later, that they
+    started using that name. Weak so a model that goes out of scope takes its entry with it.
+*/
+interface IModelOrigin {
+    subject: string
+    limits?: IUsageLimits
+    inputCostPerMillion: number
+    outputCostPerMillion: number
+}
+
+const modelOrigin = new WeakMap<object, IModelOrigin>()
+
+/*
+    The subject of the llmkey axis is a HASH of the effective key, never the key. Two LLM entries on the
+    same key land on the same subject and share one budget, which is what the provider does when it bills
+    it. And the counters table ends up holding no secret.
+*/
+const keyFingerprint = (key: string): string => createHash('sha256').update(key).digest('hex').slice(0, 32)
+
+/*
+    The same subject the counters are written under, for whoever needs to READ them back — the core, to
+    show an admin what a provider or a model has spent. Exported so that is computed in one place: a
+    second implementation of this hash would show consumption that silently belongs to nobody.
+*/
+export const usageSubjectForKey = (key: string): string => keyFingerprint(key)
+
+/*
+    Records what a model was built from, so generateText can count against it. Called by buildModel; a
+    model built any other way simply has no origin and is not counted — never silently miscounted.
+*/
+const rememberOrigin = (model: LanguageModel | null, llm: ILlm, prov: ILlmProvider | undefined, key: string): LanguageModel | null => {
+    if (model && typeof model === 'object') {
+        modelOrigin.set(model, {
+            subject: keyFingerprint(key),
+            limits: llm.useProviderKey ? prov?.limits : llm.limits,
+            inputCostPerMillion: llm.inputCostPerMillion ?? 0,
+            outputCostPerMillion: llm.outputCostPerMillion ?? 0
+        })
+    }
+    return model
+}
+
+/* The four units, paired with where each one is read from in a counted total. */
+const UNITS: { unit: EUsageUnit, of: (a: IUsageAmounts) => number }[] = [
+    { unit: EUsageUnit.TOKENS_IN, of: a => a.tokensIn },
+    { unit: EUsageUnit.TOKENS_OUT, of: a => a.tokensOut },
+    { unit: EUsageUnit.CALLS, of: a => a.calls },
+    { unit: EUsageUnit.COST, of: a => a.cost }
+]
+
+const windowsOf = (limits: IUsageLimits | undefined, unit: EUsageUnit): IUsageWindows | undefined =>
+    limits?.[unit as keyof IUsageLimits]
+
+/*
+    The ONE rule: the call goes out only if NO active ceiling is exceeded. Whichever is passed first —
+    whatever axis, whatever unit, whatever window — cuts, and what is returned says which, so the error
+    can name it instead of talking about 'a limit'.
+
+    'Exceeded' is >=, not >: a ceiling of 100 calls means the hundred-and-first does not happen, so the
+    check at 100 already has to cut.
+*/
+const findExceeded = (scope: EUsageScope, limits: IUsageLimits | undefined, daily: IUsageAmounts, monthly: IUsageAmounts): IUsageLimitExceeded | undefined => {
+    if (!limits) return undefined
+    for (const { unit, of } of UNITS) {
+        const w = windowsOf(limits, unit)
+        if (!w?.enabled) continue
+        if (w.daily !== undefined && of(daily) >= w.daily)
+            return { scope, unit, period: EUsagePeriod.DAY, limit: w.daily, current: of(daily) }
+        if (w.monthly !== undefined && of(monthly) >= w.monthly)
+            return { scope, unit, period: EUsagePeriod.MONTH, limit: w.monthly, current: of(monthly) }
+    }
+    return undefined
+}
+
+/* What a response cost, in money, with the price of the LLM that was actually used. */
+const costOf = (origin: IModelOrigin, tokensIn: number, tokensOut: number): number =>
+    (tokensIn / 1_000_000) * origin.inputCostPerMillion + (tokensOut / 1_000_000) * origin.outputCostPerMillion
+
+/*
+    The LLM call every channel in Kwirth makes, with the counters around it.
+
+    🔴 The order is not arbitrary. The ceilings are checked BEFORE calling, with what has been spent so
+    far; the usage is added AFTER, because the SDK reports it with the answer and not before. So a limit
+    on CALLS stops the call that would exceed it, and a limit on TOKENS or COST stops the NEXT one: the
+    one that crosses the line has already been paid for. That is the protocol, not a shortcut, and the UI
+    says so where the limit is set.
+
+    A model nobody built with buildModel has no origin, so it is not counted. Not counting is a visible
+    gap; counting it against someone else's budget would be a lie.
+
+    It takes the call as a parameter rather than making it, which is what lets the accounting half be
+    exercised without reaching a real provider — a harness that calls api.openai.com is slow, fails
+    offline, and sends something outward on every run. The same seam is what a wrapper around another SDK
+    entry point (streamText) would use.
+*/
+export const runWithUsageGuard = async (options: { model?: unknown }, call: () => Promise<{ usage?: { inputTokens?: number, outputTokens?: number } }>) => {
+    const service = usageService
+    const origin = options.model && typeof options.model === 'object' ? modelOrigin.get(options.model) : undefined
+    if (!service || !origin) return await call()
+
+    const { daily, monthly } = await service.read(EUsageScope.LLM_KEY, origin.subject)
+    const exceeded = findExceeded(EUsageScope.LLM_KEY, origin.limits, daily, monthly)
+    if (exceeded) {
+        service.onCut?.(exceeded)
+        throw new UsageLimitError(exceeded)
+    }
+
+    const result = await call()
+
+    const tokensIn = result.usage?.inputTokens ?? 0
+    const tokensOut = result.usage?.outputTokens ?? 0
+    await service.add(EUsageScope.LLM_KEY, origin.subject, {
+        tokensIn,
+        tokensOut,
+        calls: 1,
+        cost: costOf(origin, tokensIn, tokensOut)
+    })
+    return result
 }
 
 export interface IVisionResult<T> {
@@ -240,7 +438,18 @@ const inferZod = (value: unknown): z.ZodTypeAny => {
 // Re-export AI SDK symbols so plugins can use them without bundling the SDK
 // The TYPES needed by anyone writing a helper around generateText are re-exported too: without
 // LanguageModel and ToolSet a plugin cannot type its own functions and ends up with 'any'.
-export { generateText, Output, stepCountIs, tool } from 'ai'
+/*
+    🔴 generateText is NOT re-exported from the SDK any more: what leaves here is the wrapped one, which
+    is what makes every LLM call in Kwirth countable. Re-exporting the raw one again would open the hole
+    this whole feature exists to close, and nothing would fail to compile to warn you.
+
+    The cast is to the SDK's own type because the wrapper has exactly that signature: the alternative is
+    restating generateText's generics here and keeping them in step with the SDK by hand.
+*/
+export const generateText = ((options: Parameters<typeof sdkGenerateText>[0]) =>
+    runWithUsageGuard(options, () => sdkGenerateText(options))) as typeof sdkGenerateText
+
+export { Output, stepCountIs, tool } from 'ai'
 export type { LanguageModel, ToolSet } from 'ai'
 export { z } from 'zod'
 

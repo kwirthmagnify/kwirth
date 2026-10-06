@@ -9,12 +9,72 @@ export interface ILlmModel {
     type: 'text' | 'image' | 'video' | 'other'
 }
 
+/* What a usage limit is counted in. */
+export enum EUsageUnit {
+    TOKENS_IN = 'tokensIn',
+    TOKENS_OUT = 'tokensOut',
+    CALLS = 'calls',
+    /* Money, from the per-million prices the admin already sets on each LLM. */
+    COST = 'cost'
+}
+
+/* The window a limit is measured over. Both can be set at once, each with its own ceiling. */
+export enum EUsagePeriod {
+    DAY = 'day',
+    MONTH = 'month'
+}
+
+/*
+    The ceilings of ONE unit. 'enabled' is apart from the numbers on purpose: turning a limit off is not
+    the same as deleting it, and an admin who stops limiting for a week should not have to remember what
+    the number was. A window left undefined is simply not limited.
+*/
+export interface IUsageWindows {
+    enabled: boolean
+    daily?: number
+    monthly?: number
+}
+
+/*
+    What is configured on one subject — an LLM key or a channel. One entry per unit, and the rule between
+    them is a single one: the call goes out only if NO active ceiling is exceeded. Whichever is passed
+    first, of whatever unit, cuts.
+*/
+export interface IUsageLimits {
+    tokensIn?: IUsageWindows
+    tokensOut?: IUsageWindows
+    calls?: IUsageWindows
+    cost?: IUsageWindows
+}
+
+/*
+    The four counters, always travelling together: writing one costs the same as writing four, and the
+    front end needs to render them next to the ceilings they are measured against.
+*/
+export interface IUsageAmounts {
+    tokensIn: number
+    tokensOut: number
+    calls: number
+    cost: number
+}
+
+/* What one subject has spent in each of the two windows. */
+export interface IUsageTotals {
+    daily: IUsageAmounts
+    monthly: IUsageAmounts
+}
+
 export interface ILlmProvider {
     name: string        // user-defined identifier (e.g. 'huawei-maas', 'my-openai'); referenced by ILlm.provider
     type: string        // SDK adapter type — must be one of PROVIDERS_AVAILABLE (defaults to name for legacy entries)
     key: string
     models: ILlmModel[]
     endpoint?: string   // used by 'openai-compat' providers (base URL of the OpenAI-compatible API)
+    /*
+        Limits on THIS provider's key. They cover every LLM that borrows it (useProviderKey), because the
+        key is what the provider bills: two LLM entries on the same key share one budget.
+    */
+    limits?: IUsageLimits
 }
 
 export interface ILlm {
@@ -26,6 +86,12 @@ export interface ILlm {
     key: string
     inputCostPerMillion?: number
     outputCostPerMillion?: number
+    /*
+        Limits on THIS model's own key, and only meaningful when it has one (useProviderKey === false).
+        With a borrowed key the budget is the provider's, and setting it here would split in two a bill
+        that the provider keeps as one.
+    */
+    limits?: IUsageLimits
     data?: unknown
 }
 

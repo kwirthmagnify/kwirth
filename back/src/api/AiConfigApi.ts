@@ -3,8 +3,8 @@ import { ISecrets } from '../tools/ISecrets'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
-import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
-import { loadModels } from '@kwirthmagnify/kwirth-common-ai/back'
+import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
+import { EUsageScope, getUsageService, loadModels, usageSubjectForKey } from '@kwirthmagnify/kwirth-common-ai/back'
 
 export class AiConfigApi {
     public router = express.Router()
@@ -89,5 +89,51 @@ export class AiConfigApi {
                     res.status(500).json()
                 }
             })
+
+        /*
+            What each provider and each model has spent in the current day and month, so an admin sets a
+            ceiling knowing where he already is instead of guessing.
+
+            It is computed HERE and keyed by name and by id — never by the subject the counters use — so
+            that the hash of a key does not travel to a browser, and so the front end never has to know
+            that the counters are keyed by key at all.
+        */
+        this.router.route('/usage')
+            .all(authMiddleware)
+            .get(async (_req: Request, res: Response) => {
+                try {
+                    const service = getUsageService()
+                    if (!service) { res.status(200).json({ available: false, durable: false, providers: {}, llms: {} }); return }
+
+                    const providers = await this.readProviders()
+                    const llms = await this.readLlms()
+                    const providerUsage: Record<string, unknown> = {}
+                    const llmUsage: Record<string, unknown> = {}
+
+                    for (const p of providers) {
+                        if (p.key) providerUsage[p.name] = await service.read(EUsageScope.LLM_KEY, usageSubjectForKey(p.key))
+                    }
+                    // Only models with their OWN key have a budget of their own; the rest spend the provider's
+                    for (const l of llms) {
+                        if (!l.useProviderKey && l.key) llmUsage[l.id] = await service.read(EUsageScope.LLM_KEY, usageSubjectForKey(l.key))
+                    }
+                    res.status(200).json({ available: true, durable: service.durable, providers: providerUsage, llms: llmUsage })
+                }
+                catch (err) {
+                    console.error('AiConfigApi: error reading ai usage', err)
+                    res.status(500).json({ available: false, durable: false, providers: {}, llms: {} })
+                }
+            })
+    }
+
+    private async readProviders(): Promise<ILlmProvider[]> {
+        const content = await this.secrets.read('kwirth-store-common-' + STORAGE_KEY_PROVIDERS)
+        if (!content || !content['data']) return []
+        return JSON.parse(Buffer.from(content['data'], 'base64').toString('utf8')) as ILlmProvider[]
+    }
+
+    private async readLlms(): Promise<ILlm[]> {
+        const content = await this.configMaps.read('kwirth-store-common-' + STORAGE_KEY_LLMS)
+        return content ? JSON.parse(content) as ILlm[] : []
     }
 }

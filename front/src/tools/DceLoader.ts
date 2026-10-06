@@ -43,7 +43,7 @@ export const loadDceFront = (backendUrl: string, id: string): Promise<void> => n
     if (existing) existing.remove()
     const script = document.createElement('script')
     script.id = `kwirth-dce-${id}`
-    script.src = `${backendUrl}/core/dce/${id}/front?t=${Date.now()}`
+    script.src = `${backendUrl}/core/dces/${id}/front?t=${Date.now()}`
     script.onload = () => {
         const factory = window.__kwirth_dce_factories__?.[id]
         if (!factory || typeof factory.create !== 'function') {
@@ -72,7 +72,7 @@ export const loadDceFront = (backendUrl: string, id: string): Promise<void> => n
 /** Every installed DCE with a front end, loaded once. Idempotent: everybody awaits the same promise. */
 export const ensureDcesLoaded = (backendUrl: string, accessString: string): Promise<void> => {
     if (!loading) {
-        loading = fetch(`${backendUrl}/core/dce`, addGetAuthorization(accessString))
+        loading = fetch(`${backendUrl}/core/dces`, addGetAuthorization(accessString))
             .then(r => r.ok ? r.json() : [])
             .then((dces: IDceListEntry[]) =>
                 Promise.all(dces.filter(d => d.hasFront).map(d => loadDceFront(backendUrl, d.id))).then(() => {}))

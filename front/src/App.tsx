@@ -68,7 +68,7 @@ import { makePackDescriptor } from './components/extensions/PackDescriptor'
 import { LoginExtensionPage } from './components/login/LoginExtensionPage'
 import { IHomepageExtension, ERemoteConnState } from '@kwirthmagnify/kwirth-common-front'
 import { AiConfigProvider, AiConfigLlm } from '@kwirthmagnify/kwirth-common-ai/front'
-import { ILlmProvider, ILlm, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
+import { ILlmProvider, ILlm, IUsageTotals, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
 
 interface IAppProps {
     backendUrl:string
@@ -102,6 +102,18 @@ interface IPreviousLogNotice {
     abnormal?: boolean
     lines?: string[]
     termination?: { exitCode?: number, reason?: string, finishedAt?: string }
+}
+
+/*
+    What 'GET /core/aiconfig/usage' answers with. 'available' is false when no usage service is
+    registered, and 'durable' false when the counters are in memory and go on every restart — which the
+    dialog says out loud rather than showing a total that quietly lies about what it covers.
+*/
+interface IAiUsageResponse {
+    available: boolean
+    durable: boolean
+    providers: Record<string, IUsageTotals>
+    llms: Record<string, IUsageTotals>
 }
 
 const App: React.FC<IAppProps> = (props:IAppProps) => {
@@ -282,6 +294,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showAiModels, setShowAiModels]=useState<boolean>(false)
     const [aiProviders, setAiProviders]=useState<ILlmProvider[]>([])
     const [aiLlms, setAiLlms]=useState<ILlm[]>([])
+    /*
+        What has been spent against each AI key, so a ceiling is set knowing where you already are. It is
+        read when a dialog OPENS and not kept up to date: these are totals of a day and of a month, and
+        polling them while somebody types a number would be movement without information.
+    */
+    const [aiUsage, setAiUsage]=useState<IAiUsageResponse>({ available: false, durable: false, providers: {}, llms: {} })
     const [showRenameTab, setShowRenameLog]=useState<boolean>(false)
     const [showManageClusters, setShowManageClusters]=useState<boolean>(false)
     const [showSaveWorkspace, setShowSaveWorkspace]=useState<boolean>(false)
@@ -551,7 +569,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     const loadIdpInstances = async () => {
-        const res = await fetch(`${backendUrl}/idp`, addGetAuthorization(accessString))
+        const res = await fetch(`${backendUrl}/core/idps/instances`, addGetAuthorization(accessString))
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return await res.json()
     }
@@ -736,9 +754,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 [EExtensionType.LOGIN]:    `${backendUrl}/core/logins`,
                 [EExtensionType.PACK]:     `${backendUrl}/core/packs`,
                 [EExtensionType.DOCS]:     `${backendUrl}/core/docs`,
-                [EExtensionType.IDP]:      `${backendUrl}/idp/connectors`,
+                [EExtensionType.IDP]:      `${backendUrl}/core/idps`,
                 [EExtensionType.AITOOLSET]: `${backendUrl}/core/aitoolsets`,
-                [EExtensionType.DCE]:      `${backendUrl}/core/dce`,
+                [EExtensionType.DCE]:      `${backendUrl}/core/dces`,
             }
             // Coming in through a login extension is a NARROW door: the user lands on a specific login's
             // page and goes straight to its channel, with no marketplace and usually with no Kwirth beyond
@@ -2119,6 +2137,18 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         setRefresh(Math.random())
     }
 
+    /*
+        Reads what has been spent, just before a config dialog opens. It never breaks the dialog: a core
+        without the endpoint —or without a usage service— simply shows no figures, and the ceilings can
+        still be set. 'available: false' is a fact about this Kwirth, not an error of the screen.
+    */
+    const loadAiUsage = () => {
+        fetch(`${backendUrl}/core/aiconfig/usage`, addGetAuthorization(accessString))
+            .then(r => r.ok ? r.json() : { available: false, durable: false, providers: {}, llms: {} })
+            .then((data: IAiUsageResponse) => setAiUsage(data))
+            .catch(() => setAiUsage({ available: false, durable: false, providers: {}, llms: {} }))
+    }
+
     const menuDrawerOptionSelected = async (option:MenuDrawerOption) => {
         setMenuDrawerOpen(false)
         switch(option) {
@@ -2243,12 +2273,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 setShowSettingsImport(true)
                 break
             case MenuDrawerOption.AiProviders:
+                loadAiUsage()
                 fetch(`${backendUrl}/core/aiconfig/providers`, addGetAuthorization(accessString))
                     .then(r => r.json())
                     .then((data: ILlmProvider[]) => { setAiProviders(data); setShowAiProviders(true) })
                     .catch(() => { setAiProviders([]); setShowAiProviders(true) })
                 break
             case MenuDrawerOption.AiModels:
+                loadAiUsage()
                 Promise.all([
                     fetch(`${backendUrl}/core/aiconfig/providers`, addGetAuthorization(accessString)).then(r => r.json()),
                     fetch(`${backendUrl}/core/aiconfig/llms`, addGetAuthorization(accessString)).then(r => r.json())
@@ -2845,6 +2877,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showAiProviders && <AiConfigProvider
                     providersAvailable={PROVIDERS_AVAILABLE}
                     providers={aiProviders}
+                    usage={aiUsage.providers}
+                    usageDurable={aiUsage.durable}
                     onLoadModels={async (provider) => {
                         const r = await fetch(`${backendUrl}/core/aiconfig/loadmodels`, addPostAuthorization(accessString, JSON.stringify(provider)))
                         return r.ok ? await r.json() : []
@@ -2857,6 +2891,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showAiModels && <AiConfigLlm
                     providers={aiProviders}
                     llms={aiLlms}
+                    usage={aiUsage.llms}
+                    usageDurable={aiUsage.durable}
                     onClose={(updated) => {
                         setShowAiModels(false)
                         if (updated) fetch(`${backendUrl}/core/aiconfig/llms`, addPostAuthorization(accessString, JSON.stringify(updated))).catch(console.error)

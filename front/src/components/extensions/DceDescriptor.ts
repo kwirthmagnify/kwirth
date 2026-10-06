@@ -81,10 +81,10 @@ const makeDceDescriptor = (): IExtensionManagerDescriptor<IDceEntry, IDceEntry> 
     helpSection: 'guide/extensions/dces/index?id=managing-dces',
     icon: Hub,
     endpoints: {
-        installed: '/core/dce',
-        install: '/core/dce/install',
-        upload: '/core/dce/upload',
-        remove: e => `/core/dce/${e.id}`
+        installed: '/core/dces',
+        install: '/core/dces/install',
+        upload: '/core/dces/upload',
+        remove: e => `/core/dces/${e.id}`
     },
     keyOf: e => e.id,
     toModel,

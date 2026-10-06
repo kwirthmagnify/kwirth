@@ -15,7 +15,7 @@ import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '
     configuration.
 
     ⚠️ Secrets do not arrive with the rest: the list gives them masked and the REAL value is only asked
-    for on pressing the eye, against /idp/export, which is admin-only. That way a secret does not travel
+    for on pressing the eye, against /core/idps/export, which is admin-only. That way a secret does not travel
     to anybody's browser until it has to be shown.
 */
 
@@ -61,7 +61,7 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
         }
         if (!esNueva) {
             try {
-                const res = await fetch(`${backendUrl}/idp/export`, addGetAuthorization(accessString))
+                const res = await fetch(`${backendUrl}/core/idps/export`, addGetAuthorization(accessString))
                 if (res.ok) {
                     const todo = await res.json()
                     const real = todo?.[instancia.id]?.config?.[name]
@@ -78,8 +78,8 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
         setError(undefined)
         try {
             const res = esNueva
-                ? await fetch(`${backendUrl}/idp`, addPostAuthorization(accessString, JSON.stringify(instancia)))
-                : await fetch(`${backendUrl}/idp/${instancia.id}`, addPutAuthorization(accessString, JSON.stringify(instancia)))
+                ? await fetch(`${backendUrl}/core/idps/instances`, addPostAuthorization(accessString, JSON.stringify(instancia)))
+                : await fetch(`${backendUrl}/core/idps/instances/${instancia.id}`, addPutAuthorization(accessString, JSON.stringify(instancia)))
             if (!res.ok) {
                 const detalle = await res.json().catch(() => ({}))
                 throw new Error(detalle.error ?? `HTTP ${res.status}`)

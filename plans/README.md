@@ -28,6 +28,7 @@ meses después — que es exactamente lo que pasaba antes de escribir este índi
 
 | plan | de qué va | qué queda |
 |---|---|---|
+| [ai-usage-control](ai-usage-control/PLAN.md) · [PRD](ai-usage-control/PRD.md) | contar lo que Kwirth gasta en IA y **cortar**: por clave de LLM y por canal, en coste, llamadas o tokens, con ventana diaria y mensual | **S1 entregado** (2026-10-06): el envoltorio de `generateText` cuenta y corta por clave, con su UI y su consumo visible; `common-ai` en 0.5.66. Queda **S2**, el tope por canal, que exige pasar el `consumerId` desde los ocho consumidores — cinco de ellos de pago |
 | [kwirth-status v2](kwirth-status/PLAN-v2.md) · [PRD](kwirth-status/PRD-v2.md) | Kwirth Status en diez pestañas: home, providers, grafo, rendimiento del proceso, plugins, extensiones, rutas HTTP, DCE y el log del core | S5 (el resto de extensiones: themes, homepages, logins, idps, aitoolsets, docs y packs) y backlog; publicado 0.7.0 (SQL en 0.6.0; el grafo, del DCE `xyflow` en 0.7.0) |
 | [ai-tools](ai-tools/PLAN.md) | las tools de IA como extensión instalable (`aitoolset`) | S4–S7; las 43 viejas ya retiradas de `common-ai` (2026-09-26) |
 | [icons](icons/PLAN.md) | aligerar el barrel de iconos | los dos que un sender pide por nombre, y el alias `/icons` en 26 `build.mjs` |

@@ -5,7 +5,7 @@ import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 
 /*
-    API of the `dce` type (plan: plans/completed/dce/PLAN.md, S1), mounted at /core/dce.
+    API of the `dce` type (plan: plans/completed/dce/PLAN.md, S1), mounted at /core/dces.
 
     The listing carries, next to each installed DCE, how its back end is RIGHT NOW (`back`: loaded, or
     failed with its cause). The index says what was installed and the registry what really loaded; a

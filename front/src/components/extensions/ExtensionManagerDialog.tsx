@@ -199,8 +199,20 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         if (tipos.size === 0) return
         const resultados: Record<string, IVersionedRef[]> = {}
         await Promise.all([...tipos].map(async t => {
+            /*
+                '/core/<plural of the type>', and every type follows it: the installed list of a type is
+                the ROOT of its route. It used to be '/core/<type>s' flat, which 404'd for 'dce' (served
+                at '/core/dce', singular) and for 'idp' (which hung off '/idp' and whose root meant the
+                instances, not the connectors). A 404 read as 'requirement not met', so a plugin needing
+                an installed DCE could never be installed however installed the DCE was. Those two routes
+                were straightened out instead of being special-cased here.
+
+                'docs' is the only type whose name is already plural, which is why this is the plural and
+                not a bare '+ s': '/core/docss' would be nothing.
+            */
+            const plural = t.endsWith('s') ? t : `${t}s`
             try {
-                const r = await fetch(`${backendUrl}/core/${t}s`, addGetAuthorization(accessString))
+                const r = await fetch(`${backendUrl}/core/${plural}`, addGetAuthorization(accessString))
                 if (r.ok) resultados[t] = await r.json()
             }
             catch { /* si no se puede saber, el requisito se da por no cumplido y se dice en el tooltip */ }

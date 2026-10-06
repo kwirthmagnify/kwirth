@@ -48,7 +48,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
     // enabled IdP instances, for assigning a user to an IdP (the IUser.idp binding)
     const getIdps = async () => {
         try {
-            let response = await fetch(`${backendUrl}/idp`, addGetAuthorization(accessString))
+            let response = await fetch(`${backendUrl}/core/idps/instances`, addGetAuthorization(accessString))
             if (response.ok) {
                 let list:{id:string, label:string, enabled:boolean}[] = await response.json()
                 setIdps(list.filter(i => i.enabled).map(i => ({ id: i.id, label: i.label })))

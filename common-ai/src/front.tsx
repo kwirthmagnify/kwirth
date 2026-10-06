@@ -31,7 +31,91 @@ const downloadJson = async (data: unknown, filename: string) => {
     const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
     URL.revokeObjectURL(url)
 }
-import { ILlm, ILlmModel, ILlmProvider } from './index'
+import { EUsageUnit, ILlm, ILlmModel, ILlmProvider, IUsageAmounts, IUsageLimits, IUsageTotals, IUsageWindows } from './index'
+
+// ── UsageLimits ─────────────────────────────────────────────────────────────
+
+interface IUsageLimitsEditorProps {
+    value: IUsageLimits | undefined
+    onChange: (limits: IUsageLimits) => void
+    /* What these ceilings are set on, so the text can say it instead of talking about 'the subject'. */
+    subject: string
+    disabled?: boolean
+    /* What has been spent so far, so a ceiling is set knowing where you already are. */
+    usage?: IUsageTotals
+    /* false when the counters live in memory: they are lost on restart, and that has to be said. */
+    durable?: boolean
+}
+
+/* The four units in the order an admin thinks about them: what it costs, how often, how much it moved. */
+const USAGE_ROWS: { unit: EUsageUnit, label: string, of: (a: IUsageAmounts) => number }[] = [
+    { unit: EUsageUnit.COST, label: 'Cost (€/$)', of: a => a.cost },
+    { unit: EUsageUnit.CALLS, label: 'Calls', of: a => a.calls },
+    { unit: EUsageUnit.TOKENS_IN, label: 'Input tokens', of: a => a.tokensIn },
+    { unit: EUsageUnit.TOKENS_OUT, label: 'Output tokens', of: a => a.tokensOut }
+]
+
+/* 1234.5 → '1,235' and 0.42 → '0.42': a cost needs its decimals, a token count is noise with them. */
+const formatSpent = (value: number): string =>
+    value >= 100 ? Math.round(value).toLocaleString() : String(Math.round(value * 100) / 100)
+
+/*
+    The ceilings of one subject — a provider key or a model's own key. Shared by both dialogs because the
+    rule is the same in both, and two copies of it would drift.
+
+    Each unit carries its own switch, apart from its numbers: turning a limit off for a week should not
+    cost the admin the numbers he had worked out.
+*/
+const UsageLimitsEditor: React.FC<IUsageLimitsEditorProps> = (props: IUsageLimitsEditorProps) => {
+    const limits = props.value ?? {}
+
+    const patch = (unit: EUsageUnit, change: Partial<IUsageWindows>) => {
+        const current: IUsageWindows = limits[unit] ?? { enabled: false }
+        props.onChange({ ...limits, [unit]: { ...current, ...change } })
+    }
+
+    const numberOrUndefined = (text: string): number | undefined => text === '' ? undefined : +text
+
+    return (<Stack direction='column' spacing={1} sx={{ mt: 1 }}>
+        <Typography variant='body2' color='text.secondary'>
+            Stop spending on <b>{props.subject}</b>. A call goes out only if <b>no</b> enabled ceiling is
+            reached — whichever is passed first blocks it, and the channel is told why.
+        </Typography>
+        {/* The one thing an admin must not learn the hard way, said where the limit is set. */}
+        <Typography variant='caption' color='text.secondary'>
+            ⚠️ A <b>calls</b> ceiling stops the call that would exceed it. <b>Tokens</b> and <b>cost</b> are
+            only known once the model has answered, so those stop the <b>next</b> call: the one that crosses
+            the line has already been paid for.
+        </Typography>
+        {props.usage && props.durable === false &&
+            <Typography variant='caption' color='warning.main'>
+                ⚠️ These counters are kept <b>in memory</b>, because this Kwirth has no SQL configured:
+                they go back to zero on every restart, and so do the limits that depend on them.
+            </Typography>
+        }
+        {USAGE_ROWS.map(({ unit, label, of }) => {
+            const w: IUsageWindows = limits[unit] ?? { enabled: false }
+            // What has been spent goes in the helper text of its own window: next to the number it is
+            // measured against, which is the only place it answers anything.
+            const spent = (amounts: IUsageAmounts | undefined): string | undefined =>
+                amounts ? `${formatSpent(of(amounts))} so far` : undefined
+            return (<Stack key={unit} direction='row' spacing={1} alignItems='flex-start'>
+                <FormControlLabel sx={{ width: '190px', mr: 0, mt: 1 }} control={
+                    <Checkbox checked={!!w.enabled} disabled={props.disabled}
+                        onChange={e => patch(unit, { enabled: e.target.checked })} />
+                } label={label} />
+                <TextField value={w.daily ?? ''} onChange={e => patch(unit, { daily: numberOrUndefined(e.target.value) })}
+                    label='Per day' variant='standard' type='number' fullWidth
+                    disabled={props.disabled || !w.enabled} inputProps={{ min: 0 }} placeholder='no limit'
+                    helperText={spent(props.usage?.daily)} />
+                <TextField value={w.monthly ?? ''} onChange={e => patch(unit, { monthly: numberOrUndefined(e.target.value) })}
+                    label='Per month' variant='standard' type='number' fullWidth
+                    disabled={props.disabled || !w.enabled} inputProps={{ min: 0 }} placeholder='no limit'
+                    helperText={spent(props.usage?.monthly)} />
+            </Stack>)
+        })}
+    </Stack>)
+}
 
 // ── LlmSelector ─────────────────────────────────────────────────────────────
 
@@ -63,6 +147,9 @@ interface IAiConfigLlmProps {
     onClose: (llms: ILlm[] | undefined) => void
     providers: ILlmProvider[]
     llms: ILlm[]
+    /* What each model with its own key has spent, by llm id. Optional: an older core does not send it. */
+    usage?: Record<string, IUsageTotals>
+    usageDurable?: boolean
 }
 
 const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
@@ -76,6 +163,7 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
     const [temperature, setTemperature] = useState(0)
     const [useProviderKey, setUseProviderKey] = useState(true)
     const [key, setKey] = useState('')
+    const [limits, setLimits] = useState<IUsageLimits>({})
     const [inputCostPerMillion, setInputCostPerMillion] = useState<number | ''>(0)
     const [outputCostPerMillion, setOutputCostPerMillion] = useState<number | ''>(0)
 
@@ -94,6 +182,7 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
             setTemperature(l.temperature); setUseProviderKey(l.useProviderKey); setKey(l.key)
             setInputCostPerMillion(l.inputCostPerMillion ?? 0)
             setOutputCostPerMillion(l.outputCostPerMillion ?? 0)
+            setLimits(l.limits ?? {})
             setSelectedIndex(index)
         }
     }
@@ -101,10 +190,13 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
     const onNew = () => {
         setSelectedIndex(null); setId(''); setProvider(''); setModel('')
         setTemperature(0); setUseProviderKey(false); setKey(''); setInputCostPerMillion(0); setOutputCostPerMillion(0)
+        setLimits({})
     }
 
     const onAdd = () => {
-        const llm: ILlm = { id, provider, model, temperature, useProviderKey, key, inputCostPerMillion: inputCostPerMillion === '' ? 0 : inputCostPerMillion, outputCostPerMillion: outputCostPerMillion === '' ? 0 : outputCostPerMillion }
+        // Limits only travel with a model that has its OWN key: with a borrowed one the budget is the
+        // provider's, and keeping a stale copy here would show a ceiling that nothing enforces.
+        const llm: ILlm = { id, provider, model, temperature, useProviderKey, key, inputCostPerMillion: inputCostPerMillion === '' ? 0 : inputCostPerMillion, outputCostPerMillion: outputCostPerMillion === '' ? 0 : outputCostPerMillion, ...(useProviderKey ? {} : { limits }) }
         const updated = [...llms]
         if (selectedIndex !== null) updated[selectedIndex] = llm
         else updated.push(llm)
@@ -184,6 +276,17 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                                     )
                                 }}
                             />
+                            {/* Only with its own key: on a borrowed one the budget belongs to the
+                                provider, and showing a ceiling here that nothing enforces is worse
+                                than not showing one. */}
+                            { useProviderKey
+                                ? <Typography variant='caption' color='text.secondary'>
+                                    Usage limits for this model live on its provider, because it borrows
+                                    the provider's key — and that key is what gets billed.
+                                  </Typography>
+                                : <UsageLimitsEditor value={limits} onChange={setLimits} subject={`this model's own key`}
+                                    usage={props.usage?.[id]} durable={props.usageDurable} />
+                            }
                         </Stack>
                         <Stack direction='row' spacing={1}>
                             <Button variant='outlined' size='small' onClick={onNew}>New</Button>
@@ -219,6 +322,9 @@ interface IAiConfigProviderProps {
     providers: ILlmProvider[]
     onClose: (providers: ILlmProvider[] | undefined) => void
     onLoadModels?: (provider: ILlmProvider) => Promise<ILlmModel[]>
+    /* What each provider key has spent, by provider name. Optional: an older core does not send it. */
+    usage?: Record<string, IUsageTotals>
+    usageDurable?: boolean
 }
 
 const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProviderProps) => {
@@ -237,6 +343,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     const [providerType, setProviderType] = useState(props.providersAvailable[0] ?? '')
     const [providerKey, setProviderKey] = useState('')
     const [providerEndpoint, setProviderEndpoint] = useState('')
+    const [providerLimits, setProviderLimits] = useState<IUsageLimits>({})
     const [pendingModels, setPendingModels] = useState<ILlmModel[]>([])  // solo para mostrar count en el botón
 
     const onProviderSelected = (p: ILlmProvider, index: number) => {
@@ -244,6 +351,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
         setProviderType(p.type ?? p.name)
         setProviderKey(p.key)
         setProviderEndpoint(p.endpoint ?? '')
+        setProviderLimits(p.limits ?? {})
         loadedModelsRef.current = p.models ?? []
         setPendingModels(p.models ?? [])
         setSelectedIndex(index)
@@ -255,6 +363,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
         setProviderType(props.providersAvailable[0] ?? '')
         setProviderKey('')
         setProviderEndpoint('')
+        setProviderLimits({})
         loadedModelsRef.current = []
         setPendingModels([])
     }
@@ -264,8 +373,8 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
         const endpoint = providerType === 'openai-compat' ? providerEndpoint : undefined
         const models = loadedModelsRef.current
         const updated = [...providers]
-        if (selectedIndex !== null) updated[selectedIndex] = { ...updated[selectedIndex], name: providerName, type: providerType, key: providerKey, models, endpoint }
-        else updated.push({ name: providerName, type: providerType, key: providerKey, models, endpoint })
+        if (selectedIndex !== null) updated[selectedIndex] = { ...updated[selectedIndex], name: providerName, type: providerType, key: providerKey, models, endpoint, limits: providerLimits }
+        else updated.push({ name: providerName, type: providerType, key: providerKey, models, endpoint, limits: providerLimits })
         setProviders(updated)
         onNew()
     }
@@ -346,6 +455,12 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                                 helperText='OpenAI-compatible API base URL (e.g. Huawei MaaS, vLLM, LM Studio…)'
                             />
                         )}
+                        {/* The ceilings of THIS key, shared by every model that borrows it: the provider
+                            bills the key, so splitting the budget per model would split a bill that it
+                            keeps as one. */}
+                        <UsageLimitsEditor value={providerLimits} onChange={setProviderLimits}
+                            subject={`this provider's key`} disabled={!providerName.trim()}
+                            usage={props.usage?.[providerName]} durable={props.usageDurable} />
                         <Box sx={{ flexGrow: 1 }} />
                         <Stack direction='row' spacing={1} alignItems='center'>
                             <Button variant='outlined' onClick={onNew}>New</Button>
