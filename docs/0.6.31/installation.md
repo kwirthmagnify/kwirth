@@ -238,6 +238,38 @@ cluster type as `none` unless you mount a kubeconfig. The startup log says which
 Execution environment: 'cloudrun'        (or 'aci')
 ```
 
+### Installation identity without Kubernetes
+
+Inside a cluster, kwirth identifies itself by the uid of the `kube-system` namespace, and extensions use
+that id to keep their data apart ("per cluster"). Without Kubernetes there is no such namespace, so on ECS,
+Cloud Run, ACI or a bare container kwirth builds the id from what the platform already knows — **nothing to
+configure**:
+
+| Where | Installation id | Taken from |
+|---|---|---|
+| ECS | `aws:ecs:<account>:<region>:<cluster>:<task family>` | the task metadata endpoint |
+| Cloud Run | `gcp:run:<project>:<region>:<service>` | the GCP metadata server |
+| ACI | `azure:aci:<subscription>:<resource group>:<container group>` | the container group's **managed identity** |
+| anywhere else | `uuid:<uuid>` | generated once and kept in kwirth's store |
+
+Each part stays the same when the task is recycled, an instance is replaced or a new revision is deployed,
+so the id is stable for the life of the deployment. The startup log prints it, with a readable name that is
+also the title of the front:
+
+```
+Installation identity: 'aws:ecs:123456789012:eu-west-1:prod:kwirth' (name 'ecs/prod/kwirth', from ecs)
+```
+
+Things worth knowing:
+
+- **Renaming changes the id.** A new ECS cluster or task family name, a renamed Cloud Run service or a new
+  container group is a new installation as far as extensions are concerned: what they stored under the old
+  id stays there.
+- **ACI needs a managed identity** for its id. Without one, kwirth falls back to a generated `uuid:` id.
+- **A generated `uuid:` id lives in the store.** If `KWIRTH_STORE` is not a mounted volume, every new
+  instance gets a new id; kwirth warns about it at startup.
+- If a platform source cannot be read, kwirth does not stop: it uses a generated id and logs why.
+
 ## External: launch kwirth locally (without docker)
 First install kwirth:
 ```sh

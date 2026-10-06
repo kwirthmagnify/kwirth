@@ -37,6 +37,7 @@ export * from './ExtensionScope'
 export * from './Logging'
 export * from './Marketplace'
 export * from './PackageRegistry'
+export * from './Installation'
 // (daemons removed: export * from './Daemon' has been dropped)
 export * from './Version'
 export * from './FrontChannel'

@@ -55,6 +55,10 @@ import { NodeSecrets } from './tools/NodeSecrets'
 
 import { IUserInfo, IKwirthSettings, EExecutionEnvironment, EExtensionType, ERouteOwnerKind, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import { EStoreKind, IEnvironmentCapabilities, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType } from './tools/ExecutionEnvironment'
+import { resolveInstallationIdentity, defaultProbes } from './tools/InstallationIdentity'
+
+// Where a generated installation identity (no Kubernetes, no platform source) is kept in Kwirth's store.
+const INSTALLATION_IDENTITY_KEY = 'kwirth-installation-identity'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import * as _kwirthCommon from '@kwirthmagnify/kwirth-common'
 import { IdentityService } from './tools/auth/IdentityService'
@@ -463,6 +467,33 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
                 secrets = new KubernetesSecrets(clusterInfo.coreApi, kwirthData.namespace)
                 configMaps = new KubernetesConfigMaps(clusterInfo.coreApi, kwirthData.namespace)
                 break
+        }
+
+        /*
+            Without Kubernetes there is no kube-system uid, and clusterInfo.id would stay EMPTY: every
+            extension that persists, stamps or federates "per cluster" would do it under the same blank key,
+            and two installations sharing a database would overwrite each other without an error. The id is
+            taken from the platform (ECS task metadata, GCP metadata server, Azure managed identity) or, as a
+            last resort, generated once and kept in the store — never configured.
+
+            Only the serverless platforms lose their disk with the task, so only there a generated id
+            without KWIRTH_STORE is a warning: on desktop and docker the default store survives a restart.
+        */
+        if (!capabilities.kubernetes && configMaps) {
+            const store = configMaps
+            const serverless = [EExecutionEnvironment.ECS, EExecutionEnvironment.CLOUD_RUN, EExecutionEnvironment.ACI].includes(kwirthData.executionEnvironment)
+            const identity = await resolveInstallationIdentity(
+                kwirthData.executionEnvironment,
+                !serverless || capabilities.storePath !== undefined,
+                defaultProbes(
+                    async () => (await store.read(INSTALLATION_IDENTITY_KEY))?.id,
+                    async id => { await store.write(INSTALLATION_IDENTITY_KEY, { id }) },
+                    message => logInfo(ELogComponent.CORE, message)
+                )
+            )
+            clusterInfo.id = identity.id
+            clusterInfo.name = identity.name
+            logInfo(ELogComponent.CORE, `Installation identity: '${identity.id}' (name '${identity.name}', from ${identity.source})`)
         }
 
         // The download credentials are registered HERE, as soon as there is storage, and not when the

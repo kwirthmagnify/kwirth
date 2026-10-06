@@ -14,6 +14,9 @@ has no runtime dependencies on Node or on the browser, so the same types are use
 - **Access** — API keys and access keys, and parsing their resources and scopes.
 - **Extensions** — the extension types, their configuration fields and RBAC scopes, marketplace and
   package-registry metadata, configuration bundles.
+- **Where Kwirth runs** — the execution environment (`EExecutionEnvironment`: Kubernetes, Docker, desktop,
+  ECS, Cloud Run, ACI) and the installation identity (`IInstallationIdentity`, `EInstallationIdSource`): the
+  stable id extensions persist and federate by, also when there is no Kubernetes.
 - **Contracts the core lends to channels** — sender and webhook access, the published HTTP routes
   (`IRouteAccess`, `ERouteOwnerKind`), the installed DCEs (`IDceAccess`, `IDceMeta`, registry entries) and
   the installed plugins' status (`IPluginAccess`, `IPluginStatus`, `EPluginState`, `IChannelInstances`).
