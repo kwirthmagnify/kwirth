@@ -69,7 +69,9 @@ enum EExecutionEnvironment {
     KUBERNETES = 'kubernetes',  // inside a cluster, or against one through a kubeconfig
     DOCKER = 'docker',          // a loose container on a CRI
     DESKTOP = 'desktop',        // Electron/Tauri on the user's machine
-    ECS = 'ecs'                 // an AWS ECS task (Fargate or EC2)
+    ECS = 'ecs',                // an AWS ECS task (Fargate or EC2)
+    CLOUD_RUN = 'cloudrun',     // a Google Cloud Run service (detected by K_SERVICE)
+    ACI = 'aci'                 // an Azure Container Instances group (detected through the Azure identity endpoint)
 }
 
 // How many back instances of a channel make sense per cluster.

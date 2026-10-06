@@ -218,6 +218,26 @@ groups, target group, IAM roles) and a FireLens example live in the
 > kwirth does **not** manage ECS tasks or containers as if they were a cluster. To get the log of your
 > other tasks, ship it in through an ingestion provider.
 
+## Cloud Run and Azure Container Instances
+
+The same image also runs on **Google Cloud Run** and on **Azure Container Instances (ACI)**, again with
+nothing declared for the environment to be detected:
+
+- **Cloud Run** is recognised by `K_SERVICE`, which Cloud Run always sets. kwirth listens on the port in
+  `PORT`, so it answers wherever Cloud Run sends the traffic (8080 by default) without configuring it.
+- **ACI** sets no variable of its own, so kwirth asks Azure: at startup it calls the managed-identity
+  endpoint (`169.254.169.254`, at most one second, and only when nothing cheaper matched). An answer from
+  Azure — a token, or Azure's own "no identity assigned" error — means ACI.
+
+Everything said above for ECS about what the platform does **not** give you applies to both: point
+`KWIRTH_STORE` at a mounted volume (Cloud Storage or NFS on Cloud Run, **Azure Files** on ACI) or the
+store dies with the instance; pass `MASTERKEY` as a secret; and health-check `/healthz`. Both report the
+cluster type as `none` unless you mount a kubeconfig. The startup log says which one was found:
+
+```
+Execution environment: 'cloudrun'        (or 'aci')
+```
+
 ## External: launch kwirth locally (without docker)
 First install kwirth:
 ```sh

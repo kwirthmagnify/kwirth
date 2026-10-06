@@ -267,7 +267,7 @@ if (envCommand!==undefined) {
 */
 const getExecutionEnvironment = async ():Promise<EExecutionEnvironment|undefined> => {
     logInfo(ELogComponent.CORE, 'Detecting execution environment...')
-    let executionEnvironment = detectExecutionEnvironment()
+    let executionEnvironment = await detectExecutionEnvironment()
     if (executionEnvironment)
         logInfo(ELogComponent.CORE, `Execution environment: '${executionEnvironment}'`)
     else
@@ -3158,6 +3158,23 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
                 channels: []
             }
             break
+        // Same shape as ECS: a serverless container with no deployment of its own to manage.
+        case EExecutionEnvironment.CLOUD_RUN:
+        case EExecutionEnvironment.ACI:
+            kwirthData = {
+                namespace: '',
+                deployment: '',
+                isDesktop: false,
+                inCluster: false,
+                version: VERSION,
+                lastVersion: VERSION,
+                clusterName: process.env.KWIRTH_CLUSTER_NAME || (exenv === EExecutionEnvironment.CLOUD_RUN ? 'inCloudRun' : 'inAci'),
+                clusterType: resolveClusterType(capabilities),
+                executionEnvironment: exenv,
+                metricsInterval:15,
+                channels: []
+            }
+            break
         case EExecutionEnvironment.KUBERNETES:
             let kd = await getKubernetesKwirthData(envContext)
             if (kd) {
@@ -3278,8 +3295,10 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
             break
         case EExecutionEnvironment.DOCKER:
         case EExecutionEnvironment.ECS:
-            // ECS follows the same path as a standalone container: what differs between the two are the
-            // capabilities, and those arrive already resolved before reaching here.
+        case EExecutionEnvironment.CLOUD_RUN:
+        case EExecutionEnvironment.ACI:
+            // ECS, Cloud Run and ACI follow the same path as a standalone container: what differs between
+            // them are the capabilities, and those arrive already resolved before reaching here.
             await launchDocker(envContext, kwirthData, app)
             break
         case EExecutionEnvironment.KUBERNETES:

@@ -54,7 +54,42 @@ const isDesktopRuntime = (): boolean => {
 */
 const isEcsRuntime = (): boolean => process.env.ECS_CONTAINER_METADATA_URI_V4 !== undefined || process.env.ECS_CONTAINER_METADATA_URI !== undefined
 
-const detectExecutionEnvironment = (): EExecutionEnvironment|undefined => {
+/*
+    Cloud Run's container runtime contract always sets K_SERVICE (the service name), so it is as canonical
+    a signal as the ECS metadata variable.
+*/
+const isCloudRunRuntime = (): boolean => process.env.K_SERVICE !== undefined
+
+/*
+    Azure Container Instances sets NO variable of its own, so the only signal is to ask Azure: the managed
+    identity token endpoint on 169.254.169.254. Two answers mean Azure:
+      - 200 with a token: there is a managed identity (S2 takes the installation identity from it);
+      - an Azure JSON error ('invalid_request' / 'Identity not found'): Azure, but no identity assigned.
+    That IP is ALSO the metadata service of AWS EC2 and of GCP, and neither is mistaken for Azure: EC2 answers
+    that path with a 404 page, and GCP refuses any request without its own 'Metadata-Flavor' header.
+    One second at most, and only reached when no cheap signal matched (see detectExecutionEnvironment).
+*/
+const AZURE_IDENTITY_URL = 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F'
+const AZURE_PROBE_TIMEOUT_MS = 1000
+
+// 'url' and 'timeoutMs' are only overridden by tests (a local server playing Azure, EC2 or nobody).
+const probeAzureIdentityEndpoint = async (url: string = AZURE_IDENTITY_URL, timeoutMs: number = AZURE_PROBE_TIMEOUT_MS): Promise<boolean> => {
+    try {
+        const res = await fetch(url, { headers: { Metadata: 'true' }, signal: AbortSignal.timeout(timeoutMs) })
+        if (res.ok) return true
+        if (res.status !== 400) return false
+        const body = await res.json().catch(() => undefined) as { error?: string } | undefined
+        return typeof body?.error === 'string'
+    }
+    catch {
+        return false   // nothing listening there, or too slow: not Azure
+    }
+}
+
+/*
+    'azureProbe' is injectable so a test can say 'this is Azure' or 'nothing answers' without being there.
+*/
+const detectExecutionEnvironment = async (azureProbe: () => Promise<boolean> = () => probeAzureIdentityEndpoint()): Promise<EExecutionEnvironment|undefined> => {
     switch (process.env.FORCE) {
         case 'desktop':
             return EExecutionEnvironment.DESKTOP
@@ -64,6 +99,10 @@ const detectExecutionEnvironment = (): EExecutionEnvironment|undefined => {
             return EExecutionEnvironment.KUBERNETES
         case 'ecs':
             return EExecutionEnvironment.ECS
+        case 'cloudrun':
+            return EExecutionEnvironment.CLOUD_RUN
+        case 'aci':
+            return EExecutionEnvironment.ACI
     }
 
     if (isDesktopRuntime()) return EExecutionEnvironment.DESKTOP
@@ -73,10 +112,14 @@ const detectExecutionEnvironment = (): EExecutionEnvironment|undefined => {
         ECS goes BEFORE docker on purpose: on the EC2 launch type the containers are started by Docker's
         daemon, so '/.dockerenv' exists and would take the detection. On Fargate it does not exist — it is
         containerd — which is why until now a Fargate task was no known environment at all and the process
-        closed on startup.
+        closed on startup. Cloud Run goes before docker for the same reason.
     */
     if (isEcsRuntime()) return EExecutionEnvironment.ECS
+    if (isCloudRunRuntime()) return EExecutionEnvironment.CLOUD_RUN
     if (fs.existsSync('/.dockerenv')) return EExecutionEnvironment.DOCKER
+
+    // The only check that costs time goes LAST, so a local container or a cluster never pays for it.
+    if (await azureProbe()) return EExecutionEnvironment.ACI
 
     return undefined
 }
@@ -140,7 +183,11 @@ const resolveStore = (executionEnvironment:EExecutionEnvironment, kubernetes:boo
             reasons.push('Store: plain files (legacy docker format, set by CONFIGMAPPATH and SECRETPATH)')
             return { store: EStoreKind.FILE_PLAIN, storePath: undefined }
 
+        // The three serverless container platforms store alike: encrypted files, and only a mounted volume
+        // (EFS on ECS, Cloud Storage/NFS on Cloud Run, Azure Files on ACI) survives a recycle.
         case EExecutionEnvironment.ECS:
+        case EExecutionEnvironment.CLOUD_RUN:
+        case EExecutionEnvironment.ACI:
             if (kwirthStore) {
                 reasons.push(`Store: encrypted files at '${kwirthStore}' (KWIRTH_STORE)`)
             }
@@ -209,4 +256,4 @@ const resolveClusterType = (capabilities:IEnvironmentCapabilities): EClusterType
     return EClusterType.NONE
 }
 
-export { EStoreKind, IEnvironmentCapabilities, IEnvironmentProbes, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType, hasKubeconfigSource, hasUsableKubeconfig }
+export { EStoreKind, IEnvironmentCapabilities, IEnvironmentProbes, detectExecutionEnvironment, probeAzureIdentityEndpoint, resolveEnvironmentCapabilities, resolveClusterType, hasKubeconfigSource, hasUsableKubeconfig }
