@@ -3,7 +3,7 @@
   "name": "Pinocchio",
   "displayName": "Pinocchio",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.39",
+  "version": "0.2.40",
   "website": "https://kwirthmagnify.dev",
   "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
   "icon": "AutoFixHigh",
@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@kwirthmagnify/kwirth-common": "^0.5.62",
-    "@kwirthmagnify/kwirth-common-ai": "^0.5.64",
+    "@kwirthmagnify/kwirth-common-ai": "^0.5.66",
     "@kwirthmagnify/kwirth-common-back": "^0.6.0",
     "@kwirthmagnify/kwirth-common-front": "^0.5.65",
     "nunjucks": "^3.2.4"
@@ -35,11 +35,35 @@
   },
   "requiresRestart": false,
   "requiresExtension": [
-    { "extensionType": "provider", "id": "business", "minVersion": "0.1.6" },
-    { "extensionType": "aitoolset", "id": "k8s-inventory", "minVersion": "0.2.0" },
-    { "extensionType": "aitoolset", "id": "k8s-describe", "minVersion": "0.2.0" },
-    { "extensionType": "aitoolset", "id": "k8s-observability", "minVersion": "0.1.0" },
-    { "extensionType": "aitoolset", "id": "k8s-metrics", "minVersion": "0.1.0" },
-    { "extensionType": "aitoolset", "id": "k8s-secrets", "minVersion": "0.1.0" }
+    {
+      "extensionType": "provider",
+      "id": "business",
+      "minVersion": "0.1.6"
+    },
+    {
+      "extensionType": "aitoolset",
+      "id": "k8s-inventory",
+      "minVersion": "0.2.0"
+    },
+    {
+      "extensionType": "aitoolset",
+      "id": "k8s-describe",
+      "minVersion": "0.2.0"
+    },
+    {
+      "extensionType": "aitoolset",
+      "id": "k8s-observability",
+      "minVersion": "0.1.0"
+    },
+    {
+      "extensionType": "aitoolset",
+      "id": "k8s-metrics",
+      "minVersion": "0.1.0"
+    },
+    {
+      "extensionType": "aitoolset",
+      "id": "k8s-secrets",
+      "minVersion": "0.1.0"
+    }
   ]
 }
