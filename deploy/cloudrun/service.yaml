@@ -1,0 +1,69 @@
+# Kwirth on Google Cloud Run — the service.
+#
+#   gcloud run services replace deploy/cloudrun/service.yaml --region <REGION>
+#
+# Replace the <PLACEHOLDERS> first. See README.md in this folder for the bucket, the secret and the
+# permissions this needs.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: kwirth
+  annotations:
+    # Public by default; drop this and front it with IAP or a load balancer to restrict access.
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Second-generation runtime: needed to mount a Cloud Storage bucket as a volume.
+        run.googleapis.com/execution-environment: gen2
+        # ONE instance, always. Kwirth keeps its configuration in files (KWIRTH_STORE), and two Kwirths
+        # writing the same files would corrupt them. minScale 1 also keeps it warm: no cold start on login.
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+        # CPU always allocated: Kwirth does work between requests (providers, timers, websockets), and with
+        # CPU only during requests that work would freeze.
+        run.googleapis.com/cpu-throttling: "false"
+        # Keep a browser on the same instance (there is only one, but this also keeps websockets steady).
+        run.googleapis.com/sessionAffinity: "true"
+    spec:
+      # Websockets live as long as a request; 3600 s is Cloud Run's maximum. The front reconnects on its own.
+      timeoutSeconds: 3600
+      containerConcurrency: 80
+      serviceAccountName: <SERVICE_ACCOUNT>@<PROJECT_ID>.iam.gserviceaccount.com
+      containers:
+        - image: docker.io/kwirthmagnify/kwirth:latest
+          ports:
+            # Cloud Run tells Kwirth where to listen through PORT; Kwirth reads it. Nothing else to set.
+            - containerPort: 8080
+          env:
+            - name: KWIRTH_STORE
+              value: /data/kwirth
+            - name: MASTERKEY
+              valueFrom:
+                secretKeyRef:
+                  # Changing it later makes every secret already stored unreadable: there is no migration.
+                  name: kwirth-masterkey
+                  key: latest
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          startupProbe:
+            httpGet:
+              path: /healthz
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /healthz
+            periodSeconds: 30
+          volumeMounts:
+            - name: kwirth-store
+              mountPath: /data
+      volumes:
+        - name: kwirth-store
+          csi:
+            driver: gcsfuse.run.googleapis.com
+            volumeAttributes:
+              bucketName: <BUCKET_NAME>

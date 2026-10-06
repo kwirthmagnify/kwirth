@@ -1,0 +1,58 @@
+# Kwirth on Azure Container Instances — the container group.
+#
+#   az container create --resource-group <RESOURCE_GROUP> --file deploy/aci/container-group.yaml
+#
+# Replace the <PLACEHOLDERS> first. See README.md in this folder for the storage account, the file share
+# and the master key this needs.
+apiVersion: 2023-05-01
+location: <REGION>
+name: kwirth
+type: Microsoft.ContainerInstance/containerGroups
+# A SYSTEM-ASSIGNED managed identity. Kwirth needs it twice, and asks nothing of it but a token:
+#   - to know it is running on ACI (ACI sets no variable of its own: Kwirth asks Azure's identity endpoint);
+#   - for its installation identity (azure:aci:<subscription>:<resource group>:<container group>).
+# It is granted no role here — Kwirth does not use it to call any Azure API.
+identity:
+  type: SystemAssigned
+properties:
+  osType: Linux
+  restartPolicy: Always
+  containers:
+    - name: kwirth
+      properties:
+        image: docker.io/kwirthmagnify/kwirth:latest
+        ports:
+          - port: 3883
+            protocol: TCP
+        environmentVariables:
+          - name: KWIRTH_STORE
+            value: /data/kwirth
+          # Changing it later makes every secret already stored unreadable: there is no migration.
+          - name: MASTERKEY
+            secureValue: <MASTERKEY>
+        resources:
+          requests:
+            cpu: 1
+            memoryInGB: 2
+        volumeMounts:
+          - name: kwirth-store
+            mountPath: /data
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 3883
+          initialDelaySeconds: 60
+          periodSeconds: 30
+  ipAddress:
+    type: Public
+    dnsNameLabel: <DNS_LABEL>
+    ports:
+      - port: 3883
+        protocol: TCP
+  volumes:
+    # Kwirth's store (users, API keys, installed extensions) must outlive the container group.
+    - name: kwirth-store
+      azureFile:
+        shareName: kwirth-store
+        storageAccountName: <STORAGE_ACCOUNT>
+        storageAccountKey: <STORAGE_ACCOUNT_KEY>

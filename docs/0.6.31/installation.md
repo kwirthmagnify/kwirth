@@ -238,6 +238,19 @@ cluster type as `none` unless you mount a kubeconfig. The startup log says which
 Execution environment: 'cloudrun'        (or 'aci')
 ```
 
+Two things are particular to each:
+
+- **Cloud Run must run a single instance** (`minScale` and `maxScale` 1) with **CPU always allocated**: the
+  store is a set of files that two Kwirths must not write at once, and Kwirth works between requests.
+- **ACI needs a managed identity** on the container group. It is how Kwirth recognises ACI at startup — and
+  where its installation identity comes from. Without one, Kwirth may not recognise the environment and
+  refuse to start.
+
+Ready-to-use files, with the commands to create what they need (bucket and secret, storage account and
+file share), live in [`deploy/cloudrun/`](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/cloudrun)
+and [`deploy/aci/`](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/aci). They have not yet been
+deployed on a real project or subscription: if something there does not work, it is a bug in the example.
+
 ### Installation identity without Kubernetes
 
 Inside a cluster, kwirth identifies itself by the uid of the `kube-system` namespace, and extensions use
@@ -265,7 +278,8 @@ Things worth knowing:
 - **Renaming changes the id.** A new ECS cluster or task family name, a renamed Cloud Run service or a new
   container group is a new installation as far as extensions are concerned: what they stored under the old
   id stays there.
-- **ACI needs a managed identity** for its id. Without one, kwirth falls back to a generated `uuid:` id.
+- **ACI needs a managed identity** for its id (and, as said above, to be recognised at all). Should kwirth
+  start without one, it falls back to a generated `uuid:` id.
 - **A generated `uuid:` id lives in the store.** If `KWIRTH_STORE` is not a mounted volume, every new
   instance gets a new id; kwirth warns about it at startup.
 - If a platform source cannot be read, kwirth does not stop: it uses a generated id and logs why.
