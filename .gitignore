@@ -70,6 +70,7 @@ kwirth-bundled.json
 /providers/cloud-config/
 /providers/v16/
 /providers/object-mapper/
+/providers/host-metrics/
 /senders/datadog/
 /common-cloud/
 
