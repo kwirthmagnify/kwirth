@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { configure, ensureDb } from '@kwirthmagnify/kwirth-common-sql/back'
 import { EUsageScope } from '@kwirthmagnify/kwirth-common-ai/back'
-import { MemoryUsageService, SqlUsageService, createTable, dayKey, monthKey } from '../../src/tools/AiUsage'
+import { DAILY_RETENTION_DAYS, MemoryUsageService, SqlUsageService, createTable, dayKey, monthKey, pruneOldDailyRows } from '../../src/tools/AiUsage'
 
 /*
     The counters behind the AI usage control (plans/ai-usage-control, S1).
@@ -129,4 +129,48 @@ test('in SQL: creating the table twice is harmless, because there are no migrati
     await createTable(db)
     await createTable(db)
     assert.equal(await db.schema.hasTable('ai_usage'), true)
+})
+
+/*
+    The pruning. What matters is not that it deletes, it is WHAT it leaves alone: the monthly rows are
+    the history worth keeping, and today's daily row is what the ceilings are enforced against. A prune
+    that took either of those would silently reset somebody's quota.
+*/
+test('pruning drops old DAILY rows and leaves the monthly ones alone', async (t) => {
+    const db = sqlFromEnv() ? await ensureDb('core-ai-usage-test', { min: 1, max: 2 }).catch(() => undefined) : undefined
+    t.skip(!db, 'no SQL reachable: set KWIRTH_SQL_HOST (and user/password) to run this for real')
+    if (!db) return
+    t.after(async () => { await db('ai_usage').where({ subject: SUBJECT }).delete().catch(() => {}) })
+
+    await createTable(db)
+    await db('ai_usage').where({ subject: SUBJECT }).delete()
+
+    const now = new Date()
+    const old = new Date(now.getTime() - (DAILY_RETENTION_DAYS + 5) * 86400000)
+    const row = (period_kind: string, period_key: string) =>
+        ({ scope: EUsageScope.LLM_KEY, subject: SUBJECT, period_kind, period_key, tokens_in: 1, tokens_out: 1, calls: 1, cost: 0 })
+
+    await db('ai_usage').insert([
+        row('day', dayKey(old)),        // past its retention → must go
+        row('day', dayKey(now)),        // today → the ceilings are enforced against this one
+        row('month', monthKey(old))     // monthly → kept, however old
+    ])
+
+    await pruneOldDailyRows(db, now)
+
+    const left = await db('ai_usage').where({ subject: SUBJECT }).select('period_kind', 'period_key')
+    assert.equal(left.length, 2)
+    assert.ok(left.some(r => r.period_kind === 'day' && r.period_key === dayKey(now)), 'today survives')
+    assert.ok(left.some(r => r.period_kind === 'month'), 'the monthly row survives whatever its age')
+    assert.ok(!left.some(r => r.period_key === dayKey(old) && r.period_kind === 'day'), 'the old daily one is gone')
+})
+
+test('pruning an empty table deletes nothing and does not complain', async (t) => {
+    const db = sqlFromEnv() ? await ensureDb('core-ai-usage-test', { min: 1, max: 2 }).catch(() => undefined) : undefined
+    t.skip(!db, 'no SQL reachable: set KWIRTH_SQL_HOST (and user/password) to run this for real')
+    if (!db) return
+
+    await createTable(db)
+    await db('ai_usage').where({ subject: SUBJECT }).delete()
+    assert.equal(await pruneOldDailyRows(db), 0)
 })

@@ -98,5 +98,11 @@ El eje por clave sí sigue aplicándose: S1 no depende de esto.
 - ⏭ **Los dos tests de SQL se saltan** salvo que se apunte `KWIRTH_SQL_HOST` a una base. `common-sql` se
   configura en el arranque del core, así que desde el harness no hay servidor. Escriben en
   `core-ai-usage-test`, nunca en la base del core.
-- **Limpieza de filas diarias viejas**: las ventanas se resetean solas porque la clave del periodo cambia,
-  pero las filas de días pasados se acumulan. Falta el trabajo que las poda.
+- ✅ **Hecho el 2026-10-06: la poda de filas diarias viejas.** Estaba anotado aquí como si fuera una
+  decisión y no lo era — se quedó sin hacer al implementar la tabla, que es donde le tocaba. Las diarias
+  se conservan **35 días** y el resto se podan al arrancar; las **mensuales no se podan nunca**, porque
+  doce al año por sujeto no es nada y son el histórico que interesa. Lo que lo hace trivial es que el
+  servicio **solo lee la fila de hoy y la del mes en curso**: una diaria más vieja no tiene función.
+  La comparación es de cadenas y no de fechas, porque `YYYY-MM-DD` ordena alfabéticamente igual que
+  ordena en el tiempo. Nunca iba a doler —200 sujetos son 754.000 filas en diez años— pero sin límite
+  es sin límite.

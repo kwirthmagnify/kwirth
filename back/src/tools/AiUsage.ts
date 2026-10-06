@@ -20,6 +20,16 @@ import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 const CONSUMER_ID = 'core-ai-usage'
 const TABLE = 'ai_usage'
 
+/*
+    How long a DAILY row is kept. Enforcement never looks further back than today — read() asks for
+    today's key and this month's, and nothing else — so an older daily row has no function left, only
+    the value of being able to look at last month. Thirty-five days covers that with a margin.
+
+    The MONTHLY rows are not pruned: twelve a year per subject is nothing, and they are the history
+    worth having.
+*/
+const DAILY_RETENTION_DAYS = 35
+
 /* 2026-10-06 → '2026-10-06' and '2026-10'. The window resets on its own: a new key is a new row at zero. */
 const dayKey = (now: Date): string => now.toISOString().slice(0, 10)
 const monthKey = (now: Date): string => now.toISOString().slice(0, 7)
@@ -56,6 +66,21 @@ const createTable = async (db: Knex): Promise<void> => {
         t.primary(['scope', 'subject', 'period_kind', 'period_key'])
     })
     logInfo(ELogComponent.CORE, `AI usage: table '${TABLE}' created`)
+}
+
+/*
+    Drops the daily rows that are past their retention. A string comparison and not a date one because
+    'period_key' is 'YYYY-MM-DD': that format sorts lexicographically exactly as it sorts in time, which
+    is the reason it was chosen.
+
+    It runs once at startup and never breaks it: not being able to prune is untidy, not a failure. The
+    table was growing without a bound — slowly, but without one, and that is the part worth closing.
+*/
+const pruneOldDailyRows = async (db: Knex, now: Date = new Date()): Promise<number> => {
+    const cutoff = new Date(now.getTime() - DAILY_RETENTION_DAYS * 24 * 60 * 60 * 1000)
+    const deleted = await db(TABLE).where({ period_kind: 'day' }).where('period_key', '<', dayKey(cutoff)).delete()
+    if (deleted > 0) logInfo(ELogComponent.CORE, `AI usage: ${deleted} daily rows older than ${DAILY_RETENTION_DAYS} days pruned`)
+    return deleted
 }
 
 class SqlUsageService implements IUsageService {
@@ -149,6 +174,9 @@ export const createUsageService = async (): Promise<IUsageService> => {
     try {
         const db = await ensureDb(CONSUMER_ID, { min: 1, max: 4 })
         await createTable(db)
+        // Untidiness must not stop the service: whether old rows could be dropped says nothing about
+        // whether the ceilings can be enforced.
+        await pruneOldDailyRows(db).catch(err => logWarning(ELogComponent.CORE, `AI usage: could not prune old rows (${err})`))
         logInfo(ELogComponent.CORE, 'AI usage control: counters in SQL, they survive a restart')
         return new SqlUsageService(db)
     }
@@ -159,4 +187,4 @@ export const createUsageService = async (): Promise<IUsageService> => {
     }
 }
 
-export { SqlUsageService, MemoryUsageService, createTable, dayKey, monthKey }
+export { SqlUsageService, MemoryUsageService, createTable, pruneOldDailyRows, dayKey, monthKey, DAILY_RETENTION_DAYS }
