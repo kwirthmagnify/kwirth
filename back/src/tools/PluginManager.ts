@@ -268,7 +268,14 @@ export class PluginManager {
 
             meta.marketplaceLabel = marketplaceLabel
             meta.requiresRestart = meta.requiresRestart ?? false
-            meta.requiresExtension = meta.requiresExtension ?? []
+            /*
+                NORMALIZED, not taken as it comes: the package.json inside the tarball may declare
+                `requiresExtension` in the old string form ("provider:service-flow:0.1.0"), and the
+                validator reads objects. Handing it the raw array makes every `extensionType` come out
+                undefined and the install fails with "Unknown extension type: 'undefined'" — an error
+                that points at the extension when the fault is here.
+            */
+            meta.requiresExtension = normalizeRequires(meta.requiresExtension)
             // A plugin that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertExtensionRequirements('Plugin', meta.id, meta.requiresExtension, installedFrom)
             const backJs = fs.readFileSync(backPath, 'utf-8')

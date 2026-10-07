@@ -273,7 +273,9 @@ export class AiToolsetManager {
             meta.marketplaceId = marketplaceId
             meta.marketplaceLabel = marketplaceLabel
             meta.requiresRestart = meta.requiresRestart ?? false
-            meta.requiresExtension = meta.requiresExtension ?? []
+            // NORMALIZED: the tarball's package.json may still carry the old string form, and the
+            // validator reads objects. See the note in PluginManager.
+            meta.requiresExtension = normalizeRequires(meta.requiresExtension)
             // A toolset that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertExtensionRequirements('AI toolset', meta.id, meta.requiresExtension, installedFrom)
 

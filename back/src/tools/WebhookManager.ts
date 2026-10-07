@@ -329,7 +329,9 @@ export class WebhookManager implements IWebhookAccess {
 
             meta.marketplaceLabel = marketplaceLabel
             meta.requiresRestart = meta.requiresRestart ?? false
-            meta.requiresExtension = meta.requiresExtension ?? []
+            // NORMALIZED: the tarball's package.json may still carry the old string form, and the
+            // validator reads objects. See the note in PluginManager.
+            meta.requiresExtension = normalizeRequires(meta.requiresExtension)
             // A webhook that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertExtensionRequirements('Webhook', meta.id, meta.requiresExtension, installedFrom)
             const backJs = fs.readFileSync(backPath, 'utf-8')

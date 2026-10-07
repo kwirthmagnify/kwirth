@@ -1,7 +1,0 @@
-* [Introduction](user/01-introduction.md)
-* [Playing music](user/02-playing.md)
-* [Setup](user/03-setup.md)
-* [Install](admin/01-install.md)
-* [Permissions](admin/02-permissions.md)
-* [Troubleshooting](admin/04-troubleshooting.md)
-* [Credits](credits.md)
