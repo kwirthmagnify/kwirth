@@ -338,10 +338,15 @@ test('🔴 the Plugins tab lists the dev plugins, and Status reports ITSELF with
     await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 })
     const rows = await pluginRows()
     const status = rows.find(r => r.label === 'Plugin status')
-    test.skip(!status, 'this Kwirth does not run the Status plugin from kwirth-dev.json')
+    test.skip(!status, 'this Kwirth does not run the Status plugin')
     // This very tab is one open instance of Status, over at least one connection.
-    expect(status).toMatchObject({ name: 'Kwirth Status', state: 'Running', source: 'dev' })
+    expect(status).toMatchObject({ name: 'Kwirth Status', state: 'Running' })
     expect(status!.version).toMatch(/^\d+\.\d+\.\d+/)
+    // From kwirth-dev.json, or installed from npm — then the tarball of THAT very version, nothing else.
+    expect([
+        'dev',
+        `https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-status/-/kwirth-plugin-status-${status!.version}.tgz`
+    ], 'the source of Status').toContain(status!.source)
     expect(Number(status!.instances), 'instances of Status').toBeGreaterThanOrEqual(1)
     expect(Number(status!.connections), 'connections of Status').toBeGreaterThanOrEqual(1)
     expect(Number(status!.connections)).toBeLessThanOrEqual(Number(status!.instances))
@@ -380,8 +385,9 @@ test('the Plugins header and the Home box count exactly what the tab lists', asy
     await expect(page.getByText(new RegExp(`^${rows.length} plugins?:$`))).toBeVisible()
     await expect(page.getByText(new RegExp(`^${instances} instances? open$`))).toBeVisible()
     await tab('Home').click()
-    await expect(box('Plugins')).toContainText(`${rows.length} plugin${rows.length === 1 ? '' : 's'}`)
-    await expect(box('Plugins')).toContainText(`${instances} instance${instances === 1 ? '' : 's'} open`)
+    // Since 0.6.0 the Home has one card for plugins AND extensions.
+    await expect(box('Plugins & extensions')).toContainText(`${rows.length} plugin${rows.length === 1 ? '' : 's'}`)
+    await expect(box('Plugins & extensions')).toContainText(`${instances} instance${instances === 1 ? '' : 's'} open`)
     await tab('Plugins').click()
 })
 
@@ -622,6 +628,8 @@ test('the header counts DCEs and distinct consumers', async () => {
 })
 
 test('the filter narrows the DCEs by id and by consumer', async () => {
+    // Needs the dev DCE 'sample' and its consumer, like the cases above.
+    test.skip(!(await dceRows()).some(r => r.label === 'DCE sample'), 'this Kwirth does not run the dev DCE sample')
     const filtro = page.getByPlaceholder('Filter…')
     await expect(filtro).toBeEnabled()
     await filtro.fill('dce-consumer')
