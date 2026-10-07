@@ -1,8 +1,8 @@
 import { EExtensionType, EManifestAuthType, IKwirthSettings, IMarketplace, IMarketplaceEntry } from '@kwirthmagnify/kwirth-common'
 import { IConfigMaps } from './IConfigMap'
 import { ISecrets } from './ISecrets'
-import { SettingsApi } from '../api/SettingsApi'
-import { ELogComponent, logError, logWarning } from './Logging'
+import { SETTINGS_KEY, SettingsApi } from '../api/SettingsApi'
+import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 
 // The public OSS marketplace. It is still hardcoded and still the last in the search order; it lives here
 // (and not scattered across the front end's ten dialogs) because it is now the back end that resolves.
@@ -20,6 +20,61 @@ const PUBLIC_FOLDER: Record<EExtensionType, string> = {
     [EExtensionType.IDP]: 'idps',
     [EExtensionType.AITOOLSET]: 'aitoolsets',
     [EExtensionType.DCE]: 'dces'
+}
+
+/*
+    Marketplaces Kwirth OFFERS without imposing them.
+
+    The public one above is hardcoded: it is always consulted, always last, and cannot be removed. These
+    are the opposite — they are written into the settings as ordinary entries, so they appear in the
+    Marketplaces tab like any other, and can be disabled, edited or deleted.
+
+    🔴 Seeded ONCE, the first time they are seen, and never again. Adding one back on every boot would
+    make 'you can remove it' false: it would be there again after the next restart, and the admin would
+    have to delete it forever.
+
+    What has already been offered is remembered in bookkeeping of the core's OWN, not in IKwirthSettings.
+    Two reasons, and both matter: it is not configuration —nobody should see it in the settings dialog or
+    in a portability export— and keeping it out means an admin editing the settings cannot accidentally
+    resurrect a marketplace they removed on purpose.
+*/
+const SEEDED_KEY = 'kwirth-seeded-marketplaces'
+
+const BUILT_IN_MARKETPLACES: IMarketplace[] = [
+    {
+        id: 'jfvilas',
+        url: 'https://raw.githubusercontent.com/jfvilas/kwirth/refs/heads/master/manifest.json',
+        label: 'jfvilas (community)',
+        enabled: true
+    }
+]
+
+/*
+    Offers the built-in marketplaces that have not been offered before. Called once at startup.
+
+    It never throws: not being able to offer a marketplace is not a reason for Kwirth not to start, and
+    the one that matters —the public one— is hardcoded and needs none of this.
+*/
+export const seedBuiltInMarketplaces = async (configMaps: IConfigMaps): Promise<void> => {
+    try {
+        const seeded = (await configMaps.read(SEEDED_KEY, [])) as string[] ?? []
+        const pending = BUILT_IN_MARKETPLACES.filter(m => !seeded.includes(m.id))
+        if (pending.length === 0) return
+
+        const settings = await SettingsApi.read(configMaps)
+        const current = settings.marketplaces ?? []
+        // One the admin already has configured by hand is left exactly as it is: the id is marked as
+        // offered and nothing of theirs is touched.
+        const toAdd = pending.filter(m => !current.some(e => e.id === m.id))
+        if (toAdd.length > 0) {
+            await configMaps.write(SETTINGS_KEY, { ...settings, marketplaces: [...current, ...toAdd] })
+            for (const m of toAdd) logInfo(ELogComponent.CORE, `Marketplace '${m.label}' offered (${m.url}); remove it from the settings if you do not want it`)
+        }
+        await configMaps.write(SEEDED_KEY, [...seeded, ...pending.map(m => m.id)])
+    }
+    catch (err) {
+        logWarning(ELogComponent.CORE, `Could not offer the built-in marketplaces: ${err}`)
+    }
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000

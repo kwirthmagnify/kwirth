@@ -66,7 +66,10 @@ test('capture marketplaces (dark, redactado)', async ({ page }) => {
 
     // So the image shows the complete case, the manifest token is ticked. It is an illustration, not the
     // real configuration: none of this is saved.
-    const manifestToken = dlg(page).getByLabel('Manifest needs a token', { exact: true }).first()
+    // The checkbox that turns manifest credentials on. It used to be called 'Manifest needs a token' and
+    // this capture still asked for that name, so it had been failing since the row was redesigned — the
+    // tick is now 'Credentials' and the header type moved to a dropdown beside it.
+    const manifestToken = dlg(page).getByLabel('Credentials', { exact: true }).first()
     if (!await manifestToken.isChecked()) await manifestToken.check()
     await page.waitForTimeout(300)
 
@@ -79,7 +82,8 @@ test('capture marketplaces (dark, redactado)', async ({ page }) => {
         await dlg(page).getByRole('button', { name: 'Add registry' }).click()
         await page.waitForTimeout(300)
     }
-    const needsCreds = dlg(page).getByLabel('Needs credentials', { exact: true }).first()
+    // Same rename as above: the registries row also calls its tick 'Credentials' now.
+    const needsCreds = dlg(page).getByLabel('Credentials', { exact: true }).first()
     if (!await needsCreds.isChecked()) await needsCreds.check()
     await page.waitForTimeout(300)
     await redact(page, 'Base URL', SAMPLE.registryUrl)

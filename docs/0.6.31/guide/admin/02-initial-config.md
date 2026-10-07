@@ -136,6 +136,14 @@ Credentials are **left out unless you tick them**. A file with tokens and passwo
 
 Importing shows you **what would happen to each entry before anything is applied**: what is going in, what is not installed here (kwirth installs nothing on import), and what cannot receive configuration. Nothing is written until you press Import.
 
+### The community marketplace, which you can remove
+
+A fresh kwirth starts with **one marketplace already registered**: the community one, which publishes extensions written outside the kwirth project. It is in the **Marketplaces** tab from the first boot, switched on.
+
+It is there as an *offer*, not as part of kwirth. It is an ordinary entry, so you can rename it, switch it off or **delete it** — and if you delete it, **it does not come back**: kwirth remembers that it already offered it and never offers it again, however many times the core restarts. Removing it is a decision, not something to repeat after every upgrade.
+
+> The **public kwirth marketplace** is a different matter: it is built in, always consulted last, and does not appear in this list because it cannot be removed. What you see in the tab is only what can be changed.
+
 ### Adding your own marketplace
 
 Kwirth installs extensions from the public marketplace. In the **Marketplaces** tab of the same dialog you can register **additional** ones — your organisation's own plugins, senders, themes and so on — without replacing the public one.

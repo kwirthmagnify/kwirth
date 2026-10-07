@@ -6,7 +6,9 @@ import { IConfigMaps } from '../tools/IConfigMap'
 import { ISecrets } from '../tools/ISecrets'
 import { applyLogSettings, currentLogSettings, ELogComponent, logComponentCatalog, logError } from '../tools/Logging'
 
-const SETTINGS_KEY = 'kwirth.settings'
+// Exported because whoever writes settings from outside this class must not retype it: two copies of a
+// storage key are two copies until one of them changes.
+export const SETTINGS_KEY = 'kwirth.settings'
 const TOKENS_KEY = 'kwirth.marketplace.tokens'             // token de lectura del manifest, por marketplace
 const REGISTRY_KEY = 'kwirth.registry.credentials'         // contraseña de descarga, por registro de paquetes
 const DEFAULT_METRICS_INTERVAL = 15

@@ -16,7 +16,7 @@ import { UserApi } from './api/UserApi'
 import { ApiKeyApi } from './api/ApiKeyApi'
 import { SettingsApi } from './api/SettingsApi'
 import { MarketplaceApi } from './api/MarketplaceApi'
-import { MarketplaceManager } from './tools/MarketplaceManager'
+import { MarketplaceManager, seedBuiltInMarketplaces } from './tools/MarketplaceManager'
 import { routeRegistry } from './tools/RouteRegistry'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { buildPreviousContainerMessage, logPreviousContainerBanner, readPreviousContainerLog } from './tools/PreviousContainerLog'
@@ -1368,6 +1368,12 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         // Marketplace resolution: the back end downloads the manifests (the public one + the configured
         // ones), filters by type and applies the precedence, so the rule exists in a single place.
         let marketplaceManager = new MarketplaceManager(ri.configMaps, ri.secrets)
+        /*
+            Offers the built-in marketplaces, once each. They are written as ordinary entries in the
+            settings, so whoever does not want one deletes it from the dialog and it does NOT come back:
+            what has been offered is remembered apart.
+        */
+        await seedBuiltInMarketplaces(ri.configMaps)
         // configurePackageRegistries() has already been called in createRunningInstance(): it has to be in
         // place before prepareRunningInstance() rehydrates anything, and this runs afterwards.
         let marketplaceApi = new MarketplaceApi(marketplaceManager, apiKeyApi)
