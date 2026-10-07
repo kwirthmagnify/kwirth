@@ -300,9 +300,9 @@ test('el filtro deja solo lo que se busca', async () => {
 
 // ── The tabs (v2) ──────────────────────────────────────────────────────────────
 
-test('🔴 the ten tabs, in their order: Home first', async () => {
+test('🔴 the eleven tabs, in their order: Home first', async () => {
     const nombres = await page.getByRole('tablist').last().getByRole('tab').allInnerTexts()
-    expect(nombres.map(n => n.trim())).toEqual(['HOME', 'PROVIDERS', 'GRAPH', 'PERFORMANCE', 'PLUGINS', 'EXTENSIONS', 'ROUTES', 'DCE', 'LOG', 'PREVIOUS LOG'])
+    expect(nombres.map(n => n.trim())).toEqual(['HOME', 'PROVIDERS', 'GRAPH', 'PERFORMANCE', 'PLUGINS', 'EXTENSIONS', 'ROUTES', 'DCE', 'LOG', 'PREVIOUS LOG', 'SQL'])
 })
 
 test('🔴 the filter is always there, and only ENABLED on the tabs that are lists', async () => {
@@ -688,6 +688,57 @@ test('🔴 the Log tab paints the log and does not leak the ANSI escapes', async
     expect(painted.includes('\x1b'), 'the ANSI escapes are reaching the screen as text').toBeFalsy()
 })
 
+// How far the log box is from its end, in px, and whether it scrolls at all.
+const logScroll = () => page.locator('[aria-label="Log lines"]').evaluate(b => ({
+    fromBottom: b.scrollHeight - b.scrollTop - b.clientHeight,
+    scrolls: b.scrollHeight > b.clientHeight
+}))
+
+test('🔴 the Log tab opens at the END of the log, the newest lines in view', async () => {
+    // Away and back, so the box is mounted again: that is what "going to the tab" is.
+    await page.getByRole('tab', { name: 'Home', exact: true }).click()
+    await page.getByRole('tab', { name: 'Log', exact: true }).click()
+    const box = page.locator('[aria-label="Log lines"]')
+    test.skip(!(await box.isVisible().catch(() => false)), 'this kwirth has no log lines to paint')
+    const s = await logScroll()
+    test.skip(!s.scrolls, 'the whole log fits in the box: there is no end to scroll to')
+    expect(s.fromBottom, 'the log does not open at its end').toBeLessThanOrEqual(8)
+})
+
+test('🔴 changing tabs does not ask for the previous log again: only a snapshot does', async () => {
+    // One effect keyed on the open tab used to re-read it on every click.
+    let asked = 0
+    const count = (r: { url(): string }) => { if (r.url().includes('/managekwirth/previouslog')) asked++ }
+    page.on('request', count)
+    for (const name of ['Home', 'Providers', 'Log', 'Previous log', 'Routes', 'Home']) {
+        await page.getByRole('tab', { name, exact: true }).click()
+        await page.waitForTimeout(300)
+    }
+    page.off('request', count)
+    expect(asked, 'requests to /managekwirth/previouslog while only changing tabs').toBe(0)
+})
+
+test('the log box keeps a dark scrollbar in both themes', async () => {
+    // The box is dark whatever the theme: with the light one the bar was light on dark, and invisible.
+    await page.getByRole('tab', { name: 'Log', exact: true }).click()
+    const box = page.locator('[aria-label="Log lines"]')
+    test.skip(!(await box.isVisible().catch(() => false)), 'this kwirth has no log lines to paint')
+    await expect(box).toHaveCSS('color-scheme', 'dark')
+    await expect(box).toHaveCSS('scrollbar-color', 'rgb(107, 107, 107) rgb(30, 30, 30)')
+})
+
+test('a reader who scrolled up is not dragged down by a refresh', async () => {
+    const box = page.locator('[aria-label="Log lines"]')
+    test.skip(!(await box.isVisible().catch(() => false)), 'this kwirth has no log lines to paint')
+    test.skip(!(await logScroll()).scrolls, 'the whole log fits in the box: nothing to scroll up to')
+    await box.evaluate(b => { b.scrollTop = 0; b.dispatchEvent(new Event('scroll')) })
+    const responsePromise = page.waitForResponse(r => r.url().includes('/managekwirth/log'), { timeout: 15000 })
+    await page.locator('button[aria-label="Take a new snapshot"]').click()
+    await responsePromise
+    await page.waitForTimeout(500)
+    expect(await box.evaluate(b => b.scrollTop), 'a refresh moved the reader').toBe(0)
+})
+
 test('🔴 the Previous log tab tells the states apart, as the core says them', async () => {
     const responsePromise = page.waitForResponse(r => r.url().includes('/managekwirth/previouslog'), { timeout: 15000 })
     await page.getByRole('tab', { name: 'Previous log', exact: true }).click()
@@ -713,6 +764,16 @@ test('🔴 the Previous log tab tells the states apart, as the core says them', 
         await expect(page.getByText(new RegExp(`Restarts: ${body.restartCount}`))).toBeVisible()
         await expect(page.locator('[aria-label="Log lines"]')).toBeVisible()
     }
+})
+
+test('🔴 the Previous log tab opens at the END too: how the old container ended is at the bottom', async () => {
+    await page.getByRole('tab', { name: 'Home', exact: true }).click()
+    await page.getByRole('tab', { name: 'Previous log', exact: true }).click()
+    const box = page.locator('[aria-label="Log lines"]')
+    test.skip(!(await box.isVisible().catch(() => false)), 'this container has no previous log lines to paint')
+    const s = await logScroll()
+    test.skip(!s.scrolls, 'the whole previous log fits in the box: there is no end to scroll to')
+    expect(s.fromBottom, 'the previous log does not open at its end').toBeLessThanOrEqual(8)
 })
 
 test('🔴 the empty states of both log tabs look the SAME: centred across and down', async () => {

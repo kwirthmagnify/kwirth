@@ -15,17 +15,51 @@ interface ILogBoxProps {
     lines: string[]
 }
 
-// Both logs are painted: the previous container's was written by the same core, with the same colours.
-const LogBox: React.FC<ILogBoxProps> = ({ lines }) => (
-    <Box aria-label='Log lines' sx={{ flexGrow: 1, minHeight: 0, overflow: 'auto', backgroundColor: '#1e1e1e', borderRadius: 1, p: 1 }}>
-        <pre style={{ margin: 0, fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#dddddd' }}>
-            {lines.map((line, index) =>
-                <div key={index}>
-                    {ansiSegments(line).map((s, i) => <span key={i} style={s.colour ? { color: s.colour } : undefined}>{s.text}</span>)}
-                </div>)}
-        </pre>
-    </Box>
-)
+// How close to the bottom still counts as "at the bottom", in px: a fraction of a line, for rounding.
+const AT_BOTTOM_SLACK = 8
+
+/*
+    Both logs are painted: the previous container's was written by the same core, with the same colours.
+
+    It opens at the END: what one goes to a log for is the last thing that happened, and with up to a
+    thousand lines the top is the oldest and least interesting. Done before painting (layout effect), so
+    the box is never seen at the top and then jumping.
+
+    New lines (every snapshot reads the log again) keep it at the end ONLY if it was already there: whoever
+    scrolled up to read something must not be dragged down by a refresh.
+*/
+const LogBox: React.FC<ILogBoxProps> = ({ lines }) => {
+    const ref = React.useRef<HTMLDivElement | null>(null)
+    // Whether the reader is at the end. It starts true, so the first paint goes to the end.
+    const atBottom = React.useRef(true)
+    React.useLayoutEffect(() => {
+        const box = ref.current
+        if (box && atBottom.current) box.scrollTop = box.scrollHeight
+    }, [lines])
+    const onScroll = (): void => {
+        const box = ref.current
+        if (box) atBottom.current = box.scrollHeight - box.scrollTop - box.clientHeight <= AT_BOTTOM_SLACK
+    }
+    return (
+        /*
+            The box is dark in both themes, so its scrollbar has to be too: with the light theme the browser
+            drew a light bar on the dark background and it could not be seen. 'colorScheme' makes the native
+            bar a dark one; 'scrollbarColor' fixes thumb and track, and wins over any ::-webkit-scrollbar
+            styling the theme may set.
+        */
+        <Box ref={ref} onScroll={onScroll} aria-label='Log lines' sx={{
+            flexGrow: 1, minHeight: 0, overflow: 'auto', backgroundColor: '#1e1e1e', borderRadius: 1, p: 1,
+            colorScheme: 'dark', scrollbarColor: '#6b6b6b #1e1e1e'
+        }}>
+            <pre style={{ margin: 0, fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#dddddd' }}>
+                {lines.map((line, index) =>
+                    <div key={index}>
+                        {ansiSegments(line).map((s, i) => <span key={i} style={s.colour ? { color: s.colour } : undefined}>{s.text}</span>)}
+                    </div>)}
+            </pre>
+        </Box>
+    )
+}
 
 interface ILogMessageProps {
     title: string

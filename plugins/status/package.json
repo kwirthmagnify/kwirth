@@ -2,7 +2,7 @@
   "id": "status",
   "displayName": "Kwirth Status",
   "publisher": "@kwirthmagnify",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "A look inside Kwirth: what is installed, how it is doing and who consumes what",
   "icon": "<svg viewBox='0 0 24 24'><g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='2.6' y='4.6' width='18.8' height='14.8' rx='2.2'/><path d='M6 12h2.6l1.5-3.4 2.6 6.8 1.5-3.4H18'/></g></svg>",
   "type": "module",
@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@kwirthmagnify/kwirth-common": "^0.5.63",
-    "@kwirthmagnify/kwirth-common-back": "^0.6.0",
+    "@kwirthmagnify/kwirth-common-back": "^0.6.1",
     "@kwirthmagnify/kwirth-common-front": "^0.5.65"
   },
   "devDependencies": {
@@ -32,6 +32,10 @@
   },
   "requiresRestart": false,
   "requiresExtension": [
-    { "extensionType": "dce", "id": "xyflow", "minVersion": "0.1.0" }
+    {
+      "extensionType": "dce",
+      "id": "xyflow",
+      "minVersion": "0.1.0"
+    }
   ]
 }

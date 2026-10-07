@@ -146,20 +146,33 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
 
         Only for administrators: the back end does not serve it to anybody else, and asking would only
         produce a 403 to show.
+
+        TWO effects and not one: they depend on different things. With one effect keyed on the open tab too,
+        every tab change asked for the previous log again — a request per click, for a log that only
+        changes with a snapshot.
     */
     const admin = isAdmin(props.channelObject.accessString)
+    // The previous container's log: once per snapshot, whatever tab is open.
     React.useEffect(() => {
         const url = props.channelObject.clusterUrl
         const access = props.channelObject.accessString
         if (!admin || !inventory || !url || !access) return
         let current = true
         readPreviousLog(url, access).then(r => { if (current) { data.previousLog = r; repintar() } })
+        return () => { current = false }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [inventory?.takenAt, admin])
+    // The current log: once per snapshot and on opening its tab, and only while that tab is open.
+    React.useEffect(() => {
+        const url = props.channelObject.clusterUrl
+        const access = props.channelObject.accessString
+        if (!admin || !inventory || !url || !access) return
         // When the inventory carries coreLogLines (non-Kubernetes environments), the Log tab already has
         // them from processChannelMessage — no REST call needed. Only fetch from the REST endpoint when
         // the core has Kubernetes (the inventory does NOT include coreLogLines).
-        if (vista === EStatusTab.LOG && !inventory.coreLogLines) {
-            readCoreLog(url, access).then(l => { if (current) { data.coreLog = l; repintar() } })
-        }
+        if (vista !== EStatusTab.LOG || inventory.coreLogLines) return
+        let current = true
+        readCoreLog(url, access).then(l => { if (current) { data.coreLog = l; repintar() } })
         return () => { current = false }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [inventory?.takenAt, vista, admin])
