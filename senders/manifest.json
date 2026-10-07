@@ -272,10 +272,10 @@
   {
     "extensionType": "sender",
     "id": "console",
-    "version": "0.1.7",
+    "version": "0.1.14",
     "name": "Console Sender",
     "displayName": "Console Sender",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-console/-/kwirth-sender-console-0.1.7.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-console/-/kwirth-sender-console-0.1.14.tgz",
     "description": "Console sender plugin for Kwirth — writes messages to stdout, with configurable prefix, level and timestamps per named config"
   },
   {

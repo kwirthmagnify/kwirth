@@ -62,5 +62,15 @@ const distMeta = { type: 'commonjs', extensionType: 'provider',
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
+// El publish sale de dist/, asi que el README tiene que estar AHI o el paquete se publica sin el:
+// npm solo recoge automaticamente el que esta junto al package.json que publica.
+if (fs.existsSync('README.md')) {
+    fs.copyFileSync('README.md', path.join('dist', 'README.md'))
+    console.log('Copied README.md to dist/')
+}
+else {
+    console.warn('WARNING: no README.md — the published package would have none')
+}
+
 console.log(`Done. Run 'npm publish' on your 'dist' folder to publish to npmjs.`)
 console.log(`Package will be installable on Kwirth via: https://registry.npmjs.org/${meta.publisher}/kwirth-provider-${meta.id}/-/kwirth-provider-${meta.id}-${meta.version}.tgz`)
