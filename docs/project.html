@@ -133,13 +133,13 @@
   <p class="lead">Kwirth started as a solution to a simple problem: running a full observability stack requires too many moving parts. We set out to change that.</p>
 
   <h2>Origin</h2>
-  <p>Kwirth was born from frustration. Setting up logging, metrics, and alerting for a Kubernetes cluster typically requires Prometheus, Grafana, Loki, Alertmanager, and a dozen configuration files. Kwirth answers the question: <strong>what if all of that was one pod?</strong></p>
+  <p>Kwirth was born from frustration. Setting up logging, metrics, and alerting for a Kubernetes cluster typically requires Prometheus, Grafana, Loki, Alertmanager, and a dozen configuration files. Kwirth answers the question: <strong>what if all of that was one single container?</strong></p>
   <p>The project started in 2022 as an internal tool and has grown into a full observability and operations platform with <strong>BYO-LLM AI</strong> (bring your own model), a standalone desktop explorer, security scanning, and an extensibility system spanning <strong>plugins, providers, senders, themes, homepages, identity providers, login extensions and webhooks</strong>.</p>
 
   <h2>Design Principles</h2>
   <div class="principles-grid">
     <div class="principle-card">
-      <h3>&#x1F4E6; One pod, zero deps</h3>
+      <h3>&#x1F4E6; One container, zero deps</h3>
       <p>Everything runs in a single container. State stored in Kubernetes — ConfigMaps, Secrets, a PVC, or files. No external databases, message queues, or sidecars.</p>
     </div>
     <div class="principle-card">
@@ -152,7 +152,7 @@
     </div>
     <div class="principle-card">
       <h3>&#x1F9E9; Extensible by design</h3>
-      <p>Eight families of hot-reloadable extensions — plugins, providers, senders, themes, homepages, identity providers, logins and webhooks — grouped as UI, Security, Data and Integration. No pod restarts.</p>
+      <p>Eight families of hot-reloadable extensions — plugins, providers, senders, themes, homepages, identity providers, logins and webhooks — grouped as UI, Security, Data and Integration. No container restarts.</p>
     </div>
     <div class="principle-card">
       <h3>&#x1F512; Secure by default</h3>
@@ -229,7 +229,7 @@ document.querySelectorAll('h2').forEach(h=>{if(!h.id)h.id=h.textContent.trim().t
         <img src="_media/favicon.ico" width="20px"/>
         <span>kwirth</span>
       </div>
-      <p class="footer-desc">Kubernetes observability platform. Single pod, zero dependencies, infinite possibilities.</p>
+      <p class="footer-desc">Kubernetes observability platform. Single container, zero dependencies, infinite possibilities.</p>
     </div>
     <div class="footer-col">
       <h4>Extensions</h4>

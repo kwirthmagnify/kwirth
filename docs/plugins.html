@@ -163,12 +163,12 @@
   <div class="page-hero">
     <div class="section-tag">Extensibility</div>
     <h1>Kwirth <span class="accent">Plugins</span></h1>
-    <p class="lead">Plugins extend Kwirth with new UI channels and backend capabilities — all hot-reloadable without restarting the pod. Build once, install anywhere.</p>
+    <p class="lead">Plugins extend Kwirth with new UI channels and backend capabilities — all hot-reloadable without restarting the container. Build once, install anywhere.</p>
   </div>
 
   <h2>What is a plugin?</h2>
   <p>A Kwirth plugin is a self-contained bundle that adds a <strong>new channel tab</strong> to the Kwirth front-end and, optionally, a <strong>backend component</strong> that runs alongside Kwirth's core. Plugins follow the same lifecycle as built-in channels: the user selects a cluster, opens a tab, and the plugin takes over rendering and data fetching.</p>
-  <p>Plugins are packaged as a <strong>.tgz file</strong> containing a CJS backend bundle (<code>back.js</code>), an IIFE frontend bundle (<code>front.js</code>), and a <code>package.json</code> manifest. Once installed, Kwirth hot-reloads them — no pod restart required.</p>
+  <p>Plugins are packaged as a <strong>.tgz file</strong> containing a CJS backend bundle (<code>back.js</code>), an IIFE frontend bundle (<code>front.js</code>), and a <code>package.json</code> manifest. Once installed, Kwirth hot-reloads them — no container restart required.</p>
 
   <div class="arch-box">
     <span class="hl">Browser</span>  →  Kwirth front  →  loads <span class="hl2">front.js</span> (IIFE, registers on window.__kwirth_plugins__)
@@ -367,7 +367,7 @@ document.querySelectorAll('h2').forEach(h=>{if(!h.id)h.id=h.textContent.trim().t
         <img src="_media/favicon.ico" width="20px"/>
         <span>kwirth</span>
       </div>
-      <p class="footer-desc">Kubernetes observability platform. Single pod, zero dependencies, infinite possibilities.</p>
+      <p class="footer-desc">Kubernetes observability platform. Single container, zero dependencies, infinite possibilities.</p>
     </div>
     <div class="footer-col">
       <h4>Extensions</h4>

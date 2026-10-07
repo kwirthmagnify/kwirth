@@ -194,7 +194,7 @@ node packs/create-pack.mjs my-pack \
 
   <h2>Notes</h2>
   <ul>
-    <li><strong>Kubernetes ephemeral storage.</strong> In a standard deployment <code>/tmp</code> is ephemeral — URL-installed packages are re-downloaded automatically on each pod restart; <code>bundled</code> packages are always present; <code>local</code> (file-uploaded) packages must be re-uploaded after a restart.</li>
+    <li><strong>Kubernetes ephemeral storage.</strong> In a standard deployment <code>/tmp</code> is ephemeral — URL-installed packages are re-downloaded automatically on each container restart; <code>bundled</code> packages are always present; <code>local</code> (file-uploaded) packages must be re-uploaded after a restart.</li>
     <li><strong>Access control.</strong> Reading installed docs (<code>GET /docs</code>) is public; installing, uploading and uninstalling require an <strong>admin</strong> API key.</li>
   </ul>
 </div>
@@ -230,7 +230,7 @@ document.querySelectorAll('h2').forEach(h=>{if(!h.id)h.id=h.textContent.trim().t
   <div class="footer-grid">
     <div>
       <div class="footer-logo"><img src="_media/favicon.ico" width="20px"/><span>kwirth</span></div>
-      <p class="footer-desc">Kubernetes observability platform. Single pod, zero dependencies, infinite possibilities.</p>
+      <p class="footer-desc">Kubernetes observability platform. Single container, zero dependencies, infinite possibilities.</p>
     </div>
     <div class="footer-col">
       <h4>Extensions</h4>

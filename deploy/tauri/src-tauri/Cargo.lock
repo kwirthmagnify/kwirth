@@ -1680,7 +1680,7 @@ dependencies = [
 
 [[package]]
 name = "kwirth-magnify"
-version = "0.6.49"
+version = "0.6.52"
 dependencies = [
  "reqwest 0.12.28",
  "serde",
