@@ -1,4 +1,4 @@
-import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage } from '@kwirthmagnify/kwirth-common-back'
+import { IExtensionLogger, ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage } from '@kwirthmagnify/kwirth-common-back'
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 
@@ -18,16 +18,6 @@ const LEVEL_COLORS: Record<string, string> = {
 const RESET = '\x1b[0m'
 
 // ─── Sender ────────────────────────────────────────────────────────────────────
-
-/*
-    What the core lends the sender to write with. Declared here structurally rather than imported
-    from kwirth-common-back, so this sender does not depend on a particular version of it.
-*/
-interface IExtensionLogger {
-    info(message: unknown): void
-    warning(message: unknown): void
-    error(message: unknown): void
-}
 
 export class ConsoleSender implements ISender {
     readonly id = 'console'

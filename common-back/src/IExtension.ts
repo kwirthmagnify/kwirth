@@ -33,11 +33,19 @@ import type { IProviderAccess } from './IProvider'
  * timestamp, no level and no component, and turns a failure into something that reads like a routine
  * trace.
  *
- * Three levels and no more. An `info` nobody can filter out is what buries a log, and a failure that
+ * Four levels and no more. An `info` nobody can filter out is what buries a log, and a failure that
  * goes out as `info` is a failure nobody sees.
+ *
+ * `trace` exists for exactly that reason, and it was missing: everything an extension says while it
+ * is working normally — instantiated, started, polled, nothing changed — is noise for whoever is
+ * reading the log to find a failure, and it was all going out as `info` because there was nowhere
+ * else to put it. The core was already handing over a logger with four levels; this contract only
+ * declared three, so the fourth arrived injected and unreachable from the type. Channels have had
+ * `logTrace` all along: this is the same level, for the other families.
  */
 export interface IExtensionLogger {
     info(message: unknown): void
+    trace(message: unknown): void
     warning(message: unknown): void
     error(message: unknown): void
 }

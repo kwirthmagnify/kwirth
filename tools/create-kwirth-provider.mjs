@@ -105,7 +105,9 @@ if (fs.existsSync(providerDir) && !intoExisting) {
 
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 const runtimeDeps = [
-    '        "@kwirthmagnify/kwirth-common-back": "^0.5.42"',
+    // 0.6.1 es la primera que trae 'trace' en IExtensionLogger, y el provider generado lo usa en su
+    // logger de respaldo. Con una anterior no compila.
+    '        "@kwirthmagnify/kwirth-common-back": "^0.6.1"',
     ...(usesExpress ? ['        "express": "^4.19.2"'] : [])
 ].join(',\n')
 const devDeps = [
@@ -365,7 +367,7 @@ const hasConfig = hasSchema || hasFront
 
 const backImports = [
     ...(usesExpress ? ["import express, { Request, Response } from 'express'"] : []),
-    `import { IProvider, ${hasSchema ? 'IProviderFieldDef, ' : ''}IProviderStorage, IProviderSubscriber, IProviderSubscriptionHelp, KwirthData } from '@kwirthmagnify/kwirth-common-back'`,
+    `import { IExtensionLogger, IProvider, ${hasSchema ? 'IProviderFieldDef, ' : ''}IProviderStorage, IProviderSubscriber, IProviderSubscriptionHelp, KwirthData } from '@kwirthmagnify/kwirth-common-back'`,
     ...(hasConfig ? [`import { IExtensionExportOptions, IExtensionImportResult } from '@kwirthmagnify/kwirth-common'`] : []),
     `import { E${className}StorageKey, I${className}Config, I${className}Event, I${className}Subscription, ${constPrefix}_DEFAULT_CONFIG } from '../common/${className}Types'`
 ].join('\n')
@@ -448,7 +450,6 @@ const configRouterBlock = hasFront ? `
 ` : ''
 
 const constructorBody = [
-    `        console.log(\`[\${PROVIDER_ID}] Instantiating provider\`)`,
     '        this.storage = storage',
     ...(wantsRouter ? ['        this.buildRouter()'] : []),
     ...(hasFront ? ['        this.buildConfigRouter()'] : [])
@@ -525,6 +526,29 @@ export class ${className}Provider implements IProvider {
     private storage: IProviderStorage | undefined
     private config: I${className}Config = { ...${constPrefix}_DEFAULT_CONFIG }
     private timer: NodeJS.Timeout | undefined
+
+    /*
+        The log. The core replaces it through setLogger() right after constructing this provider, and
+        what it hands over already knows who we are, so the line comes out as
+        '[prov] [TRACE  ] [${id}] ...' and this provider writes the message and nothing else.
+
+        What is here meanwhile is a fallback, and it only runs if an older core constructs this
+        provider and never calls setLogger. That is also why this is NOT the place for an
+        'instantiated' line: at constructor time the real logger has not arrived yet, and the core
+        already says it for every provider.
+
+        Which level to use: 'trace' for anything said while things go normally — started, polled,
+        nothing changed — and 'info' only for what someone reading the log actually wants to find.
+        An info nobody can filter out is what buries a log.
+    */
+    private log: IExtensionLogger = {
+        info: (message: unknown) => console.log(\`[\${PROVIDER_ID}] \${message}\`),
+        trace: (message: unknown) => console.log(\`[\${PROVIDER_ID}] \${message}\`),
+        warning: (message: unknown) => console.warn(\`[\${PROVIDER_ID}] \${message}\`),
+        error: (message: unknown) => console.error(\`[\${PROVIDER_ID}] \${message}\`)
+    }
+
+    setLogger = (logger: IExtensionLogger): void => { this.log = logger }
 
     constructor(_clusterInfo: unknown, _kwirthData: KwirthData, storage?: IProviderStorage) {
 ${constructorBody}

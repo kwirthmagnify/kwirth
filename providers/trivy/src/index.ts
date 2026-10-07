@@ -1,4 +1,4 @@
-import { IProvider, IProviderSubscriber, createCrdInformer, ICrdInformerHandlers } from '@kwirthmagnify/kwirth-common-back'
+import { IExtensionLogger, IProvider, IProviderSubscriber, createCrdInformer, ICrdInformerHandlers } from '@kwirthmagnify/kwirth-common-back'
 import { ITrivyAsset, ITrivySubscriptionData, ITrivyProviderEvent, ITrivyMeta, ITrivyMetaEvent, ETrivyEventKind, TRIVY_API_VERSION, TRIVY_API_GROUP, TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_RBAC_PLURAL, TRIVY_API_CLUSTER_RBAC_PLURAL } from './TrivyTypes'
 
 const ALL_PLURALS = [TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_RBAC_PLURAL, TRIVY_API_CLUSTER_RBAC_PLURAL]
@@ -8,16 +8,6 @@ const TRIVY_NS = 'trivy-system'
 const TRIVY_CONFIGMAP = 'trivy-operator-trivy-config'
 const TRIVY_OPERATOR_DEPLOY = 'trivy-operator'
 
-/*
-    What the core lends the provider to write its log with. Declared here structurally instead of
-    imported from kwirth-common-back, so this provider does not depend on a particular version of
-    that package. Once the contract is published this interface can go.
-*/
-interface IExtensionLogger {
-    info(message: unknown): void
-    warning(message: unknown): void
-    error(message: unknown): void
-}
 
 export class TrivyProvider implements IProvider {
     public readonly id = 'trivy'
@@ -28,6 +18,7 @@ export class TrivyProvider implements IProvider {
     */
     private log: IExtensionLogger = {
         info: (message: unknown) => console.log(`[trivy] ${message}`),
+        trace: (message: unknown) => console.log(`[trivy] ${message}`),
         warning: (message: unknown) => console.warn(`[trivy] ${message}`),
         error: (message: unknown) => console.error(`[trivy] ${message}`)
     }

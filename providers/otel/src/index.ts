@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express'
-import { KwirthData, IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
+import { IExtensionLogger, KwirthData, IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 
 // ─── Public config types ───────────────────────────────────────────────────────
 
@@ -108,17 +108,6 @@ export type OtelEvent = IOtelTraceEvent | IOtelMetricEvent | IOtelLogEvent
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-/*
-    What the core lends the provider to write its log with. Declared here structurally instead of
-    imported from kwirth-common-back, so this provider does not depend on a particular version of
-    that package. Once the contract is published this interface can go.
-*/
-interface IExtensionLogger {
-    info(message: unknown): void
-    warning(message: unknown): void
-    error(message: unknown): void
-}
-
 export class OtelProvider implements IProvider {
     /*
         Starts writing to the console — what it did before — and the core replaces it as soon as the
@@ -126,6 +115,7 @@ export class OtelProvider implements IProvider {
     */
     private log: IExtensionLogger = {
         info: (message: unknown) => console.log(`[otel] ${message}`),
+        trace: (message: unknown) => console.log(`[otel] ${message}`),
         warning: (message: unknown) => console.warn(`[otel] ${message}`),
         error: (message: unknown) => console.error(`[otel] ${message}`)
     }

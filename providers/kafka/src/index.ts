@@ -1,5 +1,5 @@
 import { Kafka, Consumer, KafkaConfig, SASLOptions, logLevel } from 'kafkajs'
-import { KwirthData, IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
+import { IExtensionLogger, KwirthData, IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 
 // ─── Public config types (consumed by channels subscribing to this provider) ──
 
@@ -71,17 +71,6 @@ interface IConnectionEntry {
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-/*
-    What the core lends the provider to write its log with. Declared here structurally instead of
-    imported from kwirth-common-back, so this provider does not depend on a particular version of
-    that package. Once the contract is published this interface can go.
-*/
-interface IExtensionLogger {
-    info(message: unknown): void
-    warning(message: unknown): void
-    error(message: unknown): void
-}
-
 export class KafkaProvider implements IProvider {
     /*
         Starts writing to the console — what it did before — and the core replaces it as soon as the
@@ -89,6 +78,7 @@ export class KafkaProvider implements IProvider {
     */
     private log: IExtensionLogger = {
         info: (message: unknown) => console.log(`[kafka] ${message}`),
+        trace: (message: unknown) => console.log(`[kafka] ${message}`),
         warning: (message: unknown) => console.warn(`[kafka] ${message}`),
         error: (message: unknown) => console.error(`[kafka] ${message}`)
     }

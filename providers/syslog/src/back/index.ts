@@ -1,21 +1,10 @@
-import { IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
+import { IExtensionLogger, IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 //import { Router } from 'express'
 import dgram from 'dgram'
 import net from 'net'
 import { ISyslogConfig, ISyslogMessage } from '../types/ISyslogMessage'
 import { UdpServer, TMessageCallback } from './UdpServer'
 import { TcpServer } from './TcpServer'
-
-/*
-    What the core lends the provider to write its log with. Declared here structurally instead of
-    imported from kwirth-common-back, so this provider does not depend on a particular version of
-    that package. Once the contract is published this interface can go.
-*/
-interface IExtensionLogger {
-    info(message: unknown): void
-    warning(message: unknown): void
-    error(message: unknown): void
-}
 
 export class SyslogProvider implements IProvider {
     /*
@@ -24,6 +13,7 @@ export class SyslogProvider implements IProvider {
     */
     private log: IExtensionLogger = {
         info: (message: unknown) => console.log(`[syslog] ${message}`),
+        trace: (message: unknown) => console.log(`[syslog] ${message}`),
         warning: (message: unknown) => console.warn(`[syslog] ${message}`),
         error: (message: unknown) => console.error(`[syslog] ${message}`)
     }

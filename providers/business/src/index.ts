@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express'
-import { KwirthData, IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
+import { IExtensionLogger, KwirthData, IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 
 // ─── Public config types (consumed by the channels that subscribe) ──────────────
 
@@ -50,17 +50,6 @@ export interface IBusinessProviderEvent {
 
 // ─── Provider ────────────────────────────────────────────────────────────────────
 
-/*
-    What the core lends the provider to write its log with. Declared here structurally instead of
-    imported from kwirth-common-back, so this provider does not depend on a particular version of
-    that package. Once the contract is published this interface can go.
-*/
-interface IExtensionLogger {
-    info(message: unknown): void
-    warning(message: unknown): void
-    error(message: unknown): void
-}
-
 export class BusinessProvider implements IProvider {
     /*
         Starts writing to the console — what it did before — and the core replaces it as soon as the
@@ -68,6 +57,7 @@ export class BusinessProvider implements IProvider {
     */
     private log: IExtensionLogger = {
         info: (message: unknown) => console.log(`[business] ${message}`),
+        trace: (message: unknown) => console.log(`[business] ${message}`),
         warning: (message: unknown) => console.warn(`[business] ${message}`),
         error: (message: unknown) => console.error(`[business] ${message}`)
     }
@@ -99,8 +89,12 @@ export class BusinessProvider implements IProvider {
 
 
     constructor(_clusterInfo: any, _kwirthData: KwirthData) {
-        this.log.info(`Instantiating provider ${this.id}`)
-
+        /*
+            'Instantiated' is said by the core now, in createProviderInstance, for every provider and
+            at TRACE. Saying it here had two problems: it came out as 'info' — noise burying the log
+            of whoever is looking for a failure — and it went through the console fallback, because
+            the core's logger arrives AFTER the constructor returns.
+        */
         this.router.route('/')
             .post(async (req: Request, res: Response) => {
                 try {

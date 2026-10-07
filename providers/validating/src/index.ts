@@ -1,19 +1,8 @@
-import { IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
+import { IExtensionLogger, IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 import express, { Request, Response } from 'express'
 
 interface IValidatingSubscriber {
     kinds: string[]
-}
-
-/*
-    What the core lends the provider to write its log with. Declared here structurally instead of
-    imported from kwirth-common-back, so this provider does not depend on a particular version of
-    that package. Once the contract is published this interface can go.
-*/
-interface IExtensionLogger {
-    info(message: unknown): void
-    warning(message: unknown): void
-    error(message: unknown): void
 }
 
 export class ValidatingProvider implements IProvider {
@@ -23,6 +12,7 @@ export class ValidatingProvider implements IProvider {
     */
     private log: IExtensionLogger = {
         info: (message: unknown) => console.log(`[validating] ${message}`),
+        trace: (message: unknown) => console.log(`[validating] ${message}`),
         warning: (message: unknown) => console.warn(`[validating] ${message}`),
         error: (message: unknown) => console.error(`[validating] ${message}`)
     }

@@ -47,7 +47,21 @@ export type TProviderConstructor = (new (clusterInfo:ClusterInfo, kwirthData:Kwi
 export const createProviderInstance = (providerConstructor:TProviderConstructor, clusterInfo: ClusterInfo, kwirthData:KwirthData, storage?:IProviderStorage): IProvider | null => {
     if (!providerConstructor) throw  new Error('Error: providerConstructor is empty')
     const instance = new providerConstructor(clusterInfo, kwirthData, storage)
-    instance.setLogger?.(providerLogger(instance.id))
+    const log = providerLogger(instance.id)
+    instance.setLogger?.(log)
+    /*
+        'this provider was instantiated' is said HERE and not by each provider, which is where it used
+        to be said: the scaffolder generated a console.log in the constructor, so the line came out
+        with no timestamp, no level and no component, and only the providers born from the scaffolder
+        said it at all.
+
+        This is the one place every provider is born, so saying it here covers all of them, including
+        the ones written by hand. And it goes out as TRACE because it is exactly the kind of line that
+        buries a log: useful when following a startup, noise when looking for a failure. It could not
+        be said inside the constructor anyway — the logger is handed over on the line above, after the
+        'new' has already returned.
+    */
+    log.trace('Instantiated')
     return instance
 }
 
