@@ -1090,7 +1090,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
             }
         }
-        userSettingsRef.current = { channelSettings: [], keepAliveInterval: 60, channelUserPreferences:[], checkExtensionUpdates: true }
+        userSettingsRef.current = { channelSettings: [], keepAliveInterval: 30, channelUserPreferences:[], checkExtensionUpdates: true }
     }
 
     const writeLoggedUserSettings = async (user:IUser) => {
@@ -1540,7 +1540,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
                 if (t.ws && t.ws.readyState === WebSocket.OPEN) t.ws.send(JSON.stringify(instanceConfig))
             }
-        }, (userSettingsRef.current?.keepAliveInterval || 60) * 1000, tab)
+        }, (userSettingsRef.current?.keepAliveInterval || 30) * 1000, tab)
     }
 
     const getTabColor = (tab:ITabObject) => {

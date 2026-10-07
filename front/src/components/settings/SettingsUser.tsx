@@ -17,7 +17,7 @@ interface ISettingsUserProps {
 }
 
 const SettingsUser: React.FC<ISettingsUserProps> = (props:ISettingsUserProps) => {
-    const [keepAliveInterval, setKeepAliveInterval] = useState<number>(props.settings? props.settings.keepAliveInterval : 60)
+    const [keepAliveInterval, setKeepAliveInterval] = useState<number>(props.settings? props.settings.keepAliveInterval : 30)
     const [selectedTheme, setSelectedTheme] = useState<string>(props.activeThemeName ?? '')
     const [selectedHomepage, setSelectedHomepage] = useState<string>(props.activeHomepageId ?? '')
     // undefined in settings saved before the field existed: it counts as enabled

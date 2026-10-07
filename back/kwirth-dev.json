@@ -15,7 +15,9 @@
         "fluentbit": "../providers/fluentbit/dist",
         "aws": "../providers/aws/dist",
         "host-metrics": "../providers/host-metrics/dist",
-        "cloud-config": "../providers/cloud-config/dist"
+        "cloud-config": "../providers/cloud-config/dist",
+        "v16": "../../../jfvilas/kwirth/providers/v16/dist",
+        "flight-status": "../../../jfvilas/kwirth/providers/flight-status/dist"
     },
     "senders": {
         "datadog": "../senders/datadog/dist",
