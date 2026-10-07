@@ -189,16 +189,6 @@
   },
   {
     "extensionType": "plugin",
-    "id": "pacman",
-    "version": "0.1.0",
-    "name": "Pac-Man",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pacman/-/kwirth-plugin-pacman-0.1.0.tgz",
-    "description": "Pac-Man channel plugin for Kwirth - the classic arcade game playable in a Kwirth tab, with per-tab persistent game state",
-    "icon": "SportsEsports",
-    "website": "https://kwirthmagnify.dev"
-  },
-  {
-    "extensionType": "plugin",
     "id": "provider-debug",
     "version": "0.1.9",
     "name": "Provider Debug",
