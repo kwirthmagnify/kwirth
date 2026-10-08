@@ -38,16 +38,30 @@ export class KubernetesConfigMaps implements IConfigMaps {
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
                 let resourceVersion: string | undefined
+                /*
+                    🔴 The labels and annotations of the live object are carried over, and that is not
+                    tidiness. A replace is a PUT: it substitutes the WHOLE object, so a metadata with
+                    only the name wipes whatever else was on it — including, for anything deployed
+                    with Helm, 'helm.sh/resource-policy: keep' and the ownership annotations. Without
+                    this, the first write turned the api keys ConfigMap into something the release no
+                    longer owned, and the next 'helm upgrade' deleted it.
+                */
+                let labels: { [key:string]: string } | undefined
+                let annotations: { [key:string]: string } | undefined
                 try {
                     const existing = await this.coreApi.readNamespacedConfigMap({ name, namespace: this.namespace })
                     resourceVersion = existing.metadata?.resourceVersion
+                    labels = existing.metadata?.labels
+                    annotations = existing.metadata?.annotations
                 }
                 catch {}
                 var configMap:V1ConfigMap = {
                     metadata: {
                         name: name,
                         namespace: this.namespace,
-                        ...(resourceVersion ? { resourceVersion } : {})
+                        ...(resourceVersion ? { resourceVersion } : {}),
+                        ...(labels ? { labels } : {}),
+                        ...(annotations ? { annotations } : {})
                     },
                     data: { data: JSON.stringify(data) }
                 }

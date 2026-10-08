@@ -23,16 +23,30 @@ export class KubernetesSecrets implements ISecrets {
         const MAX_ATTEMPTS = 3
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             let resourceVersion: string | undefined
+            /*
+                🔴 The labels and annotations of the live object are carried over, and that is not
+                tidiness. A replace is a PUT: it substitutes the WHOLE object, so a metadata with only
+                the name wipes whatever else was on it. What was on it, for anything deployed with
+                Helm, is 'helm.sh/resource-policy: keep' and the ownership annotations — so the first
+                time Kwirth saved a user, the users Secret stopped looking like part of the release
+                and the next 'helm upgrade' DELETED it, with every user inside. Same for the api keys.
+            */
+            let labels: { [key:string]: string } | undefined
+            let annotations: { [key:string]: string } | undefined
             try {
                 const existing = await this.coreApi.readNamespacedSecret({ name, namespace: this.namespace })
                 resourceVersion = existing.metadata?.resourceVersion
+                labels = existing.metadata?.labels
+                annotations = existing.metadata?.annotations
             }
             catch {}
             var secret = {
                 metadata: {
                     name,
                     namespace: this.namespace,
-                    ...(resourceVersion ? { resourceVersion } : {})
+                    ...(resourceVersion ? { resourceVersion } : {}),
+                    ...(labels ? { labels } : {}),
+                    ...(annotations ? { annotations } : {})
                 },
                 data: content
             }

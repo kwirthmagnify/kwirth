@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import crypto from 'crypto'
+import bcrypt from 'bcryptjs'
 import express from 'express'
 import type { AddressInfo } from 'net'
 import { LoginApi } from '../../src/api/LoginApi'
@@ -9,10 +10,21 @@ import { ISecrets } from '../../src/tools/ISecrets'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 
 // ---- helpers ----
+/*
+    How a password is STORED: bcrypt over the sha256 the front end sends, never the clear text and never
+    the plain value. The login used to accept a plain stored password and re-hash it on the way through;
+    that branch is gone, so a user built with a clear-text password now simply cannot log in — which is
+    what the last test here pins down.
+
+    Cost 4 instead of the product's 10: these are unit tests and bcrypt is deliberately slow.
+*/
+const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex')
+const storedPassword = (plain: string) => bcrypt.hashSync(sha256(plain), 4)
+
 const makeUser = (over: Partial<IUser> = {}): IUser => ({
     id: 'alice@example.com',
     name: 'Alice',
-    password: 'secret',
+    password: storedPassword('secret'),
     accessKey: { id: '', type: 'volatile', resources: '' } as any,
     resources: 'view:default:::',
     ...over
@@ -54,9 +66,8 @@ async function startServer(usersMap: any) {
 const post = (base: string, path: string, body: any) =>
     fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 
-// The FRONT END sends the password already as sha256(hex); the back end's verifyPassword compares against
-// that (sha256(stored) === incoming for the inherited plain value). The tests have to mimic the front end.
-const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex')
+// The FRONT END sends the password already as sha256(hex), and verifyPassword compares that against the
+// stored bcrypt. The tests have to mimic the front end. (sha256 is defined with the helpers above.)
 
 // ---- login ----
 test('POST /login con credenciales validas devuelve 200 y accessKey', async () => {
@@ -74,7 +85,7 @@ test('POST /login con credenciales validas devuelve 200 y accessKey', async () =
 })
 
 test('POST /login admin/password devuelve 201 (fuerza cambio)', async () => {
-    const srv = await startServer(encodeUsers([makeUser({ id: 'admin', name: 'admin', password: 'password' })]))
+    const srv = await startServer(encodeUsers([makeUser({ id: 'admin', name: 'admin', password: storedPassword('password') })]))
     try {
         const res = await post(srv.base, '/login', { user: 'admin', password: sha256('password') })
         assert.equal(res.status, 201)
@@ -214,6 +225,39 @@ test('un registro de usuario corrupto se descarta arriba y da 401, no cuelga', a
     try {
         const res = await post(srv.base, '/login/password', { user: 'alice@example.com', password: sha256('secret'), newpassword: sha256('nuevo') })
         assert.equal(res.status, 401)
+    }
+    finally { await srv.stop() }
+})
+
+/*
+    🔴 A stored password in clear text is refused, full stop.
+
+    The login used to have a second path for it: compare sha256(stored) and re-hash on the way out, to
+    migrate installations written before hashing. A code path that accepts an unhashed stored password
+    is a code path that makes storing one work, so it is gone — and everything that seeds a user writes
+    bcrypt now: the core's bootstrap admin, the Helm chart, and UserApi.
+
+    This is a deliberate break for installations still holding one. They log in nowhere until the users
+    Secret is deleted and the admin seeded again.
+*/
+test('POST /login con la password guardada EN CLARO devuelve 401, no la migra', async () => {
+    const srv = await startServer(encodeUsers([makeUser({ password: 'secret' })]))
+    try {
+        // exactly what used to work: the front end's sha256 against a plain stored value
+        const res = await post(srv.base, '/login', { user: 'alice@example.com', password: sha256('secret') })
+        assert.equal(res.status, 401)
+    }
+    finally { await srv.stop() }
+})
+
+test('se aceptan los tres prefijos de bcrypt, no solo $2b$', async () => {
+    // Helm's htpasswd emits $2a$, and bcryptjs verifies $2a$, $2b$ and $2y$ alike: insisting on one
+    // would reject hashes made by perfectly ordinary tools
+    const hash2a = bcrypt.hashSync(sha256('secret'), 4).replace(/^\$2[aby]\$/, '$2a$')
+    const srv = await startServer(encodeUsers([makeUser({ password: hash2a })]))
+    try {
+        const res = await post(srv.base, '/login', { user: 'alice@example.com', password: sha256('secret') })
+        assert.equal(res.status, 200)
     }
     finally { await srv.stop() }
 })
