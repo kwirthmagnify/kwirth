@@ -5,9 +5,11 @@
 > `[kubernetes, none]`) y ✅ **S3** (publicados `excubitor@0.2.17` al Nexus privado y `status@0.7.2` a npm
 > público, con sus manifests).
 >
-> 🔴 **NO cerrado**: falta el **QA manual de UC1** contra el Kwirth de ECS, que exige buildear el core y
-> reinstalar los dos plugins. Y queda el backlog de declaraciones de los otros 22 canales, que es
-> deliberado (D3).
+> ✅ **UC1 validado por el usuario** (2026-10-08, Kwirth 0.6.64 sobre ECS real): `metrics` y `magnify` en gris
+> con *needs kubernetes*, `excubitor` y `status` seleccionables.
+>
+> 🔴 **NO cerrado**: queda el backlog de declaraciones de los otros 22 canales, que es deliberado (D3), y el
+> caché de módulos del back que destapó el QA (ver backlog).
 >
 > PRD en [`PRD.md`](./PRD.md), con las seis decisiones validadas y el caso **UC1**.
 > Documento **vivo y append-only**: el estado de cada stream se actualiza, nunca se borra.
@@ -68,6 +70,16 @@ por encima es medio motivo: en un desplegable, escrito al lado se lee sin buscar
   puede ser otro caso de "datos de algo que no está". Sin caso real todavía.
 - **`sources` sigue siendo `string[]` en `BackChannelData`**, no `EClusterType[]`. Tiparlo obligaría a
   recompilar las extensiones; se deja para cuando toque un cambio mayor del contrato.
+- 🔴 **Actualizar un plugin no invalida su módulo cacheado en el back, y nadie lo dice.** Lo destapó el QA de
+  UC1: con el core ya arrancado, el usuario instaló `excubitor@0.2.17` y `status@0.7.2`, el log dijo
+  `backend channel registered` para los dos… **y el selector los siguió deshabilitando**, porque el canal se
+  re-registra pero el código que corre es el que se cargó al arrancar. Desde fuera es indistinguible de que
+  el arreglo no funcione: actualizas, no ves ningún cambio y no tienes forma de saber que falta reiniciar.
+  Dos salidas, y no son excluyentes: **invalidar el caché al instalar**, o que el front **avise de que ese
+  plugin necesita reinicio** — el concepto ya existe (`requiresRestart` en el `package.json`), solo que hoy
+  lo declara el plugin y no se deriva de "te acabo de reinstalar". Y hay un segundo piso de la misma trampa:
+  aunque el back ya sirva lo nuevo, **el front se trae los canales al cargar la página**, así que sin un
+  refresco del navegador sigue decidiendo con el `sources` viejo.
 
 ## Lo que hay que ver para darlo por bueno
 

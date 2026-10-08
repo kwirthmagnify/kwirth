@@ -27,6 +27,10 @@ What you can see in the main kwirth is:
     - **Pod**. If the view is 'pod' or lower, you must select what pod/pods you want to use as source object (from a list made of all the namespaces and groups you selected).
     - **Container**. If the view is 'container', you must decide here what container/containers you want to use as source for the data stream. Available containers are those that live in the pods you selected.
     - **Channel**. Prior to add a resource to the workspace, you need to specify what kind of information you want to work with. So you must select 'log', 'metrics', 'alert' or whatever channel your kwirth core server have installed. Read information on [channels here](channels/index).
+
+        Some channels may appear **greyed out with a short note next to them**, like *needs kubernetes*. That is not a fault: it means the channel cannot work with the cluster you selected. A Kwirth that runs **outside Kubernetes** — on AWS ECS, Cloud Run or a plain container — has no pods, no namespaces and no Kubernetes API, so a channel that reads pod logs has nothing to read there. Channels that do not depend on the cluster, such as Status or Excubitor, stay selectable.
+
+        They are **disabled rather than hidden** on purpose: a channel you installed and cannot find is a mystery, while one that is greyed out with its reason is an answer. Select a Kubernetes cluster from the **Cluster** list and all of them become selectable again, with no need to reload: what decides is the cluster you picked, not where Kwirth itself happens to run.
   3. The main menu gives you access to several configuration and operation options of your kwirth installation.
 
     ![main menu](./_media/main-menu.png)
