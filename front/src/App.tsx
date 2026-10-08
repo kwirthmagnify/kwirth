@@ -23,7 +23,7 @@ import { TabContent } from './components/home/TabContent'
 import { SettingsKwirth } from './components/settings/SettingsKwirth'
 import { SettingsExport } from './components/settings/SettingsExport'
 import { SettingsImport } from './components/settings/SettingsImport'
-import { IKwirthSettings, IMarketplaceEntry } from '@kwirthmagnify/kwirth-common'
+import { IKwirthSettings, IMarketplaceEntry, EClusterType } from '@kwirthmagnify/kwirth-common'
 import { SettingsUser } from './components/settings/SettingsUser'
 import { MenuTab, MenuTabOption } from './menus/MenuTab'
 import { MenuDrawer, MenuDrawerOption } from './menus/MenuDrawer'
@@ -2836,6 +2836,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                 const getClusterMetrics = async (clusterName: string) => {
                                     const cluster = clusters.find(c => c.name === clusterName)
                                     if (!cluster) return null
+                                    // Same reason as the poll above: outside Kubernetes there is no metrics
+                                    // provider to ask. null is what a homepage extension already handles.
+                                    if (cluster.kwirthData?.clusterType === EClusterType.NONE) return null
                                     try {
                                         const res = await fetch(`${cluster.url}/provider/metrics/usage/cluster`, addGetAuthorization(cluster.accessString))
                                         if (!res.ok) return null

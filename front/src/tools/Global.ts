@@ -1,4 +1,4 @@
-import { KwirthData, ENotifyLevel } from '@kwirthmagnify/kwirth-common'
+import { KwirthData, ENotifyLevel, EClusterType } from '@kwirthmagnify/kwirth-common'
 import { Cluster, IClusterInfo } from '../model/Cluster'
 import { addGetAuthorization } from './AuthorizationManagement'
 import { MetricDefinition } from '../channels/metrics/MetricsTypes'
@@ -7,6 +7,11 @@ export { ENotifyLevel }
 
 //+++ review and move to metrics channel
 export const getMetricsNames = async (cluster:Cluster) => {
+    // Without a cluster there is no metrics provider: Kwirth on ECS (or anywhere outside Kubernetes) never
+    // registers it, so this call can only 404. The guard lives HERE and not at the two call sites, because
+    // a third one would have to remember, and "there are metrics channels installed" is not the same
+    // question as "is there anything to take metrics from".
+    if (cluster.kwirthData?.clusterType === EClusterType.NONE) return
     try {
         console.log(`Receiving metrics for cluster ${cluster.name}`)
         cluster.metricsList=new Map()

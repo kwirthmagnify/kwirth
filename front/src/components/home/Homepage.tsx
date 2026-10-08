@@ -6,6 +6,7 @@ import { Delete, ExpandLess, ExpandMore, FactCheck, HelpOutline, Launch } from '
 import { Star } from '../../icons'
 
 import { IHomepageProps } from '@kwirthmagnify/kwirth-common-front'
+import { EClusterType } from '@kwirthmagnify/kwirth-common'
 import { Cluster } from '../../model/Cluster'
 import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { getIconFromKind } from '../../tools/Constants-React'
@@ -43,6 +44,12 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
     let kwrithNamespace = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.kwirthData?.namespace : 'n/a'
     let kwrithDeployment = props.cluster? props.clusters.find(c => c.name===props.cluster!.name)!.kwirthData?.deployment : 'n/a'
     let frontChannels:string = ((props.frontChannels.keys() as any).toArray()).sort().join(', ')
+    /*
+        Without a cluster there is no metrics provider, so nothing ever feeds these states and they stay at
+        their initial 0. Painting a gauge at 0.0% is worse than painting nothing: it reads as "the cluster is
+        idle" when the truth is "there is no cluster to measure". They are hidden instead.
+    */
+    const hasClusterMetrics = (props.cluster || props.clusters.find(x => x.home))?.kwirthData?.clusterType !== EClusterType.NONE
 
     const handleCardToggle = () => {
         setCardExpanded((prev) => !prev)
@@ -51,6 +58,9 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
     useEffect(() => {
         const targetCluster = props.cluster || props.clusters.find(x => x.home);
         if (!targetCluster) return;
+        // No cluster, no metrics provider, nothing to poll: on Kwirth outside Kubernetes this interval was
+        // firing a request that can only 404, every few seconds, for as long as the home page stayed open.
+        if (targetCluster.kwirthData?.clusterType === EClusterType.NONE) return;
 
         const i = setInterval((c: Cluster) => {
             fetch(`${c.url}/provider/metrics/usage/cluster`, addGetAuthorization(c.accessString))
@@ -330,6 +340,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
 
                             <Typography flexGrow={1}></Typography>
 
+                            {hasClusterMetrics && <>
                             <Tooltip title={`${(cpu||0).toFixed(2)}%`}>
                                 <Stack direction={'column'} alignItems={'center'} mr={'2px'}>
                                     <Typography fontSize={8} mb={-1}>CPU</Typography>
@@ -348,13 +359,14 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 </Stack>
                             </Tooltip>
                             <Tooltip title={`${(txmbps||0).toFixed(2)}Mbps / ${(rxmbps||0).toFixed(2)}Mbps`}>
-                                <Stack direction={'column'} alignItems={'center'}>                            
+                                <Stack direction={'column'} alignItems={'center'}>
                                     <Typography fontSize={8} mb={-1}>Net</Typography>
                                     <AreaChart width={120} height={20} data={dataNetwork} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                                         <Area type="monotone" dataKey="value" stroke="#88d884" strokeWidth={2} dot={false} fill={'#bbddbb'}/>
                                     </AreaChart>
                                 </Stack>
                             </Tooltip>
+                            </>}
                         </Stack>}
                         </Box>
                     </Fade>}
@@ -401,6 +413,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 <Typography><b>Total vCPU: </b>{props.cluster?.clusterInfo?.vcpu}</Typography>
                                 <Typography><b>Total Memory: </b>{((props.cluster?.clusterInfo?.memory||0)/1024/1024/1024).toFixed(2)}GB</Typography>
                             </Stack>
+                            {hasClusterMetrics && <>
                             <Divider orientation='vertical' flexItem/>
                             <Stack width={'25%'} direction={'row'} alignItems={'center'}>
                                 <MiniGauge value={cpu} max={100} label='CPU' format={v => `${v.toFixed(1)}%`} />
@@ -408,6 +421,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 <MiniGauge value={txmbps} max={10} label='Tx Mbps' />
                                 <MiniGauge value={rxmbps} max={10} label='Rx Mbps' />
                             </Stack>
+                            </>}
                         </Stack>
                     </CardContent>
 

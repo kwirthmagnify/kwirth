@@ -113,8 +113,18 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     // Views that select no resources: with them the namespace/controller/pod/container dropdowns draw
     // nothing to choose from.
     const noResourceView = view === EInstanceConfigView.CLUSTER || view === EInstanceConfigView.NONE
+    // A Kwirth outside Kubernetes has no namespaces, controllers, pods or containers. Offering those views
+    // only leads to four dropdowns that will never have anything in them.
+    const clusterHasResources = cluster?.kwirthData?.clusterType !== EClusterType.NONE
 
     const loadAllNamespaces = async (cluster:Cluster) => {
+        /*
+            Same reasoning as the 'none' view below, but for the whole installation: on a Kwirth outside
+            Kubernetes there are no namespaces to list, so this request can only fail — and failing here
+            pops an error MsgBox at somebody who did nothing wrong. The guard is in the function because
+            three different paths reach it (the view change, the restore and the first render).
+        */
+        if (cluster?.kwirthData?.clusterType === EClusterType.NONE) { setAllNamespaces([]); return }
         if (cluster?.url) {
             try {
                 let response = await fetch(`${cluster.url}/config/namespace`, addGetAuthorization(cluster.accessString))
@@ -349,6 +359,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         // Restoring a self-contained channel's tab must not query the cluster: there are no resources to
         // repopulate, and the request would fail for anyone without permission to list namespaces.
         if (v === EInstanceConfigView.NONE) return
+        // Nor when the installation has no cluster at all: the tab being restored cannot have resources.
+        if (c?.kwirthData?.clusterType === EClusterType.NONE) return
 
         let alln=await (await fetch(`${c.url}/config/namespace`, addGetAuthorization(c.accessString))).json()
         setAllNamespaces(alln)
@@ -426,10 +438,10 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 <Select value={view} onChange={onChangeView} >
                     <MenuItem key={EInstanceConfigView.NONE} value={EInstanceConfigView.NONE}>none</MenuItem>
                     <MenuItem key={EInstanceConfigView.CLUSTER} value={EInstanceConfigView.CLUSTER}>cluster</MenuItem>
-                    <MenuItem key={EInstanceConfigView.NAMESPACE} value={EInstanceConfigView.NAMESPACE}>namespace</MenuItem>
-                    <MenuItem key={EInstanceConfigView.GROUP} value={EInstanceConfigView.GROUP}>controller</MenuItem>
-                    <MenuItem key={EInstanceConfigView.POD} value={EInstanceConfigView.POD}>pod</MenuItem>
-                    <MenuItem key={EInstanceConfigView.CONTAINER} value={EInstanceConfigView.CONTAINER}>container</MenuItem>
+                    {clusterHasResources && <MenuItem key={EInstanceConfigView.NAMESPACE} value={EInstanceConfigView.NAMESPACE}>namespace</MenuItem>}
+                    {clusterHasResources && <MenuItem key={EInstanceConfigView.GROUP} value={EInstanceConfigView.GROUP}>controller</MenuItem>}
+                    {clusterHasResources && <MenuItem key={EInstanceConfigView.POD} value={EInstanceConfigView.POD}>pod</MenuItem>}
+                    {clusterHasResources && <MenuItem key={EInstanceConfigView.CONTAINER} value={EInstanceConfigView.CONTAINER}>container</MenuItem>}
                 </Select>
             </FormControl>
 
