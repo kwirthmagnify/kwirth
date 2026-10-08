@@ -1320,7 +1320,21 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         if (conn.keepAlive) { clearInterval(conn.keepAlive); conn.keepAlive = undefined }
                         if (conn.closed || conn.retry) return
                         handlers.onState(conn.clusterId, ERemoteConnState.RECONNECTING)
-                        conn.retry = setInterval(() => { if (!conn.closed) connect(endpoint, conn) }, 10000)
+                        /*
+                            🔴 El endpoint se RE-RESUELVE en cada reintento, no se reusa el que se capturó
+                            al abrir. Reusarlo dejaba la pestaña hablando para siempre con la URL que leyó
+                            al arrancar: se corregía la URL de un cluster en Manage clusters y la pestaña
+                            abierta ni se enteraba, mientras una nueva usaba ya la nueva. Dos pestañas del
+                            mismo usuario, el mismo cluster, estados distintos — y nadie había roto nada
+                            (visto en dev, 2026-10-08).
+                            Si el cluster ya no está en la lista se cae al endpoint anterior: seguir
+                            intentando con lo último que funcionó es mejor que dejar de intentar.
+                        */
+                        conn.retry = setInterval(() => {
+                            if (conn.closed) return
+                            const fresh = clustersRef.current.find(c => (c.id || c.name) === conn.clusterId || c.name === endpoint.name)
+                            connect(fresh ?? endpoint, conn)
+                        }, 10000)
                     }
                     ws.onerror = () => { try { ws.close() } catch { /* noop */ } }
                 }
