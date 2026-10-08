@@ -36,7 +36,25 @@ let log: ISqlLogger = {
     error: (message: unknown) => console.error(`[sql] ${message}`)
 }
 
-export const setSqlLogger = (logger: ISqlLogger): void => { log = logger }
+/*
+    🔴 GANA EL PRIMERO, no el último. Antes cada llamada pisaba la anterior, y como el logger es UNO para
+    todo el proceso, el resultado era que **el último plugin en arrancar se quedaba con el log SQL de
+    todos**: los errores del pool de `excubitor` salían firmados `[agora]` (visto en dev, 2026-10-08). Eso
+    no es un detalle cosmético — manda a buscar la fuga al plugin equivocado, y costó un rato.
+
+    El primero es siempre el **core**, que lo instala al configurar el servidor, antes de arrancar ningún
+    plugin. Su etiqueta (`[stor]`) es neutral y el `owner` del pool ya va en cada línea —`sql: excubitor:
+    …`—, así que se sabe de quién es sin necesidad de que cada plugin reclame el canal.
+
+    Un plugin que llame a esto después no rompe nada: simplemente no se le hace caso.
+*/
+let loggerClaimed = false
+
+export const setSqlLogger = (logger: ISqlLogger): void => {
+    if (loggerClaimed) return
+    loggerClaimed = true
+    log = logger
+}
 
 /*
     A database error, on one line and SAYING SOMETHING.
