@@ -27,8 +27,12 @@ Installation can be tailored by changing some kwirth installation options:
 | -                  | -           | -    |-       |-             |
 | channelMetrics     | Enables/Disables Metrics channel | string | true/false  | true  |
 | channelMagnify     | Enables/Disables Magnify channel | string | true/false  | true  |
+| mode               | `normal` lets kwirth change the cluster; `readonly` gives it `get`/`list`/`watch` and nothing else | string | normal / readonly | normal |
 | rootpath           | It's the path where kwirth will be served | string | any URL Path | /kwirth  |
-| masterkey          | It's the key used to sign the access keys sent to clients | string | any string | Kwirth4Ever  |
+| masterkey          | The key that signs the access keys sent to clients. **Empty generates one** and keeps it across upgrades | string | any string | *(generated)*  |
+| users.adminPassword | The first admin's password. **Empty generates one and prints it in the install notes** | string | any string | *(generated)* |
+| users.adminId / users.adminName | Who that first admin is | string | any string | admin / Nicklaus Wirth |
+| persistence.enabled | Keep kwirth's configuration on a PersistentVolumeClaim instead of in the cluster. Required by `mode: readonly` | boolean | true/false | false |
 | image              | A full image reference | string | A valid reference | kwirthmagnify/kwirth:latest |
 | resources          | Pod resources in Kubernetes-like format | object | {}  | { limits: { cpu:1, memory:2Gi }, requests: {cpu:0, memory:256Mi } }|
 | ingress.enabled    | Set to true if you want to deploy an Ingress | boolean | true/false  | false |
@@ -40,6 +44,21 @@ Installation can be tailored by changing some kwirth installation options:
 | store              | Storage backend: `etcd` (K8s Secrets/ConfigMaps) or a filesystem path | string | `etcd` / `/mnt/data` | etcd |
 
 ?> Log, Ops, Trivy, Fileman, Echo and other observability capabilities are now loaded as **plugins**. Use the plugin management UI or `kwirth-dev.json` to install them — no Helm option is needed.
+
+!> **Read the notes Helm prints, before you close the terminal.** The chart generates the first admin's password and shows it there, and that is the only place it appears in the clear. Until somebody logs in you can still read it out of the `kwirth-users` Secret — the notes print the exact command — and after the first login kwirth has replaced it with a bcrypt hash, which cannot be read back.
+
+### Read-only with Helm
+
+The same deployment, with every verb that changes the cluster removed:
+
+```
+helm install kwirth kwirth/kwirth -n kwirth --create-namespace \
+  --set kwirth.mode=readonly --set kwirth.persistence.enabled=true
+```
+
+The ClusterRole becomes a single rule — `get`, `list`, `watch` — so the Magnify commands (restart, scale, cordon, drain, evict, apply, delete) and the `ops` and `fileman` plugins answer 403 with the button still in the UI; do not install those two here. Logs, metrics, events and the resource browser are unaffected.
+
+`persistence` is not optional in this mode and the chart will refuse to render without it: inside Kubernetes kwirth's own configuration is Secrets and ConfigMaps it would have to write, and an install that cannot write them comes up looking healthy and loses its users on the first restart. The same reasoning, and the same trade-offs, as the [read-only manifest](#kwirth-full-royaml--not-one-write) below — including that it can still *read* every Secret in the cluster, because Kubernetes RBAC cannot grant everything except one resource.
 
 
 A sample 'values.yaml' file could be:

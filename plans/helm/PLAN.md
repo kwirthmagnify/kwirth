@@ -1,9 +1,11 @@
 # Helm chart de Kwirth — revisión y puesta al día
 
-> **Estado (2026-09-28): en curso — S1 construido, pendiente de QA manual (gate CL9 punto 3).**
-> Chart `0.2.0` escrito en `deploy/helm/kwirth/`, con tests unitarios y e2e. Queda la validación manual,
-> la guía (`installation.md` + README), la publicación (`publish-chart.mjs`) y la retirada de las carpetas
-> `deploy/helm/0.1.x`.
+> **Estado (2026-10-08): chart `0.3.0`, QA pasado. Queda publicarlo.**
+> El QA del `0.2.x` que llevaba parado desde el 28/09 se hizo por fin, y encima se añadieron tres cosas:
+> el modo **`readonly`**, la **MASTERKEY generada** y la **contraseña de admin generada y mostrada al
+> instalar**. 38 tests unitarios y 60 comprobaciones e2e contra k3d, los dos modos instalados de verdad.
+> 🔴 **Bloqueante para publicar**: `appVersion` sigue en `0.6.38`, y este chart necesita un core con los
+> arreglos del 2026-10-08 (token proyectado, metadata en el `replace`, bcrypt `$2a$`).
 
 ## Por qué
 
@@ -80,9 +82,12 @@ correctos, analizar versionado y publicación, y completarlos con todo lo que ti
 
 | stream | qué | estado |
 |---|---|---|
-| S1 | chart `0.2.0` + tests unitarios (23) + e2e contra clúster + publish script + READMEs | construido; **gate QA** |
-| S2 | guía: `installation.md` (opciones, URL del repo, persistencia con `persistence.*`) y `README.md` del repo | tras el gate |
-| S3 | publicar: `publish-chart.mjs`, commit de `docs/helm-charts`, tag, push | tras el gate |
+| S1 | chart `0.2.0` + tests unitarios (23) + e2e contra clúster + publish script + READMEs | ✅ construido |
+| S2 | guía: `installation.md` (opciones, URL del repo, persistencia con `persistence.*`) y `README.md` del repo | ✅ hecho (2026-10-08), ampliado con lo de abajo |
+| S3 | publicar: `publish-chart.mjs`, commit de `docs/helm-charts`, tag, push | ⬜ **pendiente**, bloqueado por `appVersion` |
+| S4 | **modo `readonly`** (chart `0.3.0`): una regla `get/list/watch`, store en PVC obligatorio, `exitLog` y `users.bootstrap` derivados, securityContext endurecido y `/tmp`. Y cuatro combinaciones que el chart **se niega a renderizar** | ✅ hecho y QA pasado |
+| S5 | **MASTERKEY generada** en su propio Secret `keep`, con lookup en upgrade y reinstall, y la ruta de migración desde el Secret de entorno de charts anteriores | ✅ hecho y QA pasado |
+| S6 | **contraseña de admin generada y mostrada** en las notas de instalación, guardada como `bcrypt(sha256())` y con la clave del Secret en base64url como la escribe el core | ✅ hecho y QA pasado |
 
 ## Backlog
 

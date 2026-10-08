@@ -93,4 +93,14 @@ Start from *what the person needs to do*, pick the **matching scopes**, then **n
 
 Scopes and resources define **authorization** — *what a user can do*. For **authentication** — *proving who they are* — a user can use a kwirth password or an external Identity Provider. The permission model above is identical either way; IdP only changes how they log in. See [IdP integration](07-idp-integration).
 
+## How passwords are kept
+
+Two things never happen: the browser never sends the password, and kwirth never stores it.
+
+The browser hashes it with SHA-256 and sends that; kwirth stores a **bcrypt** hash of what it receives and compares the two. So the clear text exists only while the user is typing it, and a stolen copy of the users Secret gives an attacker neither the password nor anything they can replay.
+
+!> **A password stored in the clear is refused at login.** kwirth used to accept one, compare it and re-hash it on the way through, so that installations written before hashing kept working. That path has been removed — a way to accept an unhashed stored password is a way to make storing one work. An installation still holding one cannot log in: delete its `kwirth-users` Secret and let kwirth seed the admin again. Everything that creates a user today writes a hash, including the Helm chart and the user editor above.
+
+This is also why there is no "show me this user's password" anywhere: there is nothing to show. If somebody loses theirs, you set a new one.
+
 Next: [API management →](05-api-management)

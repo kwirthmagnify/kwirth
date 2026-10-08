@@ -1,7 +1,12 @@
 # Common Tasks
 
 ## Your first access
-The first time you access your fresh copy of kwirth you must login with admin credentials, **admin/password** (yes the password is password).
+The first time you access your fresh copy of kwirth you must login with admin credentials. Which ones depends on how you deployed it:
+
+- **Manifests, Docker, desktop or ECS** — the user is `admin` and the password is **password** (yes, the password is password). kwirth will not let you go any further until you change it.
+- **Helm chart** — the chart generates the password and **prints it in the notes shown at install time**. If you no longer have them and nobody has logged in yet, the password is still readable out of the `kwirth-users` Secret; once somebody logs in, kwirth has replaced it with a bcrypt hash and it cannot be read back.
+
+!> **Passwords stored in clear text are no longer accepted.** kwirth used to take a stored password in the clear, compare it, and re-hash it on the way through, so that installations written before hashing kept working. That path is gone. An installation still holding one cannot log in at all: delete its `kwirth-users` Secret and let kwirth seed the admin again, or restore from a copy where the password is already a hash. Anything that creates a user today — kwirth itself, the Helm chart, the user management dialog — writes a hash.
 
  &nbsp;&nbsp;&nbsp;&nbsp;![login](./_media/login.png)
 
