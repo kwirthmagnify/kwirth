@@ -44,7 +44,10 @@ A few consequences worth knowing:
   see [Storage configuration](installation?id=storage-configuration) in the installation page.
 - **Encryption at rest depends on the mode, and not every mode has it.** In desktop mode and with
   `KWIRTH_STORE`, secret files are AES-256-GCM with a key derived from `MASTERKEY`; change `MASTERKEY` after
-  the first run and the existing secret files become unreadable. Config maps are always plain JSON — they
+  the first run and the existing secret files become unreadable. When `MASTERKEY` is unset the key is
+  generated and kept in the store next to those files — so there is no default key, but that key does not
+  protect the store from someone who can read the volume; set `MASTERKEY` from outside the volume for that.
+  Config maps are always plain JSON — they
   are not meant for anything sensitive. In **Docker mode, secrets are written as plain JSON too**, so
   protect that directory: whatever host path you mount for `SECRETPATH` holds passwords and tokens in the
   clear.
