@@ -1,0 +1,399 @@
+# ===================================================================================================
+# Kwirth — single-file, least-privilege deployment
+# ===================================================================================================
+#
+#   kubectl apply -f kwirth-readonly.yaml
+#
+# This is the same deployment as kwirth.yaml, with the cluster-wide permissions cut down to what the
+# code actually calls. The difference is the RBAC:
+#
+#   kwirth.yaml            apiGroups: [12 groups]  resources: ['*']  verbs: ['*']
+#   kwirth-readonly.yaml   every resource named one by one, verbs get/list/watch, and nothing else
+#
+# WHAT IT CAN DO
+#   Logs, metrics, events, the whole resource browser, alerts, and every channel that only reads.
+#
+# WHAT IT CANNOT DO, BY DESIGN
+#   Restart / scale / cordon / drain / evict / apply / delete anything, and open a shell into a pod.
+#   That is the Magnify channel's command half and the 'ops' and 'fileman' plugins: the UI still
+#   offers the action and the API server answers 403. If you do not want the dead buttons, do not
+#   install those plugins.
+#
+# THE ONE THING THAT IS NOT READ-ONLY
+#   Inside Kubernetes, Kwirth's store IS ConfigMaps and Secrets: users, api keys, installed
+#   extensions, marketplaces. There is no read-only install that keeps its own configuration. That
+#   write lives in a Role scoped to the 'kwirth' namespace (below), never in the ClusterRole, so it
+#   cannot reach anything outside its own namespace.
+#
+# BEFORE YOU APPLY IT
+#   - change MASTERKEY and the admin password in the Secret
+#   - review the two optional rule blocks marked OPTIONAL in the ClusterRole
+# ===================================================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kwirth
+
+---
+# The initial admin. The payload is the base64 of:
+#   {"id":"admin","name":"Nicklaus Wirth","password":"password","resources":"cluster,admin:::::"}
+# Change the password before applying this on anything that is not a laptop.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kwirth-users
+  namespace: kwirth
+data:
+  admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0='
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kwirth-sa
+  namespace: kwirth
+
+---
+# ===================================================================================================
+# Cluster-wide: READ ONLY
+# ===================================================================================================
+# Every rule here is get/list/watch. No create, no update, no patch, no delete, no '*'.
+#
+# Resources are named one by one on purpose. 'resources: [*]' also matches subresources, which is how
+# the permissive role ends up granting pods/exec and pods/eviction without anyone noticing.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kwirth-readonly-cr
+rules:
+
+  # --- core API group ----------------------------------------------------------------------------
+  # 'namespaces' is needed at startup, not only for the browser: the cluster id is the uid of the
+  # kube-system namespace (back/src/index.ts, readNamespace 'kube-system'). Without it Kwirth does
+  # not boot.
+  - apiGroups: ['']
+    resources:
+      - componentstatuses
+      - configmaps
+      - endpoints
+      - events
+      - limitranges
+      - namespaces
+      - nodes
+      - persistentvolumeclaims
+      - persistentvolumes
+      - pods
+      - replicationcontrollers
+      - resourcequotas
+      - services
+    verbs: ['get', 'list', 'watch']
+
+  # Subresources, which have to be spelled out: the log channel reads pods/log and the resource
+  # detail reads pods/status.
+  - apiGroups: ['']
+    resources: ['pods/log', 'pods/status']
+    verbs: ['get', 'list']
+
+  # The metrics provider scrapes cAdvisor either straight at the kubelet (https://<nodeIp>:10250)
+  # or through the API server proxy, and which of the two it uses depends on the cluster. Both are
+  # needed for metrics to work everywhere.
+  - apiGroups: ['']
+    resources: ['nodes/metrics', 'nodes/proxy']
+    verbs: ['get']
+
+  # --- OPTIONAL: Secrets and ServiceAccounts -------------------------------------------------------
+  # Only the Magnify browser lists these, so that it can show them as two more nodes of the resource
+  # tree. Cluster-wide read on Secrets is the single most dangerous grant in this file — it is every
+  # credential in the cluster — which is why it is NOT enabled by default. Uncomment it only if you
+  # want those two nodes, and understand that it makes whoever can reach Kwirth's admin able to read
+  # them. Without it, those two entries of the tree return 403 and everything else keeps working.
+  #
+  # - apiGroups: ['']
+  #   resources: ['secrets', 'serviceaccounts']
+  #   verbs: ['get', 'list', 'watch']
+
+  # --- workloads -----------------------------------------------------------------------------------
+  # 'batch' is indispensable, not cosmetic: without it, listing jobs gives a 403 and the resource
+  # selector is left with NO controller at all — not even deployments — because the six listings are
+  # resolved together.
+  - apiGroups: ['apps']
+    resources: ['daemonsets', 'deployments', 'replicasets', 'statefulsets']
+    verbs: ['get', 'list', 'watch']
+
+  - apiGroups: ['batch']
+    resources: ['cronjobs', 'jobs']
+    verbs: ['get', 'list', 'watch']
+
+  - apiGroups: ['autoscaling']
+    resources: ['horizontalpodautoscalers']
+    verbs: ['get', 'list', 'watch']
+
+  - apiGroups: ['policy']
+    resources: ['poddisruptionbudgets']
+    verbs: ['get', 'list', 'watch']
+
+  - apiGroups: ['coordination.k8s.io']
+    resources: ['leases']
+    verbs: ['get', 'list', 'watch']
+
+  # --- networking ----------------------------------------------------------------------------------
+  - apiGroups: ['networking.k8s.io']
+    resources: ['ingresses', 'ingressclasses', 'networkpolicies']
+    verbs: ['get', 'list', 'watch']
+
+  # --- storage ---------------------------------------------------------------------------------------
+  - apiGroups: ['storage.k8s.io']
+    resources:
+      - csidrivers
+      - csinodes
+      - csistoragecapacities
+      - storageclasses
+      - volumeattachments
+    verbs: ['get', 'list', 'watch']
+
+  # --- cluster-level objects the browser shows -------------------------------------------------------
+  # These three groups are missing from kwirth.yaml, so today those branches of the tree 403 without
+  # saying anything. Reading them costs nothing.
+  - apiGroups: ['node.k8s.io']
+    resources: ['runtimeclasses']
+    verbs: ['get', 'list', 'watch']
+
+  - apiGroups: ['scheduling.k8s.io']
+    resources: ['priorityclasses']
+    verbs: ['get', 'list', 'watch']
+
+  - apiGroups: ['admissionregistration.k8s.io']
+    resources: ['mutatingwebhookconfigurations', 'validatingwebhookconfigurations']
+    verbs: ['get', 'list', 'watch']
+
+  - apiGroups: ['apiextensions.k8s.io']
+    resources: ['customresourcedefinitions']
+    verbs: ['get', 'list', 'watch']
+
+  # Reading the RBAC is reading who can do what; it is not being able to change it.
+  - apiGroups: ['rbac.authorization.k8s.io']
+    resources: ['clusterroles', 'clusterrolebindings', 'roles', 'rolebindings']
+    verbs: ['get', 'list', 'watch']
+
+  # --- metrics API -----------------------------------------------------------------------------------
+  # metrics-server, for the PodMetrics and NodeMetrics entries of the browser. Nothing breaks if
+  # metrics-server is not installed.
+  - apiGroups: ['metrics.k8s.io']
+    resources: ['pods', 'nodes']
+    verbs: ['get', 'list']
+
+  # --- OPTIONAL: Trivy Operator ------------------------------------------------------------------------
+  # Only the 'trivy' provider needs this, and only if trivy-operator is installed in the cluster.
+  # Leave it commented if you do not use it.
+  #
+  # - apiGroups: ['aquasecurity.github.io']
+  #   resources:
+  #     - vulnerabilityreports
+  #     - configauditreports
+  #     - sbomreports
+  #     - exposedsecretreports
+  #     - rbacassessmentreports
+  #     - clusterrbacassessmentreports
+  #   verbs: ['get', 'list', 'watch']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kwirth-readonly-crb
+subjects:
+  - kind: ServiceAccount
+    name: kwirth-sa
+    namespace: kwirth
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kwirth-readonly-cr
+
+---
+# ===================================================================================================
+# Its own namespace: the only writes in the whole file
+# ===================================================================================================
+# A Role, not a ClusterRole: nothing here reaches outside the 'kwirth' namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kwirth-store
+  namespace: kwirth
+rules:
+
+  # Kwirth's store. Inside Kubernetes its configuration IS ConfigMaps and Secrets of its own
+  # namespace — users, api keys, installed extensions, marketplaces — so this cannot be read-only
+  # and still keep anything between restarts.
+  - apiGroups: ['']
+    resources: ['configmaps', 'secrets']
+    verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete']
+
+  # The ServiceAccount token the metrics provider presents to the kubelet. Scoped by name: it can
+  # mint a token for itself and for nothing else.
+  - apiGroups: ['']
+    resources: ['serviceaccounts/token']
+    resourceNames: ['kwirth-sa']
+    verbs: ['create']
+
+  # --- OPTIONAL: restart Kwirth from its own admin UI ----------------------------------------------
+  # 'Restart Kwirth' deletes its own pod and lets the Deployment bring it back. Without this rule the
+  # button answers 403 and you restart it with kubectl instead.
+  #
+  # - apiGroups: ['']
+  #   resources: ['pods']
+  #   verbs: ['delete']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kwirth-store-rb
+  namespace: kwirth
+subjects:
+  - kind: ServiceAccount
+    name: kwirth-sa
+    namespace: kwirth
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kwirth-store
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kwirth
+  namespace: kwirth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kwirth
+  revisionHistoryLimit: 0
+  template:
+    metadata:
+      name: kwirth
+      labels:
+        app: kwirth
+    spec:
+      serviceAccountName: kwirth-sa
+      terminationGracePeriodSeconds: 5
+      containers:
+        - name: kwirth
+          image: kwirthmagnify/kwirth:latest
+          #imagePullPolicy: Never
+          # Least privilege is not only RBAC. Kwirth needs no capability, no privilege escalation and
+          # no writable image: everything it writes at runtime (extension tarballs, docs, AI toolsets)
+          # goes to os.tmpdir(), which is the emptyDir mounted below.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+            seccompProfile:
+              type: RuntimeDefault
+            # The image does not declare a USER, so it starts as root. Running it as the 'node' user
+            # of the base image works, but verify it on your cluster before turning it on.
+            #runAsNonRoot: true
+            #runAsUser: 1000
+          env:
+            - name: ROOTPATH
+              value: '/kwirth'
+            # Change this. It is the key that signs the api keys.
+            - name: MASTERKEY
+              value: 'Kwirth4Ever'
+            # The only two channel switches the back reads. The channels that used to be listed here
+            # (LOG, ALERT, OPS, TRIVY, ECHO) are plugins now and these variables did nothing.
+            - name: CHANNEL_METRICS
+              value: 'true'
+            - name: CHANNEL_MAGNIFY
+              value: 'true'
+          ports:
+            - name: kwirth
+              containerPort: 3883
+              protocol: TCP
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            limits:
+              cpu: '1'
+              memory: 2Gi
+            requests:
+              cpu: 0m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3883
+            initialDelaySeconds: 10
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 3883
+            initialDelaySeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3883
+            timeoutSeconds: 30
+            periodSeconds: 60
+            successThreshold: 1
+            failureThreshold: 3
+      volumes:
+        # Everything Kwirth writes at runtime lands here, which is what lets the root filesystem be
+        # read-only. Raise sizeLimit if you install big guides or packs.
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kwirth-svc
+  namespace: kwirth
+spec:
+  selector:
+    app: kwirth
+  ports:
+    - name: kwirth-port
+      protocol: TCP
+      port: 3883
+      targetPort: 3883
+  type: ClusterIP
+
+# ===================================================================================================
+# Optional: publish it through an nginx ingress. Uncomment and adjust the host.
+# ===================================================================================================
+#---
+#apiVersion: networking.k8s.io/v1
+#kind: Ingress
+#metadata:
+#  name: ingress-kwirth
+#  namespace: kwirth
+#  annotations:
+#    # required for having more than one Kwirth replica when using 'volatile' tokens
+#    nginx.ingress.kubernetes.io/affinity: cookie
+#    # required for websocket duration > 60s
+#    nginx.ingress.kubernetes.io/proxy-read-timeout: '3600'
+#    nginx.ingress.kubernetes.io/proxy-send-timeout: '3600'
+#spec:
+#  ingressClassName: nginx
+#  #tls:
+#  #  - hosts:
+#  #      - www.kwirth-dns.com
+#  #    secretName: www.kwirth-dns.com.tls
+#  rules:
+#    - host: localhost
+#      http:
+#        paths:
+#          - path: /kwirth
+#            pathType: Prefix
+#            backend:
+#              service:
+#                name: kwirth-svc
+#                port:
+#                  number: 3883
