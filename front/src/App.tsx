@@ -1257,7 +1257,18 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             // backoff, a fresh START → a new snapshot → the channel re-merges). The raw WS is NOT exposed;
             // the channel uses send(uid)/close(). With no id → DOWN + a warning.
             newTab.channelObject.openRemoteChannels = (clusterNames: string[], instanceConfig: any, handlers) => {
-                interface IRemoteConn { clusterId: string; ws?: WebSocket; closed: boolean; retry?: ReturnType<typeof setInterval>; instanceId?: string }
+                /*
+                    `keepAlive` is not an extra: a reverse proxy closes connections it considers idle, and a
+                    federated DATA connection is quiet by nature — it only speaks when the posture of that
+                    cluster changes. Without a heartbeat an AWS ALB cut them at its 60 s default, and the user
+                    watched "reconnecting… / back online" every minute (reported 2026-10-08). The retry below
+                    hid how bad it was: it reconnected, so it looked survivable, while every cut cost a fresh
+                    START and a fresh snapshot.
+                    Same interval the home connection uses (user settings), on purpose: two knobs for the same
+                    thing is how they end up out of sync, and the day someone raises one and not the other this
+                    comes back with a worse diagnosis.
+                */
+                interface IRemoteConn { clusterId: string; ws?: WebSocket; closed: boolean; retry?: ReturnType<typeof setInterval>; keepAlive?: ReturnType<typeof setInterval>; instanceId?: string }
                 const conns: IRemoteConn[] = []
                 const connect = (endpoint: Cluster, conn: IRemoteConn) => {
                     let ws: WebSocket
@@ -1268,6 +1279,20 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         if (conn.retry) { clearInterval(conn.retry); conn.retry = undefined }
                         ws.send(JSON.stringify({ ...instanceConfig, action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.SIGNAL, instance: '', accessKey: endpoint.accessString }))
                         handlers.onState(conn.clusterId, ERemoteConnState.CONNECTED)
+                        // The ping only makes sense once an instance has been assigned (the START reply gives
+                        // it), which is why it is re-armed on EVERY connection: after a reconnect the instance
+                        // is a different one.
+                        if (conn.keepAlive) clearInterval(conn.keepAlive)
+                        conn.keepAlive = setInterval(() => {
+                            if (conn.closed || !conn.instanceId || conn.ws?.readyState !== WebSocket.OPEN) return
+                            conn.ws.send(JSON.stringify({
+                                action: EInstanceMessageAction.PING,
+                                flow: EInstanceMessageFlow.REQUEST,
+                                type: EInstanceMessageType.SIGNAL,
+                                channel: newTab.channel.channelId,
+                                instance: conn.instanceId
+                            }))
+                        }, (userSettingsRef.current?.keepAliveInterval || 30) * 1000)
                     }
                     ws.onmessage = (ev) => {
                         try {
@@ -1281,6 +1306,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         } catch { /* no-JSON: ignora */ }
                     }
                     ws.onclose = () => {
+                        // Always stopped, even if the connection is already closed or retrying: an interval
+                        // that outlives its socket keeps firing against a `readyState` that is not OPEN, and
+                        // every reconnect would leave one more behind.
+                        if (conn.keepAlive) { clearInterval(conn.keepAlive); conn.keepAlive = undefined }
                         if (conn.closed || conn.retry) return
                         handlers.onState(conn.clusterId, ERemoteConnState.RECONNECTING)
                         conn.retry = setInterval(() => { if (!conn.closed) connect(endpoint, conn) }, 10000)
@@ -1310,6 +1339,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         for (const c of conns) {
                             c.closed = true
                             if (c.retry) { clearInterval(c.retry); c.retry = undefined }
+                            if (c.keepAlive) { clearInterval(c.keepAlive); c.keepAlive = undefined }
                             if (c.ws) { c.ws.onclose = null; c.ws.onerror = null; c.ws.onmessage = null; try { c.ws.close() } catch { /* noop */ } }
                         }
                     }
