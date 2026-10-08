@@ -10,6 +10,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { createRequire } from 'node:module'
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -40,7 +41,7 @@ test('defaults: the eight resources, with the 0.1.x names so upgrades keep worki
         'ClusterRoleBinding/kwirth-crb',
         'ConfigMap/kwirth.keys',
         'Deployment/kwirth',
-        'Secret/kwirth-env',
+        'Secret/kwirth-masterkey',
         'Secret/kwirth-users',
         'Service/kwirth-svc',
         'ServiceAccount/kwirth-sa'
@@ -74,18 +75,64 @@ test('defaults: the env is exactly what the core reads today', () => {
     for (const dead of ['CHANNEL_LOG', 'CHANNEL_ALERT', 'CHANNEL_OPS', 'CHANNEL_TRIVY', 'CHANNEL_ECHO', 'CHANNEL_FILEMAN']) assert.equal(env[dead], undefined, dead)
     // and the sensitive ones never travel inline
     assert.equal(env.MASTERKEY, undefined)
-    assert.deepEqual(container(dep).envFrom, [{ secretRef: { name: 'kwirth-env' } }])
+    assert.deepEqual(container(dep).envFrom, [{ secretRef: { name: 'kwirth-masterkey' } }])
 })
 
-test('defaults: the env Secret carries only MASTERKEY', () => {
-    const secret = find(render(), 'Secret', 'kwirth-env')
-    assert.deepEqual(secret.stringData, { MASTERKEY: 'Kwirth4Ever' })
+/*
+    MASTERKEY is generated, not shipped. It signs every access key and, with a filesystem store, derives
+    the key the configuration is encrypted with, so a hardcoded default is a published password — and
+    rotating it later is data loss, not a config change. It therefore lives in a Secret of its own that
+    is kept on uninstall and looked up on every upgrade; the cluster half of that is in run-e2e.mjs,
+    because 'helm template' has no cluster to look into.
+*/
+test('defaults: no env Secret at all, and a generated MASTERKEY in its own kept Secret', () => {
+    const docs = render()
+    // nothing to carry: the env Secret only exists for a license or an SQL password
+    assert.equal(find(docs, 'Secret', 'kwirth-env'), undefined)
+
+    const secret = find(docs, 'Secret', 'kwirth-masterkey')
+    assert.equal(secret.metadata.annotations['helm.sh/resource-policy'], 'keep')
+    assert.match(secret.stringData.MASTERKEY, /^[A-Za-z0-9]{40}$/)
+    assert.notEqual(secret.stringData.MASTERKEY, 'Kwirth4Ever', 'the old hardcoded default must be gone')
 })
+
+test('a generated MASTERKEY is different every time, which is the point', () => {
+    const one = find(render(), 'Secret', 'kwirth-masterkey').stringData.MASTERKEY
+    const two = find(render(), 'Secret', 'kwirth-masterkey').stringData.MASTERKEY
+    assert.notEqual(one, two)
+})
+
+// the bootstrap admin as the chart renders it, decoded
+// the bootstrap admin as the chart renders it, decoded. The Secret key is base64url(id), the same way
+// the core writes it (IdentityService.writeUsers), because an id can be an email and a Secret key
+// cannot hold an @.
+const secretKey = (id) => Buffer.from(id, 'utf8').toString('base64url')
+
+/*
+    Does this stored hash open with this password? Checked exactly as the core checks it: bcrypt against
+    the SHA-256 the front end sends, never against the clear text. Asserting the shape of the hash would
+    pass just as happily on a hash of the wrong thing.
+*/
+const bcryptjs = createRequire(path.join(repoRoot, 'back', 'package.json'))('bcryptjs')
+const opensWith = (plain, stored) =>
+    bcryptjs.compareSync(createHash('sha256').update(plain).digest('hex'), stored)
+const adminUser = (docs, id = 'admin') => JSON.parse(Buffer.from(find(docs, 'Secret', 'kwirth-users').data[secretKey(id)], 'base64').toString())
 
 test('defaults: users Secret has the fixed name the core reads, the bootstrap admin and is kept on uninstall', () => {
     const secret = find(render(), 'Secret', 'kwirth-users')
     assert.equal(secret.metadata.annotations['helm.sh/resource-policy'], 'keep')
-    assert.deepEqual(secret.data, { admin: ADMIN_BLOB })
+
+    const user = adminUser(render())
+    assert.equal(user.id, 'admin')
+    assert.equal(user.name, 'Nicklaus Wirth')
+    // both scopes, which is what makes it an administrator and not just a viewer
+    assert.equal(user.resources, 'cluster,admin::::')
+    // generated, not the published default every install used to share
+    // stored HASHED, the way the login compares: bcrypt over the sha256 the front end sends
+    assert.match(user.password, /^\$2[aby]\$/, 'the password must not be stored in clear text')
+    assert.notEqual(user.password, 'password')
+    assert.notEqual(Buffer.from(find(render(), 'Secret', 'kwirth-users').data[secretKey('admin')], 'base64').toString(), Buffer.from(ADMIN_BLOB, 'base64').toString())
+
     const keys = find(render(), 'ConfigMap', 'kwirth.keys')
     assert.equal(keys.metadata.annotations['helm.sh/resource-policy'], 'keep')
     assert.deepEqual(keys.data, { data: '[]' })
@@ -231,7 +278,7 @@ test('sql: the connection goes to the env and the password to the Secret', () =>
     assert.equal(env.KWIRTH_SQL_SSL, 'true')
     assert.equal(env.KWIRTH_SQL_MAINTDB, 'maint')
     assert.equal(env.KWIRTH_SQL_PASSWORD, undefined)
-    assert.deepEqual(find(docs, 'Secret', 'kwirth-env').stringData, { MASTERKEY: 'Kwirth4Ever', KWIRTH_SQL_PASSWORD: 'pw' })
+    assert.deepEqual(find(docs, 'Secret', 'kwirth-env').stringData, { KWIRTH_SQL_PASSWORD: 'pw' })
 })
 
 test('license, cluster name, previous log lines, port and the other switches', () => {
@@ -244,7 +291,8 @@ test('license, cluster name, previous log lines, port and the other switches', (
     assert.equal(env.FRONT, 'false')
     assert.equal(env.AUTH, 'entraid')
     assert.equal(container(dep).ports[0].containerPort, 8080)
-    assert.deepEqual(find(docs, 'Secret', 'kwirth-env').stringData, { MASTERKEY: 'K', KWIRTH_LICENSE: 'LIC' })
+    assert.deepEqual(find(docs, 'Secret', 'kwirth-env').stringData, { KWIRTH_LICENSE: 'LIC' })
+    assert.deepEqual(find(docs, 'Secret', 'kwirth-masterkey').stringData, { MASTERKEY: 'K' })
     const svc = find(docs, 'Service')
     assert.equal(svc.spec.ports[0].port, 80)
     assert.equal(svc.spec.ports[0].targetPort, 'kwirth')
@@ -261,7 +309,7 @@ test('extraEnv, extraEnvFrom, extraVolumes and extraVolumeMounts are passed thro
     const dep = find(docs, 'Deployment')
     const c = container(dep)
     assert.deepEqual(c.env.at(-1), { name: 'OIDC_SECRET', valueFrom: { secretKeyRef: { name: 'oidc', key: 'secret' } } })
-    assert.deepEqual(c.envFrom, [{ secretRef: { name: 'kwirth-env' } }, { configMapRef: { name: 'cm' } }])
+    assert.deepEqual(c.envFrom, [{ secretRef: { name: 'kwirth-masterkey' } }, { configMapRef: { name: 'cm' } }])
     assert.deepEqual(c.volumeMounts, [{ name: 'v', mountPath: '/v' }])
     assert.deepEqual(dep.spec.template.spec.volumes, [{ name: 'v', emptyDir: {} }])
 })
@@ -289,4 +337,163 @@ test('users.bootstrap=false renders no users Secret; serviceAccount.create=false
     assert.equal(find(docs, 'ServiceAccount'), undefined)
     assert.equal(find(docs, 'Deployment').spec.template.spec.serviceAccountName, 'external-sa')
     assert.equal(find(docs, 'ClusterRoleBinding').subjects[0].name, 'external-sa')
+})
+
+/*
+    Mode 'readonly' (plan: plans/helm/PLAN.md, and plans/least-privilege for why the role is a wildcard).
+
+    The mode is not just the ClusterRole: a read-only install that still kept its configuration in
+    Secrets would come up healthy and lose the admin password on the first restart. So the pieces travel
+    together, and the ones that would silently break it are refused at render time — which is the thing
+    a chart can do that a plain manifest cannot.
+*/
+
+const RO = ['--set', 'kwirth.mode=readonly', '--set', 'kwirth.persistence.enabled=true']
+
+const renderFails = (args, pattern) => {
+    try {
+        render(args)
+        assert.fail(`expected the render to be refused: ${args.join(' ')}`)
+    }
+    catch (err) {
+        assert.match(String(err.stderr ?? err.message ?? err), pattern)
+    }
+}
+
+test('readonly: one rule, three verbs, and nothing else anywhere', () => {
+    const docs = render(RO)
+    const cr = find(docs, 'ClusterRole')
+    assert.equal(cr.rules.length, 1)
+    assert.deepEqual(cr.rules[0].apiGroups, ['*'])
+    assert.deepEqual(cr.rules[0].resources, ['*'])
+    // the whole safety of the wildcard: exec and eviction are 'create', so three read verbs deny them
+    assert.deepEqual(cr.rules[0].verbs, ['get', 'list', 'watch'])
+
+    // no namespaced Role is rendered in either mode; this pins that the mode did not grow one
+    assert.equal(find(docs, 'Role'), undefined)
+    assert.equal(find(docs, 'RoleBinding'), undefined)
+})
+
+test('readonly: apiGroups and extraApiGroups are ignored, the wildcard already covers them', () => {
+    const cr = find(render([...RO, '--set', 'kwirth.rbac.extraApiGroups[0]=fleet.cattle.io']), 'ClusterRole')
+    assert.equal(cr.rules.length, 1)
+    assert.deepEqual(cr.rules[0].apiGroups, ['*'])
+})
+
+test('readonly: the store moves to the volume, and the pieces that depend on it follow', () => {
+    const docs = render(RO)
+    const dep = find(docs, 'Deployment')
+    const env = envOf(dep)
+
+    // the store is what removes the write permission, so it is not optional here
+    assert.equal(env.KWIRTH_STORE, '/mnt/kwirth-data')
+    assert.ok(find(docs, 'PersistentVolumeClaim'))
+    // the crash log is a ConfigMap write this role cannot do
+    assert.equal(env.EXITLOG, 'false')
+    // with the store on a volume the core seeds its own admin; a Secret would be a second, stale truth
+    assert.equal(find(docs, 'Secret', 'kwirth-users'), undefined)
+})
+
+test('readonly: a hardened securityContext by default, and /tmp to make it hold', () => {
+    const dep = find(render(RO), 'Deployment')
+    const sc = container(dep).securityContext
+    assert.equal(sc.allowPrivilegeEscalation, false)
+    assert.equal(sc.readOnlyRootFilesystem, true)
+    assert.deepEqual(sc.capabilities.drop, ['ALL'])
+    assert.equal(sc.seccompProfile.type, 'RuntimeDefault')
+
+    // readOnlyRootFilesystem only holds because what the core writes at runtime goes to os.tmpdir()
+    const mount = container(dep).volumeMounts.find(v => v.mountPath === '/tmp')
+    assert.ok(mount, 'a read-only root filesystem needs a writable /tmp')
+    assert.ok(dep.spec.template.spec.volumes.find(v => v.name === mount.name).emptyDir)
+})
+
+test('readonly: what the operator sets wins, whole', () => {
+    const docs = render([...RO, '--set', 'kwirth.securityContext.runAsNonRoot=true', '--set', 'kwirth.config.exitLog=true', '--set', 'kwirth.users.bootstrap=true'])
+    const dep = find(docs, 'Deployment')
+    // not merged with the hardened default: replaced by it, which is what 'with' semantics promise
+    assert.deepEqual(container(dep).securityContext, { runAsNonRoot: true })
+    assert.equal(envOf(dep).EXITLOG, 'true')
+    assert.ok(find(docs, 'Secret', 'kwirth-users'))
+})
+
+test('normal mode is untouched by any of this', () => {
+    const dep = find(render(), 'Deployment')
+    assert.equal(envOf(dep).EXITLOG, 'true')
+    assert.equal(container(dep).securityContext, undefined)
+    assert.ok(find(render(), 'Secret', 'kwirth-users'))
+    assert.equal(find(render(), 'Deployment').spec.template.spec.volumes, undefined)
+})
+
+test('readonly refuses the combinations that would quietly undo it', () => {
+    // no store: the install would come up and then be unable to keep anything
+    renderFails(['--set', 'kwirth.mode=readonly'], /needs a store outside the cluster/)
+    // saying both is saying opposite things
+    renderFails([...RO, '--set', 'kwirth.rbac.clusterAdmin=true'], /contradicts kwirth.mode=readonly/)
+    // extraRules are appended verbatim, so one write verb there undoes the whole mode
+    renderFails([...RO, '--set', 'kwirth.rbac.extraRules[0].resources[0]=pods', '--set', 'kwirth.rbac.extraRules[0].verbs[0]=delete'], /grants the verb 'delete'/)
+    // a typo in the mode must not silently install the permissive one
+    renderFails(['--set', 'kwirth.mode=paranoid'], /must be 'normal' or 'readonly'/)
+})
+
+test('readonly still takes extra READ rules, which is what they are mostly for', () => {
+    const cr = find(render([...RO, '--set', 'kwirth.rbac.extraRules[0].nonResourceURLs[0]=/metrics', '--set', 'kwirth.rbac.extraRules[0].verbs[0]=get']), 'ClusterRole')
+    assert.equal(cr.rules.length, 2)
+    assert.deepEqual(cr.rules[1], { nonResourceURLs: ['/metrics'], verbs: ['get'] })
+})
+
+test('readonly: an explicit store path is accepted instead of the chart PVC', () => {
+    // somebody mounting their own volume through extraVolumes is a legitimate way to satisfy the guard
+    const docs = render(['--set', 'kwirth.mode=readonly', '--set', 'kwirth.config.store=/data'])
+    assert.equal(envOf(find(docs, 'Deployment')).KWIRTH_STORE, '/data')
+    assert.equal(find(docs, 'PersistentVolumeClaim'), undefined)
+})
+
+/*
+    The bootstrap admin password: generated on a first install and PRINTED, instead of a default that
+    was the same on every Kwirth in the world and lived in a public values.yaml.
+*/
+
+test('the generated password is different every install', () => {
+    assert.notEqual(adminUser(render()).password, adminUser(render()).password)
+})
+
+/*
+    The three checks that need the NOTES — that the password PRINTED is the one STORED, and that
+    nothing is printed when the operator supplied it — live in run-e2e.mjs. NOTES.txt is not part of
+    'helm template' output, and 'helm install --dry-run' reaches the cluster to check ownership,
+    which these tests promise not to do.
+*/
+
+test('a password you set is used instead of a generated one', () => {
+    // not stored as given: hashed like any other, so the Secret never holds a password in the clear
+    const stored = adminUser(render(['--set', 'kwirth.users.adminPassword=s3cr3t'])).password
+    assert.notEqual(stored, 's3cr3t')
+    assert.ok(opensWith('s3cr3t', stored), 'the hash does not verify against the password that was set')
+})
+
+test('the id and the name are yours to choose, and the Secret key follows the id', () => {
+    const docs = render(['--set', 'kwirth.users.adminId=root', '--set', 'kwirth.users.adminName=Ada Lovelace'])
+    const user = adminUser(docs, 'root')
+    assert.equal(user.id, 'root')
+    assert.equal(user.name, 'Ada Lovelace')
+    assert.equal(find(docs, 'Secret', 'kwirth-users').data[secretKey('admin')], undefined)
+})
+
+test('a whole blob in users.admin wins over the three values above', () => {
+    assert.equal(find(render(['--set', `kwirth.users.admin=${ADMIN_BLOB}`]), 'Secret', 'kwirth-users').data[secretKey('admin')], ADMIN_BLOB)
+})
+
+/*
+    🔴 The id can be an email, and a Secret key can hold alphanumerics, '-', '_' and '.' and nothing
+    else. Using the id as the key renders a Secret the API server refuses — an install that fails on
+    apply, not on render, which is the worst place to find out.
+*/
+test('an id with characters a Secret key cannot hold still produces a legal key', () => {
+    const docs = render(['--set', 'kwirth.users.adminId=ada@acme.com'])
+    const [key] = Object.keys(find(docs, 'Secret', 'kwirth-users').data)
+    assert.match(key, /^[A-Za-z0-9._-]+$/, `'${key}' is not a legal Secret key`)
+    // and it is the SAME encoding the core uses, so both write the same place
+    assert.equal(key, Buffer.from('ada@acme.com', 'utf8').toString('base64url'))
+    assert.equal(adminUser(docs, 'ada@acme.com').id, 'ada@acme.com')
 })

@@ -10,6 +10,36 @@
 
 kwirth:
   # ---------------------------------------------------------------------------
+  # Mode — how much the cluster lets Kwirth do
+  # ---------------------------------------------------------------------------
+  # 'normal'   — the ClusterRole gets every verb on the API groups under 'rbac' below. Everything
+  #              works, including the things that CHANGE the cluster: the Magnify channel's commands
+  #              (restart, scale, cordon, drain, evict, apply, delete) and the ops and fileman
+  #              plugins, which open a shell into a pod.
+  #
+  # 'readonly' — one rule, three verbs: get, list, watch, on everything. Nothing in the install can
+  #              change anything in the cluster. Logs, metrics, events and the whole resource browser
+  #              work exactly the same; the actions above answer 403, with the button still in the UI,
+  #              so if you pick this mode do not install ops and fileman.
+  #
+  # Read-only also needs somewhere outside the cluster to keep Kwirth's own configuration, because
+  # inside Kubernetes that configuration IS Secrets and ConfigMaps it would have to write. Turn on
+  # 'persistence' below; the chart refuses to render otherwise rather than hand you an install that
+  # looks healthy and loses its users on the first restart.
+  #
+  # Two more things this mode changes on its own, and only if you have not said otherwise: 'exitLog'
+  # defaults to false (the crash log is a ConfigMap write that would 403) and 'users.bootstrap'
+  # defaults to false (with the store on a volume the core seeds its own admin: admin / password).
+  # It also applies a hardened container securityContext, unless you provide your own.
+  #
+  # 🔴 What read-only does NOT protect: reading Secrets. 'resources: [*]' includes them, and
+  # Kubernetes RBAC cannot subtract — there are no deny rules and no way to say "every group except
+  # this one", so a role cannot both cover the CustomResourceDefinitions Kwirth watches (which differ
+  # per cluster and cannot be known here) and leave Secrets out. Worth weighing against the fact that
+  # in either mode Kwirth already reads every pod's log and every ConfigMap in the cluster.
+  mode: normal
+
+  # ---------------------------------------------------------------------------
   # Container image
   # ---------------------------------------------------------------------------
   # The image can be given as the object below OR, for 0.1.x compatibility, as a plain string
@@ -46,9 +76,22 @@ kwirth:
     port: 3883
     # MASTERKEY — signs the access keys handed to clients and, with a filesystem store, derives the
     # encryption key for secrets at rest. Delivered through a Secret, never inline in the pod spec.
-    # IMPORTANT: changing it after the first run with a filesystem store makes stored secrets unreadable.
-    # With the default store (Secrets/ConfigMaps) it is safe to change.
-    masterkey: Kwirth4Ever
+    #
+    # EMPTY = the chart generates a random one on the first install and keeps it for ever after: it is
+    # held in its own Secret ('<release>-kwirth-masterkey'), looked up on every upgrade, and kept on
+    # uninstall so a reinstall over the retained volume still reads it. Read it with:
+    #
+    #   kubectl get secret <release>-kwirth-masterkey -n <ns> -o jsonpath='{.data.MASTERKEY}' | base64 -d
+    #
+    # 🔴 Changing it is not a configuration change, it is data loss: every access key already handed out
+    # stops validating, and with a filesystem store the configuration stops decrypting — after which the
+    # core finds no users it can read and seeds the default admin again, so a lost install looks like a
+    # fresh one.
+    #
+    # ⚠️ Set your own if you deploy from rendered output instead of from the cluster (Argo CD and
+    # friends): 'helm template' cannot look the live Secret up, so it renders a new random key on every
+    # render, and every sync would rotate it.
+    masterkey: ""
     # AUTH — the authentication backend. "kwirth" = built-in users (the kwirth-users Secret).
     # Any other value = the id of an installed IdP connector (e.g. "entraid", "github", "gitlab").
     # The connector must be installed and configured before you switch.
@@ -77,7 +120,9 @@ kwirth:
     # and you see escape sequences in your log viewer.
     ansiLog: true
     # EXITLOG — log the reason when the process exits. Useful for diagnosing OOMKills and crashes.
-    exitLog: true
+    # It also appends the post-mortem to a 'kwirth-secure-log' ConfigMap, which mode 'readonly' has no
+    # permission to write. Unset = true in mode 'normal', false in 'readonly'. Set it to override.
+    exitLog:
     # KWIRTH_CLUSTER_NAME — the name Kwirth uses for its cluster in the UI and in stored data.
     # Empty = derived from the cluster itself (cluster API server name or a cloud provider tag).
     # Set it explicitly in multi-cluster setups to tell them apart.
@@ -165,13 +210,30 @@ kwirth:
   # (helm.sh/resource-policy: keep). On a fresh install with 'bootstrap: false' nobody can log in,
   # so only disable it if you create the Secret yourself.
   users:
-    bootstrap: true
-    # The bootstrap admin user, base64-encoded JSON. The default is:
-    #   {"id":"admin","name":"Nicklaus Wirth","password":"password","resources":"cluster,admin::::"}
-    # The "resources" field grants both cluster-wide and admin scopes. To change the initial password,
-    # encode your own JSON and put it here — but it is simpler to install with the default and change
-    # the password from the UI immediately after first login.
-    admin: eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0=
+    # Unset = true in mode 'normal', false in 'readonly' — there the core keeps its users on the
+    # volume and seeds the admin itself, so this Secret would be a second, stale source of truth for
+    # the password. Set it to override.
+    bootstrap:
+    # Who the bootstrap admin is.
+    adminId: admin
+    adminName: Nicklaus Wirth
+    # EMPTY = the chart generates a password on the first install and PRINTS IT in the install notes.
+    # Copy it then. Until somebody logs in you can still read it out of the Secret (the install notes
+    # print the exact command, with the key already resolved); after the first login the core has
+    # replaced it with a bcrypt hash and it cannot be read back at all.
+    #
+    # Set your own to skip the generation. Either way the core re-saves it as bcrypt the first time
+    # someone logs in, so the plain value only exists until then.
+    #
+    # On an upgrade nothing here applies: the live Secret is rendered back untouched, because by then
+    # the users are managed from Kwirth and not from the chart.
+    adminPassword: ""
+    # The whole bootstrap user as base64 JSON, for full control. It WINS over adminId, adminName and
+    # adminPassword, and nothing is generated or printed. The shape is:
+    #   {"id":"admin","name":"Nicklaus Wirth","password":"...","resources":"cluster,admin::::"}
+    # where "resources" grants both the cluster-wide and the admin scopes. Leave it empty unless you
+    # need a field the three values above do not cover.
+    admin: ""
 
   # ---------------------------------------------------------------------------
   # Extra pod configuration
@@ -203,8 +265,19 @@ kwirth:
   podLabels: {}
   # Pod-level and container-level security contexts. The defaults are empty; set them to match your
   # platform policy. Example: { runAsNonRoot: true, runAsUser: 1000, fsGroup: 1000 }
+  #
+  # In mode 'readonly', leaving 'securityContext' empty gets a hardened one instead of nothing:
+  # allowPrivilegeEscalation false, readOnlyRootFilesystem true, all capabilities dropped and the
+  # RuntimeDefault seccomp profile. Anything you set here replaces it whole. runAsNonRoot is left out
+  # on purpose: the image declares no USER, and turning it on without checking the volume's ownership
+  # first is how an install stops booting.
   podSecurityContext: {}
   securityContext: {}
+
+  # Size of the emptyDir mounted at /tmp in mode 'readonly'. That volume is what lets
+  # readOnlyRootFilesystem hold: everything the core writes at runtime that is not its store —
+  # extension tarballs, guides, AI toolsets — goes to os.tmpdir(). Raise it for big guides or packs.
+  tmpSizeLimit: 1Gi
   # Scheduling constraints — all passed through as-is.
   nodeSelector: {}
   tolerations: []

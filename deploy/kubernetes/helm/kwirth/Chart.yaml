@@ -3,7 +3,7 @@ name: kwirth
 description: Kwirth, the Kubernetes observability platform. Logs, metrics, ops and a marketplace of extensions, served from inside your cluster.
 type: application
 # Chart version. SemVer, independent of the Kwirth release it ships. Bump it on every change to this folder.
-version: 0.2.1
+version: 0.3.0
 # The Kwirth image this chart was tested with. It is the default image tag (see values.yaml, kwirth.image.tag).
 appVersion: "0.6.38"
 kubeVersion: ">=1.25.0-0"

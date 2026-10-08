@@ -1,4 +1,6 @@
+{{- include "kwirth.validateMode" . }}
 {{- $store := include "kwirth.store" . }}
+{{- $readOnly := include "kwirth.readOnly" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -44,9 +46,9 @@ spec:
         - name: kwirth
           image: {{ include "kwirth.image" . | quote }}
           imagePullPolicy: {{ include "kwirth.imagePullPolicy" . }}
-          {{- with .Values.kwirth.securityContext }}
+          {{- with include "kwirth.containerSecurityContext" . | trim }}
           securityContext:
-            {{- toYaml . | nindent 12 }}
+            {{- . | nindent 12 }}
           {{- end }}
           env:
             - name: ROOTPATH
@@ -74,7 +76,7 @@ spec:
             - name: ANSILOG
               value: {{ .Values.kwirth.config.ansiLog | quote }}
             - name: EXITLOG
-              value: {{ .Values.kwirth.config.exitLog | quote }}
+              value: {{ include "kwirth.exitLog" . | quote }}
             {{- with .Values.kwirth.config.clusterName }}
             - name: KWIRTH_CLUSTER_NAME
               value: {{ . | quote }}
@@ -101,8 +103,18 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
           envFrom:
+            {{- if .Values.kwirth.existingSecret }}
+            {{- /* everything sensitive comes from the operator's own Secret, MASTERKEY included */}}
+            - secretRef:
+                name: {{ .Values.kwirth.existingSecret }}
+            {{- else }}
+            - secretRef:
+                name: {{ include "kwirth.masterkeySecretName" . }}
+            {{- if include "kwirth.hasEnvSecret" . }}
             - secretRef:
                 name: {{ include "kwirth.envSecretName" . }}
+            {{- end }}
+            {{- end }}
             {{- with .Values.kwirth.extraEnvFrom }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -127,22 +139,34 @@ spec:
             {{- toYaml .Values.kwirth.probes.liveness | nindent 12 }}
           resources:
             {{- toYaml .Values.kwirth.resources | nindent 12 }}
-          {{- if or .Values.kwirth.persistence.enabled .Values.kwirth.extraVolumeMounts }}
+          {{- if or .Values.kwirth.persistence.enabled .Values.kwirth.extraVolumeMounts $readOnly }}
           volumeMounts:
             {{- if .Values.kwirth.persistence.enabled }}
             - name: kwirth-data
               mountPath: {{ .Values.kwirth.persistence.mountPath }}
             {{- end }}
+            {{- if $readOnly }}
+            {{- /* Scratch space. This is what lets readOnlyRootFilesystem hold: everything the core
+                   writes at runtime that is not its store — extension tarballs, docs, AI toolsets —
+                   goes to os.tmpdir(). */}}
+            - name: kwirth-tmp
+              mountPath: /tmp
+            {{- end }}
             {{- with .Values.kwirth.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
           {{- end }}
-      {{- if or .Values.kwirth.persistence.enabled .Values.kwirth.extraVolumes }}
+      {{- if or .Values.kwirth.persistence.enabled .Values.kwirth.extraVolumes $readOnly }}
       volumes:
         {{- if .Values.kwirth.persistence.enabled }}
         - name: kwirth-data
           persistentVolumeClaim:
             claimName: {{ include "kwirth.pvcName" . }}
+        {{- end }}
+        {{- if $readOnly }}
+        - name: kwirth-tmp
+          emptyDir:
+            sizeLimit: {{ .Values.kwirth.tmpSizeLimit | default "1Gi" }}
         {{- end }}
         {{- with .Values.kwirth.extraVolumes }}
         {{- toYaml . | nindent 8 }}

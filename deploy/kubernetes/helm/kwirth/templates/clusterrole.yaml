@@ -6,7 +6,30 @@ metadata:
   labels:
     {{- include "kwirth.labels" . | nindent 4 }}
 rules:
-{{- if .Values.kwirth.rbac.clusterAdmin }}
+{{- if include "kwirth.readOnly" . }}
+  {{- /*
+      Read everything, change nothing. The safety is in the VERBS, not in the resources: opening a
+      shell is 'create' on pods/exec and evicting is 'create' on pods/eviction, so three read verbs
+      deny them as surely as not naming the resource would.
+
+      Spelling resources out instead was tried, in deploy/kubernetes/manifests, and does not survive
+      contact with a real cluster: the events provider opens a watcher for every
+      CustomResourceDefinition it sees appear, nobody has to ask it to, and which CRDs a cluster has
+      cannot be known when the chart is written. On a stock k3d with Rancher and Kubewarden an
+      enumerated role produced 37 Forbidden watchers at every boot and lost those events in silence.
+
+      The price, and it is in the values file too: 'resources: [*]' includes Secrets, and RBAC cannot
+      subtract — no deny rules, no "every group except the core one". Whoever reaches Kwirth's admin
+      can read every Secret in the cluster. Against that: under either mode Kwirth already reads every
+      pod's log and every ConfigMap, and the normal mode reads AND WRITES all of it, plus exec.
+
+      apiGroups and extraApiGroups are ignored here on purpose — the wildcard already covers them,
+      including the CRD groups they were there to add.
+  */}}
+  - apiGroups: ['*']
+    resources: ['*']
+    verbs: ['get', 'list', 'watch']
+{{- else if .Values.kwirth.rbac.clusterAdmin }}
   - apiGroups: ['*']
     resources: ['*']
     verbs: ['*']

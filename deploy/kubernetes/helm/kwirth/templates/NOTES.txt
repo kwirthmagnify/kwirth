@@ -1,11 +1,12 @@
 Kwirth {{ .Chart.AppVersion }} (chart {{ .Chart.Version }}) is being deployed to namespace '{{ .Release.Namespace }}'.
 
+  mode       : {{ if include "kwirth.readOnly" . }}readonly — it can read the cluster, and change nothing in it{{ else }}normal — it can change the cluster{{ end }}
   image      : {{ include "kwirth.image" . }}
   root path  : {{ default "/" (include "kwirth.rootpath" .) }}
   store      : {{ default "Kubernetes Secrets and ConfigMaps" (include "kwirth.store" .) }}
   database   : {{ if .Values.kwirth.sql.enabled }}{{ .Values.kwirth.sql.host }}:{{ .Values.kwirth.sql.port }}{{ else }}none (only extensions with data of their own need one){{ end }}
   license    : {{ if or .Values.kwirth.config.license .Values.kwirth.existingSecret }}configured{{ else }}none, open source mode{{ end }}
-  rbac       : {{ if .Values.kwirth.rbac.clusterAdmin }}cluster-admin{{ else }}{{ len .Values.kwirth.rbac.apiGroups }} API groups{{ with .Values.kwirth.rbac.extraApiGroups }} + {{ len . }} extra{{ end }}{{ end }}
+  rbac       : {{ if include "kwirth.readOnly" . }}get, list, watch — and nothing else, anywhere{{ else if .Values.kwirth.rbac.clusterAdmin }}cluster-admin{{ else }}{{ len .Values.kwirth.rbac.apiGroups }} API groups{{ with .Values.kwirth.rbac.extraApiGroups }} + {{ len . }} extra{{ end }}{{ end }}
 
 {{- if .Values.kwirth.ingress.enabled }}
 
@@ -19,9 +20,48 @@ No Ingress was created. To try it from your machine:
 and open http://localhost:{{ .Values.kwirth.service.port }}{{ include "kwirth.ingressPath" . }}
 {{- end }}
 
-{{- if .Values.kwirth.users.bootstrap }}
+{{- if include "kwirth.showAdminPassword" . }}
 
-First login: user 'admin', password 'password'. Change it right away from the user management dialog.
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  First login                                                            │
+  │                                                                         │
+  │    user     : {{ printf "%-58s" .Values.kwirth.users.adminId }}│
+  │    password : {{ printf "%-58s" (include "kwirth.adminPassword" .) }}│
+  │                                                                         │
+  │  COPY IT NOW. This was generated for this install and these notes are   │
+  │  the only place it is shown in the clear. After this, it lives in the   │
+  │  'kwirth-users' Secret, and the core replaces it with a bcrypt hash as  │
+  │  soon as somebody logs in — after which it cannot be read back at all.  │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  Lost it before anybody logs in?  'helm upgrade' will NOT reset it — the Secret is kept on purpose —
+  but you can still read it out of the Secret, which prints the whole user, password included:
+
+    kubectl get secret kwirth-users -n {{ .Release.Namespace }} -o jsonpath='{.data.{{ include "kwirth.adminSecretKey" . }}}' | base64 -d
+
+  Lost it AFTER somebody logged in? Then it is gone: the core replaced it with a bcrypt hash. Delete
+  the 'kwirth-users' Secret and reinstall, or add a user from another account that still works.
+{{- else if include "kwirth.usersBootstrap" . }}
+
+First login: user '{{ .Values.kwirth.users.adminId }}', with the password you configured. If this is an
+upgrade, the users Secret was left exactly as it was — they are managed from Kwirth, not from the chart.
+{{- else if include "kwirth.readOnly" . }}
+
+First login: user 'admin', password 'password'. In this mode the users live on the volume, not in a
+Secret, and the core creates that admin on its first boot. Change it right away from the user
+management dialog.
+{{- end }}
+
+{{- if include "kwirth.readOnly" . }}
+
+This install cannot change anything in the cluster. Logs, metrics, events and the resource browser work
+as always; restart, scale, cordon, drain, evict, apply and delete answer 403, and so does opening a
+shell into a pod. The buttons are still in the UI, so do not install the 'ops' and 'fileman' plugins
+here. It CAN read Secrets: Kubernetes RBAC has no way to grant everything except one resource.
+
+Metrics need a Kwirth that reads the ServiceAccount token Kubernetes projects into the pod (0.6.65 and
+later). On an older image this mode starts fine and says 'There is no SA Token, no metrics will be
+available'. The image being installed is {{ include "kwirth.image" . }}.
 {{- end }}
 
 The users Secret ('kwirth-users') and the API keys ConfigMap ('kwirth.keys') are kept on uninstall so a
