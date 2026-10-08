@@ -2,8 +2,32 @@ apiVersion: v1
 entries:
   kwirth:
   - apiVersion: v2
+    appVersion: 0.6.65
+    created: "2026-10-08T21:14:17.6679478+02:00"
+    description: Kwirth, the Kubernetes observability platform. Logs, metrics, ops
+      and a marketplace of extensions, served from inside your cluster.
+    digest: b4032278dffc2574e7d0894ade6e31bd00cabf1baa1e2fd2b6682a8671abd842
+    home: https://kwirthmagnify.dev
+    icon: https://kwirthmagnify.dev/_media/kwirth-transparent.png
+    keywords:
+    - kubernetes
+    - observability
+    - logs
+    - metrics
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: Kwirth Magnify
+      url: https://github.com/kwirthmagnify
+    name: kwirth
+    sources:
+    - https://github.com/kwirthmagnify/kwirth
+    type: application
+    urls:
+    - https://kwirthmagnify.dev/helm-charts/kwirth-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
     appVersion: 0.6.38
-    created: "2026-10-03T13:56:42.1612168+02:00"
+    created: "2026-10-08T21:14:17.6675216+02:00"
     description: Kwirth, the Kubernetes observability platform. Logs, metrics, ops
       and a marketplace of extensions, served from inside your cluster.
     digest: 45acccda34a27f4d35f43e0c3a32dd58bf29acf594e519e4b4fe1e46b60b3f40
@@ -27,7 +51,7 @@ entries:
     version: 0.2.1
   - apiVersion: v2
     appVersion: 0.6.38
-    created: "2026-10-03T13:56:42.1589658+02:00"
+    created: "2026-10-08T21:14:17.6645162+02:00"
     description: Kwirth, the Kubernetes observability platform. Logs, metrics, ops
       and a marketplace of extensions, served from inside your cluster.
     digest: c3922d9e6bf7b73dba282a307a51d44e76423d703f74efca7ccdcf202805ba8d
@@ -51,7 +75,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: 0.4.235
-    created: "2026-10-03T13:56:42.1561314+02:00"
+    created: "2026-10-08T21:14:17.6616967+02:00"
     description: A Helm chart for deploying Kwirth on Kubernetes
     digest: 08ef707028ac0d2ae92e54ae3f97a3f0ef3ab37f3bbdc5c295cb187370b56187
     name: kwirth
@@ -61,7 +85,7 @@ entries:
     version: 0.1.5
   - apiVersion: v2
     appVersion: 0.4.102
-    created: "2026-10-03T13:56:42.1549678+02:00"
+    created: "2026-10-08T21:14:17.6606848+02:00"
     description: A Helm chart for deploying Kwirth on Kubernetes
     digest: 414321b7a6aed6a84f175b778950e3aa23ec35018a7af5498af063eefac24a0e
     name: kwirth
@@ -71,7 +95,7 @@ entries:
     version: 0.1.4
   - apiVersion: v2
     appVersion: 0.4.63
-    created: "2026-10-03T13:56:42.1538482+02:00"
+    created: "2026-10-08T21:14:17.6569531+02:00"
     description: A Helm chart for deploying Kwirth on Kubernetes
     digest: 0b7f7fed571deb88c69118a324007060c223cc6a2fbf865be27e0bf7e6be631b
     name: kwirth
@@ -81,7 +105,7 @@ entries:
     version: 0.1.3
   - apiVersion: v2
     appVersion: 0.4.20
-    created: "2026-10-03T13:56:42.1527249+02:00"
+    created: "2026-10-08T21:14:17.6549342+02:00"
     description: A Helm chart for deploying Kwirth on Kubernetes
     digest: 4b983df17f588cfc546fdc2f0a89f6f7ac6d14cc7042fd35963ae50c0483405b
     name: kwirth
@@ -91,7 +115,7 @@ entries:
     version: 0.1.2
   - apiVersion: v2
     appVersion: 0.4.20
-    created: "2026-10-03T13:56:42.1516019+02:00"
+    created: "2026-10-08T21:14:17.6534131+02:00"
     description: A Helm chart for deploying Kwirth on Kubernetes
     digest: f3df240a1b9c1651e50bc07748d7536e73d5c86fad096a38718ed5c933e9c2e1
     name: kwirth
@@ -101,7 +125,7 @@ entries:
     version: 0.1.1
   - apiVersion: v2
     appVersion: 0.4.12
-    created: "2026-10-03T13:56:42.1504002+02:00"
+    created: "2026-10-08T21:14:17.651049+02:00"
     description: A Helm chart for deploying Kwirth on Kubernetes
     digest: c89b70d7f602370bd0e824cdba9d60df76d566eae0f40731e84d01d67726e4c7
     name: kwirth
@@ -109,4 +133,4 @@ entries:
     urls:
     - https://kwirthmagnify.dev/helm-charts/kwirth-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-03T13:56:42.1480375+02:00"
+generated: "2026-10-08T21:14:17.6488303+02:00"

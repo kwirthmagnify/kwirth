@@ -47,10 +47,14 @@ kwirth:
   image:
     # The registry/repo. Change this to use a mirror or a private registry.
     repository: kwirthmagnify/kwirth
-    # The tag. Empty ("") resolves to the chart appVersion — the image this chart was tested with.
-    # Do NOT use "latest": it is not moved with every release and you lose reproducibility.
-    # Example: "0.6.38" to pin a specific Kwirth version.
-    tag: ""
+    # The tag. 'develop' is the moving one: it always carries the newest core, which is what this
+    # chart's newer features need. Empty ("") resolves to the chart appVersion instead.
+    #
+    # Pin a version for anything you care about reproducing — e.g. "0.6.65" — and be aware of the
+    # floor: mode 'readonly' needs 0.6.65 or later for its metrics, and the generated admin password
+    # needs it to log in at all, because earlier cores rejected the $2a$ bcrypt the chart writes.
+    # Do NOT use "latest": it is not moved with every release.
+    tag: develop
     # When to pull. IfNotPresent is right for a pinned tag. Always is forced when a string image is used.
     pullPolicy: IfNotPresent
 

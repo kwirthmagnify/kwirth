@@ -48,11 +48,20 @@ test('defaults: the eight resources, with the 0.1.x names so upgrades keep worki
     ])
 })
 
-test('defaults: the image is pinned to appVersion, never latest', () => {
+/*
+    The default tag is 'develop', the moving one, because the chart's newer features need a core newer
+    than any release tag it could point at. 'latest' is the one that must never appear: it is not moved
+    with every release, so it promises freshness it does not deliver.
+*/
+test('defaults: the image is develop, never latest, and appVersion stays a real version', () => {
     const dep = find(render(), 'Deployment')
-    assert.equal(container(dep).image, `kwirthmagnify/kwirth:${chartMeta.appVersion}`)
+    assert.equal(container(dep).image, 'kwirthmagnify/kwirth:develop')
     assert.equal(container(dep).imagePullPolicy, 'IfNotPresent')
-    assert.doesNotMatch(String(chartMeta.appVersion), /latest/)
+    assert.doesNotMatch(String(chartMeta.appVersion), /latest|develop/)
+})
+
+test('a pinned tag wins over the default', () => {
+    assert.equal(container(find(render(['--set', 'kwirth.image.tag=0.6.65']), 'Deployment')).image, 'kwirthmagnify/kwirth:0.6.65')
 })
 
 test('defaults: the env is exactly what the core reads today', () => {
