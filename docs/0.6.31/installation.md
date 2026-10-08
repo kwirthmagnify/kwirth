@@ -93,7 +93,7 @@ kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/d
 
 **Its configuration lives on a PersistentVolumeClaim**, not in Secrets and ConfigMaps, and that is what removes the write permission rather than a detail of persistence. It is the `KWIRTH_STORE` mechanism described in the next section, already wired in the file. Two consequences worth knowing before you apply it:
 
-- `MASTERKEY` becomes the key your configuration is encrypted with. Set it once, before the first boot, and never change it — see the warning in the next section.
+- `MASTERKEY` is the key your configuration is encrypted with. Leave it unset and kwirth generates a random one on the first boot and persists it on the volume, so every installation gets its own instead of a shared default — then it must never change (see the warning in the next section). A key that lives on the same volume as the store does not protect it from someone who can read the volume; for real at-rest protection, set `MASTERKEY` from a Secret kept outside the volume.
 - The first boot creates the admin user as `admin` / `password`, in the volume. Change it immediately.
 
 **One thing it does allow: reading Secrets.** It grants read on every resource, Secrets included. Kubernetes RBAC has no deny rules and no way to express "every group except this one", so a role cannot both cover the CustomResourceDefinitions kwirth watches — which differ from cluster to cluster and cannot be known in advance — and leave Secrets out. If your requirement is that Secrets stay unreadable, the file carries an enumerated alternative, commented in its header, that you can paste over the single rule; its cost is that events from CustomResourceDefinitions will not arrive.
@@ -113,7 +113,7 @@ However, some environments restrict Secret/ConfigMap write access, or you may pr
 
 > **Note**: this setting only affects Kubernetes mode. Desktop mode always uses `~/.kwirth/`, and Docker mode uses its own volume mounts.
 
-> **Security**: when kwirth uses filesystem storage (desktop or `KWIRTH_STORE` path), sensitive data (secrets) is encrypted at rest with AES-256-GCM using a key derived from `MASTERKEY`. Non-sensitive data (config maps) is stored as plain JSON. If you change `MASTERKEY` after first run, existing secret files will become unreadable.
+> **Security**: when kwirth uses filesystem storage (desktop or `KWIRTH_STORE` path), sensitive data (secrets) is encrypted at rest with AES-256-GCM using a key derived from `MASTERKEY`. Non-sensitive data (config maps) is stored as plain JSON. When `MASTERKEY` is not set, kwirth generates a random one on the first boot and keeps it in the store, so there is no shared default key; but a key kept next to the store it encrypts does not protect it against someone who can read the volume — provide `MASTERKEY` yourself, from outside the volume, for at-rest encryption that also resists that. If you change `MASTERKEY` after first run, existing secret files will become unreadable.
 
 ### Example: store kwirth data in a PersistentVolumeClaim
 
@@ -348,7 +348,7 @@ Options:
   -k, --apiKey                    Context to load (default: false)
   -p, --port <number>             Server port (default: 3883)
   -r, --rootpath <string>         Root path (default: )
-  -k, --masterkey <string>        Master key (default: Kwirth4Ever)
+  -k, --masterkey <string>        Master key (must match the target kwirth; no default)
   -t, --front                     Enable front SPA serving (default: false)
   -f, --forward                   FORWARD feature (default: false)
   -i, --metricsinterval <number>  Seconds between metrics (default: 15)

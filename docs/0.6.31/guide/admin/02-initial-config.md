@@ -22,8 +22,8 @@ The built-in admin account is special mainly because it exists from the start: i
 
 The **master key** is the secret kwirth uses to **sign the access keys** it issues to clients. Anyone who knows it could forge access keys, so it matters.
 
-- Its default value is **`Kwirth4Ever`** — fine for a quick test, **never** for anything real.
-- Set your own at deploy time: Helm `masterkey`, External `--masterkey`, or the corresponding environment variable.
+- It **no longer has a hardcoded default**. When you don't set one, kwirth generates a random key on the first boot and keeps it in the store, so there is no shared, publicly known key to forge against.
+- Set your own at deploy time — Helm `masterkey`, External `--masterkey`, or the `MASTERKEY` environment variable — when you need a **stable, known** key: to issue API keys from outside, to keep the same key across a store that is not durable, or to encrypt the on-disk store with a key held **outside** the volume (a random key generated next to the store does not protect it from someone who can read the volume).
 
 > **Security:** treat the master key like a signing secret. Set a strong, unique value **before** exposing kwirth to users, and store it somewhere safe (a Kubernetes secret / your secrets manager). Changing it later invalidates access keys already issued.
 
