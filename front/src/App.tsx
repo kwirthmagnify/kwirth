@@ -260,6 +260,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     const [clusters, setClusters] = useState<Cluster[]>([])
     const clustersRef = useRef<Cluster[]>([])
+    /*  Una función por federación abierta, para pedirle que compruebe si alguno de sus clusters cambió de
+        dirección. Las registra `openRemoteChannels` y las llama `onManageClustersClosed`: sin un punto de
+        encuentro, una pestaña abierta no tiene forma de enterarse de que el usuario movió un cluster.  */
+    const fedRefreshRef = useRef<(() => void)[]>([])
     const [selectedClusterName, setSelectedClusterName] = useState<string>()
 
     const tabs = useRef<ITabObject[]>([])
@@ -1268,12 +1272,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     thing is how they end up out of sync, and the day someone raises one and not the other this
                     comes back with a worse diagnosis.
                 */
-                interface IRemoteConn { clusterId: string; ws?: WebSocket; closed: boolean; retry?: ReturnType<typeof setInterval>; keepAlive?: ReturnType<typeof setInterval>; instanceId?: string }
+                interface IRemoteConn { clusterId: string; ws?: WebSocket; closed: boolean; retry?: ReturnType<typeof setInterval>; keepAlive?: ReturnType<typeof setInterval>; instanceId?: string; using?: Cluster }
                 const conns: IRemoteConn[] = []
                 const connect = (endpoint: Cluster, conn: IRemoteConn) => {
                     let ws: WebSocket
                     try { ws = new WebSocket(endpoint.url) }
                     catch { return }
+                    conn.using = endpoint   // con qué dirección y clave está hablando AHORA MISMO
                     conn.ws = ws
                     ws.onopen = () => {
                         if (conn.retry) { clearInterval(conn.retry); conn.retry = undefined }
@@ -1349,6 +1354,30 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     conns.push(conn)
                     connect(ep, conn)
                 }
+                /*
+                    🔴 Reevaluar las conexiones VIVAS cuando cambia la lista de clusters.
+
+                    Sin esto, una pestaña abierta seguía hablando con la dirección que leyó al arrancar
+                    aunque el usuario la hubiera cambiado en Manage clusters — y entonces el MISMO front,
+                    con el MISMO landscape, decía `3/3` en una pestaña y `2/3` en otra. No es que cada una
+                    tuviera razón "a su manera": la primera estaba informando de una conectividad basada en
+                    una dirección **que ya no está configurada**. Visto en dev, 2026-10-08.
+
+                    Se cierra el socket y el bucle de reintento (que ya re-resuelve) se encarga de levantar
+                    el nuevo. Solo se tocan las que de verdad cambiaron: tirar conexiones sanas por guardar
+                    un diálogo sería peor que el problema.
+                */
+                const refresh = (): void => {
+                    for (const c of conns) {
+                        if (c.closed) continue
+                        const fresh = clustersRef.current.find(x => (x.id || x.name) === c.clusterId)
+                        if (!fresh || !c.using) continue
+                        if (fresh.url === c.using.url && fresh.accessString === c.using.accessString) continue
+                        console.log(`Cluster ${c.clusterId} changed endpoint: dropping its federated connection to pick the new one up`)
+                        if (c.ws) { try { c.ws.close() } catch { /* el onclose dispara el reintento */ } }
+                    }
+                }
+                fedRefreshRef.current.push(refresh)
                 return {
                     send: (clusterId: string, msg: any) => {
                         const c = conns.find(x => x.clusterId === clusterId)
@@ -1358,6 +1387,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         if (c?.ws && c.ws.readyState === WebSocket.OPEN) c.ws.send(JSON.stringify({ ...msg, instance: c.instanceId ?? msg.instance }))
                     },
                     close: () => {
+                        fedRefreshRef.current = fedRefreshRef.current.filter(f => f !== refresh)
                         for (const c of conns) {
                             c.closed = true
                             if (c.retry) { clearInterval(c.retry); c.retry = undefined }
@@ -2470,6 +2500,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         let payload=JSON.stringify(otherClusters)
         fetch (`${backendUrl}/store/${user?.id}/clusters/list`, addPostAuthorization(accessString, payload))
         setClusters([...cc])
+        // El ref se sincroniza en un efecto, o sea DESPUÉS de pintar: se adelanta aquí para que la
+        // reevaluación de abajo compare contra la lista nueva y no contra la que acabamos de sustituir.
+        clustersRef.current = [...cc]
+        // Las conexiones federadas vivas apuntan a la dirección que leyeron al abrirse. Si acaba de
+        // cambiar, hay que soltarlas: si no, esta pestaña sigue informando de un cluster que ya no está
+        // donde dice, y otra recién abierta dirá lo contrario.
+        for (const refresh of fedRefreshRef.current) refresh()
     }
 
     const onFirstTimeLoginClose = (exit:boolean) => {
