@@ -59,6 +59,15 @@ export class PluginManager {
     // the path watched, by id, so that fs.unwatchFile can be called on unregistering
     private devWatchers = new Map<string, string>()
     onDevPluginReloaded?: (id: string, ChannelClass: TChannelConstructor) => void
+    /*
+        Uninstalling has to STOP what is running, not just forget the class. Deleting the constructor
+        prevents NEW instances, but the ones already created keep their timers, their provider
+        subscriptions and their database connections — a channel that is "started but no longer
+        installed". Seen in the field (2026-10-07): hours after being uninstalled a channel was still
+        computing scores nobody received, while the core logged "Unsupported channel … for sending
+        signals" on every attempt to reach it, because the running instance no longer listed it.
+    */
+    onPluginUninstalled?: (id: string) => void
 
     constructor(configMaps: IConfigMaps) {
         this.configMaps = configMaps
@@ -341,6 +350,10 @@ export class PluginManager {
         // will serve the previous installation's js as long as the pod stays alive.
         dropCachedExtensionFiles('plugin', id)
         registeredChannels.delete(id)
+        // Deleting the constructor only stops NEW instances. The ones already running are stopped here,
+        // before the configmaps go: otherwise the plugin disappears from the index while its channel
+        // carries on working, which is a state nobody can reason about.
+        this.onPluginUninstalled?.(id)
         this.installedIds = this.installedIds.filter(i => i !== id)
 
         await this.configMaps.write('kwirth-plugins-index', index.filter(p => p.id !== id))

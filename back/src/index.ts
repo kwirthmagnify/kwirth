@@ -1889,6 +1889,26 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             if (bundledExtensionsPath) await pluginManager.installBundled(bundledExtensionsPath, registeredChannels, licenseManager)
             await pluginManager.loadAll(registeredChannels)
             pluginManager.loadDevPlugins(registeredChannels)
+            /*
+                A channel that is uninstalled has to STOP. Removing the constructor only prevents new
+                instances; the live ones keep their timers, their provider subscriptions and their database
+                connections. The symptom is a channel "started but no longer installed": it goes on working
+                for nobody, and every signal addressed to it fails with "Unsupported channel", because the
+                running instance no longer lists it. Same walk as the dev hot-reload below, but removing
+                instead of replacing.
+            */
+            pluginManager.onPluginUninstalled = (id) => {
+                for (const ri of runningInstances) {
+                    const instance = ri.channels.get(id)
+                    if (!instance) continue
+                    try { if (typeof (instance as any).cleanup === 'function') (instance as any).cleanup() }
+                    // A channel that throws on the way out must not stop the uninstall: it is already being
+                    // removed, and leaving it half-registered would be worse than the failed cleanup.
+                    catch (err) { logError(ELogComponent.CORE, `Plugin '${id}' cleanup on uninstall failed: ${err}`) }
+                    ri.channels.delete(id)
+                    logInfo(ELogComponent.CORE, `Plugin '${id}' channel instance stopped and removed on uninstall`)
+                }
+            }
             pluginManager.onDevPluginReloaded = (id, ChannelClass) => {
                 for (const ri of runningInstances) {
                     if (!ri.channels.has(id)) continue
