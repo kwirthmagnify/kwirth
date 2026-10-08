@@ -67,6 +67,31 @@ kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/t
 
 If you need to change default kwirth configuration you may need to edit the YAML files in order to customize the deployment.
 
+### Least-privilege manifests
+
+The express manifest above gives kwirth broad permissions on the cluster, because it is meant to get you running in two minutes with every feature working. If your cluster has a security review, or you only want kwirth for observing and never for acting, there are two alternatives in [`deploy/kubernetes/manifests`](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/kubernetes/manifests). Each is a single file you apply exactly like the one above.
+
+| Manifest | Cluster permission | Writes | Metrics |
+| - | - | - | - |
+| `kwirth.yaml` | `resources: ['*']`, `verbs: ['*']` on 12 API groups | everything | yes |
+| `kwirth-readonly.yaml` | `get`, `list`, `watch` on everything | one: a token for its own ServiceAccount | yes |
+| `kwirth-full-ro.yaml` | `get`, `list`, `watch` on everything | none at all | no |
+
+```
+kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/deploy/kubernetes/manifests/kwirth-readonly.yaml
+```
+
+**What they give up.** Both drop every verb that changes the cluster, so the Magnify channel's commands — restart, scale, cordon, drain, evict, apply, delete — and the `ops` and `fileman` plugins stop working: the button is still in the UI and the API server answers 403. If you do not want buttons that cannot work, do not install those two plugins.
+
+**They keep their configuration on a PersistentVolumeClaim**, not in Secrets and ConfigMaps, which is what removes the write permission. That is the `KWIRTH_STORE` mechanism described in the next section, already wired in both files. Two consequences worth knowing before you apply them:
+
+- `MASTERKEY` becomes the key your configuration is encrypted with. Set it once, before the first boot, and never change it — see the warning in the next section.
+- The first boot creates the admin user as `admin` / `password`, in the volume. Change it immediately.
+
+**Which of the two.** `kwirth-readonly.yaml` can mint a token for its own ServiceAccount, scoped by name so it cannot mint one for anything else, and that token is how the metrics provider reaches each node's kubelet. `kwirth-full-ro.yaml` removes that one permission, and with it the kubelet metrics: the metrics channel, and the alert, pinocchio, spectrum and agora plugins, lose their feed, and kwirth says so at startup instead of failing. The PodMetrics and NodeMetrics entries of the Magnify tree still work in both, because those come from metrics-server through the API server and need no token.
+
+**One thing they do allow: reading Secrets.** Both grant read on every resource, Secrets included. Kubernetes RBAC has no deny rules and no way to express "every group except this one", so a role cannot both cover the CustomResourceDefinitions kwirth watches — which differ from cluster to cluster and cannot be known in advance — and leave Secrets out. If your requirement is that Secrets stay unreadable, each file carries an enumerated alternative, commented in its header, that you can paste over the single rule; its cost is that events from CustomResourceDefinitions will not arrive.
+
 ## Storage configuration
 
 By default, kwirth running in Kubernetes stores all its configuration data (users, API keys, plugin settings, AI providers, etc.) in **Kubernetes Secrets and ConfigMaps** inside the same namespace. This is the recommended approach for most clusters.
