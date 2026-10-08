@@ -8,8 +8,18 @@ kind: Secret
 metadata:
   name: kwirth-users
   namespace: kwirth
+# The bootstrap admin, as the core stores users: base64url of the id for the key, and base64 of the user
+# JSON for the value. First login is admin / password, and Kwirth answers "change it" instead of letting
+# you in until you do.
+#
+# 🔴 The password inside is a bcrypt hash, not the clear text it used to be. The login compares bcrypt
+# against the SHA-256 the browser sends — it never sees the clear text — and the branch that accepted a
+# plain stored value is gone. Decoded, this is:
+#   {"id":"admin","name":"Nicklaus Wirth","password":"$2b$10$...","resources":"cluster,admin::::"}
+#
+# Want a different starting password? Do not edit this by hand: install, log in, change it in the UI.
 data:
-  admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0='
+  YWRtaW4: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiIkMmIkMTAkd3ZLZmN1dWg3NmV3OWlVV0N3MVh3dTh5UC9WbmhUUUpQWXNrZ2lqNmc5OTlyQTAzOTRETmUiLCJyZXNvdXJjZXMiOiJjbHVzdGVyLGFkbWluOjo6OiJ9'
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -75,8 +85,11 @@ spec:
           env:
             - name: ROOTPATH
               value: '/kwirth'
-            - name: MASTERKEY
-              value: 'Kwirth4Ever'
+            # MASTERKEY intentionally unset: the core generates a random one on first boot and persists it
+            # (here, a ConfigMap in this namespace) so no two installations share a key — the old hardcoded
+            # 'Kwirth4Ever' let anyone forge an admin token. To pin it yourself, set it from a Secret:
+            #   - name: MASTERKEY
+            #     valueFrom: { secretKeyRef: { name: kwirth-masterkey, key: MASTERKEY } }
             # The only two channel switches the back reads. LOG, ALERT, OPS, TRIVY and ECHO used to be
             # listed here and did nothing: those channels are plugins now, and a plugin is turned off
             # by not installing it.

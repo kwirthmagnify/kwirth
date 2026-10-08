@@ -115,9 +115,8 @@ export class ApiKeyApi {
                         }
                         else {
                             // bearer
-                            let input = this.masterKey + '|' + accessKey.resources + '|' + expire
-                            let hash = crypto.createHash('md5').update(input).digest('hex')
-                            accessKey.type = 'bearer:' + expire 
+                            let hash = AuthorizationManagement.signBearer(this.masterKey, accessKey.resources, expire)
+                            accessKey.type = 'bearer:' + expire
                             apiKey.accessKey = accessKeyBuild(hash, accessKey.type, accessKey.resources)
                         }
                         res.status(200).json(apiKey)

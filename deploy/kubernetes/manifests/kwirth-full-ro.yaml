@@ -52,13 +52,15 @@
 #   KWIRTH_STORE at a mounted volume moves all of it to the PVC, AES-256-GCM encrypted with
 #   MASTERKEY, and the write disappears with it.
 #
-# 🔴 MASTERKEY IS SET ONCE, BEFORE THE FIRST BOOT, AND NEVER CHANGED
-#   It is the key the store is encrypted with. Change it later and nothing errors: the files stop
-#   decrypting, Kwirth sees no users, and it recreates the default admin — the password resets to
-#   'password' and every api key and extension setting is gone. Change it now, not afterwards.
+# 🔴 MASTERKEY: GENERATED ON FIRST BOOT, THEN NEVER CHANGED
+#   It is the key the store is encrypted with and the one that signs api keys. This manifest leaves it
+#   UNSET: the core generates a random one on the first boot and persists it on the PVC, so every
+#   installation gets its own (the old hardcoded default let anyone forge an admin token). It survives
+#   restarts with the volume. Change it later and nothing errors, but the files stop decrypting, Kwirth
+#   sees no users and recreates the default admin — so don't. For at-rest encryption that also resists
+#   someone reading the volume, set MASTERKEY from a Secret kept outside the PVC (see the env section).
 #
 # BEFORE YOU APPLY IT
-#   - change MASTERKEY
 #   - check that the cluster has a default StorageClass, or name one in the PVC
 #   - the first boot creates the admin user as admin / password. Change it at once.
 #
@@ -239,9 +241,14 @@ spec:
           env:
             - name: ROOTPATH
               value: '/kwirth'
-            # 🔴 Change this, once, before the first boot. See the header.
-            - name: MASTERKEY
-              value: 'Kwirth4Ever'
+            # MASTERKEY is intentionally NOT set here. Left unset, the core generates a random one on the
+            # first boot and persists it next to the store on the PVC below, so no two installations share
+            # a key (the old hardcoded 'Kwirth4Ever' let anyone forge an admin token). It survives restarts
+            # with the volume. NOTE: a key that lives on the same volume as the encrypted store does not
+            # protect that store against someone who can read the volume — for real at-rest encryption,
+            # set MASTERKEY from a Secret kept OUTSIDE this volume:
+            #   - name: MASTERKEY
+            #     valueFrom: { secretKeyRef: { name: kwirth-masterkey, key: MASTERKEY } }
             # This is what moves the store off the cluster and onto the volume. Any value other than
             # 'etcd' means "encrypted files at this path".
             - name: KWIRTH_STORE

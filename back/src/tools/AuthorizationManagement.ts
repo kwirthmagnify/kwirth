@@ -70,11 +70,25 @@ export class AuthorizationManagement {
         return apiKeys
     }    
 
+    /*
+        Signs a bearer key with HMAC-SHA256 over 'resources|expire', keyed by the master key.
+
+        It replaces the old md5(masterKey|resources|expire): md5 is a broken hash, and hashing the secret
+        PREFIXED to the data (instead of a real MAC) is the length-extension shape. HMAC is a proper MAC:
+        the key is the key, not a prefix of the message. Changing this invalidates every bearer key signed
+        the old way —including those the external API-key command and Kwirth External minted— on purpose.
+    */
+    public static signBearer = (masterKey:string, resources:string, expire:string|number): string => {
+        return crypto.createHmac('sha256', masterKey).update(`${resources}|${expire}`).digest('hex')
+    }
+
     public static validBearerKey = (masterKey:string, accessKey:AccessKey): boolean => {
         let expire = accessKey.type.split(':')[1]
-        let input = masterKey + '|' + accessKey.resources + '|' + expire
-        var hash = crypto.createHash('md5').update(input).digest('hex')
-        return hash === accessKey.id
+        let expected = AuthorizationManagement.signBearer(masterKey, accessKey.resources, expire)
+        let a = Buffer.from(expected)
+        let b = Buffer.from(accessKey.id || '')
+        // constant-time compare; timingSafeEqual throws on different lengths, so guard first
+        return a.length === b.length && crypto.timingSafeEqual(a, b)
     }
     
     public static validKey = async (req:Request,res:Response, apiKeyApi: ApiKeyApi): Promise<boolean> => {
@@ -126,6 +140,36 @@ export class AuthorizationManagement {
         return false
     }
     
+    // Silent twin of validKey: tells whether the request carries a valid key WITHOUT answering the
+    // response and WITHOUT logging. For endpoints that are reachable unauthenticated but reveal more to a
+    // valid key (e.g. /config/info, which hides the cluster topology from anonymous callers), where a 403
+    // or a warning per anonymous hit would be wrong.
+    public static isValidKey = async (req:Request, apiKeyApi: ApiKeyApi): Promise<boolean> => {
+        try {
+            if (!req.headers.authorization) return false
+            const receivedStr = req.headers.authorization.replaceAll('Bearer ','').trim()
+            const received = accessKeyDeserialize(receivedStr)
+            let computedExpire = 0
+            if (received.type && received.type.startsWith('bearer:')) {
+                if (!AuthorizationManagement.validBearerKey(apiKeyApi.masterKey, received)) return false
+                computedExpire = +received.type.split(':')[1]
+            }
+            else {
+                let key = apiKeyApi.apiKeys.find(apiKey => accessKeySerialize(apiKey.accessKey)===receivedStr)
+                if (!key) {
+                    if (!apiKeyApi.isDesktop) await apiKeyApi.refreshKeys()
+                    key = apiKeyApi.apiKeys.find(apiKey => accessKeySerialize(apiKey.accessKey)===receivedStr)
+                    if (!key) return false
+                }
+                computedExpire = key.expire
+            }
+            return computedExpire > 0 && computedExpire >= Date.now()
+        }
+        catch (err) {
+            return false
+        }
+    }
+
     // checks whether the header's accessKey includes a particular scope ('admin', for instance) in any of
     // its resources. It must be used AFTER validKey (which guarantees the key is valid/untampered).
     public static hasScope = (req:Request, scope:string): boolean => {

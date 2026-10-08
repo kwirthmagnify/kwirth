@@ -61,6 +61,7 @@ import { resolveInstallationIdentity, defaultProbes } from './tools/Installation
 
 // Where a generated installation identity (no Kubernetes, no platform source) is kept in Kwirth's store.
 const INSTALLATION_IDENTITY_KEY = 'kwirth-installation-identity'
+import { resolveMasterKey } from './tools/MasterKey'
 import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import * as _kwirthCommon from '@kwirthmagnify/kwirth-common'
 import { IdentityService } from './tools/auth/IdentityService'
@@ -86,6 +87,7 @@ import bodyParser from 'body-parser'
 import cors from 'cors'
 import { Application } from 'express-serve-static-core'
 import * as crypto from 'crypto'
+import bcrypt from 'bcryptjs'
 
 import { createProviderInstance, IProvider, IProviderStorage, TProviderConstructor } from './providers/IProvider'
 import { findMissingSubscriptionTargets, isPluvider, pluviderId, rebindPluvider, startPluviders, warnNameCollisions } from './providers/Pluvider'
@@ -181,6 +183,12 @@ if (process.env.KWIRTH_SQL_HOST) {
     }
     _kwirthCommonSql.configure(_sqlServer)
     logInfo(ELogComponent.STORAGE, `SQL server ${_sqlServer.user}@${_sqlServer.host}:${_sqlServer.port} (${_sqlServer.client})`)
+    /*  Recoge lo que un arranque anterior dejó colgado: transacciones abiertas que nadie cerró en bases
+        `kwirth_*`. Tras un reinicio sucio el servidor no sabe que el proceso que las abrió ya no está, así
+        que siguen reteniendo su conexión y sus bloqueos. Solo toca las que llevan minutos `idle in
+        transaction` — nunca trabajo en curso, y nunca bases ajenas al producto: el mismo Postgres puede
+        estar sirviendo a OTRO Kwirth vivo. Es best-effort y no bloquea el arranque.  */
+    void _kwirthCommonSql.reapStaleSessions((m) => logInfo(ELogComponent.STORAGE, m))
 }
 else {
     logInfo(ELogComponent.STORAGE, 'No SQL server configured (KWIRTH_SQL_HOST is not set). Extensions that need one will say so and carry on')
@@ -211,6 +219,7 @@ interface IRunningInstance {
     kwirthData: KwirthData
     secrets: ISecrets
     configMaps: IConfigMaps
+    masterKey: string   // resolved once at store construction: env MASTERKEY, or generated and persisted
     channels: Map<string,IChannel>
     remoteChannels: BackChannelData[]   // single channels not hosted here (announced as remote)
     backChannelObject: IBackChannelObject
@@ -227,7 +236,9 @@ const envRootPath = rootPath || ''
 const envCommand = process.env.COMMAND
 const envContext = process.env.CONTEXT || undefined
 const envAuth = process.env.AUTH || 'kwirth'  // kwirth | kubeconfig | b2c | entraid | cognito | keycloak | ...
-const envMasterKey = process.env.MASTERKEY || 'Kwirth4Ever'
+// No default: a hardcoded, public master key (the old 'Kwirth4Ever') let anyone forge an admin bearer
+// key offline. When it is unset the core generates one and persists it in the store (resolveMasterKey).
+const envMasterKey = process.env.MASTERKEY
 const envForward = (process.env.FORWARD || 'true').toLowerCase() === 'true'
 const envPort = +(process?.env?.PORT || '3883')
 // Ceiling on a request's body. Configurable because whoever ingests logs knows how much their collector
@@ -288,10 +299,16 @@ registeredChannels.set('magnify', MagnifyChannel)
 if (envCommand!==undefined) {
     switch(envCommand) {
         case 'APIKEY': // Bearer Api Key
+            // This offline generator cannot read the store (it runs before any instance exists), so it can
+            // only sign with an explicit MASTERKEY. When the key was auto-generated into the store there is
+            // nothing to sign with here, and the operator must read it from the store instead.
+            if (!envMasterKey) {
+                logError(ELogComponent.CORE, 'APIKEY needs MASTERKEY to be set. Without it the master key was generated into the store, and this offline tool cannot read it.')
+                process.exit(1)
+            }
             let expire= Date.now() + 86400000
-            let input = envMasterKey + '|cluster::::|' + expire
-            let hash = crypto.createHash('md5').update(input).digest('hex')
-            let apiKey:ApiKey={ accessKey:accessKeyBuild(hash, 'permanent', 'cluster::::'), description:'ApiKey created with Kwirth External', expire, days:1}
+            let hash = AuthorizationManagement.signBearer(envMasterKey, 'cluster::::', expire)
+            let apiKey:ApiKey={ accessKey:accessKeyBuild(hash, 'bearer:'+expire, 'cluster::::'), description:'ApiKey created with Kwirth External', expire, days:1}
             logInfo(ELogComponent.CORE, apiKey)
             process.exit(0)
         default:
@@ -367,11 +384,26 @@ const activateRunningInstance = (ri:IRunningInstance) => {
     A file storage starts out empty, so the first startup has to leave somebody inside to be able to log in
     with. On Kubernetes it is not needed, because the users secret is put there by the deployment itself.
 */
+/*
+    The bootstrap admin, seeded when there is no users store yet.
+
+    🔴 The password goes in HASHED, never in clear text. It used to be a base64 blob with
+    "password":"password" inside, and the login had a branch that accepted a plain stored value to make
+    it work. That branch is gone (LoginApi, verifyPassword), so anything that seeds a user has to hash
+    the same way the login compares: bcrypt over the SHA-256 the front end sends, not over the clear
+    text, because the clear text never leaves the browser.
+
+    The password itself is still the well known 'password'. It is not a secret and is not meant to be:
+    the login answers 201 instead of letting anyone in while the admin is still on it, which is a
+    better guarantee than a value nobody would be able to look up.
+*/
 const createAdminUserIfMissing = async (secrets:ISecrets) => {
     let users:{ [username:string]:string } = await secrets.read('kwirth-users')
     if (users) return
     logInfo(ELogComponent.CORE, 'Admin user will be created, since there is no users secret')
-    users = { admin: 'eyJpZCI6ImFkbWluIiwibmFtZSI6Ik5pY2tsYXVzIFdpcnRoIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInJlc291cmNlcyI6ImNsdXN0ZXIsYWRtaW46Ojo6In0=' }
+    const sha = crypto.createHash('sha256').update('password').digest('hex')
+    const admin = { id: 'admin', name: 'Nicklaus Wirth', password: await bcrypt.hash(sha, 10), resources: 'cluster,admin::::' }
+    users = { admin: Buffer.from(JSON.stringify(admin)).toString('base64') }
     await secrets.write('kwirth-users', users)
 }
 
@@ -484,18 +516,28 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         */
         let configMaps
         let secrets
+        let masterKey = ''
+
+        // A durable store survives a restart: etcd (Kubernetes) always, a FILE store only when it is a
+        // mounted volume (KWIRTH_STORE) or a platform whose default path persists (desktop/docker). On an
+        // ephemeral store the generated master key rotates on restart —harmless, since the encrypted store
+        // dies with it— but the warning has to say so.
+        const serverlessPlatform = [EExecutionEnvironment.ECS, EExecutionEnvironment.CLOUD_RUN, EExecutionEnvironment.ACI].includes(kwirthData.executionEnvironment)
+        const storeDurable = capabilities.store === EStoreKind.KUBERNETES || !serverlessPlatform || capabilities.storePath !== undefined
 
         switch (capabilities.store) {
             case EStoreKind.FILE:
                 logInfo(ELogComponent.CORE, `Using filesystem storage at ${capabilities.storePath || 'the default path'}`)
-                secrets = new NodeSecrets(capabilities.storePath, envMasterKey)
                 configMaps = new NodeConfigMaps(capabilities.storePath)
+                masterKey = await resolveMasterKey(envMasterKey, configMaps, storeDurable)
+                secrets = new NodeSecrets(capabilities.storePath, masterKey)
                 await createAdminUserIfMissing(secrets)
                 break
 
             case EStoreKind.FILE_PLAIN:
                 logInfo(ELogComponent.CORE, `Configuration paths:  ${envConfigMapPath} ${envSecretPath}`)
                 configMaps = new DockerConfigMaps(clusterInfo.coreApi, envConfigMapPath)
+                masterKey = await resolveMasterKey(envMasterKey, configMaps, storeDurable)
                 secrets = new DockerSecrets(clusterInfo.coreApi, envSecretPath)
                 await createAdminUserIfMissing(secrets)
                 break
@@ -504,6 +546,8 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
                 logInfo(ELogComponent.CORE, `Using cluster storage on namespace '${kwirthData.namespace}'`)
                 secrets = new KubernetesSecrets(clusterInfo.coreApi, kwirthData.namespace)
                 configMaps = new KubernetesConfigMaps(clusterInfo.coreApi, kwirthData.namespace)
+                // Here the master key only signs bearer keys: the store is real Secrets, not encrypted files.
+                masterKey = await resolveMasterKey(envMasterKey, configMaps, storeDurable)
                 break
         }
 
@@ -549,6 +593,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             clusterInfo: clusterInfo,
             secrets,
             configMaps,
+            masterKey,
             channels: new Map(),
             remoteChannels: [],
             backChannelObject: {},
@@ -1149,6 +1194,21 @@ const processChannelWebsocket = async (ri:IRunningInstance, webSocket: WebSocket
     }
 }
 
+// Whether a WebSocket message carries a valid access key (bearer signed with the master key, or a known
+// stored api key). Mirrors the START validation, reused by RECONNECT so a reconnect cannot attach to an
+// instance without a valid session — until now RECONNECT was processed knowing only the instance UUID.
+const validWsAccessKey = (ri:IRunningInstance, accessKeyStr:string|undefined): boolean => {
+    if (!accessKeyStr) return false
+    try {
+        const ak = accessKeyDeserialize(accessKeyStr)
+        if (ak.type.toLowerCase().startsWith('bearer:')) return AuthorizationManagement.validBearerKey(ri.masterKey, ak)
+        return !!ri.apiKeyApi && ri.apiKeyApi.apiKeys.some(apiKey => accessKeySerialize(apiKey.accessKey) === accessKeyStr)
+    }
+    catch (err) {
+        return false
+    }
+}
+
 const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRunningInstance) => {
     try {
         const instanceMessage = JSON.parse(message) as IInstanceMessage
@@ -1179,6 +1239,14 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
             logInfo(ELogComponent.CORE, `Received request: ${instanceMessage.channel}, ${instanceMessage.flow}, ${instanceMessage.action}`)
         if (instanceMessage.action === EInstanceMessageAction.RECONNECT) {
             logInfo(ELogComponent.CORE, 'Reconnect received')
+            // A reconnect used to be accepted on the instance UUID alone. Require a valid access key, so a
+            // leaked UUID is not enough to reattach to someone else's stream. (Binding the key to that
+            // specific instance's resources is a deeper follow-up — see plans/auth-hardening A4.)
+            if (!validWsAccessKey(ri, (instanceMessage as any).accessKey)) {
+                logWarning(ELogComponent.AUTH, `Reconnect rejected: invalid or missing access key for instance ${instanceMessage.instance} on channel ${instanceMessage.channel}`)
+                sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, 'Invalid or missing access key for reconnect', instanceMessage, ri.channels)
+                return
+            }
             if (!ri.channels.get(instanceMessage.channel)?.getChannelData().reconnectable) {
                 logError(ELogComponent.CORE, `Reconnect capability not enabled for channel ${instanceMessage.channel} and instance ${instanceMessage.instance}`)
                 sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Channel ${instanceMessage.channel} does not support reconnect`, instanceMessage, ri.channels)
@@ -1203,7 +1271,7 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
 
         let accessKey = accessKeyDeserialize(instanceConfig.accessKey)
         if (accessKey.type.toLowerCase().startsWith('bearer:')) {
-            if (!AuthorizationManagement.validBearerKey(envMasterKey, accessKey)) {
+            if (!AuthorizationManagement.validBearerKey(ri.masterKey, accessKey)) {
                 sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Invalid bearer access key: ${instanceConfig.accessKey}`, instanceConfig, ri.channels)
                 return
             }       
@@ -1352,7 +1420,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
     try {
         const riRouter = express.Router()
 
-        let result = await ApiKeyApi.create(ri.configMaps, envMasterKey, runningEnv.isDesktop, () => validScopeSet(registeredChannels))
+        let result = await ApiKeyApi.create(ri.configMaps, ri.masterKey, runningEnv.isDesktop, () => validScopeSet(registeredChannels))
         if (!result) {
             logError(ELogComponent.CORE, 'Could not get apikeyapi setting up routes')
             return false

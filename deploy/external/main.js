@@ -6,7 +6,9 @@ function startApp(options) {
     if (options.command) process.env.COMMAND = options.command
     process.env.CONTEXT = options.context // (this option is not like electron (multiple contexts), this option connects a Kwirth External to a Kubernetes cluster, just one)
     process.env.ROOTPATH = options.rootpath
-    process.env.MASTERKEY = options.masterkey
+    // Only forward MASTERKEY when the user actually passed one: setting it to the string 'undefined' would
+    // make the core sign with that literal instead of generating/reading its own key.
+    if (options.masterkey) process.env.MASTERKEY = options.masterkey
     process.env.FORWARD = options.forward
     process.env.PORT = options.port
     process.env.FRONT = options.front
@@ -28,7 +30,7 @@ cli
   .option('-k, --apiKey', 'Context to load', { default: false })
   .option('-p, --port <number>', 'Server port', { default: 3883 })
   .option('-r, --rootpath <string>', 'Root path', { default: '' })
-  .option('-k, --masterkey <string>', 'Master key', { default: 'Kwirth4Ever' })
+  .option('-k, --masterkey <string>', 'Master key (must match the target Kwirth; the old default Kwirth4Ever is gone)')
   .option('-t, --front', 'Enable front SPA serving  <--- DEFAULT IS FALSE', { default: false })
   .option('-f, --forward', 'FORWARD feature', { default: false })
   .option('-i, --metricsinterval <number>', 'Seconds between metrics', { default: 15 })

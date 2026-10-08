@@ -1714,7 +1714,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             action: EInstanceMessageAction.RECONNECT,
             instance: tab.channelObject.instanceId,
             scope: InstanceConfigScopeEnum.NONE,
-            accessKey: '',
+            // The back now requires a valid key to reattach (a leaked instance UUID is no longer enough).
+            // Same credential the START used: the delegated host key for REMOTE channels, else the session key.
+            accessKey: tab.channelObject.accessString ?? accessString,
             view: EInstanceConfigView.NONE,
             namespace: '',
             group: '',

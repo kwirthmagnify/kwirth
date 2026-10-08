@@ -19,7 +19,15 @@ export class ConfigApi {
         this.router.route('/info')
             .get( async (req:Request, res:Response) => {
                 try {
-                    res.status(200).json(this.kwirthData)
+                    // Reachable unauthenticated on purpose: the login page needs the version and the channel
+                    // list to render. But the cluster topology (name, namespace, deployment) is handed only
+                    // to a valid key — anonymous it was pre-login reconnaissance.
+                    if (await AuthorizationManagement.isValidKey(req, this.apiKeyApi)) {
+                        res.status(200).json(this.kwirthData)
+                    }
+                    else {
+                        res.status(200).json({ ...this.kwirthData, clusterName: '', namespace: '', deployment: '' })
+                    }
                 }
                 catch (err) {
                     res.status(500).json({})
