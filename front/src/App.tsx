@@ -1305,7 +1305,15 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                             handlers.onMessage(conn.clusterId, m)
                         } catch { /* no-JSON: ignora */ }
                     }
-                    ws.onclose = () => {
+                    ws.onclose = (ev) => {
+                        /*
+                            The close code is the only thing that says WHO ended the connection, and without
+                            it a drop is indistinguishable from any other: 1006 means nobody sent a close
+                            frame (the network or an intermediary killed it), 1000/1001 means somebody closed
+                            it on purpose, 1011/1008 means the far end rejected it. Diagnosing the federated
+                            connections dropping on ECS cost a morning for the lack of this one line.
+                        */
+                        console.log(`Remote DATA websocket closed (${conn.clusterId}): code=${ev.code} reason='${ev.reason}' wasClean=${ev.wasClean}`, new Date().toISOString())
                         // Always stopped, even if the connection is already closed or retrying: an interval
                         // that outlives its socket keeps firing against a `readyState` that is not OPEN, and
                         // every reconnect would leave one more behind.
@@ -1732,7 +1740,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     const socketDisconnect = (wsEvent:any) => {
-        console.log('WebSocket disconnected', new Date().toISOString())
+        // Same reason as the remote DATA sockets: without the close code, every drop looks alike.
+        console.log(`WebSocket disconnected: code=${wsEvent?.code} reason='${wsEvent?.reason ?? ''}' wasClean=${wsEvent?.wasClean}`, new Date().toISOString())
         let tab = tabs.current.find(tab => tab.ws === wsEvent.target)
         if (!tab || !tab.channelObject) return
 
