@@ -3298,7 +3298,7 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
 
     // serve front
     if (envFront) {
-        logInfo(ELogComponent.CORE, `Front serving is enbaled`)
+        logInfo(ELogComponent.CORE, 'Front serving is enabled')
         logInfo(ELogComponent.CORE, `SPA is available at: ${envRootPath}/front`)
         app.get(`${envRootPath}`, (req, res) => res.redirect(`${envRootPath}/front`))
         recordRoute(`${envRootPath || '/'}`, ERouteOwnerKind.FRONT, 'redirect', undefined, ['GET'])

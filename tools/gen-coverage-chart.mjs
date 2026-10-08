@@ -126,9 +126,24 @@ const buildSvg = (chartTitle, chartRows, series, yAxis, xLabel) => {
         svg += `<line x1="${ML}" y1="${y(t.v)}" x2="${ML + plotW}" y2="${y(t.v)}" stroke="#eee" stroke-width="1"/>`
         svg += `<text x="${ML - 8}" y="${y(t.v) + 4}" text-anchor="end" font-size="11" fill="#666">${t.label}</text>`
     }
+    /*
+        One label per row stopped fitting: a `MM-DD` at font-size 10 needs about 34px with its gap, and with
+        38 CL9 entries there were barely 20px each — the dates printed on top of one another and the axis
+        became unreadable. Rotating them was the obvious move and it is not better: tilted text at this size
+        is just as hard to read, and it costs vertical space.
+        So the TICKS stay on every row (the density of releases is itself information) and only the TEXT is
+        thinned out, keeping the first and the last — the two anyone looks for.
+    */
+    const LABEL_PX = 34
+    const gap = chartRows.length > 1 ? plotW / (chartRows.length - 1) : plotW
+    const every = Math.max(1, Math.ceil(LABEL_PX / Math.max(1, gap)))
+    const last = chartRows.length - 1
     chartRows.forEach((r, i) => {
         svg += `<line x1="${x(i)}" y1="${MT + plotH}" x2="${x(i)}" y2="${MT + plotH + 4}" stroke="#999"/>`
-        svg += `<text x="${x(i)}" y="${MT + plotH + 20}" text-anchor="middle" font-size="10" fill="#666">${esc(r.date.slice(5))}</text>`
+        // El último SIEMPRE se pinta; y si al hacerlo pisaría al anterior rotulado, ese se calla.
+        const periodic = i % every === 0
+        const show = i === last || (periodic && (last - i) >= every)
+        if (show) svg += `<text x="${x(i)}" y="${MT + plotH + 20}" text-anchor="middle" font-size="10" fill="#666">${esc(r.date.slice(5))}</text>`
     })
     svg += `<line x1="${ML}" y1="${MT}" x2="${ML}" y2="${MT + plotH}" stroke="#999"/>`
     svg += `<line x1="${ML}" y1="${MT + plotH}" x2="${ML + plotW}" y2="${MT + plotH}" stroke="#999"/>`
