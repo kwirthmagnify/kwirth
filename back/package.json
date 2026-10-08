@@ -29,7 +29,7 @@
     "@kwirthmagnify/kwirth-common": "^0.5.65",
     "@kwirthmagnify/kwirth-common-ai": "^0.5.66",
     "@kwirthmagnify/kwirth-common-back": "^0.6.1",
-    "@kwirthmagnify/kwirth-common-sql": "^0.3.1",
+    "@kwirthmagnify/kwirth-common-sql": "^0.3.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.12.13",
     "bcryptjs": "^3.0.3",

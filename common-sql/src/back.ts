@@ -146,7 +146,14 @@ const admin = (): Knex => {
     // The MAINTENANCE pool is used on rare occasions (createDb/dropDb/SHOW): it keeps NO warm connections
     // (min:0). It also lets short-lived processes (tests and scripts) finish without live connections
     // hanging the process (consumer pools do keep them, but they are closed with closeDb).
-    if (!adminPool) { adminPool = knexForDb(s.maintenanceDb ?? 'postgres', { min: 0 }, 'maintenance'); configuredMax.set('#admin', POOL_DEFAULT.max) }
+    /*  🔴 `min: 1`, no 0. Con 0 el pool no guarda ninguna conexión caliente, así que CADA uso paga el
+        establecimiento — 1-2 s, como dice el comentario de POOL_DEFAULT. En el arranque eso es una ráfaga:
+        todas las extensiones con SQL llaman a `ensureDb` casi a la vez y todas pasan por ESTE pool para
+        comprobar o crear su base. Con `acquireConnectionTimeout` de 5 s, alguna pierde la carrera y el
+        error que sale es el genérico de Knex, *"the pool is probably full"*, que manda a mirar al sitio
+        equivocado: el servidor tenía 15 conexiones de 100 (visto en dev, 2026-10-08). Lo que vencía era el
+        reloj, no el tope.  */
+    if (!adminPool) { adminPool = knexForDb(s.maintenanceDb ?? 'postgres', { min: 1 }, 'maintenance'); configuredMax.set('#admin', POOL_DEFAULT.max) }
     return adminPool
 }
 
@@ -176,6 +183,49 @@ const safeIdent = (name: string): string => name.replace(/[^a-zA-Z0-9_]/g, '_')
 
 /** Called by the CORE at startup: it pins the connection to the SQL server. */
 export const configure = (s: ISqlServer): void => { server = s }
+
+/*
+    Recoge las sesiones que un Kwirth anterior dejó colgadas en sus bases (`kwirth_*`).
+
+    Una conexión **`idle in transaction`** es una transacción que alguien abrió y nadie cerró: retiene su
+    conexión y, según lo que tocara, los bloqueos que ya había tomado. Tras un reinicio sucio —un pod que
+    muere, un `watch` que recarga el back— esas sesiones siguen vivas en el servidor porque el servidor no
+    sabe que el proceso que las abrió ya no está. Visto en dev el 2026-10-08: `kwirth_iter` con una abierta
+    desde hacía 23 minutos.
+
+    🔴 **El criterio es deliberadamente estrecho, y conviene entender por qué.** NO se mata todo lo que sea
+    `kwirth_*`: el mismo Postgres puede estar sirviendo a **otro Kwirth vivo**, y cortarle sus conexiones en
+    pleno uso sería causar el problema que se viene a resolver. Solo se recogen las que cumplen las tres:
+
+      · la base es `kwirth_*`                 — no se toca nada ajeno al producto
+      · el estado es `idle in transaction`    — NUNCA `active`: eso es trabajo en curso de alguien
+      · lleva así más de `STALE_TX_MINUTES`   — una transacción sana no pasa minutos sin hacer nada
+
+    Con esas tres, un falso positivo exige que alguien tenga una transacción abierta y parada durante
+    minutos, que ya es un bug por sí mismo.
+
+    Best-effort: si falla (sin permisos para `pg_terminate_backend`, por ejemplo) se avisa y se sigue. No
+    poder limpiar no puede impedir arrancar.
+*/
+const STALE_TX_MINUTES = 5
+
+export const reapStaleSessions = async (log?: (msg: string) => void): Promise<number> => {
+    try {
+        const r = await admin().raw(
+            `select pg_terminate_backend(pid) from pg_stat_activity
+             where datname like 'kwirth\\_%' and state = 'idle in transaction'
+               and state_change < now() - (? || ' minutes')::interval and pid <> pg_backend_pid()`,
+            [STALE_TX_MINUTES]
+        )
+        const n = (r.rows as unknown[]).length
+        if (n > 0) log?.(`[common-sql] reaped ${n} stale session(s) left 'idle in transaction' by a previous run`)
+        return n
+    }
+    catch (err) {
+        log?.(`[common-sql] could not reap stale sessions (ignored): ${err}`)
+        return 0
+    }
+}
 
 export const dbExists = async (name: string): Promise<boolean> => {
     const r = await admin().raw('select 1 from pg_database where datname = ?', [name])
