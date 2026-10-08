@@ -4,58 +4,39 @@
 #
 #   kubectl apply -f kwirth-full-ro.yaml
 #
-# Three manifests live in this folder, and this is the strictest of them:
+# Two manifests live in this folder:
 #
 #   kwirth.yaml            apiGroups:['*'] resources:['*'] verbs:['*']   store: etcd
-#   kwirth-readonly.yaml   read-only, + ONE create: a token for its own ServiceAccount
-#   kwirth-full-ro.yaml    read-only. Nothing else. No Role, no RoleBinding, no create anywhere
+#   kwirth-full-ro.yaml    get / list / watch. Nothing else, anywhere   store: a PVC
 #
 # WHAT 'FULL' MEANS HERE
 #   One rule, three verbs: get, list, watch. The ServiceAccount has exactly one binding and that is
-#   the whole of its authority in the cluster. The filter is the VERBS, not the resources, and that
-#   is what makes it safe: opening a shell is 'create' on pods/exec and evicting is 'create' on
-#   pods/eviction, so both are denied, as are delete, patch, update and escalate.
+#   the whole of its authority in the cluster — there is no namespaced Role either. The filter is the
+#   VERBS, not the resources, and that is what makes it safe: opening a shell is 'create' on
+#   pods/exec and evicting is 'create' on pods/eviction, so both are denied, as are delete, patch,
+#   update and escalate.
 #
-#   Getting here takes two things. The store moves to a PVC (KWIRTH_STORE), so Kwirth's own
-#   configuration stops being Secrets it has to write. And the metrics provider is turned off, which
-#   is what removes the last create.
+#   And it loses nothing for it. Metrics included: Kwirth reads the ServiceAccount token that
+#   Kubernetes already projects into every pod and that the KUBELET ROTATES, so reaching the kubelet
+#   costs no permission at all. Earlier builds asked the API server for a token instead, which meant
+#   a 'create' on serviceaccounts/token — and a token that expired in a week and was never renewed.
 #
-# 🔴 WHAT YOU GIVE UP: THE KUBELET METRICS
-#   The metrics provider scrapes each node's kubelet directly, and it authenticates with a token
-#   Kwirth mints for its own ServiceAccount — a 'create' on serviceaccounts/token, the one verb this
-#   file does not have. Without it the back says so at startup and carries on:
+#   🔴 That needs Kwirth 0.6.65 or later. On an older image there is no projected-token path: the
+#   TokenRequest is refused by this role, the back says "There is no SA Token, no metrics will be
+#   available" at startup and carries on without them. Everything else works the same.
 #
-#       There is no SA Token, no metrics will be available.
-#
-#   Startup does not fail. What loses its feed is the metrics provider and its six consumers: the
-#   'metrics' and 'magnify' channels, and the alert, pinocchio, spectrum and agora plugins. If you
-#   use alerts on CPU or memory, this is the manifest that takes them away.
-#
-#   CHANNEL_METRICS is therefore set to 'false' below. The channel would otherwise be offered in the
-#   UI with nothing behind it.
-#
-#   ⚠️ IT WILL LOG. That switch turns off the CHANNEL, not the PROVIDER, and the provider keeps its
-#   own 15-second clock, so the pod log gets one line per node per tick, for ever:
-#
-#       Error reading metrics from 'https://<nodeIp>:10250/metrics/cadvisor' 401: Unauthorized
-#
-#   Nothing is broken — that 401 is the kubelet declining a request with no token, which is this
-#   manifest working as designed — but on a big cluster it is a lot of noise. Today the only way to
-#   silence it is to give Kwirth the token, which means kwirth-readonly.yaml. Making the back skip
-#   the metrics clock when there is no token is a one-line change that has not been made yet.
-#
-# WHAT STILL WORKS
-#   Logs, events, the whole resource browser, the resource selector, and every channel that only
-#   reads. Including, and this surprises people: the PodMetrics and NodeMetrics entries of the
-#   Magnify tree. Those do not go to the kubelet — they are metrics.k8s.io read through the API
-#   server with the ordinary client, no token involved.
+# WHAT IT CANNOT DO, BY DESIGN
+#   Restart / scale / cordon / drain / evict / apply / delete anything, and open a shell into a pod.
+#   That is the Magnify channel's command half and the 'ops' and 'fileman' plugins: the UI still
+#   offers the action and the API server answers 403. If you do not want the dead buttons, do not
+#   install those plugins.
 #
 # 🔴 THE PRICE, SAID PLAINLY: SECRETS ARE READABLE
 #   'resources: [*]' includes Secrets, and RBAC cannot subtract — there are no deny rules and no way
 #   to say "every group except the core one". So whoever reaches Kwirth's admin can read every
-#   Secret in the cluster. Worth weighing against two facts: under any of these manifests Kwirth
-#   already reads every pod's log and every ConfigMap cluster-wide, and what kwirth.yaml grants
-#   today is read AND WRITE on all of it, plus exec and delete.
+#   Secret in the cluster. Worth weighing against two facts: under either manifest Kwirth already
+#   reads every pod's log and every ConfigMap cluster-wide, and what kwirth.yaml grants is read AND
+#   WRITE on all of it, plus exec and delete.
 #
 #   Spelling out resources instead was tried and does not survive contact with a real cluster. The
 #   events provider opens a watcher for every CustomResourceDefinition it sees appear
@@ -65,14 +46,16 @@
 #   six retries, and lost those events in silence. If your requirement is that Secrets stay
 #   unreadable, use the enumerated block at the bottom of this header and accept that loss.
 #
+# WHY THE PVC IS PART OF THE SECURITY STORY, NOT A DETAIL
+#   Inside Kubernetes, Kwirth's store is normally ConfigMaps and Secrets of its own namespace: users,
+#   api keys, installed extensions, marketplaces. That forces WRITE permission on Secrets. Pointing
+#   KWIRTH_STORE at a mounted volume moves all of it to the PVC, AES-256-GCM encrypted with
+#   MASTERKEY, and the write disappears with it.
+#
 # 🔴 MASTERKEY IS SET ONCE, BEFORE THE FIRST BOOT, AND NEVER CHANGED
 #   It is the key the store is encrypted with. Change it later and nothing errors: the files stop
 #   decrypting, Kwirth sees no users, and it recreates the default admin — the password resets to
 #   'password' and every api key and extension setting is gone. Change it now, not afterwards.
-#
-# IF YOU WANT THE METRICS BACK
-#   Use kwirth-readonly.yaml, which is this same file plus a Role with a single rule, scoped by name
-#   so Kwirth can mint a token for itself and for nothing else.
 #
 # BEFORE YOU APPLY IT
 #   - change MASTERKEY
@@ -83,10 +66,11 @@
 # STRICT ALTERNATIVE: enumerated, Secrets unreadable, no events from CRDs
 # ---------------------------------------------------------------------------------------------------
 # Drop-in replacement for the 'rules:' of the ClusterRole below. It is kept correct by the unit
-# tests, which derive what the back calls from back/src and check this list covers it. It does NOT
-# include nodes/metrics or nodes/stats: those are kubelet paths, and reaching the kubelet needs the
-# token this manifest cannot mint, so granting them would be permission for a call that never
-# happens.
+# tests, which derive what the back calls from back/src and check this list covers it — including
+# the subresources, which are the part that bites: the metrics provider reads TWO kubelet paths per
+# node and the kubelet authorizes them against DIFFERENT subresources, /metrics/cadvisor against
+# nodes/metrics and /stats/summary against nodes/stats. Missing the second one does not degrade node
+# metrics, it breaks them.
 #
 # STRICT-RULES-BEGIN
 #   - apiGroups: ['']
@@ -95,6 +79,9 @@
 #   - apiGroups: ['']
 #     resources: ['pods/log', 'pods/status']
 #     verbs: ['get', 'list']
+#   - apiGroups: ['']
+#     resources: ['nodes/metrics', 'nodes/stats']
+#     verbs: ['get']
 #   - apiGroups: ['apps']
 #     resources: ['daemonsets', 'deployments', 'replicasets', 'statefulsets']
 #     verbs: ['get', 'list', 'watch']
@@ -226,6 +213,9 @@ spec:
         app: kwirth
     spec:
       serviceAccountName: kwirth-sa
+      # automountServiceAccountToken is left at its default of true ON PURPOSE: that projected token
+      # is how the metrics provider reaches the kubelet without this deployment needing a single
+      # write. Turning it off costs you the metrics.
       terminationGracePeriodSeconds: 5
       containers:
         - name: kwirth
@@ -257,18 +247,15 @@ spec:
             - name: KWIRTH_STORE
               value: '/data'
             # On a crash Kwirth appends the post-mortem to a 'kwirth-secure-log' ConfigMap, which
-            # this role does not allow — and the failed write makes it wait an hour before exiting
-            # instead of letting the Deployment restart it. Off here; the crash still goes to the
-            # pod log, which is where kubectl logs --previous looks anyway.
+            # this role does not allow. Off here; the crash still goes to the pod log, which is
+            # where 'kubectl logs --previous' looks anyway.
             - name: EXITLOG
               value: 'false'
-            # Off: without a ServiceAccount token the provider cannot reach any kubelet, so the
-            # channel would be offered with nothing behind it. This is the line to flip, together
-            # with moving to kwirth-readonly.yaml, if you decide you want the metrics after all.
+            # The only two channel switches the back reads. The channels that used to be listed in
+            # kwirth.yaml (LOG, ALERT, OPS, TRIVY, ECHO) are plugins now and those variables did
+            # nothing.
             - name: CHANNEL_METRICS
-              value: 'false'
-            # Magnify stays on. It subscribes to the metrics provider too, so its metric-fed parts
-            # come up empty, but browsing the cluster — which is most of what it is for — works.
+              value: 'true'
             - name: CHANNEL_MAGNIFY
               value: 'true'
           ports:

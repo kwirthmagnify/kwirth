@@ -17,7 +17,12 @@ schema.
 - `listPools()` — runtime stats of every open connection pool (used by the Status plugin).
 - `ensureSchemaOnce(db, schemaId, fn)` — idempotent schema creation, memoised by `schemaId`.
 - `closeDb(consumerId?)` — destroy pools.
-- `describeError(err)` — one-line description of a database error (unwraps `AggregateError`).
+- `setSqlLogger(logger)` — send this library's output to the host's logger instead of the console.
+- `describeError(err)` — one-line description of a database error: unwraps `AggregateError`, and trims
+  the stack off the already-formatted strings knex hands its logger.
+
+Every line a pool writes is prefixed with the consumer it belongs to, so a failing connection says who
+was asking for it.
 
 ## Install
 

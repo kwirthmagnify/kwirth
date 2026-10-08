@@ -118,7 +118,14 @@ export class ClusterInfo {
     public objectsApi!: KubernetesObjectApi
     public apisApi!: ApisApi
     public saToken!: ServiceAccountToken
-    public token: string|undefined   // needed just for connecting to kubelet and extract metrics
+    /*
+        Needed just for connecting to the kubelet and extracting metrics. It is a GETTER and not a
+        field on purpose: the token the kubelet projects into the pod is rotated, so a remembered one
+        goes stale — which is exactly what happened, and metrics died in silence a week after every
+        boot. Reading it through ServiceAccountToken keeps every consumer on a current token without
+        any of them changing, plugins included.
+    */
+    public get token(): string|undefined { return this.saToken?.current }
     public providers!: IProvider[]
     /*
         The PLUVIDER registry: channels that also produce. Kept apart from 'providers' on purpose — the

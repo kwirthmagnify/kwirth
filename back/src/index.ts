@@ -136,21 +136,55 @@ const fs = require('fs')
 // Expose shared packages as Node globals so plugins can use them without bundling
 ;(global as any).__kwirth_back__ = { kwirthCommon: _kwirthCommon, kwirthCommonBack: _kwirthCommonBack, kwirthCommonAi: _kwirthCommonAi, kwirthCommonAiBack: _kwirthCommonAiBack, kwirthCommonSql: _kwirthCommonSql, express }
 
-// common-sql: the relational storage service. The connection to the SQL server is pinned at startup
-// (the KWIRTH_SQL_* env; an override through secret/front end -> a later phase). It is lazy: it does not
-// connect until a consumer calls ensureDb(), so startup does not fail even when SQL is not available yet.
-const _sqlServer: ISqlServer = {
-    id: 'default',
-    name: 'default',
-    client: process.env.KWIRTH_SQL_CLIENT || 'pg',
-    host: process.env.KWIRTH_SQL_HOST || 'localhost',
-    port: Number(process.env.KWIRTH_SQL_PORT || 5432),
-    user: process.env.KWIRTH_SQL_USER || 'postgres',
-    password: process.env.KWIRTH_SQL_PASSWORD || '',
-    ssl: process.env.KWIRTH_SQL_SSL === 'true',
-    maintenanceDb: process.env.KWIRTH_SQL_MAINTDB || 'postgres'
+/*
+    common-sql: the relational storage service. The connection is pinned at startup from the KWIRTH_SQL_*
+    env (an override through secret/front end -> a later phase). It is lazy: nothing connects until a
+    consumer calls ensureDb(), so startup does not fail when SQL is there but not up yet.
+
+    Its output goes through OUR logger, with the 'stor' component, so it carries a time, a level and a
+    name like everything else. Left alone, knex writes to the console on its own account and a failed
+    connection comes out as a bare stack in the middle of the log.
+*/
+_kwirthCommonSql.setSqlLogger({
+    info: (message: unknown) => logInfo(ELogComponent.STORAGE, String(message)),
+    /*
+        knex files a pool timeout as a WARNING. It is not: whatever wanted that connection failed, and
+        so did everything behind it. It goes out as an error.
+    */
+    warning: (message: unknown) => /acquir\w* (a )?connection|pool is probably full/i.test(String(message))
+        ? logError(ELogComponent.STORAGE, String(message))
+        : logWarning(ELogComponent.STORAGE, String(message)),
+    error: (message: unknown) => logError(ELogComponent.STORAGE, String(message))
+})
+
+/*
+    🔴 No KWIRTH_SQL_HOST, no SQL. It used to default to 'localhost', which meant there was no such
+    thing as "not configured": a Kwirth with no database still had one pinned at localhost:5432, and the
+    first consumer to ask for a store — the AI usage control does, at startup — got an ECONNREFUSED and
+    a stack, on every boot, for a server nobody had ever mentioned. Now the consumer is told there is no
+    SQL, which is the truth and is one line.
+
+    The rest keep their defaults: once a host is given, the usual port, user and maintenance database are
+    a convenience. It is the HOST that says whether an administrator meant any of this.
+*/
+if (process.env.KWIRTH_SQL_HOST) {
+    const _sqlServer: ISqlServer = {
+        id: 'default',
+        name: 'default',
+        client: process.env.KWIRTH_SQL_CLIENT || 'pg',
+        host: process.env.KWIRTH_SQL_HOST,
+        port: Number(process.env.KWIRTH_SQL_PORT || 5432),
+        user: process.env.KWIRTH_SQL_USER || 'postgres',
+        password: process.env.KWIRTH_SQL_PASSWORD || '',
+        ssl: process.env.KWIRTH_SQL_SSL === 'true',
+        maintenanceDb: process.env.KWIRTH_SQL_MAINTDB || 'postgres'
+    }
+    _kwirthCommonSql.configure(_sqlServer)
+    logInfo(ELogComponent.STORAGE, `SQL server ${_sqlServer.user}@${_sqlServer.host}:${_sqlServer.port} (${_sqlServer.client})`)
 }
-_kwirthCommonSql.configure(_sqlServer)
+else {
+    logInfo(ELogComponent.STORAGE, 'No SQL server configured (KWIRTH_SQL_HOST is not set). Extensions that need one will say so and carry on')
+}
 
 const runningEnv = {
   isDesktop: process.env.FORCE==='desktop' || !!(process.versions && (process.versions as any).electron) || !!(globalThis as any).__TAURI__,
@@ -424,12 +458,14 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
                 logInfo(ELogComponent.CORE, `SA Token will not be created outside Kubernetes (running on '${kwirthData.executionEnvironment}', using kubeconfig credentials)`)
             }
             else {
-                let saToken = new ServiceAccountToken(clusterInfo.coreApi, kwirthData.namespace)
-                let token = await saToken.createToken('kwirth-sa', kwirthData.namespace)
+                /*
+                    saToken is assigned BEFORE obtaining anything: clusterInfo.token reads through it,
+                    so it has to be in place for the getter to answer at all.
+                */
+                clusterInfo.saToken = new ServiceAccountToken(clusterInfo.coreApi, kwirthData.namespace)
+                let token = await clusterInfo.saToken.obtain('kwirth-sa', kwirthData.namespace)
                 if (token) {
                     logInfo(ELogComponent.CORE, 'Got token...')
-                    clusterInfo.saToken = saToken
-                    clusterInfo.token = token
                 }
                 else {
                     logWarning(ELogComponent.CORE, 'There is no SA Token, no metrics will be available.')
@@ -3032,9 +3068,16 @@ const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthD
                 secureLogCm.data!.events = JSON.stringify(events)
                 await runningInstance.clusterInfo.coreApi?.replaceNamespacedConfigMap({ name: 'kwirth-secure-log', namespace: kwirthData.namespace, body:secureLogCm })
             }
-            catch {
-                console.log('Error writing secure exit info. Waiting for 1h before finishing')
-                await new Promise((resolve) => setTimeout(resolve, 60*60*1000))
+            catch (err) {
+                /*
+                    It used to wait an hour here before letting the process finish, which turned a
+                    failed write into an hour of downtime: the Deployment cannot bring the pod back
+                    until this one is gone. And the write fails EVERY time on a deployment whose role
+                    cannot touch ConfigMaps, which is the whole point of the read-only manifests. The
+                    post-mortem is in the pod log either way, which is where 'kubectl logs --previous'
+                    looks.
+                */
+                logError(ELogComponent.CORE, `Could not write the secure exit log to the '${kwirthData.namespace}/kwirth-secure-log' ConfigMap: ${describeFailure(err)}`)
             }
         }
 

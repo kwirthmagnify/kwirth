@@ -26,7 +26,13 @@ rules:
   # "" indicates the core API group
   # 'batch' is indispensable: without it, listing jobs gives a 403 and the resource selector is left with
   # NO controller at all — neither deployments nor statefulsets — because the six listings go together.
-  - apiGroups: ['', 'apps', 'batch', 'autoscaling', 'policy', 'coordination.k8s.io', 'metrics.k8s.io', 'rbac.authorization.k8s.io', 'networking.k8s.io', 'storage.k8s.io', 'apiextensions.k8s.io', 'aquasecurity.github.io']
+  # 'node.k8s.io', 'scheduling.k8s.io' and 'admissionregistration.k8s.io' are listed by the Magnify
+  # browser too; without them those three branches of the tree answered 403 without saying so.
+  #
+  # This is a broad grant — it is create and delete on every Secret in the cluster, plus exec. If you
+  # want Kwirth to observe and never to act, kwirth-full-ro.yaml in this same folder is the same
+  # deployment with no write permission at all, and it loses no observability for it.
+  - apiGroups: ['', 'apps', 'batch', 'autoscaling', 'policy', 'coordination.k8s.io', 'metrics.k8s.io', 'rbac.authorization.k8s.io', 'networking.k8s.io', 'storage.k8s.io', 'node.k8s.io', 'scheduling.k8s.io', 'admissionregistration.k8s.io', 'apiextensions.k8s.io', 'aquasecurity.github.io']
     resources: ['*']
     verbs: ['*']
 ---
@@ -71,17 +77,12 @@ spec:
               value: '/kwirth'
             - name: MASTERKEY
               value: 'Kwirth4Ever'
-            - name: CHANNEL_LOG
-              value: 'true'
+            # The only two channel switches the back reads. LOG, ALERT, OPS, TRIVY and ECHO used to be
+            # listed here and did nothing: those channels are plugins now, and a plugin is turned off
+            # by not installing it.
             - name: CHANNEL_METRICS
               value: 'true'
-            - name: CHANNEL_ALERT
-              value: 'true'
-            - name: CHANNEL_OPS
-              value: 'true'
-            - name: CHANNEL_TRIVY
-              value: 'true'
-            - name: CHANNEL_ECHO
+            - name: CHANNEL_MAGNIFY
               value: 'true'
           ports:
             - name: kwirth

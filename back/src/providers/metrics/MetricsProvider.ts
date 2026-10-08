@@ -710,6 +710,19 @@ export class MetricsProvider implements IProvider {
     }
 
     startProvider = async () => {
+        /*
+            On the desktop the kubelet is reached with the kubeconfig credentials; everywhere else it
+            is reached with the ServiceAccount token, and without one every single scrape is a 401.
+            Starting the clock then buys nothing and costs one error line per node per tick, for ever,
+            over a condition that cannot fix itself while the process lives. A deployment with no
+            permission to mint a token is a legitimate setup, not a fault, so this is a warning said
+            once and not an error repeated until someone mutes the log.
+        */
+        if (!this.kwirthData.isDesktop && !this.clusterInfo.token) {
+            this.log.warning('No ServiceAccount token, so no kubelet can be scraped: metrics will not be gathered and the metrics clock is not started')
+            return
+        }
+
         this.log.info('Metrics provider started...')
 
         let nodes = Array.from(this.clusterInfo.nodes.values())

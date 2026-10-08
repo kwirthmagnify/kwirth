@@ -62,3 +62,17 @@ test('describeError tolera basura sin romper', () => {
     assert.equal(describeError(undefined), 'undefined')
     assert.equal(describeError('plain string'), 'plain string')
 })
+
+/*
+    knex no entrega un Error a su logger: entrega una CADENA que ya ha formateado, con el stack dentro.
+    Tal cual, eso metía en el log cuatro líneas de internals de node que no dicen nada, y el
+    AggregateError se quedaba sin desenvolver porque una cadena no tiene `.errors`.
+*/
+test('describeError recorta el stack de una cadena ya formateada por knex', () => {
+    const knexSays = 'Acquire connection error: AggregateError [ECONNREFUSED]: \n    at internalConnectMultiple (node:net:1430:18)\n    at afterConnectMultiple (node:net:2099:7)'
+    assert.equal(describeError(knexSays), 'Acquire connection error: AggregateError [ECONNREFUSED]:')
+})
+
+test('describeError deja una cadena multilínea sin stack en una sola línea', () => {
+    assert.equal(describeError('Timeout acquiring a connection.\n  The pool is probably full.'), 'Timeout acquiring a connection. The pool is probably full.')
+})

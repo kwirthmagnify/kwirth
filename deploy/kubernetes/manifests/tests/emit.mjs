@@ -1,13 +1,14 @@
 /*
-    Prints one of the least-privilege manifests rewritten into another namespace, so it can be
-    deployed BESIDE an existing Kwirth instead of on top of it.
+    Prints kwirth-full-ro.yaml rewritten into another namespace, so it can be deployed BESIDE an
+    existing Kwirth instead of on top of it.
 
         node deploy/kubernetes/manifests/tests/emit.mjs <namespace> [manifest] | kubectl apply -f -
 
-    The manifest defaults to kwirth-readonly.yaml; the other one is kwirth-full-ro.yaml.
-
-        node deploy/kubernetes/manifests/tests/emit.mjs kwirth-ro     | kubectl apply -f -
-        node deploy/kubernetes/manifests/tests/emit.mjs kwirth-fullro kwirth-full-ro.yaml | kubectl apply -f -
+    Why this exists. Trying the read-only role on an installation that is already there does not
+    work: this deployment keeps its configuration on a PVC, and an installation that keeps it in the
+    cluster (what kwirth.yaml does) would be left unable to write its own Secrets the moment the
+    binding was repointed. The store and the RBAC go together, so the only honest way to try it is a
+    second, separate instance.
 
     KWIRTH_IMAGE overrides the image, with imagePullPolicy IfNotPresent so a locally built one that
     is already on the node is used instead of being pulled. Testing the manifest against the image
@@ -15,24 +16,13 @@
 
         KWIRTH_IMAGE=kwirth:develop node ...emit.mjs kwirth-ro | kubectl apply -f -
 
-    Why this exists. Trying the least-privilege role on an installation that is already there does
-    not work any more: this deployment keeps its configuration on a PVC, and an installation that
-    keeps it in the cluster (the default) would be left unable to write its own Secrets the moment
-    the binding was repointed. The store and the RBAC go together, so the only honest way to try it
-    is a second, separate instance.
-
     Namespaced objects move to the new namespace. Cluster-scoped ones (ClusterRole,
     ClusterRoleBinding) are renamed with the namespace as prefix, because there is only one of each
     name in a cluster and clobbering the real install's RBAC is exactly what this avoids.
 
-    To remove it afterwards — the cluster-scoped names are printed on stderr when it runs:
-
-        kubectl delete namespace <ns>
-        kubectl delete clusterrole <ns>-readonly-cr        # or <ns>-full-ro-cr
-        kubectl delete clusterrolebinding <ns>-readonly-crb
-
-    Deleting the namespace deletes the PVC, and with it the users and every setting of that
-    instance. That is the point of a throwaway.
+    The command to remove it afterwards is printed on stderr, so it stays out of the pipe. Deleting
+    the namespace deletes the PVC, and with it the users and every setting of that instance. That is
+    the point of a throwaway.
 */
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -44,7 +34,7 @@ const repoRoot = path.resolve(here, '..', '..', '..', '..')
 const yaml = createRequire(path.join(repoRoot, 'back', 'package.json'))('js-yaml')
 
 const ns = process.argv[2]
-const file = process.argv[3] ?? 'kwirth-readonly.yaml'
+const file = process.argv[3] ?? 'kwirth-full-ro.yaml'
 if (!ns || ns === 'kwirth') {
     console.error('usage: node emit.mjs <namespace> [manifest]   (a namespace of its own, not "kwirth")')
     process.exit(1)

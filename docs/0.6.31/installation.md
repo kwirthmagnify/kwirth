@@ -59,38 +59,44 @@ helm repo install kwirth kwirth/kwirth -n kwirth --create-namespace -f values.ya
 ```
 
 ## Kubernetes: deploy kwirth using MANIFESTS
-If you want an express setup of kwirth, do not loose your time, just type-in this kubectl in your console:
 
-```yaml
-kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/test/kwirth.yaml
-```
+There are two manifests in [`deploy/kubernetes/manifests`](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/kubernetes/manifests), and they differ in one thing: **whether the cluster lets kwirth change anything**. Each is a single file, and each is applied the same way. Pick one.
 
-If you need to change default kwirth configuration you may need to edit the YAML files in order to customize the deployment.
-
-### Least-privilege manifests
-
-The express manifest above gives kwirth broad permissions on the cluster, because it is meant to get you running in two minutes with every feature working. If your cluster has a security review, or you only want kwirth for observing and never for acting, there are two alternatives in [`deploy/kubernetes/manifests`](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/kubernetes/manifests). Each is a single file you apply exactly like the one above.
-
-| Manifest | Cluster permission | Writes | Metrics |
+| Manifest | What the cluster lets it do | Node metrics | Configuration lives in |
 | - | - | - | - |
-| `kwirth.yaml` | `resources: ['*']`, `verbs: ['*']` on 12 API groups | everything | yes |
-| `kwirth-readonly.yaml` | `get`, `list`, `watch` on everything | one: a token for its own ServiceAccount | yes |
-| `kwirth-full-ro.yaml` | `get`, `list`, `watch` on everything | none at all | no |
+| `kwirth.yaml` | `resources: ['*']`, `verbs: ['*']` on 15 API groups | yes | Secrets and ConfigMaps |
+| `kwirth-full-ro.yaml` | `get`, `list`, `watch`. Nothing else, anywhere | yes | a PersistentVolumeClaim |
+
+### `kwirth.yaml` — everything works
+
+The express setup. If you want kwirth running in two minutes with every feature available, do not lose your time, just type-in this kubectl in your console:
 
 ```
-kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/deploy/kubernetes/manifests/kwirth-readonly.yaml
+kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/deploy/kubernetes/manifests/kwirth.yaml
 ```
 
-**What they give up.** Both drop every verb that changes the cluster, so the Magnify channel's commands — restart, scale, cordon, drain, evict, apply, delete — and the `ops` and `fileman` plugins stop working: the button is still in the UI and the API server answers 403. If you do not want buttons that cannot work, do not install those two plugins.
+It is a broad grant, and deliberately so: `verbs: ['*']` means create and delete on every Secret in the cluster, and `exec` into any pod. That is what makes the ops and fileman plugins, and the Magnify commands, work at all.
 
-**They keep their configuration on a PersistentVolumeClaim**, not in Secrets and ConfigMaps, which is what removes the write permission. That is the `KWIRTH_STORE` mechanism described in the next section, already wired in both files. Two consequences worth knowing before you apply them:
+If you need to change default kwirth configuration you may need to edit the YAML file in order to customize the deployment.
+
+### `kwirth-full-ro.yaml` — not one write
+
+The same deployment with every verb that changes the cluster removed. One rule, three verbs: `get`, `list`, `watch`. Use it when your cluster has a security review, or when kwirth is there to watch and nothing else.
+
+```
+kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/deploy/kubernetes/manifests/kwirth-full-ro.yaml
+```
+
+**It loses no observability for it, metrics included.** kwirth reads the ServiceAccount token that Kubernetes already projects into every pod and that the kubelet rotates, so reaching each node's kubelet costs no permission at all. (That needs kwirth **0.6.65 or later**. Older builds asked the API server for a token instead, which was a write; on an older image this manifest starts fine and says `There is no SA Token, no metrics will be available`.)
+
+**What it does give up** are the actions. The Magnify channel's commands — restart, scale, cordon, drain, evict, apply, delete — and the `ops` and `fileman` plugins stop working: the button is still in the UI and the API server answers 403. If you do not want buttons that cannot work, do not install those two plugins.
+
+**Its configuration lives on a PersistentVolumeClaim**, not in Secrets and ConfigMaps, and that is what removes the write permission rather than a detail of persistence. It is the `KWIRTH_STORE` mechanism described in the next section, already wired in the file. Two consequences worth knowing before you apply it:
 
 - `MASTERKEY` becomes the key your configuration is encrypted with. Set it once, before the first boot, and never change it — see the warning in the next section.
 - The first boot creates the admin user as `admin` / `password`, in the volume. Change it immediately.
 
-**Which of the two.** `kwirth-readonly.yaml` can mint a token for its own ServiceAccount, scoped by name so it cannot mint one for anything else, and that token is how the metrics provider reaches each node's kubelet. `kwirth-full-ro.yaml` removes that one permission, and with it the kubelet metrics: the metrics channel, and the alert, pinocchio, spectrum and agora plugins, lose their feed, and kwirth says so at startup instead of failing. The PodMetrics and NodeMetrics entries of the Magnify tree still work in both, because those come from metrics-server through the API server and need no token.
-
-**One thing they do allow: reading Secrets.** Both grant read on every resource, Secrets included. Kubernetes RBAC has no deny rules and no way to express "every group except this one", so a role cannot both cover the CustomResourceDefinitions kwirth watches — which differ from cluster to cluster and cannot be known in advance — and leave Secrets out. If your requirement is that Secrets stay unreadable, each file carries an enumerated alternative, commented in its header, that you can paste over the single rule; its cost is that events from CustomResourceDefinitions will not arrive.
+**One thing it does allow: reading Secrets.** It grants read on every resource, Secrets included. Kubernetes RBAC has no deny rules and no way to express "every group except this one", so a role cannot both cover the CustomResourceDefinitions kwirth watches — which differ from cluster to cluster and cannot be known in advance — and leave Secrets out. If your requirement is that Secrets stay unreadable, the file carries an enumerated alternative, commented in its header, that you can paste over the single rule; its cost is that events from CustomResourceDefinitions will not arrive.
 
 ## Storage configuration
 

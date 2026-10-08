@@ -55,6 +55,22 @@ const oneLine = (err: unknown): string => {
 }
 
 export const describeError = (err: unknown): string => {
+    /*
+        🔴 knex does not hand its logger an Error, it hands it a STRING it has already formatted —
+        "Acquire connection error: AggregateError [ECONNREFUSED]: \n    at internalConnectMultiple
+        (node:net:1430:18)\n    at ...". Everything below works on objects, so without this the stack
+        went to the log verbatim, four lines of node internals that say nothing, and the AggregateError
+        stayed un-unwrapped because a string has no `.errors`.
+
+        So a string is cut at its first stack frame and squeezed onto one line. What is kept is the
+        part a human reads; what is dropped is where inside node's net module it happened, which is
+        the same place every time.
+    */
+    if (typeof err === 'string') {
+        const head = err.split(/\n\s*at /)[0]
+        return head.replace(/\s+/g, ' ').trim()
+    }
+
     const causes = (err as { errors?: unknown[] })?.errors
     if (Array.isArray(causes) && causes.length > 0) {
         // Deduplicated: trying six addresses and failing at all of them is not six pieces of news, it is one.
@@ -91,8 +107,18 @@ const requireServer = (): ISqlServer => {
 export const physicalDbName = (consumerId: string): string =>
     'kwirth_' + consumerId.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase()
 
-const knexForDb = (dbName: string, pool?: IPoolOptions): Knex => {
+/*
+    `owner` is who the pool belongs to, and it is on every line this pool writes.
+
+    🔴 The reason it cannot live in the logger: setSqlLogger sets ONE logger for the whole process.
+    A plugin that installs its own —agora does— ends up labelling every SQL message in the process
+    as its own, whoever caused it, so a global logger cannot answer "who is trying to connect": it
+    can only answer it wrong. The knex instance, on the other hand, is created per pool and knows.
+*/
+const knexForDb = (dbName: string, pool?: IPoolOptions, owner?: string): Knex => {
     const s = requireServer()
+    const who = owner ?? dbName
+    const say = (message: unknown): string => `${who}: ${describeError(message)}`
     return knexFactory({
         client: s.client,
         connection: {
@@ -107,10 +133,10 @@ const knexForDb = (dbName: string, pool?: IPoolOptions): Knex => {
             they also SAY what happened instead of a bare "AggregateError".
         */
         log: {
-            warn: (message: unknown) => log.warning(describeError(message)),
-            error: (message: unknown) => log.error(describeError(message)),
-            deprecate: (message: unknown) => log.warning(describeError(message)),
-            debug: (message: unknown) => log.info(describeError(message))
+            warn: (message: unknown) => log.warning(say(message)),
+            error: (message: unknown) => log.error(say(message)),
+            deprecate: (message: unknown) => log.warning(say(message)),
+            debug: (message: unknown) => log.info(say(message))
         }
     })
 }
@@ -120,7 +146,7 @@ const admin = (): Knex => {
     // The MAINTENANCE pool is used on rare occasions (createDb/dropDb/SHOW): it keeps NO warm connections
     // (min:0). It also lets short-lived processes (tests and scripts) finish without live connections
     // hanging the process (consumer pools do keep them, but they are closed with closeDb).
-    if (!adminPool) { adminPool = knexForDb(s.maintenanceDb ?? 'postgres', { min: 0 }); configuredMax.set('#admin', POOL_DEFAULT.max) }
+    if (!adminPool) { adminPool = knexForDb(s.maintenanceDb ?? 'postgres', { min: 0 }, 'maintenance'); configuredMax.set('#admin', POOL_DEFAULT.max) }
     return adminPool
 }
 
@@ -179,9 +205,16 @@ export const ensureDb = async (consumerId: string, pool?: IPoolOptions): Promise
     const existing = pools.get(consumerId)
     if (existing) return existing
     const name = physicalDbName(consumerId)
+    /*
+        Said BEFORE anything is attempted, and on purpose. Provisioning goes through the shared
+        maintenance pool, so when the server is down the first error comes out labelled 'maintenance'
+        and names no consumer: this is the line that says who asked for it, and where it was asked.
+    */
+    const s = requireServer()
+    log.info(`${consumerId}: provisioning '${name}' on ${s.host}:${s.port}`)
     await createDb(name)
     const opts: IPoolOptions = { ...POOL_DEFAULT, ...(pool ?? {}) }
-    const k = knexForDb(name, opts)
+    const k = knexForDb(name, opts, consumerId)
     await k.raw('select 1')          // validates the connection
     pools.set(consumerId, k)
     configuredMax.set(consumerId, opts.max ?? POOL_DEFAULT.max)
