@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Kwirth — Kubernetes observability platform. Log streaming, metrics, alerts, security scanning and AI analysis. Deployed in a single container.">
-  <title>Kwirth — Kubernetes Management Platform</title>
+  <title>[k]wirth — Kubernetes Management Platform</title>
   <link rel="icon" type="image/x-icon" href="_media/favicon.ico">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -230,7 +230,7 @@
 <nav>
   <a class="nav-logo" href="/">
     <img src="_media/favicon.ico" width="24" height="24" style="display:block"/>
-    <span>kwirth</span>
+    <span><span style="color:#8b949e">[k]</span>wirth</span>
   </a>
   <div class="nav-links">
     <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="#features">Features</a><a href="#install">Quick Install</a><a href="#architecture">Architecture</a><a href="#extensibility">Extensibility</a><a href="#about">About</a></div></div>
@@ -517,9 +517,13 @@
 <span class="cmd">kubectl port-forward</span> <span class="flag">-n</span> kwirth svc/kwirth <span class="val">3883:3883</span></pre></div>
     </div>
     <div id="i-kubectl" class="install-panel">
-      <div class="code-block"><pre><span class="comment"># Apply the latest manifest directly</span>
+      <div class="code-block"><pre><span class="comment"># Apply the manifest directly</span>
 <span class="cmd">kubectl apply</span> <span class="flag">-f</span> \
-  https://github.com/kwirthmagnify/kwirth/releases/latest/download/kwirth.yaml
+  https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/deploy/kubernetes/manifests/kwirth.yaml
+
+<span class="comment"># Or read-only: the same Kwirth, logs and metrics included,</span>
+<span class="comment"># with no permission to change a single thing in the cluster</span>
+<span class="comment">#   .../manifests/kwirth-full-ro.yaml</span>
 
 <span class="comment"># Check pod is running</span>
 <span class="cmd">kubectl get pods</span> <span class="flag">-n</span> kwirth
@@ -780,7 +784,7 @@
     <div>
       <div class="footer-logo">
         <img src="_media/favicon.ico" width="20px"/>
-        <span>kwirth</span>
+        <span><span style="color:#8b949e">[k]</span>wirth</span>
       </div>
       <p class="footer-desc">Kubernetes observability platform. Single container, zero dependencies, infinite possibilities.</p>
     </div>
