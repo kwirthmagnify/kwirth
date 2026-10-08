@@ -25,6 +25,15 @@ Parameters:
     Type: Number
     Default: 80
     Description: Port the load balancer listens on (use 443 with a certificate in production)
+  AlbIdleTimeout:
+    Type: Number
+    Default: 3600
+    MinValue: 1
+    MaxValue: 4000
+    Description: >
+      Seconds the load balancer keeps an idle connection open (AWS allows up to 4000). A Kwirth session is a
+      WebSocket and only speaks when something changes, so the AWS default of 60 cuts it and the browser
+      reconnects about once a minute.
   DbInstanceClass:
     Type: String
     Default: db.t4g.micro
@@ -222,6 +231,18 @@ Resources:
         - !Ref PublicSubnet2
       SecurityGroups:
         - !GetAtt AlbSecurityGroup.GroupId
+      LoadBalancerAttributes:
+        # A Kwirth session is a WebSocket, and a WebSocket is quiet by nature: it only speaks when something
+        # changes. The AWS default of 60 s cuts it and the browser reconnects about once a minute.
+        # 🔴 This raises the floor, it does not remove the problem: AWS documents no maximum lifetime for
+        # these connections, and an ALB replaces its nodes, taking their connections down with a 1006 (no
+        # close frame) whatever keep-alive the client sends. Measured here on 2026-10-08: drops at 7, 9, 20
+        # and 29 minutes while pings flowed every 20 s. Surviving that is the front end's job, by
+        # reconnecting; this only stops the balancer from adding cuts of its own.
+        # And it belongs in the template: raised by hand it is lost with the next stack recreation, together
+        # with the load balancer itself. That is exactly how it came back to 60.
+        - Key: idle_timeout.timeout_seconds
+          Value: !Ref AlbIdleTimeout
 
   Listener:
     Type: AWS::ElasticLoadBalancingV2::Listener

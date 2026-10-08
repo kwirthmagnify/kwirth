@@ -1779,7 +1779,52 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             tab.reconnectRef = selfId   // track it so removeTab can stop retrying when the tab closes
         }
         else {
-            console.log(`Channel ${tab.channel.channelId} does not support reconnect.`)
+            /*
+                "Not reconnectable" does NOT mean "give up". It means the instance cannot be RESUMED: a
+                channel like this serves a full snapshot on entry, so resuming would silently lose whatever
+                happened during the gap. The socket still has to come back.
+
+                Giving up left the tab dead with a red error, and the drop is not the user's fault: behind a
+                load balancer a websocket gets cut with code 1006 sooner or later, however much keep-alive
+                you send -- measured on a real ALB, four times in an hour, at irregular intervals of 7 to 29
+                minutes (2026-10-08). AWS documents no maximum lifetime for these connections, only an idle
+                timeout, so this is not something a setting can prevent: it is absorbed by reconnecting.
+
+                Same retry loop as above, ending in a fresh START instead of a RECONNECT.
+            */
+            console.log(`Channel ${tab.channel.channelId} cannot resume its instance: retrying with a fresh start.`)
+            if (tab.ws) {
+                tab.ws.onerror = null
+                tab.ws.onmessage = null
+                tab.ws.onclose = null
+                tab.ws = undefined
+            }
+            const restartCluster = clusters.find(c => c.name === tab!.channelObject!.clusterName)
+            if (!restartCluster) return
+
+            if (tab.channel.socketDisconnected(tab.channelObject)) setChannelMessageAction({action : EChannelRefreshAction.REFRESH})
+
+            if (tab.reconnectRef) clearInterval(tab.reconnectRef)   // never stack retry loops
+            let restartId = setInterval( (url, t:ITabObject) => {
+                console.log(`Trying to restart ${t.channel.channelId} using ${url}`)
+                try {
+                    let ws = new WebSocket(url)
+                    t.ws = ws
+                    ws.onopen = () => {
+                        clearInterval(restartId)
+                        t.reconnectRef = undefined
+                        // The back removed the instance when the socket closed (that is what non-reconnectable
+                        // means on its side), so there is nothing to refer to: START asks for a new one. Until
+                        // it arrives the keep-alive stays quiet, which is exactly what it checks for.
+                        t.channelObject.instanceId = ''
+                        t.channelStarted = false
+                        startTabChannel(t, restartCluster)
+                        if (t.channel.socketReconnect(t.channelObject)) setChannelMessageAction({action : EChannelRefreshAction.REFRESH})
+                    }
+                }
+                catch  {}
+            }, 10000, tab.channelObject.clusterUrl ?? restartCluster.url, tab)
+            tab.reconnectRef = restartId
         }
     }
     
