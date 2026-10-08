@@ -134,7 +134,14 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
                 return // frame no-JSON: se ignora
             }
             const mAny = msg as { action?: string; flow?: string; msgtype?: string; instance?: string; text?: string; signalMessage?: string }
-            if (logInfo) logInfo(`[fedtrace] recv ${wsUrl}: action=${mAny.action} flow=${mAny.flow} msgtype=${mAny.msgtype} instance=${mAny.instance} text='${mAny.text ?? mAny.signalMessage ?? ''}'`)
+            /*
+                🔴 Una traza POR FRAME no puede ir a INFO. Nació para levantar la federación de Agora, donde
+                el tráfico son preguntas y respuestas sueltas, pero un enlace que trae un FEED —la postura de
+                un cluster, miles de findings— convierte el log en algo inservible: miles de líneas por
+                segundo, y los mensajes que importan sepultados (visto en dev, 2026-10-08).
+                Se conservan las de ciclo de vida (START, OPEN, keepalive, cierre), que son pocas y son las
+                que de verdad se consultan, y la de frame NO-JSON de arriba, que es rara y siempre interesa.
+            */
             // The remote back end assigns the instance in the START's RESPONSE; we store it in order to be able
             // to SEND commands referencing an instance valid in THAT cluster (otherwise the back end discards it).
             if (msg?.action === EInstanceMessageAction.START && msg?.flow === EInstanceMessageFlow.RESPONSE) {
