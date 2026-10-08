@@ -9,6 +9,14 @@ Parameters:
     Type: String
     Default: 'develop'
     Description: Tag of kwirthmagnify/kwirth to run. Pin a version; avoid 'latest' outside demos
+  ScanRunnerImage:
+    Type: String
+    Default: ''
+    Description: >-
+      Optional. Image of the Kwirth scan runner (a container with Trivy). Without Kubernetes there are no
+      Jobs to scan images with, so an extension like Excubitor can inventory ECS and Lambda but reports no
+      container CVEs. Set this to run the runner as a sidecar and the extension reaches it on
+      http://localhost:8080. Leave empty and nothing is deployed.
   VpcCidr:
     Type: String
     Default: '10.0.0.0/16'
@@ -29,6 +37,10 @@ Parameters:
     Type: String
     Default: '15.13'
     Description: PostgreSQL engine version
+
+Conditions:
+  # The runner is opt-in: an empty image means the stack behaves exactly as it did before it existed.
+  WithScanRunner: !Not [!Equals [!Ref ScanRunnerImage, '']]
 
 Resources:
 
@@ -364,6 +376,19 @@ Resources:
         PasswordLength: 48
         ExcludePunctuation: true
 
+  # Shared secret between the extension and the runner. Generated here so nobody has to invent one and
+  # paste it in two places: the runner refuses to start without it and rejects any scan whose bearer
+  # token does not match. Read it from Secrets Manager to type it into the extension's settings.
+  ScanRunnerTokenSecret:
+    Condition: WithScanRunner
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'kwirth/${AWS::StackName}-scan-runner-token'
+      Description: Bearer token shared by the scan runner and whoever sends it images to scan.
+      GenerateSecretString:
+        PasswordLength: 48
+        ExcludePunctuation: true
+
   ExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -381,12 +406,15 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              # Both secrets: the MASTERKEY and the DB password.
+              # The MASTERKEY, the DB password and — when the runner is deployed — its token. ECS reads
+              # them BEFORE starting the containers: a missing one here does not degrade anything, the
+              # task simply never starts.
               - Effect: Allow
                 Action: secretsmanager:GetSecretValue
                 Resource:
                   - !Ref MasterKeySecret
                   - !Ref DbPasswordSecret
+                  - !If [WithScanRunner, !Ref ScanRunnerTokenSecret, !Ref 'AWS::NoValue']
 
   TaskRole:
     Type: AWS::IAM::Role
@@ -411,6 +439,29 @@ Resources:
                 Condition:
                   StringEquals:
                     elasticfilesystem:AccessPointArn: !GetAtt AccessPoint.Arn
+        # Trivy pulls the image it is scanning using the task's own identity. Without this the runner
+        # starts, answers its health check and fails every single scan with an ECR error — which reads
+        # like a broken runner when it is a missing permission.
+        - !If
+          - WithScanRunner
+          - PolicyName: ecr-read
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                # GetAuthorizationToken is account-wide by design: it takes no resource.
+                - Effect: Allow
+                  Action: ecr:GetAuthorizationToken
+                  Resource: '*'
+                - Effect: Allow
+                  Action:
+                    - ecr:BatchCheckLayerAvailability
+                    - ecr:GetDownloadUrlForLayer
+                    - ecr:BatchGetImage
+                    - ecr:DescribeImages
+                    - ecr:ListImages
+                    - ecr:DescribeRepositories
+                  Resource: !Sub 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/*'
+          - !Ref AWS::NoValue
 
   LogGroup:
     Type: AWS::Logs::LogGroup
@@ -427,8 +478,10 @@ Resources:
       RequiresCompatibilities:
         - FARGATE
       NetworkMode: awsvpc
-      Cpu: '1024'
-      Memory: '2048'
+      # Trivy shares the task with Kwirth, so the size doubles when the runner is in. Scanning large
+      # images is memory-hungry: raise this before lowering the runner's concurrency.
+      Cpu: !If [WithScanRunner, '2048', '1024']
+      Memory: !If [WithScanRunner, '4096', '2048']
       ExecutionRoleArn: !GetAtt ExecutionRole.Arn
       TaskRoleArn: !GetAtt TaskRole.Arn
       Volumes:
@@ -439,6 +492,12 @@ Resources:
             AuthorizationConfig:
               AccessPointId: !Ref AccessPoint
               IAM: ENABLED
+        # Ephemeral on purpose: it only holds Trivy's vulnerability database, which is a cache. Losing it
+        # on a task replacement costs one download (~3 min), not data.
+        - !If
+          - WithScanRunner
+          - Name: trivy-cache
+          - !Ref AWS::NoValue
       ContainerDefinitions:
         - Name: kwirth
           Image: !Sub 'kwirthmagnify/kwirth:${ImageTag}'
@@ -489,6 +548,50 @@ Resources:
               awslogs-group: !Ref LogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: kwirth
+
+        # ── The scan runner, when asked for ────────────────────────────────────────────────────────
+        - !If
+          - WithScanRunner
+          - Name: scan-runner
+            Image: !Ref ScanRunnerImage
+            # NOT essential: if the runner dies, Kwirth stays up. You lose new image CVEs, not the product.
+            Essential: false
+            PortMappings:
+              # Not published through the load balancer: the only client is Kwirth, over localhost, and the
+              # bearer token is the runner's only protection.
+              - ContainerPort: 8080
+                Protocol: tcp
+            Environment:
+              - Name: PORT
+                Value: '8080'
+              - Name: MAX_CONCURRENCY
+                Value: '1'
+              - Name: TRIVY_CACHE_DIR
+                Value: /trivy-cache
+            Secrets:
+              - Name: SCAN_RUNNER_TOKEN
+                ValueFrom: !Ref ScanRunnerTokenSecret
+            MountPoints:
+              - SourceVolume: trivy-cache
+                ContainerPath: /trivy-cache
+                ReadOnly: false
+            HealthCheck:
+              Command:
+                - CMD-SHELL
+                - wget -q -O - http://localhost:8080/healthz || exit 1
+              Interval: 30
+              Timeout: 5
+              Retries: 3
+              # The first start downloads the vulnerability database (around 3 minutes). A shorter grace
+              # period kills the container halfway through it, over and over.
+              StartPeriod: 300
+            LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-group: !Ref LogGroup
+                awslogs-region: !Ref AWS::Region
+                awslogs-stream-prefix: scan-runner
+          - !Ref AWS::NoValue
 
   Service:
     Type: AWS::ECS::Service
