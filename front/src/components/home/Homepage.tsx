@@ -48,8 +48,15 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
         Without a cluster there is no metrics provider, so nothing ever feeds these states and they stay at
         their initial 0. Painting a gauge at 0.0% is worse than painting nothing: it reads as "the cluster is
         idle" when the truth is "there is no cluster to measure". They are hidden instead.
+
+        The same goes for everything else on this card that comes from the cluster -- nodes, flavour,
+        version, platform, vCPU, memory: without one they render as `undefined` and `0.00GB`, which is not
+        information, it is noise dressed as information.
+
+        It is read from THE SELECTED cluster, not from the installation: add a Kubernetes cluster to the
+        list and selecting it brings all of this back, because it is that cluster that has something to say.
     */
-    const hasClusterMetrics = (props.cluster || props.clusters.find(x => x.home))?.kwirthData?.clusterType !== EClusterType.NONE
+    const hasCluster = (props.cluster || props.clusters.find(x => x.home))?.kwirthData?.clusterType !== EClusterType.NONE
 
     const handleCardToggle = () => {
         setCardExpanded((prev) => !prev)
@@ -309,8 +316,8 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                         {cardExpanded && <Typography variant="h6">Cluster details</Typography>}
                         {!cardExpanded && <Stack direction={'row'}>
                             <Typography><b>Cluster: </b>{props.cluster?.clusterInfo?.name}</Typography>
-                            <Typography sx={{ml:'32px'}}><b>Nodes: </b>{props.cluster?.clusterInfo?.nodes?.length}</Typography>
-                            <Typography sx={{ml:'32px'}}><b>Resources: </b>{props.cluster?.clusterInfo?.vcpu} vCPU / {((props.cluster?.clusterInfo?.memory||0)/1024/1024/1024).toFixed(2)} GB</Typography>
+                            {hasCluster && <Typography sx={{ml:'32px'}}><b>Nodes: </b>{props.cluster?.clusterInfo?.nodes?.length}</Typography>}
+                            {hasCluster && <Typography sx={{ml:'32px'}}><b>Resources: </b>{props.cluster?.clusterInfo?.vcpu} vCPU / {((props.cluster?.clusterInfo?.memory||0)/1024/1024/1024).toFixed(2)} GB</Typography>}
 
                             <Typography flexGrow={1}></Typography>
 
@@ -340,7 +347,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
 
                             <Typography flexGrow={1}></Typography>
 
-                            {hasClusterMetrics && <>
+                            {hasCluster && <>
                             <Tooltip title={`${(cpu||0).toFixed(2)}%`}>
                                 <Stack direction={'column'} alignItems={'center'} mr={'2px'}>
                                     <Typography fontSize={8} mb={-1}>CPU</Typography>
@@ -395,6 +402,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 <Typography><b>Clusters: </b>{props.clusters.map (c => c.name).join(', ')}</Typography>
                                 <Typography><b>Cluster type: </b>{props.cluster?.clusterInfo?.type}</Typography>
                             </Stack>
+                            {hasCluster && <>
                             <Divider orientation='vertical' flexItem/>
                             <Stack width={'25%'}>
                                 <Typography fontSize={20}><b>Cluster Info</b></Typography>
@@ -413,7 +421,8 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                 <Typography><b>Total vCPU: </b>{props.cluster?.clusterInfo?.vcpu}</Typography>
                                 <Typography><b>Total Memory: </b>{((props.cluster?.clusterInfo?.memory||0)/1024/1024/1024).toFixed(2)}GB</Typography>
                             </Stack>
-                            {hasClusterMetrics && <>
+                            </>}
+                            {hasCluster && <>
                             <Divider orientation='vertical' flexItem/>
                             <Stack width={'25%'} direction={'row'} alignItems={'center'}>
                                 <MiniGauge value={cpu} max={100} label='CPU' format={v => `${v.toFixed(1)}%`} />
