@@ -48,6 +48,26 @@ const isAutonomous = (channel: BackChannelData | undefined): boolean =>
     stop it either: it only looks at whether there are resources selected, not whether the channel
     admits them.
 */
+/*
+    Can this channel live on THIS cluster? A different question from the one above: `cluster`/`resourced`
+    say HOW a channel is invoked (cluster-wide, per resource, not at all), while `sources` says WHAT it
+    needs behind it. They are orthogonal, and Excubitor is the case that proves it -- invoked cluster-wide
+    and needing no Kubernetes at all, because its data comes from the cloud connectors.
+
+    Until now nobody crossed the two, so a Kwirth outside Kubernetes offered channels that could only paint
+    an empty screen, and offered Excubitor by luck rather than by decision.
+
+    Permissive when the channel declares nothing: the field went years without a reader, and breaking
+    third-party extensions over an internal tidy-up does not pay.
+*/
+const channelFitsCluster = (channel: BackChannelData, clusterType?: string): boolean =>
+    !channel.sources || channel.sources.length === 0 || !clusterType || channel.sources.includes(clusterType)
+
+/** What the channel is missing here, for the item that cannot be picked. Names what it NEEDS, not that it
+ *  is "incompatible": the second says nothing the user can act on. */
+const channelNeeds = (channel: BackChannelData): string =>
+    `needs ${channel.sources.filter(s => s !== EClusterType.NONE).join(' or ')}`
+
 const channelFitsView = (channel: BackChannelData, view: EInstanceConfigView | ''): boolean => {
     switch (view) {
         case '':
@@ -116,6 +136,9 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     // A Kwirth outside Kubernetes has no namespaces, controllers, pods or containers. Offering those views
     // only leads to four dropdowns that will never have anything in them.
     const clusterHasResources = cluster?.kwirthData?.clusterType !== EClusterType.NONE
+    // The SELECTED cluster decides, not the installation: add a Kubernetes cluster to the list, select it,
+    // and every channel is offered again -- it is that cluster that has something to serve.
+    const selectedClusterType = cluster?.kwirthData?.clusterType
 
     const loadAllNamespaces = async (cluster:Cluster) => {
         /*
@@ -535,11 +558,20 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                     { props.backChannels.filter(c => !props.enabledChannels?.length || props.enabledChannels.includes(c.id)).map(c => {
                         const cls = props.frontChannels?.get(c.id)
                         const icon = cls ? React.cloneElement(getChannelIconSafe(cls), { sx: { fontSize: 18, mr: 0.5 } }) : null
+                        /*
+                            It is DISABLED, never hidden. A channel the user installed and cannot find is a
+                            mystery; one that is greyed out with its reason beside it is an answer.
+                            The reason is written inline rather than in a tooltip because MUI disables
+                            pointer events on a disabled MenuItem, so a tooltip would never fire -- and a
+                            reason you have to hover for is half a reason anyway.
+                        */
+                        const unfitCluster = !channelFitsCluster(c, selectedClusterType)
                         return (
-                            <MenuItem key={c.id} value={c.id} disabled={!channelFitsView(c, view)}>
+                            <MenuItem key={c.id} value={c.id} disabled={!channelFitsView(c, view) || unfitCluster}>
                                 <Stack direction='row' alignItems='center'>
                                     {icon}
                                     <span>{c.id}</span>
+                                    {unfitCluster && <Typography variant='caption' color='text.disabled' sx={{ ml: 1 }}>{channelNeeds(c)}</Typography>}
                                     {c.mode === EChannelMode.REMOTE && <RemoteBadge operative={!!resolveRemoteChannelHost(c.id, cluster.clusterInfo?.id ?? '', props.clusters)} />}
                                 </Stack>
                             </MenuItem>

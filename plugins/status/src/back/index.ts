@@ -216,7 +216,11 @@ class StatusChannel implements IChannel {
         modifiable: false,
         reconnectable: true,
         metrics: false,
-        sources: [EClusterType.KUBERNETES],
+        // 🔴 También SIN cluster, y aquí es casi la razón de existir del canal: lo que Status enseña es el
+        // propio Kwirth —providers, plugins, extensiones, rutas HTTP, el log del core—, nada de lo cual
+        // sale de la API de Kubernetes. En un Kwirth sobre ECS es de los pocos sitios donde mirar qué pasa,
+        // así que deshabilitarlo ahí sería exactamente al revés de lo que hace falta.
+        sources: [EClusterType.KUBERNETES, EClusterType.NONE],
         endpoints: [],
         websocket: false,
         cluster: true,          // lo que se mira es el Kwirth entero, no un pod
