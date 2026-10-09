@@ -297,3 +297,48 @@ test('sin Kubernetes no se observa infraestructura, y eso tiene nombre propio', 
     const capacidades = await resolveEnvironmentCapabilities(EExecutionEnvironment.ECS, undefined, probes(false))
     assert.equal(resolveClusterType(capacidades), EClusterType.NONE)
 })
+
+// ── CONTAINER: el contenedor genérico ──────────────────────────────────────────────────────────────
+
+/*
+    El único entorno que NO se detecta: se pide. Los demás valores de FORCE pisan una detección que
+    habría funcionado igual; éste nombra un caso que la detección NO puede alcanzar — y sobre todo el
+    pod desplegado sin un solo permiso de Kubernetes, donde el KUBERNETES_SERVICE_HOST que inyecta el
+    kubelet identificaría un workload que luego se niega a arrancar sin una API que no le dejan tocar.
+*/
+test('FORCE=container gana al KUBERNETES_SERVICE_HOST que inyecta el kubelet', async () => {
+    await conEntorno({ FORCE: 'container', KUBERNETES_SERVICE_HOST: '10.43.0.1' }, async () => {
+        assert.equal(await detectExecutionEnvironment(async () => false), EExecutionEnvironment.CONTAINER)
+    })
+})
+
+test('container guarda como ECS, Cloud Run y ACI: ficheros CIFRADOS en KWIRTH_STORE', async () => {
+    await conEntorno({ KWIRTH_STORE: '/data' }, async () => {
+        const capacidades = await resolveEnvironmentCapabilities(EExecutionEnvironment.CONTAINER, undefined, probes(false))
+        assert.equal(capacidades.store, EStoreKind.FILE)
+        assert.equal(capacidades.storePath, '/data')
+    })
+})
+
+test('sin kubeconfig el contenedor no tiene cluster, y eso NO es un fallo', async () => {
+    const capacidades = await resolveEnvironmentCapabilities(EExecutionEnvironment.CONTAINER, undefined, probes(false))
+    assert.equal(capacidades.kubernetes, false)
+    assert.equal(resolveClusterType(capacidades), EClusterType.NONE)
+})
+
+/*
+    El perfil es "contenedor con volumen, cluster OPCIONAL", no "contenedor sin cluster": la
+    task-definition-ec2 de deploy/ecs monta un kubeconfig y ve su cluster. Las capacidades salen de la
+    sonda, no del entorno, así que un CONTAINER con kubeconfig montado se comporta igual.
+*/
+test('con un kubeconfig montado, el mismo contenedor SÍ tiene cluster', async () => {
+    const capacidades = await resolveEnvironmentCapabilities(EExecutionEnvironment.CONTAINER, undefined, probes(true))
+    assert.equal(capacidades.kubernetes, true)
+    assert.equal(resolveClusterType(capacidades), EClusterType.KUBERNETES)
+})
+
+test('sin KWIRTH_STORE avisa de que no sobrevive a un reinicio', async () => {
+    const capacidades = await resolveEnvironmentCapabilities(EExecutionEnvironment.CONTAINER, undefined, probes(false))
+    assert.equal(capacidades.storePath, undefined)
+    assert.ok(capacidades.reasons.some(r => /WARNING: no KWIRTH_STORE/.test(r)), capacidades.reasons.join(' | '))
+})

@@ -9,7 +9,7 @@ import { IConfigMaps } from '../tools/IConfigMap'
 import { IdentityService } from '../tools/auth/IdentityService'
 import { guard } from '../tools/RequestGuard'
 import { LoginRateLimiter } from '../tools/LoginRateLimiter'
-import { ELogComponent, logWarning } from '../tools/Logging'
+import { ELogComponent, logError, logWarning } from '../tools/Logging'
 
 const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex')
 
@@ -83,7 +83,7 @@ export class LoginApi {
 
                 let users = await IdentityService.readUsers(this.secrets)
                 if (!users) {
-                    console.error('Cannot access kwirth users on /')
+                    logError(ELogComponent.CORE, 'Cannot access kwirth users on /')
                     res.status(401).json()
                     return
                 }
@@ -113,7 +113,7 @@ export class LoginApi {
                         res.status(200).json(IdentityService.okResponse(user))
                     }
                     else {
-                        console.log('Error creating api key')
+                        logError(ELogComponent.CORE, 'Error creating api key')
                         res.status(500).json({})
                     }
                 }
@@ -143,7 +143,7 @@ export class LoginApi {
 
                 let users = await IdentityService.readUsers(this.secrets)
                 if (!users) {
-                    console.error('Cannot access kwirth users for changini password')
+                    logError(ELogComponent.CORE, 'Cannot access kwirth users for changini password')
                     res.status(401).json()
                     return
                 }
@@ -173,7 +173,7 @@ export class LoginApi {
                         res.status(200).json(IdentityService.okResponse(user))
                     }
                     else {
-                        console.log('Error creating api key')
+                        logError(ELogComponent.CORE, 'Error creating api key')
                         res.status(500).json({})
                     }
                 }

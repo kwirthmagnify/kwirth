@@ -95,6 +95,16 @@ const detectExecutionEnvironment = async (azureProbe: () => Promise<boolean> = (
             return EExecutionEnvironment.DESKTOP
         case 'docker':
             return EExecutionEnvironment.DOCKER
+        /*
+            The one environment that is never detected, only asked for. Everything else here overrides
+            a detection that would have worked anyway; this one names a case detection CANNOT reach —
+            a container on a platform Kwirth is not asked to recognise, and above all a pod deployed
+            with no Kubernetes permissions at all, where the kubelet's own KUBERNETES_SERVICE_HOST
+            would otherwise identify a workload that then refuses to start without an API it is not
+            allowed to reach.
+        */
+        case 'container':
+            return EExecutionEnvironment.CONTAINER
         case 'k8s':
             return EExecutionEnvironment.KUBERNETES
         case 'ecs':
@@ -183,11 +193,18 @@ const resolveStore = (executionEnvironment:EExecutionEnvironment, kubernetes:boo
             reasons.push('Store: plain files (legacy docker format, set by CONFIGMAPPATH and SECRETPATH)')
             return { store: EStoreKind.FILE_PLAIN, storePath: undefined }
 
-        // The three serverless container platforms store alike: encrypted files, and only a mounted volume
-        // (EFS on ECS, Cloud Storage/NFS on Cloud Run, Azure Files on ACI) survives a recycle.
+        /*
+            The container platforms store alike: encrypted files, and only a mounted volume (EFS on ECS,
+            Cloud Storage/NFS on Cloud Run, Azure Files on ACI, a PersistentVolumeClaim in a pod)
+            survives a recycle.
+
+            That they already shared this case is what made CONTAINER worth adding rather than faking:
+            the four are ONE profile, and the three named ones differ from it only in being detectable.
+        */
         case EExecutionEnvironment.ECS:
         case EExecutionEnvironment.CLOUD_RUN:
         case EExecutionEnvironment.ACI:
+        case EExecutionEnvironment.CONTAINER:
             if (kwirthStore) {
                 reasons.push(`Store: encrypted files at '${kwirthStore}' (KWIRTH_STORE)`)
             }

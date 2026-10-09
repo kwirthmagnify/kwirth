@@ -71,7 +71,19 @@ enum EExecutionEnvironment {
     DESKTOP = 'desktop',        // Electron/Tauri on the user's machine
     ECS = 'ecs',                // an AWS ECS task (Fargate or EC2)
     CLOUD_RUN = 'cloudrun',     // a Google Cloud Run service (detected by K_SERVICE)
-    ACI = 'aci'                 // an Azure Container Instances group (detected through the Azure identity endpoint)
+    ACI = 'aci',                // an Azure Container Instances group (detected through the Azure identity endpoint)
+    /*
+        A container on a platform Kwirth is not asked to recognise. It behaves exactly as the three
+        above — a mounted volume for its store, and a cluster only if a kubeconfig is mounted — which
+        is the point: those three already share one profile and differ only in how they are DETECTED.
+
+        It is the only value that is never detected: it is asked for with FORCE=container, for where
+        detection cannot work. A pod is the case that forced it into existence — the kubelet injects
+        KUBERNETES_SERVICE_HOST into every container, so a Kwirth deployed with no RBAC at all would
+        still be identified as a Kubernetes workload and refuse to start without an API it is not
+        allowed to reach.
+    */
+    CONTAINER = 'container'
 }
 
 // How many back instances of a channel make sense per cluster.

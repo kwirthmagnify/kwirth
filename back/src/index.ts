@@ -522,7 +522,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         // mounted volume (KWIRTH_STORE) or a platform whose default path persists (desktop/docker). On an
         // ephemeral store the generated master key rotates on restart —harmless, since the encrypted store
         // dies with it— but the warning has to say so.
-        const serverlessPlatform = [EExecutionEnvironment.ECS, EExecutionEnvironment.CLOUD_RUN, EExecutionEnvironment.ACI].includes(kwirthData.executionEnvironment)
+        const serverlessPlatform = [EExecutionEnvironment.ECS, EExecutionEnvironment.CLOUD_RUN, EExecutionEnvironment.ACI, EExecutionEnvironment.CONTAINER].includes(kwirthData.executionEnvironment)
         const storeDurable = capabilities.store === EStoreKind.KUBERNETES || !serverlessPlatform || capabilities.storePath !== undefined
 
         switch (capabilities.store) {
@@ -563,7 +563,9 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
         */
         if (!capabilities.kubernetes && configMaps) {
             const store = configMaps
-            const serverless = [EExecutionEnvironment.ECS, EExecutionEnvironment.CLOUD_RUN, EExecutionEnvironment.ACI].includes(kwirthData.executionEnvironment)
+            // CONTAINER belongs here with the other three: a container whose volume is not mounted
+            // loses its generated identity on the next restart, whatever platform it runs on.
+            const serverless = [EExecutionEnvironment.ECS, EExecutionEnvironment.CLOUD_RUN, EExecutionEnvironment.ACI, EExecutionEnvironment.CONTAINER].includes(kwirthData.executionEnvironment)
             const identity = await resolveInstallationIdentity(
                 kwirthData.executionEnvironment,
                 !serverless || capabilities.storePath !== undefined,
@@ -3339,9 +3341,10 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
                 channels: []
             }
             break
-        // Same shape as ECS: a serverless container with no deployment of its own to manage.
+        // Same shape as ECS: a container with no deployment of its own to manage.
         case EExecutionEnvironment.CLOUD_RUN:
         case EExecutionEnvironment.ACI:
+        case EExecutionEnvironment.CONTAINER:
             kwirthData = {
                 namespace: '',
                 deployment: '',
@@ -3349,7 +3352,7 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
                 inCluster: false,
                 version: VERSION,
                 lastVersion: VERSION,
-                clusterName: process.env.KWIRTH_CLUSTER_NAME || (exenv === EExecutionEnvironment.CLOUD_RUN ? 'inCloudRun' : 'inAci'),
+                clusterName: process.env.KWIRTH_CLUSTER_NAME || (exenv === EExecutionEnvironment.CLOUD_RUN ? 'inCloudRun' : exenv === EExecutionEnvironment.ACI ? 'inAci' : 'inContainer'),
                 clusterType: resolveClusterType(capabilities),
                 executionEnvironment: exenv,
                 metricsInterval:15,
@@ -3478,8 +3481,9 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
         case EExecutionEnvironment.ECS:
         case EExecutionEnvironment.CLOUD_RUN:
         case EExecutionEnvironment.ACI:
-            // ECS, Cloud Run and ACI follow the same path as a standalone container: what differs between
-            // them are the capabilities, and those arrive already resolved before reaching here.
+        case EExecutionEnvironment.CONTAINER:
+            // They all follow the same path as a standalone container: what differs between them are the
+            // capabilities, and those arrive already resolved before reaching here.
             await launchDocker(envContext, kwirthData, app)
             break
         case EExecutionEnvironment.KUBERNETES:

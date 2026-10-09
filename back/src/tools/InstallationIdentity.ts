@@ -171,6 +171,12 @@ const resolveInstallationIdentity = async (executionEnvironment: EExecutionEnvir
         case EExecutionEnvironment.ACI:
             platform = fromAzureManagedIdentity(probes)
             break
+        /*
+            CONTAINER is absent on purpose and falls through to the generated id. It is the environment
+            of a platform Kwirth is not asked to recognise, so there is no metadata endpoint to ask —
+            probing one would be a request that is known in advance to fail, and a line in the log
+            apologising for it.
+        */
     }
     if (platform) {
         const result = await platform.catch(err => `error: ${err instanceof Error ? err.message : String(err)}`)
