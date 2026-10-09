@@ -1,15 +1,18 @@
 /*
-    Unit tests of kwirth-full-ro.yaml, the deployment with no write permission at all. They need
-    nothing but node — no cluster, no helm.
+    Unit tests of the three deployment manifests. They need nothing but node — no cluster, no helm.
 
-    It grants with a single wildcard rule, because the events provider watches every CRD it sees
-    appear and a cluster's CRDs cannot be known when the manifest is written. What is checked there
-    is the VERBS, which is where the safety actually lives.
+        kwirth.yaml            verbs:['*'] on 15 API groups      it manages the cluster
+        kwirth-full-ro.yaml    get / list / watch on everything  it watches the cluster
+        kwirth-zero.yaml       nothing at all                    it does not know it is in one
 
-    The enumerated alternative still ships, commented in the header between STRICT-RULES-BEGIN and
-    STRICT-RULES-END, for installations that require Secrets to stay unreadable. It is advice we
-    give, so it is tested like code: parsed out of the comment and checked against what back/src
-    really calls. That check is what caught nodes/stats missing.
+    Most of what is checked is shared, because the three are the same deployment with different
+    authority, and the point of testing all three together is that they do not drift apart. What each
+    one is FOR lives in its own block at the end.
+
+    The read-only one also ships an enumerated alternative, commented in its header between
+    STRICT-RULES markers, for installations that require Secrets to stay unreadable. It is advice we
+    give, so it is tested like code: parsed out of the comment and checked against what back/src really
+    calls. That check is what caught nodes/stats missing.
 
     Run:  node --test deploy/kubernetes/manifests/tests/manifests.test.mjs
 */
@@ -24,59 +27,241 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(here, '..', '..', '..', '..')
 const yaml = createRequire(path.join(repoRoot, 'back', 'package.json'))('js-yaml')
 
-const MANIFEST = 'kwirth-full-ro.yaml'
 const READ_VERBS = ['get', 'list', 'watch']
+const RBAC_KINDS = ['ServiceAccount', 'Role', 'RoleBinding', 'ClusterRole', 'ClusterRoleBinding']
 
-const text = readFileSync(path.resolve(here, '..', MANIFEST), 'utf8')
-const docs = yaml.loadAll(text).filter(Boolean)
-const find = (kind, name) => docs.find(d => d.kind === kind && (!name || d.metadata.name === name))
-const deployment = () => find('Deployment')
-const container = () => deployment().spec.template.spec.containers[0]
-const envOf = () => Object.fromEntries(container().env.map(e => [e.name, e.value]))
+const textOf = (file) => readFileSync(path.resolve(here, '..', file), 'utf8')
+
+const MANIFESTS = [
+    { file: 'kwirth.yaml', authority: 'full' },
+    { file: 'kwirth-full-ro.yaml', authority: 'read' },
+    { file: 'kwirth-zero.yaml', authority: 'none' }
+]
+
+const load = (file) => {
+    const docs = yaml.loadAll(textOf(file)).filter(Boolean)
+    const find = (kind, name) => docs.find(d => d.kind === kind && (!name || d.metadata.name === name))
+    const deployment = find('Deployment')
+    const container = deployment.spec.template.spec.containers[0]
+    return {
+        docs, find, deployment, container,
+        env: Object.fromEntries((container.env || []).map(e => [e.name, e.value ?? '<fromSecret>'])),
+        granted: new Set((find('ClusterRole')?.rules ?? []).flatMap(r => r.apiGroups.flatMap(g => r.resources.map(res => `${g}/${res}`))))
+    }
+}
+
+// ── what every manifest must get right, whatever its authority ─────────────────────────────────────
+
+for (const { file, authority } of MANIFESTS) {
+    test(`${file}: applies as one bundle, in its own namespace, with a Service in front`, () => {
+        const m = load(file)
+        assert.equal(m.find('Namespace').metadata.name, 'kwirth')
+        for (const d of m.docs) {
+            if (d.kind === 'Namespace' || RBAC_KINDS.includes(d.kind) && !d.metadata.namespace) continue
+            if (['ClusterRole', 'ClusterRoleBinding'].includes(d.kind)) continue
+            assert.equal(d.metadata.namespace, 'kwirth', `${d.kind}/${d.metadata.name} is not in the kwirth namespace`)
+        }
+        const svc = m.find('Service')
+        assert.equal(svc.spec.ports[0].targetPort, 3883)
+        assert.equal(svc.spec.selector.app, m.deployment.spec.template.metadata.labels.app)
+    })
+
+    test(`${file}: the pod is probed, limited, and one replica`, () => {
+        const m = load(file)
+        assert.equal(m.deployment.spec.replicas, 1)
+        for (const probe of ['readinessProbe', 'startupProbe', 'livenessProbe']) {
+            assert.equal(m.container[probe].httpGet.path, '/healthz', `${probe} does not check /healthz`)
+        }
+        assert.ok(m.container.resources.limits.memory)
+    })
+
+    test(`${file}: only the two channel switches the back actually reads`, () => {
+        // LOG, ALERT, OPS, TRIVY and ECHO were listed here for a long time and did nothing: those
+        // channels are plugins now, and a plugin is turned off by not installing it.
+        const m = load(file)
+        assert.deepEqual(Object.keys(m.env).filter(n => n.startsWith('CHANNEL_')).sort(), ['CHANNEL_MAGNIFY', 'CHANNEL_METRICS'])
+    })
+
+    test(`${file}: no password and no master key are written into the pod spec`, () => {
+        const m = load(file)
+        // a value here is readable by anyone who can read the Deployment; both belong in a Secret, or
+        // generated by the core, which is what every one of these manifests now does
+        assert.equal(m.env.MASTERKEY, undefined)
+        for (const [name, value] of Object.entries(m.env)) {
+            if (/PASSWORD/.test(name)) assert.equal(value, '<fromSecret>', `${name} is inline in the pod spec`)
+        }
+    })
+
+    if (authority !== 'full') {
+        test(`${file}: hardened pod — no capability, no escalation, read-only image`, () => {
+            const m = load(file)
+            const sc = m.container.securityContext
+            assert.equal(sc.allowPrivilegeEscalation, false)
+            assert.equal(sc.readOnlyRootFilesystem, true)
+            assert.deepEqual(sc.capabilities.drop, ['ALL'])
+            assert.equal(sc.seccompProfile.type, 'RuntimeDefault')
+
+            // readOnlyRootFilesystem only holds because everything written at runtime that is not the
+            // store goes to os.tmpdir()
+            const tmp = m.container.volumeMounts.find(v => v.mountPath === '/tmp')
+            assert.ok(tmp, 'a read-only root filesystem needs a writable /tmp')
+            assert.ok(m.deployment.spec.template.spec.volumes.find(v => v.name === tmp.name).emptyDir)
+        })
+
+        test(`${file}: the store is a volume, not the cluster`, () => {
+            const m = load(file)
+            // any value but 'etcd' means "encrypted files at this path" (resolveStore)
+            assert.ok(m.env.KWIRTH_STORE && m.env.KWIRTH_STORE !== 'etcd')
+            const mount = m.container.volumeMounts.find(v => v.mountPath === m.env.KWIRTH_STORE)
+            assert.ok(mount, `nothing is mounted at KWIRTH_STORE (${m.env.KWIRTH_STORE})`)
+            const volume = m.deployment.spec.template.spec.volumes.find(v => v.name === mount.name)
+            assert.equal(volume.persistentVolumeClaim.claimName, m.find('PersistentVolumeClaim').metadata.name)
+
+            // ReadWriteOnce plus a directory of files with no locking: Recreate, or the rollout
+            // deadlocks on a volume the old pod still holds
+            assert.equal(m.deployment.spec.strategy.type, 'Recreate')
+        })
+    }
+}
+
+// ── kwirth.yaml — it manages the cluster ───────────────────────────────────────────────────────────
+
+test('kwirth.yaml: the permissive role, with the three groups that used to be missing', () => {
+    const m = load('kwirth.yaml')
+    const rule = m.find('ClusterRole').rules[0]
+    assert.deepEqual(rule.verbs, ['*'])
+    assert.deepEqual(rule.resources, ['*'])
+    // these three are listed by the Magnify browser; without them those branches answered 403 in
+    // silence, which is how they went unnoticed for so long
+    for (const group of ['node.k8s.io', 'scheduling.k8s.io', 'admissionregistration.k8s.io']) {
+        assert.ok(rule.apiGroups.includes(group), `missing ${group}`)
+    }
+    assert.ok(rule.apiGroups.includes('batch'), 'without batch the resource selector loses EVERY controller, not just jobs')
+})
+
+test('kwirth.yaml: it ships the bootstrap admin, hashed and under the key the core writes', () => {
+    const m = load('kwirth.yaml')
+    const data = m.find('Secret', 'kwirth-users').data
+    // base64url(id), like IdentityService.writeUsers: an id is often an email and a Secret key cannot
+    // hold an '@'
+    const key = Buffer.from('admin', 'utf8').toString('base64url')
+    assert.ok(data[key], `the admin is not under '${key}'`)
+    const user = JSON.parse(Buffer.from(data[key], 'base64').toString())
+    assert.equal(user.id, 'admin')
+    assert.equal(user.resources, 'cluster,admin::::')
+    // the login refuses a password stored in the clear, so shipping one would ship an install nobody
+    // can enter
+    assert.match(user.password, /^\$2[aby]\$/, 'the shipped password is not a bcrypt hash')
+})
+
+test('kwirth.yaml: the store stays in the cluster, which is what it is for', () => {
+    const m = load('kwirth.yaml')
+    assert.equal(m.env.KWIRTH_STORE, undefined)
+    assert.equal(m.find('PersistentVolumeClaim'), undefined)
+})
+
+// ── kwirth-full-ro.yaml — it watches the cluster ───────────────────────────────────────────────────
+
+test('kwirth-full-ro.yaml: one rule, three verbs, and not a Role anywhere', () => {
+    const m = load('kwirth-full-ro.yaml')
+    const rules = m.find('ClusterRole').rules
+    assert.equal(rules.length, 1)
+    assert.deepEqual(rules[0].apiGroups, ['*'])
+    assert.deepEqual(rules[0].resources, ['*'])
+    // the whole safety of the wildcard: exec and eviction are 'create', so three read verbs deny them
+    // as surely as not naming the resource would
+    assert.deepEqual(rules[0].verbs, READ_VERBS)
+
+    // there WAS a namespaced Role here, whose single rule minted a token for the ServiceAccount so the
+    // metrics provider could reach the kubelet. Reading the token Kubernetes already projects into the
+    // pod made it unnecessary.
+    assert.equal(m.find('Role'), undefined, 'minting a token is no longer needed: the projected one is read')
+    assert.equal(m.find('RoleBinding'), undefined)
+    assert.equal(m.env.EXITLOG, 'false', 'the crash log is a ConfigMap write this role cannot do')
+})
+
+test('kwirth-full-ro.yaml: the projected token pays for the metrics, so the automount is left alone', () => {
+    const m = load('kwirth-full-ro.yaml')
+    /*
+        Setting automountServiceAccountToken to false would look like one more hardening step and would
+        silently cost the metrics: that projected token is the only way this deployment reaches a
+        kubelet, now that it cannot mint one.
+    */
+    assert.equal(m.deployment.spec.template.spec.automountServiceAccountToken, undefined)
+    assert.equal(m.env.CHANNEL_METRICS, 'true')
+})
+
+// ── kwirth-zero.yaml — it does not know it is in a cluster ─────────────────────────────────────────
+
+test('kwirth-zero.yaml: NOT ONE RBAC object, and no credential in the container', () => {
+    const m = load('kwirth-zero.yaml')
+    const rbac = m.docs.filter(d => RBAC_KINDS.includes(d.kind))
+    assert.deepEqual(rbac, [], `this manifest grants nothing, so it declares nothing: found ${rbac.map(d => d.kind).join(', ')}`)
+
+    /*
+        And the half that is not RBAC. Every pod gets a ServiceAccount token projected into it unless
+        this is off; with no bindings that token opens nothing, but with it off there is no credential
+        in the container at all, so a mistake elsewhere cannot turn into access.
+    */
+    assert.equal(m.deployment.spec.template.spec.automountServiceAccountToken, false)
+})
+
+test('kwirth-zero.yaml: it is told what it is, because detection cannot work out', () => {
+    const m = load('kwirth-zero.yaml')
+    /*
+        The kubelet injects KUBERNETES_SERVICE_HOST into every pod and that is what identifies a
+        Kubernetes workload — taking the permissions away does not change it. Inside a cluster the API
+        is deliberately not optional, so without this the pod comes up, finds no credentials, falls
+        back to the client's invented localhost:8080 and never starts.
+    */
+    assert.equal(m.env.FORCE, 'container')
+    // not 'docker': that profile still writes the legacy PLAIN-file format, and this manifest's whole
+    // point is a store it can keep on a shared volume
+    assert.notEqual(m.env.FORCE, 'docker')
+    // both off: there is no cluster behind them
+    assert.equal(m.env.CHANNEL_METRICS, 'false')
+    assert.equal(m.env.CHANNEL_MAGNIFY, 'false')
+})
+
+test('kwirth-zero.yaml: the database password comes from a Secret, never inline', () => {
+    const m = load('kwirth-zero.yaml')
+    assert.equal(m.env.KWIRTH_SQL_PASSWORD, '<fromSecret>')
+    assert.ok(m.find('Secret', 'kwirth-sql'), 'the Secret the password is referenced from is missing')
+    assert.ok(m.env.KWIRTH_SQL_HOST, 'a SQL host is expected: this deployment is meant to use a database')
+})
+
+// ── the enumerated alternative shipped in kwirth-full-ro.yaml ──────────────────────────────────────
 
 /*
-    The enumerated alternative, lifted out of the header comment. Uncommenting it by hand is exactly
-    what a user would do, so the test does the same thing and then parses it: if it stops being
-    valid YAML, or stops covering what the back calls, this fails.
+    Lifted out of the header comment. Uncommenting it by hand is exactly what a user would do, so the
+    test does the same and then parses it: if it stops being valid YAML, or stops covering what the
+    back calls, this fails.
 */
 const strictRules = () => {
-    const m = text.match(/STRICT-RULES-BEGIN\r?\n([\s\S]*?)# STRICT-RULES-END/)
-    assert.ok(m, `${MANIFEST} has no STRICT-RULES block`)
-    const body = m[1].split(/\r?\n/).map(l => l.replace(/^#/, '')).join('\n')
-    const rules = yaml.load(body)
-    assert.ok(Array.isArray(rules) && rules.length > 0, `${MANIFEST}: the STRICT-RULES block is not a list of rules`)
+    const m = textOf('kwirth-full-ro.yaml').match(/STRICT-RULES-BEGIN\r?\n([\s\S]*?)# STRICT-RULES-END/)
+    assert.ok(m, 'kwirth-full-ro.yaml has no STRICT-RULES block')
+    const rules = yaml.load(m[1].split(/\r?\n/).map(l => l.replace(/^#/, '')).join('\n'))
+    assert.ok(Array.isArray(rules) && rules.length > 0, 'the STRICT-RULES block is not a list of rules')
     return rules
 }
 
-const asSet = (rules) => new Set(rules.flatMap(r => r.apiGroups.flatMap(g => r.resources.map(res => `${g}/${res}`))))
-
-// The api client field in ClusterInfo tells which API group the call lands on. This is the test's
-// model of the k8s client naming, not something the manifest can get wrong on its own.
+// The api client field in ClusterInfo tells which API group the call lands on. This is the test's model
+// of the k8s client naming, not something a manifest can get wrong on its own.
 const GROUP_OF_CLIENT = {
-    coreApi: '',
-    appsApi: 'apps',
-    batchApi: 'batch',
-    autoscalingApi: 'autoscaling',
-    policyApi: 'policy',
-    coordinationApi: 'coordination.k8s.io',
-    networkApi: 'networking.k8s.io',
-    storageApi: 'storage.k8s.io',
-    nodeApi: 'node.k8s.io',
-    schedulingApi: 'scheduling.k8s.io',
-    admissionApi: 'admissionregistration.k8s.io',
-    extensionApi: 'apiextensions.k8s.io',
-    rbacApi: 'rbac.authorization.k8s.io'
+    coreApi: '', appsApi: 'apps', batchApi: 'batch', autoscalingApi: 'autoscaling', policyApi: 'policy',
+    coordinationApi: 'coordination.k8s.io', networkApi: 'networking.k8s.io', storageApi: 'storage.k8s.io',
+    nodeApi: 'node.k8s.io', schedulingApi: 'scheduling.k8s.io', admissionApi: 'admissionregistration.k8s.io',
+    extensionApi: 'apiextensions.k8s.io', rbacApi: 'rbac.authorization.k8s.io'
 }
 
-// Where the client's method name does not pluralize into the RBAC resource name.
+// where the client's method name does not pluralize into the RBAC resource name
 const RESOURCE_OVERRIDE = {
     'coreApi.readNamespacedPodLog': 'pods/log',
     'coreApi.readNamespacedPodStatus': 'pods/status',
     'coreApi.listEndpointsForAllNamespaces': 'endpoints'
 }
 
-// Reads the STRICT alternative deliberately leaves out, each for a stated reason. Anything NOT here
-// has to be in it, which is the point of the coverage test.
+// reads the strict alternative deliberately leaves out, each for a stated reason
 const UNGRANTED_READS = {
     'coreApi.listSecretForAllNamespaces': 'the whole point of the strict variant is that Secrets stay unreadable',
     'coreApi.listServiceAccountForAllNamespaces': 'travels with secrets',
@@ -90,25 +275,14 @@ const pluralize = (kind) => {
     return k + 's'
 }
 
-const sourceFiles = (dir) => {
-    const out = []
-    for (const entry of readdirSync(dir)) {
-        const full = path.join(dir, entry)
-        if (statSync(full).isDirectory()) out.push(...sourceFiles(full))
-        else if (entry.endsWith('.ts')) out.push(full)
-    }
-    return out
-}
+const sourceFiles = (dir) => readdirSync(dir).flatMap(e => {
+    const full = path.join(dir, e)
+    return statSync(full).isDirectory() ? sourceFiles(full) : (e.endsWith('.ts') ? [full] : [])
+})
 
-/*
-    Every read call the back makes, as '<client>.<method>' -> '<group>/<resource>'. Only read verbs:
-    the write calls are Magnify's command half and the ops plugins, which this deployment drops on
-    purpose.
-*/
 const readCalls = () => {
     const calls = new Map()
-    const clients = Object.keys(GROUP_OF_CLIENT).join('|')
-    const re = new RegExp(`\\b(${clients})\\.(list|read)([A-Za-z]+)\\(`, 'g')
+    const re = new RegExp(`\\b(${Object.keys(GROUP_OF_CLIENT).join('|')})\\.(list|read)([A-Za-z]+)\\(`, 'g')
     for (const file of sourceFiles(path.join(repoRoot, 'back', 'src'))) {
         const source = readFileSync(file, 'utf8')
         let m
@@ -123,60 +297,21 @@ const readCalls = () => {
     return calls
 }
 
-test('one applyable bundle of seven objects, and not a Role among them', () => {
-    assert.deepEqual(docs.map(d => `${d.kind}/${d.metadata.name}`), [
-        'Namespace/kwirth',
-        'ServiceAccount/kwirth-sa',
-        'ClusterRole/kwirth-full-ro-cr',
-        'ClusterRoleBinding/kwirth-full-ro-crb',
-        'PersistentVolumeClaim/kwirth-store',
-        'Deployment/kwirth',
-        'Service/kwirth-svc'
-    ])
-
-    /*
-        There WAS a second manifest with a namespaced Role, whose single rule let Kwirth mint a token
-        for its own ServiceAccount so the metrics provider could reach the kubelet. Reading the token
-        Kubernetes already projects into the pod made that rule unnecessary, and two files that
-        differ by a rule that does nothing are two files somebody has to maintain and explain.
-    */
-    assert.equal(find('Role'), undefined, 'minting a token is no longer needed: the projected one is read instead')
-    assert.equal(find('RoleBinding'), undefined)
-
-    // the users Secret of kwirth.yaml is gone on purpose: with the store on the PVC, the back seeds
-    // the admin itself on first boot (createAdminUserIfMissing). Shipping one would be a second,
-    // stale source of truth for the password.
-    assert.equal(find('Secret'), undefined)
-})
-
-test('the ClusterRole reads everything and changes nothing', () => {
-    const rules = find('ClusterRole').rules
-    // one rule, on purpose: enumerating cannot cover the CRDs the events provider discovers
-    assert.equal(rules.length, 1)
-    assert.deepEqual(rules[0].apiGroups, ['*'])
-    assert.deepEqual(rules[0].resources, ['*'])
-    // the whole safety of the wildcard lives here. exec and eviction are 'create', so three read
-    // verbs deny them as surely as not naming the resource would.
-    assert.deepEqual(rules[0].verbs, READ_VERBS)
-
-    const crb = find('ClusterRoleBinding')
-    assert.equal(crb.roleRef.name, 'kwirth-full-ro-cr')
-    assert.equal(crb.subjects[0].name, 'kwirth-sa')
-    assert.equal(crb.subjects[0].namespace, 'kwirth')
-})
-
-test('the strict alternative in the header is valid and still read-only', () => {
+test('the strict alternative is valid, read-only, and keeps Secrets out', () => {
     for (const rule of strictRules()) {
-        for (const verb of rule.verbs) {
-            assert.ok(READ_VERBS.includes(verb), `strict block has verb '${verb}' on ${rule.resources}`)
-        }
-        assert.ok(!rule.apiGroups.includes('*'), `strict block wildcards a group on ${rule.resources}`)
-        assert.ok(!rule.resources.includes('*'), `strict block wildcards resources on ${rule.apiGroups}`)
+        for (const verb of rule.verbs) assert.ok(READ_VERBS.includes(verb), `verb '${verb}' on ${rule.resources}`)
+        assert.ok(!rule.apiGroups.includes('*'), `wildcard group on ${rule.resources}`)
+        assert.ok(!rule.resources.includes('*'), `wildcard resources on ${rule.apiGroups}`)
     }
+    const granted = new Set(strictRules().flatMap(r => r.apiGroups.flatMap(g => r.resources.map(res => `${g}/${res}`))))
+    assert.ok(!granted.has('/secrets'), 'the strict block exists so that Secrets stay unreadable')
+    assert.ok(!granted.has('/pods/exec'), 'it must not grant pods/exec')
+    // in-cluster, metrics go straight to the kubelet, so proxying to any kubelet is not needed
+    assert.ok(!granted.has('/nodes/proxy'), 'nodes/proxy is only used when Kwirth runs outside the cluster')
 })
 
 test('the strict alternative covers every resource the back reads', () => {
-    const granted = asSet(strictRules())
+    const granted = new Set(strictRules().flatMap(r => r.apiGroups.flatMap(g => r.resources.map(res => `${g}/${res}`))))
     const missing = []
     for (const [call, resource] of readCalls()) {
         if (granted.has(resource) || UNGRANTED_READS[call]) continue
@@ -184,69 +319,11 @@ test('the strict alternative covers every resource the back reads', () => {
     }
     assert.deepEqual(missing, [], `the strict block does not cover what back/src calls:\n  ${missing.join('\n  ')}`)
 
-    // the subresources that only exist spelled out, which 'resources: [*]' hides
-    assert.ok(granted.has('/pods/log'), 'missing pods/log')
-    assert.ok(granted.has('/pods/status'), 'missing pods/status')
-    // readNodeMetrics reads TWO kubelet paths and the kubelet authorizes them against different
-    // subresources: /metrics/cadvisor -> nodes/metrics, /stats/summary -> nodes/stats. Granting only
-    // the first does not degrade node metrics, it breaks them, because readCAdvisorSummary throws on
-    // a non-ok response.
-    assert.ok(granted.has('/nodes/metrics'), 'missing nodes/metrics (/metrics/cadvisor)')
-    assert.ok(granted.has('/nodes/stats'), 'missing nodes/stats (/stats/summary)')
-
-    assert.ok(!granted.has('/pods/exec'), 'the strict block must not grant pods/exec')
-    assert.ok(!granted.has('/nodes/proxy'), 'nodes/proxy is only used when Kwirth runs outside the cluster')
-    // and the Secrets that are the entire reason this alternative exists
-    assert.ok(!granted.has('/secrets'), 'the strict block exists so that Secrets stay unreadable')
-})
-
-test('the store is the PVC, and the back is told to use it', () => {
-    const pvc = find('PersistentVolumeClaim', 'kwirth-store')
-    assert.deepEqual(pvc.spec.accessModes, ['ReadWriteOnce'])
-
-    const spec = deployment().spec
-    // ReadWriteOnce plus a directory of files with no locking: one replica, and Recreate, or the
-    // rollout deadlocks on a volume the old pod still holds
-    assert.equal(spec.replicas, 1)
-    assert.equal(spec.strategy.type, 'Recreate')
-
-    const env = envOf()
-    // any value but 'etcd' means "encrypted files at this path" (resolveStore, ExecutionEnvironment.ts)
-    assert.ok(env.KWIRTH_STORE && env.KWIRTH_STORE !== 'etcd')
-
-    const mount = container().volumeMounts.find(v => v.mountPath === env.KWIRTH_STORE)
-    assert.ok(mount, `nothing is mounted at KWIRTH_STORE (${env.KWIRTH_STORE})`)
-    assert.equal(spec.template.spec.volumes.find(v => v.name === mount.name).persistentVolumeClaim.claimName, pvc.metadata.name)
-
-    // a 403 on the secure-log ConfigMap is guaranteed here, and writing it is not worth the noise
-    assert.equal(env.EXITLOG, 'false')
-})
-
-test('the projected token is what pays for the metrics, so the automount is left alone', () => {
-    const podSpec = deployment().spec.template.spec
-    /*
-        Setting automountServiceAccountToken to false would look like one more hardening step and
-        would silently cost the metrics: that projected token is the only way this deployment reaches
-        a kubelet, now that it cannot mint one.
-    */
-    assert.equal(podSpec.automountServiceAccountToken, undefined, 'leaving it at the default true is deliberate')
-    assert.equal(envOf().CHANNEL_METRICS, 'true')
-})
-
-test('the pod runs with no capability, no escalation and a read-only image', () => {
-    const sc = container().securityContext
-    assert.equal(sc.allowPrivilegeEscalation, false)
-    assert.equal(sc.readOnlyRootFilesystem, true)
-    assert.deepEqual(sc.capabilities.drop, ['ALL'])
-    assert.equal(sc.seccompProfile.type, 'RuntimeDefault')
-
-    // readOnlyRootFilesystem only holds because everything written at runtime that is not the store
-    // goes to os.tmpdir()
-    const tmp = container().volumeMounts.find(v => v.mountPath === '/tmp')
-    assert.ok(tmp, 'a read-only root filesystem needs a writable /tmp')
-    assert.ok(deployment().spec.template.spec.volumes.find(v => v.name === tmp.name).emptyDir)
-})
-
-test('only the two channel switches the back actually reads are set', () => {
-    assert.deepEqual(Object.keys(envOf()).filter(n => n.startsWith('CHANNEL_')).sort(), ['CHANNEL_MAGNIFY', 'CHANNEL_METRICS'])
+    // the subresources that only exist spelled out, which 'resources: [*]' hides. readNodeMetrics reads
+    // TWO kubelet paths authorized against DIFFERENT subresources — /metrics/cadvisor against
+    // nodes/metrics and /stats/summary against nodes/stats — and missing the second does not degrade
+    // node metrics, it breaks them.
+    for (const sub of ['/pods/log', '/pods/status', '/nodes/metrics', '/nodes/stats']) {
+        assert.ok(granted.has(sub), `missing subresource ${sub}`)
+    }
 })

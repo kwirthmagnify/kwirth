@@ -442,7 +442,7 @@ test('readonly refuses the combinations that would quietly undo it', () => {
     // extraRules are appended verbatim, so one write verb there undoes the whole mode
     renderFails([...RO, '--set', 'kwirth.rbac.extraRules[0].resources[0]=pods', '--set', 'kwirth.rbac.extraRules[0].verbs[0]=delete'], /grants the verb 'delete'/)
     // a typo in the mode must not silently install the permissive one
-    renderFails(['--set', 'kwirth.mode=paranoid'], /must be 'normal' or 'readonly'/)
+    renderFails(['--set', 'kwirth.mode=paranoid'], /must be 'normal', 'readonly' or 'zero'/)
 })
 
 test('readonly still takes extra READ rules, which is what they are mostly for', () => {
@@ -505,4 +505,97 @@ test('an id with characters a Secret key cannot hold still produces a legal key'
     // and it is the SAME encoding the core uses, so both write the same place
     assert.equal(key, Buffer.from('ada@acme.com', 'utf8').toString('base64url'))
     assert.equal(adminUser(docs, 'ada@acme.com').id, 'ada@acme.com')
+})
+
+/*
+    Mode 'zero' — a pod that is not allowed to touch the cluster at all, and is told so.
+
+    It is not 'readonly' with fewer verbs: there is nothing RBAC-shaped to render, no credential
+    reaches the container, and the core is launched as a container rather than as a Kubernetes
+    workload. The tests below check all three, because any one of them missing turns the mode into a
+    deployment that comes up and then fails in a way nobody connects back to here.
+*/
+
+const ZERO = ['--set', 'kwirth.mode=zero', '--set', 'kwirth.persistence.enabled=true']
+
+test('zero: not one RBAC object, and no ServiceAccount of its own', () => {
+    const docs = render(ZERO)
+    for (const kind of ['ServiceAccount', 'Role', 'RoleBinding', 'ClusterRole', 'ClusterRoleBinding']) {
+        assert.equal(find(docs, kind), undefined, `mode zero grants nothing, so it declares no ${kind}`)
+    }
+    // it falls back to the namespace's default ServiceAccount, which this chart never binds
+    assert.equal(find(docs, 'Deployment').spec.template.spec.serviceAccountName, 'default')
+})
+
+test('zero: no credential reaches the container', () => {
+    // with no bindings the projected token opens nothing, but with it off there is nothing in the
+    // container to use at all, so a mistake elsewhere cannot turn into access
+    assert.equal(find(render(ZERO), 'Deployment').spec.template.spec.automountServiceAccountToken, false)
+})
+
+test('zero: it is told what it is, because detection cannot work it out', () => {
+    /*
+        The kubelet injects KUBERNETES_SERVICE_HOST into every pod and that is what identifies a
+        Kubernetes workload — taking permissions away does not change it. Inside a cluster the API is
+        deliberately not optional, so without this the pod comes up, finds no credentials, falls back
+        to the client's invented localhost:8080 cluster and never starts.
+    */
+    const env = envOf(find(render(ZERO), 'Deployment'))
+    assert.equal(env.FORCE, 'container')
+    // not 'docker': that profile still writes the legacy PLAIN-file format
+    assert.notEqual(env.FORCE, 'docker')
+    // the store is a volume all the same, and encrypted, because 'container' shares ECS's profile
+    assert.ok(env.KWIRTH_STORE && env.KWIRTH_STORE !== 'etcd')
+})
+
+test('zero: the cluster-reading channels are off, and the users Secret is not rendered', () => {
+    const docs = render(ZERO)
+    const env = envOf(find(docs, 'Deployment'))
+    // there is no cluster behind them: they would be channels offered with nothing to show
+    assert.equal(env.CHANNEL_METRICS, 'false')
+    assert.equal(env.CHANNEL_MAGNIFY, 'false')
+    // with the store on the volume the core seeds its own admin there
+    assert.equal(find(docs, 'Secret', 'kwirth-users'), undefined)
+})
+
+test('zero refuses the combinations that would quietly undo it', () => {
+    // no store: the install comes up healthy and loses every user on the first restart
+    renderFails(['--set', 'kwirth.mode=zero'], /needs a store outside the cluster/)
+    // asking for RBAC in the mode whose whole point is having none
+    renderFails([...ZERO, '--set', 'kwirth.rbac.create=true'], /renders no RBAC/)
+    renderFails([...ZERO, '--set', 'kwirth.serviceAccount.create=true'], /default ServiceAccount/)
+})
+
+test('zero: what the operator sets still wins', () => {
+    const env = envOf(find(render([...ZERO, '--set', 'kwirth.config.channelMagnify=true']), 'Deployment'))
+    assert.equal(env.CHANNEL_MAGNIFY, 'true')
+})
+
+/*
+    The three modes side by side. What this pins is that they differ in AUTHORITY and nothing else —
+    the same image, the same port, the same probes — because the day they start differing in something
+    else, one of them has quietly become a different product.
+*/
+test('the three modes are one deployment with three levels of authority', () => {
+    const modes = {
+        normal: render(),
+        readonly: render(['--set', 'kwirth.mode=readonly', '--set', 'kwirth.persistence.enabled=true']),
+        zero: render(ZERO)
+    }
+    const verbs = {
+        normal: find(modes.normal, 'ClusterRole').rules[0].verbs,
+        readonly: find(modes.readonly, 'ClusterRole').rules[0].verbs,
+        zero: find(modes.zero, 'ClusterRole')
+    }
+    assert.deepEqual(verbs.normal, ['*'])
+    assert.deepEqual(verbs.readonly, ['get', 'list', 'watch'])
+    assert.equal(verbs.zero, undefined)
+
+    const first = container(find(modes.normal, 'Deployment'))
+    for (const [name, docs] of Object.entries(modes)) {
+        const c = container(find(docs, 'Deployment'))
+        assert.equal(c.image, first.image, `${name} runs a different image`)
+        assert.equal(c.ports[0].containerPort, first.ports[0].containerPort, `${name} listens elsewhere`)
+        assert.equal(c.readinessProbe.httpGet.path, '/healthz', `${name} is probed differently`)
+    }
 })

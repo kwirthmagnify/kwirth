@@ -56,7 +56,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Create the name of the service account to use. '<fullname>-sa' is the 0.1.x name.
 */}}
 {{- define "kwirth.serviceAccountName" -}}
-{{- if .Values.kwirth.serviceAccount.create }}
+{{- if include "kwirth.serviceAccountCreate" . }}
 {{- default (printf "%s-sa" (include "kwirth.fullname" .)) .Values.kwirth.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.kwirth.serviceAccount.name }}
@@ -137,6 +137,43 @@ Read-only mode, as a boolean-ish string ("true" or empty, so templates can just 
 {{- end }}
 
 {{/*
+Mode 'zero': a pod that is not allowed to touch the cluster at all, and is told so.
+
+It is not 'readonly' with fewer verbs — it is a different deployment. There is no ServiceAccount, no
+ClusterRole and no binding to render, the projected token is turned off so no credential reaches the
+container, and the core is launched with FORCE=container so it does not try to use an API it cannot
+reach. Everything the two other modes read from the cluster is simply absent here.
+*/}}
+{{- define "kwirth.zero" -}}
+{{- if eq (default "normal" .Values.kwirth.mode) "zero" }}true{{ end }}
+{{- end }}
+
+{{/*
+Whether the cluster is read at all. True for 'normal' and 'readonly', false for 'zero' — which is what
+decides whether RBAC objects exist and whether the cluster-reading channels are offered.
+*/}}
+{{- define "kwirth.readsCluster" -}}
+{{- if include "kwirth.zero" . }}{{ else }}true{{ end }}
+{{- end }}
+
+{{/*
+Whether the RBAC objects and the ServiceAccount are rendered. Unset follows the mode — which is the
+whole point of having a mode — and an explicit value still wins, except for the one contradiction
+validateMode refuses: asking for RBAC in mode 'zero'.
+*/}}
+{{- define "kwirth.rbacCreate" -}}
+{{- if kindIs "invalid" .Values.kwirth.rbac.create }}
+{{- include "kwirth.readsCluster" . }}
+{{- else if .Values.kwirth.rbac.create }}true{{ end }}
+{{- end }}
+
+{{- define "kwirth.serviceAccountCreate" -}}
+{{- if kindIs "invalid" .Values.kwirth.serviceAccount.create }}
+{{- include "kwirth.readsCluster" . }}
+{{- else if .Values.kwirth.serviceAccount.create }}true{{ end }}
+{{- end }}
+
+{{/*
 What a chart can do that a plain manifest cannot: refuse to render a combination that would produce a
 broken Kwirth.
 
@@ -148,8 +185,24 @@ class and a lifetime that are the operator's call), so this stops and says what 
 */}}
 {{- define "kwirth.validateMode" -}}
 {{- $mode := default "normal" .Values.kwirth.mode }}
-{{- if not (has $mode (list "normal" "readonly")) }}
-{{- fail (printf "kwirth.mode must be 'normal' or 'readonly', got '%s'" $mode) }}
+{{- if not (has $mode (list "normal" "readonly" "zero")) }}
+{{- fail (printf "kwirth.mode must be 'normal', 'readonly' or 'zero', got '%s'" $mode) }}
+{{- end }}
+{{- if include "kwirth.zero" . }}
+{{- /* Same reasoning as readonly, and for the same consequence: with no permission to write Secrets
+       the install comes up healthy and loses every user on the first restart. */}}
+{{- if not (include "kwirth.store" .) }}
+{{- fail "kwirth.mode=zero needs a store outside the cluster: set kwirth.persistence.enabled=true (or kwirth.config.store to a path you mount yourself). This deployment has no permission to keep anything in the cluster." }}
+{{- end }}
+{{- /* Asking for RBAC in the mode whose whole point is having none is asking for two opposite things,
+       and silently picking one would leave somebody believing they installed what they did not. Only
+       an EXPLICIT true is refused: unset simply means no, which is what the mode is. */}}
+{{- if eq (toString .Values.kwirth.rbac.create) "true" }}
+{{- fail "kwirth.mode=zero grants nothing, so it renders no RBAC. Leave kwirth.rbac.create unset, or use mode 'readonly' if you did want a role." }}
+{{- end }}
+{{- if eq (toString .Values.kwirth.serviceAccount.create) "true" }}
+{{- fail "kwirth.mode=zero runs as the namespace's default ServiceAccount, with no token mounted. Leave kwirth.serviceAccount.create unset." }}
+{{- end }}
 {{- end }}
 {{- if include "kwirth.readOnly" . }}
 {{- if not (include "kwirth.store" .) }}
@@ -191,8 +244,12 @@ EXITLOG and the users Secret default differently per mode, and only when the ope
 {{- end }}
 
 {{- define "kwirth.usersBootstrap" -}}
+{{- /* Unset follows the STORE, not the mode, because that is the real condition: the core reads the
+       kwirth-users Secret only when its store IS the cluster. With the store on a volume it seeds its
+       own admin there, and the Secret becomes a second, stale source of truth for the password —
+       which is as true of a normal install with persistence on as it is of readonly and zero. */}}
 {{- if kindIs "invalid" .Values.kwirth.users.bootstrap }}
-{{- if include "kwirth.readOnly" . }}{{ else }}true{{ end }}
+{{- if include "kwirth.store" . }}{{ else }}true{{ end }}
 {{- else if .Values.kwirth.users.bootstrap }}true{{ end }}
 {{- end }}
 
@@ -358,4 +415,15 @@ Usage: include "kwirth.ownedByRelease" (dict "obj" $existing "root" $)
 {{- "true" }}
 {{- end }}
 {{- end }}
+{{- end }}
+
+{{/*
+The two core channels. Unset follows the mode; anything set wins.
+*/}}
+{{- define "kwirth.channelMetrics" -}}
+{{- if kindIs "invalid" .Values.kwirth.config.channelMetrics }}{{ include "kwirth.readsCluster" . | default "false" }}{{ else }}{{ .Values.kwirth.config.channelMetrics }}{{ end }}
+{{- end }}
+
+{{- define "kwirth.channelMagnify" -}}
+{{- if kindIs "invalid" .Values.kwirth.config.channelMagnify }}{{ include "kwirth.readsCluster" . | default "false" }}{{ else }}{{ .Values.kwirth.config.channelMagnify }}{{ end }}
 {{- end }}

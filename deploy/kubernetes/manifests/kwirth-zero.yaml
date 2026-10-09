@@ -1,0 +1,246 @@
+# ===================================================================================================
+# Kwirth — a pod with NO Kubernetes permissions at all
+# ===================================================================================================
+#
+#   kubectl apply -f kwirth-zero.yaml
+#
+# Three manifests live in this folder, and they differ in how much of the cluster Kwirth touches:
+#
+#   kwirth.yaml            verbs:['*'] on 15 API groups     it manages the cluster
+#   kwirth-full-ro.yaml    get / list / watch on everything it watches the cluster
+#   kwirth-zero.yaml       nothing                          it does not know it is in a cluster
+#
+# WHAT THIS IS
+#   The ECS deployment, in a pod. Not an analogy: it is the same Kwirth, configured the same way, and
+#   there is no RBAC in this file — no ClusterRole, no ClusterRoleBinding, no Role, not even a
+#   ServiceAccount of its own, and the API token the kubelet projects into every pod is turned off.
+#   An administrator can look at this file and see that it grants nothing, because there is nothing
+#   in it to grant.
+#
+#   Use it when the cluster is not yours to read: a shared platform, a tenant namespace, a security
+#   policy that does not hand out ClusterRoles. Kwirth runs anyway.
+#
+# WHAT IT DOES, WITH NO CLUSTER
+#   It serves the front end and the marketplace, installs and runs extensions, keeps its configuration
+#   on the volume, uses the database for the extensions that accumulate data — and it FEDERATES: this
+#   Kwirth can be pointed at other Kwirths that do have access, and show their logs, metrics and
+#   resources from here.
+#
+# WHAT IT DOES NOT DO
+#   Everything that reads the cluster it lives in: logs, metrics, events, the resource browser, and
+#   every channel that looks at the infrastructure. CHANNEL_METRICS and CHANNEL_MAGNIFY are off below
+#   because there would be nothing behind them. Do not install ops, fileman or trivy here either.
+#
+# 🔴 HOW IT IS TOLD, AND WHY IT HAS TO BE TOLD
+#   FORCE=container. Every other value of FORCE overrides a detection that would have worked anyway;
+#   this one names a case detection CANNOT reach. The kubelet injects KUBERNETES_SERVICE_HOST into
+#   every pod, and that is what identifies a Kubernetes workload — taking the permissions away does
+#   not change it. Inside a cluster the API is deliberately NOT optional, because a failure there is
+#   an error and not a degradation, so without this line the pod would come up, find no credentials,
+#   fall back to the client's invented localhost:8080 cluster, fail the first call and never start.
+#
+#   'container' is the profile ECS, Cloud Run and ACI already share: configuration in ENCRYPTED files
+#   at KWIRTH_STORE, which is the volume below. Those three differ from it only in being detectable.
+#   It is not 'docker': that profile still writes the legacy PLAIN-file format, and a Kwirth that
+#   leaves its users unencrypted on a shared volume is not what this manifest is for.
+#
+#   ⚠️ 'container' does NOT mean 'no cluster'. It means the platform is not one Kwirth recognises.
+#   Mount a kubeconfig and this same deployment reads that cluster — which is exactly what the ECS
+#   task definition in deploy/ecs/task-definition-ec2.json does. What rules is whether a usable
+#   kubeconfig is there, never the environment name.
+#
+# 🔴 ABOUT THE MASTER KEY
+#   It signs the access keys and encrypts the store. Left unset, the core makes one on the first boot
+#   and keeps it — on the volume, next to what it protects, which stops credential forgery but is not
+#   encryption at rest against whoever can read the volume. Pin it from a Secret (see the commented
+#   block below) and the key lives outside the store, which is the real thing.
+#
+#   Either way: once there is one, NEVER change it. Nothing errors — the files simply stop decrypting,
+#   Kwirth sees no users, and it seeds the default admin again, so a lost install looks like a new one.
+#
+# BEFORE YOU APPLY IT
+#   - change MASTERKEY and the SQL password
+#   - point the SQL variables at your database, or delete that block if no extension needs one
+#   - check that the cluster has a default StorageClass, or name one in the PVC
+#   - the first boot creates the admin user as admin / password. Change it at once.
+# ===================================================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kwirth
+
+---
+# The database password, so it is not sitting in the pod spec. Delete this together with the
+# KWIRTH_SQL_* block if no extension of yours needs a database.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kwirth-sql
+  namespace: kwirth
+type: Opaque
+stringData:
+  KWIRTH_SQL_PASSWORD: 'change-me'
+
+---
+# Everything Kwirth remembers: users, api keys, installed extensions, marketplaces. Encrypted with
+# MASTERKEY. Delete this and you delete all of it.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kwirth-store
+  namespace: kwirth
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  # uses the cluster's default StorageClass; name one here if there is no default
+  #storageClassName: standard
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kwirth
+  namespace: kwirth
+spec:
+  # ReadWriteOnce, and the store is a directory of files with no locking: one replica.
+  replicas: 1
+  strategy:
+    # Recreate, not RollingUpdate: with ReadWriteOnce the new pod cannot mount the volume while the
+    # old one still holds it, and the rollout would sit there until it gave up.
+    type: Recreate
+  selector:
+    matchLabels:
+      app: kwirth
+  revisionHistoryLimit: 0
+  template:
+    metadata:
+      name: kwirth
+      labels:
+        app: kwirth
+    spec:
+      # 🔴 The line that makes this manifest what it says it is. Every pod gets a ServiceAccount token
+      # projected into it unless this is off; with it off there is no credential in the container at
+      # all, so even a mistake elsewhere cannot turn into access. There is no ServiceAccount of our
+      # own either: the pod runs as the namespace's default one, which this file never binds to
+      # anything.
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 5
+      containers:
+        - name: kwirth
+          image: kwirthmagnify/kwirth:latest
+          #imagePullPolicy: Never
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+            seccompProfile:
+              type: RuntimeDefault
+            # The image does not declare a USER, so it starts as root. Running it as the 'node' user
+            # of the base image works, but verify it on your cluster before turning it on — and give
+            # the PVC an fsGroup so the mounted volume stays writable.
+            #runAsNonRoot: true
+            #runAsUser: 1000
+          env:
+            # 🔴 See the header. Without this the pod is detected as a Kubernetes workload and refuses
+            # to start without an API it is not allowed to reach.
+            - name: FORCE
+              value: 'container'
+            # The name this Kwirth goes by. With no cluster to ask, it is this or a generated id.
+            - name: KWIRTH_CLUSTER_NAME
+              value: 'kwirth-zero'
+            - name: ROOTPATH
+              value: '/kwirth'
+            # MASTERKEY intentionally unset: the core generates a random one on first boot and keeps it
+            # in its store, so no two installations share a key. Here that store is the volume, so the
+            # key ends up next to the ciphertext it protects — which stops credential forgery but is
+            # not real encryption at rest against whoever can read the volume. For that, pin it from a
+            # Secret, which keeps it OUTSIDE the store:
+            #   - name: MASTERKEY
+            #     valueFrom: { secretKeyRef: { name: kwirth-masterkey, key: MASTERKEY } }
+            # 🔴 Once set, never change it: the store stops decrypting and the admin resets.
+            # The store: encrypted files on the volume below.
+            - name: KWIRTH_STORE
+              value: '/data'
+            # The database, for extensions that accumulate data (findings, histories, audit trails).
+            # Delete this block, and the Secret above, if none of yours needs one.
+            - name: KWIRTH_SQL_HOST
+              value: 'postgres.databases.svc.cluster.local'
+            - name: KWIRTH_SQL_PORT
+              value: '5432'
+            - name: KWIRTH_SQL_USER
+              value: 'postgres'
+            - name: KWIRTH_SQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kwirth-sql
+                  key: KWIRTH_SQL_PASSWORD
+            # Both off: there is no cluster behind them, so they would be channels offered with
+            # nothing to show.
+            - name: CHANNEL_METRICS
+              value: 'false'
+            - name: CHANNEL_MAGNIFY
+              value: 'false'
+          ports:
+            - name: kwirth
+              containerPort: 3883
+              protocol: TCP
+          volumeMounts:
+            - name: store
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            limits:
+              cpu: '1'
+              memory: 2Gi
+            requests:
+              cpu: 0m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3883
+            initialDelaySeconds: 10
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 3883
+            initialDelaySeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3883
+            timeoutSeconds: 30
+            periodSeconds: 60
+            successThreshold: 1
+            failureThreshold: 3
+      volumes:
+        - name: store
+          persistentVolumeClaim:
+            claimName: kwirth-store
+        # Scratch space. Everything Kwirth writes at runtime that is not the store lands here, which
+        # is what lets the root filesystem be read-only.
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kwirth-svc
+  namespace: kwirth
+spec:
+  selector:
+    app: kwirth
+  ports:
+    - name: kwirth-port
+      protocol: TCP
+      port: 3883
+      targetPort: 3883
+  type: ClusterIP

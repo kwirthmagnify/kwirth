@@ -34,6 +34,13 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "kwirth.serviceAccountName" . }}
+      {{- if include "kwirth.zero" . }}
+      {{- /* The line that makes mode zero what it says it is. Every pod gets a ServiceAccount token
+             projected into it unless this is off; with no bindings that token opens nothing, but with
+             it off there is no credential in the container at all, so a mistake elsewhere cannot turn
+             into access. */}}
+      automountServiceAccountToken: false
+      {{- end }}
       terminationGracePeriodSeconds: {{ .Values.kwirth.terminationGracePeriodSeconds }}
       {{- with .Values.kwirth.priorityClassName }}
       priorityClassName: {{ . }}
@@ -51,6 +58,15 @@ spec:
             {{- . | nindent 12 }}
           {{- end }}
           env:
+            {{- if include "kwirth.zero" . }}
+            {{- /* The one environment that is never detected, only asked for. The kubelet injects
+                   KUBERNETES_SERVICE_HOST into every pod and that is what identifies a Kubernetes
+                   workload — taking the permissions away does not change it. Inside a cluster the API
+                   is deliberately not optional, so without this the pod comes up, finds no
+                   credentials, falls back to the client's invented localhost:8080 and never starts. */}}
+            - name: FORCE
+              value: "container"
+            {{- end }}
             - name: ROOTPATH
               value: {{ include "kwirth.rootpath" . | quote }}
             - name: PORT
@@ -58,9 +74,9 @@ spec:
             - name: AUTH
               value: {{ .Values.kwirth.config.auth | quote }}
             - name: CHANNEL_METRICS
-              value: {{ .Values.kwirth.config.channelMetrics | quote }}
+              value: {{ include "kwirth.channelMetrics" . | quote }}
             - name: CHANNEL_MAGNIFY
-              value: {{ .Values.kwirth.config.channelMagnify | quote }}
+              value: {{ include "kwirth.channelMagnify" . | quote }}
             - name: METRICSINTERVAL
               value: {{ .Values.kwirth.config.metricsInterval | quote }}
             {{- if .Values.kwirth.config.previousLogLines }}

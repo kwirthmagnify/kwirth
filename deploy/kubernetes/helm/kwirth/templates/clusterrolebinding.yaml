@@ -1,4 +1,4 @@
-{{- if .Values.kwirth.rbac.create }}
+{{- if include "kwirth.rbacCreate" . }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:

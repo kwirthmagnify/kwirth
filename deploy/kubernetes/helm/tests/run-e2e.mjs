@@ -363,6 +363,104 @@ const readOnlyPhase = async () => {
     console.log('--- cleanup')
     roCleanup()
     check('readonly: namespace removed', !exists('ns', roNs, null))
+
+    await zeroPhase()
+}
+
+
+/*
+    Mode 'zero' — a pod that is not allowed to touch the cluster at all, and is told so.
+
+    It is not 'readonly' with fewer verbs: there is nothing RBAC-shaped to render, no credential
+    reaches the container, and the core is launched as a container rather than as a Kubernetes
+    workload. What only a cluster can settle is that it COMES UP that way — the unit tests can read
+    the rendered YAML, but not that a Kwirth told it is not in Kubernetes actually serves.
+*/
+const zeroPhase = async () => {
+    const zNs = `${NS}-zero`
+    const zRelease = 'e2ezero'
+    const zFull = `${zRelease}-kwirth`
+
+    const zCleanup = () => {
+        shQuiet('helm', ['uninstall', zRelease, '-n', zNs, '--wait'])
+        shQuiet('kubectl', ['delete', 'ns', zNs, '--ignore-not-found', '--wait=true'])
+    }
+
+    console.log('\n=== mode: zero ===')
+    console.log('--- clean slate')
+    zCleanup()
+
+    console.log('--- install')
+    sh('helm', ['install', zRelease, chartDir, '-n', zNs, '--create-namespace',
+        '--set', 'kwirth.mode=zero', '--set', 'kwirth.persistence.enabled=true',
+        ...IMAGE_ARGS, '--wait', '--timeout', '8m'], { stdio: ['ignore', 'inherit', 'inherit'] })
+
+    check('zero: Deployment is available', kget('deployment', zFull, '{.status.availableReplicas}', zNs) === '1')
+
+    // the whole manifest, asserted as an absence
+    for (const kind of ['serviceaccount', 'role', 'rolebinding']) {
+        const found = shQuiet('kubectl', ['get', kind, '-n', zNs, '-o', 'jsonpath={.items[*].metadata.name}'])
+            .split(' ').filter(n => n && n !== 'default')
+        check(`zero: no ${kind} of its own`, found.length === 0, found.join(', '))
+    }
+    check('zero: no ClusterRole', !exists('clusterrole', `${zFull}-cr`, null))
+    check('zero: no ClusterRoleBinding', !exists('clusterrolebinding', `${zFull}-crb`, null))
+
+    // and the half that is not RBAC: with no token mounted there is nothing in the container to use
+    check('zero: the projected token is turned off',
+        kget('deployment', zFull, '{.spec.template.spec.automountServiceAccountToken}', zNs) === 'false')
+    check('zero: the core is told it is a container, not a Kubernetes workload',
+        kget('deployment', zFull, '{.spec.template.spec.containers[0].env[?(@.name=="FORCE")].value}', zNs) === 'container')
+    check('zero: the store is the volume', kget('pvc', `${zFull}-data`, '{.status.phase}', zNs) === 'Bound')
+    check('zero: the chart rendered NO users Secret', !exists('secret', 'kwirth-users', zNs))
+
+    /*
+        🔴 The one that cannot be read off the YAML. A pod told FORCE=container inside a cluster either
+        comes up as a container with no cluster, or it falls back to the client's invented
+        localhost:8080, fails its first call and never starts. The log says which.
+    */
+    const zLog = shQuiet('kubectl', ['logs', '-n', zNs, `deploy/${zFull}`])
+    check("zero: it came up as 'container', not as a Kubernetes workload", /Execution environment: 'container'/.test(zLog))
+    check('zero: and with no cluster', /"clusterType":"none"/.test(zLog))
+    check('zero: it never went looking for an API it cannot reach', !/localhost:8080/.test(zLog))
+
+    await (async () => {
+        const proxy = spawn('kubectl', ['proxy', `--port=${LOCAL_PORT + 2}`], { stdio: ['ignore', 'ignore', 'pipe'] })
+        const base = `http://127.0.0.1:${LOCAL_PORT + 2}/api/v1/namespaces/${zNs}/services/${zFull}-svc:3883/proxy`
+        try {
+            let ready = false
+            for (let i = 0; i < 30 && !ready; i++) {
+                await sleep(1000)
+                try { ready = (await fetch(`${base}/healthz`)).ok } catch { /* not up yet */ }
+            }
+            check('zero: the service answers', ready)
+            if (!ready) return
+            /*
+                No users Secret exists, so the admin this logs in as can only have been seeded by the
+                core onto the volume — and here that volume is the only store there is. 201 and not
+                200: the core seeds the literal 'password', which is what its 'change it' prompt fires
+                on, unlike the one the chart generates for the other modes.
+            */
+            const sha256 = createHash('sha256').update('password').digest('hex')
+            let login
+            for (let i = 0; i < 15; i++) {
+                login = await fetch(`${base}/kwirth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user: 'admin', password: sha256 }) })
+                if (login.status !== 503) break
+                await sleep(2000)
+            }
+            check('zero: admin logs in, so the core seeded its users on the volume', login.status === 201, `status ${login.status}`)
+        }
+        finally {
+            proxy.kill()
+        }
+    })()
+
+    const zRestarts = shQuiet('kubectl', ['get', 'pods', '-n', zNs, '-l', `app.kubernetes.io/instance=${zRelease}`, '-o', 'jsonpath={.items[*].status.containerStatuses[0].restartCount}'])
+    check('zero: the pod has not restarted', zRestarts === '0', `restartCount ${zRestarts}`)
+
+    console.log('--- cleanup')
+    zCleanup()
+    check('zero: namespace removed', !exists('ns', zNs, null))
 }
 
 main()

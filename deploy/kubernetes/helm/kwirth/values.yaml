@@ -103,8 +103,10 @@ kwirth:
     # CHANNEL_METRICS — the built-in metrics channel (cluster metrics, node/pod resource usage).
     # CHANNEL_MAGNIFY — the built-in magnify channel (log magnification, live tail).
     # Both are core channels; everything else is a plugin from the marketplace.
-    channelMetrics: true
-    channelMagnify: true
+    # Unset follows the mode: on for normal and readonly, OFF for zero, where there is no cluster
+    # behind them and they would be channels offered with nothing to show. Set either to override.
+    channelMetrics:
+    channelMagnify:
     # METRICSINTERVAL — seconds between metrics samples. Lower = more granular but more load on the
     # Kubernetes metrics API. 15 is a good default; 5 for near-real-time, 60 for low-traffic clusters.
     metricsInterval: 15
@@ -317,7 +319,9 @@ kwirth:
   # Service account
   # ---------------------------------------------------------------------------
   serviceAccount:
-    create: true
+    # Unset follows the mode. In zero there is no ServiceAccount of its own: the pod runs as the
+    # namespace default, with no token mounted.
+    create:
     # Empty = '<release>-sa'. Set to use an existing ServiceAccount (create must be false).
     name: ""
     # Annotations on the ServiceAccount. This is where IRSA (AWS) and Workload Identity (GCP/Azure)
@@ -336,7 +340,10 @@ kwirth:
   # of their own (Fleet, Longhorn, Kubewarden, Trivy...) need their groups added to 'extraApiGroups',
   # or set 'clusterAdmin: true' for the 0.1.x behaviour: '*' on '*' (not recommended for production).
   rbac:
-    create: true
+    # Unset follows the mode: the ClusterRole and its binding are rendered for normal and readonly,
+    # and NOT for zero, which grants nothing. Set it to override — except an explicit true with mode
+    # zero, which is refused as the contradiction it is.
+    create:
     # true = a single rule { apiGroups: ['*'], resources: ['*'], verbs: ['*'] } (cluster-admin equivalent).
     # Convenient but over-permissive; prefer extraApiGroups for least privilege.
     clusterAdmin: false
