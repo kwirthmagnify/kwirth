@@ -523,7 +523,8 @@
 
 <span class="comment"># Or read-only: the same Kwirth, logs and metrics included,</span>
 <span class="comment"># with no permission to change a single thing in the cluster</span>
-<span class="comment">#   .../manifests/kwirth-full-ro.yaml</span>
+<span class="comment">#   .../manifests/kwirth-full-ro.yaml   reads everything, changes nothing</span>
+<span class="comment">#   .../manifests/kwirth-zero.yaml      no Kubernetes permissions at all</span>
 
 <span class="comment"># Check pod is running</span>
 <span class="cmd">kubectl get pods</span> <span class="flag">-n</span> kwirth

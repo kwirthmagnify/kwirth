@@ -20,25 +20,47 @@ install and prints it there; that is the only place it is shown in the clear. Un
 can still read it out of the `kwirth-users` Secret — the notes print the exact command — and after the
 first login the core has replaced it with a bcrypt hash and it cannot be read back at all.
 
-### Two modes
+### Three modes
+
+`kwirth.mode` is how much of the cluster the install is allowed to touch. It is one value, and it
+carries with it everything that has to travel with it.
+
+| mode | the ClusterRole | what it gives up |
+| - | - | - |
+| `normal` | every verb on the listed API groups | nothing |
+| `readonly` | one rule: `get`, `list`, `watch` | the actions that change the cluster |
+| `zero` | there is none | everything that reads the cluster |
 
 ```bash
 # everything works, including the actions that change the cluster
 helm install kwirth kwirth/kwirth -n kwirth --create-namespace
 
-# read-only: it can see everything and change nothing
+# read-only: it sees everything and changes nothing
 helm install kwirth kwirth/kwirth -n kwirth --create-namespace \
   --set kwirth.mode=readonly --set kwirth.persistence.enabled=true
+
+# zero: no permissions at all, and no credential in the container
+helm install kwirth kwirth/kwirth -n kwirth --create-namespace \
+  --set kwirth.mode=zero --set kwirth.persistence.enabled=true
 ```
 
-In `readonly` the ClusterRole is a single rule — `get`, `list`, `watch` — so the Magnify commands
-(restart, scale, cordon, drain, evict, apply, delete) and the `ops` and `fileman` plugins answer 403
-with the button still in the UI. Do not install those two there. Logs, metrics, events and the resource
-browser work exactly the same.
+In **`readonly`** the Magnify commands (restart, scale, cordon, drain, evict, apply, delete) and the
+`ops` and `fileman` plugins answer 403 with the button still in the UI. Do not install those two there.
+Logs, metrics, events and the resource browser work exactly the same.
 
-That mode needs its configuration kept outside the cluster, which is what `persistence` is for; the
-chart refuses to render without it rather than hand you an install that looks healthy and loses its
-users on the first restart. See `kwirth.mode` under [Configuration](#configuration-config-one-env-var-each).
+In **`zero`** there is no ClusterRole, no binding and no ServiceAccount of its own, and the token the
+kubelet projects into every pod is turned off, so there is no credential in the container either. It is
+the ECS deployment, in a pod: it serves the front end, installs and runs extensions, keeps its
+configuration on the volume, uses the database, and federates against other kwirths that do have
+access. What it loses is everything that reads the cluster it lives in, so the two core channels are
+off and the chart launches the core with `FORCE=container` — without which the pod would be identified
+as a Kubernetes workload and refuse to start without an API it is not allowed to reach.
+
+Both of those modes keep their configuration outside the cluster, which is what `persistence` is for,
+and the chart **refuses to render** without it rather than hand you an install that looks healthy and
+loses its users on the first restart. It refuses a few other combinations too — asking for RBAC in
+`zero`, or `clusterAdmin` in `readonly`, or an `extraRules` with a write verb in it — because quietly
+picking one of two opposite answers leaves somebody believing they installed what they did not.
 
 ## Upgrade from chart 0.1.x
 

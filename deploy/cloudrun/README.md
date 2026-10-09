@@ -80,3 +80,19 @@ Nothing by default, and that is a complete configuration: the front, users, auto
 ingestion providers all work, and the cluster type is reported as `none`. To observe a Kubernetes cluster
 (GKE or any other), mount a kubeconfig and point `KUBECONFIG` at it — note that a GKE kubeconfig usually
 calls `gke-gcloud-auth-plugin`, which is not in the image.
+
+## The same profile, where detection cannot work
+
+Cloud Run, ACI and ECS share one profile — a container with a mounted volume, an encrypted file store
+at `KWIRTH_STORE`, and a cluster only if a kubeconfig is mounted — and differ only in **how Kwirth
+recognises them**. Each has its own signal: `K_SERVICE` here, the Azure identity endpoint on ACI, the
+agent's metadata variable on ECS.
+
+Where there is no such signal, ask for the profile by name with `FORCE=container`. The case that forced
+it into existence is a **pod with no Kubernetes permissions at all**: the kubelet injects
+`KUBERNETES_SERVICE_HOST` into every container, so taking the permissions away does not stop Kwirth
+being identified as a Kubernetes workload — and inside a cluster the API is deliberately not optional,
+because a failure there is an error and not a degradation. See
+[`deploy/kubernetes/manifests/kwirth-zero.yaml`](../kubernetes/manifests/kwirth-zero.yaml).
+
+You do not need it here: a Cloud Run service is detected on its own.

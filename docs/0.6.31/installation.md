@@ -79,12 +79,13 @@ helm repo install kwirth kwirth/kwirth -n kwirth --create-namespace -f values.ya
 
 ## Kubernetes: deploy kwirth using MANIFESTS
 
-There are two manifests in [`deploy/kubernetes/manifests`](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/kubernetes/manifests), and they differ in one thing: **whether the cluster lets kwirth change anything**. Each is a single file, and each is applied the same way. Pick one.
+There are three manifests in [`deploy/kubernetes/manifests`](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/kubernetes/manifests), and they differ in one thing: **how much of the cluster kwirth is allowed to touch**. Each is a single file, and each is applied the same way. Pick one.
 
 | Manifest | What the cluster lets it do | Node metrics | Configuration lives in |
 | - | - | - | - |
 | `kwirth.yaml` | `resources: ['*']`, `verbs: ['*']` on 15 API groups | yes | Secrets and ConfigMaps |
 | `kwirth-full-ro.yaml` | `get`, `list`, `watch`. Nothing else, anywhere | yes | a PersistentVolumeClaim |
+| `kwirth-zero.yaml` | nothing at all — not one RBAC object in the file | no | a PersistentVolumeClaim |
 
 ### `kwirth.yaml` — everything works
 
@@ -116,6 +117,35 @@ kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/d
 - The first boot creates the admin user as `admin` / `password`, in the volume. Change it immediately.
 
 **One thing it does allow: reading Secrets.** It grants read on every resource, Secrets included. Kubernetes RBAC has no deny rules and no way to express "every group except this one", so a role cannot both cover the CustomResourceDefinitions kwirth watches — which differ from cluster to cluster and cannot be known in advance — and leave Secrets out. If your requirement is that Secrets stay unreadable, the file carries an enumerated alternative, commented in its header, that you can paste over the single rule; its cost is that events from CustomResourceDefinitions will not arrive.
+
+### `kwirth-zero.yaml` — it does not know it is in a cluster
+
+A pod with **no Kubernetes permissions at all**. There is nothing RBAC-shaped in the file — no ClusterRole, no binding, no ServiceAccount of its own — and the token the kubelet projects into every pod is turned off, so there is no credential in the container either.
+
+```
+kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/deploy/kubernetes/manifests/kwirth-zero.yaml
+```
+
+Use it when the cluster is not yours to read: a shared platform, a tenant namespace, a policy that does not hand out ClusterRoles. It is the ECS deployment, in a pod — the same kwirth, configured the same way.
+
+**What it still does.** It serves the front end and the marketplace, installs and runs extensions, keeps its configuration on the volume, uses the database for the extensions that accumulate data, and **federates**: point it at other kwirths that do have access and you see their logs, metrics and resources from here. Extensions that do not look at the infrastructure work exactly as anywhere else, which is what this deployment is for.
+
+**What it does not do** is everything that reads the cluster it lives in: logs, metrics, events and the resource browser. The two core channels are off in the file because there would be nothing behind them; do not install the plugins that read the cluster either.
+
+**It is told what it is**, with `FORCE=container`, and that line is not optional. The kubelet injects `KUBERNETES_SERVICE_HOST` into every pod, so taking the permissions away does not stop kwirth being identified as a Kubernetes workload — and inside a cluster the API is deliberately not optional, because a failure there is an error and not a degradation. Without it the pod comes up, finds no credentials, falls back to an invented cluster at `localhost:8080`, fails its first call and never starts.
+
+!> `container` does **not** mean "no cluster". It means the platform is not one kwirth recognises. Mount a kubeconfig and the same deployment reads that cluster, which is exactly what the ECS task definition with a kubeconfig does. What decides is whether a usable kubeconfig is there, never the name of the environment.
+
+### The same three, with Helm
+
+The chart offers the three as `kwirth.mode`: `normal`, `readonly` and `zero`. See [Read-only with Helm](#read-only-with-helm) above; `zero` works the same way and also needs `persistence`:
+
+```
+helm install kwirth kwirth/kwirth -n kwirth --create-namespace \
+  --set kwirth.mode=zero --set kwirth.persistence.enabled=true
+```
+
+In that mode the chart renders no RBAC and no ServiceAccount at all, and it refuses to render if you ask for either — a request for permissions in the mode whose point is having none is a contradiction, and quietly picking one of the two answers would leave you believing you installed something you did not.
 
 ## Storage configuration
 

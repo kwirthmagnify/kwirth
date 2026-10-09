@@ -201,7 +201,7 @@ pointing somewhere else, will keep cycling the task without telling you why.
 | `PORT` | listening port (default `3883`) | with `awsvpc` the host port is the same |
 | `ROOTPATH` | path prefix, if Kwirth hangs off a subpath | needed when the load balancer routes by path |
 | `KUBECONFIG` | path to the kubeconfig | only if you want it to observe a cluster |
-| `FORCE` | override the environment detection | **not needed**: the ECS agent's own metadata variable is what identifies ECS, in both launch types |
+| `FORCE` | override the environment detection | **not needed here**: the ECS agent's own metadata variable identifies ECS in both launch types. `FORCE=container` asks for this same profile where there is no such signal — see below |
 | `BODYLIMIT` | max request body (default `8mb`) | raise it if a log collector batches large payloads |
 | `KEEPALIVE` | idle connection timeout in ms (default `65000`) | lower than the load balancer's idle timeout causes resets |
 
@@ -351,3 +351,20 @@ OTLP works the same way through the `otel` provider, with one caveat: it reads *
 
 The admin user is created on first start with a default password. **Change it before exposing the task**,
 and remember that if you did not set `KWIRTH_STORE` that change disappears with the task.
+
+## The same profile, where detection cannot work
+
+ECS, Cloud Run and ACI share one profile — a container with a mounted volume, an encrypted file store
+at `KWIRTH_STORE`, and a cluster only if a kubeconfig is mounted — and differ only in **how Kwirth
+recognises them**. Each has its own signal: the agent's metadata variable here, `K_SERVICE` on Cloud
+Run, the Azure identity endpoint on ACI.
+
+Where there is no such signal, ask for the profile by name with `FORCE=container`. The case that forced
+it into existence is a **pod with no Kubernetes permissions at all**: the kubelet injects
+`KUBERNETES_SERVICE_HOST` into every container, so taking the permissions away does not stop Kwirth
+being identified as a Kubernetes workload — and inside a cluster the API is deliberately not optional,
+because a failure there is an error and not a degradation. See
+[`deploy/kubernetes/manifests/kwirth-zero.yaml`](../kubernetes/manifests/kwirth-zero.yaml), which is
+this very deployment running in a pod.
+
+You do not need it here: an ECS task is detected on its own, on both launch types.

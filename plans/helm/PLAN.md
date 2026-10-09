@@ -1,11 +1,13 @@
 # Helm chart de Kwirth — revisión y puesta al día
 
-> **Estado (2026-10-08): chart `0.3.0`, QA pasado. Queda publicarlo.**
-> El QA del `0.2.x` que llevaba parado desde el 28/09 se hizo por fin, y encima se añadieron tres cosas:
-> el modo **`readonly`**, la **MASTERKEY generada** y la **contraseña de admin generada y mostrada al
-> instalar**. 38 tests unitarios y 60 comprobaciones e2e contra k3d, los dos modos instalados de verdad.
-> 🔴 **Bloqueante para publicar**: `appVersion` sigue en `0.6.38`, y este chart necesita un core con los
-> arreglos del 2026-10-08 (token proyectado, metadata en el `replace`, bcrypt `$2a$`).
+> **Estado (2026-10-09): chart `0.3.0` publicado, con TRES modos de instalación.**
+> `normal` (gestiona el clúster), `readonly` (lo observa y no lo cambia) y `zero` (ni sabe que está en
+> uno). Más la MASTERKEY generada y la contraseña de admin generada y mostrada al instalar. **46 tests
+> unitarios y 77 comprobaciones e2e** contra k3d, con los tres modos instalados de verdad. El QA del
+> `0.2.x`, parado en su gate desde el 28/09, se hizo por fin de camino.
+> ⚠️ El chart se publicó con `appVersion 0.6.65` y el tag por defecto `develop`: ese tag tiene que llevar
+> un core con los arreglos del 2026-10-08 y el `CONTAINER` del 09, o el modo `zero` no arranca y el login
+> de los otros dos da 401 (rechazan el bcrypt `$2a$` que escribe el chart).
 
 ## Por qué
 
@@ -88,6 +90,7 @@ correctos, analizar versionado y publicación, y completarlos con todo lo que ti
 | S4 | **modo `readonly`** (chart `0.3.0`): una regla `get/list/watch`, store en PVC obligatorio, `exitLog` y `users.bootstrap` derivados, securityContext endurecido y `/tmp`. Y cuatro combinaciones que el chart **se niega a renderizar** | ✅ hecho y QA pasado |
 | S5 | **MASTERKEY generada** en su propio Secret `keep`, con lookup en upgrade y reinstall, y la ruta de migración desde el Secret de entorno de charts anteriores | ✅ hecho y QA pasado |
 | S6 | **contraseña de admin generada y mostrada** en las notas de instalación, guardada como `bcrypt(sha256())` y con la clave del Secret en base64url como la escribe el core | ✅ hecho y QA pasado |
+| S7 | **modo `zero`**: un pod sin un solo permiso de Kubernetes. Ni RBAC ni ServiceAccount, token proyectado apagado, `FORCE=container` y los canales de clúster en false. Se niega a renderizar si le piden RBAC | ✅ hecho y QA pasado (2026-10-09) |
 
 ## Backlog
 

@@ -179,13 +179,14 @@
   </div>
 
   <h3>Option 2 — kubectl apply</h3>
-  <p>Two manifests, and they differ in one thing: <strong>whether the cluster lets Kwirth change anything</strong>. Each is a single file, each is applied the same way. Pick one.</p>
+  <p>Three manifests, and they differ in one thing: <strong>how much of the cluster Kwirth is allowed to touch</strong>. Each is a single file, each is applied the same way. Pick one.</p>
 
   <div class="table-wrap">
   <table>
     <tr><th>Manifest</th><th>What the cluster lets it do</th><th>Node metrics</th><th>Config lives in</th></tr>
     <tr><td><a href="https://github.com/kwirthmagnify/kwirth/blob/master/deploy/kubernetes/manifests/kwirth.yaml">kwirth.yaml</a></td><td><code>verbs: ['*']</code> on 15 API groups</td><td>yes</td><td>Secrets and ConfigMaps</td></tr>
     <tr><td><a href="https://github.com/kwirthmagnify/kwirth/blob/master/deploy/kubernetes/manifests/kwirth-full-ro.yaml">kwirth-full-ro.yaml</a></td><td><code>get</code>, <code>list</code>, <code>watch</code>. Nothing else, anywhere</td><td>yes</td><td>a PersistentVolumeClaim</td></tr>
+    <tr><td><a href="https://github.com/kwirthmagnify/kwirth/blob/master/deploy/kubernetes/manifests/kwirth-zero.yaml">kwirth-zero.yaml</a></td><td>nothing at all — not one RBAC object in the file</td><td>no</td><td>a PersistentVolumeClaim</td></tr>
   </table>
   </div>
 
@@ -200,6 +201,14 @@
   https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/deploy/kubernetes/manifests/kwirth-full-ro.yaml</pre></div>
 
   <p>What it gives up are the <em>actions</em>: the Magnify commands — restart, scale, cordon, drain, evict, apply, delete — and the <code>ops</code> and <code>fileman</code> plugins. The button stays in the UI and the API server answers 403, so if you do not want buttons that cannot work, do not install those two plugins. Its configuration also moves to a PersistentVolumeClaim instead of Secrets, and that is what removes the write permission rather than a detail of persistence: <code>MASTERKEY</code> becomes the key that configuration is encrypted with: leave it unset and kwirth generates a random one on the first boot and keeps it on the volume, so each installation gets its own instead of a shared default — it must then never change. For at-rest encryption that also resists someone reading the volume, set it from a Secret kept outside the volume.</p>
+
+  <p><strong>kwirth-zero.yaml</strong> — it does not know it is in a cluster. No ClusterRole, no binding, no ServiceAccount of its own, and the token the kubelet projects into every pod turned off, so there is no credential in the container either. Use it where the cluster is not yours to read: a shared platform, a tenant namespace, a policy that does not hand out ClusterRoles. It is the ECS deployment below, in a pod — it serves the front end, installs and runs extensions, keeps its configuration on the volume, uses the database, and <strong>federates</strong> against other Kwirths that do have access. What it loses is everything that reads the cluster it lives in.</p>
+  <div class="code-block"><pre><span class="cmd">kubectl apply</span> <span class="flag">-f</span> \
+  https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/deploy/kubernetes/manifests/kwirth-zero.yaml</pre></div>
+
+  <p>That one carries <code>FORCE=container</code>, and the line is not optional: the kubelet injects <code>KUBERNETES_SERVICE_HOST</code> into every pod, so taking the permissions away does not stop Kwirth being identified as a Kubernetes workload — and inside a cluster the API is deliberately not optional, because a failure there is an error and not a degradation. Note that <code>container</code> does not mean "no cluster": it means the platform is not one Kwirth recognises. Mount a kubeconfig and the same deployment reads that cluster, which is what the ECS task definition below does.</p>
+
+  <p>The Helm chart offers the same three as <code>kwirth.mode</code>: <code>normal</code>, <code>readonly</code> and <code>zero</code>.</p>
 
   <h3>Option 3 — AWS ECS (Fargate or EC2)</h3>
   <p>Kwirth runs as an ECS task with the same image, on either launch type. There is no ECS-specific build, and nothing to declare for the environment to be detected: the ECS agent injects its own metadata variable in both launch types and Kwirth reads it.</p>
