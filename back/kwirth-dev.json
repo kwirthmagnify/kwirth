@@ -3,21 +3,14 @@
         "iter": "../plugins/iter/dist",
         "agora": "../plugins/agora/dist",
         "excubitor": "../plugins/excubitor/dist",
-        "montag": "../plugins/montag/dist",
-        "chapete": "../../../jfvilas/kwirth/plugins/chapete/dist",
-        "webamp": "../../../jfvilas/kwirth/plugins/webamp/dist",
-        "rallyx": "../../../jfvilas/kwirth/plugins/rallyx/dist",
-        "pacman": "../../../jfvilas/kwirth/plugins/pacman/dist",
-        "asteroids": "../../../jfvilas/kwirth/plugins/asteroids/dist"
+        "montag": "../plugins/montag/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",
         "fluentbit": "../providers/fluentbit/dist",
         "aws": "../providers/aws/dist",
         "host-metrics": "../providers/host-metrics/dist",
-        "cloud-config": "../providers/cloud-config/dist",
-        "v16": "../../../jfvilas/kwirth/providers/v16/dist",
-        "flight-status": "../../../jfvilas/kwirth/providers/flight-status/dist"
+        "cloud-config": "../providers/cloud-config/dist"
     },
     "senders": {
         "datadog": "../senders/datadog/dist",
@@ -35,7 +28,6 @@
         "suse-fleet": "../aitoolsets/suse-fleet/dist"
     },
     "dces": {
-        "xyflow": "../dces/xyflow/dist"
     },
     "docs": {}
 }

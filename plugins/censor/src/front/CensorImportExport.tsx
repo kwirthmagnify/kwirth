@@ -153,7 +153,7 @@ const CensorImportExport: React.FC<ICensorImportExportProps> = ({ configs, onClo
             <DialogActions>
                 {tab === EImportExportTab.Export && <Button variant='contained' onClick={handleExport} disabled={selectedExport.size === 0}>Export</Button>}
                 {tab === EImportExportTab.Import && <Button variant='contained' onClick={handleImport} disabled={selectedImport.size === 0}>Import</Button>}
-                <Button variant='outlined' onClick={() => onClose(undefined)} color='inherit'>Cancel</Button>
+                <Button variant='outlined' onClick={() => onClose(undefined)}>Cancel</Button>
             </DialogActions>
         </Dialog>
     )

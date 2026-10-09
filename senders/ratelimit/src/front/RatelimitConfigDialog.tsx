@@ -182,7 +182,7 @@ const RatelimitConfigDialog: React.FC<IProps> = ({ onClose, backendUrl, accessSt
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button size='small' onClick={onClose}>Close</Button>
+                <Button onClick={onClose}>Close</Button>
             </DialogActions>
         </Dialog>
     )

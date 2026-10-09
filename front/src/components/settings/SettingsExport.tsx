@@ -145,9 +145,9 @@ const SettingsExport: React.FC<ISettingsExportProps> = (props: ISettingsExportPr
                 { result && <Alert severity='info' sx={{ mt: 2 }} onClose={() => setResult(undefined)}>{result}</Alert> }
                 { error !== '' && <Alert severity='error' sx={{ mt: 2 }}>{error}</Alert> }
             </DialogContent>
-            <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
-                <Button variant='outlined' size='small' startIcon={<Download />} disabled={loading || error !== ''} onClick={doExport}>Export</Button>
-                <Button variant='outlined' size='small' onClick={props.onClose}>Close</Button>
+            <DialogActions sx={{ justifyContent: 'space-between' }}>
+                <Button variant='outlined' startIcon={<Download />} disabled={loading || error !== ''} onClick={doExport}>Export</Button>
+                <Button variant='outlined' onClick={props.onClose}>Close</Button>
             </DialogActions>
         </Dialog>
     )

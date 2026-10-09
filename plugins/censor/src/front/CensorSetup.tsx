@@ -39,7 +39,7 @@ const CensorSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button variant='outlined' onClick={handleCancel} color='inherit'>Cancel</Button>
+                <Button variant='outlined' onClick={handleCancel}>Cancel</Button>
                 <Button onClick={handleStart} variant='contained'>Start</Button>
             </DialogActions>
         </Dialog>

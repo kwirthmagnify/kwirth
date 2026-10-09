@@ -70,7 +70,7 @@ const CensorAddRegexDialog: React.FC<ICensorAddRegexDialogProps> = ({ data, send
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleOk} variant='contained' disabled={!runnerKey || !pattern || !!patternError}>OK</Button>
-                <Button variant='outlined' onClick={onClose} color='inherit'>Cancel</Button>
+                <Button variant='outlined' onClick={onClose}>Cancel</Button>
             </DialogActions>
         </Dialog>
     )

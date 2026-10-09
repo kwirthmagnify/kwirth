@@ -202,7 +202,7 @@ const TeeSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString }
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button size='small' onClick={onClose}>Close</Button>
+                <Button onClick={onClose}>Close</Button>
             </DialogActions>
         </Dialog>
     )
