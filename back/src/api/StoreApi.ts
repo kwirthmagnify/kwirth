@@ -4,7 +4,8 @@ import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { guard } from '../tools/RequestGuard'
-import { ELogComponent } from '../tools/Logging'
+import { ELogComponent, logError } from '../tools/Logging'
+import { userStoreName } from '../tools/UserStoreName'
 
 export class StoreApi {
     configMaps: IConfigMaps
@@ -26,7 +27,7 @@ export class StoreApi {
             .get(async (req:Request, res:Response) => {
                 guard(StoreApi.semaphore.use ( async () => {
                     try {
-                        let data:any= await this.configMaps.read('kwirth-store-'+req.params.user,{})
+                        let data:any= await this.configMaps.read(userStoreName(req.params.user),{})
                         if (data===undefined)
                             res.status(200).json([])
                         else {
@@ -52,7 +53,7 @@ export class StoreApi {
             .get(async (req:Request, res:Response) => {
                 guard(StoreApi.semaphore.use ( async () => {
                     try {
-                        let data:any= await this.configMaps.read('kwirth-store-'+req.params.user,{})
+                        let data:any= await this.configMaps.read(userStoreName(req.params.user),{})
                         if (data === undefined)
                             res.status(200).json([])
                         else {
@@ -84,7 +85,7 @@ export class StoreApi {
             .get( async (req:Request, res:Response) => {
                 guard(StoreApi.semaphore.use ( async () => {
                     try {
-                        let data:any= await this.configMaps.read('kwirth-store-'+req.params.user,{})
+                        let data:any= await this.configMaps.read(userStoreName(req.params.user),{})
                         if (!data || data[req.params.group+'-'+req.params.key]===undefined) {
                             res.status(404).json()
                         }
@@ -101,10 +102,10 @@ export class StoreApi {
             .delete( async (req:Request, res:Response) => {
                 guard(StoreApi.semaphore.use ( async () => {
                     try {
-                        let data:any= await this.configMaps.read('kwirth-store-'+req.params.user)
+                        let data:any= await this.configMaps.read(userStoreName(req.params.user))
                         if (!data) data = {}
                         delete data[req.params.group+'-'+req.params.key]
-                        await this.configMaps.write('kwirth-store-'+req.params.user,data)
+                        await this.configMaps.write(userStoreName(req.params.user),data)
                         res.status(200).json()
                     }      
                     catch (err) {
@@ -116,15 +117,18 @@ export class StoreApi {
             .post( async (req:Request, res:Response) => {
                 guard(StoreApi.semaphore.use ( async () => {
                     try {
-                        let data:any= await this.configMaps.read('kwirth-store-'+req.params.user,{})
+                        let data:any= await this.configMaps.read(userStoreName(req.params.user),{})
                         if (!data) data={}
                         data[req.params.group+'-'+req.params.key]=JSON.stringify(req.body)
-                        await this.configMaps.write('kwirth-store-'+req.params.user,data)
+                        await this.configMaps.write(userStoreName(req.params.user),data)
                         res.status(200).json()
                     }
                     catch (err) {
+                        // 🔴 Al log, no solo al 500. Quien llama puede no mirar la respuesta —el front no lo
+                        // hacía—, y entonces un guardado que falla es indistinguible de uno que funciona:
+                        // el valor sigue en memoria y solo se descubre al recargar, horas después.
+                        logError(ELogComponent.CORE, `store write failed for user '${req.params.user}' (${req.params.group}/${req.params.key}): ${err}`)
                         res.status(500).json()
-                        console.log(err)
                     }
                 }), res, ELogComponent.CORE)
             })
