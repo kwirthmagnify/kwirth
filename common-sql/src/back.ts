@@ -137,14 +137,47 @@ const knexForDb = (dbName: string, pool?: IPoolOptions, owner?: string): Knex =>
     const s = requireServer()
     const who = owner ?? dbName
     const say = (message: unknown): string => `${who}: ${describeError(message)}`
-    return knexFactory({
+    const opts: IPoolOptions = { ...POOL_DEFAULT, ...(pool ?? {}) }
+    const k = knexFactory({
         client: s.client,
         connection: {
             host: s.host, port: s.port, user: s.user, password: s.password, database: dbName,
-            ...(s.ssl ? { ssl: { rejectUnauthorized: false } } : {})
+            ...(s.ssl ? { ssl: { rejectUnauthorized: false } } : {}),
+            /*
+                🔴 TCP keepalive. Sin esto, una conexión que muere SIN avisar —un `kubectl port-forward` que
+                corta el stream, un failover, un firewall que descarta la sesión— se queda en el pool como si
+                estuviera viva: tarn se la entrega al siguiente que la pida y la consulta se cuelga hasta
+                agotar `acquireConnectionTimeout`. El pool acaba lleno de fantasmas, el error que sale es
+                *"the pool is probably full"* —que manda a mirar a `max_connections`, donde no hay nada— y el
+                servidor, mientras tanto, tan tranquilo con conexiones ociosas que ya nadie va a usar.
+
+                Con keepalive el socket roto se detecta en segundos y la conexión se descarta y se repone.
+                Solo para pg: es una opción de node-postgres, y pasársela a otro driver sería ruido.
+            */
+            ...(s.client.startsWith('pg') ? { keepAlive: true, keepAliveInitialDelayMillis: 10_000 } : {})
         },
-        pool: { ...POOL_DEFAULT, ...(pool ?? {}) },
-        acquireConnectionTimeout: 5000,
+        /*
+            🔴 `createTimeoutMillis` por DEBAJO del `acquireConnectionTimeout`, y los dos holgados.
+
+            Esto es lo que rompe la espiral que se vio en dev el 2026-10-09. Con 5 s de espera, el
+            arranque —que pide una docena de conexiones a la vez a través de un `kubectl port-forward`—
+            vencía antes de que el handshake terminase. Pero el handshake NO fallaba: la conexión acababa
+            estableciéndose **en el servidor**, y el cliente ya la había abandonado. El servidor se
+            quedaba con ella viva y ociosa, el pool volvía a intentarlo, y dejaba otra.
+
+                cliente:   used=1/10 free=0 waiting=14
+                servidor:  24 conexiones idle de ese mismo consumidor
+
+            Cada abandono deja basura que hace más lento el intento siguiente —más sockets, más streams en
+            el túnel—, así que la cosa EMPEORA con el tiempo en vez de estabilizarse. Cinco segundos no
+            significaban "ha fallado", significaban "todavía no ha llegado".
+
+            Con `createTimeoutMillis` el que se rinde es tarn, que sí cancela la creación, en vez de que se
+            rinda el que espera dejando el socket a medias. Y queda margen para que el pool reintente
+            dentro del presupuesto de `acquireConnectionTimeout`.
+        */
+        pool: { ...opts, createTimeoutMillis: 15_000 },
+        acquireConnectionTimeout: 30_000,
         /*
             knex's logger, redirected to ours. Without this it writes to the console on its own and its
             messages come out with no time, no level and no owner — and, passed through describeError,
@@ -157,6 +190,36 @@ const knexForDb = (dbName: string, pool?: IPoolOptions, owner?: string): Knex =>
             debug: (message: unknown) => log.info(say(message))
         }
     })
+    instrumentPool(k, who, opts.max ?? POOL_DEFAULT.max)
+    return k
+}
+
+/** Lo mínimo que se le pide al pool de tarn que knex lleva dentro. Tipado a mano: knex no lo expone. */
+interface ITarnPool {
+    on?: (event: string, listener: (...args: unknown[]) => void) => void
+    numUsed?: () => number
+    numFree?: () => number
+    numPendingAcquires?: () => number
+}
+
+/*
+    🔴 Que el fallo DIGA cuál de los dos es.
+
+    Knex da el mismo mensaje —"Timeout acquiring a connection. The pool is probably full"— para dos cosas
+    que no se arreglan igual: que de verdad no queden huecos (`used` = `max`, hay quien espera) o que no se
+    pueda ABRIR una conexión nueva (red, credenciales, el servidor caído). El 2026-10-09 costó media mañana
+    distinguirlas a mano, con el servidor en 44 conexiones de 100 — o sea, el mensaje era falso.
+
+    tarn ya emite los dos eventos; solo había que escucharlos y contar lo que se ve desde dentro.
+*/
+const instrumentPool = (k: Knex, who: string, max: number): void => {
+    const p = (k.client as unknown as { pool?: ITarnPool }).pool
+    if (!p?.on) return
+    const census = (): string => `used=${p.numUsed?.() ?? '?'}/${max} free=${p.numFree?.() ?? '?'} waiting=${p.numPendingAcquires?.() ?? '?'}`
+    p.on('createFail', (_eventId: unknown, err: unknown) =>
+        log.warning(`${who}: could not OPEN a new connection (${census()}) — ${describeError(err)}`))
+    p.on('acquireFail', (_eventId: unknown, err: unknown) =>
+        log.warning(`${who}: could not TAKE a connection from the pool (${census()}) — ${describeError(err)}`))
 }
 
 const admin = (): Knex => {
@@ -175,6 +238,42 @@ const admin = (): Knex => {
     return adminPool
 }
 
+/*
+    🔴 Toda operación de mantenimiento pasa por aquí, y un fallo de conexión TIRA EL POOL.
+
+    Un pool puede quedarse con conexiones que ya no existen —el otro extremo se fue sin avisar— y, sin algo
+    que las descarte, tarn se las sigue entregando a quien pida: cada intento se cuelga sus 5 s y falla.
+    Como ese pool es el que usa `ensureDb` para comprobar la base, el consumidor reintenta, vuelve a
+    colgarse, y queda un bucle perfecto cada 5 s. Pasó en dev el 2026-10-09 con `iter`:
+
+        10:23:10 maintenance: Acquire connection error → iter: provisioning 'kwirth_iter'
+        10:23:15 maintenance: Acquire connection error → iter: provisioning 'kwirth_iter'
+        10:23:20 … y así indefinidamente
+
+    El `keepAlive` de `knexForDb` evita llegar hasta aquí en la mayoría de los casos, pero no en todos, y
+    un pool de mantenimiento envenenado deja al producto SIN poder aprovisionar nada. Reciclarlo cuesta una
+    reconexión y se recupera solo; no hacerlo cuesta el proceso entero hasta que alguien lo reinicia.
+
+    🔴 Solo se recicla ante fallos de CONEXIÓN. Un error de SQL —una clave duplicada, por ejemplo— no tiene
+    nada que ver con el pool, y tirarlo por eso sería cambiar un problema por otro peor.
+*/
+const CONNECTION_FAILURE = /timeout acquiring a connection|operation timed out|econnrefused|econnreset|etimedout|connection terminated|server closed the connection/i
+
+const withAdmin = async <T>(what: string, fn: (k: Knex) => Promise<T>): Promise<T> => {
+    try {
+        return await fn(admin())
+    }
+    catch (err) {
+        if (CONNECTION_FAILURE.test(describeError(err))) {
+            const dead = adminPool
+            adminPool = undefined        // el siguiente `admin()` abre uno nuevo, con conexiones nuevas
+            log.warning(`maintenance: recycling the pool after a connection failure during ${what} — ${describeError(err)}`)
+            if (dead) { try { await dead.destroy() } catch { /* best-effort: ya estaba roto */ } }
+        }
+        throw err
+    }
+}
+
 // Budget warning: the SUM of the `max` of every pool (consumers + admin) competes for Postgres's GLOBAL
 // max_connections. When Σmax exceeds max_connections − headroom, a warning goes to the console with the
 // per-consumer breakdown (so you know who to trim). Best-effort: if max_connections cannot be read, it
@@ -182,7 +281,7 @@ const admin = (): Knex => {
 const warnIfBudgetExceeded = async (): Promise<void> => {
     try {
         if (maxConnections === undefined) {
-            const r = await admin().raw('SHOW max_connections')
+            const r = await withAdmin('SHOW max_connections', k => k.raw('SHOW max_connections'))
             maxConnections = Number(r.rows?.[0]?.max_connections ?? 0) || undefined
         }
         if (!maxConnections) return
@@ -229,12 +328,12 @@ const STALE_TX_MINUTES = 5
 
 export const reapStaleSessions = async (log?: (msg: string) => void): Promise<number> => {
     try {
-        const r = await admin().raw(
+        const r = await withAdmin('reapStaleSessions', k => k.raw(
             `select pg_terminate_backend(pid) from pg_stat_activity
              where datname like 'kwirth\\_%' and state = 'idle in transaction'
                and state_change < now() - (? || ' minutes')::interval and pid <> pg_backend_pid()`,
             [STALE_TX_MINUTES]
-        )
+        ))
         const n = (r.rows as unknown[]).length
         if (n > 0) log?.(`[common-sql] reaped ${n} stale session(s) left 'idle in transaction' by a previous run`)
         return n
@@ -246,13 +345,13 @@ export const reapStaleSessions = async (log?: (msg: string) => void): Promise<nu
 }
 
 export const dbExists = async (name: string): Promise<boolean> => {
-    const r = await admin().raw('select 1 from pg_database where datname = ?', [name])
+    const r = await withAdmin('dbExists', k => k.raw('select 1 from pg_database where datname = ?', [name]))
     return r.rows.length > 0
 }
 
 export const createDb = async (name: string): Promise<void> => {
     if (await dbExists(name)) return
-    await admin().raw('create database "' + safeIdent(name) + '"')
+    await withAdmin('createDb', k => k.raw('create database "' + safeIdent(name) + '"'))
 }
 
 export const dropDb = async (name: string): Promise<void> => {
@@ -260,18 +359,42 @@ export const dropDb = async (name: string): Promise<void> => {
     for (const [cid, k] of [...pools]) {
         if (physicalDbName(cid) === name) { await k.destroy(); pools.delete(cid); configuredMax.delete(cid) }
     }
-    await admin().raw('drop database if exists "' + safeIdent(name) + '"')
+    await withAdmin('dropDb', k => k.raw('drop database if exists "' + safeIdent(name) + '"'))
 }
 
 export const listDbs = async (): Promise<string[]> => {
-    const r = await admin().raw('select datname from pg_database where datistemplate = false order by 1')
+    const r = await withAdmin('listDbs', k => k.raw('select datname from pg_database where datistemplate = false order by 1'))
     return r.rows.map((x: { datname: string }) => x.datname)
 }
+
+/*
+    Aprovisionamientos EN VUELO, para que un consumidor no arranque dos a la vez.
+
+    🔴 `ensureDb` solo registra el pool en `pools` si TODO salió bien, así que un fallo lo deja sin
+    registrar y la siguiente llamada vuelve a empezar. Mientras el servidor contesta eso está bien —se
+    reintenta—, pero cuando no contesta se convierte en un bucle que se alimenta solo: cada intento espera
+    los 5 s del `acquireConnectionTimeout`, falla, y el siguiente que pida la base lo repite. Visto en dev
+    el 2026-10-09: `provisioning 'kwirth_excubitor'` una y otra vez, emparejado siempre con un timeout del
+    pool de mantenimiento, martilleando justo la conexión que no iba.
+
+    Con esto, N peticiones concurrentes comparten UN intento. No se cachea el fallo: cuando el servidor
+    vuelva, el siguiente que pregunte lo consigue.
+*/
+const provisioning = new Map<string, Promise<Knex>>()
 
 /** PROVISIONING (async, once): ensures the consumer's DB and opens the pool. Returns the ready Knex. */
 export const ensureDb = async (consumerId: string, pool?: IPoolOptions): Promise<Knex> => {
     const existing = pools.get(consumerId)
     if (existing) return existing
+    const inFlight = provisioning.get(consumerId)
+    if (inFlight) return inFlight
+    const attempt = provisionNow(consumerId, pool)
+    provisioning.set(consumerId, attempt)
+    try { return await attempt }
+    finally { provisioning.delete(consumerId) }
+}
+
+const provisionNow = async (consumerId: string, pool?: IPoolOptions): Promise<Knex> => {
     const name = physicalDbName(consumerId)
     /*
         Said BEFORE anything is attempted, and on purpose. Provisioning goes through the shared
