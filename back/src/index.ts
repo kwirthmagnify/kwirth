@@ -18,6 +18,8 @@ import { SettingsApi } from './api/SettingsApi'
 import { MarketplaceApi } from './api/MarketplaceApi'
 import { MarketplaceManager, seedBuiltInMarketplaces } from './tools/MarketplaceManager'
 import { routeRegistry } from './tools/RouteRegistry'
+import { userStoreName } from './tools/UserStoreName'
+import { wsUpgradeAllowed } from './tools/WsPathGuard'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { buildPreviousContainerMessage, logPreviousContainerBanner, readPreviousContainerLog } from './tools/PreviousContainerLog'
 import { createUsageService } from './tools/AiUsage'
@@ -2484,7 +2486,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             // tolerante a fallo. Ej.: readUserStore(userId, 'clusters', 'list') → IClusterEndpoint[].
             readUserStore: async (userId: string, group: string, key: string): Promise<unknown> => {
                 try {
-                    const data: any = await runningInstance.configMaps.read('kwirth-store-' + userId, {})
+                    const data: any = await runningInstance.configMaps.read(userStoreName(userId), {})
                     if (!data || typeof data !== 'object') return undefined
                     const raw = data[group + '-' + key]
                     if (raw === undefined) return undefined
@@ -2965,6 +2967,21 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                 zlibInflateOptions: { chunkSize: 10 * 1024 }
             }
         })
+
+        /*
+            🔴 El upgrade se acepta SOLO en la ruta de este Kwirth.
+
+            Montado con `server:` y sin `path`, `ws` acepta el upgrade en cualquier ruta, y la única criba
+            era el ingress del cliente — que no controlamos y que puede no respetar su propia declaración:
+            en un despliegue real, un `pathType: Prefix` sobre `/kwirth` dejaba entrar `/kwirth2` y
+            `/kwirthXYZ`, y el canal se abría por ellas (2026-10-09). `shouldHandle` es el punto que la
+            librería ofrece para decidirlo; devolver false responde 400 y cierra, sin llegar a abrir nada.
+        */
+        wsServer.shouldHandle = (req: IncomingMessage): boolean => {
+            if (wsUpgradeAllowed(req.url, envRootPath)) return true
+            logWarning(ELogComponent.CORE, `WS upgrade REFUSED for '${(req.url || '').split('?')[0]}': this Kwirth serves '${envRootPath}' (a path that merely starts the same is NOT a subpath)`)
+            return false
+        }
 
         wsServer.on('connection', (webSocket:WebSocket, req:IncomingMessage) => {
             const ipHeader = req.headers['x-forwarded-for']

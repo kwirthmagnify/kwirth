@@ -30,6 +30,25 @@ const START_RETRY_MS = 3000
 // START's RESPONSE (needed in order to send commands referencing an instance valid in THAT cluster). The raw
 // WS is NOT exposed: the consumer uses the handle (send/close). It lives in the framework (the core), not in
 // any plugin.
+/*
+    Traduce el error de conexión a algo que diga QUÉ hacer.
+
+    🔴 El de verdad confuso es `Unexpected server response: 200`: un 200 parece éxito, y lo que significa
+    es que pedimos cambiar a WebSocket y nos contestaron con una página normal — o sea que esa ruta la
+    sirve otra cosa, no este canal. Diagnosticarlo costó una mañana (2026-10-09) con un ingress cuya regla
+    de prefijo dejaba pasar `/kwirth2` hasta que se corrigió, y entonces el mismo sitio empezó a devolver
+    200 sin que el mensaje explicara nada.
+*/
+const explainWsError = (err: unknown, url: string): string => {
+    const msg = String((err as { message?: string })?.message ?? err)
+    const status = /Unexpected server response:\s*(\d+)/i.exec(msg)
+    if (status) return `${msg} — a WebSocket handshake must be answered with 101 Switching Protocols; a ${status[1]} means ${url} is served by something that is not this channel (check the path and the ingress rule)`
+    if (/ENOTFOUND/i.test(msg)) return `${msg} — the host does not resolve`
+    if (/ECONNREFUSED/i.test(msg)) return `${msg} — nothing is listening on that host and port`
+    if (/CERT|SSL|self.signed/i.test(msg)) return `${msg} — the TLS certificate was rejected`
+    return msg
+}
+
 export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceConfig, handlers: IRemoteChannelHandlers, logError?: (message: unknown) => void, logInfo?: (message: unknown) => void): IRemoteChannelHandle {
     let ws: WebSocket | undefined
     let closed = false
@@ -178,7 +197,7 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
         sock.on('error', (err) => {
             // ws emits 'close' automatically after an 'error'; we do NOT call close() here (doing so during
             // CONNECTING emits 'error' again). The 'close' takes care of the state and of the retry.
-            if (logError) logError(`openRemoteChannel: WS error to ${wsUrl}: ${err}`)
+            if (logError) logError(`openRemoteChannel: WS error to ${wsUrl}: ${explainWsError(err, wsUrl)}`)
         })
     }
 
