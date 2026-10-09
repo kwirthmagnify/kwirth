@@ -264,6 +264,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         dirección. Las registra `openRemoteChannels` y las llama `onManageClustersClosed`: sin un punto de
         encuentro, una pestaña abierta no tiene forma de enterarse de que el usuario movió un cluster.  */
     const fedRefreshRef = useRef<(() => void)[]>([])
+    /*  ¿Se llegó a LEER la lista de clusters? Guardarla sobrescribe la entera, así que escribir sin haber
+        podido leer antes borra lo que hubiera. Ver el bloque de carga y `onManageClustersClosed`. */
+    const clustersLoadedRef = useRef<boolean>(false)
     const [selectedClusterName, setSelectedClusterName] = useState<string>()
 
     const tabs = useRef<ITabObject[]>([])
@@ -1060,8 +1063,26 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 if (response.status===200) {
                     clusterList = JSON.parse (await response.json())
                     clusterList = clusterList.filter (c => c.name !== srcCluster!.name)
+                    clustersLoadedRef.current = true
+                }
+                /*
+                    🔴 404 = la clave no existe todavía (nadie ha guardado clusters). Es una lista vacía
+                    legítima y se puede escribir encima. CUALQUIER OTRA COSA es "no he podido leer", y
+                    entonces NO se puede guardar: cerrar Manage clusters escribe la lista ENTERA, así que
+                    guardar desde una memoria que nunca se llenó BORRA lo que hubiera.
+
+                    Pasó en dev el 2026-10-09: al reiniciar, el front cargó antes de que el back estuviera
+                    listo, el GET falló, se quedó con el home solo —sin decir nada— y al abrir y cerrar el
+                    diálogo se llevó por delante cuatro clusters con sus API keys. Leer mal es recuperable;
+                    leer mal y escribir encima, no.
+                */
+                else if (response.status===404) clustersLoadedRef.current = true
+                else {
+                    clustersLoadedRef.current = false
+                    notify(undefined, ENotifyLevel.ERROR, `Your cluster list could not be loaded (HTTP ${response.status}). It is NOT lost: changes are disabled until it loads — reload the page`)
                 }
             }
+            else clustersLoadedRef.current = true
 
             for (let cluster of clusterList) {
                 readClusterInfo(cluster, notify).then( () => { setChannelMessageAction({action : EChannelRefreshAction.REFRESH}) })
@@ -1272,18 +1293,56 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     thing is how they end up out of sync, and the day someone raises one and not the other this
                     comes back with a worse diagnosis.
                 */
-                interface IRemoteConn { clusterId: string; ws?: WebSocket; closed: boolean; retry?: ReturnType<typeof setInterval>; keepAlive?: ReturnType<typeof setInterval>; instanceId?: string; using?: Cluster }
+                /*
+                    🔴 `using` guarda COPIAS de la url y la clave, no el objeto Cluster.
+
+                    Guardaba la referencia, y el diálogo de Manage clusters edita los clusters EN EL SITIO
+                    (`selectedCluster.url = url`, sobre los mismos objetos que la lista de App). Con eso,
+                    la comprobación de "¿ha cambiado el endpoint?" comparaba un objeto consigo mismo: daba
+                    "no ha cambiado" siempre, y la conexión viva nunca se soltaba. La pestaña abierta
+                    seguía diciendo 3/3 mientras una nueva decía 2/3 — y el arreglo que debía evitarlo
+                    estaba leyendo su propia escritura (visto en dev, 2026-10-09).
+
+                    Copiar los dos valores al conectar hace la comparación inmune a que alguien mute el
+                    objeto por detrás, que es exactamente lo que pasa aquí.
+                */
+                interface IRemoteConn { clusterId: string; ws?: WebSocket; closed: boolean; retry?: ReturnType<typeof setInterval>; keepAlive?: ReturnType<typeof setInterval>; startAck?: ReturnType<typeof setTimeout>; instanceId?: string; using?: { url: string; accessString: string } }
                 const conns: IRemoteConn[] = []
                 const connect = (endpoint: Cluster, conn: IRemoteConn) => {
                     let ws: WebSocket
                     try { ws = new WebSocket(endpoint.url) }
                     catch { return }
-                    conn.using = endpoint   // con qué dirección y clave está hablando AHORA MISMO
+                    conn.using = { url: endpoint.url, accessString: endpoint.accessString }   // con qué dirección y clave está hablando AHORA MISMO (por VALOR: ver IRemoteConn)
                     conn.ws = ws
                     ws.onopen = () => {
                         if (conn.retry) { clearInterval(conn.retry); conn.retry = undefined }
                         ws.send(JSON.stringify({ ...instanceConfig, action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.SIGNAL, instance: '', accessKey: endpoint.accessString }))
-                        handlers.onState(conn.clusterId, ERemoteConnState.CONNECTED)
+                        /*
+                            🔴 HANDSHAKING, no CONNECTED. Un socket abierto NO es un cluster operativo.
+
+                            Aquí se daba por conectado en cuanto el socket se abría, sin esperar a que el
+                            otro extremo contestara. Con eso, un cluster cuyo START se rechaza —clave
+                            inválida, canal inexistente, una URL que no sirve este canal— se pintaba verde
+                            y "contribuyendo" mientras no aportaba un solo finding. El 2026-10-09 se vio en
+                            crudo: el back decía `down` para el mismo cluster y la topbar seguía en 3/3.
+
+                            El back ya lo hacía bien (RemoteChannel: CONNECTED solo con el START RESPONSE
+                            que trae instancia). Que los dos lados midan lo mismo es lo que permite creerse
+                            el indicador; dos definiciones de "conectado" garantizan que una miente.
+                        */
+                        /*  ⚠️ Debería ser HANDSHAKING —socket abierto, instancia todavía no—, que es lo que
+                            el back usa. El enum de common-front no lo tiene: está declarado DOS VECES, en
+                            common-front y en common-back, y solo el del back lo incluye. Añadirlo obliga a
+                            publicar common-front y a reinstalarlo en front y plugins, así que se usa
+                            RECONNECTING, que ya pinta el indicador en naranja y NO cuenta como conectado,
+                            que es lo que importa. La unificación de los dos enums está en el backlog. */
+                        handlers.onState(conn.clusterId, ERemoteConnState.RECONNECTING)
+                        /*  Y si el START no se contesta, no se deja la conexión colgada en naranja para
+                            siempre: se cierra, y el bucle de reintento —que re-resuelve el endpoint— la
+                            vuelve a levantar. Un socket que abre y calla es justo lo que pasa cuando al
+                            otro lado hay algo que no es este canal. */
+                        if (conn.startAck) clearTimeout(conn.startAck)
+                        conn.startAck = setTimeout(() => { if (!conn.closed && !conn.instanceId) { try { ws.close() } catch { /* noop */ } } }, 10000)
                         // The ping only makes sense once an instance has been assigned (the START reply gives
                         // it), which is why it is re-armed on EVERY connection: after a reconnect the instance
                         // is a different one.
@@ -1306,7 +1365,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                             // connection so commands (accept/assign/remediate) can be SENT referencing an
                             // instance valid in THAT cluster (otherwise the back end answers "Instance not
                             // found for command").
-                            if (m?.action === EInstanceMessageAction.START && m?.flow === EInstanceMessageFlow.RESPONSE && m?.instance) conn.instanceId = m.instance
+                            if (m?.action === EInstanceMessageAction.START && m?.flow === EInstanceMessageFlow.RESPONSE && m?.instance) {
+                                conn.instanceId = m.instance
+                                if (conn.startAck) { clearTimeout(conn.startAck); conn.startAck = undefined }
+                                // AHORA sí: hay instancia en el otro lado, o sea el canal existe allí, la
+                                // clave vale y los mensajes van a llegar a alguien. Es el mismo criterio
+                                // que el back, y el único que hace que el indicador signifique algo.
+                                handlers.onState(conn.clusterId, ERemoteConnState.CONNECTED)
+                            }
                             handlers.onMessage(conn.clusterId, m)
                         } catch { /* no-JSON: ignora */ }
                     }
@@ -1323,6 +1389,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         // that outlives its socket keeps firing against a `readyState` that is not OPEN, and
                         // every reconnect would leave one more behind.
                         if (conn.keepAlive) { clearInterval(conn.keepAlive); conn.keepAlive = undefined }
+                        if (conn.startAck) { clearTimeout(conn.startAck); conn.startAck = undefined }
+                        conn.instanceId = undefined   // la instancia muere con el socket: la nueva la asigna el próximo START
                         if (conn.closed || conn.retry) return
                         handlers.onState(conn.clusterId, ERemoteConnState.RECONNECTING)
                         /*
@@ -2497,8 +2565,24 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const onManageClustersClosed = (cc:Cluster[]) => {
         setShowManageClusters(false)
         let otherClusters = cc.filter (c => !c.home)
+        /*  🔴 Si la lista no se pudo LEER al arrancar, no se escribe. El POST manda la lista completa, y
+            mandar la de una memoria que nunca se llenó borra los clusters del usuario con sus API keys —
+            que no se pueden recuperar de un ConfigMap. Mejor negarse a guardar y decirlo. */
+        if (!clustersLoadedRef.current) {
+            notify(undefined, ENotifyLevel.ERROR, 'Your cluster list was never loaded, so it will NOT be saved (saving now would erase it). Reload the page and try again')
+            setClusters([...cc])
+            clustersRef.current = [...cc]
+            return
+        }
         let payload=JSON.stringify(otherClusters)
+        /*  🔴 Se COMPRUEBA que se ha guardado. Esto se mandaba y nadie miraba la respuesta: el día que el
+            back no pudo escribir el store —el id del usuario era un email y el nombre del ConfigMap salía
+            inválido— la lista se quedó solo en memoria. El usuario añadió un cluster, lo probó, lo usó, y
+            al recargar había desaparecido sin que nada lo hubiera dicho. Un guardado que falla en silencio
+            es peor que uno que no se intenta. */
         fetch (`${backendUrl}/store/${user?.id}/clusters/list`, addPostAuthorization(accessString, payload))
+            .then (resp => { if (!resp.ok) notify(undefined, ENotifyLevel.ERROR, `Your cluster list could not be saved (HTTP ${resp.status}). It will be lost when you reload`) })
+            .catch (err => notify(undefined, ENotifyLevel.ERROR, `Your cluster list could not be saved: ${err}. It will be lost when you reload`))
         setClusters([...cc])
         // El ref se sincroniza en un efecto, o sea DESPUÉS de pintar: se adelanta aquí para que la
         // reevaluación de abajo compare contra la lista nueva y no contra la que acabamos de sustituir.
