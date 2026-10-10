@@ -52,6 +52,20 @@ export const ansiSegments = (line: string): ILogSegment[] => {
     return out
 }
 
+/** What a line reads on screen: its text without the colour escapes. */
+export const visibleText = (line: string): string => ansiSegments(line).map(s => s.text).join('')
+
+/*
+    The lines that contain the filter, case-insensitive, matched against what is SEEN and not against the
+    raw line: a colour escape can sit in the middle of a word ('\x1b[31merror'), and searching the raw text
+    would then miss what the reader is looking at — or find an 'm' that is not on screen.
+*/
+export const filterLogLines = (lines: string[], filter: string): string[] => {
+    const f = filter.trim().toLowerCase()
+    if (!f) return lines
+    return lines.filter(l => visibleText(l).toLowerCase().includes(f))
+}
+
 /*
     The core's log carries internal traces, so it is only for administrators: without the 'admin' scope it
     is not asked for, and the back end does not serve it either. Read from the channel's own access key.

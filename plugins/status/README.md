@@ -26,7 +26,7 @@ Eleven tabs, and it opens on the first:
 | **Extensions** | senders and webhooks, with their state |
 | **Routes** | every HTTP route published — core API, providers, plugins, webhooks — with its methods, and collisions marked |
 | **DCE** | every installed DCE: version, source, whether its back and front loaded (with the error), and who consumes it |
-| **Log** | the core's own log, opened at its newest lines (admin only) |
+| **Log** | the core's own log, opened at its newest lines and filtered by the Filter box (admin only) |
 | **Previous log** | the log of the previous container after a restart, and how it ended (admin only) |
 | **SQL** | the core's relational storage — PostgreSQL via knex: connection config (no password), driver versions, reachability, the list of databases and per-consumer connection pool stats (used / free / max) |
 

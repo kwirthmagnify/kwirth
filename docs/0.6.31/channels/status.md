@@ -46,8 +46,8 @@ The content is split into ten tabs, and it opens on **Home**:
 
 The toolbar above the tabs is shared: the refresh button, the auto-refresh selector and the time of the
 snapshot apply to **all** of them — a snapshot is of the whole Kwirth, not of one tab. The **Filter** box is
-always there, and it is **disabled** on the tabs that are not lists (Home, Graph, Performance, the logs) —
-it does not come and go, so nothing next to it moves. Status remembers the tab you were on when you come
+always there, and it is **disabled** on the tabs where there is nothing to filter (Home, Graph, Performance) —
+it does not come and go, so nothing next to it moves. On the two log tabs it filters the **lines**. Status remembers the tab you were on when you come
 back to it.
 
 A tab whose data the core does not give — an older core, for instance — says so in words, instead of showing
@@ -361,6 +361,14 @@ The **Log** tab shows the last **1000 lines** the container running now has writ
 put there. It is read when you open the tab and again with every snapshot, so the refresh button and
 auto-refresh bring the latest lines. The **Previous log** tab shows the log of the previous container, when
 Kwirth has restarted — with the restart count, the exit code and whether it ended cleanly or abnormally.
+
+Both open at the **end**, on the newest lines. A refresh keeps you there only if you were there: if you have
+scrolled up to read something, new lines do not drag you down.
+
+The **Filter** box keeps only the lines that contain what you type — `error`, a component like `[auth]`, a
+user, a time like `10:42`. It ignores case, and it matches the text you **see**, not the colour codes behind
+it, so `ERROR [auth]` finds the line even though a colour change sits between the two words. The line above
+the box says how many lines match out of how many there are; if none does, the tab says so.
 
 They used to live in **About kwirth…**; both are explained in detail, with what each message means, in
 [Reading the core's own log](../guide/admin/01-deployment#reading-the-cores-own-log) and

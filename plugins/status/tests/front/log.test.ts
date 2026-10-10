@@ -4,7 +4,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ANSI_COLOUR, ansiSegments, isAdmin, previousSummary } from '../../src/front/StatusLog'
+import { ANSI_COLOUR, ansiSegments, filterLogLines, isAdmin, previousSummary, visibleText } from '../../src/front/StatusLog'
 import { IStatusPreviousLog } from '../../src/common/StatusTypes'
 
 const ESC = '\x1b'
@@ -59,4 +59,45 @@ test('no restart, restarts, and an abnormal exit with its code', () => {
     const bad = previousSummary(true, { log: previous({ abnormal: true, termination: { exitCode: 137 } }) })
     assert.deepEqual([bad.headline, bad.abnormal], ['1 restart', true])
     assert.match(bad.detail, /exit code 137/)
+})
+
+// ── the filter (Log and Previous log tabs) ─────────────────────────────────────
+
+const LINES = [
+    '\x1b[90m10:00:01\x1b[0m \x1b[36mINFO\x1b[0m \x1b[35m[core]\x1b[0m started',
+    '\x1b[90m10:00:02\x1b[0m \x1b[31mERROR\x1b[0m \x1b[35m[auth]\x1b[0m login failed for admin',
+    '\x1b[90m10:00:03\x1b[0m \x1b[33mWARNING\x1b[0m \x1b[35m[store]\x1b[0m slow write',
+    'plain line without colour'
+]
+
+test('visibleText is the line as it reads on screen, without escapes', () => {
+    assert.equal(visibleText(LINES[1]), '10:00:02 ERROR [auth] login failed for admin')
+    assert.equal(visibleText('plain'), 'plain')
+    assert.equal(visibleText(''), '')
+})
+
+test('an empty or blank filter keeps every line, the SAME array', () => {
+    assert.equal(filterLogLines(LINES, ''), LINES)
+    assert.equal(filterLogLines(LINES, '   '), LINES)
+})
+
+test('the filter is case-insensitive and keeps the lines with their colours', () => {
+    assert.deepEqual(filterLogLines(LINES, 'error'), [LINES[1]])
+    assert.deepEqual(filterLogLines(LINES, 'ERROR'), [LINES[1]])
+    assert.deepEqual(filterLogLines(LINES, '[auth]'), [LINES[1]])
+    assert.deepEqual(filterLogLines(LINES, 'colour'), [LINES[3]])
+    assert.deepEqual(filterLogLines(LINES, '10:00:0'), LINES.slice(0, 3))
+    assert.deepEqual(filterLogLines(LINES, 'nothing like this'), [])
+})
+
+test('🔴 it matches what is SEEN: across a colour escape, and never on the escape itself', () => {
+    // 'ERROR [auth]' spans two escapes in the raw line; on screen it is one piece of text.
+    assert.deepEqual(filterLogLines(LINES, 'error [auth]'), [LINES[1]])
+    // '[31m' is in the raw line but not on screen: it must not match.
+    assert.deepEqual(filterLogLines(LINES, '[31m'), [])
+    assert.deepEqual(filterLogLines(LINES, '0m'), [])
+})
+
+test('surrounding spaces in the filter are ignored', () => {
+    assert.deepEqual(filterLogLines(LINES, '  slow write  '), [LINES[2]])
 })

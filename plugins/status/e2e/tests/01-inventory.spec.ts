@@ -735,6 +735,38 @@ test('the log box keeps a dark scrollbar in both themes', async () => {
     await expect(box).toHaveCSS('scrollbar-color', 'rgb(107, 107, 107) rgb(30, 30, 30)')
 })
 
+test('🔴 the filter is ENABLED on both log tabs', async () => {
+    const filtro = page.getByPlaceholder('Filter…')
+    for (const name of ['Log', 'Previous log']) {
+        await page.getByRole('tab', { name, exact: true }).click()
+        await expect(filtro, `the filter is disabled on ${name}`).toBeEnabled()
+    }
+})
+
+test('🔴 the filter keeps only the log lines that contain it, and says how many', async () => {
+    await page.getByRole('tab', { name: 'Log', exact: true }).click()
+    const box = page.locator('[aria-label="Log lines"]')
+    test.skip(!(await box.isVisible().catch(() => false)), 'this kwirth has no log lines to paint')
+    const lineas = () => box.locator('pre > div').allInnerTexts()
+    const todas = await lineas()
+    // A word from the middle of a real line, so the expected result comes from the log itself.
+    const palabra = (todas.find(l => l.trim().split(/\s+/).length > 2) ?? todas[0]).trim().split(/\s+/)[1]
+    const esperadas = todas.filter(l => l.toLowerCase().includes(palabra.toLowerCase()))
+    const filtro = page.getByPlaceholder('Filter…')
+    await filtro.fill(palabra.toUpperCase())
+    await expect(async () => {
+        const vistas = await lineas()
+        expect(vistas.length).toBe(esperadas.length)
+        expect(vistas.every(l => l.toLowerCase().includes(palabra.toLowerCase())), `a line without '${palabra}'`).toBe(true)
+    }).toPass({ timeout: 10000 })
+    await expect(page.getByText(new RegExp(`${esperadas.length} of ${todas.length} match`))).toBeVisible()
+    await filtro.fill('zzz-no-log-line-has-this')
+    await expect(page.locator('[aria-label="Log message"]')).toContainText('No line matches the filter')
+    await filtro.fill('')
+    await expect(box).toBeVisible()
+    expect((await lineas()).length).toBe(todas.length)
+})
+
 test('a reader who scrolled up is not dragged down by a refresh', async () => {
     const box = page.locator('[aria-label="Log lines"]')
     test.skip(!(await box.isVisible().catch(() => false)), 'this kwirth has no log lines to paint')

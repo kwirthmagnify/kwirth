@@ -37,7 +37,7 @@ const SELF_SCROLLING: ReadonlySet<EStatusTab> = new Set([EStatusTab.GRAPH, EStat
 const TOP_BAR_HEIGHT = 26
 
 /** The tabs where the filter applies: the ones that are lists. */
-const FILTERABLE: ReadonlySet<EStatusTab> = new Set([EStatusTab.PROVIDERS, EStatusTab.PLUGINS, EStatusTab.EXTENSIONS, EStatusTab.ROUTES, EStatusTab.DCE, EStatusTab.SQL])
+const FILTERABLE: ReadonlySet<EStatusTab> = new Set([EStatusTab.PROVIDERS, EStatusTab.PLUGINS, EStatusTab.EXTENSIONS, EStatusTab.ROUTES, EStatusTab.DCE, EStatusTab.SQL, EStatusTab.LOG, EStatusTab.PREVIOUS_LOG])
 
 interface IEmptyStateProps {
     title: string
@@ -346,15 +346,15 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 width and the columns moved as you typed. Only there: on Home it left the cards off-centre
                 (the room on the right only), and Home's rows never come and go.
             */}
-            <Box ref={boxRef} aria-label='Tab content' sx={{ display: 'flex', flexDirection: 'column', overflowY: SELF_SCROLLING.has(vista) ? 'hidden' : 'auto', overflowX: 'hidden', scrollbarGutter: FILTERABLE.has(vista) ? 'stable' : 'auto', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
+            <Box ref={boxRef} aria-label='Tab content' sx={{ display: 'flex', flexDirection: 'column', overflowY: SELF_SCROLLING.has(vista) ? 'hidden' : 'auto', overflowX: 'hidden', scrollbarGutter: FILTERABLE.has(vista) && !SELF_SCROLLING.has(vista) ? 'stable' : 'auto', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
                 {vista === EStatusTab.HOME && <StatusHomeTab inventory={inventory} series={data.series} autoRefresh={data.autoRefresh} onOpen={setVista} admin={admin} previousLog={data.previousLog} />}
                 {vista === EStatusTab.GRAPH && <StatusDiagram inventory={inventory} active={activos} autoRefresh={data.autoRefresh} />}
                 {vista === EStatusTab.PROVIDERS && tabla(filasDe(EStatusTab.PROVIDERS), true)}
                 {vista === EStatusTab.EXTENSIONS && tabla(filasDe(EStatusTab.EXTENSIONS), false)}
                 {vista === EStatusTab.ROUTES && <StatusRoutesTab routes={inventory.routes} filter={filter} />}
                 {vista === EStatusTab.DCE && <StatusDceTab dces={inventory.dces} filter={filter} />}
-                {vista === EStatusTab.LOG && <StatusCoreLogTab admin={admin} log={data.coreLog} />}
-                {vista === EStatusTab.PREVIOUS_LOG && <StatusPreviousLogTab admin={admin} read={data.previousLog} />}
+                {vista === EStatusTab.LOG && <StatusCoreLogTab admin={admin} log={data.coreLog} filter={filter} />}
+                {vista === EStatusTab.PREVIOUS_LOG && <StatusPreviousLogTab admin={admin} read={data.previousLog} filter={filter} />}
                 {vista === EStatusTab.PERFORMANCE && <StatusPerformanceTab inventory={inventory} series={data.series} />}
                 {vista === EStatusTab.PLUGINS && <StatusPluginsTab plugins={inventory.plugins} filter={filter} />}
                 {vista === EStatusTab.SQL && <StatusSqlTab sql={inventory.sql} filter={filter} />}

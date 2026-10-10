@@ -1,7 +1,7 @@
 import React from 'react'
 import { Box, Stack, Typography } from '@mui/material'
 import { IStatusCoreLog } from '../common/StatusTypes'
-import { CORE_LOG_LINES, IPreviousLogRead, ansiSegments } from './StatusLog'
+import { CORE_LOG_LINES, IPreviousLogRead, ansiSegments, filterLogLines } from './StatusLog'
 
 /*
     The Log and Previous log tabs: the core's own log, as it used to be read from the About dialog.
@@ -84,22 +84,36 @@ const NOT_ADMIN: ILogMessageProps = {
     detail: "It carries internal traces. Your access key has no 'admin' scope."
 }
 
+/** With a filter, how many lines match; said so the box is never mistaken for the whole log. */
+const matchNote = (shown: number, total: number, filter: string): string =>
+    filter.trim() ? ` · ${shown} of ${total} match "${filter.trim()}"` : ''
+
+/** A filter that leaves nothing: said centred, like any other state without lines. */
+const noMatch = (filter: string, total: number): ILogMessageProps => ({
+    title: 'No line matches the filter',
+    detail: `None of the ${total} lines contains "${filter.trim()}". Clear the filter to see them all.`
+})
+
 interface ICoreLogTabProps {
     admin: boolean
     log: IStatusCoreLog | undefined
+    /** The top bar's filter: only the lines that contain it are shown. */
+    filter: string
 }
 
-export const StatusCoreLogTab: React.FC<ICoreLogTabProps> = ({ admin, log }) => {
+export const StatusCoreLogTab: React.FC<ICoreLogTabProps> = ({ admin, log, filter }) => {
     if (!admin) return <LogMessage {...NOT_ADMIN} />
     if (!log) return <LogMessage title='Reading the log…' detail='The last lines of the container running now.' />
     if (log.unavailableReason) return <LogMessage title='There is no log to show' detail={log.unavailableReason} warning />
     if (log.lines.length === 0) return <LogMessage title='The log is empty' detail='The container running now has not written any line yet.' />
+    const shown = filterLogLines(log.lines, filter)
     return (
         <Stack spacing={1} sx={{ height: '100%', minHeight: 0 }}>
             <Typography variant='caption' color='text.secondary'>
                 Last {log.lines.length} lines of the container running now (at most {CORE_LOG_LINES}). It is read again with every snapshot.
+                {matchNote(shown.length, log.lines.length, filter)}
             </Typography>
-            <LogBox lines={log.lines} />
+            {shown.length === 0 ? <LogMessage {...noMatch(filter, log.lines.length)} /> : <LogBox lines={shown} />}
         </Stack>
     )
 }
@@ -107,13 +121,15 @@ export const StatusCoreLogTab: React.FC<ICoreLogTabProps> = ({ admin, log }) => 
 interface IPreviousLogTabProps {
     admin: boolean
     read: IPreviousLogRead | undefined
+    /** The top bar's filter: only the lines that contain it are shown. */
+    filter: string
 }
 
 /*
     "There was no restart" and "there was a restart but the log is gone" are different things, and the
     second is the one that puzzles whoever goes to look: said in words, or it looks as if Kwirth ate it.
 */
-export const StatusPreviousLogTab: React.FC<IPreviousLogTabProps> = ({ admin, read }) => {
+export const StatusPreviousLogTab: React.FC<IPreviousLogTabProps> = ({ admin, read, filter }) => {
     if (!admin) return <LogMessage {...NOT_ADMIN} />
     if (!read) return <LogMessage title='Checking whether this container has restarted…' detail='The core keeps the previous log in memory since it started.' />
     if (read.error || !read.log) return <LogMessage title='The core could not be asked' detail={read.error ?? 'No answer.'} warning />
@@ -127,6 +143,7 @@ export const StatusPreviousLogTab: React.FC<IPreviousLogTabProps> = ({ admin, re
     // Restarted, but nothing to show: still said centred, with how it ended, like any other empty state.
     if (log.unavailableReason) return <LogMessage title='The container restarted, but its log is no longer available' detail={`${how}. ${log.unavailableReason}`} warning />
     if (log.lines.length === 0) return <LogMessage title='The previous container left no log lines' detail={how} warning={log.abnormal} />
+    const shown = filterLogLines(log.lines, filter)
     return (
         <Stack spacing={1} sx={{ height: '100%', minHeight: 0 }}>
             <Typography variant='body2'>
@@ -138,11 +155,12 @@ export const StatusPreviousLogTab: React.FC<IPreviousLogTabProps> = ({ admin, re
                     {log.abnormal ? 'it ended abnormally' : 'it ended cleanly'}
                 </Box>
             </Typography>
-            {t?.finishedAt &&
+            {(t?.finishedAt || filter.trim()) &&
                 <Typography variant='caption' color='text.secondary'>
-                    Ended at {t.finishedAt}{t.startedAt && <>, started at {t.startedAt}</>}
+                    {t?.finishedAt && <>Ended at {t.finishedAt}{t.startedAt && <>, started at {t.startedAt}</>}</>}
+                    {matchNote(shown.length, log.lines.length, filter)}
                 </Typography>}
-            <LogBox lines={log.lines} />
+            {shown.length === 0 ? <LogMessage {...noMatch(filter, log.lines.length)} /> : <LogBox lines={shown} />}
         </Stack>
     )
 }
