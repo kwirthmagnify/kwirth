@@ -115,15 +115,21 @@ const MetricsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
         let allCharts = []
         if (metricsConfig.merge) {
-            let assetNames=Array.from(data.keys())
-            let selectedMetrics:string[] = Array.from(new Set(data.get(assetNames[0])!.keys()))
-
+            /*
+                Not every asset carries every metric: the cluster metrics travel in a series of their own
+                ('Cluster'), so the metrics are the union of all the assets', and each chart gets only the
+                series that carry its metric.
+            */
+            let selectedMetrics:string[] = Array.from(new Set(Array.from(data.values()).flatMap(metrics => Array.from(metrics.keys()))))
 
             for (let metric of selectedMetrics) {
-                let metricDefinition = props.channelObject.metricsList.get(metric)!
-                let series = assetNames.map(assetName => {
-                    return data.get(assetName)!.get(metric)!
-                })
+                let metricDefinition = props.channelObject.metricsList.get(metric)
+                if (!metricDefinition) {
+                    allCharts.push(<Typography key={metric}> Metrics definition not found for {metric}</Typography>)
+                    continue
+                }
+                let assetNames = Array.from(data.keys()).filter(assetName => data.get(assetName)!.has(metric))
+                let series = assetNames.map(assetName => data.get(assetName)!.get(metric)!)
                 allCharts.push(
                     <Chart key={metricDefinition.metric} metricDefinition={metricDefinition} names={assetNames} series={series} colour={'#888'} chartType={metricsConfig.chart} stack={metricsConfig.stack} numSeries={series.length} tooltip={true} labels={true} onSetDefault={onSetMetricDefault} onViewConfigChange={onViewConfigChange} viewConfig={metricsConfig.metricsDefault[metricDefinition.metric] as IMetricViewConfig} onRemove={onChartRemove}
                         configurable={metricsConfig.configurable}
@@ -174,7 +180,7 @@ const MetricsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                         />
                     }
                     else {
-                        return <Typography key={metric}> Metrics definition not found for ${metric}</Typography>
+                        return <Typography key={metric}> Metrics definition not found for {metric}</Typography>
                     }
                 })
             })

@@ -145,13 +145,48 @@ test('the first message after adding an object is marked as initial (timestamp 0
     assert.equal(sent.messages[0].timestamp, 0)
 })
 
-test('cluster metrics are read from the cluster values, not from any pod', async () => {
+test('cluster metrics travel once, in a series of their own named Cluster', async () => {
+    /*
+        They are one value for the whole cluster. They used to be repeated inside every asset, which drew
+        one identical line per namespace or pod, each named after something the value has nothing to do with.
+    */
+    const sentFor = async (aggregate: boolean) => {
+        const channel = newChannel(newState())
+        await feedTwoReadings(channel)
+        const sent: ISent = { messages: [] }
+        const socket = fakeSocket(sent)
+        const config = instanceConfig(EInstanceConfigView.POD, { aggregate, metrics: ['kwirth_container_memory_percentage', 'kwirth_cluster_cpu_percentage'] })
+        await channel.addObject(socket, config, NAMESPACE, 'web-1', '')
+        await channel.addObject(socket, config, NAMESPACE, 'web-2', '')
+        channel.cleanup()
+        return lastValues(sent)
+    }
+
+    const separate = await sentFor(false)
+    assert.deepEqual([...separate.keys()], ['web-1', 'web-2', 'Cluster'])
+    assert.deepEqual([...separate.get('Cluster')!.entries()], [['kwirth_cluster_cpu_percentage', 42]])
+    assert.equal(separate.get('web-1')!.has('kwirth_cluster_cpu_percentage'), false)
+    assert.equal(separate.get('web-2')!.has('kwirth_cluster_cpu_percentage'), false)
+
+    // aggregated, the pods' series no longer carries the cluster's value under the pods' names either
+    const aggregated = await sentFor(true)
+    assert.deepEqual([...aggregated.keys()], ['web-1,web-2', 'Cluster'])
+    assert.equal(aggregated.get('web-1,web-2')!.has('kwirth_cluster_cpu_percentage'), false)
+})
+
+test('asking only for cluster metrics sends only the Cluster series, and one reading is enough', async () => {
+    // A rate needs two readings; a cluster metric is a plain value, so it does not have to wait
     const channel = newChannel(newState())
-    await feedTwoReadings(channel)
+    await channel.processProviderEvent('metrics', reading({}, {}))
     const sent: ISent = { messages: [] }
-    await channel.addObject(fakeSocket(sent), instanceConfig(EInstanceConfigView.POD, { metrics: ['kwirth_cluster_cpu_percentage'] }), NAMESPACE, 'web-1', '')
+    await channel.addObject(fakeSocket(sent), instanceConfig(EInstanceConfigView.NAMESPACE, { metrics: ['kwirth_cluster_cpu_percentage', 'kwirth_cluster_memory_percentage'] }), NAMESPACE, 'web-1', '')
     channel.cleanup()
-    assert.equal(lastValues(sent).get('web-1')!.get('kwirth_cluster_cpu_percentage'), 42)
+
+    const values = lastValues(sent)
+    assert.deepEqual([...values.keys()], ['Cluster'])
+    assert.equal(values.get('Cluster')!.get('kwirth_cluster_cpu_percentage'), 42)
+    // a metric the provider did not report comes out as 0, not missing
+    assert.equal(values.get('Cluster')!.get('kwirth_cluster_memory_percentage'), 0)
 })
 
 test('with fewer than two readings nothing is sent: a rate needs two points', async () => {
@@ -241,6 +276,17 @@ test('without the stream scope the instance is refused with an error signal', as
     assert.equal(sent.messages[0].type, EInstanceMessageType.SIGNAL)
     assert.equal(sent.messages[0].level, ESignalMessageLevel.ERROR)
     assert.equal(sent.messages[0].text, 'Insufficient scope for STREAM')
+})
+
+test('the scope ladder ends in admin, and an admin key may stream', async () => {
+    const channel = newChannel(newState())
+    assert.deepEqual(['snapshot', 'stream', 'cluster', 'admin'].map(s => channel.getChannelScopeLevel(s)), [1, 2, 3, 4])
+    await feedTwoReadings(channel)
+    const sent: ISent = { messages: [] }
+    const ok = await channel.addObject(fakeSocket(sent), instanceConfig(EInstanceConfigView.POD, { metrics: ['kwirth_container_memory_percentage'] }, 'admin'), NAMESPACE, 'web-1', '')
+    channel.cleanup()
+    assert.equal(ok, true)
+    assert.equal(lastValues(sent).get('web-1')!.get('kwirth_container_memory_percentage'), 25)
 })
 
 test('getInstances counts instances and the connections that carry them; cleanup leaves none', async () => {

@@ -8,6 +8,11 @@ import { Request, Response } from 'express'
 import { EMetricsConfigMode, IMetricsAssets, IMetricsInstanceConfig, IMetricsMessageResponse } from '../common/MetricsTypes'
 import { IMetricsCluster, IMetricsNode, IMetricsValue } from './MetricsProviderTypes'
 
+// The series the cluster metrics travel in. Capitalised on purpose: Kubernetes names are lowercase, so
+// no namespace, controller or pod can be called this and get its series mixed with the cluster's.
+const CLUSTER_ASSET = 'Cluster'
+const isClusterMetric = (metricName: string): boolean => metricName.startsWith('kwirth_cluster_')
+
 interface IAssetData {
     podNode: string
     podNamespace: string
@@ -79,7 +84,9 @@ class MetricsChannel implements IChannel {
     }
 
     getChannelScopeLevel(scope: string): number {
-        return ['','snapshot','stream','cluster'].indexOf(scope)
+        // 'admin' tops the ladder, as in every OSS plugin: an admin key reaches any channel without the core
+        // warning 'Inexistent scope admin'
+        return ['','snapshot','stream','cluster','admin'].indexOf(scope)
     }
 
     startChannel = async () =>  {
@@ -525,12 +532,8 @@ class MetricsChannel implements IChannel {
         }
 
         for (let metricName of (instanceConfig.data as IMetricsInstanceConfig).metrics) {
-            if (metricName.startsWith('kwirth_cluster_')) {
-                const lastRead = this.metricsCluster[this.metricsCluster.length - 1]
-                const clusterValue = lastRead.clusterMetricValues?.get(metricName)?.value ?? 0
-                assetMetrics.values.push({ metricName, metricValue: clusterValue })
-                continue
-            }
+            // cluster metrics belong to no asset: they travel in their own series (see getClusterMetrics)
+            if (isClusterMetric(metricName)) continue
 
             let sourceMetricName = metricName
             if (metricName === 'kwirth_container_memory_percentage') sourceMetricName = 'container_memory_working_set_bytes'
@@ -657,6 +660,22 @@ class MetricsChannel implements IChannel {
         return assetMetrics
     }
 
+    /*
+        The provider's cluster metrics (kwirth_cluster_*) are one value for the whole cluster. Repeating
+        them in every asset drew N identical series named after namespaces or pods they have nothing to do
+        with, so they go out ONCE, as a series of their own named CLUSTER_ASSET, whatever the view,
+        aggregation or merge. They need a single reading: they are not rates.
+    */
+    getClusterMetrics = (instanceConfig:IInstanceConfig): IMetricsAssets|undefined => {
+        const clusterMetrics = (instanceConfig.data as IMetricsInstanceConfig).metrics.filter(isClusterMetric)
+        if (clusterMetrics.length === 0 || this.metricsCluster.length === 0) return undefined
+        const lastRead = this.metricsCluster[this.metricsCluster.length - 1]
+        return {
+            assetName: CLUSTER_ASSET,
+            values: clusterMetrics.map(metricName => ({ metricName, metricValue: lastRead.clusterMetricValues?.get(metricName)?.value ?? 0 }))
+        }
+    }
+
     getAssetMetricName = (instanceConfig:IInstanceConfig, assets:IAssetData[]): string => {
         switch (instanceConfig.view) {
             case EInstanceConfigView.NAMESPACE:
@@ -749,6 +768,10 @@ class MetricsChannel implements IChannel {
             default:
                 this.backChannelObject.logWarning?.(`Invalid view:` + instanceConfig.view)
         }
+        // an asset left with no values (only cluster metrics were asked for) is not sent
+        responseMessage.assets = responseMessage.assets.filter(asset => asset.values.length > 0)
+        const clusterMetrics = this.getClusterMetrics(instanceConfig)
+        if (clusterMetrics) responseMessage.assets.push(clusterMetrics)
     }
 
     sendMetricsDataInstance = (webSocket:WebSocket, instanceId:string, initial:boolean): void => {
