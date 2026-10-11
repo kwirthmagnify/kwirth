@@ -1,0 +1,36 @@
+{
+    "id": "metrics",
+    "name": "Metrics",
+    "displayName": "Metrics",
+    "extensionType": "plugin",
+    "publisher": "@kwirthmagnify",
+    "version": "0.1.0",
+    "description": "Metrics channel plugin for Kwirth - real-time CPU, memory, network and disk charts",
+    "icon": "BarChart",
+    "website": "https://kwirthmagnify.dev",
+    "requiresRestart": false,
+    "requiresExtension": [],
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs",
+        "watch": "node watch.mjs",
+        "test": "node tests/run.mjs"
+    },
+    "dependencies": {
+        "@kwirthmagnify/kwirth-common": "^0.5.66",
+        "@kwirthmagnify/kwirth-common-back": "^0.6.1",
+        "@kwirthmagnify/kwirth-common-front": "^0.5.65"
+    },
+    "devDependencies": {
+        "@mui/icons-material": "7.1.2",
+        "@mui/material": "7.1.2",
+        "@types/express": "^4.17.21",
+        "@types/node": "^20.12.13",
+        "@types/react": "^18.3.0",
+        "esbuild": "^0.27.2",
+        "react": "^18.3.0",
+        "react-dom": "^18.3.0",
+        "recharts": "^2.13.3",
+        "typescript": "^5.4.0"
+    }
+}

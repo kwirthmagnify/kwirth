@@ -1,18 +1,14 @@
-import React, { useContext, useRef, useState } from 'react'
-import { Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemButton, ListItemText, MenuItem, Select, Stack, TextField, Tooltip, Typography} from '@mui/material'
+import React, { useRef, useState } from 'react'
+import { Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemButton, ListItemText, MenuItem, Select, Stack, TextField, Tooltip, Typography} from '@mui/material'
 import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
-import { ISetupProps } from '../IChannel'
-import { BarChart } from '@kwirthmagnify/kwirth-common-front/icons'
+import { ISetupProps, DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
+import { BarChart } from '@mui/icons-material'
 import { MetricsInstanceConfig, MetricsConfig } from './MetricsConfig'
-import { EMetricsConfigMode } from './MetricsTypes'
-import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { SessionContext, SessionContextType } from '../../model/SessionContext'
+import { EMetricsConfigMode } from '../common/MetricsTypes'
 
 const MetricsIcon = <BarChart/>
 
 const MetricsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
-    // the dialog is mounted inside App's SessionContext.Provider, which is where the guide's url comes from
-    const { backendUrl } = useContext(SessionContext) as SessionContextType
     let metricsInstanceConfig:MetricsInstanceConfig = props.setupConfig?.channelInstanceConfig || new MetricsInstanceConfig()
     let metricsConfig:MetricsConfig = props.setupConfig?.channelConfig || new MetricsConfig()
     let allMetricsList = props.channelObject.metricsList
@@ -101,7 +97,7 @@ const MetricsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
 
     return (<>
         <Dialog open={true} maxWidth={false} sx={{'& .MuiDialog-paper': { width: '50vw', maxWidth: '60vw', height:'60vh', maxHeight:'40vw' } }}>
-            <DialogTitleHelp section='guide/user/07-everyday-tasks?id=build-a-metrics-view' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Configure metrics for {props.channelObject?.view}</DialogTitleHelp>
+            <DialogTitleHelp section='guide/user/07-everyday-tasks?id=build-a-metrics-view' docsUrl={docsUrl(props.channelObject.clusterUrl, 'core', 'kwirth')}>Configure metrics for {props.channelObject?.view}</DialogTitleHelp>
             <DialogContent >
                 <Stack spacing={2} direction={'column'} sx={{ mt:'16px' }}>
                     <Stack direction={'row'} spacing={1} >

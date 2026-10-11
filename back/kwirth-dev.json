@@ -3,7 +3,8 @@
         "iter": "../plugins/iter/dist",
         "agora": "../plugins/agora/dist",
         "excubitor": "../plugins/excubitor/dist",
-        "montag": "../plugins/montag/dist"
+        "montag": "../plugins/montag/dist",
+        "metrics": "../plugins/metrics/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",

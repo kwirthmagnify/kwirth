@@ -74,9 +74,8 @@ import * as _kwirthCommonSql from '@kwirthmagnify/kwirth-common-sql/back'
 import { ISqlServer } from '@kwirthmagnify/kwirth-common-sql'
 import { IChannel, createChannelInstance, TChannelConstructor } from './channels/IChannel'
 import { resolveChannelMode } from './tools/ChannelPlacement'
-import { MetricsChannel } from './channels/metrics/MetricsChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
-// NewsChannel, PinocchioChannel and FilemanChannel removed — now loaded as plugins
+// NewsChannel, PinocchioChannel, FilemanChannel and MetricsChannel removed — now loaded as plugins
 
 import { IncomingMessage } from 'http'
 
@@ -261,7 +260,6 @@ const envAnsiLog = process.env.ANSILOG !== undefined ? process.env.ANSILOG === '
 const envExitLog = process.env.EXITLOG !== undefined ? process.env.EXITLOG === 'true' : true
 const envConfigMapPath = process.env.CONFIGMAPPATH !== undefined ? process.env.CONFIGMAPPATH : '.'
 const envSecretPath = process.env.SECRETPATH !== undefined ? process.env.SECRETPATH : '.'
-const envChannelMetricsEnabled = (process.env.CHANNEL_METRICS || 'true').toLowerCase() === 'true'
 const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
 
 const runningInstances:IRunningInstance[] = []
@@ -294,9 +292,8 @@ let idpManager: IdpManager | undefined
 const routerOnlyProviders = new Set<string>()
 
 const registeredChannels = new Map<string, TChannelConstructor>()
-registeredChannels.set('metrics', MetricsChannel)
 registeredChannels.set('magnify', MagnifyChannel)
-// 'echo', 'news', 'topology' and 'pinocchio' channels loaded dynamically by PluginManager
+// 'echo', 'news', 'topology', 'pinocchio' and 'metrics' channels loaded dynamically by PluginManager
 
 if (envCommand!==undefined) {
     switch(envCommand) {
@@ -1987,7 +1984,6 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 
         // Channel management
         let requiredChannels = []
-        if (envChannelMetricsEnabled) requiredChannels.push('metrics')
         if (envChannelMagnifyEnabled) requiredChannels.push('magnify')
         // plugin channels: load installed plugins and add their ids to requiredChannels
         if (!pluginManager) {

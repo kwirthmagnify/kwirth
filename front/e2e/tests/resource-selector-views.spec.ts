@@ -115,8 +115,9 @@ test('selecting the none view does not query the cluster', async () => {
 test('with the none view, channels that need the cluster are not selectable', async () => {
     /*
         It is checked from the side that does not depend on an autonomous channel being installed: the
-        channels that DO need the cluster have to be left out. Naming 'log' and 'metrics' is safe
-        because they belong to the core and are always there.
+        channels that DO need the cluster have to be left out. 'log' and 'metrics' are plugins, but the
+        ones every installation with a cluster carries (they ship in the readonly and full images); the
+        check below demands at least one of them is there, so it never passes having proved nothing.
 
         That a particular autonomous channel is enabled is deliberately not asserted: this is a CORE
         e2e, and it must not demand a particular plugin be installed in order to pass.
@@ -209,8 +210,9 @@ test('a resource view only offers channels that support per-resource invocation'
         including one that does not know how to start per resource, and addable() did not stop it either
         because it only looks at whether resources have been chosen.
 
-        It is asserted with two core channels of opposite flags, which are always there: 'magnify' is
-        cluster-wide and NOT resourced, 'metrics' is resourced and not cluster-wide.
+        It is asserted with two channels of opposite flags: 'magnify' (core) is cluster-wide and NOT
+        resourced, 'metrics' (a plugin, installed wherever there is a cluster) is resourced and not
+        cluster-wide.
     */
     await pickCombo(page, COMBO_VIEW, 'namespace')
 

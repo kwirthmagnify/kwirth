@@ -1,10 +1,12 @@
 import { FC } from 'react'
-import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from '../IChannel'
-import { InstanceConfigScopeEnum, IInstanceMessage, ISignalMessage, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
+import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from '@kwirthmagnify/kwirth-common-front'
+import { InstanceConfigScopeEnum, IInstanceMessage, ISignalMessage, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { MetricsIcon, MetricsSetup } from './MetricsSetup'
 import { MetricsTabContent } from './MetricsTabContent'
 import { MetricsData, IAssetMetricsValues, EMetricsEventSeverity, IMetricsData } from './MetricsData'
 import { IMetricsConfig, MetricsInstanceConfig, MetricsConfig } from './MetricsConfig'
+import { EChartType } from './MenuChart'
+import { EMetricsConfigMode, IMetricsInstanceConfig } from '../common/MetricsTypes'
 
 export class MetricsChannel implements IChannel {
     private setupVisible = false
@@ -14,7 +16,7 @@ export class MetricsChannel implements IChannel {
     
     requirements:IChannelRequirements = {
         accessString: true,
-        clusterUrl: false,
+        clusterUrl: true,
         clusterInfo: false,
         exit: false,
         frontChannels: false,
@@ -135,4 +137,33 @@ export class MetricsChannel implements IChannel {
         return false
     }
 
-}    
+    /*
+        What an embedding channel (Magnify) needs to run metrics inside its own view: the initial data,
+        config and instance config. Compact charts, everything aggregated and the six basic metrics.
+        The embedder still builds its own form (it knows the metrics list it has); formConfig is empty.
+    */
+    prepareExternalChannel(_view: EInstanceConfigView, _selectedResources: unknown[], _container: string): { data: IMetricsData; config: IMetricsConfig; instanceConfig: IMetricsInstanceConfig; formConfig: {} } {
+        return {
+            data: new MetricsData(),
+            config: {
+                depth: 50,
+                width: 3,
+                lineHeight: 300,
+                configurable: true,
+                compact: true,
+                legend: true,
+                merge: false,
+                stack: false,
+                chart: EChartType.LineChart,
+                metricsDefault: {}
+            },
+            instanceConfig: {
+                mode: EMetricsConfigMode.STREAM,
+                aggregate: true,
+                interval: 15,
+                metrics: ['kwirth_container_cpu_percentage','kwirth_container_memory_percentage', 'kwirth_container_transmit_mbps', 'kwirth_container_receive_mbps', 'kwirth_container_write_mbps', 'kwirth_container_read_mbps']
+            },
+            formConfig: {}
+        }
+    }
+}

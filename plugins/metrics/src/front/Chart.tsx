@@ -4,9 +4,9 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, LabelList, Legend,
 import { IMetricViewConfig, METRICSCOLOURS } from './MetricsConfig'
 import { Tooltip as MUITooltip, IconButton } from '@mui/material'
 import { MenuChart, EMenuChartOption, EChartType } from './MenuChart'
-import { MoreVert } from '@kwirthmagnify/kwirth-common-front/icons'
+import { MoreVert } from '@mui/icons-material'
 import { TreemapNode } from 'recharts/types/util/types'
-import { MetricDefinition } from './MetricsTypes'
+import { MetricDefinition } from '@kwirthmagnify/kwirth-common-front'
 
 export interface ISample {
     timestamp:string
@@ -296,16 +296,16 @@ export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
             break
     }
 
-    let title = props.metricDefinition.metric.replaceAll('_',' ')
+    let title = props.metricDefinition.metric.replace(/_/g,' ')
     title = title[0].toLocaleUpperCase()+ title.substring(1)
-    title = title.replaceAll('cpu', 'CPU')
-    title = title.replaceAll(' fs ', ' FS ')
-    title = title.replaceAll(' io ', ' IO ')
-    title = title.replaceAll('oom', 'OOM')
-    title = title.replaceAll('nvm', 'NVM')
-    title = title.replaceAll('rss', 'RSS')
-    title = title.replaceAll('failcnt', 'fail count')
-    title = title.replaceAll('mbps', 'Mbps')
+    title = title.replace(/cpu/g, 'CPU')
+    title = title.replace(/ fs /g, ' FS ')
+    title = title.replace(/ io /g, ' IO ')
+    title = title.replace(/oom/g, 'OOM')
+    title = title.replace(/nvm/g, 'NVM')
+    title = title.replace(/rss/g, 'RSS')
+    title = title.replace(/failcnt/g, 'fail count')
+    title = title.replace(/mbps/g, 'Mbps')
 
     return (
         <Card sx={{margin:compact?'3px':'6px', width:'100%'}}>

@@ -1,5 +1,5 @@
 import { EClusterFlavour, ERancherRole, KwirthData } from '@kwirthmagnify/kwirth-common'
-import { MetricDefinition } from '../channels/metrics/MetricsTypes'
+import { MetricDefinition } from '@kwirthmagnify/kwirth-common-front'
 
 export class Cluster {
     public id: string = ''

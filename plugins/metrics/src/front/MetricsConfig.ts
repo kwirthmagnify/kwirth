@@ -1,5 +1,5 @@
 import { EChartType } from "./MenuChart"
-import { EMetricsConfigMode } from "./MetricsTypes"
+import { EMetricsConfigMode, IMetricsInstanceConfig } from "../common/MetricsTypes"
 
 interface IMetricViewConfig {
     displayName: string
@@ -37,13 +37,6 @@ class MetricsConfig implements IMetricsConfig{
     stack = false
     chart = EChartType.LineChart
     metricsDefault = {}
-}
-
-interface IMetricsInstanceConfig {
-    mode: EMetricsConfigMode
-    aggregate: boolean
-    interval: number
-    metrics: string[]
 }
 
 class MetricsInstanceConfig implements IMetricsInstanceConfig{
@@ -88,5 +81,5 @@ const METRICSCOLOURS = [
     "#f1c1d2"  // rosa bebé pastel
 ]
 
-export type { IMetricsConfig, IMetricsInstanceConfig, IMetricViewConfig }
+export type { IMetricsConfig, IMetricViewConfig }
 export { MetricsConfig, MetricsInstanceConfig, METRICSCOLOURS }

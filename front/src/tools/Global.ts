@@ -1,7 +1,7 @@
 import { KwirthData, ENotifyLevel, EClusterType } from '@kwirthmagnify/kwirth-common'
 import { Cluster, IClusterInfo } from '../model/Cluster'
 import { addGetAuthorization } from './AuthorizationManagement'
-import { MetricDefinition } from '../channels/metrics/MetricsTypes'
+import { MetricDefinition } from '@kwirthmagnify/kwirth-common-front'
 
 export { ENotifyLevel }
 

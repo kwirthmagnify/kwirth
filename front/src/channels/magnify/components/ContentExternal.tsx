@@ -15,10 +15,7 @@ import { FormSimple } from './FormSimple'
 import { addGetAuthorization } from '../../../tools/AuthorizationManagement'
 import { MsgBoxOk, MsgBoxWait } from '../../../tools/MsgBox'
 
-import { IMetricsConfig, IMetricsInstanceConfig } from '../../metrics/MetricsConfig'
-import { EMetricsConfigMode } from '../../metrics/MetricsTypes'
-import { IMetricsData } from '../../metrics/MetricsData'
-import { EChartType } from '../../metrics/MenuChart'
+import { IMetricsConfig, IMetricsInstanceConfig } from './MetricsExternalTypes'
 
 interface IFilemanData { paused: boolean; started: boolean; files: any[]; currentPath: string; ri: string | undefined; unlock?: () => void }
 interface IFilemanConfig { [key: string]: any }
@@ -99,11 +96,18 @@ const containerRef = useRef<HTMLDivElement>(null)
                     break
                 }
                 case 'metrics': {
+                    // the metrics plugin builds its own initial state; Magnify only adds its form on top
+                    const chMetrics = contentExternalData.content?.externalChannel
+                    if (chMetrics?.prepareExternalChannel) {
+                        const setup = chMetrics.prepareExternalChannel(contentExternalData.contentView, props.selectedFiles, props.container ?? '')
+                        contentExternalData.content!.externalChannelObject!.data = setup.data
+                        contentExternalData.content!.externalChannelObject!.config = setup.config
+                        contentExternalData.content!.externalChannelObject!.instanceConfig = setup.instanceConfig
+                    }
                     const allMetrics = Array.from(contentExternalData.channelObject?.metricsList?.keys() || []).filter((k:string) => k.startsWith('container_') || k.startsWith('kwirth_'))
                     const defaultMetrics = ['kwirth_container_cpu_percentage','kwirth_container_memory_percentage', 'kwirth_container_transmit_mbps', 'kwirth_container_receive_mbps', 'kwirth_container_write_mbps', 'kwirth_container_read_mbps']
                     const currentMetrics = (contentExternalData.content?.externalChannelObject?.instanceConfig as IMetricsInstanceConfig)?.metrics
                     contentExternalData.formConfig = { aggregate: true, merge: false, type: {value:'line', options:['line','bar','area']}, width:3, depth:50, legend:true, metrics: { available: allMetrics, value: currentMetrics?.length ? currentMetrics : defaultMetrics } }
-                    setMetricsConfig(contentExternalData.content)
                     break
                 }
                 case 'fileman':
@@ -349,36 +353,6 @@ const containerRef = useRef<HTMLDivElement>(null)
         }
     }
 
-    const setMetricsConfig = (c:IContentExternalObject) => {
-        let metricsData:IMetricsData = {
-            assetMetricsValues: [],
-            events: [],
-            paused: false,
-            started: false
-        }
-        let metricsConfig:IMetricsConfig = {
-            depth: 50,
-            width: 3,
-            lineHeight: 300,
-            configurable: true,
-            compact: true,
-            legend: true,
-            merge: false,
-            stack: false,
-            chart: EChartType.LineChart,
-            metricsDefault: {}
-        }
-        let metricsInstanceConfig:IMetricsInstanceConfig = {
-            mode: EMetricsConfigMode.STREAM,
-            aggregate: true,
-            interval: 15,
-            metrics: ['kwirth_container_cpu_percentage','kwirth_container_memory_percentage', 'kwirth_container_transmit_mbps', 'kwirth_container_receive_mbps', 'kwirth_container_write_mbps', 'kwirth_container_read_mbps']
-        }
-
-        c.externalChannelObject!.data = metricsData
-        c.externalChannelObject!.config = metricsConfig
-        c.externalChannelObject!.instanceConfig = metricsInstanceConfig
-    }
 
     const setFilemanConfig = (c:IContentExternalObject) => {
         let filemanData:IFilemanData = {

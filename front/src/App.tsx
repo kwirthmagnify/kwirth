@@ -39,7 +39,6 @@ import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanc
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
-import { MetricsChannel } from './channels/metrics/MetricsChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 import { getMetricsNames, ENotifyLevel, readClusterInfo } from './tools/Global'
 import { Homepage } from './components/home/Homepage'
@@ -642,7 +641,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     useEffect( () => {
         // only first time
-        frontChannels.set('metrics', MetricsChannel)
         frontChannels.set('magnify', MagnifyChannel)
     },[])
 

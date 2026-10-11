@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { IMetricsData, EMetricsEventSeverity } from './MetricsData'
 import { Alert, Box, Button, Snackbar, Typography } from '@mui/material'
-import { IContentProps } from '../IChannel'
-import { IMetricsConfig, IMetricsInstanceConfig, IMetricViewConfig, METRICSCOLOURS, MetricsConfig } from './MetricsConfig'
+import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { IMetricsConfig, IMetricViewConfig, METRICSCOLOURS, MetricsConfig } from './MetricsConfig'
+import { IMetricsInstanceConfig } from '../common/MetricsTypes'
 import { Chart, ISample } from './Chart'
 import { EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, IInstanceConfig } from '@kwirthmagnify/kwirth-common'
-import { EMetricsConfigMode } from './MetricsTypes'
+import { EMetricsConfigMode } from '../common/MetricsTypes'
 
 const MetricsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     let metricsConfig:IMetricsConfig = props.channelObject.config
