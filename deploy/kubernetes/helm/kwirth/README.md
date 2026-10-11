@@ -103,7 +103,7 @@ value that decides several others. See [Two modes](#two-modes).
 | `port` | `PORT` | `3883` | Listening (and container) port. |
 | `masterkey` | `MASTERKEY` | generated | Signs access keys and, with a filesystem store, encrypts secrets at rest. **Empty generates a random one on the first install** and keeps it in `<release>-kwirth-masterkey`, which is looked up on every upgrade and kept on uninstall. Changing it later is data loss: every access key stops validating and a filesystem store stops decrypting. Set your own if you deploy from rendered output (Argo CD and friends) — `helm template` has no cluster to look the live one up in, so it would mint a new key on every sync. |
 | `auth` | `AUTH` | `kwirth` | `kwirth` (built-in users) or the id of an installed IdP connector. |
-| `channelMetrics`, `channelMagnify` | `CHANNEL_METRICS`, `CHANNEL_MAGNIFY` | `true` | The two channels built into the core. |
+| `channelMagnify` | `CHANNEL_MAGNIFY` | `true` | The channel built into the core (metrics is a plugin). |
 | `metricsInterval` | `METRICSINTERVAL` | `15` | Seconds between metrics samples. |
 | `previousLogLines` | `PREVIOUSLOGLINES` | unset | Lines of the previous container log shown after a restart. |
 | `bodyLimit` | `BODYLIMIT` | `8mb` | Request body ceiling (log ingestion). |

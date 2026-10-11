@@ -14,7 +14,6 @@ function startApp(options) {
     process.env.FRONT = options.front
     process.env.METRICSINTERVAL = options.metricsinterval
     process.env.CHANNEL_LOG = options.channellog
-    process.env.CHANNEL_METRICS = options.channelmetrics
     process.env.CHANNEL_ALERT = options.channelalert
     process.env.CHANNEL_ECHO = options.channelecho
     process.env.CHANNEL_TRIVY = options.trivy
@@ -35,7 +34,6 @@ cli
   .option('-f, --forward', 'FORWARD feature', { default: false })
   .option('-i, --metricsinterval <number>', 'Seconds between metrics', { default: 15 })
   .option('-cl, --channellog', 'Channel LOG', { default: true })
-  .option('-cm, --channelmetrics', 'Channel METRICS', { default: true })
   .option('-ca, --channelalert', 'Channel ALERT', { default: true })
   .option('-ce, --channelecho', 'Channel ECHO', { default: true })
   .option('-co, --channelops', 'Channel OPS', { default: true })

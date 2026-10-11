@@ -90,11 +90,9 @@ spec:
             # 'Kwirth4Ever' let anyone forge an admin token. To pin it yourself, set it from a Secret:
             #   - name: MASTERKEY
             #     valueFrom: { secretKeyRef: { name: kwirth-masterkey, key: MASTERKEY } }
-            # The only two channel switches the back reads. LOG, ALERT, OPS, TRIVY and ECHO used to be
-            # listed here and did nothing: those channels are plugins now, and a plugin is turned off
+            # The only channel switch the back reads. LOG, ALERT, OPS, TRIVY, ECHO and METRICS used to
+            # be listed here and did nothing: those channels are plugins now, and a plugin is turned off
             # by not installing it.
-            - name: CHANNEL_METRICS
-              value: 'true'
             - name: CHANNEL_MAGNIFY
               value: 'true'
           ports:

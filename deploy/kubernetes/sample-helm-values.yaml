@@ -5,7 +5,6 @@ kwirth:
   config:
     rootpath: /kwirth
     masterkey: change-me
-    channelMetrics: true
     channelMagnify: true
   ingress:
     enabled: true

@@ -100,12 +100,10 @@ kwirth:
     # Any other value = the id of an installed IdP connector (e.g. "entraid", "github", "gitlab").
     # The connector must be installed and configured before you switch.
     auth: kwirth
-    # CHANNEL_METRICS — the built-in metrics channel (cluster metrics, node/pod resource usage).
     # CHANNEL_MAGNIFY — the built-in magnify channel (log magnification, live tail).
-    # Both are core channels; everything else is a plugin from the marketplace.
+    # It is the only core channel; everything else (metrics included) is a plugin from the marketplace.
     # Unset follows the mode: on for normal and readonly, OFF for zero, where there is no cluster
-    # behind them and they would be channels offered with nothing to show. Set either to override.
-    channelMetrics:
+    # behind it and it would be a channel offered with nothing to show. Set it to override.
     channelMagnify:
     # METRICSINTERVAL — seconds between metrics samples. Lower = more granular but more load on the
     # Kubernetes metrics API. 15 is a good default; 5 for near-real-time, 60 for low-traffic clusters.

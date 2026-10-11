@@ -28,8 +28,8 @@
 #
 # WHAT IT DOES NOT DO
 #   Everything that reads the cluster it lives in: logs, metrics, events, the resource browser, and
-#   every channel that looks at the infrastructure. CHANNEL_METRICS and CHANNEL_MAGNIFY are off below
-#   because there would be nothing behind them. Do not install ops, fileman or trivy here either.
+#   every channel that looks at the infrastructure. CHANNEL_MAGNIFY is off below because there would
+#   be nothing behind it. Do not install metrics, ops, fileman or trivy here either.
 #
 # 🔴 HOW IT IS TOLD, AND WHY IT HAS TO BE TOLD
 #   FORCE=container. Every other value of FORCE overrides a detection that would have worked anyway;
@@ -179,10 +179,7 @@ spec:
                 secretKeyRef:
                   name: kwirth-sql
                   key: KWIRTH_SQL_PASSWORD
-            # Both off: there is no cluster behind them, so they would be channels offered with
-            # nothing to show.
-            - name: CHANNEL_METRICS
-              value: 'false'
+            # Off: there is no cluster behind it, so it would be a channel offered with nothing to show.
             - name: CHANNEL_MAGNIFY
               value: 'false'
           ports:

@@ -71,7 +71,6 @@ test('defaults: the env is exactly what the core reads today', () => {
         ROOTPATH: '/kwirth',
         PORT: '3883',
         AUTH: 'kwirth',
-        CHANNEL_METRICS: 'true',
         CHANNEL_MAGNIFY: 'true',
         METRICSINTERVAL: '15',
         BODYLIMIT: '8mb',
@@ -548,12 +547,13 @@ test('zero: it is told what it is, because detection cannot work it out', () => 
     assert.ok(env.KWIRTH_STORE && env.KWIRTH_STORE !== 'etcd')
 })
 
-test('zero: the cluster-reading channels are off, and the users Secret is not rendered', () => {
+test('zero: the cluster-reading core channel is off, and the users Secret is not rendered', () => {
     const docs = render(ZERO)
     const env = envOf(find(docs, 'Deployment'))
-    // there is no cluster behind them: they would be channels offered with nothing to show
-    assert.equal(env.CHANNEL_METRICS, 'false')
+    // there is no cluster behind it: it would be a channel offered with nothing to show
     assert.equal(env.CHANNEL_MAGNIFY, 'false')
+    // metrics is a plugin now: no variable left that nobody reads
+    assert.equal(env.CHANNEL_METRICS, undefined)
     // with the store on the volume the core seeds its own admin there
     assert.equal(find(docs, 'Secret', 'kwirth-users'), undefined)
 })

@@ -72,8 +72,6 @@ spec:
               value: 'Kwirth4Ever'
             - name: CHANNEL_LOG
               value: 'true'
-            - name: CHANNEL_METRICS
-              value: 'true'
             - name: CHANNEL_ALERT
               value: 'true'
             - name: CHANNEL_OPS

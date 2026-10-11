@@ -3,7 +3,6 @@ kwirth:
     channelAlert: "true"
     channelEcho: "false"
     channelLog: "true"
-    channelMetrics: "true"
     channelOps: "true"
     channelTrivy: "false"
     rootpath: /kwirth

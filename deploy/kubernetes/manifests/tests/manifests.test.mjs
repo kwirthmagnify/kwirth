@@ -75,11 +75,11 @@ for (const { file, authority } of MANIFESTS) {
         assert.ok(m.container.resources.limits.memory)
     })
 
-    test(`${file}: only the two channel switches the back actually reads`, () => {
-        // LOG, ALERT, OPS, TRIVY and ECHO were listed here for a long time and did nothing: those
-        // channels are plugins now, and a plugin is turned off by not installing it.
+    test(`${file}: only the channel switch the back actually reads`, () => {
+        // LOG, ALERT, OPS, TRIVY and ECHO were listed here for a long time and did nothing, and METRICS
+        // joined them when it became a plugin: a plugin is turned off by not installing it.
         const m = load(file)
-        assert.deepEqual(Object.keys(m.env).filter(n => n.startsWith('CHANNEL_')).sort(), ['CHANNEL_MAGNIFY', 'CHANNEL_METRICS'])
+        assert.deepEqual(Object.keys(m.env).filter(n => n.startsWith('CHANNEL_')).sort(), ['CHANNEL_MAGNIFY'])
     })
 
     test(`${file}: no password and no master key are written into the pod spec`, () => {
@@ -188,7 +188,6 @@ test('kwirth-full-ro.yaml: the projected token pays for the metrics, so the auto
         kubelet, now that it cannot mint one.
     */
     assert.equal(m.deployment.spec.template.spec.automountServiceAccountToken, undefined)
-    assert.equal(m.env.CHANNEL_METRICS, 'true')
 })
 
 // ── kwirth-zero.yaml — it does not know it is in a cluster ─────────────────────────────────────────
@@ -218,8 +217,7 @@ test('kwirth-zero.yaml: it is told what it is, because detection cannot work out
     // not 'docker': that profile still writes the legacy PLAIN-file format, and this manifest's whole
     // point is a store it can keep on a shared volume
     assert.notEqual(m.env.FORCE, 'docker')
-    // both off: there is no cluster behind them
-    assert.equal(m.env.CHANNEL_METRICS, 'false')
+    // off: there is no cluster behind it
     assert.equal(m.env.CHANNEL_MAGNIFY, 'false')
 })
 

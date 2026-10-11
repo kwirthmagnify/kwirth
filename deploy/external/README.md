@@ -47,7 +47,6 @@ Options:
   -f, --forward                   FORWARD feature (default: false)
   -i, --metricsinterval <number>  Seconds between metrics (default: 15)
   -cl, --channellog               Channel LOG (default: true)
-  -cm, --channelmetrics           Channel METRICS (default: true)
   -ca, --channelalert             Channel ALERT (default: true)
   -ce, --channelecho              Channel ECHO (default: true)
   -co, --channelops               Channel OPS (default: true)
@@ -95,9 +94,6 @@ Set the number of seconds to wait between two consecutive Kubelet metrics read.
 
 ### Channel Log (-cl, --channellog)
 Enable/Disable the Log channel.
-
-### Channel Metrics (-cm, --channelmetrics)
-Enable/Disable the Metrics channel.
 
 ### Channel Alert( -ca, --channelalert)
 Enable/Disable the Alert channel.
