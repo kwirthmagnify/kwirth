@@ -76,42 +76,47 @@ const UsageLimitsEditor: React.FC<IUsageLimitsEditorProps> = (props: IUsageLimit
 
     const numberOrUndefined = (text: string): number | undefined => text === '' ? undefined : +text
 
-    return (<Stack direction='column' spacing={1} sx={{ mt: 1 }}>
-        <Typography variant='body2' color='text.secondary'>
-            Stop spending on <b>{props.subject}</b>. A call goes out only if <b>no</b> enabled ceiling is
-            reached — whichever is passed first blocks it, and the channel is told why.
-        </Typography>
-        {/* The one thing an admin must not learn the hard way, said where the limit is set. */}
+    /*
+        Compact on purpose. These rows used to be three paragraphs of prose and four full-height fields,
+        which pushed the Add/Update button below the fold — and that button is the one that applies the
+        form to the list, so a limit typed above it looked saved and was not. Height here is not a
+        cosmetic matter: it is what decides whether the control that commits the edit can be seen.
+
+        What was dropped is repetition, not meaning. The one thing an admin must not learn the hard way
+        — that a tokens or cost ceiling stops the NEXT call, because the amount is only known once the
+        model has answered — is still said, in one line, where the limit is set.
+    */
+    return (<Stack direction='column' spacing={0.5} sx={{ mt: 0.5 }}>
         <Typography variant='caption' color='text.secondary'>
-            ⚠️ A <b>calls</b> ceiling stops the call that would exceed it. <b>Tokens</b> and <b>cost</b> are
-            only known once the model has answered, so those stop the <b>next</b> call: the one that crosses
-            the line has already been paid for.
+            Stop spending on <b>{props.subject}</b>: a call goes out only if <b>no</b> enabled ceiling is
+            reached. ⚠️ A <b>calls</b> ceiling stops the call that would exceed it; <b>tokens</b> and
+            <b> cost</b> are only known after the answer, so those stop the <b>next</b> one.
         </Typography>
         {props.usage && props.durable === false &&
             <Typography variant='caption' color='warning.main'>
-                ⚠️ These counters are kept <b>in memory</b>, because this Kwirth has no SQL configured:
-                they go back to zero on every restart, and so do the limits that depend on them.
+                ⚠️ Counters kept <b>in memory</b> (no SQL): they reset on every restart, and so do these limits.
             </Typography>
         }
         {USAGE_ROWS.map(({ unit, label, of }) => {
             const w: IUsageWindows = limits[unit] ?? { enabled: false }
             // What has been spent goes in the helper text of its own window: next to the number it is
-            // measured against, which is the only place it answers anything.
+            // measured against, which is the only place it answers anything. It only costs height when
+            // there IS usage, which is when it earns it.
             const spent = (amounts: IUsageAmounts | undefined): string | undefined =>
                 amounts ? `${formatSpent(of(amounts))} so far` : undefined
             return (<Stack key={unit} direction='row' spacing={1} alignItems='flex-start'>
-                <FormControlLabel sx={{ width: '190px', mr: 0, mt: 1 }} control={
-                    <Checkbox checked={!!w.enabled} disabled={props.disabled}
+                <FormControlLabel sx={{ width: '150px', mr: 0, mt: 0.5 }} control={
+                    <Checkbox size='small' checked={!!w.enabled} disabled={props.disabled}
                         onChange={e => patch(unit, { enabled: e.target.checked })} />
-                } label={label} />
+                } label={<Typography variant='body2'>{label}</Typography>} />
                 <TextField value={w.daily ?? ''} onChange={e => patch(unit, { daily: numberOrUndefined(e.target.value) })}
-                    label='Per day' variant='standard' type='number' fullWidth
+                    label='Per day' variant='standard' type='number' fullWidth size='small'
                     disabled={props.disabled || !w.enabled} inputProps={{ min: 0 }} placeholder='no limit'
-                    helperText={spent(props.usage?.daily)} />
+                    helperText={spent(props.usage?.daily)} FormHelperTextProps={{ sx: { mt: 0 } }} />
                 <TextField value={w.monthly ?? ''} onChange={e => patch(unit, { monthly: numberOrUndefined(e.target.value) })}
-                    label='Per month' variant='standard' type='number' fullWidth
+                    label='Per month' variant='standard' type='number' fullWidth size='small'
                     disabled={props.disabled || !w.enabled} inputProps={{ min: 0 }} placeholder='no limit'
-                    helperText={spent(props.usage?.monthly)} />
+                    helperText={spent(props.usage?.monthly)} FormHelperTextProps={{ sx: { mt: 0 } }} />
             </Stack>)
         })}
     </Stack>)
@@ -210,12 +215,17 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
         onNew()
     }
 
+    /*
+        Height follows the content instead of being pinned at 78vh. A fixed height is what put the
+        Add/Update button below the fold on a short screen: the form grew, the dialog did not, and the
+        control that applies the form to the list scrolled out of sight.
+    */
     return (
-        <Dialog open={true} onClose={() => props.onClose(undefined)} PaperProps={{ sx: { width: '80vw', maxWidth: '800px', height: '78vh' } }}>
-            <DialogTitle>AI — LLM config</DialogTitle>
-            <DialogContent style={{ display: 'flex', height: '100%' }}>
-                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '40%' }}>
-                    <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <Dialog open={true} onClose={() => props.onClose(undefined)} PaperProps={{ sx: { width: '90vw', maxWidth: '1200px', height: 'auto', maxHeight: '90vh' } }}>
+            <DialogTitle sx={{ pb: 1 }}>AI — LLM config</DialogTitle>
+            <DialogContent style={{ display: 'flex' }}>
+                <Box sx={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+                    <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', maxHeight: '70vh' }}>
                         <List sx={{ flexGrow: 1, mr: 2, width: '100%' }}>
                             {llms.map((llm, index) => (
                                 <ListItemButton key={index} selected={selectedIndex === index} onClick={() => onLlmSelected(index)}>
@@ -228,9 +238,10 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                         </List>
                     </Box>
                 </Box>
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '16px' }}>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '16px', minWidth: 0 }}>
                     <Stack spacing={2} style={{ width: '100%' }}>
-                        <Stack direction='column' spacing={1}>
+                        <Stack direction='row' spacing={3} alignItems='flex-start' sx={{ flexWrap: 'wrap' }}>
+                        <Stack direction='column' spacing={1} sx={{ flex: 1, minWidth: '260px' }}>
                             <TextField value={id} onChange={e => setId(e.target.value)} placeholder='Enter LLM id' label='LLM ID' variant='standard' fullWidth />
                             <FormControl variant='standard' sx={{ width: '100%' }}>
                                 <InputLabel>Provider</InputLabel>
@@ -255,10 +266,12 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                                     <TextField value={model} onChange={e => setModel(e.target.value)} label='Model ID' placeholder='e.g. claude-sonnet-4-5, glm-5.2' variant='standard' fullWidth />
                                 )
                             }
-                            <TextField value={temperature} onChange={e => setTemperature(+e.target.value)} label='Model temperature' variant='standard' type='number' fullWidth />
+                            {/* Three numbers on one line: a field each cost a whole row, and the rows are
+                                what pushed the Add/Update button out of sight. */}
                             <Stack direction='row' spacing={1}>
-                                <TextField value={inputCostPerMillion} onChange={e => setInputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Input cost / M tokens (€/$)' variant='standard' type='number' fullWidth inputProps={{ min: 0, step: 0.01 }} />
-                                <TextField value={outputCostPerMillion} onChange={e => setOutputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Output cost / M tokens (€/$)' variant='standard' type='number' fullWidth inputProps={{ min: 0, step: 0.01 }} />
+                                <TextField value={temperature} onChange={e => setTemperature(+e.target.value)} label='Temperature' variant='standard' type='number' sx={{ width: '28%' }} />
+                                <TextField value={inputCostPerMillion} onChange={e => setInputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Input cost /M' variant='standard' type='number' fullWidth inputProps={{ min: 0, step: 0.01 }} />
+                                <TextField value={outputCostPerMillion} onChange={e => setOutputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Output cost /M' variant='standard' type='number' fullWidth inputProps={{ min: 0, step: 0.01 }} />
                             </Stack>
                             <Stack direction='row' alignItems='center'>
                                 <Typography flex={1}>Use provider API Key (or enter a specific one)</Typography>
@@ -276,9 +289,15 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                                     )
                                 }}
                             />
-                            {/* Only with its own key: on a borrowed one the budget belongs to the
-                                provider, and showing a ceiling here that nothing enforces is worse
-                                than not showing one. */}
+                        </Stack>
+                        {/* Only with its own key: on a borrowed one the budget belongs to the
+                            provider, and showing a ceiling here that nothing enforces is worse
+                            than not showing one.
+
+                            Second column, not another row: see the provider dialog — the limits block is
+                            what pushed Add/Update below the fold. */}
+                        <Stack direction='column' spacing={1} sx={{ flex: 1, minWidth: '260px' }}>
+                            <Typography variant='subtitle2'>Usage limits</Typography>
                             { useProviderKey
                                 ? <Typography variant='caption' color='text.secondary'>
                                     Usage limits for this model live on its provider, because it borrows
@@ -287,6 +306,7 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                                 : <UsageLimitsEditor value={limits} onChange={setLimits} subject={`this model's own key`}
                                     usage={props.usage?.[id]} durable={props.usageDurable} />
                             }
+                        </Stack>
                         </Stack>
                         <Stack direction='row' spacing={1}>
                             <Button variant='outlined' size='small' onClick={onNew}>New</Button>
@@ -405,11 +425,11 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     }
 
     return (
-        <Dialog open={true} onClose={() => props.onClose(undefined)} PaperProps={{ sx: { width: '80vw', maxWidth: '900px', height: 'auto', maxHeight: '90vh' } }}>
-            <DialogTitle>AI — Provider config</DialogTitle>
+        <Dialog open={true} onClose={() => props.onClose(undefined)} PaperProps={{ sx: { width: '90vw', maxWidth: '1200px', height: 'auto', maxHeight: '90vh' } }}>
+            <DialogTitle sx={{ pb: 1 }}>AI — Provider config</DialogTitle>
             <DialogContent style={{ display: 'flex' }}>
-                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: '30%' }}>
-                    <Box sx={{ flex: 1, overflowY: 'auto', maxHeight: '60vh' }}>
+                <Box sx={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+                    <Box sx={{ flex: 1, overflowY: 'auto', maxHeight: '70vh' }}>
                         <List sx={{ mr: 1 }}>
                             {providers.map((p, index) => (
                                 <ListItemButton key={index} selected={selectedIndex === index} onClick={() => onProviderSelected(p, index)}>
@@ -422,8 +442,10 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                         </List>
                     </Box>
                 </Box>
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '24px' }}>
-                    <Stack spacing={3} style={{ width: '100%' }}>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', padding: '16px', minWidth: 0 }}>
+                    <Stack spacing={2} style={{ width: '100%' }}>
+                    <Stack direction='row' spacing={3} alignItems='flex-start' sx={{ flexWrap: 'wrap' }}>
+                    <Stack direction='column' spacing={1} sx={{ flex: 1, minWidth: '260px' }}>
                         <TextField label='Name' variant='standard' fullWidth placeholder='e.g. huawei-maas, openai-prod'
                             value={providerName} onChange={e => setProviderName(e.target.value)}
                             helperText='Unique identifier for this provider instance'
@@ -455,13 +477,21 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                                 helperText='OpenAI-compatible API base URL (e.g. Huawei MaaS, vLLM, LM Studio…)'
                             />
                         )}
-                        {/* The ceilings of THIS key, shared by every model that borrows it: the provider
-                            bills the key, so splitting the budget per model would split a bill that it
-                            keeps as one. */}
+                    </Stack>
+                    {/* The ceilings of THIS key, shared by every model that borrows it: the provider
+                        bills the key, so splitting the budget per model would split a bill that it
+                        keeps as one.
+
+                        Second column, not another row: four units × two windows is the tallest block of
+                        the form, and stacked under the credentials it pushed the Add/Update button out
+                        of sight on a laptop screen. */}
+                    <Stack direction='column' spacing={1} sx={{ flex: 1, minWidth: '260px' }}>
+                        <Typography variant='subtitle2'>Usage limits</Typography>
                         <UsageLimitsEditor value={providerLimits} onChange={setProviderLimits}
                             subject={`this provider's key`} disabled={!providerName.trim()}
                             usage={props.usage?.[providerName]} durable={props.usageDurable} />
-                        <Box sx={{ flexGrow: 1 }} />
+                    </Stack>
+                    </Stack>
                         <Stack direction='row' spacing={1} alignItems='center'>
                             <Button variant='outlined' onClick={onNew}>New</Button>
                             { props.onLoadModels && (
