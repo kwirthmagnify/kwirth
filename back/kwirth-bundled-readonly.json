@@ -1,0 +1,22 @@
+{
+  "plugins": {
+    "log": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.25.tgz",
+    "metrics": "bundle/plugins/metrics.tgz",
+    "alert": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.26.tgz"
+  },
+  "providers": {
+  },
+  "senders": {
+  },
+  "homepages": {
+  },
+  "logins": {
+  },
+  "themes": {
+  },
+  "idps": {
+  },
+  "docs": {
+    "kwirth": "bundle/docs/kwirth.tgz"
+  }
+}

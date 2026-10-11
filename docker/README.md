@@ -8,14 +8,36 @@ how to run it.
 |---|---|
 | `Dockerfile` | the image. Two stages, so the bundled guide travels once instead of three times |
 | `build-image.mjs` | prepares the build context (bundled extensions manifest + fetch script) and runs `docker build` |
-| `docker-build.cmd` | reads `version/` and builds `kwirth:<version>` plus `kwirth:latest` |
-| `docker-publish-current-as.cmd` | tags and pushes to Docker Hub under a name you pass |
-| `docker-import-current-as.cmd` | imports the image into a local k3d cluster |
+| `docker-build.cmd` | reads `version/` and builds the **three variants** below, plus `kwirth:latest` |
+| `docker-publish-current-as.cmd` | tags and pushes the **`-full`** variant to Docker Hub under a name you pass |
+| `docker-import-current-as.cmd` | imports the **`-full`** variant into a local k3d cluster |
+| `../back/kwirth-bundled-<variant>.json` | what each variant carries inside. One file per variant; this is the **only** difference between them |
 | `docker-launch.cmd` | runs it locally with a kubeconfig and a store mounted |
 | `kwirth-users`, `kwirth.keys` | **not source: runtime state.** See [Where Kwirth keeps its data](#where-kwirth-keeps-its-data) |
 
 > The `.cmd` scripts are Windows-only. On Linux and macOS, build with
-> `node build-image.mjs kwirth:<version>` and run the `docker run` below.
+> `node build-image.mjs kwirth:<version>-<variant> kwirth-bundled-<variant>.json` and run the `docker run`
+> below.
+
+## Three variants of the same image
+
+`docker-build.cmd` builds **three** images from the same `Dockerfile` and the same core. What separates
+them is a single file — which extensions travel *inside* the image — so a variant is not a different
+Kwirth, it is a different starting inventory:
+
+| tag | manifest | carries |
+|---|---|---|
+| `kwirth:<version>-core` | `back/kwirth-bundled-core.json` | nothing but the bundled guide |
+| `kwirth:<version>-readonly` | `back/kwirth-bundled-readonly.json` | + `log`, `metrics`, `alert` |
+| `kwirth:<version>-full` | `back/kwirth-bundled-full.json` | + `magnify` |
+
+`kwirth:latest`, the import into k3d and the push to Docker Hub all follow **`-full`**: Docker Hub keeps
+carrying the plain `kwirthmagnify/kwirth:<version>` tag it has always carried, and that tag is the
+complete image. Nothing about an existing `docker run` changes.
+
+> Anything missing from a variant is still **installable at runtime** from the extension marketplace. The
+> variant only decides what is there the moment the container starts — which is what matters on an
+> air-gapped cluster, or one whose egress does not reach npm.
 
 ## Choosing which Kwirth you run
 

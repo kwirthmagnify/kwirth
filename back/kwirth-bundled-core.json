@@ -1,0 +1,19 @@
+{
+  "plugins": {
+  },
+  "providers": {
+  },
+  "senders": {
+  },
+  "homepages": {
+  },
+  "logins": {
+  },
+  "themes": {
+  },
+  "idps": {
+  },
+  "docs": {
+    "kwirth": "bundle/docs/kwirth.tgz"
+  }
+}

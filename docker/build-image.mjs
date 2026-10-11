@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 /**
  * Prepares the Docker build context with bundled extensions support and runs docker build.
- * Usage (from docker/ directory): node build-image.mjs [image-tag]
- * Default tag: kwirth
+ * Usage (from docker/ directory): node build-image.mjs [image-tag] [bundled-manifest]
+ * Default tag: kwirth. Default manifest: back/kwirth-bundled.json
+ *
+ * The manifest is the ONLY thing that separates the image variants (-core / -readonly / -full): same
+ * Dockerfile, same core, different set of bundled extensions. It is named by file (resolved inside
+ * back/) and is always copied to the context under the fixed name the Dockerfile expects, so the
+ * Dockerfile never has to know which variant is being built.
  */
 
 import { execSync } from 'child_process'
@@ -13,8 +18,9 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
 const tag = process.argv[2] ?? 'kwirth'
+const manifestName = process.argv[3] ?? 'kwirth-bundled.json'
 
-const manifestSrc = join(root, 'back', 'kwirth-bundled.json')
+const manifestSrc = join(root, 'back', manifestName)
 const scriptSrc   = join(root, 'tools', 'scripts', 'fetch-bundled.mjs')
 const manifestDst = join(__dirname, 'kwirth-bundled.json')
 const scriptDst   = join(__dirname, 'fetch-bundled.mjs')
@@ -30,7 +36,7 @@ if (!existsSync(scriptSrc)) {
 
 copyFileSync(manifestSrc, manifestDst)
 copyFileSync(scriptSrc, scriptDst)
-console.log('[build-image] Bundled extensions manifest and script copied to docker context.')
+console.log(`[build-image] Bundled extensions manifest (${manifestName}) and script copied to docker context.`)
 
 try {
     execSync(`docker build -t ${tag} .`, { stdio: 'inherit', cwd: __dirname })
