@@ -1,7 +1,7 @@
 # 📊 Metrics (plugin)
 
-> **Type:** Channel — **built-in** (ships with the kwirth core)<br>
-> **Package:** built-in (no install needed)<br>
+> **Type:** Plugin (channel)<br>
+> **Package:** `@kwirthmagnify/kwirth-plugin-metrics`<br>
 > **Icon:** 📊
 
 ## Overview
@@ -67,6 +67,8 @@ Besides the raw cAdvisor metrics, kwirth adds ready-made ones. They come in two 
 | `kwirth_cluster_memory_percentage` | % of cluster memory in use |
 | `kwirth_cluster_cpu_percentage` | % of cluster CPU in use |
 
+A cluster-scope metric is **one value for the whole cluster**, whatever objects you selected. That's why it is always drawn as a **single series named `Cluster`**, never one series per namespace or pod — with or without Aggregate, with or without Merge. Use it as a reference next to your objects: for example, your namespace's CPU and the cluster's CPU in the same tab.
+
 ## Drawing options — Aggregate vs Merge vs Stack
 
 These three decide how **multiple objects** are drawn for the **same** metric:
@@ -81,7 +83,7 @@ A single Metrics tab can mix **different chart types at once** — build a real 
 
 ![Metrics dashboard — five metrics, five chart types](../../../_media/guide/channel-metrics-dashboard.png)
 
-*One tab, five metrics, five chart types: **Line** (container CPU), **Area** (container memory), **Bar** (cluster CPU), **Pie** (cluster memory) and **Tree map** (cluster total pods). Change any chart's type from its ⋮ menu — see [Per-chart options](#per-chart-options-menu).*
+*One tab, five metrics, five chart types, over three namespaces merged: **Line** (container CPU), **Area** (container memory), **Bar** (network sent), **Pie** (network received, each namespace's share) and **Value** (cluster CPU, a single `Cluster` series). Change any chart's type from its ⋮ menu — see [Per-chart options](#per-chart-options-menu).*
 
 The individual chart types and drawing modes, one by one. All examples below chart `kwirth_container_cpu_percentage` across three namespaces (`default`, `kube-system`, `monitoring`).
 
@@ -128,9 +130,10 @@ So you can, for example, keep most metrics as lines but switch one to a **Pie** 
 
 ## Admin guide
 
-- **Built-in:** Metrics ships with the core — there is nothing to install in *Manage extensions*. It can be enabled/disabled at deploy time (Helm `channelMetrics`, External `--channelmetrics`).
+- **Installing it:** Metrics is a plugin. Install it from **☰ → Manage extensions → Plugins** like any other; uninstalling it removes the channel. It already comes inside the `-readonly` and `-full` images (and the plain image tag), so on those there is nothing to install — see the image variants in [Deployment](../../admin/01-deployment).
+- **What it needs from the core:** the data comes from the core's built-in **`metrics` provider**, which reads the kubelets. Without a Kubernetes API behind Kwirth (ECS, ACI, a container without a kubeconfig, Helm mode `zero`) there is nothing to draw, so don't install it there.
 - **Sampling rate:** the cluster-wide metrics read interval is set at deploy (`--metricsinterval`) and can be adjusted per cluster in **☰ → Cluster Settings** (see [Initial configuration](../../admin/02-initial-config)). The per-tab **Interval** above is how often the client refreshes its charts.
-- **Permissions:** users need streaming scopes (**`view`**, **`stream`**, or **`snapshot`** for one-off values) on the target objects — see [Security & permissions](../../admin/04-security-and-permissions).
+- **Permissions:** users need the **`stream`** scope on the target objects (or a higher one: **`cluster`** or **`admin`**) — see [Security & permissions](../../admin/04-security-and-permissions).
 
 ## Notes
 

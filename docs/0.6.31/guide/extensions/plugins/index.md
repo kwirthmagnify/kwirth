@@ -1,6 +1,6 @@
 # Plugins (channels)
 
-**Channels** are the features users open in the [resource selector](../../user/04-selecting-resources) to observe and operate their clusters — Log, Metrics, Alert, Ops and so on. Most channels are **plugins** you install or remove; two (**Metrics** and **Magnify**) are **built-in** and ship with the kwirth core.
+**Channels** are the features users open in the [resource selector](../../user/04-selecting-resources) to observe and operate their clusters — Log, Metrics, Alert, Ops and so on. Every channel is a **plugin** you install or remove, except **Magnify**, which is **built-in** and ships with the kwirth core.
 
 ## Managing channel plugins
 
@@ -20,7 +20,7 @@ Each card shows the plugin's **name**, **version**, a short **description** and 
 | Channel | What it does | Packaging |
 |---|---|---|
 | 📄 [Log](log) | Real-time log streaming | plugin |
-| 📊 [Metrics](metrics) | Live CPU / memory / network / I/O metrics | built-in |
+| 📊 [Metrics](metrics) | Live CPU / memory / network / I/O metrics | plugin |
 | ⚠️ [Alert](alert) | Alerts on matching log lines | plugin |
 | 🖥️ [Ops](ops) | Operations: shell, restart, inspect | plugin |
 | 📁 [Fileman](fileman) | Browse container filesystems and volumes | plugin |

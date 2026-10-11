@@ -6,10 +6,10 @@ This part is a **reference for every extension**, grouped by type. Each entry ex
 
 ## Plugins (channels)
 
-The channels users work with. Most are **plugins** you can install or remove; a couple (**Metrics**, **Magnify**) are **built-in** channels that ship with the kwirth core.
+The channels users work with. All are **plugins** you can install or remove, except **Magnify**, the **built-in** channel that ships with the kwirth core.
 
 - 📄 [Log](plugins/log) — real-time log streaming.
-- 📊 [Metrics](plugins/metrics) — live CPU/memory/network/IO metrics. *(built-in)*
+- 📊 [Metrics](plugins/metrics) — live CPU/memory/network/IO metrics.
 - ⚠️ [Alert](plugins/alert) — alerts on matching log lines.
 - 🖥️ [Ops](plugins/ops) — day-to-day operations (shell, restart, inspect).
 - 📁 [Fileman](plugins/fileman) — browse container filesystems and volumes.

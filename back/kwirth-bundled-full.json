@@ -1,7 +1,7 @@
 {
   "plugins": {
     "log": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.25.tgz",
-    "metrics": "bundle/plugins/metrics.tgz",
+    "metrics": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-metrics/-/kwirth-plugin-metrics-0.1.0.tgz",
     "alert": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.26.tgz",
     "magnify": "bundle/plugins/magnify.tgz"
   },

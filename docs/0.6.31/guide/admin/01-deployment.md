@@ -6,54 +6,73 @@ Kwirth is a **single component** — one container/process — that you can run 
 
 ## Kubernetes with Helm (recommended)
 
-1. Add the repo:
-   ```bash
-   helm repo add kwirth https://github.com/kwirthmagnify/kwirth/tree/master/deploy/helm
-   ```
-2. Install:
-   ```bash
-   helm install kwirth kwirth/kwirth -n kwirth --create-namespace
-   ```
-
-This installs kwirth in the `kwirth` namespace with defaults. Tune it with a `values.yaml`:
-
-```yaml
-kwirth:
-  config:
-    channelMetrics: "true"
-    channelMagnify: "true"
-    rootpath: /kwirth
-  image: kwirthmagnify/kwirth:0.6.31
+```bash
+helm repo add kwirth https://kwirthmagnify.dev/helm-charts
+helm repo update
+helm install kwirth kwirth/kwirth -n kwirth --create-namespace
 ```
+
+This installs kwirth in the `kwirth` namespace with defaults. **Read the notes Helm prints**: the chart generates the admin password on the first install and shows it there, the only place it is shown in the clear.
+
+### The mode: how much of the cluster kwirth may touch
+
+`kwirth.mode` is the option that matters most. It is a single value, and the RBAC, the service account, where the configuration lives and the container's security context change with it.
+
+| `kwirth.mode` | What the ClusterRole grants | What you give up |
+|---|---|---|
+| `normal` (default) | Every verb on the API groups kwirth uses | Nothing: everything works, including the actions that **change** the cluster (Magnify's restart, scale, cordon, drain, evict, apply and delete, and the `ops` and `fileman` plugins). |
+| `readonly` | One rule: `get`, `list`, `watch` on everything | The actions that change the cluster. They answer 403 with the buttons still in the UI, so don't install `ops` or `fileman`. Logs, metrics, events and the resource browser work the same. |
+| `zero` | No ClusterRole, no binding, no service account of its own, no projected token | Everything that reads the cluster it runs in. What remains: front end, users, extensions, autonomous channels, ingestion providers, database, and federation with other kwirth instances. |
 
 ```bash
-helm install kwirth kwirth/kwirth -n kwirth --create-namespace -f values.yaml
+# readonly: sees everything, changes nothing
+helm install kwirth kwirth/kwirth -n kwirth --create-namespace \
+  --set kwirth.mode=readonly --set kwirth.persistence.enabled=true
+
+# zero: no Kubernetes permissions at all
+helm install kwirth kwirth/kwirth -n kwirth --create-namespace \
+  --set kwirth.mode=zero --set kwirth.persistence.enabled=true
 ```
 
-Most useful Helm options:
+`readonly` and `zero` need **`kwirth.persistence.enabled=true`**: inside Kubernetes kwirth keeps its configuration in Secrets and ConfigMaps, neither mode may write them, so it goes on a volume. The chart refuses to render without it.
+
+> ⚠️ `readonly` does not stop kwirth from reading Secrets: Kubernetes RBAC has no deny rules, so a role covering every resource kwirth watches can't leave them out.
+
+### The image: what comes inside
+
+The image is published in three variants of the same core. The only difference is which extensions are already inside when the container starts:
+
+| Image tag | Comes with |
+|---|---|
+| `kwirthmagnify/kwirth:<version>-core` | The core and the bundled guide. No channels. |
+| `kwirthmagnify/kwirth:<version>-readonly` | `-core` plus the `log`, `metrics` and `alert` plugins |
+| `kwirthmagnify/kwirth:<version>-full` | `-readonly` plus `magnify`. The plain `<version>` tag and `latest` are this one. |
+
+Anything missing can still be installed at runtime from the marketplace (see [Extending kwirth](08-extending-kwirth)); the variant only decides what is there at startup, which is what counts on an air-gapped cluster. Choose it with `--set kwirth.image.tag=<version>-readonly`. The natural pairs are `normal` + `-full`, `readonly` + `-readonly` and `zero` + `-core`; the project [README](https://github.com/kwirthmagnify/kwirth#choosing-a-combination) explains all nine combinations.
+
+### Other useful options
 
 | Option | Description | Default |
 |---|---|---|
-| `masterkey` | Key used to **sign the access keys** issued to clients. **Change this.** | `Kwirth4Ever` |
-| `rootpath` | Path kwirth is served under | `/kwirth` |
-| `image` | Full image reference | `kwirthmagnify/kwirth:latest` |
-| `resources` | Pod resources (K8s format) | `{ limits: {cpu:1, memory:2Gi}, requests: {cpu:0, memory:256Mi} }` |
-| `ingress.enabled` | Deploy an Ingress | `false` |
-| `ingress.controller` | Ingress controller (`nginx` / `agic`) | `nginx` |
-| `ingress.hostname` | Host in the Ingress | – |
-| `nginx.tls` / `nginx.secret` | Enable TLS / secret holding CRT+KEY | – |
+| `kwirth.config.masterkey` | Key that **signs the access keys** (and encrypts a filesystem store). Empty generates a random one on the first install and keeps it across upgrades. | generated |
+| `kwirth.config.rootpath` | Path kwirth is served under | `/kwirth` |
+| `kwirth.config.channelMagnify` | The only core channel; follows the mode when unset | on (off in `zero`) |
+| `kwirth.image.tag` | Image tag (and with it, the variant) | the chart's `appVersion` |
+| `kwirth.ingress.*` | Ingress (`nginx` / `agic`), hostname and TLS | disabled |
 
-> **Channels are plugins now.** Log, Ops, Trivy, Fileman and the rest are loaded as **plugins**, not Helm flags. Install them from the plugin management UI (see [Extending kwirth](08-extending-kwirth)).
+Every value is documented in the chart's [README](https://github.com/kwirthmagnify/kwirth/blob/master/deploy/kubernetes/helm/kwirth/README.md).
+
+> **Channels are plugins.** Log, Metrics, Alert, Ops, Trivy, Fileman and the rest are **plugins**, not Helm flags: install them from the plugin management UI (see [Extending kwirth](08-extending-kwirth)), or run an image that already carries them.
 
 ## Kubernetes with manifests
 
 For an express setup:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/test/kwirth.yaml
+kubectl apply -f https://raw.githubusercontent.com/kwirthmagnify/kwirth/master/deploy/kubernetes/manifests/kwirth.yaml
 ```
 
-Edit the YAML if you need to change defaults.
+It creates the `kwirth` namespace and the `kwirth-svc` Service on port 3883, and serves kwirth under `/kwirth`. The first login is `admin` / `password`, and kwirth asks you to change it before letting you in. The same folder has `kwirth-full-ro.yaml` (read-only) and `kwirth-zero.yaml` (no Kubernetes permissions), the equivalents of the Helm modes; read each file's header before applying it.
 
 ### The API groups kwirth needs
 
@@ -79,13 +98,18 @@ If you write your own `ClusterRole` instead of using the one in that manifest, g
 
 ## Docker
 
-Mount your kubeconfig so kwirth can reach the cluster:
+Mount your kubeconfig so kwirth can reach the cluster, and a volume for kwirth's own data:
 
 ```bash
-docker run -d -p 3883:3883 \
-  -v ~/.kube/config:/root/.kube/config \
-  --name kwirth kwirthmagnify/kwirth:latest
+docker run -d --name kwirth -p 3883:3883 \
+  -v ~/.kube/config:/root/.kube/config:ro \
+  -v ~/.kwirth:/data \
+  -e CONFIGMAPPATH=/data \
+  -e SECRETPATH=/data \
+  kwirthmagnify/kwirth:latest
 ```
+
+Without the `/data` volume, users, API keys, settings and installed extensions live inside the container and disappear with `docker rm`. Without a kubeconfig kwirth still starts, observing no cluster.
 
 ## External (no Docker)
 

@@ -25,9 +25,8 @@ Installation can be tailored by changing some kwirth installation options:
 
 | Option             | Description | Type | Value  |Default value |
 | -                  | -           | -    |-       |-             |
-| channelMetrics     | Enables/Disables Metrics channel | string | true/false  | true  |
-| channelMagnify     | Enables/Disables Magnify channel | string | true/false  | true  |
-| mode               | `normal` lets kwirth change the cluster; `readonly` gives it `get`/`list`/`watch` and nothing else | string | normal / readonly | normal |
+| channelMagnify     | Enables/Disables Magnify, the only core channel (Metrics and the rest are plugins) | string | true/false  | true  |
+| mode               | `normal` lets kwirth change the cluster; `readonly` gives it `get`/`list`/`watch` and nothing else; `zero` grants nothing at all | string | normal / readonly / zero | normal |
 | rootpath           | It's the path where kwirth will be served | string | any URL Path | /kwirth  |
 | masterkey          | The key that signs the access keys sent to clients. **Empty generates one** and keeps it across upgrades | string | any string | *(generated)*  |
 | users.adminPassword | The first admin's password. **Empty generates one and prints it in the install notes** | string | any string | *(generated)* |
@@ -66,7 +65,6 @@ A sample 'values.yaml' file could be:
 ```yaml
 kwirth:
   config:
-    channelMetrics: "true"
     channelMagnify: "true"
     rootpath: /kwirth
   image: kwirthmagnify/kwirth:0.6.31
@@ -130,7 +128,7 @@ Use it when the cluster is not yours to read: a shared platform, a tenant namesp
 
 **What it still does.** It serves the front end and the marketplace, installs and runs extensions, keeps its configuration on the volume, uses the database for the extensions that accumulate data, and **federates**: point it at other kwirths that do have access and you see their logs, metrics and resources from here. Extensions that do not look at the infrastructure work exactly as anywhere else, which is what this deployment is for.
 
-**What it does not do** is everything that reads the cluster it lives in: logs, metrics, events and the resource browser. The two core channels are off in the file because there would be nothing behind them; do not install the plugins that read the cluster either.
+**What it does not do** is everything that reads the cluster it lives in: logs, metrics, events and the resource browser. The core channel (Magnify) is off in the file because there would be nothing behind it; do not install the plugins that read the cluster either.
 
 **It is told what it is**, with `FORCE=container`, and that line is not optional. The kubelet injects `KUBERNETES_SERVICE_HOST` into every pod, so taking the permissions away does not stop kwirth being identified as a Kubernetes workload — and inside a cluster the API is deliberately not optional, because a failure there is an error and not a degradation. Without it the pod comes up, finds no credentials, falls back to an invented cluster at `localhost:8080`, fails its first call and never starts.
 
@@ -402,7 +400,6 @@ Options:
   -f, --forward                   FORWARD feature (default: false)
   -i, --metricsinterval <number>  Seconds between metrics (default: 15)
   -cl, --channellog               Channel LOG (default: true)
-  -cm, --channelmetrics           Channel METRICS (default: true)
   -ca, --channelalert             Channel ALERT (default: true)
   -ce, --channelecho              Channel ECHO (default: true)
   -co, --channelops               Channel OPS (default: true)
