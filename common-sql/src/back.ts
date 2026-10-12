@@ -123,6 +123,10 @@ const POOL_HEADROOM = 5   // connections reserved (superuser / other clients) wh
     findings, que con la base sana se resuelve en milisegundos. 20 s no es el tiempo de una consulta lenta,
     es el tiempo de una consulta que no va a volver. */
 const QUERY_TIMEOUT_MS = 20_000
+/*  Caducidad de una sesión OCIOSA. Solo puede alcanzar a conexiones que ya no usa nadie: el pool cierra por
+    su cuenta las que sobran a los 30 s, y las que conserva (`min`) se usan mucho antes de los quince
+    minutos. Lo que mata son las huérfanas de un proceso que murió sin poder despedirse. */
+const IDLE_SESSION_TIMEOUT_MS = 15 * 60_000
 
 let server: ISqlServer | undefined
 const pools = new Map<string, Knex>()          // consumerId -> Knex (BD del consumidor)
@@ -197,7 +201,33 @@ const knexForDb = (dbName: string, pool?: IPoolOptions, owner?: string): Knex =>
                 keepAliveInitialDelayMillis: 10_000,
                 query_timeout: QUERY_TIMEOUT_MS,
                 statement_timeout: QUERY_TIMEOUT_MS,
-                idle_in_transaction_session_timeout: QUERY_TIMEOUT_MS   // una transacción abandonada no bloquea la tabla indefinidamente
+                idle_in_transaction_session_timeout: QUERY_TIMEOUT_MS,  // una transacción abandonada no bloquea la tabla indefinidamente
+                /*
+                    🔴 Y que la sesión ABANDONADA se muera sola, que es lo que de verdad se acumulaba.
+
+                    Cuando el proceso del back muere —un reinicio, un crash, un `kubectl port-forward` que
+                    se corta— el cierre TCP no siempre llega al servidor, y Postgres se queda la sesión
+                    viva e **ociosa para siempre**: su `idle_session_timeout` viene a 0 de fábrica y sus
+                    keepalives tardan DOS HORAS en preguntar. Medido en dev el 2026-10-12: veinte sesiones
+                    contra la base de un canal cuyo pool admite diez, dieciséis de ellas de procesos muertos
+                    hacía uno y dos días.
+
+                    No es cosmético. Cada sesión es un stream del túnel —por eso el port-forward acababa
+                    dando `error creating error stream`— y en producción, con `max_connections` a 100, un
+                    back que deja veinte huérfanas por reinicio agota el servidor en cinco reinicios y se
+                    lleva por delante a todo lo que comparta esa base.
+
+                    ⚠️ Va por `options`, NO como una opción más del cliente: `node-postgres` solo traduce
+                    `statement_timeout` e `idle_in_transaction_session_timeout` (ver `connection-parameters.js`),
+                    y cualquier otra la **ignora en silencio** — se escribiría el parámetro, no fallaría nada,
+                    y las sesiones seguirían acumulándose igual. `options` llega al servidor tal cual en el
+                    paquete de arranque, así que la sesión nace con su propia fecha de caducidad sin tocar la
+                    configuración del servidor ni depender de quien lo administre.
+
+                    Quince minutos queda muy por encima de lo que el pool mantiene ociosa una conexión por
+                    encima de `min` (30 s), así que solo alcanza a las que ya no tienen dueño.
+                */
+                options: `-c idle_session_timeout=${IDLE_SESSION_TIMEOUT_MS}`
             } : {})
         },
         /*
