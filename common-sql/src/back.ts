@@ -108,6 +108,21 @@ export interface IPoolOptions {
 // extension raises or lowers its own (iter/excubitor min:4, agora min:1, say) through ensureDb.
 const POOL_DEFAULT: Required<Pick<IPoolOptions, 'min' | 'max'>> = { min: 2, max: 10 }
 const POOL_HEADROOM = 5   // connections reserved (superuser / other clients) when computing the budget
+/*  Tope de una consulta. Una conexión cuya consulta no termina NUNCA vuelve al pool, así que sin esto un
+    corte de red —failover, firewall, un `kubectl port-forward` degradado, la base reiniciándose— agota el
+    pool de forma permanente y el canal deja de escribir hasta que alguien reinicie el proceso.
+
+    🔴 Tiene que quedar POR DEBAJO de `acquireConnectionTimeout` (30 s), y ese es el único criterio que
+    importa. Con un tope mayor —se probó con 60 s— el que espera una conexión se rinde ANTES de que la
+    colgada se libere: el hueco llega cuando ya nadie lo quiere, y mientras tanto cada operación que pase
+    por ahí suma su propio error. En un minuto de red rota eso son cientos de líneas de log por un fallo
+    que ya estaba diagnosticado. Con 20 s, la conexión vuelve al pool **dentro** del presupuesto de espera
+    del siguiente, que es lo que convierte el corte en un tropiezo en vez de en una caída.
+
+    Holgado igualmente para este producto: lo más pesado que emite es un bulk insert de unos cientos de
+    findings, que con la base sana se resuelve en milisegundos. 20 s no es el tiempo de una consulta lenta,
+    es el tiempo de una consulta que no va a volver. */
+const QUERY_TIMEOUT_MS = 20_000
 
 let server: ISqlServer | undefined
 const pools = new Map<string, Knex>()          // consumerId -> Knex (BD del consumidor)
@@ -154,7 +169,36 @@ const knexForDb = (dbName: string, pool?: IPoolOptions, owner?: string): Knex =>
                 Con keepalive el socket roto se detecta en segundos y la conexión se descarta y se repone.
                 Solo para pg: es una opción de node-postgres, y pasársela a otro driver sería ruido.
             */
-            ...(s.client.startsWith('pg') ? { keepAlive: true, keepAliveInitialDelayMillis: 10_000 } : {})
+            /*
+                🔴 Y un tope para la CONSULTA, no solo para conseguir la conexión.
+
+                Lo de arriba detecta un socket que ya está roto; esto rescata el caso en que **se rompe con
+                una consulta dentro**. Esa consulta no falla: se queda esperando una respuesta que no va a
+                llegar, y para el pool la conexión sigue *en uso*. El keepalive acaba enterándose, pero el
+                TCP tarda minutos en darse por vencido, y mientras tanto la conexión no vuelve al pool.
+
+                Diez veces lo mismo y el pool queda agotado PARA SIEMPRE, con una firma inconfundible:
+
+                    used=10/10 free=0 waiting=2     ← nadie en cola: no sobran peticiones, faltan conexiones
+
+                `waiting` bajo es lo que lo distingue de una avalancha: no hay trabajo de más esperando, hay
+                diez conexiones secuestradas. No se recupera solo; hay que reiniciar el proceso. Medido en dev
+                durante cinco días seguidos (2026-10-07 a 10-12), con `kubectl port-forward` degradándose bajo
+                carga y arrastrando a TODOS los canales del core, no solo al que escribía.
+
+                `query_timeout` lo corta desde el CLIENTE —aborta y destruye la conexión, que es lo que
+                devuelve el hueco al pool— y `statement_timeout` desde el SERVIDOR, para que la consulta no
+                siga consumiendo recursos allí. El minuto es holgadísimo para cualquier consulta legítima de
+                este producto (lo más pesado es un bulk insert de unos cientos de findings) y a la vez corta
+                la fuga mucho antes de que el pool se vacíe.
+            */
+            ...(s.client.startsWith('pg') ? {
+                keepAlive: true,
+                keepAliveInitialDelayMillis: 10_000,
+                query_timeout: QUERY_TIMEOUT_MS,
+                statement_timeout: QUERY_TIMEOUT_MS,
+                idle_in_transaction_session_timeout: QUERY_TIMEOUT_MS   // una transacción abandonada no bloquea la tabla indefinidamente
+            } : {})
         },
         /*
             🔴 `createTimeoutMillis` por DEBAJO del `acquireConnectionTimeout`, y los dos holgados.
