@@ -104,3 +104,6 @@ kwirth-bundled.json
 # claude
 /.claude/settings.json
 /.claude/settings.local.json
+# volcados de heap de Node (--heapsnapshot-near-heap-limit / kill -USR2): son de GIGABYTES y los escribe
+# el proceso en su propio directorio de trabajo. Fuera de git, siempre.
+*.heapsnapshot
