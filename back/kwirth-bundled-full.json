@@ -6,7 +6,8 @@
     "magnify": "bundle/plugins/magnify.tgz"
   },
   "providers": {
-    "metrics": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-metrics/-/kwirth-provider-metrics-0.1.0.tgz"
+    "metrics": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-metrics/-/kwirth-provider-metrics-0.1.0.tgz",
+    "events": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-events/-/kwirth-provider-events-0.1.0.tgz"
   },
   "senders": {
   },

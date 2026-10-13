@@ -9,6 +9,14 @@
   },
   {
     "extensionType": "provider",
+    "id": "events",
+    "version": "0.1.0",
+    "name": "Events",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-events/-/kwirth-provider-events-0.1.0.tgz",
+    "description": "Events provider for Kwirth — streams Kubernetes resource changes and cluster events to the channels that subscribe"
+  },
+  {
+    "extensionType": "provider",
     "id": "business",
     "version": "0.3.2",
     "name": "Business Provider",

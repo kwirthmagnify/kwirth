@@ -31,6 +31,10 @@ From Kwirth: **☰ → Manage extensions → Plugins**, find **Censor** in the m
 needs an **AI provider** configured (its own dialog, shared with the other AI channels) before an analysis
 can run.
 
+It also needs two providers, which the marketplace asks for when you install it: **Events** (pods appearing
+and disappearing, for configs that cover the whole cluster) and **Business**. Events comes already installed
+in the images that carry channels (`-readonly`, `-full`) and in the desktop app.
+
 ## Configuration
 
 A **config** is a named filter set: which containers it covers (all of them, or sources by namespace, pod

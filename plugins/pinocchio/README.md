@@ -24,7 +24,9 @@ something you can act on.
 
 From Kwirth: **☰ → Manage extensions → Plugins**, find **Pinocchio** in the marketplace and install it.
 It pulls in the AI toolsets it uses to gather context — inventory, describe, observability, metrics and
-secrets — and the **business** provider; the marketplace installs them with it.
+secrets — and the **business**, **metrics** and **events** providers; the marketplace installs them with
+it. Metrics and events come already installed in the images that carry channels (`-readonly`, `-full`) and
+in the desktop app.
 
 It needs an **AI provider** configured in Kwirth (its own dialog, shared with the other AI channels): the
 model is yours, and Pinocchio only decides what to ask it.

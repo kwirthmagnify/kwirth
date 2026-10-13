@@ -2,6 +2,28 @@
   {
     "extensionType": "plugin",
     "id": "censor",
+    "version": "0.2.55",
+    "name": "Censor",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.55.tgz",
+    "description": "Censor channel plugin for Kwirth - LLM-based log noise filtering",
+    "icon": "FilterList",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      },
+      {
+        "extensionType": "provider",
+        "id": "events",
+        "minVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "censor",
     "version": "0.2.54",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.54.tgz",
@@ -63,6 +85,59 @@
         "extensionType": "dce",
         "id": "nettools",
         "minVersion": "0.2.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "pinocchio",
+    "version": "0.2.42",
+    "name": "Pinocchio",
+    "displayName": "Pinocchio",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.2.42.tgz",
+    "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
+    "icon": "AutoFixHigh",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      },
+      {
+        "extensionType": "provider",
+        "id": "metrics",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "provider",
+        "id": "events",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-inventory",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-describe",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-observability",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-metrics",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-secrets",
+        "minVersion": "0.1.0"
       }
     ]
   },
@@ -196,6 +271,28 @@
       {
         "extensionType": "aitoolset",
         "id": "k8s-secrets",
+        "minVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "topology",
+    "version": "0.3.2",
+    "name": "Topology",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.3.2.tgz",
+    "description": "Topology channel plugin for Kwirth - 3D visualization of Kubernetes cluster topology",
+    "icon": "AccountTree",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "dce",
+        "id": "three",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "provider",
+        "id": "events",
         "minVersion": "0.1.0"
       }
     ]
