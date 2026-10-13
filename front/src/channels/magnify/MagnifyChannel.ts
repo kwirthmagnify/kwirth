@@ -91,9 +91,13 @@ class MagnifyChannel implements IChannel {
                                 break
                             case EMagnifyCommand.USAGE:
                                 let usageData = JSON.parse(response.data)
-                                usageData.timestamp = new Date().toLocaleTimeString('en-GB')
-                                magnifyData.metricsCluster.push(usageData)
-                                if (magnifyData.metricsCluster.length>50) magnifyData.metricsCluster.shift()
+                                // a back from before the flag does not send it: treat it as present, as it always was
+                                magnifyData.metricsProviderMissing = usageData.metricsProvider === false
+                                if (!magnifyData.metricsProviderMissing) {
+                                    usageData.timestamp = new Date().toLocaleTimeString('en-GB')
+                                    magnifyData.metricsCluster.push(usageData)
+                                    if (magnifyData.metricsCluster.length>50) magnifyData.metricsCluster.shift()
+                                }
                                 channelObject.data?.refreshUsage?.()                                
                                 break
                             case EMagnifyCommand.POD:

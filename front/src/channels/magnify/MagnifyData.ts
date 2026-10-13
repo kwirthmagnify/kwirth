@@ -20,6 +20,8 @@ export interface IMagnifyData {
     pendingWebSocketRequests : Map<string, (value: any) => void>
 
     metricsCluster: any[]
+    // the back said the 'metrics' provider is not installed: the overview explains it instead of drawing empty charts
+    metricsProviderMissing: boolean
     metricsPodDetail: any[]
 
     logSearchResults: ILogSearchResult[]
@@ -46,6 +48,7 @@ export class MagnifyData implements IMagnifyData {
     leftMenuAnchorParent: undefined
     pendingWebSocketRequests = new Map<string, (value: any) => void>()
     metricsCluster = []
+    metricsProviderMissing = false
     metricsPodDetail = []
     logSearchResults = []
     logSearchDone = true

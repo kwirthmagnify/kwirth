@@ -40,7 +40,7 @@ import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
-import { getMetricsNames, ENotifyLevel, readClusterInfo } from './tools/Global'
+import { getMetricsNames, ENotifyLevel, readClusterInfo, fetchMetricsProvider } from './tools/Global'
 import { Homepage } from './components/home/Homepage'
 import { DEFAULTLASTTABS, IColors, TABSELECTEDCOLORS, TABUNSELECTEDCOLORS } from './tools/Constants'
 import { createChannelInstance, getChannelIconOf, getChannelIconSafe } from './tools/ChannelTools'
@@ -3029,7 +3029,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                     // provider to ask. null is what a homepage extension already handles.
                                     if (cluster.kwirthData?.clusterType === EClusterType.NONE) return null
                                     try {
-                                        const res = await fetch(`${cluster.url}/provider/metrics/usage/cluster`, addGetAuthorization(cluster.accessString))
+                                        const res = await fetchMetricsProvider(cluster, '/usage/cluster')
                                         if (!res.ok) return null
                                         const data = await res.json()
                                         return { cpu: data.cpuUsage as number, memory: data.memoryUsage as number, vcpus: data.vcpus as number, totalMemoryBytes: data.memory as number, pods: data.pods as number, maxPods: data.maxPods as number }

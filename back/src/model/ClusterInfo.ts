@@ -1,4 +1,5 @@
 import { AdmissionregistrationV1Api, ApiextensionsV1Api, ApisApi, AppsV1Api, AutoscalingV2Api, BatchV1Api, CoordinationV1Api, CoreV1Api, CustomObjectsApi, Exec, KubeConfig, KubernetesObjectApi, Log, NetworkingV1Api, NodeV1Api, PolicyV1Api, RbacAuthorizationV1Api, SchedulingV1Api, StorageV1Api, V1Node, VersionApi } from '@kubernetes/client-node'
+import { quantityToScalar } from '@kubernetes/client-node/dist/util.js'
 import { EClusterType, EClusterFlavour, ERancherRole, IDceAccess, IInstanceConfig, IPluginAccess, IRouteAccess, ISenderAccess, IWebhookAccess } from '@kwirthmagnify/kwirth-common'
 import { IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
@@ -198,9 +199,9 @@ export class ClusterInfo {
         else
             /*
                 A warning, not an error: the channel goes on working, it just receives no events from this
-                provider. In a non-Kubernetes environment (ECS, ACI, bare OS) the 'metrics' and 'events'
-                providers are not registered, and the built-in channels subscribing to them is expected, not
-                a misconfiguration. A plugin that truly requires a provider is caught by the separate
+                provider. In a non-Kubernetes environment (ECS, ACI, bare OS) the 'events' provider is not
+                registered and the installable 'metrics' one may not be installed (or not start), and the
+                built-in channels subscribing to them is expected, not a misconfiguration. A plugin that truly requires a provider is caught by the separate
                 requirements check at startup.
             */
             log.warning(`Cannot subscribe channel '${c.getChannelData().id}': provider '${providerId}' does not exist`)
@@ -490,6 +491,20 @@ export class ClusterInfo {
         try {
             var resp = await this.coreApi.listNode()
             var nodes:Map<string, INodeInfo> = new Map()
+            /*
+                The cluster's capacity, from what each node declares (status.capacity). It used to be written
+                by the 'metrics' provider, from the kubelets' machine metrics; now that the provider is an
+                extension that may not be installed, the core works it out itself, so what ConfigApi
+                publishes does not depend on it.
+            */
+            let vcpus = 0
+            let memory = 0
+            for (const node of resp.items) {
+                vcpus += Number(quantityToScalar(node.status?.capacity?.['cpu'] ?? '0'))
+                memory += Number(quantityToScalar(node.status?.capacity?.['memory'] ?? '0'))
+            }
+            this.vcpus = vcpus
+            this.memory = memory
             for (var node of resp.items) {
                 if (node.spec?.unschedulable) {
                     logWarning(ELogComponent.CORE,`WARNING: Node ${node.metadata?.name} is unschedulable`)

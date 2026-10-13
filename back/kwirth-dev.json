@@ -10,7 +10,8 @@
         "fluentbit": "../providers/fluentbit/dist",
         "aws": "../providers/aws/dist",
         "host-metrics": "../providers/host-metrics/dist",
-        "cloud-config": "../providers/cloud-config/dist"
+        "cloud-config": "../providers/cloud-config/dist",
+        "metrics": "../providers/metrics/dist"
     },
     "senders": {
         "datadog": "../senders/datadog/dist",

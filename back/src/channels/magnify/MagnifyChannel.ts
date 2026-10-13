@@ -8,7 +8,7 @@ import { V1APIResource, V1APIResourceList } from '@kubernetes/client-node'
 import { EventsProvider } from '../../providers/events/EventsProvider'
 import { applyResource, cronJobStatus, cronJobTrigger, imageDelete, nodeCordon, nodeDrain, nodeShell, nodeUnCordon, podEvict, podWork, restartController, scaleController, setIngressClassAsDefault, throttleExcute } from '../../tools/KubernetesTools'
 import { componentLogger, ELogComponent, IComponentLogger } from '../../tools/Logging'
-import { IMetricsClusterUsage } from '../../providers/metrics/IMetricsModel'
+import { IMagnifyClusterUsage, IMetricsClusterUsage } from './MagnifyMetricsTypes'
 const yaml = require('js-yaml')
 
 export interface IMagnifyConfig {
@@ -1011,10 +1011,14 @@ class MagnifyChannel implements IChannel {
         }
     }
 
-    private getUsage = async (scope:string) => {
+    getUsage = async (scope:string) => {
         switch(scope) {
-            case 'cluster':
-                return this.clusterUsage
+            case 'cluster': {
+                // the provider is an installable extension: say whether it is installed, so the front can tell
+                // "not installed" from "nothing read yet"
+                const usage: IMagnifyClusterUsage = { ...this.clusterUsage, metricsProvider: (this.clusterInfo.providers ?? []).some(p => p.id === 'metrics') }
+                return usage
+            }
             default:
                 this.log.warning('Invalid scope por getUsage: ' + scope)
         }

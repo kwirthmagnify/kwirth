@@ -1,4 +1,4 @@
-import { Stack } from '@mui/material'
+import { Alert, Stack } from '@mui/material'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 import { IMagnifyData } from '../MagnifyData'
 import { IChannelObject } from '../../IChannel'
@@ -9,6 +9,16 @@ interface IClusterMetricsProps {
 
 const ClusterMetrics: React.FC<IClusterMetricsProps> = (props:IClusterMetricsProps) => {
     let magnifyData:IMagnifyData = props.channelObject.data as IMagnifyData
+
+    /*
+        The cluster usage comes from the 'metrics' provider, an installable extension. Without it there is
+        nothing to draw, and three empty charts with no explanation looked like a fault.
+    */
+    if (magnifyData.metricsProviderMissing) {
+        return <Alert severity='info' sx={{ my: 1 }}>
+            The metrics provider is not installed in this cluster, so there is no cluster usage to draw. Install it from ☰ → Manage extensions → Providers.
+        </Alert>
+    }
 
     const chartData = [...magnifyData.metricsCluster]
     return <Stack direction={'row'} sx={{height:'200px'}}>

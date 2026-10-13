@@ -95,7 +95,6 @@ import { findMissingSubscriptionTargets, isPluvider, pluviderId, rebindPluvider,
 import { resolveConsumedProviders, wireProviderConsumers, wireExtensionConsumers, IExtensionWiringDeps } from './providers/Consumer'
 import { buildProviderStorage } from './tools/ProviderStorage'
 import { EventsProvider } from './providers/events/EventsProvider'
-import { MetricsProvider as MetricsProvider } from './providers/metrics/MetricsProvider'
 import { CoreLogProvider } from './providers/corelog/CoreLogProvider'
 
 import { applyLogSettings, ELogComponent, logError, logInfo, logTrace, logWarning, providerLogger, setLogConfig } from './tools/Logging'
@@ -279,7 +278,7 @@ licenseManager.load()
 
 const registeredProviders = new Map<string, TProviderConstructor>()
 registeredProviders.set('events', EventsProvider)
-registeredProviders.set('metrics', MetricsProvider)
+// 'metrics' is an installable provider now (providers/metrics), loaded by the ProviderManager
 // 'corelog' is registered conditionally after capabilities are resolved: only when there is no Kubernetes
 // API. In a pod the kubelet keeps the log and the REST endpoint serves it; everywhere else this provider
 // takes that role through the Status plugin's WebSocket.
@@ -1443,23 +1442,15 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         riRouter.use(`/user`, userApi.router)
         recordRoute(`${envRootPath}/user`, ERouteOwnerKind.CORE, 'user', userApi.router)
 
-        // Kwirth's own persisted configuration. It applies the metrics interval to the live provider and
-        // reflects it in kwirthData, which is what /config/info serves to the front end.
+        // Kwirth's own persisted configuration. It reflects the metrics interval in kwirthData, which is
+        // what /config/info serves to the front end AND the very object the providers were handed: the
+        // installable 'metrics' provider reads it on every tick and reschedules itself, so the core needs
+        // to know nothing about it.
         const applyKwirthSettings = (settings: IKwirthSettings) => {
             // The log first: what comes after this may write, and it has to do so with what the admin
             // configured rather than with the defaults.
             applyLogSettings(settings.log)
-            const interval = SettingsApi.resolveMetricsInterval(settings)
-            ri.kwirthData.metricsInterval = interval
-            const metricsProvider = ri.clusterInfo.providers.find(p => p.id === 'metrics') as MetricsProvider|undefined
-            if (!metricsProvider) return
-            metricsProvider.metricsInterval = interval
-            // if the provider was already ticking, it has to be restarted so it takes the new interval;
-            // if it has not started yet, setting the field is enough (startProvider reads it from there)
-            if (metricsProvider.metricsIntervalRef !== undefined) {
-                metricsProvider.stopMetricsInterval()
-                metricsProvider.startMetricsInterval(interval)
-            }
+            ri.kwirthData.metricsInterval = SettingsApi.resolveMetricsInterval(settings)
         }
         applyKwirthSettings(await SettingsApi.read(ri.configMaps))
         let settingsResult = await SettingsApi.create(ri.configMaps, ri.secrets, apiKeyApi, applyKwirthSettings)
@@ -1479,6 +1470,13 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             what has been offered is remembered apart.
         */
         await seedBuiltInMarketplaces(ri.configMaps)
+        /*
+            Warms up the catalogue in the background, AFTER seeding (so the built-in sources are already
+            there to be read). Nothing waits for this: the marketplace is decoupled from the UI, so the
+            first read returns whatever is cached — and this is what makes sure something IS cached by the
+            time a browser asks, instead of the user paying for the first download.
+        */
+        marketplaceManager.warmUp()
         // configurePackageRegistries() has already been called in createRunningInstance(): it has to be in
         // place before prepareRunningInstance() rehydrates anything, and this runs afterwards.
         let marketplaceApi = new MarketplaceApi(marketplaceManager, apiKeyApi)
@@ -3290,21 +3288,20 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
     logInfo(ELogComponent.CORE, `Execution environment capabilities — ${capabilities.reasons.join(' · ')}`)
 
     /*
-        The CORE's two providers read from the cluster and from nowhere else, so without a Kubernetes API
-        they are not even registered. Letting them be instantiated is expensive, and it showed in a
-        container: 'events' retries a dozen resources every 80 seconds with 'No currently active cluster',
-        and the 'metrics' tick throws on every interval against a listNode() that does not exist. The
+        The CORE's 'events' provider reads from the cluster and from nowhere else, so without a Kubernetes
+        API it is not even registered. Letting it be instantiated is expensive, and it showed in a
+        container: it retries a dozen resources every 80 seconds with 'No currently active cluster'. The
         deployment works just the same, but a perfectly normal startup ends up buried in errors — and then
         a real error can no longer be told apart.
 
         This decides about the core's code, not about somebody else's extensions: a plugin still starts
-        and connects to whatever it can, and if it asks for one of these two it gets a clear 'not
-        registered', said once, which is the truth.
+        and connects to whatever it can, and if it asks for 'events' it gets a clear 'not registered',
+        said once, which is the truth. ('metrics' used to be in here too; it is an installable provider
+        now, and it notices on its own that there is no cluster and does not start its clock.)
     */
     if (!capabilities.kubernetes) {
         registeredProviders.delete('events')
-        registeredProviders.delete('metrics')
-        logInfo(ELogComponent.CORE, `Providers 'events' and 'metrics' are not registered: they read from the Kubernetes API, and there is none here`)
+        logInfo(ELogComponent.CORE, `Provider 'events' is not registered: it reads from the Kubernetes API, and there is none here`)
     }
 
     let kwirthData:KwirthData

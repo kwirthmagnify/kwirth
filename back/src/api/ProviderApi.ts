@@ -166,11 +166,11 @@ export class ProviderApi {
                 const entries = new Map<string, TProviderApiEntry>()
                 for (const meta of await this.providerManager.listInstalled()) entries.set(meta.id, { ...meta })
 
-                // The core providers ('events', 'metrics') are registered in code and are NOT installed
-                // as an extension, so listInstalled() does not know them. They are added from the
-                // registry so that this endpoint is the complete view.
-                // TODO: once events and metrics are externalised as real providers this block is
-                // surplus: they will show up in listInstalled() like any other.
+                // The core providers ('events', and 'corelog' outside Kubernetes) are registered in code
+                // and are NOT installed as an extension, so listInstalled() does not know them. They are
+                // added from the registry so that this endpoint is the complete view.
+                // TODO: once events is externalised as a real provider (metrics already was) this block
+                // is surplus: it will show up in listInstalled() like any other.
                 for (const id of this.registeredProviders.keys()) {
                     if (!entries.has(id)) entries.set(id, { id, name: id, version: 'core', description: '', core: true })
                 }

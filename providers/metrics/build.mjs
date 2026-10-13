@@ -1,0 +1,73 @@
+import esbuild from 'esbuild'
+import { execFileSync } from 'child_process'
+import fs from 'fs'
+import path from 'path'
+
+// Map express to the host's shared instance (the configRouter is an express Router), so the provider does
+// not carry its own copy and also loads inside the desktop binary. Same as host-metrics.
+const kwirthBackGlobalsPlugin = {
+    name: 'kwirth-back-globals',
+    setup(build) {
+        build.onResolve({ filter: /^express$/ }, () => ({ path: 'express', namespace: 'kwirth-back-globals' }))
+        build.onLoad({ filter: /.*/, namespace: 'kwirth-back-globals' }, () => ({
+            contents: 'module.exports = global.__kwirth_back__.express;',
+            loader: 'js',
+        }))
+    },
+}
+
+// esbuild STRIPS types without ever checking them, so a build with no typecheck step happily
+// publishes broken TypeScript. tsc runs first and aborts the build; the watcher skips it on
+// purpose, so that saving stays instant while you work.
+const TSC = 'node_modules/typescript/lib/tsc.js'
+if (fs.existsSync(TSC)) {
+    try {
+        execFileSync(process.execPath, [TSC, '--noEmit'], { stdio: 'inherit' })
+        console.log('Typecheck passed')
+    }
+    catch {
+        console.error('Typecheck failed — build aborted')
+        process.exit(1)
+    }
+}
+else {
+    console.log('Skipping typecheck: typescript is not installed (run npm install)')
+}
+
+fs.mkdirSync('dist', { recursive: true })
+
+await esbuild.build({
+    entryPoints: ['src/back/index.ts'],
+    bundle: true,
+    format: 'cjs',
+    platform: 'node',
+    target: 'node20',
+    outfile: 'dist/back.js',
+    plugins: [kwirthBackGlobalsPlugin],
+    loader: { '.ts': 'ts' },
+    minify: false,
+})
+console.log('Built dist/back.js')
+
+const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
+const distMeta = {
+    type: 'commonjs',
+    extensionType: 'provider',
+    id: meta.id,
+    name: meta.name,
+    displayName: meta.displayName,
+    version: meta.version,
+    description: meta.description,
+    ...(meta.website ? { website: meta.website } : {}),
+    requiresRestart: meta.requiresRestart ?? false,
+    requiresExtension: meta.requiresExtension ?? [],
+}
+fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
+console.log('Wrote dist/package.json')
+
+// The package page on npm is this README: publishing without it leaves a page that says nothing.
+fs.copyFileSync('README.md', path.join('dist', 'README.md'))
+console.log('Copied README.md to dist/')
+
+console.log("Done. Run 'npm publish --access=public' on your 'dist' folder to publish to npmjs.")
+console.log(`Installable on Kwirth via: https://registry.npmjs.org/${meta.name}/-/kwirth-provider-${meta.id}-${meta.version}.tgz`)

@@ -1,3 +1,26 @@
+/*
+    The model of what this provider delivers: each tick, one IMetricsCluster to every subscriber.
+
+    It moved here from the core (back/src/providers/metrics/IMetricsModel.ts) when the provider became an
+    extension. Its consumers (the metrics, alert, pinocchio, spectrum and agora plugins, and the core's
+    Magnify) keep their own copy of the part they read, so a field can be added here without breaking
+    them; renaming or removing one breaks them all.
+*/
+
+/** One metric of the list the provider serves (cAdvisor's '# HELP' / '# TYPE' lines). */
+export interface IMetricDefinition {
+    help: string
+    type: string
+    eval: string
+}
+
+/** What a subscriber may send. Consumers send { pod, container, machine } flags; today nothing filters on them. */
+export interface IMetricsSubscriberConfig {
+    container?: boolean
+    pod?: boolean
+    machine?: boolean
+}
+
 export interface IMetricsClusterUsage {
     vcpus: number
     memory: number

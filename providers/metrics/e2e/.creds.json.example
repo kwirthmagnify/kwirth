@@ -1,0 +1,6 @@
+{
+  "url": "http://localhost:3000",
+  "user": "admin",
+  "pass": "<tu password de dev>",
+  "cluster": "inCluster"
+}
