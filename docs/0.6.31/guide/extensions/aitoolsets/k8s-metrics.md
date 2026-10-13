@@ -32,7 +32,7 @@ toolset is a bot being asked to explain a number it cannot see.
 
 ## Notes
 
-- Needs the **metrics provider** to be running and feeding kwirth (capability `METRICS`); the tools read the
+- Needs the **[metrics provider](../providers/metrics)** installed, running and feeding kwirth (capability `METRICS`); the tools read the
   samples kwirth keeps in memory, they do not scrape anything themselves.
 - The `get_prev_*` tools take *N readings*, not minutes. How much wall-clock time that covers depends on the
   provider's sampling interval — which is a cluster-wide setting.

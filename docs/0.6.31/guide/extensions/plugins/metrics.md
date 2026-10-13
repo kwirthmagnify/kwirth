@@ -131,7 +131,7 @@ So you can, for example, keep most metrics as lines but switch one to a **Pie** 
 ## Admin guide
 
 - **Installing it:** Metrics is a plugin. Install it from **☰ → Manage extensions → Plugins** like any other; uninstalling it removes the channel. It already comes inside the `-readonly` and `-full` images (and the plain image tag), so on those there is nothing to install — see the image variants in [Deployment](../../admin/01-deployment).
-- **What it needs from the core:** the data comes from the core's built-in **`metrics` provider**, which reads the kubelets. Without a Kubernetes API behind Kwirth (ECS, ACI, a container without a kubeconfig, Helm mode `zero`) there is nothing to draw, so don't install it there.
+- **What it needs:** the data comes from the **[Metrics provider](../providers/metrics)**, which reads the kubelets. It is a requirement: the marketplace will not install this plugin without it, and both come in the `-readonly` / `-full` images. Without a Kubernetes API behind Kwirth (ECS, ACI, a container without a kubeconfig, Helm mode `zero`) there is nothing to draw, so don't install either there.
 - **Sampling rate:** the cluster-wide metrics read interval is set at deploy (`--metricsinterval`) and can be adjusted per cluster in **☰ → Cluster Settings** (see [Initial configuration](../../admin/02-initial-config)). The per-tab **Interval** above is how often the client refreshes its charts.
 - **Permissions:** users need the **`stream`** scope on the target objects (or a higher one: **`cluster`** or **`admin`**) — see [Security & permissions](../../admin/04-security-and-permissions).
 

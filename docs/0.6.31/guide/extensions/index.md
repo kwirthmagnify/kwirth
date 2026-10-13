@@ -26,7 +26,7 @@ The channels users work with. All are **plugins** you can install or remove, exc
 
 ## [Providers (data sources)](providers/index)
 
-Feed data into channels. Built-in: **Events**, **Metrics**, **Business**. Installable: **Tick**, **Validating**, **Kafka**, **OpenTelemetry**, **Syslog**, **HTTP Pull-Push**, **Trivy**, **Sample**. → **[Providers manual](providers/index)**
+Feed data into channels. Built-in: **Events**. Installable: **[Metrics](providers/metrics)**, **Business**, **Tick**, **Validating**, **Kafka**, **OpenTelemetry**, **Syslog**, **HTTP Pull-Push**, **Trivy**, **Sample**. → **[Providers manual](providers/index)**
 
 ## [Senders (output destinations)](senders/index)
 

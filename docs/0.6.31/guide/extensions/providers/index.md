@@ -19,13 +19,11 @@ Why the indirection?
 
 ## Built-in providers
 
-These ship with the kwirth core — nothing to install:
+This one ships with the kwirth core — nothing to install:
 
 | Provider | What it streams | Consumed by |
 |---|---|---|
 | **Events** | A kwirth event whenever a **Kubernetes cluster event** occurs (Pod created, Deployment scaled, node pressure…). | Alert, Censor, Pinocchio, Topology… |
-| **Metrics** | Cluster-wide **resource metrics** polled from the kubelet/cAdvisor API on a configurable interval. | Metrics, Magnify |
-| **Business** | External **business data** ingested via HTTP `POST`, routed to channels by **space / type**. | Alert, Censor, Pinocchio |
 
 ## Installable provider plugins
 
@@ -33,6 +31,8 @@ Add these from **☰ → Manage extensions → Providers**:
 
 | Provider | What it does | Notes / key config |
 |---|---|---|
+| **[Metrics](metrics)** | Cluster-wide **resource metrics** read from every node's kubelet/cAdvisor on a configurable interval — no Prometheus. | Feeds Metrics, Magnify, Alert… Comes installed in the `-readonly` / `-full` images and the desktop. |
+| **Business** | External **business data** ingested via HTTP `POST`, routed to channels by **space / type**. | Consumed by Alert, Censor, Pinocchio. |
 | **[Tick](tick)** | Fires a **heartbeat** every few seconds. | Great for testing channel subscriptions; no real config. |
 | **[Validating](validating)** | Emits an event whenever the Kubernetes API calls a **Validating webhook** — lets kwirth observe admission decisions. | Register it as a validating webhook target. |
 | **[Kafka](kafka)** | Connects to one or more **Kafka** broker sets and distributes topic messages to channels using the same **space/type** routing as Business. | Broker list, topics, credentials. |

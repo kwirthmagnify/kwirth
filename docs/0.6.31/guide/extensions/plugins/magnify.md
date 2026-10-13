@@ -34,7 +34,7 @@ The landing screen (a header with **cluster name, Kubernetes version, platform a
 
 ![Magnify cluster overview](../../../_media/guide/channel-magnify-overview.png)
 
-**1 · Consumption charts.** Real-time cluster consumption — **% CPU**, **% Memory** and network **Tx / Rx Mbps** — drawn live (no Prometheus needed).
+**1 · Consumption charts.** Real-time cluster consumption — **% CPU**, **% Memory** and network **Tx / Rx Mbps** — drawn live (no Prometheus needed). They come from the **[Metrics provider](../providers/metrics)**; if it is not installed, this section says so instead of drawing empty charts.
 
 **2 · Validations.** The row of hexagon **badges**, one per resource kind (node, ConfigMap, Secret, Deployment, ReplicaSet, StatefulSet, DaemonSet, Job, Ingress, Service, volume, Role, ClusterRole…). Each badge carries **two counters — errors and warnings** — from Magnify's cluster validation, so you can spot at a glance which kinds of objects have problems (e.g. a red count on *Deployments* tells you a workload needs attention).
 
@@ -221,6 +221,7 @@ The **desktop** app is built for local work like Lens/K9s/Headlamp: instead of c
 ## Admin guide
 
 - **Built-in:** ships with the core; enable/disable at deploy (Helm `channelMagnify`, External `--channelmagnify`). Nothing to install in *Manage extensions*.
+- **Metrics:** the consumption charts and the Metrics windows need the **[Metrics provider](../providers/metrics)** (and the windows, the [Metrics](metrics) plugin). Both come in the `-readonly` / `-full` images and the desktop.
 - **Permissions:** because Magnify can do *everything*, it honours the full scope model — browsing needs read/streaming scopes; restarting/deleting needs `ops$restart`, and cluster-level mutations need `cluster` on the target objects. Grant Magnify power deliberately (see [Security & permissions](../../admin/04-security-and-permissions)).
 - **Trivy Operator:** Magnify can deploy the Trivy Operator to a cluster that doesn't have it, enabling vulnerability scans.
 

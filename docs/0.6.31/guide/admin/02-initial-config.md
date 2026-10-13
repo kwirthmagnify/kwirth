@@ -43,7 +43,7 @@ Two small settings are worth knowing, both reached from the **☰ main menu**.
 
 ![Kwirth settings dialog](../../_media/guide/admin-kwirth-settings.png)
 
-What you save here is **stored by kwirth and survives a restart**. Changing it also retimes the running metrics provider immediately, so you do not need to restart anything for it to take effect.
+What you save here is **stored by kwirth and survives a restart**. The [Metrics provider](../extensions/providers/metrics) picks up a new value on its next read, so you do not need to restart anything for it to take effect.
 
 Managing these settings requires the **`admin`** scope; without it the dialog will tell you so instead of loading.
 

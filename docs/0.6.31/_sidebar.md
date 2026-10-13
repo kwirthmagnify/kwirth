@@ -51,6 +51,7 @@
       * [Sender Debug](/0.6.31/guide/extensions/plugins/sender-debug)
       * [Net Tools](/0.6.31/guide/extensions/plugins/nettools)
     * [Providers](/0.6.31/guide/extensions/providers/index)
+      * [Metrics](/0.6.31/guide/extensions/providers/metrics)
       * [Tick](/0.6.31/guide/extensions/providers/tick)
       * [Validating](/0.6.31/guide/extensions/providers/validating)
       * [Kafka](/0.6.31/guide/extensions/providers/kafka)
