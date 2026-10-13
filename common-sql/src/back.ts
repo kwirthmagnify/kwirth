@@ -123,10 +123,45 @@ const POOL_HEADROOM = 5   // connections reserved (superuser / other clients) wh
     findings, que con la base sana se resuelve en milisegundos. 20 s no es el tiempo de una consulta lenta,
     es el tiempo de una consulta que no va a volver. */
 const QUERY_TIMEOUT_MS = 20_000
-/*  Caducidad de una sesión OCIOSA. Solo puede alcanzar a conexiones que ya no usa nadie: el pool cierra por
-    su cuenta las que sobran a los 30 s, y las que conserva (`min`) se usan mucho antes de los quince
-    minutos. Lo que mata son las huérfanas de un proceso que murió sin poder despedirse. */
-const IDLE_SESSION_TIMEOUT_MS = 15 * 60_000
+/*  Transacción ABIERTA y sin hacer nada. Es un problema distinto del de la consulta y necesita su propio
+    número: una transacción retiene locks mientras vive, así que conviene cortarla, pero el reloj corre
+    ENTRE sus operaciones, no durante una de ellas.
+
+    🔴 Cinco minutos, no los 20 s de la consulta. Se probó con 20 s y abortaba transacciones **legítimas**
+    en pleno `COMMIT` (`[iter] handleEvent failed: COMMIT; - terminating connection due to
+    idle-in-transaction timeout`, dev 2026-10-12): con la base lenta, el hueco entre dos operaciones de una
+    transacción sana se pasa de 20 s con facilidad, y abortar ahí no protege de nada — destruye trabajo en
+    curso. Una transacción que pasa CINCO MINUTOS parada, en cambio, no la está usando nadie. */
+const IDLE_TX_TIMEOUT_MS = 5 * 60_000
+/*
+    Identidad de ESTA ejecución del proceso. Va en el `application_name` de cada conexión, y es lo que
+    permite distinguir —desde el servidor y sin adivinar— una conexión VIVA de una ABANDONADA: las de otra
+    ejecución del mismo consumidor son, por definición, de un proceso que ya no es éste.
+
+    Es lo que convierte la limpieza en determinista. Un `idle_session_timeout` a secas no sabe la diferencia
+    entre una conexión en reposo y una huérfana, así que o es corto y mata las vivas, o es largo y deja el
+    problema ahí durante horas. Con la etiqueta no hay que elegir: se recogen al arrancar, al instante.
+*/
+const RUN_ID = `${process.pid}-${Date.now().toString(36)}`
+const appName = (consumerId: string): string => `kwirth:${consumerId}:${RUN_ID}`
+/*  Cuánto tiene que llevar OCIOSA una conexión de otra ejecución para darla por abandonada.
+
+    No es cero por el caso de ALTA DISPONIBILIDAD: dos instancias del core contra la misma base comparten
+    `consumerId` y, para el servidor, la una es "otra ejecución" de la otra. Diez minutos ociosa es algo que
+    una instancia con tráfico no alcanza —el pool recicla a los 30 s lo que pasa de `min`— pero una huérfana
+    sí, siempre: no la va a usar nadie nunca más. */
+const ORPHAN_IDLE_MINUTES = 10
+/*  Caducidad de una sesión OCIOSA: limpia las huérfanas de un proceso que murió sin poder despedirse.
+
+    🔴 Una hora, no quince minutos. El pool CONSERVA sus conexiones mínimas (`min`) abiertas aunque no se
+    usen, así que un tope corto no distingue una huérfana de una conexión viva en reposo: Postgres la cierra,
+    knex no se entera hasta que intenta usarla, y la operación que le toque falla. Se vio en dev el
+    2026-10-12 con 15 min — `terminating connection due to idle-session timeout` sobre conexiones del pool
+    activo, no sobre fantasmas.
+
+    Una hora sigue limpiando lo que hay que limpiar (las huérfanas medidas llevaban DÍAS, no minutos) y no
+    alcanza a una instalación con tráfico, por poco que tenga. */
+const IDLE_SESSION_TIMEOUT_MS = 60 * 60_000
 
 let server: ISqlServer | undefined
 const pools = new Map<string, Knex>()          // consumerId -> Knex (BD del consumidor)
@@ -201,7 +236,7 @@ const knexForDb = (dbName: string, pool?: IPoolOptions, owner?: string): Knex =>
                 keepAliveInitialDelayMillis: 10_000,
                 query_timeout: QUERY_TIMEOUT_MS,
                 statement_timeout: QUERY_TIMEOUT_MS,
-                idle_in_transaction_session_timeout: QUERY_TIMEOUT_MS,  // una transacción abandonada no bloquea la tabla indefinidamente
+                idle_in_transaction_session_timeout: IDLE_TX_TIMEOUT_MS,
                 /*
                     🔴 Y que la sesión ABANDONADA se muera sola, que es lo que de verdad se acumulaba.
 
@@ -227,7 +262,12 @@ const knexForDb = (dbName: string, pool?: IPoolOptions, owner?: string): Knex =>
                     Quince minutos queda muy por encima de lo que el pool mantiene ociosa una conexión por
                     encima de `min` (30 s), así que solo alcanza a las que ya no tienen dueño.
                 */
-                options: `-c idle_session_timeout=${IDLE_SESSION_TIMEOUT_MS}`
+                options: `-c idle_session_timeout=${IDLE_SESSION_TIMEOUT_MS}`,
+                /*  La etiqueta que permite reconocer, desde el servidor, de QUÉ ejecución es cada conexión.
+                    Es lo que hace posible recoger las huérfanas al arrancar sin tocar las vivas: ver
+                    `reapOrphanSessions`. También sale en `pg_stat_activity`, así que diagnosticar deja de
+                    ser adivinar de quién es cada sesión. */
+                application_name: appName(who)
             } : {})
         },
         /*
@@ -418,6 +458,49 @@ export const reapStaleSessions = async (log?: (msg: string) => void): Promise<nu
     }
 }
 
+/*
+    Recoge las conexiones ABANDONADAS de este consumidor: las que dejó una ejecución ANTERIOR del proceso.
+
+    🔴 Esto es lo que distingue una conexión en reposo de una huérfana, que es la pregunta que un
+    `idle_session_timeout` a secas no sabe responder: o lo pones corto y matas conexiones vivas que estaban
+    esperando trabajo, o lo pones largo y te comes el problema durante horas. La diferencia no está en
+    cuánto lleva ociosa, sino en **de quién es**: cada conexión lleva en su `application_name` el id de la
+    ejecución que la abrió, así que una con otro id es, por definición, de un proceso que ya no es éste.
+
+    Se hace al ARRANCAR, que es cuando se sabe con certeza que lo anterior ya no existe, y el efecto es
+    inmediato: no hay que esperar a que caduque nada.
+
+    Las tres condiciones, y por qué cada una:
+      · misma base y mismo consumidor  — no se toca nada que no sea nuestro
+      · `application_name` de OTRA ejecución — es la marca de la huérfana
+      · estado `idle` y más de `ORPHAN_IDLE_MINUTES` — nunca `active`: eso es trabajo en curso. Y el margen
+        cubre el caso de ALTA DISPONIBILIDAD, donde dos instancias comparten `consumerId` y cada una es
+        "otra ejecución" para la otra: una instancia con tráfico no tiene conexiones diez minutos sin tocar,
+        una huérfana sí, siempre.
+
+    Best-effort: si falla (sin permisos para `pg_terminate_backend`) se avisa y se sigue. No poder limpiar
+    no puede impedir arrancar.
+*/
+export const reapOrphanSessions = async (consumerId: string, log?: (msg: string) => void): Promise<number> => {
+    try {
+        const name = physicalDbName(consumerId)
+        const r = await withAdmin('reapOrphanSessions', k => k.raw(
+            `select pg_terminate_backend(pid) from pg_stat_activity
+             where datname = ? and application_name like ? and application_name <> ?
+               and state = 'idle' and state_change < now() - (? || ' minutes')::interval
+               and pid <> pg_backend_pid()`,
+            [name, `kwirth:${consumerId}:%`, appName(consumerId), ORPHAN_IDLE_MINUTES]
+        ))
+        const n = (r.rows as unknown[]).length
+        if (n > 0) log?.(`[common-sql] ${consumerId}: reaped ${n} orphan connection(s) left behind by a previous run`)
+        return n
+    }
+    catch (err) {
+        log?.(`[common-sql] ${consumerId}: could not reap orphan connections (ignored): ${err}`)
+        return 0
+    }
+}
+
 export const dbExists = async (name: string): Promise<boolean> => {
     const r = await withAdmin('dbExists', k => k.raw('select 1 from pg_database where datname = ?', [name]))
     return r.rows.length > 0
@@ -481,6 +564,9 @@ const provisionNow = async (consumerId: string, pool?: IPoolOptions): Promise<Kn
     const opts: IPoolOptions = { ...POOL_DEFAULT, ...(pool ?? {}) }
     const k = knexForDb(name, opts, consumerId)
     await k.raw('select 1')          // validates the connection
+    // Lo que dejó la ejecución anterior se recoge AQUÍ, con la base ya accesible y antes de empezar a
+    // trabajar: es el único momento en que se sabe a ciencia cierta que aquel proceso ya no existe.
+    void reapOrphanSessions(consumerId, m => log.info(m))
     pools.set(consumerId, k)
     configuredMax.set(consumerId, opts.max ?? POOL_DEFAULT.max)
     await warnIfBudgetExceeded()

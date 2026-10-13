@@ -78,6 +78,21 @@ export const seedBuiltInMarketplaces = async (configMaps: IConfigMaps): Promise<
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000
+/*
+    🔴 A FAILED read is remembered too, and that is the whole point of this constant.
+
+    Only successes used to be cached, so an unreachable marketplace was re-attempted by every single
+    request. The front asks once per extension type —around twenty-five calls when a page loads— and each
+    one waited out the full connect timeout. Measured on 2026-10-13 with the private marketplace host
+    unreachable: **21.5 seconds per request**, every request, with the UI frozen until the last one gave up.
+    Not a hypothetical: a customer on a closed network, or with the marketplace simply down, gets exactly
+    this, and nothing on screen says why.
+
+    Thirty seconds is the balance. Long enough that one page load pays the timeout ONCE instead of
+    twenty-five times; short enough that the marketplace coming back is noticed almost immediately — and
+    far below the five minutes of a good read, because a failure is not news worth keeping.
+*/
+const FAILURE_TTL_MS = 30 * 1000
 
 // An already downloaded source, with its provenance. marketplaceId undefined = the public OSS one.
 export interface IMarketplaceSource {
@@ -89,6 +104,7 @@ export interface IMarketplaceSource {
 interface ICacheItem {
     at: number
     entries: IMarketplaceEntry[]
+    failed?: boolean   // the read did not work: remembered too, but for much less time (see FAILURE_TTL_MS)
 }
 
 // The result of a manifest's reachability test, so that the UI can tell credentials from network.
@@ -114,6 +130,23 @@ export class MarketplaceManager {
     constructor(configMaps: IConfigMaps, secrets: ISecrets) {
         this.configMaps = configMaps
         this.secrets = secrets
+    }
+
+    /*
+        Warms the cache up in the background, so the first page load already finds a catalogue.
+
+        It is the other half of decoupling the UI from the marketplace: `fetchManifest` never waits any
+        more, which means the very first read — with nothing cached yet — returns empty. Doing this at
+        startup moves that first read to a moment when nobody is waiting, instead of to the user's first
+        click.
+
+        Deliberately fire-and-forget and deliberately silent: a marketplace that is down must not delay nor
+        break the boot. Each failure is already logged by `downloadManifest`, and is remembered so it is not
+        retried on every request.
+    */
+    public warmUp(): void {
+        for (const extensionType of Object.values(EExtensionType))
+            void this.resolve(extensionType).catch(() => { /* logged in downloadManifest; nothing to add */ })
     }
 
     // GitHub's Contents API returns a JSON with the file in base64 unless the 'raw' media type is asked for
@@ -172,24 +205,57 @@ export class MarketplaceManager {
         return entry.targetType ? `${entry.targetType}/${entry.id}` : entry.id
     }
 
-    // A manifest, from wherever it already is: the cache, a download in progress, or a new one.
+    /*
+        🔴 Lo que haya AHORA MISMO, sin esperar nunca a la red. El marketplace está DESACOPLADO de la UI.
+
+        Antes esto esperaba la descarga, y ese `await` era lo que ataba la interfaz a un servidor que puede
+        no estar. El front pregunta una vez por tipo de extensión —unas veinticinco llamadas al cargar una
+        página— y con el marketplace inalcanzable cada una se quedaba colgada 21 s: la lista de clusters
+        tardaba medio minuto en aparecer por culpa de un catálogo de cosas instalables que ni siquiera se
+        estaba mirando (medido el 2026-10-13).
+
+        Y el problema no es solo que el servidor esté caído: un marketplace lento, una red mala o un túnel
+        regular producen lo mismo en menor grado. Lo que estaba mal era la DEPENDENCIA, no su latencia.
+
+        Ahora: se devuelve lo que hay —la caché, aunque esté caducada— y el refresco va por detrás. Quien
+        pregunta obtiene respuesta inmediata siempre. La primera vez, antes de que haya nada, se devuelve
+        vacío: el catálogo aparece en cuanto llega, y mientras tanto lo INSTALADO —que es lo que hace
+        funcionar el producto— se ve desde el primer momento.
+    */
     private async fetchManifest(url: string, headers: Record<string, string>): Promise<IMarketplaceEntry[]> {
         const cached = this.cache.get(url)
-        if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.entries
+        // Un fallo se recuerda mucho menos que un acierto: ver FAILURE_TTL_MS.
+        const fresca = cached && Date.now() - cached.at < (cached.failed ? FAILURE_TTL_MS : CACHE_TTL_MS)
+        if (fresca) return cached!.entries
 
-        // If somebody is already asking for it, ITS download is waited for instead of firing another just like it.
-        const yaPedida = this.enCurso.get(url)
-        if (yaPedida) return yaPedida
-
-        const descarga = this.downloadManifest(url, headers).finally(() => this.enCurso.delete(url))
+        const descarga = this.enCurso.get(url)
+            ?? this.downloadManifest(url, headers).finally(() => this.enCurso.delete(url))
         this.enCurso.set(url, descarga)
-        return descarga
+
+        /*  🔴 Se espera SOLO si no hay absolutamente nada que ofrecer.
+
+            Hay dos situaciones y merecen respuestas distintas. Si ya se sabe algo de esta fuente —aunque
+            esté caducado, aunque el último intento fallara— se devuelve eso AHORA y el refresco va por
+            detrás: nadie espera a la red por un catálogo que ya tiene una versión servible, y ahí es donde
+            estaba el daño (veinticinco llamadas al cargar una página, 21 s cada una con el marketplace
+            inalcanzable, la lista de clusters tardando medio minuto por culpa de un catálogo que nadie
+            estaba mirando).
+
+            Pero la PRIMERA vez no hay nada, y devolver una lista vacía sin más sería peor que esperar:
+            un catálogo vacío se lee como "no hay extensiones", no como "todavía no lo sé". Eso sí se
+            espera — y `warmUp()` hace que esa primera vez ocurra al arrancar el core, cuando no hay nadie
+            delante, en vez de en el primer clic de alguien. */
+        if (!cached) return descarga
+        return cached.entries
     }
 
     // The real download. It never throws: an unreachable source must not take down the others, but it IS
     // logged, unlike the absolute silence there was when the browser did the downloading.
     private async downloadManifest(url: string, headers: Record<string, string>): Promise<IMarketplaceEntry[]> {
         try {
+            // Sin tope propio: nadie espera esta descarga (ver `fetchManifest`), así que puede tardar lo que
+            // necesite sin que nadie mire una pantalla quieta. Un manifest grande o un servidor lento no se
+            // cortan por las bravas; simplemente llegan cuando llegan.
             const response = await fetch(url, { headers })
             if (!response.ok) {
                 // a 401/403 with a token configured usually means an expired token or one without permission: it deserves saying plainly
@@ -197,17 +263,17 @@ export class MarketplaceManager {
                     ? ' (the configured manifest token was rejected)'
                     : ''
                 logWarning(ELogComponent.CORE, `Marketplace manifest ${url} returned ${response.status}${hint}`)
-                return []
+                return this.rememberFailure(url)
             }
             // a 200 with HTML usually means a login page: the host ignored the token (a web URL instead of the API one)
             if ((response.headers.get('content-type') ?? '').includes('text/html')) {
                 logWarning(ELogComponent.CORE, `Marketplace manifest ${url} answered HTML instead of JSON (likely a login page: use the API endpoint, not the web URL)`)
-                return []
+                return this.rememberFailure(url)
             }
             const body = await response.json()
             if (!Array.isArray(body)) {
                 logWarning(ELogComponent.CORE, `Marketplace manifest ${url} is not an array`)
-                return []
+                return this.rememberFailure(url)
             }
             const entries = body as IMarketplaceEntry[]
             this.cache.set(url, { at: Date.now(), entries })
@@ -215,8 +281,18 @@ export class MarketplaceManager {
         }
         catch (err) {
             logError(ELogComponent.CORE, `Could not read marketplace manifest ${url}: ${err}`)
-            return []
+            return this.rememberFailure(url)
         }
+    }
+
+    /*  Remembers that this source did not work, so the next caller does not pay the wait all over again.
+
+        It returns the empty list on purpose, so every failure path reads the same: `return
+        this.rememberFailure(url)`. Forgetting one of them is how this came back — the timeout was handled,
+        the 401 was not, and an expired token made the UI just as slow as an unreachable host. */
+    private rememberFailure(url: string): IMarketplaceEntry[] {
+        this.cache.set(url, { at: Date.now(), entries: [], failed: true })
+        return []
     }
 
     public invalidateCache(): void {
