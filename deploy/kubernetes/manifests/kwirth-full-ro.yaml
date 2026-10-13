@@ -40,7 +40,7 @@
 #
 #   Spelling out resources instead was tried and does not survive contact with a real cluster. The
 #   events provider opens a watcher for every CustomResourceDefinition it sees appear
-#   (EventsProvider, handleEvent -> startCrdInstanceWatcher), nobody has to ask it to, and which
+#   (providers/events, handleEvent -> startCrdInstanceWatcher), nobody has to ask it to, and which
 #   CRDs a cluster has cannot be known when the manifest is written. On a stock k3d with Rancher and
 #   Kubewarden installed, an enumerated role produced 37 Forbidden watchers at every boot, each with
 #   six retries, and lost those events in silence. If your requirement is that Secrets stay

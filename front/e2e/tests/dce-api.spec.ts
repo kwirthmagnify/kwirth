@@ -29,12 +29,19 @@ const CONSUMER_ID = 'e2e-dce-consumer'
 
 interface IAccessKey { id: string, type: string, resources: string }
 
+/*
+    Paths go RELATIVE, from the temp folder: GNU tar (the one Git for Windows puts on the PATH) reads
+    'C:\...' as 'host:path' and tries to reach a host called C. Relative names work for every tar.
+*/
+const tarDir = (dir: string, tgz: string) =>
+    execFileSync('tar', ['-czf', path.basename(tgz), '-C', path.basename(dir), '.'], { cwd: path.dirname(dir) })
+
 /** A tgz with a package.json and the given files, built with the system tar, like a real package. */
 const makeTgz = (files: Record<string, string>): Buffer => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kwirth-e2e-dce-'))
     for (const [name, content] of Object.entries(files)) fs.writeFileSync(path.join(dir, name), content)
     const tgz = `${dir}.tgz`
-    execFileSync('tar', ['-czf', tgz, '-C', dir, '.'])
+    tarDir(dir, tgz)
     const buffer = fs.readFileSync(tgz)
     fs.rmSync(dir, { recursive: true, force: true })
     fs.rmSync(tgz, { force: true })
@@ -69,7 +76,7 @@ test.describe('dce: the type through its API', () => {
     test.afterAll(async () => {
         // Whatever happened, nothing of ours stays: the consumer first, or the DCE refuses to go.
         await api.delete(`/core/themes/${CONSUMER_ID}`, { headers: auth }).catch(() => {})
-        await api.delete(`/core/dce/${DCE_ID}`, { headers: auth }).catch(() => {})
+        await api.delete(`/core/dces/${DCE_ID}`, { headers: auth }).catch(() => {})
         await api.dispose()
     })
 
@@ -77,16 +84,16 @@ test.describe('dce: the type through its API', () => {
         api.post(route, { headers: { ...auth, 'Content-Type': 'application/octet-stream' }, data: body })
 
     test('the sample DCE is installed, its back end LOADED, and its front is served', async () => {
-        const res = await api.get('/core/dce', { headers: auth })
+        const res = await api.get('/core/dces', { headers: auth })
         expect(res.status()).toBe(200)
         const sample = (await res.json()).find((m: { id: string }) => m.id === 'sample')
-        expect(sample, 'the sample DCE from kwirth-dev.json').toBeTruthy()
+        expect(sample, 'the sample DCE must be installed (from the marketplace or kwirth-dev.json)').toBeTruthy()
         expect(sample.hasBack).toBe(true)
         expect(sample.hasFront).toBe(true)
         expect(sample.requiresRestart, 'forced true for every DCE').toBe(true)
         expect(sample.back?.state).toBe('loaded')
 
-        const front = await api.get('/core/dce/sample/front')
+        const front = await api.get('/core/dces/sample/front')
         expect(front.status()).toBe(200)
         expect(front.headers()['content-type']).toContain('javascript')
         // The bundle reads the registry's name from common at runtime, so what is pinned is the registration itself.
@@ -95,15 +102,15 @@ test.describe('dce: the type through its API', () => {
     })
 
     test('a DCE uploaded as a tgz is loaded hot and served', async () => {
-        const res = await upload('/core/dce/upload', dceTgz(DCE_ID))
+        const res = await upload('/core/dces/upload', dceTgz(DCE_ID))
         expect(res.status(), await res.text()).toBe(200)
         const meta = await res.json()
         expect(meta.id).toBe(DCE_ID)
         expect(meta.version).toBe('1.0.0')
 
-        const listed = (await (await api.get('/core/dce', { headers: auth })).json()).find((m: { id: string }) => m.id === DCE_ID)
+        const listed = (await (await api.get('/core/dces', { headers: auth })).json()).find((m: { id: string }) => m.id === DCE_ID)
         expect(listed.back?.state).toBe('loaded')
-        expect(await (await api.get(`/core/dce/${DCE_ID}/front`)).text()).toContain(`'${DCE_ID}'`)
+        expect(await (await api.get(`/core/dces/${DCE_ID}/front`)).text()).toContain(`'${DCE_ID}'`)
     })
 
     test('🔴 RF8: a consumer requiring a DCE that is not there is refused, and the message says which', async () => {
@@ -143,7 +150,7 @@ test.describe('dce: the type through its API', () => {
             ]
         }))
         const packTgz = `${dir}.tgz`
-        execFileSync('tar', ['-czf', packTgz, '-C', dir, '.'])
+        tarDir(dir, packTgz)
         const body = fs.readFileSync(packTgz)
         fs.rmSync(dir, { recursive: true, force: true })
         fs.rmSync(packTgz, { force: true })
@@ -153,7 +160,7 @@ test.describe('dce: the type through its API', () => {
             expect(res.status(), await res.text()).toBe(200)
 
             // Both members are in, and the DCE is loaded — it was installed first.
-            const dces = await (await api.get('/core/dce', { headers: auth })).json()
+            const dces = await (await api.get('/core/dces', { headers: auth })).json()
             const installedDce = dces.find((d: { id: string }) => d.id === packDce)
             expect(installedDce, 'the pack did not install its DCE').toBeTruthy()
             expect(installedDce.back?.state).toBe('loaded')
@@ -163,7 +170,7 @@ test.describe('dce: the type through its API', () => {
             expect(themes.some((t: { id: string }) => t.id === packConsumer), 'the consumer was refused').toBe(true)
 
             // And a pack-owned DCE is not removed on its own: the pack owns it.
-            const refused = await api.delete(`/core/dce/${packDce}`, { headers: auth })
+            const refused = await api.delete(`/core/dces/${packDce}`, { headers: auth })
             expect(refused.status(), 'a DCE in use by its own pack was removed').toBe(409)
         }
         finally {
@@ -171,7 +178,7 @@ test.describe('dce: the type through its API', () => {
             await api.delete(`/core/packs/${PACK_ID}`, { headers: auth }).catch(() => {})
         }
 
-        const dcesAfter = await (await api.get('/core/dce', { headers: auth })).json()
+        const dcesAfter = await (await api.get('/core/dces', { headers: auth })).json()
         expect(dcesAfter.some((d: { id: string }) => d.id === packDce), 'the pack left its DCE behind').toBe(false)
         const themesAfter = await (await api.get('/core/themes', { headers: auth })).json()
         expect(themesAfter.some((t: { id: string }) => t.id === packConsumer), 'the pack left its consumer behind').toBe(false)
@@ -181,15 +188,15 @@ test.describe('dce: the type through its API', () => {
         const installed = await upload('/core/themes/upload', themeTgz(CONSUMER_ID, [{ extensionType: 'dce', id: DCE_ID, minVersion: '1.0.0' }]))
         expect(installed.status(), await installed.text()).toBe(200)
 
-        const refused = await api.delete(`/core/dce/${DCE_ID}`, { headers: auth })
+        const refused = await api.delete(`/core/dces/${DCE_ID}`, { headers: auth })
         expect(refused.status()).toBe(409)
         expect((await refused.json()).error).toMatch(new RegExp(`DCE '${DCE_ID}' is in use and cannot be uninstalled: required by theme '${CONSUMER_ID}' \\(dce:${DCE_ID}:1\\.0\\.0\\)`))
         // still there
-        expect((await (await api.get('/core/dce', { headers: auth })).json()).some((m: { id: string }) => m.id === DCE_ID)).toBe(true)
+        expect((await (await api.get('/core/dces', { headers: auth })).json()).some((m: { id: string }) => m.id === DCE_ID)).toBe(true)
 
         expect((await api.delete(`/core/themes/${CONSUMER_ID}`, { headers: auth })).status()).toBe(200)
-        expect((await api.delete(`/core/dce/${DCE_ID}`, { headers: auth })).status()).toBe(200)
-        expect((await (await api.get('/core/dce', { headers: auth })).json()).some((m: { id: string }) => m.id === DCE_ID)).toBe(false)
-        expect((await api.get(`/core/dce/${DCE_ID}/front`)).status()).toBe(404)
+        expect((await api.delete(`/core/dces/${DCE_ID}`, { headers: auth })).status()).toBe(200)
+        expect((await (await api.get('/core/dces', { headers: auth })).json()).some((m: { id: string }) => m.id === DCE_ID)).toBe(false)
+        expect((await api.get(`/core/dces/${DCE_ID}/front`)).status()).toBe(404)
     })
 })

@@ -124,6 +124,115 @@ export function createInformer(clusterInfo: any, watchPath: string, listFn: () =
     return informer
 }
 
+export interface IResourceWatcherOptions {
+    /** Reconnections in a row before giving up (6 by default). A delivered object resets the count. */
+    maxRetries?: number
+    /** Wait before the first reconnection, doubled on each one after it (5000 ms by default). */
+    initialWaitMs?: number
+    /** How long the API server keeps each watch open before closing it (3600 s by default). */
+    timeoutSeconds?: number
+    log?: { info(message: unknown): void, error(message: unknown): void }
+    /** Called once when the watcher gives up after maxRetries. */
+    onGiveUp?: () => void
+}
+
+export interface IResourceWatcher {
+    /** Stops the watcher for good: aborts the open request and does not reconnect. */
+    stop(): void
+    readonly stopped: boolean
+}
+
+/**
+ * Watches ONE resource path ('/api/v1/pods', '/apis/apps/v1/deployments', '/api/v1/events'...) and calls
+ * onEvent(type, obj) for every change from NOW on: ADDED, MODIFIED, DELETED.
+ *
+ * It is NOT an informer, on purpose: an informer lists first and emits an 'add' for every object that
+ * already exists (and again on every resync), so a consumer that reacts to ADDED would see the whole
+ * cluster arrive at once. This only delivers what changes.
+ *
+ * The watch reconnects when it ends — the API server closes it every so often, and the network can drop
+ * it. A watch that ends after connecting reconnects at the initial wait; only FAILING TO CONNECT grows the
+ * wait, and maxRetries failures in a row make it give up. Moved here from the core's
+ * 'events' provider, so that provider (now an extension) and any other can watch without carrying its
+ * own copy of @kubernetes/client-node: at runtime this function is the core's.
+ */
+export function createResourceWatcher(clusterInfo: any, watchPath: string, onEvent: (type: string, obj: any) => void, options: IResourceWatcherOptions = {}): IResourceWatcher {
+    const maxRetries = options.maxRetries ?? 6
+    const initialWait = options.initialWaitMs ?? 5000
+    const timeoutSeconds = options.timeoutSeconds ?? 3600
+    let retryCount = 0
+    let currentWait = initialWait
+    let stopped = false
+    let controller: AbortController | undefined
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+
+    const retry = (reason: string): void => {
+        if (stopped) return
+        if (retryCount < maxRetries) {
+            retryCount++
+            options.log?.info(`[${watchPath}] Watch ended (${reason}). Retry ${retryCount}/${maxRetries} in ${currentWait / 1000}s`)
+            retryTimer = setTimeout(watchLoop, currentWait)
+            currentWait *= 2
+        }
+        else {
+            options.log?.error(`[${watchPath}] MAX RETRIES REACHED (${maxRetries}). Stopping watcher.`)
+            stopped = true
+            options.onGiveUp?.()
+        }
+    }
+
+    const watchLoop = async (): Promise<void> => {
+        if (stopped) return
+        // this attempt's watch has already ended (done was called)
+        let ended = false
+        try {
+            controller = await new k8s.Watch(clusterInfo.kubeConfig).watch(
+                watchPath,
+                { timeoutSeconds },
+                (type: string, apiObj: any) => {
+                    retryCount = 0
+                    currentWait = initialWait
+                    if (apiObj && apiObj.metadata) onEvent(type, apiObj)
+                },
+                (err: any) => {
+                    ended = true
+                    retry(err?.message || err?.Error || 'closed')
+                }
+            )
+            /*
+                Connected: the count starts again HERE, not when an event arrives. The API server closes every
+                watch after a while (30-60 min, whatever timeoutSeconds says), and a quiet resource —
+                configmaps, a CRD nobody touches — can go hours without an event. Counting those normal
+                closes made such a watcher give up for ever after its sixth one. Only failing to connect,
+                maxRetries times in a row, is a reason to give up.
+
+                ⚠️ watch() does NOT throw when it fails to connect (a 500, a refused connection): it calls done
+                with the error and returns all the same. So 'connected' is "returned with this attempt still
+                open", never just "returned".
+            */
+            if (!ended) {
+                retryCount = 0
+                currentWait = initialWait
+            }
+            // stop() may have arrived while the request was being opened
+            if (stopped) controller?.abort()
+        }
+        catch (err: any) {
+            retry(err?.message ?? String(err))
+        }
+    }
+
+    void watchLoop()
+    return {
+        stop: () => {
+            stopped = true
+            if (retryTimer) clearTimeout(retryTimer)
+            try { controller?.abort() } catch { /* already closed */ }
+        },
+        get stopped() { return stopped }
+    }
+}
+
 export async function restartController(kind: string, namespace: string, name: string, clusterInfo: any): Promise<void> {
     try {
         const labels = await getSelector(kind, namespace, name, clusterInfo)

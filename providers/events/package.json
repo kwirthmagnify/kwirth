@@ -1,0 +1,27 @@
+{
+    "id": "events",
+    "name": "@kwirthmagnify/kwirth-provider-events",
+    "publisher": "@kwirthmagnify",
+    "version": "0.1.0",
+    "displayName": "Events",
+    "description": "Events provider for Kwirth - streams Kubernetes resource changes and cluster events to the channels that subscribe",
+    "website": "https://kwirthmagnify.dev",
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs",
+        "watch": "node watch.mjs",
+        "test": "node tests/run.mjs"
+    },
+    "dependencies": {
+        "@kwirthmagnify/kwirth-common-back": "^0.6.3",
+        "express": "^4.19.2"
+    },
+    "devDependencies": {
+        "@types/express": "^4.17.21",
+        "@types/node": "^20.12.13",
+        "esbuild": "^0.27.2",
+        "typescript": "^5.4.0"
+    },
+    "requiresRestart": false,
+    "requiresExtension": []
+}

@@ -44,11 +44,12 @@ test.describe('gestor generico de extensiones: idp', () => {
             The endpoint is authenticated and the session does not live in localStorage, so the response
             the dialog itself asks for on opening is LISTENED to.
 
-            ⚠️ Only /idp/connectors. The instances list is NOT read here: '/idp' is also requested by the
-            login screen to know which buttons to show, and listening for it returned that other
-            response. What is configured is deduced from the chips, which is exactly what is to be checked.
+            ⚠️ Only the connectors, which live at the ROOT of '/core/idps' like every other type's installed
+            list (they used to be '/idp/connectors'). The instances ('/core/idps/instances') are NOT read
+            here: what is configured is deduced from the chips, which is exactly what is to be checked.
+            The path is compared WHOLE, so the instances list cannot be taken for it.
         */
-        const respConectores = page.waitForResponse(r => r.url().endsWith('/idp/connectors'), { timeout: 60000 })
+        const respConectores = page.waitForResponse(r => r.request().method() === 'GET' && new URL(r.url()).pathname === '/core/idps', { timeout: 60000 })
         await clickExtensionMenuItem(page, 'Identity providers')
         await page.getByRole('dialog').filter({ hasText: DIALOG }).waitFor({ timeout: 40000 })
         conectores = await (await respConectores).json()

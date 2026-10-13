@@ -22,7 +22,7 @@ const URL_INPUT = 'input[placeholder="https://…/repository/my-repo"]'
 // carries the delete button, and leaves the second half out.
 const rowOf = (page: Page, url: string) => page.locator('div.MuiBox-root')
     .filter({ has: page.locator(`input[value="${url}"]`) })
-    .filter({ hasText: 'Needs credentials' })
+    .filter({ hasText: 'Credentials' })
     .last()
 
 const openRegistriesTab = async (page: Page) => {
@@ -49,8 +49,9 @@ const removeE2eRegistries = async (page: Page) => {
     let removed = 0
     while (await leftovers.count() > 0 && removed < 10) {
         const url = await leftovers.first().inputValue()
-        // the bin is the FIRST button on the row; the LAST is the eye that reveals the secret
-        await rowOf(page, url).locator('button').first().click()
+        // the bin BY ITS NAME (its tooltip): the row's first button is TEST and there is an eye in between,
+        // so a position would press something else
+        await rowOf(page, url).getByRole('button', { name: 'Remove this registry' }).click()
         removed++
     }
     if (removed > 0) await save(page)
@@ -73,7 +74,7 @@ test('package registries: se anade, persiste con su secreto y se borra', async (
 
         const newRow = rowOf(page, URL_PREFIX)
         await newRow.getByLabel('Name').fill(LABEL)
-        await newRow.getByLabel('Needs credentials').check()
+        await newRow.getByLabel('Credentials', { exact: true }).check()
 
         // Token (Bearer) by default: a Nexus with user tokens accepts the token as Bearer and rejects
         // that SAME credential as Basic, so the default type matters.

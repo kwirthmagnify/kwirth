@@ -2,7 +2,7 @@ import { useContext } from 'react'
 import { Stack, Button, Dialog, DialogActions, DialogContent, Typography, List, ListItemButton, ListItem } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
-import { useKeyboard } from '../../tools/useKeyboard'
+import { useEscapeToClose } from '../../tools/useKeyboard'
 
 interface ISelectWorkspaceProps {
     onSelect:(action:string, a?:string) => {},
@@ -17,10 +17,10 @@ interface IValue {
 
 const SelectWorkspace: React.FC<ISelectWorkspaceProps> = (props:ISelectWorkspaceProps) => {
     const { backendUrl } = useContext(SessionContext) as SessionContextType
-    useKeyboard(() => props.onSelect(props.action))
+    const escapeRef = useEscapeToClose(() => props.onSelect(props.action))
 
     return (
-        <Dialog open={true}>
+        <Dialog open={true} ref={escapeRef}>
             <DialogTitleHelp section='guide/user/06-workspaces?id=reopening-a-workspace' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Select workspace</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' sx={{width:'50vh'}}>

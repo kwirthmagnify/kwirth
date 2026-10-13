@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickExtensionMenuItem, dismissOpenDialogs, configureCogOf } from './helpers'
 
 /*
     Migration of the `webhook` manager to the generic dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
@@ -31,8 +31,12 @@ test('webhooks: el chip de configs cuenta las que hay, y la URL solo sale en las
 
     // To begin with, whatever is there: the chip counts configurations, so we start from what exists and
     // check the INCREMENT. That way the test does not depend on a clean environment.
-    const chip = dialog.getByText(/^\d+ configs?$/)
-    await dialog.getByRole('button', { name: 'Configure' }).first().click()
+    // Everything on the JIRA card (its schema is the one with the API key): another webhook may sort first.
+    const JIRA = 'Jira Webhook'
+    const gear = configureCogOf(dialog, JIRA)
+    const chip = dialog.getByText(JIRA, { exact: true }).first()
+        .locator('xpath=ancestor::*[.//button[@aria-label="Configure"]][1]').getByText(/^\d+ configs?$/)
+    await gear.click()
     const cfg = page.getByRole('dialog').filter({ hasText: /^Configure:/ })
     await expect(cfg).toBeVisible()
 
@@ -61,7 +65,7 @@ test('webhooks: el chip de configs cuenta las que hay, y la URL solo sale en las
     // INCREMENT, so the test does not depend on how many this Kwirth happens to have.
     const inicial = await chip.count() === 0 ? 0 : Number((await chip.first().textContent())!.replace(/\D/g, ''))
 
-    await dialog.getByRole('button', { name: 'Configure' }).first().click()
+    await gear.click()
     await expect(cfg).toBeVisible()
 
     // ── a new configuration, unsaved, has no URL ─────────────────────────────────────────────────────
@@ -88,7 +92,7 @@ test('webhooks: el chip de configs cuenta las que hay, y la URL solo sale en las
     await expect(chip.first()).toHaveText(`${inicial + 2} configs`, { timeout: 15000 })
 
     // ── cleanup: both are deleted and the chip has to go back to what was there ─────────────────────
-    await dialog.getByRole('button', { name: 'Configure' }).first().click()
+    await gear.click()
     await expect(cfg).toBeVisible()
     for (const name of [CFG2, CFG1]) {
         const fila = cfg.getByText(name, { exact: true }).locator('xpath=ancestor::div[.//button][1]')

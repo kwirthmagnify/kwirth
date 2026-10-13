@@ -75,6 +75,8 @@ export interface IProviderHandle {
     subscribe(subscriber: IProviderSubscriber, data?: any): unknown
     updateSubscription(subscriber: IProviderSubscriber, data?: any): unknown
     unsubscribe(subscriber: IProviderSubscriber): unknown
+    // a one-off read (IProvider.getData); rejects when the producer does not serve reads
+    getData(request: Record<string, unknown>): Promise<unknown>
 }
 
 /* A provider or a pluvider, seen only as the thing you subscribe to: both offer exactly this. */
@@ -82,6 +84,8 @@ interface ISubscriptionTarget {
     addSubscriber(subscriber: IProviderSubscriber, data: any): unknown
     removeSubscriber(subscriber: IProviderSubscriber): unknown
     updateSubscription?(subscriber: IProviderSubscriber, data: any): unknown
+    // the one-off read of the contract (IProvider.getData); a pluvider does not serve it
+    getData?(request: Record<string, unknown>): Promise<unknown>
 }
 
 interface ISubscriptionEntry extends ISubscription {
@@ -199,9 +203,9 @@ export class ClusterInfo {
         else
             /*
                 A warning, not an error: the channel goes on working, it just receives no events from this
-                provider. In a non-Kubernetes environment (ECS, ACI, bare OS) the 'events' provider is not
-                registered and the installable 'metrics' one may not be installed (or not start), and the
-                built-in channels subscribing to them is expected, not a misconfiguration. A plugin that truly requires a provider is caught by the separate
+                provider. The 'events' and 'metrics' providers are installable and may not be installed
+                (or, without a Kubernetes API, not start), and the built-in channels subscribing to them is
+                expected, not a misconfiguration. A plugin that truly requires a provider is caught by the separate
                 requirements check at startup.
             */
             log.warning(`Cannot subscribe channel '${c.getChannelData().id}': provider '${providerId}' does not exist`)
@@ -324,6 +328,15 @@ export class ClusterInfo {
                 const removed = target.removeSubscriber(subscriber)
                 this.untrackSubscription(providerId, edgeId, subscriber)
                 return removed
+            },
+            /*
+                The pull side of the contract. A provider that does not serve reads gets a clear rejection
+                instead of a TypeError on undefined: the consumer can tell "it does not do that" from "it
+                failed while doing it".
+            */
+            getData: (request: Record<string, unknown>) => {
+                if (typeof target.getData !== 'function') return Promise.reject(new Error(`Provider '${providerId}' does not serve getData`))
+                return target.getData(request)
             }
         }
     }

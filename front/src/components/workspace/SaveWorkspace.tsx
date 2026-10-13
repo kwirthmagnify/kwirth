@@ -2,7 +2,7 @@ import { useState, useContext } from 'react'
 import { Stack, Button, Dialog, DialogActions, DialogContent, TextField } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
-import { useKeyboard } from '../../tools/useKeyboard'
+import { useEscapeToClose } from '../../tools/useKeyboard'
 
 interface ISaveWorkspaceProps {
     onClose:(name?:string, description?:string) => void
@@ -19,11 +19,11 @@ interface IValue {
 const SaveWorkspace: React.FC<ISaveWorkspaceProps> = (props:ISaveWorkspaceProps) => {
     const [newname, setNewname] = useState(props.name)
     const [desc, setDesc] = useState(props.description)
+    const escapeRef = useEscapeToClose(() => props.onClose())
     const { backendUrl } = useContext(SessionContext) as SessionContextType
-    useKeyboard(() => props.onClose())
 
     return (
-        <Dialog open={true} disableRestoreFocus={true}>
+        <Dialog open={true} ref={escapeRef} disableRestoreFocus={true}>
             <DialogTitleHelp section='guide/user/06-workspaces?id=saving-your-work' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Save workspace as...</DialogTitleHelp>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{width:'40vh'}}>

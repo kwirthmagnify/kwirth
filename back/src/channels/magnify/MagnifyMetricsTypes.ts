@@ -15,10 +15,12 @@ export interface IMetricsClusterUsage {
 }
 
 /*
-    What Magnify answers to its USAGE command: the usage plus whether the 'metrics' provider is there at all.
-    Without the flag, a cluster with no provider installed and one whose provider has not read yet look the
-    same (zeros), and the overview drew three empty charts with no explanation.
+    What Magnify answers to its USAGE command, which the front polls: the usage plus whether the providers its
+    overview lives on are there at all. Without the flags, a cluster with no provider installed and one whose
+    provider has not produced anything yet look the same (zeros, an empty list), and the overview drew empty
+    charts and an empty events feed with no explanation.
 */
 export interface IMagnifyClusterUsage extends IMetricsClusterUsage {
     metricsProvider: boolean
+    eventsProvider: boolean
 }

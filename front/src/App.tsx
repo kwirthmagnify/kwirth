@@ -40,7 +40,7 @@ import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
 import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
-import { getMetricsNames, ENotifyLevel, readClusterInfo, fetchMetricsProvider } from './tools/Global'
+import { getMetricsNames, ENotifyLevel, readClusterInfo, fetchProvider } from './tools/Global'
 import { Homepage } from './components/home/Homepage'
 import { DEFAULTLASTTABS, IColors, TABSELECTEDCOLORS, TABUNSELECTEDCOLORS } from './tools/Constants'
 import { createChannelInstance, getChannelIconOf, getChannelIconSafe } from './tools/ChannelTools'
@@ -76,7 +76,8 @@ interface IAppProps {
     authMethods: IAuthMethod[]
 }
 
-// Minimal shape of a raw kube Event as returned by /provider/events (projected to IClusterEvent for homepages).
+// Minimal shape of a raw kube Event as returned by the 'events' provider (/core/providerconfig/events, or
+// /provider/events on an older Kwirth), projected to IClusterEvent for homepages.
 interface IRawInvolvedObject {
     kind?: string
     name?: string
@@ -3008,7 +3009,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                     const cluster = clusters.find(c => c.name === clusterName)
                                     if (!cluster) return []
                                     try {
-                                        const res = await fetch(`${cluster.url}/provider/events?limit=${limit}`, addGetAuthorization(cluster.accessString))
+                                        const res = await fetchProvider(cluster, 'events', `?limit=${limit}`)
                                         if (!res.ok) return []
                                         const items = await res.json() as IRawKubeEvent[]
                                         // project raw kube events to the summary shape consumed by homepages (IClusterEvent)
@@ -3029,7 +3030,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                     // provider to ask. null is what a homepage extension already handles.
                                     if (cluster.kwirthData?.clusterType === EClusterType.NONE) return null
                                     try {
-                                        const res = await fetchMetricsProvider(cluster, '/usage/cluster')
+                                        const res = await fetchProvider(cluster, 'metrics', '/usage/cluster')
                                         if (!res.ok) return null
                                         const data = await res.json()
                                         return { cpu: data.cpuUsage as number, memory: data.memoryUsage as number, vcpus: data.vcpus as number, totalMemoryBytes: data.memory as number, pods: data.pods as number, maxPods: data.maxPods as number }

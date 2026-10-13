@@ -1,7 +1,7 @@
 import React from 'react'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Stack, Typography} from '@mui/material'
 import { VERSION } from '../../version'
-import { useKeyboard } from '../../tools/useKeyboard'
+import { useEscapeToClose } from '../../tools/useKeyboard'
 
 /*
     The core's log (current and previous container) used to be read from here. It moved to the Status
@@ -14,10 +14,10 @@ interface IAboutProps {
 }
 
 const About: React.FC<IAboutProps> = (props:IAboutProps) => {
-    useKeyboard(props.onClose)
+    const escapeRef = useEscapeToClose(props.onClose)
 
     return (<>
-        <Dialog open={true} disableRestoreFocus={true} fullWidth maxWidth={'md'}>
+        <Dialog open={true} ref={escapeRef} disableRestoreFocus={true} fullWidth maxWidth={'md'}>
             <DialogTitle>About Kwirth...</DialogTitle>
             <DialogContent>
                 <Stack direction={'row'} alignItems={'center'} justifyContent={'space-between'}>

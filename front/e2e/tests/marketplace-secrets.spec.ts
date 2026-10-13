@@ -121,7 +121,7 @@ test('el secreto de un marketplace vuelve relleno y enmascarado, y el ojo lo rev
 
         await dlg(page).getByLabel('Name', { exact: true }).nth(i).fill(TEST_LABEL)
         await dlg(page).getByLabel('Manifest URL', { exact: true }).nth(i).fill(TEST_URL)
-        await dlg(page).getByLabel('Manifest needs a token', { exact: true }).nth(i).check()
+        await dlg(page).getByLabel('Credentials', { exact: true }).nth(i).check()
         await dlg(page).getByLabel('Token', { exact: true }).nth(i).fill(TEST_TOKEN)
 
         await saveSettings(page)

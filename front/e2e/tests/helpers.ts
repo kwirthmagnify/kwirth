@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test'
+import { Locator, Page } from '@playwright/test'
 import { readdirSync } from 'fs'
 import path from 'path'
 
@@ -68,6 +68,18 @@ export async function clickExtensionMenuItem(page: Page, label: string): Promise
     await page.getByRole('menuitem', { name: label, exact: true }).click()
     await page.waitForTimeout(400)
 }
+
+/*
+    The Configure cog of ONE extension in a manager dialog, found by its name. It climbs from the name to
+    the first ancestor with a cog inside, so it lands on that card and not on the next one.
+
+    Never `.first()` over every cog: the order is whatever is installed, and installing an extension that
+    sorts earlier (a paid webhook, a sender with its own designer) silently retargets the test.
+*/
+export const configureCogOf = (manager: Locator, name: string | RegExp): Locator =>
+    manager.getByText(name, { exact: typeof name === 'string' }).first()
+        .locator('xpath=ancestor::*[.//button[@aria-label="Configure"]][1]')
+        .locator('button[aria-label="Configure"]').first()
 
 // --- Comboboxes of the ADD dialog (Cluster / View / … / Channel) ------------------------------------
 // The ADD dialog mounts its selects in order, and the LAST one is always the channel's (its position

@@ -8,7 +8,7 @@ import { Star } from '../../icons'
 import { IHomepageProps } from '@kwirthmagnify/kwirth-common-front'
 import { EClusterType } from '@kwirthmagnify/kwirth-common'
 import { Cluster } from '../../model/Cluster'
-import { fetchMetricsProvider } from '../../tools/Global'
+import { fetchProvider } from '../../tools/Global'
 import { getIconFromKind } from '../../tools/Constants-React'
 import { clusterColor } from '../../tools/clusterColor'
 import { Area, AreaChart } from 'recharts'
@@ -70,7 +70,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
         if (targetCluster.kwirthData?.clusterType === EClusterType.NONE) return;
 
         const i = setInterval((c: Cluster) => {
-            fetchMetricsProvider(c, '/usage/cluster')
+            fetchProvider(c, 'metrics', '/usage/cluster')
                 .then((result) => {
                     if (!result.ok) throw new Error('Error getting cluster usage')
                     return result.json()

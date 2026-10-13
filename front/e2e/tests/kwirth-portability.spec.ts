@@ -7,7 +7,9 @@ import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
 
     It replaces 'kwirth-settings-portability', which tested the export/import that used to hang off the
     settings dialog with a second format of its own. That format is gone — the bundle does the same and
-    also carries what the EXTENSIONS store — and the operation now lives in its own dialog.
+    also carries what the EXTENSIONS store — and the operation now lives in two dialogs of its own, each
+    with its menu entry: 'Kwirth export' and 'Kwirth import' (it was a single 'Kwirth portability' dialog
+    for a while, which is what these tests went on looking for after it was split).
 
     NON destructive by construction: it exports (which only downloads) and it opens the import to see the
     PREVIEW, which applies nothing. Import is never pressed: doing so would write configuration over the
@@ -32,17 +34,27 @@ interface IBundle {
     extensions: { type: string, id: string }[]
 }
 
-const openPortability = async (page: Page) => {
-    await clickMenuItem(page, 'Kwirth portability')
-    const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth portability' })
+const openExport = async (page: Page) => {
+    await clickMenuItem(page, 'Kwirth export')
+    const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth export' })
     await expect(dialog).toBeVisible()
-    // wait until it has read what can be exported: otherwise the spinner is what gets clicked
-    await expect(dialog.getByText('Kwirth settings')).toBeVisible({ timeout: 15000 })
+    // wait until it has read what can be exported: otherwise the spinner is what gets clicked. The list comes
+    // in collapsed blocks (Kwirth, Plugins, Providers…), and the 'Kwirth' block only shows once it has loaded
+    await expect(dialog.getByRole('checkbox', { name: 'Kwirth', exact: true })).toBeVisible({ timeout: 15000 })
     return dialog
 }
 
+/*
+    The dialog's own Close, in its actions. After exporting, the result Alert brings an X that is ALSO
+    named 'Close', so a page-wide lookup finds two and strict mode waits for ever.
+*/
+const closeExport = async (page: Page) => {
+    await page.getByRole('dialog').filter({ hasText: 'Kwirth export' })
+        .locator('.MuiDialogActions-root').getByRole('button', { name: 'Close', exact: true }).click()
+}
+
 const exportBundle = async (page: Page, withCredentials: boolean): Promise<IBundle> => {
-    const dialog = await openPortability(page)
+    const dialog = await openExport(page)
     if (withCredentials) await dialog.getByLabel(/Include credentials/).check()
     const download = page.waitForEvent('download')
     await dialog.getByRole('button', { name: 'Export', exact: true }).click()
@@ -62,7 +74,7 @@ test('el export baja un bundle con la forma del contrato', async ({ page }) => {
     expect(bundle.meta.kwirthVersion.length).toBeGreaterThan(0)
     expect(Array.isArray(bundle.extensions)).toBe(true)
 
-    await page.getByRole('button', { name: 'Close' }).click()
+    await closeExport(page)
     await dismissOpenDialogs(page)
 })
 
@@ -86,7 +98,7 @@ test('🔴 la configuracion del LOG viaja dentro del bundle', async ({ page }) =
     }
     expect(typeof bundle.core.settings?.log?.ansi).toBe('boolean')
 
-    await page.getByRole('button', { name: 'Close' }).click()
+    await closeExport(page)
     await dismissOpenDialogs(page)
 })
 
@@ -104,7 +116,7 @@ test('🔴 sin marcar credenciales no viaja ni un secreto', async ({ page }) => 
         expect(r.auth?.password ?? '').toBe('')
     }
 
-    await page.getByRole('button', { name: 'Close' }).click()
+    await closeExport(page)
     await dismissOpenDialogs(page)
 })
 

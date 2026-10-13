@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react'
 import { Button, Checkbox, Dialog, DialogActions, DialogContent, Divider, FormControlLabel, Stack, Typography } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
-import { useKeyboard } from '../../tools/useKeyboard'
+import { useEscapeToClose } from '../../tools/useKeyboard'
 
 interface IWorkspacePickerDialogProps {
     title: string
@@ -20,11 +20,11 @@ const WorkspacePickerDialog: React.FC<IWorkspacePickerDialogProps> = ({ title, w
 
     const allChecked = selected.length === workspaceNames.length
     const toggleAll = () => setSelected(allChecked ? [] : [...workspaceNames])
+    const escapeRef = useEscapeToClose(() => onCancel())
 
-    useKeyboard(() => onCancel())
 
     return (
-        <Dialog open maxWidth='xs' fullWidth>
+        <Dialog open ref={escapeRef} maxWidth='xs' fullWidth>
             <DialogTitleHelp section='guide/user/06-workspaces?id=the-workspaces-menu' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>{title}</DialogTitleHelp>
             <DialogContent>
                 <Stack spacing={0.5}>

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickExtensionMenuItem, dismissOpenDialogs, configureCogOf } from './helpers'
 
 // E2E for the WebhookManagerDialog (the `webhook` extension type, stream 3.4).
 // It needs the dev core with the `jira` dev webhook loaded (kwirth-dev.json → webhooks.jira).
@@ -17,8 +17,8 @@ test('Manage webhooks: lists the jira webhook and a config mints a routable URL'
     // marketplace — once under 'Installed webhooks' and once under 'Available webhooks'. Unscoped, strict mode.
     await expect(page.getByText('Jira Webhook').first()).toBeVisible()
 
-    // Open the jira webhook's config (the Configure ⚙ button on its card).
-    await page.getByRole('button', { name: 'Configure' }).first().click()
+    // Open the jira webhook's config (the Configure ⚙ button on ITS card: another webhook may sort first).
+    await configureCogOf(page.getByRole('dialog').filter({ hasText: 'Manage webhooks' }), 'Jira Webhook').click()
     const cfgDialog = page.getByRole('dialog').filter({ hasText: 'Configure: Jira Webhook' })
     await expect(cfgDialog).toBeVisible()
 

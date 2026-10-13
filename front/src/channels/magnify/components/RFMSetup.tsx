@@ -1,4 +1,4 @@
-import { Box, Button, Card, CardContent, CardHeader, Divider, Stack, Typography } from "@mui/material"
+import { Alert, Box, Button, Card, CardContent, CardHeader, Divider, Stack, Typography } from "@mui/material"
 import { Theme } from "@mui/material/styles"
 import { EMagnifyCommand, IMagnifyData, IMagnifyMessage } from "../MagnifyData"
 import { ClusterMetrics } from "./ClusterMetrics"
@@ -156,6 +156,13 @@ const rfmSetup = (
 
                     <Box sx={{ flex:1, overflowY: 'auto', ml:1, mr:1 }}>
 
+                        {/* The recent events come from the 'events' provider, an installable extension: without it the list
+                            would just be empty, with no explanation */}
+                        {magnifyData.eventsProviderMissing &&
+                            <Alert severity='info' sx={{ my: 1 }}>
+                                The events provider is not installed in this cluster, so there are no cluster events to show. Install it from ☰ → Manage extensions → Providers.
+                            </Alert>
+                        }
                         <Stack direction={'column'}>
                             {
                                 magnifyData.clusterEvents?.map( (e,index) => {

@@ -5,7 +5,6 @@ import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 import { V1APIResource, V1APIResourceList } from '@kubernetes/client-node'
-import { EventsProvider } from '../../providers/events/EventsProvider'
 import { applyResource, cronJobStatus, cronJobTrigger, imageDelete, nodeCordon, nodeDrain, nodeShell, nodeUnCordon, podEvict, podWork, restartController, scaleController, setIngressClassAsDefault, throttleExcute } from '../../tools/KubernetesTools'
 import { componentLogger, ELogComponent, IComponentLogger } from '../../tools/Logging'
 import { IMagnifyClusterUsage, IMetricsClusterUsage } from './MagnifyMetricsTypes'
@@ -1016,7 +1015,8 @@ class MagnifyChannel implements IChannel {
             case 'cluster': {
                 // the provider is an installable extension: say whether it is installed, so the front can tell
                 // "not installed" from "nothing read yet"
-                const usage: IMagnifyClusterUsage = { ...this.clusterUsage, metricsProvider: (this.clusterInfo.providers ?? []).some(p => p.id === 'metrics') }
+                const providers = this.clusterInfo.providers ?? []
+                const usage: IMagnifyClusterUsage = { ...this.clusterUsage, metricsProvider: providers.some(p => p.id === 'metrics'), eventsProvider: providers.some(p => p.id === 'events') }
                 return usage
             }
             default:
@@ -1027,14 +1027,19 @@ class MagnifyChannel implements IChannel {
 
     private getEventsForObject = async (command:string, namespace:string,  objectKind:string, objectName:string, limit:number) => {
         try {
-            // Delegate to the events provider (single coreApi implementation) instead of calling coreApi directly.
-            const eventsProvider = this.clusterInfo.providers.find(p => p.id === 'events') as EventsProvider | undefined
-            if (!eventsProvider) return []
+            /*
+                Read from the 'events' provider through the contract's one-off read (getData), asked for with
+                a handle like any subscription. It used to look the provider up and call a method of its own
+                (getEvents), which bypassed the registry and would break in silence the day it was renamed;
+                the provider is an installable extension now.
+            */
+            const events = this.clusterInfo.getProvider('events', this)
+            if (!events) return []
             switch(command) {
                 case 'cluster':
-                    return await eventsProvider.getEvents({ limit })
+                    return await events.getData({ limit })
                 case 'object':
-                    return await eventsProvider.getEvents({ namespace, kind: objectKind, name: objectName, limit })
+                    return await events.getData({ namespace, kind: objectKind, name: objectName, limit })
                 default:
                     return []
             }

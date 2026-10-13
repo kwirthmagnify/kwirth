@@ -45,6 +45,13 @@ export interface IProviderHandle {
     /** Changes what this subscriber wants. Providers may not implement it; then nothing happens. */
     updateSubscription(subscriber: IProviderSubscriber, data?: any): unknown
     unsubscribe(subscriber: IProviderSubscriber): unknown
+    /**
+     * A one-off read (pull), as opposed to a subscription (push): asks the producer for something and
+     * gets it back once. 'request' is a JSON whose shape each provider describes in getDataHelp().
+     * Rejects with a clear error when the producer does not serve reads, instead of failing blindly.
+     * It goes through the handle, like subscribing, so the core's registry knows who reads from whom.
+     */
+    getData(request: Record<string, unknown>): Promise<unknown>
 }
 
 /**
@@ -184,6 +191,19 @@ export interface IProvider extends IExtension {
      * consumer keeps working, it simply has nothing to show the user about which payload to write.
      */
     getSubscriptionHelp?(): IProviderSubscriptionHelp
+    /**
+     * A one-off read (pull), as opposed to a subscription (push). OPTIONAL: a provider that can answer
+     * questions on demand ("the last 25 events of this pod", "the cluster usage now") implements it, and
+     * the 'request' JSON says what is being asked. Consumers reach it through IProviderHandle.getData,
+     * never by looking the provider up and calling a method of its own: that bypasses the registry and
+     * breaks silently the day the method is renamed.
+     */
+    getData?(request: Record<string, unknown>): Promise<unknown>
+    /**
+     * What getData accepts, described like the subscription payload (usage, example, fields), so a
+     * consumer such as provider-debug can show and try it. OPTIONAL, like getSubscriptionHelp.
+     */
+    getDataHelp?(): IProviderSubscriptionHelp
     /**
      * Names of the configurations the provider has defined (the equivalent of
      * ISender.getConfigNames). OPTIONAL: it only makes sense on a provider that owns its

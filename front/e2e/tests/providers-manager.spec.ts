@@ -70,14 +70,16 @@ test.describe('gestor generico de extensiones: providers', () => {
         .locator('button[aria-label="Configure"]').first()
 
     test('los providers de CORE no se pintan: no son extensiones', async () => {
-        // events and metrics come inside Kwirth. Were they to show up, the bin would invite removing
-        // something that cannot be removed, and the installed counter would lie.
+        // A core provider comes inside Kwirth. Were it to show up, the bin would invite removing something
+        // that cannot be removed, and the installed counter would lie. Since 'events' and 'metrics' became
+        // installable, the only one left is 'corelog', registered OUTSIDE Kubernetes: in a cluster there is
+        // none, and then this test has nothing to check.
         const core = delBack.filter(p => p.core)
+        test.skip(core.length === 0, 'no core providers in this environment: events and metrics are installable extensions, and corelog only exists outside Kubernetes')
         // PLUVIDERS do not count as installed either: they are drawn (whoever comes here comes to see
         // what they can subscribe to) but they are neither installed nor uninstalled — they come and go
         // with their plugin, so they contribute no bin.
         const extensiones = delBack.filter(p => !p.core && !p.pluvider)
-        expect(core.length, 'el back no devuelve ningun provider de core: el test no probaria nada').toBeGreaterThan(0)
 
         await expect(dialog().getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
         const papeleras = dialog().locator('span[aria-label="Uninstall"] button, span[aria-label^="Dev providers"] button, span[aria-label^="Installed via pack"] button')

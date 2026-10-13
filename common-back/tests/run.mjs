@@ -48,6 +48,8 @@ await esbuild.build({
         '@kubernetes/client-node', '@kwirthmagnify/kwirth-common', 'express', 'js-yaml', 'openid-client', 'jose'
     ],
     loader: { '.ts': 'ts' },
+    // KubernetesTools loads client-node with require(): an ESM bundle needs a real require for that
+    banner: { js: "import { createRequire as __createRequire } from 'module'; const require = __createRequire(import.meta.url);" },
 })
 
 const bundled = readdirSync(OUT_DIR, { recursive: true }).map(String).filter(f => f.endsWith('.mjs')).map(f => path.join(OUT_DIR, f))

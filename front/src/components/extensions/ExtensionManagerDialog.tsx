@@ -8,7 +8,7 @@ import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../../tools/AuthorizationManagement'
 import { compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
 import { ERestartAction } from './extensionRestart'
-import { useKeyboard } from '../../tools/useKeyboard'
+import { useEscapeToClose } from '../../tools/useKeyboard'
 import { EChipIcon, EManagerSection, IExtensionAction, IExtensionChip, IExtensionManagerDescriptor, IExtensionRequirement } from './extensionManagerModel'
 import { ExtensionCard, extensionRowCells, EXTENSION_ROW_COLUMNS } from './ExtensionCard'
 
@@ -120,7 +120,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
 ) => {
     const { descriptor: d } = props
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
-    useKeyboard(props.onClose)
+    const escapeRef = useEscapeToClose(props.onClose)
 
     const [installed, setInstalled] = useState<TInstalled[]>([])
     const [available, setAvailable] = useState<TEntry[]>([])
@@ -619,7 +619,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const shownKeys = Object.keys(grouped).filter(k => matches(grouped[k][0], availableFilter)).sort((a, b) => byName(grouped[a][0], grouped[b][0]))
 
     return (<>
-        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
+        <Dialog open={true} ref={escapeRef} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
             {d.helpSection
                 ? <DialogTitleHelp section={d.helpSection} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TypeIcon fontSize='small' />{d.title}</Box>

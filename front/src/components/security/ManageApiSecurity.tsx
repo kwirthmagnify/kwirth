@@ -6,7 +6,7 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { AccessKey, accessKeySerialize, ApiKey, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { ResourceEditor } from './ResourceEditor'
-import { useKeyboard } from '../../tools/useKeyboard'
+import { useEscapeToClose } from '../../tools/useKeyboard'
 import { v4 as uuid } from 'uuid'
 import copy from 'clipboard-copy'
 
@@ -27,7 +27,7 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
     const [filterText, setFilterText] = useState<string>('')
     const [allResources, setAllResources] = useState<string[]>([])
     const [scopeCatalog, setScopeCatalog] = useState<IExtensionScope[]>([])
-    useKeyboard(() => props.onClose())
+    const escapeRef = useEscapeToClose(() => props.onClose())
     
     const getKeys = async () => {
         let response = await fetch(`${backendUrl}/key`, addGetAuthorization(accessString))
@@ -109,7 +109,7 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
     }
 
     return (<>
-        <Dialog open={true} fullWidth maxWidth={false} PaperProps={{ sx: { height: '75vh', maxWidth: '1080px', width: '100%' } }} disableEnforceFocus>
+        <Dialog open={true} ref={escapeRef} fullWidth maxWidth={false} PaperProps={{ sx: { height: '75vh', maxWidth: '1080px', width: '100%' } }} disableEnforceFocus>
             <DialogTitleHelp section='guide/admin/05-api-management?id=create-an-api-key' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>API Key management</DialogTitleHelp>
             <DialogContent sx={{ display: 'flex', height: '100%' }}>
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: 'calc(50% - 8px)' }}>

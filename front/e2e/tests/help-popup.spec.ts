@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, clickMenuItem, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickMenuItem, clickExtensionMenuItem, dismissOpenDialogs, configureCogOf } from './helpers'
 
 // Verifies that every core dialog carrying a HelpButton invokes window.open (a popup) with the right
 // deep link to its section of the guide. window.open is intercepted so the test does not depend on the
@@ -95,9 +95,10 @@ test('help button: el dialogo de configuracion de un sender tambien lleva ayuda'
     const manager = page.getByRole('dialog').filter({ hasText: 'Manage senders' })
     await manager.waitFor()
 
-    // the first installed sender's gear opens its configuration dialog
-    const gear = manager.getByRole('button', { name: 'Configure' }).first()
-    test.skip(await gear.count() === 0, 'no hay ningun sender instalado que configurar')
+    // 'console' is configured with the core's form. Not the first cog: a sender with its own designer
+    // (composite) sorts earlier, and its dialog is not a 'Configure:' one.
+    const gear = configureCogOf(manager, /^Console Sender/)
+    test.skip(await gear.count() === 0, 'console sender is not installed')
     await gear.click()
 
     const config = page.getByRole('dialog').filter({ hasText: /^Configure:/ })

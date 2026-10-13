@@ -6,26 +6,28 @@ import { MetricDefinition } from '@kwirthmagnify/kwirth-common-front'
 export { ENotifyLevel }
 
 /*
-    Asks the 'metrics' provider for something ('' = the metric list, '/usage/cluster' = the cluster usage).
+    Asks an installable provider for something over HTTP: 'metrics' ('' = the metric list, '/usage/cluster'
+    = the cluster usage) or 'events' ('?limit=25' = the latest Kubernetes Events).
 
-    The provider is an installable extension, and its routes hang from its configRouter, which the core
-    mounts behind the accessKey at /core/providerconfig/metrics. A cluster running a Kwirth from before
-    that change still serves them at /provider/metrics, and the cluster list can mix both (federation),
-    so a 404 on the new route makes it try the old one. Which one answered is remembered per cluster URL,
-    so the home page, which polls every few seconds, does not pay two requests every time.
+    Those providers are extensions, and their routes hang from their configRouter, which the core mounts
+    behind the accessKey at /core/providerconfig/<id>. A cluster running a Kwirth from before that change
+    still serves them at /provider/<id>, and the cluster list can mix both (federation), so a 404 on the new
+    route makes it try the old one. Which one answered is remembered per cluster URL and provider, so the
+    home page, which polls every few seconds, does not pay two requests every time.
 */
-const metricsProviderBase: Map<string, string> = new Map()
-export const fetchMetricsProvider = async (cluster: Cluster, subpath: string): Promise<Response> => {
-    const remembered = metricsProviderBase.get(cluster.url)
+const providerBase: Map<string, string> = new Map()
+export const fetchProvider = async (cluster: Cluster, providerId: string, subpath: string): Promise<Response> => {
+    const key = `${cluster.url}|${providerId}`
+    const remembered = providerBase.get(key)
     if (remembered) return fetch(`${cluster.url}${remembered}${subpath}`, addGetAuthorization(cluster.accessString))
-    const current = await fetch(`${cluster.url}/core/providerconfig/metrics${subpath}`, addGetAuthorization(cluster.accessString))
+    const current = await fetch(`${cluster.url}/core/providerconfig/${providerId}${subpath}`, addGetAuthorization(cluster.accessString))
     if (current.status !== 404) {
-        metricsProviderBase.set(cluster.url, '/core/providerconfig/metrics')
+        providerBase.set(key, `/core/providerconfig/${providerId}`)
         return current
     }
-    const legacy = await fetch(`${cluster.url}/provider/metrics${subpath}`, addGetAuthorization(cluster.accessString))
+    const legacy = await fetch(`${cluster.url}/provider/${providerId}${subpath}`, addGetAuthorization(cluster.accessString))
     // a 404 on both means the provider is not installed there: nothing is remembered, so it is asked again next time
-    if (legacy.status !== 404) metricsProviderBase.set(cluster.url, '/provider/metrics')
+    if (legacy.status !== 404) providerBase.set(key, `/provider/${providerId}`)
     return legacy
 }
 
@@ -39,7 +41,7 @@ export const getMetricsNames = async (cluster:Cluster) => {
     try {
         console.log(`Receiving metrics for cluster ${cluster.name}`)
         cluster.metricsList=new Map()
-        var response = await fetchMetricsProvider(cluster, '')
+        var response = await fetchProvider(cluster, 'metrics', '')
         var json=await response.json() as MetricDefinition[]
         json.map( jsonMetric => cluster.metricsList.set(jsonMetric.metric, jsonMetric))
         console.log(`Metrics for cluster ${cluster.name} have been received (${Array.from(cluster.metricsList.keys()).length})`)

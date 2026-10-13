@@ -93,6 +93,7 @@ class MagnifyChannel implements IChannel {
                                 let usageData = JSON.parse(response.data)
                                 // a back from before the flag does not send it: treat it as present, as it always was
                                 magnifyData.metricsProviderMissing = usageData.metricsProvider === false
+                                magnifyData.eventsProviderMissing = usageData.eventsProvider === false
                                 if (!magnifyData.metricsProviderMissing) {
                                     usageData.timestamp = new Date().toLocaleTimeString('en-GB')
                                     magnifyData.metricsCluster.push(usageData)

@@ -16,6 +16,14 @@ import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
 const INTERVAL_LABEL = 'Cluster metrics read interval (seconds)'
 const COMPONENTS = ['core', 'chan', 'prov', 'send', 'auth', 'stor']
 
+/*
+    The level selects of the Log tab. Only the VISIBLE ones: the dialog's tabs are hidden, not unmounted, so
+    the first combobox of the whole dialog is the General tab's previous-log sender. These tests took that
+    one for the 'core' row for a while — the "cancel" one could not click it (hidden) and the "in force" one
+    passed by luck, checking the wrong select.
+*/
+const logSelects = (dialog: ReturnType<Page['getByRole']>) => dialog.locator('[role="combobox"]').filter({ visible: true })
+
 const openLogTab = async (page: Page) => {
     await clickMenuItem(page, 'Kwirth settings')
     const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth settings' })
@@ -48,7 +56,7 @@ test('🔴 se abre con lo que RIGE, no en blanco', async ({ page }) => {
     await dismissOpenDialogs(page)
     const dialog = await openLogTab(page)
 
-    const selects = dialog.locator('[role="combobox"]')
+    const selects = logSelects(dialog)
     await expect(selects.first()).not.toHaveText('')
     // One per component, plus one per id that has written: never fewer than the six.
     expect(await selects.count()).toBeGreaterThanOrEqual(COMPONENTS.length)
@@ -96,8 +104,8 @@ test('cambiar un nivel y cancelar NO guarda nada', async ({ page }) => {
     await dismissOpenDialogs(page)
     let dialog = await openLogTab(page)
 
-    // The core's select is the first one: it is the first row of the tab.
-    const coreSelect = dialog.locator('[role="combobox"]').first()
+    // The core's select is the first one of the tab: it is its first row.
+    const coreSelect = logSelects(dialog).first()
     const before = await coreSelect.textContent()
     await coreSelect.click()
     await page.getByRole('option', { name: /Errors only/ }).click()
@@ -107,7 +115,7 @@ test('cambiar un nivel y cancelar NO guarda nada', async ({ page }) => {
     await dismissOpenDialogs(page)
 
     dialog = await openLogTab(page)
-    await expect(dialog.locator('[role="combobox"]').first()).toHaveText(before ?? '')
+    await expect(logSelects(dialog).first()).toHaveText(before ?? '')
 
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await dismissOpenDialogs(page)

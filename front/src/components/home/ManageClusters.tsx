@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react'
-import { useKeyboard } from '../../tools/useKeyboard'
+import { useEscapeToClose } from '../../tools/useKeyboard'
 import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, List, ListItem, ListItemButton, Stack, TextField, Typography } from '@mui/material'
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline'
 import ErrorOutline from '@mui/icons-material/ErrorOutline'
@@ -40,8 +40,8 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     const [msgBox, setMsgBox] = useState(<></>)
     const [refresh, setRefresh] = useState(0)
     const [testResult, setTestResult] = useState<ITestResult | null>(null)
+    const escapeRef = useEscapeToClose(() => props.onClose(clusters))
 
-    useKeyboard(() => props.onClose(clusters))
 
     const onClusterSelected = (cluster: Cluster) => {
         setSelectedCluster(cluster)
@@ -139,7 +139,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     ].filter(Boolean) as string[]
 
     return (<>
-        <Dialog open={true} fullWidth maxWidth='md' disableEnforceFocus>
+        <Dialog open={true} ref={escapeRef} fullWidth maxWidth='md' disableEnforceFocus>
             <DialogTitleHelp section='guide/admin/06-cluster-management?id=add-a-remote-cluster' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Manage clusters</DialogTitleHelp>
             <DialogContent data-refresh={refresh}>
                 <Stack sx={{ display: 'flex', flexDirection: 'row' }}>

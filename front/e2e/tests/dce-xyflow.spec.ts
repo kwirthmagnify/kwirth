@@ -61,7 +61,7 @@ test.describe('dce xyflow: React Flow and elk served by a DCE, not by the core',
     })
 
     test('the DCE is installed, front only', async () => {
-        const res = await api.get('/core/dce', { headers: auth })
+        const res = await api.get('/core/dces', { headers: auth })
         expect(res.status()).toBe(200)
         const xyflow = ((await res.json()) as IDceListed[]).find(dce => dce.id === DCE_ID)
         expect(xyflow, 'xyflow is not installed — is it in back/kwirth-dev.json?').toBeTruthy()
@@ -72,7 +72,7 @@ test.describe('dce xyflow: React Flow and elk served by a DCE, not by the core',
     })
 
     test('🔴 its front.js registers a factory and takes React and ReactDOM from the core', async () => {
-        const front = await api.get(`/core/dce/${DCE_ID}/front`)
+        const front = await api.get(`/core/dces/${DCE_ID}/front`)
         expect(front.status()).toBe(200)
         expect(front.headers()['content-type']).toContain('javascript')
         const code = await front.text()

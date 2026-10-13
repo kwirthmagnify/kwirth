@@ -47,7 +47,10 @@ const abrirGestorTemas = async (page: Page) => {
     const dialog = page.getByRole('dialog').filter({ hasText: THEMES_DIALOG })
     // The back end resolves the catalogue against the remote marketplaces: on a loaded machine it is not fast.
     await dialog.waitFor({ timeout: 40000 })
-    await expect(dialog.getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
+    // Loaded = an installed version chip OR a catalogue entry to install. With nothing installed there is
+    // no chip at all: the catalogue shows its version in a picker, not as 'vX.Y.Z' text.
+    await expect(dialog.getByText(/^v\d+\.\d+\.\d+$/).or(dialog.getByRole('button', { name: 'Install', exact: true })).first())
+        .toBeVisible({ timeout: 60000 })
     return dialog
 }
 

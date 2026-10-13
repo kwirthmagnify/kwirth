@@ -12,7 +12,8 @@ import { coreLogBuffer } from '../../tools/LogBuffer'
     plugin finds it in clusterInfo.providers, calls getLogLines(), and carries the lines over its
     WebSocket — no REST endpoint needed.
 
-    It is an internal provider, like 'events': registered by the core, not installed from a plugin. No channel declares it in its requirements (the Status plugin observes, it does not consume),
+    It is an internal provider, the only one left since 'events' and 'metrics' became installable: registered
+    by the core, not installed from a plugin. No channel declares it in its requirements (the Status plugin observes, it does not consume),
     so the core instantiates it itself.
 
     The buffer itself lives in tools/LogBuffer.ts and captures every console.log/error from the moment

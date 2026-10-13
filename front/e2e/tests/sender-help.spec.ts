@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickExtensionMenuItem, dismissOpenDialogs, configureCogOf } from './helpers'
 
 // The help on a sender's configuration dialog leads to THAT SENDER's reference page, which is the one
 // explaining its fields. Those without one — a paid sender, or a freshly published one — fall back to
@@ -31,13 +31,8 @@ async function helpUrlFor(page: Page, senderName: RegExp): Promise<string> {
     const manager = page.getByRole('dialog').filter({ hasText: 'Manage senders' })
     await manager.waitFor()
 
-    // In LIST view each sender is a flat row, so the ancestor with a button is exactly that row.
-    // In card view the text sits several divs inside the buttons and the locator does not reach them.
-    await manager.getByRole('button', { name: /list view/i }).first().click()
-    await page.waitForTimeout(600)
-
-    const row = manager.getByText(senderName).first().locator('xpath=ancestor::div[.//button][1]')
-    await row.getByRole('button', { name: 'Configure' }).first().click()
+    // THAT sender's cog, climbing from its name: the first ancestor with a button is not always its row
+    await configureCogOf(manager, senderName).click()
 
     const config = page.getByRole('dialog').filter({ hasText: /^Configure:/ })
     await config.waitFor({ timeout: 10_000 })
@@ -48,7 +43,7 @@ async function helpUrlFor(page: Page, senderName: RegExp): Promise<string> {
     return await lastOpen(page)
 }
 
-test('la ayuda de un sender lleva a SU pagina de referencia, y a la general si no la tiene', async ({ page }) => {
+test('la ayuda de un sender lleva a SU pagina de referencia', async ({ page }) => {
     await login(page)
     await dismissOpenDialogs(page)
     await captureOpens(page)
@@ -58,8 +53,24 @@ test('la ayuda de un sender lleva a SU pagina de referencia, y a la general si n
     expect(consoleUrl, 'debe abrir la referencia del propio sender').toContain('guide/extensions/senders/console')
     expect(consoleUrl, 'y no la general').not.toContain('senders/index')
 
-    // 'jira' is paid and publishes no reference: it falls back to the general page, never to a 404
+    await page.goto('about:blank')
+})
+
+test('la ayuda de un sender sin pagina propia cae a la general', async ({ page }) => {
+    await login(page)
     await dismissOpenDialogs(page)
+    await captureOpens(page)
+
+    // 'jira' is paid and publishes no reference. It comes from the private marketplace, so it is not
+    // there in every environment: a skip, never a branch that turns green having checked nothing.
+    await clickExtensionMenuItem(page, 'Senders')
+    const manager = page.getByRole('dialog').filter({ hasText: 'Manage senders' })
+    await manager.waitFor()
+    // counted only once the installed list has drawn: an early count would skip on an empty dialog
+    await expect(manager.getByText(/^Console Sender/).first()).toBeVisible({ timeout: 30000 })
+    test.skip(await manager.getByText(/^Jira Sender/).count() === 0, 'the paid Jira sender is not installed in this environment')
+
+    // it falls back to the general page, never to a 404
     const jiraUrl = await helpUrlFor(page, /^Jira Sender/)
     expect(jiraUrl, 'sin pagina propia se cae a la general').toContain('guide/extensions/senders/index')
 

@@ -94,7 +94,6 @@ import { createProviderInstance, IProvider, IProviderStorage, TProviderConstruct
 import { findMissingSubscriptionTargets, isPluvider, pluviderId, rebindPluvider, startPluviders, warnNameCollisions } from './providers/Pluvider'
 import { resolveConsumedProviders, wireProviderConsumers, wireExtensionConsumers, IExtensionWiringDeps } from './providers/Consumer'
 import { buildProviderStorage } from './tools/ProviderStorage'
-import { EventsProvider } from './providers/events/EventsProvider'
 import { CoreLogProvider } from './providers/corelog/CoreLogProvider'
 
 import { applyLogSettings, ELogComponent, logError, logInfo, logTrace, logWarning, providerLogger, setLogConfig } from './tools/Logging'
@@ -277,8 +276,8 @@ const licenseManager = new LicenseManager()
 licenseManager.load()
 
 const registeredProviders = new Map<string, TProviderConstructor>()
-registeredProviders.set('events', EventsProvider)
-// 'metrics' is an installable provider now (providers/metrics), loaded by the ProviderManager
+// 'events' and 'metrics' are installable providers now (providers/events, providers/metrics), loaded by the
+// ProviderManager
 // 'corelog' is registered conditionally after capabilities are resolved: only when there is no Kubernetes
 // API. In a pod the kubelet keeps the log and the REST endpoint serves it; everywhere else this provider
 // takes that role through the Status plugin's WebSocket.
@@ -1799,7 +1798,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         // let metricsApi:MetricsApi = new MetricsApi(ri.clusterInfo, apiKeyApi)
         // riRouter.use(`/metrics`, metricsApi.route)
 
-        // NOTE: the events pull moved to the events provider router at /provider/events (F2a).
+        // NOTE: the events pull lives in the installable 'events' provider (its configRouter, at
+        // /core/providerconfig/events; it was /provider/events while the provider was in the core).
 
         for (let provider of ri.clusterInfo.providers) {
             if (provider.providesRouter) {
@@ -3288,21 +3288,11 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
     logInfo(ELogComponent.CORE, `Execution environment capabilities — ${capabilities.reasons.join(' · ')}`)
 
     /*
-        The CORE's 'events' provider reads from the cluster and from nowhere else, so without a Kubernetes
-        API it is not even registered. Letting it be instantiated is expensive, and it showed in a
-        container: it retries a dozen resources every 80 seconds with 'No currently active cluster'. The
-        deployment works just the same, but a perfectly normal startup ends up buried in errors — and then
-        a real error can no longer be told apart.
-
-        This decides about the core's code, not about somebody else's extensions: a plugin still starts
-        and connects to whatever it can, and if it asks for 'events' it gets a clear 'not registered',
-        said once, which is the truth. ('metrics' used to be in here too; it is an installable provider
-        now, and it notices on its own that there is no cluster and does not start its clock.)
+        The 'events' and 'metrics' providers used to be unregistered here without a Kubernetes API (instantiated,
+        'events' retried a dozen resources every 80 seconds with 'No currently active cluster' and buried a normal
+        startup in errors). Both are installable extensions now, and each notices on its own that there is no
+        cluster behind Kwirth and stays idle.
     */
-    if (!capabilities.kubernetes) {
-        registeredProviders.delete('events')
-        logInfo(ELogComponent.CORE, `Provider 'events' is not registered: it reads from the Kubernetes API, and there is none here`)
-    }
 
     let kwirthData:KwirthData
     switch (exenv) {

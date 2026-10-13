@@ -11,7 +11,8 @@
         "aws": "../providers/aws/dist",
         "host-metrics": "../providers/host-metrics/dist",
         "cloud-config": "../providers/cloud-config/dist",
-        "metrics": "../providers/metrics/dist"
+        "metrics": "../providers/metrics/dist",
+        "events": "../providers/events/dist"
     },
     "senders": {
         "datadog": "../senders/datadog/dist",

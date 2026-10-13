@@ -43,7 +43,8 @@ const makeTgz = (files: Record<string, string>): Buffer => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kwirth-e2e-nettools-'))
     for (const [name, content] of Object.entries(files)) fs.writeFileSync(path.join(dir, name), content)
     const tgz = `${dir}.tgz`
-    execFileSync('tar', ['-czf', tgz, '-C', dir, '.'])
+    // RELATIVE paths: GNU tar reads 'C:\...' as 'host:path'. Relative names work for every tar.
+    execFileSync('tar', ['-czf', path.basename(tgz), '-C', path.basename(dir), '.'], { cwd: path.dirname(dir) })
     const buffer = fs.readFileSync(tgz)
     fs.rmSync(dir, { recursive: true, force: true })
     fs.rmSync(tgz, { force: true })
@@ -80,7 +81,7 @@ test.describe('dce nettools: loaded, both sides served, and consumable by versio
     })
 
     const listed = async (): Promise<IDceListed | undefined> => {
-        const res = await api.get('/core/dce', { headers: auth })
+        const res = await api.get('/core/dces', { headers: auth })
         expect(res.status()).toBe(200)
         return ((await res.json()) as IDceListed[]).find(dce => dce.id === DCE_ID)
     }
@@ -99,7 +100,7 @@ test.describe('dce nettools: loaded, both sides served, and consumable by versio
         expect(nettools?.hasBack).toBe(true)
         expect(nettools?.hasFront, 'the front end of the DCE is not installed').toBe(true)
 
-        const front = await api.get(`/core/dce/${DCE_ID}/front`)
+        const front = await api.get(`/core/dces/${DCE_ID}/front`)
         expect(front.status()).toBe(200)
         expect(front.headers()['content-type']).toContain('javascript')
         const code = await front.text()

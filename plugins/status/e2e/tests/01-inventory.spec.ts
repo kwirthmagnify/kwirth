@@ -590,16 +590,22 @@ const dceRows = () => page.locator('table tbody tr').evaluateAll(rows => rows.ma
     }
 }))
 
-test('🔴 the DCE tab lists the dev DCEs with their REAL version, state and consumers', async () => {
+test('🔴 the DCE tab lists the DCEs with their REAL version, state and consumers', async () => {
     await tab('DCE').click()
     await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 })
     const rows = await dceRows()
-    // kwirth-dev.json declares 'nettools' and 'sample', and the plugins that require each one.
+    // 'nettools' and 'sample' may come from dev or from the marketplace: where they come from is not
+    // pinned, nor a fixed version — what the tab says has to be a real one.
     const nettools = rows.find(r => r.label === 'DCE nettools')
     const sample = rows.find(r => r.label === 'DCE sample')
-    test.skip(!nettools || !sample, 'this Kwirth does not run the dev DCEs nettools and sample')
-    expect(nettools).toMatchObject({ name: 'Net Tools', version: '0.2.0', source: 'dev', consumers: ['plugin nettools'] })
-    expect(sample).toMatchObject({ name: 'Sample DCE', version: '0.1.0', source: 'dev', consumers: ['plugin dce-consumer'] })
+    test.skip(!nettools || !sample, 'this Kwirth does not run the DCEs nettools and sample')
+    expect(nettools).toMatchObject({ name: 'Net Tools' })
+    expect(sample).toMatchObject({ name: 'Sample DCE' })
+    expect(nettools!.version).toMatch(/^\d+\.\d+\.\d+$/)
+    expect(sample!.version).toMatch(/^\d+\.\d+\.\d+$/)
+    // The nettools plugin is its real consumer; the sample is a reference DCE that nobody requires.
+    expect(nettools!.consumers).toContain('plugin nettools')
+    expect(sample!.consumers).toEqual([])
     // Both have a back end that loaded in the core.
     expect(nettools!.back).toBe('Loaded')
     expect(sample!.back).toBe('Loaded')
@@ -609,12 +615,12 @@ test('🔴 the front half is read from THIS page: what the tab says is what the 
     const rows = await dceRows()
     const nettools = rows.find(r => r.label === 'DCE nettools')
     const sample = rows.find(r => r.label === 'DCE sample')
-    test.skip(!nettools || !sample, 'this Kwirth does not run the dev DCEs nettools and sample')
+    test.skip(!nettools || !sample, 'this Kwirth does not run the DCEs nettools and sample')
     const registry = await page.evaluate(() => {
         const r = (window as unknown as Record<string, Record<string, { state: string }> | undefined>)['__kwirth_dce__'] ?? {}
         return Object.fromEntries(Object.entries(r).map(([id, e]) => [id, e.state]))
     })
-    // Both dev DCEs ship a front.js: the core's front loaded them into this page before any plugin.
+    // Both DCEs ship a front.js: the core's front loaded them into this page before any plugin.
     expect(registry).toMatchObject({ nettools: 'loaded', sample: 'loaded' })
     expect(nettools!.front).toBe('Loaded')
     expect(sample!.front).toBe('Loaded')
@@ -628,14 +634,25 @@ test('the header counts DCEs and distinct consumers', async () => {
 })
 
 test('the filter narrows the DCEs by id and by consumer', async () => {
-    // Needs the dev DCE 'sample' and its consumer, like the cases above.
-    test.skip(!(await dceRows()).some(r => r.label === 'DCE sample'), 'this Kwirth does not run the dev DCE sample')
+    const all = await dceRows()
+    test.skip(!all.some(r => r.label === 'DCE sample'), 'this Kwirth does not run the DCE sample')
     const filtro = page.getByPlaceholder('Filter…')
     await expect(filtro).toBeEnabled()
-    await filtro.fill('dce-consumer')
+
+    // by id
+    await filtro.fill('sample')
     await expect(async () => {
-        const rows = await dceRows()
-        expect(rows.map(r => r.label)).toEqual(['DCE sample'])
+        expect((await dceRows()).map(r => r.label)).toEqual(['DCE sample'])
+    }).toPass({ timeout: 10000 })
+
+    // by consumer: a consumer whose id is not also a DCE id, so the match can only come from the chip
+    const ids = all.map(r => r.label.replace(/^DCE /, ''))
+    const consumer = all.flatMap(r => r.consumers).map(c => c.replace(/^\S+ /, '')).find(c => !ids.some(id => id.includes(c) || c.includes(id)))
+    test.skip(!consumer, 'no DCE consumer here whose id differs from every DCE id')
+    await filtro.fill(consumer!)
+    const expected = all.filter(r => r.consumers.some(c => c.endsWith(` ${consumer}`))).map(r => r.label)
+    await expect(async () => {
+        expect((await dceRows()).map(r => r.label)).toEqual(expected)
     }).toPass({ timeout: 10000 })
     await filtro.fill('')
 })

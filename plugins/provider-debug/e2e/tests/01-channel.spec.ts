@@ -121,8 +121,9 @@ test('the tab explains that the channel must be started', async () => {
     about the channel, only about the inventory of whoever was running the test. What matters here is that
     the list arrives populated and with the state resolved, not WHAT is installed.
 
-    The core ones are named: 'events' and 'metrics' are registered by the core in code, so they are always
-    there whatever happens with the extensions.
+    'events' and 'metrics' are named: they were the core's own, and although both are installable
+    extensions now, every environment this runs in carries them (the dev through back/kwirth-dev.json, the
+    -readonly and -full images and the desktop through their bundles).
 */
 test('before any start the select offers core providers and resolves their state', async () => {
     await openSetup()

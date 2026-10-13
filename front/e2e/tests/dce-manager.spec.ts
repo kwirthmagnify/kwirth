@@ -1,41 +1,86 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
+import { test, expect, Page, APIRequestContext } from '@playwright/test'
+import { createHash } from 'crypto'
+import { login, clickExtensionMenuItem, dismissOpenDialogs, USER, PASS } from './helpers'
 
 /*
-    The `dce` type in the FRONT END (plan: plans/completed/dce/PLAN.md, S2). It needs the dev core with the sample
-    DCE and its consumer stub loaded (kwirth-dev.json → dces.sample, plugins.dce-consumer).
+    The `dce` type in the FRONT END (plan: plans/completed/dce/PLAN.md, S2). It needs the sample DCE
+    installed (from the marketplace or kwirth-dev.json → dces.sample).
 
-    What it checks is the two things the front end adds to the type:
+    What it checks is the two things the type promises:
 
       · the manager: the DCE is listed as a family of its own, saying which sides it brings and whether
         its back end is alive — a DCE whose factory failed has to be readable from the card
-      · the ONE instance: the consumer stub reads the DCE on both ends and its counters GROW between
-        readings. A copy of the code would say 1 → 2 for ever, which is what the type exists to prevent
+      · the ONE instance, on both ends. The sample's counter is shared: a copy per reading would start
+        again from 1, which is exactly what the type exists to prevent
 
-    NON-destructive: it installs and removes nothing. It opens the manager, reads, opens the stub's
-    channel and presses its button. Tabs are not persisted between browser sessions, so nothing is left
-    behind.
+    The single instance is read straight from the registries, not through a consumer plugin: in the
+    front from `window.__kwirth_dce__`, which is where getDce() reads it; in the back from /core/dces,
+    which serialises the instance the core keeps (createdAt and boots — functions do not travel).
+
+    NON-destructive: it installs and removes nothing. It opens the manager and reads.
 */
 
+const BACK = process.env.KWIRTH_E2E_BACK ?? 'http://localhost:3883'
 const DIALOG = /Manage DCEs/i
-const CHANNEL = 'dce-consumer'
+const DCE_ID = 'sample'
+
+interface IAccessKey { id: string, type: string, resources: string }
+/** The sample's back-end instance as /core/dces serialises it: its data, without the functions. */
+interface ISampleBackListed {
+    id: string
+    back?: { state: string, instance?: { id: string, createdAt: number, boots: number } }
+}
+/** What the page reads from the front registry, in one go. */
+interface IFrontReading {
+    state?: string
+    createdAt?: number
+    ticks: number[]
+}
 
 test.describe.configure({ mode: 'serial' })
 
 test.describe('dce: the manager and the single instance', () => {
     let page: Page
+    let api: APIRequestContext
+    let auth: Record<string, string>
 
-    test.beforeAll(async ({ browser }) => {
+    test.beforeAll(async ({ browser, playwright }) => {
         page = await browser.newPage()
         await login(page)
         await dismissOpenDialogs(page)
+
+        api = await playwright.request.newContext({ baseURL: BACK })
+        const res = await api.post('/login', { data: { user: USER, password: createHash('sha256').update(PASS).digest('hex') } })
+        expect(res.status(), 'login against the back end').toBe(200)
+        const key = (await res.json()).accessKey as IAccessKey
+        auth = { Authorization: `Bearer ${key.id}|${key.type}|${key.resources}` }
     })
 
     test.afterAll(async () => {
         await page?.close()
+        await api?.dispose()
     })
 
     const dialog = () => page.getByRole('dialog').filter({ hasText: DIALOG })
+
+    /** The front registry's entry, read now: its state, its createdAt, and two calls to the shared counter. */
+    const readFront = () => page.evaluate((id: string): IFrontReading => {
+        interface ISampleLike { createdAt: number, next(): number }
+        const registry = (window as unknown as { __kwirth_dce__?: Record<string, { state: string, instance?: ISampleLike }> }).__kwirth_dce__
+        const entry = registry?.[id]
+        const instance = entry?.instance
+        return {
+            state: entry?.state,
+            createdAt: instance?.createdAt,
+            ticks: instance ? [instance.next(), instance.next()] : []
+        }
+    }, DCE_ID)
+
+    const readBack = async (): Promise<ISampleBackListed | undefined> => {
+        const res = await api.get('/core/dces', { headers: auth })
+        expect(res.status()).toBe(200)
+        return ((await res.json()) as ISampleBackListed[]).find(dce => dce.id === DCE_ID)
+    }
 
     test('🔴 DCEs are a family of their own in the extensions menu', async () => {
         await clickExtensionMenuItem(page, 'DCEs')
@@ -60,81 +105,41 @@ test.describe('dce: the manager and the single instance', () => {
         await dismissOpenDialogs(page)
     })
 
-    // ── The single instance, through the consumer stub ────────────────────────────────────────────
+    // ── The single instance ───────────────────────────────────────────────────────────────────────
 
-    test('🔴 the consumer reads the DCE on BOTH ends, and neither says it is missing', async () => {
-        /*
-            The cluster that OFFERS the channel, found by asking rather than by name.
+    test('🔴 the sample is LOADED on both ends: the front registry holds its instance, and so does the back', async () => {
+        // The front loader runs after login: wait for the entry rather than assuming it is already there.
+        await page.waitForFunction((id: string) => {
+            const registry = (window as unknown as { __kwirth_dce__?: Record<string, { state: string }> }).__kwirth_dce__
+            return registry?.[id]?.state !== undefined
+        }, DCE_ID, { timeout: 30_000 })
+        const front = await readFront()
+        expect(front.state, 'the front factory failed in the browser').toBe('loaded')
 
-            This Kwirth may have other clusters connected, and the stub is installed only in the local
-            one. Taking the first on the list left the channel selector empty with nothing broken; and
-            the title bar is no help either, because it renames itself with whatever cluster is picked.
-            So each one is tried and the first that offers the channel wins — which is exactly the
-            question being asked, and it does not depend on what this environment's clusters are called.
-        */
-        await page.getByRole('combobox').first().click()
-        await page.getByRole('listbox').waitFor({ state: 'visible', timeout: 5000 })
-        const clusters = await page.getByRole('option').allInnerTexts()
-        await page.keyboard.press('Escape')
-        expect(clusters.length, 'no clusters at all in the selector').toBeGreaterThan(0)
-
-        let chosen: string | undefined
-        for (const cluster of clusters.map(c => c.trim()).filter(Boolean)) {
-            await pickCombo(page, 0, cluster)
-            await page.waitForTimeout(600)
-            await pickCombo(page, 1, 'cluster')
-            await page.waitForTimeout(600)
-            const combos = await page.getByRole('combobox').count()
-            await page.getByRole('combobox').nth(combos - 1).click()
-            await page.getByRole('listbox').waitFor({ state: 'visible', timeout: 5000 })
-            const option = page.getByRole('option', { name: CHANNEL, exact: true })
-            if (await option.count() > 0) { await option.click(); chosen = cluster; break }
-            await page.keyboard.press('Escape')
-            await page.waitForTimeout(300)
-        }
-        expect(chosen, `no cluster offers the '${CHANNEL}' channel: the stub is not loaded`).toBeTruthy()
-
-        await page.waitForTimeout(400)
-        await page.getByRole('button', { name: 'ADD' }).click()
-        await page.waitForTimeout(2500)
-
-        // Adding the tab does not start the channel: Start has to be pressed, as a user would. It is
-        // checked all the same, so this still holds should starting ever become automatic.
-        await page.locator('[data-testid="SettingsIcon"]').first().click({ force: true })
-        await page.waitForTimeout(500)
-        const start = page.getByText('Start', { exact: true })
-        if (await start.isVisible().catch(() => false)) await start.click()
-        else await page.keyboard.press('Escape')
-        await page.waitForTimeout(2500)
-
-        await expect(page.getByText('What the sample DCE says, on each end')).toBeVisible({ timeout: 30000 })
-        // getDce() throws when the DCE is not there, and the stub paints the cause. Nothing here may.
-        await expect(page.locator('[aria-label="Back end error"]')).toHaveCount(0)
-        await expect(page.locator('[aria-label="Front end error"]')).toHaveCount(0)
+        const back = await readBack()
+        expect(back, 'the sample DCE is not installed').toBeTruthy()
+        expect(back?.back?.state, 'the back factory failed at load').toBe('loaded')
+        expect(back?.back?.instance?.id).toBe(DCE_ID)
     })
 
-    test('🔴 the counters GROW between readings: it is ONE instance, not a copy per reading', async () => {
-        const ticks = async (side: string): Promise<number[]> =>
-            (await page.locator(`[aria-label="${side} ticks"]`).innerText()).split('→').map(t => Number(t.trim()))
-
-        const backBefore = await ticks('Back end')
-        const frontBefore = await ticks('Front end')
+    test('🔴 the front counter GROWS between readings, and the instance is the same one: no copy per reading', async () => {
+        const first = await readFront()
         // Two consecutive calls to the shared counter: within one reading they already have to differ.
-        expect(backBefore[1], 'the back end counter does not move within a reading').toBe(backBefore[0] + 1)
-        expect(frontBefore[1], 'the front end counter does not move within a reading').toBe(frontBefore[0] + 1)
+        expect(first.ticks[1], 'the counter does not move within a reading').toBe(first.ticks[0] + 1)
 
-        await page.getByRole('button', { name: 'Read again' }).click()
-        await expect(async () => {
-            const backAfter = await ticks('Back end')
-            expect(backAfter[0], 'the back end built a NEW object instead of sharing one').toBeGreaterThan(backBefore[1])
-        }).toPass({ timeout: 15000 })
-
-        const frontAfter = await ticks('Front end')
-        expect(frontAfter[0], 'the front end built a NEW object instead of sharing one').toBeGreaterThan(frontBefore[1])
+        const second = await readFront()
+        expect(second.ticks[0], 'the front built a NEW object instead of sharing one').toBeGreaterThan(first.ticks[1])
+        expect(second.createdAt, 'a different createdAt means a different instance').toBe(first.createdAt)
     })
 
-    test('the back end says how many times its factory has run on this Kwirth', async () => {
-        // It is the host's configMaps at work: the count survives restarts, the counter does not.
-        await expect(page.getByText(/factory runs on this Kwirth: \d+/)).toBeVisible()
+    test('🔴 the back instance is the same one across requests, and says how many times its factory ran', async () => {
+        const first = await readBack()
+        await page.waitForTimeout(1100)
+        const second = await readBack()
+        // A copy per request would carry the time IT was made: the same createdAt is the same object.
+        expect(second?.back?.instance?.createdAt, 'the back built a NEW object instead of sharing one')
+            .toBe(first?.back?.instance?.createdAt)
+        // It is the host's configMaps at work: the count survives restarts, the instance does not.
+        expect(second?.back?.instance?.boots ?? 0, 'the factory runs are not persisted by the host').toBeGreaterThanOrEqual(1)
     })
 })
