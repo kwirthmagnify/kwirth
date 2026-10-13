@@ -1,4 +1,11 @@
-import { Box } from "@mui/material"
+import React from 'react'
+import { Box } from '@mui/material'
+
+/*
+    The icon of each Kubernetes kind (and of each cluster flavour: k3s, EKS, AKS…), drawn as inline SVG.
+    It lived in the core, used by the core's home and selectors and by Magnify; it is here so that Magnify,
+    as a plugin, gets the same icons from the core's copy at runtime instead of carrying 2000 lines of SVG.
+*/
 
 const IconAks = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"  width={'100%'}    height={'100%'}>

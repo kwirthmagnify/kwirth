@@ -7,10 +7,9 @@ import { MsgBoxOkError } from '../../tools/MsgBox'
 import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { BackChannelData, EChannelMode, EClusterType, EInstanceConfigView, EInstanceMessageChannel } from '@kwirthmagnify/kwirth-common'
 import { ITabObject } from '../../model/ITabObject'
-import { getIconFromKind } from '../../tools/Constants-React'
+import { getIconFromKind, getChannelIconSafe } from '@kwirthmagnify/kwirth-common-front'
 import { TChannelConstructor } from '../../channels/IChannel'
 import { resolveRemoteChannelHost } from '../../tools/ChannelResolution'
-import { getChannelIconSafe } from '../../tools/ChannelTools'
 
 // Remote channel indicator in the dropdown: an 'R' in a circle. Green = operational (its in-cluster
 // Kwirth is connected and can be delegated to); grey = not operational (no host connected, the ADD will

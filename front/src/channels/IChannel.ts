@@ -9,15 +9,12 @@ import {
 import { IResourceSelected } from '../components/home/ResourceSelector'
 import { IClusterInfo } from '../model/Cluster'
 import { INotification } from '@kwirthmagnify/kwirth-common-front'
-import { BackChannelData } from '@kwirthmagnify/kwirth-common'
 
 interface IChannelObject extends IChannelObjectBase {
     notifications?: INotification[]
     clusterInfo?: IClusterInfo
     createTab?: (resource: IResourceSelected, start: boolean, settings: any) => void
     frontChannels?: Map<string, TChannelConstructor>
-    backChannels?: BackChannelData[]
-    exitFullscreen?: () => void
     /** In-place cluster switch — set up by the framework for any channel with clusterManagement. */
     switchCluster?: (clusterName: string) => void
 }

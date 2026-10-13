@@ -1,6 +1,6 @@
 import React from 'react'
-import { HelpOutline } from '@kwirthmagnify/kwirth-common-front/icons'
-import { TChannelConstructor, IChannel } from '../channels/IChannel'
+import { HelpOutline } from './kwirthicons'
+import type { TChannelConstructor, IChannel } from './index'
 
 const createChannelInstance = (channelConstructor:TChannelConstructor): IChannel | null => {
     if (!channelConstructor) return null

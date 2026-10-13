@@ -1,5 +1,5 @@
 import { FC, ReactNode, useEffect } from 'react'
-import { EInstanceConfigView, EChannelRefreshAction, ENotifyLevel, IChannelMessageAction, IChannelSettings, IChannelRequirements, EExtensionType, IExtensionScope } from '@kwirthmagnify/kwirth-common'
+import { EInstanceConfigView, EChannelRefreshAction, ENotifyLevel, IChannelMessageAction, IChannelSettings, IChannelRequirements, EExtensionType, IExtensionScope, BackChannelData } from '@kwirthmagnify/kwirth-common'
 
 type CloseWithId = (id: string) => void
 type CloseNoId = () => void
@@ -97,6 +97,10 @@ export interface IChannelObject {
     // requirements.clusterManagement.
     openRemoteChannels?: (clusterNames: string[], instanceConfig: any, handlers: IRemoteChannelHandlers) => IRemoteChannelHandle
     frontChannels?: Map<string, TChannelConstructor>
+    /** The channels the back end offers on this cluster, with what each one supports (to embed another channel). */
+    backChannels?: BackChannelData[]
+    /** Leaves full-screen mode, for a channel that draws its own control for it. */
+    exitFullscreen?: () => void
     notifications?: any[]
     webSocket?: WebSocket
     clusterUrl?: string
@@ -157,9 +161,17 @@ export interface IChannel {
     prepareExternalChannel?: (view: EInstanceConfigView, selectedResources: any[], container: string) => { data: any; config: any; instanceConfig: any; formConfig: any }
     getExternalHelpContent?: () => ReactNode
     onExternalConfigApply?: (channelObject: IChannelObject, values: any) => boolean
+    /**
+        Called by the core when the tab switches cluster in place (switchCluster), after closing the old
+        WebSocket and before opening the new one: the channel clears whatever it holds about the old
+        cluster in channelObject.data. Optional — a channel with nothing cluster-bound to clear omits it.
+    */
+    onClusterSwitch?: (channelObject: IChannelObject) => void
 }
 
-export const cleanANSI = (text: string): string => text.replace(/\x1b\[[0-9;]*[mKHVfJrcegH]|\x1b\[\d*n/g, '')
+export { getIconFromKind } from './KindIcons'
+export { createChannelInstance, getChannelIconSafe, getChannelIconOf } from './ChannelTools'
+export const cleanANSI =(text: string): string => text.replace(/\x1b\[[0-9;]*[mKHVfJrcegH]|\x1b\[\d*n/g, '')
 export { MarkdownViewer } from './MarkdownViewer'
 export { MiniGauge } from './MiniGauge'
 export type { IMiniGaugeProps } from './MiniGauge'

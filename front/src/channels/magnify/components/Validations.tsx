@@ -2,7 +2,7 @@ import { Button, Stack, Typography } from "@mui/material"
 import { ENotifyLevel } from "../../../tools/Global"
 import { IFileObject } from "@jfvilas/react-file-manager"
 import { useMemo } from "react"
-import { getIconFromKind } from "../../../tools/Constants-React"
+import { getIconFromKind } from '@kwirthmagnify/kwirth-common-front'
 const _ = require('lodash')
 
 interface IIssue {

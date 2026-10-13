@@ -9,11 +9,10 @@ import { IHomepageProps } from '@kwirthmagnify/kwirth-common-front'
 import { EClusterType } from '@kwirthmagnify/kwirth-common'
 import { Cluster } from '../../model/Cluster'
 import { fetchProvider } from '../../tools/Global'
-import { getIconFromKind } from '../../tools/Constants-React'
+import { getIconFromKind, getChannelIconSafe } from '@kwirthmagnify/kwirth-common-front'
 import { clusterColor } from '../../tools/clusterColor'
 import { Area, AreaChart } from 'recharts'
 import { EClusterFlavour, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
-import { getChannelIconSafe } from '../../tools/ChannelTools'
 import { MiniGauge } from '@kwirthmagnify/kwirth-common-front'
 
 // svg optimizer: https://jakearchibald.github.io/svgomg/ (optmizes size and removes namespaces)

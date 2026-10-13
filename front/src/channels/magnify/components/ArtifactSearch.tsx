@@ -3,7 +3,7 @@ import { IFileObject } from '@jfvilas/react-file-manager'
 import { ChangeEvent, useRef, useState } from 'react'
 import { Search } from '@kwirthmagnify/kwirth-common-front/icons'
 import { objectClone, objectSearch } from '../Tools'
-import { getIconFromKind } from '../../../tools/Constants-React'
+import { getIconFromKind } from '@kwirthmagnify/kwirth-common-front'
 // @ts-ignore
 import './ResizableDialog.css'
 import { ResizableDialog, IResizableDialogHandle } from './ResizableDialog'

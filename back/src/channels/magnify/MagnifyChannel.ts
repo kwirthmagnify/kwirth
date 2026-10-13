@@ -5,7 +5,7 @@ import { IBackChannelObject } from '@kwirthmagnify/kwirth-common-back'
 import { IChannel } from '../IChannel'
 import { Request, Response } from 'express'
 import { V1APIResource, V1APIResourceList } from '@kubernetes/client-node'
-import { applyResource, cronJobStatus, cronJobTrigger, imageDelete, nodeCordon, nodeDrain, nodeShell, nodeUnCordon, podEvict, podWork, restartController, scaleController, setIngressClassAsDefault, throttleExcute } from '../../tools/KubernetesTools'
+import { applyResource, cronJobStatus, cronJobTrigger, imageDelete, nodeCordon, nodeDrain, nodeShell, nodeUnCordon, podEvict, podWork, restartController, scaleController, setIngressClassAsDefault, throttleExcute } from '@kwirthmagnify/kwirth-common-back'
 import { componentLogger, ELogComponent, IComponentLogger } from '../../tools/Logging'
 import { IMagnifyClusterUsage, IMetricsClusterUsage } from './MagnifyMetricsTypes'
 const yaml = require('js-yaml')

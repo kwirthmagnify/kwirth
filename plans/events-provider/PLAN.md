@@ -47,6 +47,7 @@ Nadie declara `events` como requisito: hoy lo da el core.
 | E1.5 | CL9: QA validado (7/7; el 6 tras rehacer el Escape); guía (página nueva del provider, índice de providers sin built-in en cluster, Magnify, referencia, changelog, sidebar, captura del gestor); `provider/events@0.1.0` publicado + manifest + bundles `-readonly`/`-full`/desktop; cascada pública: `topology@0.3.2`, `censor@0.2.55`, `pinocchio@0.2.42` (+ su guía `0.2.42`, lockstep), `pack/censor@0.1.4`, todos sobre common-back 0.6.3, con su `requires` en el manifest y el README corregido donde decía que el core da los eventos | ✅ |
 - **E2** (cuando vuelva el GitLab privado `repo.plexus.services`): cascada privada + montag (abajo). **Orden
   decidido por el usuario (2026-10-13): tras cerrar E1 va antes Magnify como plugin, y E2 después.**
+  ✅ **Desbloqueado** (2026-10-13, ~13:00): el GitLab privado vuelve a estar operativo. Sigue el orden: después de Magnify.
 
 ## Para revisar (encontrado en E1)
 

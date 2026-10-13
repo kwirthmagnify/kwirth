@@ -5,7 +5,7 @@ import { Info, Pause, PlayArrow, Settings, Stop } from '@kwirthmagnify/kwirth-co
 
 import { EInstanceConfigObject, EInstanceConfigScope, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, IInstanceConfig, IInstanceMessage, InstanceConfigScopeEnum } from '@kwirthmagnify/kwirth-common'
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelObject, IContentProps } from '../../IChannel'
-import { createChannelInstance, getChannelIconOf } from '../../../tools/ChannelTools'
+import { createChannelInstance, getChannelIconOf } from '@kwirthmagnify/kwirth-common-front'
 import { ENotifyLevel } from '../../../tools/Global'
 import { MagnifyUserPreferences } from './MagnifyUserPreferences'
 import { IContentWindow } from '../MagnifyTabContent'
