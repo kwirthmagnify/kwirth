@@ -48,6 +48,33 @@ try {
         description: 'User and administrator guide for the Kwirth Pinocchio plugin'
     }, null, 2))
 
+    // The package page on npm is this README: publishing without it left a page that said nothing.
+    writeFileSync(join(tmpDir, 'README.md'), [
+        '# Kwirth Pinocchio — Guide',
+        '',
+        `The user and administrator guide of **Pinocchio** (version ${pkg.version}), the AI channel plugin for`,
+        '**[Kwirth](https://kwirthmagnify.dev)** that analyses Kubernetes events with an LLM: triggers, findings,',
+        'the playground, and how to configure the AI provider and the tools it may use.',
+        '',
+        'It is a Kwirth **docs** extension: once installed, the help buttons of the Pinocchio channel open it inside',
+        'Kwirth, served by Kwirth itself (no internet access needed).',
+        '',
+        '> **Kwirth** is an open-source Kubernetes observability and operations tool: logs, metrics, events and more,',
+        '> in real time, extended with plugins like Pinocchio.',
+        '> Website: **https://kwirthmagnify.dev** · Source: **https://github.com/kwirthmagnify/kwirth**',
+        '',
+        '## Installing it',
+        '',
+        'From Kwirth: **☰ → Manage extensions → Docs**, find **Kwirth Pinocchio — Guide** in the marketplace and',
+        'install it. Install the version that matches your Pinocchio plugin: both are released together, with the',
+        'same version number.',
+        '',
+        '## License',
+        '',
+        'Same as Kwirth — see https://github.com/kwirthmagnify/kwirth.',
+        ''
+    ].join('\n'))
+
     // The 'package/' prefix is NOT decorative: npmjs rejects the tarball without it, with
     // "415 Unsupported Media Type - invalid path: ./". Kwirth accepts both shapes on install — it looks
     // for package.json at the root and under package/ — so this breaks nothing and makes the tgz publishable.

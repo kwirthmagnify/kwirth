@@ -3,7 +3,7 @@
   "name": "Alert",
   "displayName": "Alert",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.26",
+  "version": "0.2.27",
   "website": "https://kwirthmagnify.dev",
   "description": "Alert channel plugin for Kwirth — regex and metric-based alerting",
   "icon": "Warning",
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@kwirthmagnify/kwirth-common": "^0.5.62",
-    "@kwirthmagnify/kwirth-common-back": "^0.6.0",
+    "@kwirthmagnify/kwirth-common-back": "^0.6.1",
     "@kwirthmagnify/kwirth-common-front": "^0.5.65"
   },
   "devDependencies": {
@@ -29,5 +29,7 @@
     "typescript": "^5.4.0"
   },
   "requiresRestart": false,
-  "requiresExtension": []
+  "requiresExtension": [
+    { "extensionType": "provider", "id": "metrics", "minVersion": "0.1.0" }
+  ]
 }
