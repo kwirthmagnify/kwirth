@@ -417,12 +417,19 @@
   {
     "extensionType": "plugin",
     "id": "fileman",
-    "version": "0.2.25",
+    "version": "0.2.26",
     "name": "Fileman",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.25.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.26.tgz",
     "description": "File Manager channel plugin for Kwirth",
     "icon": "FolderCopy",
-    "website": "https://kwirthmagnify.dev"
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "dce",
+        "id": "file-manager",
+        "minVersion": "0.1.0"
+      }
+    ]
   },
   {
     "extensionType": "plugin",

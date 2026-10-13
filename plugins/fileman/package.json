@@ -3,7 +3,7 @@
   "name": "Fileman",
   "displayName": "Fileman",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.25",
+  "version": "0.2.26",
   "website": "https://kwirthmagnify.dev",
   "description": "File Manager channel plugin for Kwirth",
   "icon": "FolderCopy",
@@ -19,14 +19,14 @@
     "@codemirror/theme-one-dark": "^6.0.0",
     "@codemirror/view": "^6.0.0",
     "@jfvilas/parse-listing": "^1.0.1",
-    "@jfvilas/react-file-manager": "*",
     "@kwirthmagnify/kwirth-common": "^0.5.62",
-    "@kwirthmagnify/kwirth-common-back": "^0.6.0",
+    "@kwirthmagnify/kwirth-common-back": "^0.6.1",
     "@kwirthmagnify/kwirth-common-front": "^0.5.65",
     "@uiw/react-codemirror": "^4.0.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@jfvilas/react-file-manager": "^1.5.6",
     "@mui/icons-material": "7.1.2",
     "@mui/material": "7.1.2",
     "@types/express": "^5.0.6",
@@ -39,5 +39,5 @@
     "typescript": "^5.4.0"
   },
   "requiresRestart": false,
-  "requiresExtension": []
+  "requiresExtension": ["dce:file-manager:0.1.0"]
 }

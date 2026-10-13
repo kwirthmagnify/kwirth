@@ -19,7 +19,8 @@ const kwirthGlobalsPlugin = {
             '@codemirror/lang-yaml': 'window.__kwirth__.codeMirrorLangYaml',
             '@codemirror/theme-one-dark': 'window.__kwirth__.codeMirrorThemeOneDark',
             '@uiw/react-codemirror': 'window.__kwirth__.uiwReactCodeMirror',
-            '@jfvilas/react-file-manager': 'window.__kwirth__.jfvilasReactFileManager',
+            // The file manager comes from DCE `file-manager`, which also puts its CSS on the page.
+            '@jfvilas/react-file-manager': "window.__kwirth_dce__['file-manager'].instance.fileManager",
 
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
             '@codemirror/view': 'window.__kwirth__.codeMirrorView',
@@ -30,7 +31,7 @@ const kwirthGlobalsPlugin = {
             '@codemirror/lang-yaml': 'window.__kwirth__.codeMirrorLangYaml',
             '@codemirror/theme-one-dark': 'window.__kwirth__.codeMirrorThemeOneDark',
             '@uiw/react-codemirror': 'window.__kwirth__.uiwReactCodeMirror',
-            '@jfvilas/react-file-manager': 'window.__kwirth__.jfvilasReactFileManager',
+            '@jfvilas/react-file-manager': "window.__kwirth_dce__['file-manager'].instance.fileManager",
 
         }
         for (const pkg of Object.keys(globals)) {

@@ -101,6 +101,8 @@ And `packs/create-pack.mjs` takes `--include dce:my-icons`, reading from `dces/m
 |---|---|
 | [Sample](sample) | a shared counter, to see with your own eyes that two consumers hold the same instance |
 | [Net Tools](nettools) | DNS resolution and TCP reachability, from where kwirth runs. Spawns no processes |
+| [XYFlow](xyflow) | React Flow and elk, for the extensions that draw graphs |
+| [File Manager](file-manager) | the file browser's library, for the extensions that draw a file tree |
 
 ## Writing your own
 

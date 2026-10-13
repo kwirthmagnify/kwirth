@@ -22,7 +22,9 @@ const kwirthGlobalsPlugin = {
             '@codemirror/lang-yaml': 'window.__kwirth__.codeMirrorLangYaml',
             '@codemirror/theme-one-dark': 'window.__kwirth__.codeMirrorThemeOneDark',
             '@uiw/react-codemirror': 'window.__kwirth__.uiwReactCodeMirror',
-            '@jfvilas/react-file-manager': 'window.__kwirth__.jfvilasReactFileManager',
+            // The file manager comes from DCE `file-manager` (requiresExtension), which also puts its
+            // CSS on the page, so no stylesheet of the library needs importing here.
+            '@jfvilas/react-file-manager': "window.__kwirth_dce__['file-manager'].instance.fileManager",
             'recharts': 'window.__kwirth__.recharts',
 
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
@@ -35,7 +37,7 @@ const kwirthGlobalsPlugin = {
             '@codemirror/lang-yaml': 'window.__kwirth__.codeMirrorLangYaml',
             '@codemirror/theme-one-dark': 'window.__kwirth__.codeMirrorThemeOneDark',
             '@uiw/react-codemirror': 'window.__kwirth__.uiwReactCodeMirror',
-            '@jfvilas/react-file-manager': 'window.__kwirth__.jfvilasReactFileManager',
+            '@jfvilas/react-file-manager': "window.__kwirth_dce__['file-manager'].instance.fileManager",
             'recharts': 'window.__kwirth__.recharts',
 
         }
