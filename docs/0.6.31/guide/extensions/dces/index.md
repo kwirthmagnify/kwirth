@@ -139,7 +139,7 @@ import { getDce } from '@kwirthmagnify/kwirth-common-back'   // or /kwirth-commo
 const icons = getDce<IMyIcons>('my-icons')   // throws if it is not loaded, and says why
 ```
 
-⚠️ **Do not bundle the DCE's package into the consumer.** Install it for its **types** and let the build resolve it against the registry, the same way the common packages are resolved. A bundled DCE is a second copy of the code that builds its own object, and the one instance the type guarantees quietly becomes two. `dces/sample/consumer/build.mjs` in the kwirth repo carries the mapping, ready to copy.
+⚠️ **Do not bundle the DCE's package into the consumer.** Install it for its **types** and let the build resolve it against the registry, the same way the common packages are resolved. A bundled DCE is a second copy of the code that builds its own object, and the one instance the type guarantees quietly becomes two. `plugins/nettools/build.mjs` in the kwirth repo carries the mapping, ready to copy.
 
 ⚠️ **The mapping hands back the instance, not the module.** Whatever your contract exports that is not part of that object — an **enum**, a constant, a helper function — is not there after the mapping, and a consumer that imports one gets `undefined` at runtime with nothing failing at build time. Declare those locally in the consumer and ask the registry only for the object. `plugins/nettools` does exactly that, and is the worked example of a real consumer.
 

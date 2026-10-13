@@ -19,11 +19,7 @@ Why the indirection?
 
 ## Built-in providers
 
-This one ships with the kwirth core — nothing to install:
-
-| Provider | What it streams | Consumed by |
-|---|---|---|
-| **Events** | A kwirth event whenever a **Kubernetes cluster event** occurs (Pod created, Deployment scaled, node pressure…). | Alert, Censor, Pinocchio, Topology… |
+**None in a cluster.** The core no longer carries any provider of its own: the two it used to carry, **Events** and **Metrics**, are installable extensions now (below), and come already installed in the images that carry channels. The only one left inside the core is the in-memory log buffer it keeps **outside Kubernetes** (ECS, ACI, a bare host), where there is no container log to read — the [Status](/0.6.31/channels/status) channel shows it in its Log tab.
 
 ## Installable provider plugins
 
@@ -31,6 +27,7 @@ Add these from **☰ → Manage extensions → Providers**:
 
 | Provider | What it does | Notes / key config |
 |---|---|---|
+| **[Events](events)** | Every **change in the Kubernetes API** (an object added, modified or deleted) and the cluster's own **event log**, to the channels subscribed to it. | Feeds Magnify, Topology, Censor, Pinocchio… Comes installed in the `-readonly` / `-full` images and the desktop. |
 | **[Metrics](metrics)** | Cluster-wide **resource metrics** read from every node's kubelet/cAdvisor on a configurable interval — no Prometheus. | Feeds Metrics, Magnify, Alert… Comes installed in the `-readonly` / `-full` images and the desktop. |
 | **Business** | External **business data** ingested via HTTP `POST`, routed to channels by **space / type**. | Consumed by Alert, Censor, Pinocchio. |
 | **[Tick](tick)** | Fires a **heartbeat** every few seconds. | Great for testing channel subscriptions; no real config. |
@@ -66,7 +63,7 @@ Install a new provider from the **Install provider** field at the bottom (paste 
 ## Admin guide
 
 - **Install / enable / remove:** all providers are managed from **☰ → Manage extensions → Providers**, using the common flow described in [Extending kwirth](../../admin/08-extending-kwirth).
-- **Configuration:** providers that talk to external systems (**Syslog**, **Kafka**, **OpenTelemetry**, **Business**) expose their connection settings behind the card's **gear**; built-in providers (Events, Metrics) are always available.
+- **Configuration:** providers that talk to external systems (**Syslog**, **Kafka**, **OpenTelemetry**, **Business**) expose their connection settings behind the card's **gear**; **Events** and **Metrics** need no configuration at all.
 - **Security:** a provider can bring **external, untrusted data** into kwirth — treat provider endpoints (Business `POST`, OTLP, Syslog) like any ingress and protect them accordingly.
 
 ## Notes

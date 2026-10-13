@@ -52,6 +52,7 @@
       * [Net Tools](/0.6.31/guide/extensions/plugins/nettools)
     * [Providers](/0.6.31/guide/extensions/providers/index)
       * [Metrics](/0.6.31/guide/extensions/providers/metrics)
+      * [Events](/0.6.31/guide/extensions/providers/events)
       * [Tick](/0.6.31/guide/extensions/providers/tick)
       * [Validating](/0.6.31/guide/extensions/providers/validating)
       * [Kafka](/0.6.31/guide/extensions/providers/kafka)

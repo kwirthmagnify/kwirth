@@ -58,8 +58,9 @@ Consumidores: el canal **Magnify** (core) y los plugins **metrics**, **alert**, 
 | tema | qué falta |
 |---|---|
 | desktop | si el kubeconfig autentica con **certificado de cliente**, las opciones de `applyToFetchOptions` llevan un `agent` que el `fetch` nativo de Node ignora; con token funciona |
-| pinocchio-help (e2e del core) | falla porque la guía de Pinocchio instalada en el dev no tiene `user/02-ui-tour.md`; la `0.2.41` sí la trae — instalarla en el dev y relanzar |
-| core mínimo | siguientes: `events` como provider y Magnify como plugin (pedido del usuario, 2026-10-13) |
+| pinocchio-help (e2e del core) | ✅ 2026-10-13: en verde con la guía 0.2.41 instalada |
+| core mínimo | siguientes: `events` como provider (✅ E1, [events-provider](../events-provider/PLAN.md)) y Magnify como plugin (pedido del usuario, 2026-10-13) |
+| lecturas que se encadenan (visto 2026-10-13) | con el API server colgado (`UND_ERR_CONNECT_TIMEOUT` hacia el reenvío de puertos de Docker Desktop), cada `fetch` espera 10 s de conexión: 2 llamadas × N nodos superan el intervalo y sale *"Still loading cluster metrics"*. Dar a cada `fetch` un timeout menor que el intervalo (`AbortSignal.timeout`) y leer los nodos en paralelo, para que un corte cueste un intervalo y no se encadene. El canal escribe además un `No node … asset skipped` **por pod** en ese intervalo: uno por intervalo bastaría. La lógica es la del core original, no la introdujo P1 |
 
 ### Dónde se quedó (2026-10-12, parado por el usuario) — superado, se cerró el 2026-10-13
 
