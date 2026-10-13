@@ -83,6 +83,8 @@ export class MetricsProvider implements IProvider {
     private metricsList: Map<string, IMetricDefinition> = new Map()
     public metricsInterval: number = DEFAULT_INTERVAL
     public metricsIntervalRef: NodeJS.Timeout | undefined = undefined
+    // ticks skipped because the previous read was still running, reported once when that read ends
+    private skippedTicks = 0
     private loadingClusterMetrics: boolean = false
     private lastRead: IMetricsCluster | undefined
     private prevRead: IMetricsCluster | undefined
@@ -129,6 +131,8 @@ export class MetricsProvider implements IProvider {
     }
 
     startMetricsInterval = (seconds: number): void => {
+        // never two clocks: a second start would make every read overlap with the other clock's
+        this.stopMetricsInterval()
         this.metricsInterval = seconds
         this.metricsIntervalRef = setInterval(() => { void this.tick() }, this.metricsInterval * 1000)
     }
@@ -277,15 +281,45 @@ export class MetricsProvider implements IProvider {
         return { url, options: { headers: { Authorization: 'Bearer ' + this.clusterInfo.token } } }
     }
 
+    /*
+        How long one kubelet call may take: 40% of the interval, so the two calls a node needs (cAdvisor and
+        the summary) fit in it — but never less than minKubeletTimeoutMs.
+
+        Without a limit of its own a call waits as long as undici lets it — five minutes — and while it
+        waits 'loadingClusterMetrics' stays set, so every tick in between is skipped and nobody learns which
+        node or which endpoint is stuck. Now a hung call costs at most this, and the error says where.
+
+        The floor is what keeps a SHORT interval from leaving the cluster with no metrics at all: with 3 s a
+        cAdvisor scrape (some 300 KB per node) does not fit in 1.2 s, and every read failed. A read that does
+        not fit in the interval skips ticks instead, and says so (see readClusterMetrics).
+    */
+    public minKubeletTimeoutMs = 10000
+    private kubeletTimeoutMs = (): number => Math.max(this.minKubeletTimeoutMs, Math.floor(this.metricsInterval * 1000 * 0.4))
+
+    /** GET against a node's kubelet, body included, within kubeletTimeoutMs(). */
+    private kubeletGet = async (node: INodeInfo, path: string): Promise<{ url: string, ok: boolean, status: number, statusText: string, body: string }> => {
+        const { url, options } = await this.configCall(node, path)
+        const timeoutMs = this.kubeletTimeoutMs()
+        try {
+            // the signal covers the body too: a response that starts and never ends is cut as well
+            const response = await fetch(url, { ...options, signal: AbortSignal.timeout(timeoutMs) })
+            const body = response.ok ? await response.text() : ''
+            return { url, ok: response.ok, status: response.status, statusText: response.statusText, body }
+        }
+        catch (err) {
+            if (err instanceof Error && err.name === 'TimeoutError') throw new Error(`'${path}' did not answer within ${timeoutMs / 1000}s`)
+            throw err
+        }
+    }
+
     public readCAdvisorMetrics = async (node: INodeInfo): Promise<string> => {
         let text = ''
 
-        let { url, options } = await this.configCall(node, '/metrics/cadvisor')
-        const response = await fetch(url, options)
+        const response = await this.kubeletGet(node, '/metrics/cadvisor')
         if (response.ok)
-            text = await response.text()
+            text = response.body
         else
-            this.log.error(`Error reading metrics from '${url}' ${response.status}: ${response.statusText}`)
+            this.log.error(`Error reading metrics from '${response.url}' ${response.status}: ${response.statusText}`)
 
         // add kwirth container metrics
         text += '# HELP kwirth_container_memory_percentage Percentage of memory used by object from the whole cluster\n'
@@ -490,21 +524,29 @@ export class MetricsProvider implements IProvider {
     }
 
     public readCAdvisorSummary = async (node: INodeInfo): Promise<{ node?: unknown, pods?: unknown }> => {
-        const { url, options } = await this.configCall(node, '/stats/summary')
-        const resp = await fetch(url, options)
+        const resp = await this.kubeletGet(node, '/stats/summary')
         // The status is checked before parsing: a 404 or a 500 from the kubelet would otherwise surface as an
         // opaque JSON parse error that names neither the status nor the url.
-        if (!resp.ok) throw new Error(`Error reading summary from '${url}' ${resp.status}: ${resp.statusText}`)
-        return await resp.json() as { node?: unknown, pods?: unknown }
+        if (!resp.ok) throw new Error(`Error reading summary from '${resp.url}' ${resp.status}: ${resp.statusText}`)
+        return JSON.parse(resp.body) as { node?: unknown, pods?: unknown }
     }
 
     readClusterMetrics = async (): Promise<IMetricsCluster | undefined> => {
+        /*
+            A tick that finds the previous read still running is skipped. It used to say 'Still loading
+            cluster metrics' on EVERY such tick, which with an interval shorter than a read meant one line
+            every few seconds for ever, and none of them saying why. Now it says it once when it starts
+            skipping, and once more when the read ends, with how long it took — which is the figure to set
+            the interval against.
+        */
         if (this.loadingClusterMetrics) {
-            this.log.warning(`Still loading cluster metrics ${new Date().toTimeString()}`)
+            this.skippedTicks++
+            if (this.skippedTicks === 1) this.log.warning(`Still loading cluster metrics after ${this.metricsInterval}s: ticks are skipped until the read ends`)
             return undefined
         }
 
         this.loadingClusterMetrics = true
+        const readStarted = Date.now()
         try {
             this.log.trace(`About to read cluster metrics ${new Date().toTimeString()}`)
 
@@ -518,35 +560,39 @@ export class MetricsProvider implements IProvider {
             }
 
             /*
-                One node at a time, and a failing node only costs ITS OWN metrics. Without this guard the
-                first unreachable kubelet threw, broke the loop, and the whole cluster got no metrics even
-                though every other node was answering perfectly.
+                Every node at once, and a failing node only costs ITS OWN metrics. Without the guard the
+                first unreachable kubelet threw and the whole cluster got no metrics even though every other
+                node was answering perfectly. In parallel, because one after another a read lasted the sum
+                of every node's: a slow node pushed the read past the interval for all of them.
             */
+            const nodeInfos = Array.from(this.clusterInfo.nodes.values())
+            const results = await Promise.allSettled(nodeInfos.map(node => this.readNodeMetrics(node)))
             const nodeDataList: Array<{ node: IMetricsNode, prevNode: IMetricsNode | undefined }> = []
-            for (const node of this.clusterInfo.nodes.values()) {
-                try {
-                    nodeDataList.push(await this.readNodeMetrics(node))
-                }
-                catch (err) {
-                    this.log.error(`Error reading metrics of node '${node.name}' (${node.ip}): ${describeFetchError(err)}`)
-                }
-            }
+            results.forEach((result, i) => {
+                if (result.status === 'fulfilled') nodeDataList.push(result.value)
+                else this.log.error(`Error reading metrics of node '${nodeInfos[i].name}' (${nodeInfos[i].ip}): ${describeFetchError(result.reason)}`)
+            })
             if (nodeDataList.length === 0) {
                 this.log.error('No node answered: there are no cluster metrics for this interval')
-                this.loadingClusterMetrics = false
                 return undefined
             }
             const nodes = nodeDataList.map(d => d.node)
             const clusterMetricValues = this.enrichWithSyntheticMetrics(nodeDataList)
             const usage = this.getClusterUsage()
-            this.loadingClusterMetrics = false
             return { metricsInterval: this.metricsInterval, cluster: usage, nodes, clusterMetricValues }
         }
         catch (err) {
             this.log.error(`Error reading cluster metrics: ${describeFetchError(err)}`)
+            return undefined
         }
-        this.loadingClusterMetrics = false
-        return undefined
+        finally {
+            this.loadingClusterMetrics = false
+            if (this.skippedTicks > 0) {
+                const seconds = Math.round((Date.now() - readStarted) / 100) / 10
+                this.log.warning(`That read of the cluster metrics took ${seconds}s and ${this.skippedTicks} tick(s) were skipped: the interval (${this.metricsInterval}s, in Kwirth settings) is shorter than a read of this cluster`)
+                this.skippedTicks = 0
+            }
+        }
     }
 
     tick = async (): Promise<void> => {

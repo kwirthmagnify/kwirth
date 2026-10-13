@@ -250,3 +250,100 @@ test('the configRouter serves the metric list and the cluster usage (the core mo
         server.close()
     }
 })
+
+// ── A kubelet that does not answer (2026-10-13) ─────────────────────────────────────────────────────
+//
+// A fetch with no limit of its own waits five minutes (undici's). Meanwhile 'loadingClusterMetrics' stays
+// set and every tick only says 'Still loading cluster metrics': twenty silent ticks, and no word of which
+// node or endpoint is stuck. It was seen for hours against a dev cluster whose port forwarding stalled.
+
+/** A kubelet: the IPs in 'hang' never answer (until the request is aborted), the rest answer after 'delayMs'. */
+const slowKubelet = (hang: string[], delayMs = 0): void => {
+    const k = newKubelet()
+    globalThis.fetch = (async (url: string, options?: RequestInit) => {
+        if (hang.some(ip => String(url).includes(`//${ip}:`))) {
+            return await new Promise<Response>((_resolve, reject) => {
+                options?.signal?.addEventListener('abort', () => reject(options.signal!.reason))
+            })
+        }
+        if (delayMs) await new Promise(r => setTimeout(r, delayMs))
+        if (String(url).endsWith('/metrics/cadvisor')) return new Response(cadvisor(k), { status: 200 })
+        if (String(url).endsWith('/stats/summary')) return new Response(JSON.stringify(summary(k)), { status: 200 })
+        return new Response('', { status: 404 })
+    }) as typeof fetch
+}
+
+test('🔴 a kubelet that never answers costs one read, not twenty, and the log says which node and endpoint', async () => {
+    const logs: ILogs = { warnings: [], errors: [] }
+    // n1 → 10.0.0.2 hangs; n333 → 10.0.0.4 answers
+    slowKubelet(['10.0.0.2'])
+    const provider = newProvider(clusterInfoWith(['n1', 'n333']), kwirthData(), logs)
+    provider.metricsInterval = 3   // 40 % of it: 1.2 s per call…
+    provider.minKubeletTimeoutMs = 1000   // …once the 10 s floor is lowered, so the test does not wait it
+
+    const started = Date.now()
+    const read = await provider.readClusterMetrics()
+    const took = Date.now() - started
+    assert.ok(took < 2500, `the read waited ${took} ms for a kubelet that does not answer`)
+    // the node that answers is there; the stuck one is reported, by name and endpoint
+    assert.deepEqual(read?.nodes.map(n => n.name), ['n333'])
+    assert.ok(logs.errors.some(e => e.includes("'n1'") && e.includes("'/metrics/cadvisor' did not answer within 1.2s")), logs.errors.join('\n'))
+
+    // and the next read is a read, not a 'Still loading'
+    await provider.readClusterMetrics()
+    assert.equal(logs.warnings.filter(w => w.includes('Still loading')).length, 0)
+})
+
+test('the nodes are read at the same time: a read lasts as long as the slowest node, not the sum', async () => {
+    slowKubelet([], 300)
+    const provider = newProvider(clusterInfoWith(['n1', 'n22', 'n333', 'n4444']))
+    const started = Date.now()
+    const read = await provider.readClusterMetrics()
+    const took = Date.now() - started
+    assert.equal(read?.nodes.length, 4)
+    // one node is two calls of 300 ms; four in a row would be 2.4 s
+    assert.ok(took < 1500, `four nodes took ${took} ms: they are read one after another`)
+})
+
+test('🔴 a short interval never starves the read: the kubelet gets at least the floor, not 40 % of 3 s', async () => {
+    // A cAdvisor scrape that takes 1.5 s: 40 % of a 3 s interval (1.2 s) would cut every read and leave the
+    // cluster with no metrics at all, which is what happened in the dev with the interval at 3 s.
+    slowKubelet([], 1500)
+    const logs: ILogs = { warnings: [], errors: [] }
+    const provider = newProvider(clusterInfoWith(['n1']), kwirthData(), logs)
+    provider.metricsInterval = 3
+    const read = await provider.readClusterMetrics()
+    assert.equal(read?.nodes.length, 1, logs.errors.join('\n'))
+    assert.equal(logs.errors.length, 0)
+})
+
+test('a read longer than the interval says so ONCE, and then how long it took and how many ticks it skipped', async () => {
+    slowKubelet([], 200)
+    const logs: ILogs = { warnings: [], errors: [] }
+    const provider = newProvider(clusterInfoWith(['n1']), kwirthData(), logs)
+    const reading = provider.readClusterMetrics()
+    // three ticks arrive while the read (two calls of 200 ms) is still running
+    for (let i = 0; i < 3; i++) assert.equal(await provider.readClusterMetrics(), undefined)
+    await reading
+    const still = logs.warnings.filter(w => w.startsWith('Still loading cluster metrics'))
+    assert.equal(still.length, 1, `it said it ${still.length} times: ${logs.warnings.join(' | ')}`)
+    assert.ok(logs.warnings.some(w => /took [\d.]+s and 3 tick\(s\) were skipped/.test(w)), logs.warnings.join(' | '))
+
+    // and a read that does not overlap says nothing at all
+    logs.warnings.length = 0
+    await provider.readClusterMetrics()
+    assert.deepEqual(logs.warnings, [])
+})
+
+test('starting the clock twice leaves ONE clock', async () => {
+    fakeKubelet(newKubelet())
+    const provider = newProvider()
+    let ticks = 0
+    provider.tick = async () => { ticks++ }
+    provider.startMetricsInterval(0.05)
+    provider.startMetricsInterval(0.05)
+    await new Promise(r => setTimeout(r, 230))
+    provider.stopMetricsInterval()
+    // one clock of 50 ms gives 4 ticks in 230 ms; two would give 8
+    assert.ok(ticks <= 5, `${ticks} ticks: two clocks are running`)
+})

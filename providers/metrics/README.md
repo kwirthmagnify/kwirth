@@ -30,6 +30,11 @@ the kubeconfig's credentials through the API server.
 Every **Cluster metrics interval** seconds (15 by default), set in Kwirth under **☰ → Kwirth settings**. A
 new value takes effect on the next read, without restarting anything.
 
+All nodes are read at once, and each call to a kubelet has a limit (40 % of the interval, at least 10 s), so
+a node that hangs is reported by name and endpoint instead of holding the next reads back. If the interval
+is shorter than a read of your cluster, the reads that would overlap are skipped and the log says so once,
+with how long the read took — the figure to set the interval against.
+
 ## What it delivers
 
 Every read, each subscriber gets the whole cluster:

@@ -53,6 +53,20 @@ Consumidores: el canal **Magnify** (core) y los plugins **metrics**, **alert**, 
 | P1.7 | D5, parte OSS: `metrics` 0.1.1, `alert` 0.2.27 y `pinocchio` 0.2.41 con `requires` hacia `provider:metrics:0.1.0` (y common-back 0.6.1). La guía de pinocchio sale en lockstep **con README por primera vez**: su generador no lo metía y la 0.2.40 se publicó sin él | ✅ |
 | P1.8 | D5, parte de pago: `spectrum` y `agora` (+ sus guías en lockstep) al Nexus y al manifest privado | ⏳ bloqueado: GitLab privado caído |
 
+## P2 — las lecturas ya no se cuelgan ni se encadenan (2026-10-13)
+
+Pedido por el usuario tras ver *"Still loading cluster metrics"* en cada tick durante toda la tarde. Causa
+principal: el intervalo del dev estaba guardado a **3 s** y una lectura de dos nodos no cabe; puesto a 15 a
+petición del usuario. Lo que cambia el provider:
+
+| # | tarea | estado |
+|---|---|---|
+| P2.1 | timeout por llamada al kubelet: 40 % del intervalo con **suelo de 10 s** (la primera versión, sin suelo, cortaba a 1,2 s con 3 s y dejaba sin métricas); corta también el cuerpo y el error nombra nodo y endpoint | ✅ |
+| P2.2 | nodos en paralelo (`allSettled`) | ✅ |
+| P2.3 | *Still loading* una vez por racha + aviso al acabar con lo que tardó y los ticks saltados | ✅ |
+| P2.4 | `startMetricsInterval` no deja dos relojes | ✅ |
+| P2.5 | CL9: harness 16/16, e2e 7 ✅ · 1 ⏭, QA validado por el usuario (4/4), guía y README, `provider/metrics@0.1.1` publicado + manifest + bundles | ✅ |
+
 ## Backlog (fuera de P1)
 
 | tema | qué falta |
@@ -60,6 +74,7 @@ Consumidores: el canal **Magnify** (core) y los plugins **metrics**, **alert**, 
 | desktop | si el kubeconfig autentica con **certificado de cliente**, las opciones de `applyToFetchOptions` llevan un `agent` que el `fetch` nativo de Node ignora; con token funciona |
 | pinocchio-help (e2e del core) | ✅ 2026-10-13: en verde con la guía 0.2.41 instalada |
 | core mínimo | siguientes: `events` como provider (✅ E1, [events-provider](../events-provider/PLAN.md)) y Magnify como plugin (pedido del usuario, 2026-10-13) |
+| lecturas que se encadenan (visto 2026-10-13) | ✅ **provider 0.1.1** (P2, publicado): timeout por llamada del 40 % del intervalo, que nombra nodo y endpoint; nodos en paralelo; un solo reloj. La causa real fue una lectura **colgada** (API y kubelets respondían en 68-100 ms), no la lentitud. Queda el ruido del **plugin** metrics: un `No node … asset skipped` por pod en el intervalo sin datos | *(entrada original, abajo)* |
 | lecturas que se encadenan (visto 2026-10-13) | con el API server colgado (`UND_ERR_CONNECT_TIMEOUT` hacia el reenvío de puertos de Docker Desktop), cada `fetch` espera 10 s de conexión: 2 llamadas × N nodos superan el intervalo y sale *"Still loading cluster metrics"*. Dar a cada `fetch` un timeout menor que el intervalo (`AbortSignal.timeout`) y leer los nodos en paralelo, para que un corte cueste un intervalo y no se encadene. El canal escribe además un `No node … asset skipped` **por pod** en ese intervalo: uno por intervalo bastaría. La lógica es la del core original, no la introdujo P1 |
 
 ### Dónde se quedó (2026-10-12, parado por el usuario) — superado, se cerró el 2026-10-13

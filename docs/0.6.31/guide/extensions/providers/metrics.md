@@ -47,7 +47,8 @@ The plugins that live on it (**Metrics**, **Alert**, **Pinocchio**, **Spectrum**
 
 - **No Kubernetes behind Kwirth** (ECS, ACI, a container without a kubeconfig, Helm mode `zero`): there are no kubelets to read. The provider says so **once** in the log and stays idle, so don't bother installing it there.
 - **No ServiceAccount token** inside a cluster: every read would be a 401, so it does not start its clock and warns once, instead of one error per node every interval.
-- **A node that does not answer** only loses its own metrics for that read; the rest of the cluster keeps coming.
+- **A node that does not answer** only loses its own metrics for that read; the rest of the cluster keeps coming. Every node is read at the same time, and each call to a kubelet is given a limit (40 % of the interval, never under 10 s): a node that hangs is reported in the log by name and endpoint (`'/metrics/cadvisor' did not answer within 10s`) instead of holding every later read back.
+- **An interval shorter than a read.** Reading the whole cluster takes a while — a few hundred KB per node. If the interval is shorter, the reads that would start while one is still running are skipped: the log says *Still loading cluster metrics* **once**, and when that read ends, how long it took and how many reads were skipped. That figure is what to set the interval against; 15 s suits most clusters, and very short values (a few seconds) rarely do.
 - It needs nothing from the cluster beyond what Kwirth already reads: no extra RBAC, no agents.
 
 ---
