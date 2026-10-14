@@ -1,4 +1,5 @@
 import { IInstanceMessage } from "./InstanceMessage"
+import { ESignalMessageReason } from "./SignalMessage"
 
 // transient
 export enum InstanceConfigObjectEnum {
@@ -100,4 +101,7 @@ export interface IInstanceConfig extends IInstanceMessage{
 export interface IInstanceConfigResponse extends IInstanceMessage {
     text?: string
     data?: any
+    /** Código de protocolo cuando esta respuesta es una NEGATIVA. Ver `ESignalMessageReason`: el texto es
+     *  para leerlo, esto es para decidir — y reescribir una frase no puede cambiar lo que hace un par. */
+    reason?: ESignalMessageReason
 }
