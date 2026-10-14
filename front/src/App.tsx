@@ -39,7 +39,6 @@ import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanc
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
-import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 import { getMetricsNames, ENotifyLevel, readClusterInfo, fetchProvider } from './tools/Global'
 import { Homepage } from './components/home/Homepage'
 import { DEFAULTLASTTABS, IColors, TABSELECTEDCOLORS, TABUNSELECTEDCOLORS } from './tools/Constants'
@@ -73,6 +72,8 @@ interface IAppProps {
     isDesktop: boolean
     auth: string
     authMethods: IAuthMethod[]
+    /** The channel to open right after a desktop login, named by whoever launched this Kwirth. */
+    startChannel?: string
 }
 
 // Minimal shape of a raw kube Event as returned by the 'events' provider (/core/providerconfig/events, or
@@ -639,10 +640,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         readClusterInfo(cluster, notify).then(() => setUsablechannels(cluster))
     }, [pluginVersion])
 
-    useEffect( () => {
-        // only first time
-        frontChannels.set('magnify', MagnifyChannel)
-    },[])
 
     useEffect(() => {
         const previousFocus = document.activeElement as HTMLElement
@@ -1510,20 +1507,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 newTab.channelObject.accessString = target.accessString
                 newTab.channelObject.clusterInfo = target.clusterInfo
                 newTab.channelObject.instanceId = ''
-                // 4. Reset cluster-specific data IN-PLACE (do NOT replace the object — React useEffect
-                //    closures captured the reference). Do NOT clear files: startChannel filters them to
-                //    keep the static top-level menu (Overview, Workloads, etc.) which was pushed once
-                //    on mount by useEffect([]) and is NOT re-pushed. LIST responses will repopulate
-                //    the cluster-specific items under those sections.
-                const magnifyData = newTab.channelObject.data as any
-                if (magnifyData) {
-                    magnifyData.clusterInfo = undefined
-                    magnifyData.clusterEvents = []
-                    magnifyData.metricsCluster = []
-                    magnifyData.started = false
-                    magnifyData.currentPath = '/overview'
-                    magnifyData.pendingWebSocketRequests = new Map()
-                }
+                // 4. The channel clears what it holds about the old cluster. What that is, only the
+                //    channel knows: the core used to reset Magnify's own fields here, by name, for any
+                //    channel that switched.
+                newTab.channel.onClusterSwitch?.(newTab.channelObject)
                 // 5. Open a fresh WS and start the channel on connect
                 newTab.channelStarted = false
                 startSocket(newTab, target, () => {
@@ -2792,11 +2779,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             return
         }
 
-        let magnifySettings = {
-            config: undefined,
-            instanceConfig: undefined
-        }
-        await populateTabObject(user, 'ELECTRON', 'magnify', srcCluster, EInstanceConfigView.CLUSTER, '', '', '', '', true, true, magnifySettings)
+        /*
+            The tab the desktop opens: the channel its launcher names (props.startChannel), as the user's
+            startup channel. The startup-channel effect opens it once its plugin's front has loaded, and
+            opens nothing if it is not installed. It used to open Magnify here, by name.
+        */
+        if (props.startChannel) setUser({ ...user, startChannel: props.startChannel, startView: EInstanceConfigView.CLUSTER })
         setFirstLogin(false)
         setLogged(true)
     }
@@ -2830,11 +2818,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             return
         }
 
-        let magnifySettings = {
-            config: undefined,
-            instanceConfig: undefined
-        }
-        await populateTabObject(user, 'ELECTRON', 'magnify', srcCluster, EInstanceConfigView.NAMESPACE  , 'default', '', '', '', true, true, magnifySettings)
+        // As in onContextSelectorLocal (the desktop's own choice, even against a remote Kwirth); there the
+        // tab starts on the 'default' namespace.
+        if (props.startChannel) setUser({ ...user, startChannel: props.startChannel, startView: EInstanceConfigView.NAMESPACE, startNamespace: 'default' })
         setFirstLogin(false)
         setLogged(true)
     }

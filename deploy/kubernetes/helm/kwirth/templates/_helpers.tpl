@@ -416,10 +416,3 @@ Usage: include "kwirth.ownedByRelease" (dict "obj" $existing "root" $)
 {{- end }}
 {{- end }}
 {{- end }}
-
-{{/*
-The core channel (metrics is a plugin since chart 0.3.1). Unset follows the mode; anything set wins.
-*/}}
-{{- define "kwirth.channelMagnify" -}}
-{{- if kindIs "invalid" .Values.kwirth.config.channelMagnify }}{{ include "kwirth.readsCluster" . | default "false" }}{{ else }}{{ .Values.kwirth.config.channelMagnify }}{{ end }}
-{{- end }}

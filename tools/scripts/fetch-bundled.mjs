@@ -26,7 +26,11 @@ const manifestPath = resolve(process.argv[2] ?? join(__dirname, '..', 'back', 'k
 const manifestDir = dirname(manifestPath)
 const outputDir = resolve(process.argv[3] ?? 'bundled')
 
-const EXTENSION_TYPES = ['plugins', 'providers', 'senders', 'homepages', 'logins', 'themes', 'idps', 'docs']
+/*
+    Every family the core installs from the bundled directory. 'dces' and 'aitoolsets' were missing: the
+    core knew how to install them and this never fetched them (Magnify needs the 'file-manager' DCE).
+*/
+const EXTENSION_TYPES = ['dces', 'providers', 'plugins', 'senders', 'homepages', 'logins', 'themes', 'idps', 'aitoolsets', 'docs']
 
 const downloadFile = (url, destPath) => new Promise((res, rej) => {
     const protocol = url.startsWith('https') ? https : http
@@ -66,7 +70,12 @@ if (total === 0) {
 for (const type of EXTENSION_TYPES) {
     const entries = manifest[type] ?? {}
     for (const [id, url] of Object.entries(entries)) {
-        const filename = `${id}.tgz`
+        /*
+            The TYPE goes into the name: two extensions of different families can share an id (the
+            'metrics' plugin and the 'metrics' provider), and '<id>.tgz' made the second one an "already
+            exists — skipping". The core reads the id and the type from each package, not from the name.
+        */
+        const filename = `${type}-${id}.tgz`
         const destPath = join(outputDir, filename)
         if (existsSync(destPath)) {
             console.log(`[bundled] ${type}/${id} already exists — skipping.`)

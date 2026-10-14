@@ -1,0 +1,6 @@
+# harness output (tests/run.mjs bundles here)
+tests/.out
+# e2e: the credentials of the dev Kwirth, and Playwright's leftovers
+e2e/.creds.json
+e2e/test-results
+e2e/playwright-report

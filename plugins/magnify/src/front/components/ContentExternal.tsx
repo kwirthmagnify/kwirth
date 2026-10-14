@@ -1,0 +1,777 @@
+import { useEffect, useRef, useState } from 'react'
+/*
+    The hook alone (the package's index drags in every hook react-use has), from its ESM build: the CJS one
+    ('react-use/lib/useAsync') sets exports.default, and this package being "type": "module" makes the
+    bundler hand over the whole exports object as the default — which is not a function, and broke every
+    channel embedded in Magnify (Log, Metrics, Fileman, Ops…).
+*/
+import useAsync from 'react-use/esm/useAsync'
+import { Box, DialogContent, DialogTitle, Divider, IconButton, Popover, Stack, Typography } from '@mui/material'
+import { Info, Pause, PlayArrow, Settings, Stop } from '@kwirthmagnify/kwirth-common-front/icons'
+
+import { EInstanceConfigObject, EInstanceConfigScope, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, IInstanceConfig, IInstanceMessage, InstanceConfigScopeEnum } from '@kwirthmagnify/kwirth-common'
+import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelObject, IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { createChannelInstance, getChannelIconOf } from '@kwirthmagnify/kwirth-common-front'
+import { ENotifyLevel } from '@kwirthmagnify/kwirth-common-front'
+import { MagnifyUserPreferences } from './MagnifyUserPreferences'
+import { IContentWindow } from '../MagnifyTabContent'
+import { ResizableDialog, IResizableDialogHandle } from './ResizableDialog'
+import { WindowTitleButtons } from './WindowTitleButtons'
+import { FormSimple } from './FormSimple'
+import { addGetAuthorization } from '../CoreHelpers'
+import { MsgBoxOk, MsgBoxWait } from '@kwirthmagnify/kwirth-common-front'
+
+import { IMetricsConfig, IMetricsInstanceConfig } from './MetricsExternalTypes'
+
+interface IFilemanData { paused: boolean; started: boolean; files: any[]; currentPath: string; ri: string | undefined; unlock?: () => void }
+interface IFilemanConfig { [key: string]: any }
+
+export interface IContentExternalOptions {
+    pauseable: boolean
+    stoppable: boolean
+    autostart: boolean
+    configurable: boolean
+    data: any
+}
+
+export interface IContentExternalData {
+    isInitialized: boolean
+    isDesktop: boolean
+    channelId: string
+    options: IContentExternalOptions
+    formConfig: any
+    contentView: EInstanceConfigView
+    settings: MagnifyUserPreferences
+    frontChannels: Map<string, TChannelConstructor>
+    onNotify: (channel:string|undefined, level: ENotifyLevel, msg: string) => void
+    onRefresh: () => void
+    onOpenExternal?: (channelId: string, files: any[], view: EInstanceConfigView, data: any, container: string | undefined) => void
+    content?: IContentExternalObject
+    channelObject: IChannelObject
+}
+
+export interface IContentExternalProps extends IContentWindow {
+    data: IContentExternalData
+}
+
+export interface IContentExternalObject {
+    ws: WebSocket | undefined
+    settings: MagnifyUserPreferences
+    externalChannel?: IChannel
+    externalChannelObject?: IChannelObject
+    externalChannelStarted: boolean
+    externalChannelPaused: boolean
+    externalChannelPending: boolean
+    termId: string|undefined
+}
+
+const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternalProps) => {
+    let contentExternalData:IContentExternalData = props.data
+    const dialogRef = useRef<IResizableDialogHandle>(null)
+const containerRef = useRef<HTMLDivElement>(null)
+    const [ msgBox, setMsgBox ] = useState(<></>)
+    const [ anchorHelp, setAnchorHelp ] = useState<undefined | HTMLElement>(undefined)
+    const [ anchorConfig, setAnchorConfig ] = useState<undefined | HTMLElement>(undefined)
+    const [ isMaximized, setIsMaximized ] = useState(props.isMaximized)
+    const [ , setRefreshTick] = useState(0)
+    const forceUpdate = () => setRefreshTick(tick => tick + 1)
+
+    useEffect( () => {
+        if (!contentExternalData.isInitialized) {
+            contentExternalData.isInitialized = true
+
+            contentExternalData.content = createContent(contentExternalData.channelId)
+            if (!contentExternalData.content) return
+
+            switch(contentExternalData.channelId) {
+                case 'log': {
+                    const chLog = contentExternalData.content?.externalChannel
+                    if (chLog?.prepareExternalChannel) {
+                        const setup = chLog.prepareExternalChannel(contentExternalData.contentView, props.selectedFiles, props.container ?? '')
+                        contentExternalData.content!.externalChannelObject!.data = setup.data
+                        contentExternalData.content!.externalChannelObject!.config = setup.config
+                        contentExternalData.content!.externalChannelObject!.instanceConfig = setup.instanceConfig
+                        contentExternalData.content!.externalChannelObject!.config.maxMessages = contentExternalData.settings?.logLines ?? 5000
+                    }
+                    contentExternalData.formConfig = {
+                        lines: contentExternalData.settings?.logLines ?? 5000,
+                        showNames: false,
+                        timestamp: false,
+                        startDiagnostics: false
+                    }
+                    break
+                }
+                case 'metrics': {
+                    // the metrics plugin builds its own initial state; Magnify only adds its form on top
+                    const chMetrics = contentExternalData.content?.externalChannel
+                    if (chMetrics?.prepareExternalChannel) {
+                        const setup = chMetrics.prepareExternalChannel(contentExternalData.contentView, props.selectedFiles, props.container ?? '')
+                        contentExternalData.content!.externalChannelObject!.data = setup.data
+                        contentExternalData.content!.externalChannelObject!.config = setup.config
+                        contentExternalData.content!.externalChannelObject!.instanceConfig = setup.instanceConfig
+                    }
+                    const allMetrics = Array.from(contentExternalData.channelObject?.metricsList?.keys() || []).filter((k:string) => k.startsWith('container_') || k.startsWith('kwirth_'))
+                    const defaultMetrics = ['kwirth_container_cpu_percentage','kwirth_container_memory_percentage', 'kwirth_container_transmit_mbps', 'kwirth_container_receive_mbps', 'kwirth_container_write_mbps', 'kwirth_container_read_mbps']
+                    const currentMetrics = (contentExternalData.content?.externalChannelObject?.instanceConfig as IMetricsInstanceConfig)?.metrics
+                    contentExternalData.formConfig = { aggregate: true, merge: false, type: {value:'line', options:['line','bar','area']}, width:3, depth:50, legend:true, metrics: { available: allMetrics, value: currentMetrics?.length ? currentMetrics : defaultMetrics } }
+                    break
+                }
+                case 'fileman':
+                    contentExternalData.formConfig = {}
+                    setFilemanConfig(contentExternalData.content)
+                    break
+                case 'trivy': {
+                    const ch = contentExternalData.content?.externalChannel
+                    if (ch?.prepareExternalChannel) {
+                        const setup = ch.prepareExternalChannel(contentExternalData.contentView, props.selectedFiles, props.container ?? '')
+                        contentExternalData.content!.externalChannelObject!.data = setup.data
+                        contentExternalData.content!.externalChannelObject!.config = setup.config
+                        contentExternalData.content!.externalChannelObject!.instanceConfig = setup.instanceConfig
+                    }
+                    const trivyIc = contentExternalData.content!.externalChannelObject!.instanceConfig
+                    contentExternalData.formConfig = {
+                        ignoreCritical: trivyIc?.ignoreCritical ?? false,
+                        ignoreHigh:     trivyIc?.ignoreHigh     ?? false,
+                        ignoreMedium:   trivyIc?.ignoreMedium   ?? false,
+                        ignoreLow:      trivyIc?.ignoreLow      ?? true,
+                        'Status': {
+                            text: 'Status',
+                            asyncAction: async () => {
+                                try  {
+                                    if (contentExternalData.content?.externalChannelObject?.data.ri)
+                                        return await (await fetch (`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=status`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))).text()
+                                    else
+                                        return 'No RI. Wait a few seconds.'
+                                }
+                                catch {
+                                    return 'N/A'
+                                }
+                            }
+                        },
+                        'Install Trivy operator': {
+                            button:'Install',
+                            action: async () => {
+                                if (contentExternalData.content?.externalChannelObject?.data.ri) {
+                                    setMsgBox(MsgBoxWait('Trivy install', 'Wait for Trivy to start installation', setMsgBox, ))
+                                    await fetch (`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=install`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))
+                                    setMsgBox(MsgBoxOk('Install', 'Installation started, close this dialog and wait for Trivy to finish startup', setMsgBox))
+                                }
+                                else {
+                                    setMsgBox(MsgBoxOk('Trivy install', 'Running instance is not yet available, please try again in a few seconds', setMsgBox))
+                                }
+                            }
+                        },
+                        'Remove Trivy operator': {
+                            button:'Remove',
+                            action: async () => {
+                                if (contentExternalData.content?.externalChannelObject?.data.ri) {
+                                    setMsgBox(MsgBoxWait('Trivy remove', 'Wait for Trivy to start removing', setMsgBox, ))
+                                    await fetch (`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=remove`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))
+                                    setMsgBox(MsgBoxOk('Remove', 'Removing started, close this dialog and wait for Trivy to completely disappear from your cluster', setMsgBox))
+                                }
+                                else {
+                                    setMsgBox(MsgBoxOk('Trivy install', 'Running instance is not yet available, please try again in a few seconds', setMsgBox))
+                                }
+                            }
+                        }
+                    }
+                    break
+                }
+                case 'news':
+                    contentExternalData.formConfig = {
+                        maxItems: 50,
+                        feeds: { available: ['kubernetes', 'ai'], value: ['kubernetes', 'ai'] }
+                    }
+                    break
+                default: {
+                    const ch = contentExternalData.content?.externalChannel
+                    if (ch?.prepareExternalChannel) {
+                        const setup = ch.prepareExternalChannel(contentExternalData.contentView, props.selectedFiles, props.container ?? '')
+                        contentExternalData.content!.externalChannelObject!.data = setup.data
+                        contentExternalData.content!.externalChannelObject!.config = setup.config
+                        contentExternalData.content!.externalChannelObject!.instanceConfig = setup.instanceConfig
+                        contentExternalData.formConfig = setup.formConfig
+                    } else {
+                        contentExternalData.formConfig = {}
+                    }
+                    break
+                }
+            }
+        }
+    },[])
+
+    useEffect(() => {
+        if (contentExternalData.channelId==='ops') {
+            const handleNativeKey = async (e: KeyboardEvent) => {
+                if (!containerRef.current?.contains(document.activeElement)) {
+                    return;
+                }
+
+                if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) return
+
+                // we handle first start and restore (the id comes from a different source). This is needed because the id is included in the colusure of the keyboard handle)
+                let id = contentExternalData.content!.termId ||
+                    props.selectedFiles[0]?.data?.origin?.metadata?.namespace + '/' + 
+                    props.selectedFiles[0]?.data?.origin?.metadata?.name + '/' + 
+                    props.container
+
+                const terminalEntry = contentExternalData.content?.externalChannelObject?.data?.terminalManager?.terminals.get(id)
+                const socket = terminalEntry?.socket
+                if (!socket || socket.readyState !== WebSocket.OPEN) return
+
+                const key = e.key.toLowerCase();
+                let toSend: string | null = null;
+
+                if (e.ctrlKey && key === 'w') {
+                    // +++ close tab, we should capture???
+                }
+
+                // Ctrl + Shift + C = copy
+                if (e.ctrlKey && e.shiftKey && key === 'c') {
+                    e.preventDefault()
+                    const selectedText = terminalEntry.term ? terminalEntry.term.getSelection() : window.getSelection()?.toString()
+                    if (selectedText) await navigator.clipboard.writeText(selectedText)
+                    return
+                }
+
+                // Ctrl + Shift + V = paste
+                if (e.ctrlKey && e.shiftKey && key === 'v') {
+                    e.preventDefault()
+                    try {
+                        const text = await navigator.clipboard.readText()
+                        if (text) socket.send(text)
+                    }
+                    catch (err) {
+                        console.error('Clipboard could not be accessed', err)
+                    }
+                    return
+                }
+
+                toSend = getComplexCode(e)
+                if (!toSend && e.ctrlKey) toSend = getControlChar(e.key)
+                if (!toSend && e.altKey && e.key.length === 1) toSend = '\x1b' + e.key;
+                if (!toSend) toSend = ANSI_MAP[e.key] || (e.key.length === 1 ? e.key : null);
+
+                if (toSend) {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    socket.send(toSend)
+                }
+            }
+
+            window.addEventListener('keydown', handleNativeKey, true)
+            
+            return () => {
+                window.removeEventListener('keydown', handleNativeKey, true)
+            }
+        }
+    }, [props.container, props.selectedFiles, contentExternalData.content?.externalChannelObject])
+
+    useAsync (async () => {
+        // useAsync must be executed after useEffect, because it uses content.current
+        if (contentExternalData.content && !contentExternalData.content.externalChannelObject!.data) {
+            await contentExternalData.content.externalChannel!.initChannel(contentExternalData.content.externalChannelObject!)
+        }
+        if (contentExternalData.options.autostart) {
+            if (contentExternalData.content && !contentExternalData.content.externalChannelStarted) {
+                while (contentExternalData.content?.ws?.readyState !== WebSocket.OPEN) {
+                    await new Promise((resolve) => setTimeout(resolve, 10))
+                }
+                if (contentExternalData.content?.ws?.readyState === WebSocket.OPEN) play()
+            }
+        }
+    }, [])
+
+    const createContent = (channelId:string) : IContentExternalObject|undefined => {
+        let newChannel = createChannelInstance(contentExternalData.frontChannels.get(channelId))
+        if (!newChannel) {
+            console.log('Invaid channel instance created')
+            return undefined
+        }
+        let newContent:IContentExternalObject = {
+            ws: undefined,
+            externalChannel: newChannel,
+            externalChannelObject: {
+                isDesktop: contentExternalData.isDesktop,
+                clusterName: contentExternalData.channelObject?.clusterName!,
+                instanceId: '',
+                view: contentExternalData.contentView,
+                // for namespaces, we can create a list of selected namespaces or just a list of namespaced referenced boy objects (in another view)
+                namespace: contentExternalData.contentView === EInstanceConfigView.NAMESPACE ? props.selectedFiles.map(f=> f.data.origin.metadata.name).join(',') : [...new Set(props.selectedFiles.map(n => n.data.origin.metadata.namespace))].join(','),
+                group: contentExternalData.contentView === EInstanceConfigView.GROUP ? props.selectedFiles.map(g => g.data.origin.kind + '+' + g.data.origin.metadata.name).join(',') : '',
+                pod: contentExternalData.contentView === EInstanceConfigView.POD ? props.selectedFiles.map(p => p.data.origin.metadata.name).join(',') : '',
+                container: contentExternalData.contentView === EInstanceConfigView.CONTAINER ? props.selectedFiles[0].data.origin.metadata.name + '+' + props.container : '',
+                config: undefined,
+                data: undefined,
+                instanceConfig: undefined,
+                channelId: newChannel.channelId
+            } satisfies IChannelObject,
+            externalChannelStarted: false,
+            externalChannelPaused: false,
+            externalChannelPending: false,
+            settings: contentExternalData.settings,
+            termId: props.selectedFiles[0]?.data?.origin?.metadata?.namespace + '/' + 
+                    props.selectedFiles[0]?.data?.origin?.metadata?.name.split('+')[0] + '/' + 
+                    props.container
+        }
+
+        if (newChannel.requirements.notifier) newContent.externalChannelObject!.notify = contentExternalData.channelObject?.notify
+        if (newChannel.requirements.metrics) newContent.externalChannelObject!.metricsList = contentExternalData.channelObject?.metricsList
+        if (newChannel.requirements.clusterUrl) newContent.externalChannelObject!.clusterUrl = contentExternalData.channelObject?.clusterUrl
+        if (newChannel.requirements.accessString) newContent.externalChannelObject!.accessString = contentExternalData.channelObject?.accessString
+
+        newContent.ws = new WebSocket(contentExternalData.channelObject?.clusterUrl!)
+        newContent.ws.onmessage = (event:MessageEvent) => wsOnMessage(event)
+        newContent.ws.onerror = (event) => () => { console.log('WebSocket error:'+event, new Date().toISOString()) }
+        newContent.ws.onclose = (event:CloseEvent) => { console.log('WebSocket disconnect:'+event.reason, new Date().toISOString()) }
+        if (newChannel.requirements.webSocket) newContent.externalChannelObject!.webSocket = newContent.ws
+        if (contentExternalData.onOpenExternal) (newContent.externalChannelObject as any).openExternal = contentExternalData.onOpenExternal
+        return newContent
+    }
+
+    const wsOnMessage = (wsEvent:MessageEvent) => {
+        let instanceMessage:IInstanceMessage
+        try {
+            instanceMessage = JSON.parse(wsEvent.data)
+        }
+        catch (err:any) {
+            console.log(err.stack)
+            console.log(wsEvent.data)
+            return
+        }
+
+        if (instanceMessage.action === EInstanceMessageAction.PING || instanceMessage.channel === '') return
+
+        if (contentExternalData.frontChannels.has(instanceMessage.channel)) {
+            let refreshAction = contentExternalData.content!.externalChannel?.processChannelMessage(contentExternalData.content!.externalChannelObject!, wsEvent)
+            if (refreshAction) {
+                if (refreshAction.action === EChannelRefreshAction.REFRESH) {
+                    contentExternalData.onRefresh()
+                }
+                else if (refreshAction.action === EChannelRefreshAction.STOP) {
+                    stop()
+                }
+            }
+        }
+        else {
+            console.log('Received invalid channel in message: ', instanceMessage)
+            contentExternalData.onNotify(undefined, ENotifyLevel.ERROR, `'Received invalid channel in message: ${instanceMessage.channel}`)
+        }
+    }
+
+
+    const setFilemanConfig = (c:IContentExternalObject) => {
+        let filemanData:IFilemanData = {
+            paused: false,
+            started: false,
+            files: [],
+            currentPath: '',
+            ri: undefined
+        }
+        let filemanConfig:IFilemanConfig = {
+            notify: contentExternalData.onNotify
+        }
+
+        c.externalChannelObject!.webSocket = contentExternalData.content!.ws
+        c.externalChannelObject!.data = filemanData
+        c.externalChannelObject!.config = filemanConfig
+    }
+
+    const play = () => {
+        if (!contentExternalData.content || !contentExternalData.content.ws || !contentExternalData.content.externalChannel || !contentExternalData.content.externalChannelObject) return
+
+        if (contentExternalData.content.externalChannelPaused) {
+            contentExternalData.content.externalChannel.continueChannel(contentExternalData.content.externalChannelObject)
+            let instanceConfig:IInstanceConfig = {
+                channel: contentExternalData.content.externalChannel.channelId,
+                objects: EInstanceConfigObject.PODS,
+                action: EInstanceMessageAction.CONTINUE,
+                flow: EInstanceMessageFlow.REQUEST,
+                instance: contentExternalData.content.externalChannelObject.instanceId,
+                accessKey: contentExternalData.channelObject?.accessString!,
+                view: contentExternalData.contentView,
+                scope: InstanceConfigScopeEnum.NONE,
+                namespace: '',
+                group: '',
+                pod: '',
+                container: '',
+                type: EInstanceMessageType.SIGNAL
+            }
+            contentExternalData.content.externalChannelPaused = false
+            contentExternalData.content.ws.send(JSON.stringify(instanceConfig))
+        }
+        else {
+            contentExternalData.content.externalChannel.startChannel(contentExternalData.content.externalChannelObject)
+
+            let instanceConfig:IInstanceConfig = {
+                channel: contentExternalData.content.externalChannel.channelId,
+                objects: EInstanceConfigObject.PODS,
+                action: EInstanceMessageAction.START,
+                flow: EInstanceMessageFlow.REQUEST,
+                instance: '',
+                accessKey: contentExternalData.channelObject?.accessString!,
+                scope: EInstanceConfigScope.NONE,
+                view: contentExternalData.contentView,
+                namespace: contentExternalData.contentView === EInstanceConfigView.NAMESPACE ? props.selectedFiles.map(n => n.data.origin.metadata.name).join(',') : [...new Set(props.selectedFiles.map(n => n.data.origin.metadata.namespace))].join(','),
+                group: contentExternalData.contentView === EInstanceConfigView.GROUP? props.selectedFiles.map(g => g.data.origin.kind+'+'+g.data.origin.metadata.name).join(',') : '',
+                pod: contentExternalData.contentView === EInstanceConfigView.POD? props.selectedFiles.map(p => p.data.origin.metadata.name).join(',') : '',
+                container: contentExternalData.contentView === EInstanceConfigView.CONTAINER? props.selectedFiles[0].data.origin.metadata.name + '+' + props.container : '',
+                type: EInstanceMessageType.SIGNAL
+            }
+            instanceConfig.scope = contentExternalData.content.externalChannel.getScope() || ''
+            instanceConfig.data = contentExternalData.content.externalChannelObject.instanceConfig
+            contentExternalData.content.ws.send(JSON.stringify(instanceConfig))
+            contentExternalData.content.externalChannelStarted = true
+            contentExternalData.content.externalChannelPaused = false
+        }
+        forceUpdate()
+    }
+
+    const pause = () => {
+        if (!contentExternalData.content || !contentExternalData.content.ws || !contentExternalData.content.externalChannel || !contentExternalData.content.externalChannelObject) return
+
+        contentExternalData.content.externalChannel.pauseChannel(contentExternalData.content.externalChannelObject!)
+
+        let instanceConfig:IInstanceConfig = {
+            channel: contentExternalData.content.externalChannel.channelId,
+            objects: EInstanceConfigObject.PODS,
+            action: EInstanceMessageAction.PAUSE,
+            flow: EInstanceMessageFlow.REQUEST,
+            instance: contentExternalData.content.externalChannelObject.instanceId,
+            accessKey: contentExternalData.channelObject?.accessString!,
+            view: contentExternalData.content.externalChannelObject.view,
+            scope: InstanceConfigScopeEnum.NONE,
+            namespace: '',
+            group: '',
+            pod: '',
+            container: '',
+            type: EInstanceMessageType.SIGNAL
+        }
+
+        contentExternalData.content.externalChannelPaused = true
+        instanceConfig.action = EInstanceMessageAction.PAUSE
+        contentExternalData.content.ws.send(JSON.stringify(instanceConfig))
+        forceUpdate()
+    }
+
+    const stop = () => {
+        if (!contentExternalData.content || !contentExternalData.content.ws || !contentExternalData.content.externalChannel || !contentExternalData.content.externalChannelObject) return
+
+        let instanceConfig: IInstanceConfig = {
+            channel: contentExternalData.content.externalChannel.channelId,
+            objects: EInstanceConfigObject.PODS,
+            action: EInstanceMessageAction.STOP,
+            flow: EInstanceMessageFlow.REQUEST,
+            instance: contentExternalData.content.externalChannelObject.instanceId,
+            accessKey: contentExternalData.channelObject?.accessString!,
+            view: contentExternalData.content.externalChannelObject.view,
+            scope: InstanceConfigScopeEnum.NONE,
+            namespace: '',
+            group: '',
+            pod: '',
+            container: '',
+            type: EInstanceMessageType.SIGNAL
+        }
+        contentExternalData.content.externalChannel.stopChannel(contentExternalData.content.externalChannelObject)
+        contentExternalData.content.ws.send(JSON.stringify(instanceConfig))
+        contentExternalData.content.externalChannelStarted = false
+        contentExternalData.content.externalChannelPaused = false
+        forceUpdate()
+    }
+
+    const showHelp = () => {
+        let content = <></>
+        switch(contentExternalData.channelId) {
+            case 'log':
+                content = <>
+                    <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Log</Typography>
+                    <Divider/>
+                    <Typography fontSize={12}>You can configure log depth (number of lines) on the configuration menu.</Typography>
+                    <Typography fontSize={12}>Other configuration options, like Start Diagnostics, are not available to Magnify, but you can use them in log channel.</Typography>
+                </>
+                break
+            case 'metrics':
+                content = <>
+                    <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Metrics</Typography>
+                    <Divider/>
+                    <Typography fontSize={12}>You can change every individual chart type, but it won't be saved. Next time you'll need to reconfigure it again.</Typography>
+                    <Typography fontSize={12}>Data visualization refreshment depends on your Kwirth front configuration, your Magnify configuration.</Typography>
+                    <Typography fontSize={12}>On the other side, data freshness depends on Kwirth backend configuration. If you ser a visualization refresh lower than your data freshness, you'll get repeated values on different intervals.</Typography>
+                </>
+                break
+            case 'ops':
+                content = <>
+                    <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Ops</Typography>
+                    <Divider/>
+                    <Typography fontSize={12}>You can use clipboard functions by pressing <b>Ctrl+Shift+C</b> for copying and <b>Ctrl+Shift+V</b> for pasting</Typography>
+                    <Typography fontSize={12}>You can minimize this window and the connection will keep open, or you can close this window and the connection to the container will be closed.</Typography>
+                </>
+                break
+            case 'fileman':
+                content = <>
+                    <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Fileman</Typography>
+                    <Divider/>
+                    <Typography fontSize={12}>You can refresh filesystem data everytime you suspect what you are viewing is not acccurate. Just click on top-righ icon to refresh content.</Typography>
+                    <Typography fontSize={12}>Upload and Download capabilities depend on your kind of Kwirth deployment. These actions are not available for all architectures. They should be available, at least, on Kubernetes Deployment. Accessing them via Electron may not be working.</Typography>
+                </>
+                break
+            case 'trivy':
+                content = <>
+                    <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Trivy</Typography>
+                    <Divider/>
+                    <Typography variant='body2'>Kwirth Trivy channel is a powerful tool for managing your workload security. It is based on Trivy Operator, which you can install by your own or use Kwirth for deploying Trivy without any effort (perform installation from a Trivy channel or from 'Settings' on this window).</Typography>
+                    <Typography variant='body2'>Once Trivy Operator is installed, you will see here Trivy information related to artifacts you've selected in Magnify. You can select, for instance, several pods and access this Trivy channel for viewing Trivy information about those set of pods.</Typography>
+                    <Typography variant='body2'>From the asset list you will be able to see: Vulnerabilities report, Config Audit report, Exposed secrets report and also a SBOM (Software Bill of Materials, where you can analyze pacakges and its dependencies).</Typography>
+                </>
+                break
+            case 'pinocchio':
+                content = <>
+                    <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Pinocchio</Typography>
+                    <Divider/>
+                    <Typography variant='body2'>This is real WIP.</Typography>
+                </>
+                break
+            default: {
+                const helpContent = contentExternalData.content?.externalChannel?.getExternalHelpContent?.()
+                if (helpContent) content = <>{helpContent}</>
+                break
+            }
+        }
+        return <Popover
+                anchorEl={anchorHelp}
+                open={true}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                slotProps={{paper: { sx: { width: 400, maxHeight: 500 } }}}
+                onClose={() => setAnchorHelp(undefined)}
+            >
+            <Box sx={{ p: 2, display: 'flex', alignItems: 'left', gap: 1, flexDirection:'column' }}>
+                {content}
+            </Box>
+        </Popover>
+    }
+
+    const showContent = () => {
+        if (!contentExternalData.content || !contentExternalData.content.ws || !contentExternalData.content.externalChannel || !contentExternalData.content.externalChannelObject) return
+
+        let ChannelTabContent = contentExternalData.content.externalChannel.TabContent
+        let channelProps:IContentProps = {
+            channelObject: contentExternalData.content.externalChannelObject!,
+            onEnd: () => props.onClose(props.id)
+        }
+        // we need this ref for getting focus status with terms. We need this for capturing keys ONLY for the terminal in focus (due to global keyboard listeners)
+        return channelProps.channelObject.channelId==='ops'?
+            <div ref={containerRef}>
+                <ChannelTabContent {...channelProps}/>
+            </div>
+            :
+            <ChannelTabContent {...channelProps}/>
+    }
+
+	const onFocus = () => {
+		if (props.onFocus) props.onFocus()
+	}
+
+	const handleIsMaximized = () => {
+		props.onWindowChange(props.id, !isMaximized, props.x, props.y, props.width, props.height)
+		setIsMaximized(!isMaximized)
+	}
+
+	const handleSnap = (position: 'left' | 'right') => {
+		setIsMaximized(false)
+		dialogRef.current?.snapTo(position)
+	}
+
+    const onConfigApply = (values:any) => {
+        setAnchorConfig(undefined)
+        //setChannelFormConfig(values)
+        contentExternalData.formConfig = values
+        switch(contentExternalData.channelId) {
+            case 'log': {
+                const logConfig = contentExternalData.content!.externalChannelObject!.config as any
+                logConfig.maxMessages = values.lines
+                logConfig.showNames = values.showNames
+                logConfig.startDiagnostics = values.startDiagnostics
+                const logInstanceConfig = contentExternalData.content!.externalChannelObject!.instanceConfig as any
+                logInstanceConfig.timestamp = values.timestamp
+                stop()
+                play()
+                break
+            }
+            case 'metrics':
+                let metricsConfig = contentExternalData.content!.externalChannelObject!.config as IMetricsConfig
+                let metricsInstanceConfig = contentExternalData.content!.externalChannelObject!.instanceConfig as IMetricsInstanceConfig
+                metricsConfig.width = values.width
+                metricsConfig.merge = values.merge
+                metricsConfig.depth = values.depth
+                metricsConfig.legend = values.legend
+                metricsConfig.chart = values.type?.value ?? metricsConfig.chart
+                metricsInstanceConfig.aggregate = values.aggregate
+                metricsInstanceConfig.metrics = values.metrics?.value ?? metricsInstanceConfig.metrics
+                stop()
+                play()
+                break
+            case 'shell':
+                break
+            case 'fileman':
+                break
+            case 'trivy': {
+                const ic = contentExternalData.content!.externalChannelObject!.instanceConfig
+                ic.ignoreCritical = values.ignoreCritical ?? false
+                ic.ignoreHigh     = values.ignoreHigh     ?? false
+                ic.ignoreMedium   = values.ignoreMedium   ?? false
+                ic.ignoreLow      = values.ignoreLow      ?? true
+                // Restore action functions lost during FormSimple objectClone
+                contentExternalData.formConfig['Status'].asyncAction = async () => {
+                    try {
+                        if (contentExternalData.content?.externalChannelObject?.data.ri)
+                            return await (await fetch(`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=status`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))).text()
+                        return 'No RI. Wait a few seconds.'
+                    } catch { return 'N/A' }
+                }
+                contentExternalData.formConfig['Install Trivy operator'].action = async () => {
+                    if (contentExternalData.content?.externalChannelObject?.data.ri) {
+                        setMsgBox(MsgBoxWait('Trivy install', 'Wait for Trivy to start installation', setMsgBox))
+                        await fetch(`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=install`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))
+                        setMsgBox(MsgBoxOk('Install', 'Installation started, close this dialog and wait for Trivy to finish startup', setMsgBox))
+                    } else { setMsgBox(MsgBoxOk('Trivy install', 'Running instance is not yet available, please try again in a few seconds', setMsgBox)) }
+                }
+                contentExternalData.formConfig['Remove Trivy operator'].action = async () => {
+                    if (contentExternalData.content?.externalChannelObject?.data.ri) {
+                        setMsgBox(MsgBoxWait('Trivy remove', 'Wait for Trivy to start removing', setMsgBox))
+                        await fetch(`${contentExternalData.content?.externalChannelObject?.clusterUrl}/${contentExternalData.content?.externalChannelObject?.data.ri}/channel/trivy/operator?action=remove`, addGetAuthorization(contentExternalData.content?.externalChannelObject?.accessString!))
+                        setMsgBox(MsgBoxOk('Remove', 'Removing started, close this dialog and wait for Trivy to completely disappear from your cluster', setMsgBox))
+                    } else { setMsgBox(MsgBoxOk('Trivy remove', 'Running instance is not yet available, please try again in a few seconds', setMsgBox)) }
+                }
+                break
+            }
+            case 'news': {
+                const ch = contentExternalData.content?.externalChannel
+                ch?.onExternalConfigApply?.(contentExternalData.content!.externalChannelObject!, values)
+                stop()
+                play()
+                break
+            }
+            case 'pinocchio':
+                break
+            default: {
+                const ch = contentExternalData.content?.externalChannel
+                if (ch?.onExternalConfigApply?.(contentExternalData.content!.externalChannelObject!, values)) forceUpdate()
+                break
+            }
+        }
+    }
+
+    return (<>
+        <ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
+            <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
+                <Stack direction={'row'} alignItems={'center'}>
+                    <IconButton size="small" onClick={play} disabled={!contentExternalData.options.autostart || (contentExternalData.content?.externalChannelStarted && !contentExternalData.content?.externalChannelPaused)}>
+                        <PlayArrow fontSize="small"/>
+                    </IconButton>
+                    <IconButton size="small" onClick={pause} disabled={!contentExternalData.options.pauseable || !contentExternalData.content?.externalChannelStarted || contentExternalData.content?.externalChannelPaused}>
+                        <Pause fontSize="small"/>
+                    </IconButton>
+                    <IconButton size="small" onClick={stop} disabled={!contentExternalData.options.stoppable || !contentExternalData.content?.externalChannelStarted}>
+                        <Stop fontSize="small"/>
+                    </IconButton>
+                    <IconButton size="small" disabled={!contentExternalData.options.configurable} onClick={(event) => setAnchorConfig(event.target as HTMLElement)}>
+                        <Settings fontSize="small"/>
+                    </IconButton>
+                    <IconButton size="small" onClick={(event) => setAnchorHelp(event.currentTarget)}>
+                        <Info fontSize="small"/>
+                    </IconButton>
+                    
+                    <Typography sx={{flexGrow:1}}></Typography>
+                    <Typography>{getChannelIconOf(contentExternalData.content?.externalChannel)}&nbsp;{props.title}</Typography>
+                    <Typography sx={{flexGrow:1}}></Typography>
+
+                    <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={() => props.onClose(props.id)} onSnap={handleSnap} />
+                </Stack>
+            </DialogTitle>
+
+
+            <DialogContent sx={{ display: 'flex', flexDirection: 'column', p: 0, overflow: 'hidden', height: '100%', minHeight: 0, paddingBottom: 1}}>
+                {showContent()}
+            </DialogContent>
+        </ResizableDialog>        
+        { anchorHelp && showHelp() }
+        {/* { anchorConfig && <FormSimple anchorParent={anchorConfig} model={channelFormConfig} onApply={onConfigApply} onClose={() => setAnchorConfig(undefined)}/> } */}
+        { anchorConfig && <FormSimple anchorParent={anchorConfig} model={contentExternalData.formConfig} onApply={onConfigApply} onClose={() => setAnchorConfig(undefined)}/> }
+        { msgBox }
+    </>)
+}
+
+export const ANSI_MAP: Record<string, string> = {
+    'ArrowUp':    '\x1b[A',
+    'ArrowDown':  '\x1b[B',
+    'ArrowRight': '\x1b[C',
+    'ArrowLeft':  '\x1b[D',
+    'Home':       '\x1b[H',
+    'End':        '\x1b[F',
+    'PageUp':     '\x1b[5~',
+    'PageDown':   '\x1b[6~',
+    'Insert':     '\x1b[2~',
+    'Delete':     '\x1b[3~',
+
+    // Teclas de control básicas
+    'Backspace':  '\x7f',    // A veces \x08 según el sistema
+    'Tab':        '\t',
+    'Enter':      '\r',
+    'Escape':     '\x1b',
+
+    // F1 - F12 (they vary by terminal; these are xterm's common ones)
+    'F1':  '\x1bOP',
+    'F2':  '\x1bOQ',
+    'F3':  '\x1bOR',
+    'F4':  '\x1bOS',
+    'F5':  '\x1b[15~',
+    'F6':  '\x1b[17~',
+    'F7':  '\x1b[18~',
+    'F8':  '\x1b[19~',
+    'F9':  '\x1b[20~',
+    'F10': '\x1b[21~',
+    'F11': '\x1b[23~',
+    'F12': '\x1b[24~',
+}
+
+export const getComplexCode = (e: KeyboardEvent): string | null => {
+    const { key, ctrlKey, altKey, shiftKey } = e
+
+    let modifier = 1
+    if (shiftKey) modifier += 1
+    if (altKey)   modifier += 2
+    if (ctrlKey)  modifier += 4
+
+    if (modifier === 1) return null
+
+    const F1_F4: Record<string, string> = { 'F1': 'P', 'F2': 'Q', 'F3': 'R', 'F4': 'S' }
+    if (F1_F4[key]) return `\x1b[1;${modifier}${F1_F4[key]}`
+
+    const F5_F12: Record<string, number> = {
+        'F5': 15, 'F6': 17, 'F7': 18, 'F8': 19, 'F9': 20, 'F10': 21, 'F11': 23, 'F12': 24
+    }
+    if (F5_F12[key]) return `\x1b[${F5_F12[key]};${modifier}~`
+
+    // 5. Mapping for arrows and navigation
+    const Nav: Record<string, string> = {
+        'ArrowUp': 'A', 'ArrowDown': 'B', 'ArrowRight': 'C', 'ArrowLeft': 'D',
+        'Home': 'H', 'End': 'F'
+    };
+    if (Nav[key]) return `\x1b[1;${modifier}${Nav[key]}`
+
+    // 6. Mapping for editing (Insert, Delete, and so on)
+    const Edit: Record<string, number> = { 'Insert': 2, 'Delete': 3, 'PageUp': 5, 'PageDown': 6 }
+    if (Edit[key]) return `\x1b[${Edit[key]};${modifier}~`
+
+    return null
+}
+
+export function getControlChar(key: string): string | null {
+    const charCode = key.toLowerCase().charCodeAt(0)
+    if (charCode >= 97 && charCode <= 122) return String.fromCharCode(charCode - 96)
+    
+    return null
+}
+
+export { ContentExternal }

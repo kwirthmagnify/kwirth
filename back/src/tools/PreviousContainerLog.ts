@@ -115,7 +115,7 @@ export const readPreviousContainerLog = async (coreApi: CoreV1Api, namespace: st
 
         const tailLines = lines && lines > 0 ? Math.floor(lines) : resolvePreviousLogLines()
         try {
-            // The same route MagnifyChannel uses in order to read a pod's log, plus 'previous'
+            // The same route the Magnify plugin uses in order to read a pod's log, plus 'previous'
             const log = await coreApi.readNamespacedPodLog({ name: podName, namespace, container: status.name, previous: true, tailLines })
             result.lines = String(log ?? '').split('\n')
             // a log ending in \n leaves a last empty line that adds nothing

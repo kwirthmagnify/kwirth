@@ -51,7 +51,6 @@ Options:
   -ce, --channelecho              Channel ECHO (default: true)
   -co, --channelops               Channel OPS (default: true)
   -ct, --channeltrivy             Channel TRIVY (default: true)
-  -cy, --channelmagnify           Channel MAGNIFY (default: true)
   -cp, --channelpinocchio         Channel PINOCCHIO (default: true)
   -v, --version                   Display version number
   -h, --help                      Display this message
@@ -106,9 +105,6 @@ Enable/Disable the Ops channel.
 
 ### Channel Trivy ( -ct, --channeltrivy)
 Enable/Disable the Trivy channel.
-
-### Channel Magnify (-cy, --channelmagnify)
-Enable/Disable the Magnify channel.
 
 ### Channel Pinocchio (-cp, --channelpinocchio)
 Enable/Disable the Pinocchio channel.

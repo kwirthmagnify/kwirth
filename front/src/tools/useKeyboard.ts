@@ -1,8 +1,5 @@
 import { MutableRefObject, RefObject, useEffect, useRef } from 'react'
 
-type CloseWithId = (id: string) => void
-type CloseNoId = () => void
-
 /*
     Escape closes a core dialog: `const escapeRef = useEscapeToClose(cancel)` and `<Dialog ref={escapeRef}>`.
 
@@ -58,25 +55,4 @@ export const useEscapeToClose = (close: () => void): RefObject<HTMLDivElement> =
     }, [])
 
     return root
-}
-
-/*
-    ⚠️ Only for Magnify's floating windows (ResizableDialog), pending their move into the Magnify plugin.
-    It listens on window in the CAPTURE phase and stops every keydown, so Escape on an open select closes
-    the whole window and no key reaches the window's components. Core dialogs use useEscapeToClose.
-*/
-export const useKeyboard = (onEscape?: CloseWithId | CloseNoId, id?: string) => {
-    useEffect(() => {
-        const handleKeyDown = (event: KeyboardEvent) => {
-            event.stopPropagation()
-            if (event.key === 'Escape' && onEscape) {
-                if (id)
-                    (onEscape as CloseWithId)(id)
-                else
-                    (onEscape as CloseNoId)()
-            }
-        }
-        window.addEventListener('keydown', handleKeyDown, true)
-        return () => window.removeEventListener('keydown', handleKeyDown, true)
-    }, [onEscape, id])
 }

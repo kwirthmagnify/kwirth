@@ -20,7 +20,8 @@ import { IComponentLogger, providerLogger } from "../tools/Logging"
     itself manages and that a provider's author does not implement.
 */
 
-export { IProviderSubscriptionField, IProviderSubscriptionHelp, IProviderFieldDef }
+// 'export type': they are types only, and as plain exports an ESM loader (the harness) looked for them at runtime
+export type { IProviderSubscriptionField, IProviderSubscriptionHelp, IProviderFieldDef }
 
 /*
     The persistence the core injects into the provider. It is the same contract the channels receive
@@ -47,6 +48,9 @@ export type TProviderConstructor = (new (clusterInfo:ClusterInfo, kwirthData:Kwi
 export const createProviderInstance = (providerConstructor:TProviderConstructor, clusterInfo: ClusterInfo, kwirthData:KwirthData, storage?:IProviderStorage): IProvider | null => {
     if (!providerConstructor) throw  new Error('Error: providerConstructor is empty')
     const instance = new providerConstructor(clusterInfo, kwirthData, storage)
+    // false until the core sees startProvider() return: a provider that fails to start stays false, and an
+    // observer can tell "not running" from "a core too old to say" (undefined)
+    instance.providerStarted = false
     const log = providerLogger(instance.id)
     instance.setLogger?.(log)
     /*
@@ -84,7 +88,14 @@ export interface IProvider extends Omit<IPublicProvider, 'addSubscriber'|'remove
         'router', which is public and can receive external traffic (OTLP, third-party POSTs).
     */
     configRouter?: Router
+    /*
+        ⚠️ 'started' means "its PUBLIC router is mounted" (and guards against mounting it twice), not that
+        the provider runs: one with no public router never gets it. 'providerStarted' is the other fact —
+        set by the core once startProvider() has returned without throwing — and it is what to read to know
+        whether a provider is running (the Status channel does).
+    */
     started?: boolean
+    providerStarted?: boolean
     configRouterStarted?: boolean
     apiKeyApi: ApiKeyApi|undefined
     /*

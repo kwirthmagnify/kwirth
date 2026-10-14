@@ -10,6 +10,8 @@ import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
+import { listBundledOfType, peekBundledMeta } from './BundledExtensions'
+import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 
 /**
  * @deprecated use IProviderFieldDef from kwirth-common-back, which is the contract common to every
@@ -414,5 +416,37 @@ export class ProviderManager {
 
     async saveConfig(id: string, cfg: Record<string, unknown>): Promise<void> {
         await this.configMaps.write(`kwirth-provider-${id}-config`, cfg)
+    }
+
+    /*
+        The providers an image or the desktop brings (BUNDLED_EXTENSIONS_PATH, filled by fetch-bundled from
+        the kwirth-bundled*.json). Every other family had this and providers did not, so the providers a
+        bundle declared were downloaded and never installed.
+
+        The directory is shared by every type: only the tgz files declaring themselves 'provider' are taken.
+        The same version already installed is left alone; another one is installed over it (upgrade), so a
+        new image brings its providers up to date.
+    */
+    async installBundled(dir: string, registeredProviders: Map<string, TProviderConstructor>): Promise<void> {
+        const index = (await this.configMaps.read('kwirth-providers-index', []) as IProviderMeta[]) || []
+        for (const filePath of await listBundledOfType(dir, EExtensionType.PROVIDER)) {
+            const file = path.basename(filePath)
+            const bundled = await peekBundledMeta(filePath)
+            const existing = bundled.id ? index.find(p => p.id === bundled.id) : undefined
+            if (existing && bundled.version && existing.version === bundled.version) {
+                logInfo(ELogComponent.CORE, `Bundled provider '${bundled.id}' v${bundled.version} up to date — skipping`)
+                continue
+            }
+            try {
+                const meta = await this.install(filePath, registeredProviders, 'bundled', undefined, undefined, existing !== undefined)
+                logInfo(ELogComponent.CORE, `Bundled provider '${meta.id}' v${meta.version} ${existing ? `updated from v${existing.version}` : 'installed'}`)
+            }
+            catch (err: unknown) {
+                if (err instanceof Error && err.message.includes('already installed'))
+                    logInfo(ELogComponent.CORE, `Bundled provider '${file}' already installed — skipping`)
+                else
+                    logError(ELogComponent.CORE, `Failed to install bundled provider '${file}': ${err}`)
+            }
+        }
     }
 }

@@ -64,9 +64,32 @@ Y Magnify usa del core:
 
 | # | tarea | estado |
 |---|---|---|
-| G2.1 | scaffold; port del back (log por `backChannelObject`, `ClusterInfo` estructural, common-back 0.6.4) | ⏳ |
-| G2.2 | port del front: librerías (G-D5), DCE `file-manager`, CSS y PNG, helpers copiados | ⏳ |
-| G2.3 | `onClusterSwitch` (G-D6) y `startChannel` del desktop (G-D7) | ⏳ |
-| G2.4 | retirada del core: registro back y front, `useKeyboard`, dependencias que solo usaba Magnify | ⏳ |
-| G2.5 | harness (mudado + nuevo) y e2e del plugin | ⏳ |
-| G2.6 | CL9: QA, publicación, manifest, bundles (G-D9), `CHANNEL_MAGNIFY` fuera (G-D8), guía | ⏳ |
+| G2.1 | scaffold; port del back: `ClusterInfo` estructural (`IMagnifyClusterInfo`, tipos de client-node solo como tipos), operaciones de common-back 0.6.4, log por `backChannelObject` con un adaptador (las ~40 llamadas `this.log.*` intactas); `requiresExtension`: DCE `file-manager` y providers `events` y `metrics` (como plugin ya puede declararlos) | ✅ |
+| G2.2 | port del front: imports del core a common-front; `clusterColor` y `addGetAuthorization` copiados (`CoreHelpers.ts`), `About` propio con `kwirthVersion`, icono `Fullscreen`; globals del core para React, ReactDOM, codemirror, recharts y el explorador (DCE); empaquetadas las pequeñas, `lodash/get`+`lodash/set` y `react-use/lib/useAsync` sueltos; CSS como texto inyectado desde `index.ts`; JSX con `inject` de React (el core usaba el runtime automático); **los 7 PNG de las secciones pasan a SVG** (pedido del usuario, toman el color del tema); front minificado: 524 KB (133 KB gzip), venía de 1,6 MB | ✅ |
+| G2.3 | `onClusterSwitch` (G-D6): `switchCluster` llama al hook y el plugin hace su limpieza. `startChannel` (G-D7): los lanzadores (Tauri, Electron y `start:desktop`) ponen `KWIRTH_START_CHANNEL=magnify`, el back lo sirve en `/core/auth/method` y el desktop lo usa como canal de arranque del usuario, cuyo efecto ya espera a que cargue el plugin. Se probó primero como campo de `KwirthData` (kwirth-common 0.5.67) y se descartó: en el flujo remoto del desktop llegaría el del Kwirth remoto; 0.5.68 lo retira | ✅ |
+| G2.4 | retirada del core: back (`channels/magnify`, registro, `CHANNEL_MAGNIFY`), front (`channels/magnify`, registro, `useKeyboard` antiguo, `useEscape.ts`), seis dependencias del front; `kwirth-dev.json` carga el plugin | ✅ |
+| G2.5 | harness del plugin 6/6 (mudado del core, con un `clusterInfo` falso que imita el handle del core); primer e2e de Magnify, 5/5; regresión: providers events y metrics, selector de recursos y `dialog-escape` en verde; core 705 (0 ✗) | ✅ |
+| G2.6 | CL9: QA, publicación, manifest, bundles (G-D9), `CHANNEL_MAGNIFY` fuera (G-D8), guía | ⏳ QA |
+
+- **G3** — las extensiones del bundle de imagen/desktop (decidido por el usuario el 2026-10-13: antes de cerrar
+  G2, que lo necesita para G-D9). Encontrado al preparar los bundles de Magnify:
+  1. no hay `installBundled` para **providers**: los del bundle no se instalan nunca (lo que P1 y E1 dijeron en la
+     guía —metrics y events "vienen instalados" en `-readonly`/`-full`/desktop— no era cierto);
+  2. `fetch-bundled.mjs` guarda `<id>.tgz`: el provider `metrics` choca con el plugin `metrics` y se descarta; y
+     `PluginManager` saca el id del plugin del NOMBRE del fichero;
+  3. `fetch-bundled.mjs` no conoce `dces`;
+  4. ~~el arranque instala los plugins del bundle antes de que existan los gestores de providers y DCEs, y un plugin
+     que requiere uno del bundle (Magnify) es rechazado~~ — **retirado**: `assertExtensionRequirements` se salta lo
+     que viene del bundle (como dev y packs), así que no había rechazo. Se llegó a reordenar el arranque y se deshizo.
+
+| # | tarea | estado |
+|---|---|---|
+| G3.1 | `ProviderManager.installBundled`, como el de DCEs (misma versión → se salta; otra → `upgrade`) | ✅ |
+| G3.2 | `PluginManager.installBundled` saca id y versión del `package.json` del tgz (`peekBundledMeta` en `BundledExtensions`); con el nombre del fichero, una versión nueva en la imagen chocaba con "already installed" | ✅ |
+| G3.3 | `fetch-bundled.mjs`: fichero `<tipo>-<id>.tgz` y tipos `dces` y `aitoolsets` | ✅ |
+| G3.4 | ~~orden de arranque~~ — no hacía falta (ver punto 4) | ✖ |
+| G3.5 | 5 tests en `bundledExtensions` (id y versión del paquete; providers del bundle instalados; misma versión se salta, otra actualiza; un plugin de la imagen se actualiza tras un reinicio). Con un bundle real descargado por `fetch-bundled` (providers `events` y `metrics`, plugins `metrics` y `magnify`, DCE `file-manager`) los gestores del core instalan las cuatro extensiones; core 710 (0 ✗) | ✅ |
+
+**Backlog del plugin** (anotado en G2): el harness solo cubre el `USAGE` y los eventos (24,7 % de líneas); los
+comandos del back (listas, apply, delete, operaciones de nodo) no tienen tests. `cron-parser` arrastra luxon
+(~380 KB sin minificar) solo para la próxima ejecución de un CronJob.

@@ -1,6 +1,6 @@
 import { IConfigMaps } from './IConfigMap'
 import { EExtensionType, IConfigFieldDef, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
-import { listBundledOfType } from './BundledExtensions'
+import { listBundledOfType, peekBundledMeta } from './BundledExtensions'
 import { TChannelConstructor } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { LicenseManager } from './LicenseManager'
@@ -451,20 +451,15 @@ export class PluginManager {
     async installBundled(dir: string, registeredChannels: Map<string, TChannelConstructor>, licenseManager?: LicenseManager): Promise<void> {
         for (const filePath of await listBundledOfType(dir, EExtensionType.PLUGIN)) {
             const file = path.basename(filePath)
-            const id = path.basename(file, '.tgz')
+            // the id the PACKAGE declares, not the file's name: the fetcher names the files, and a plugin
+            // and a provider may share an id ('metrics'), so the name has to carry the type too
+            const bundled = await peekBundledMeta(filePath)
+            const id = bundled.id ?? path.basename(file, '.tgz')
             if (licenseManager && !licenseManager.isExtensionLicensed(EExtensionType.PLUGIN, id)) {
                 logInfo(ELogComponent.CORE, `Bundled plugin '${id}' not licensed — skipping`)
                 continue
             }
-            let _bvVersion: string | undefined
-            try {
-                const _bvTmp = path.join(os.tmpdir(), `kwirth-bv-${id}`)
-                fs.mkdirSync(_bvTmp, { recursive: true })
-                await tar.x({ file: filePath, cwd: _bvTmp, filter: (p: string) => p.endsWith('package.json') })
-                const _bvPkg = [path.join(_bvTmp, 'package.json'), path.join(_bvTmp, 'package', 'package.json')].find(p => fs.existsSync(p))
-                if (_bvPkg) _bvVersion = JSON.parse(fs.readFileSync(_bvPkg, 'utf-8')).version
-                fs.rmSync(_bvTmp, { recursive: true, force: true })
-            } catch {}
+            const _bvVersion = bundled.version
             const _bvExisting = this.cachedIndex.find(p => p.id === id)
             if (_bvExisting && _bvVersion && _bvExisting.version === _bvVersion) {
                 logInfo(ELogComponent.CORE, `Bundled plugin '${id}' v${_bvVersion} up to date — skipping`)

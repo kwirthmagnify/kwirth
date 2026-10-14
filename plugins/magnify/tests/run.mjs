@@ -1,0 +1,47 @@
+// Unit test runner for magnify (copied from censor's, pattern montag/Agora).
+// It bundles tests/**/*.test.ts with esbuild -> tests/.out (ESM node20) and runs `node --test`.
+// The tests import straight from ../src (the real code, not the dist).
+import esbuild from 'esbuild'
+import { readdirSync, mkdirSync, rmSync } from 'fs'
+import { execFileSync } from 'child_process'
+import path from 'path'
+
+const TEST_DIR = 'tests'
+const OUT_DIR = 'tests/.out'
+
+// 1) Discover every tests/**/*.test.ts
+const entries = readdirSync(TEST_DIR, { recursive: true })
+    .map(String)
+    .filter(f => f.endsWith('.test.ts'))
+    .map(f => path.join(TEST_DIR, f))
+
+if (entries.length === 0) { console.log('No tests (tests/**/*.test.ts).'); process.exit(0) }
+
+// 2) Limpia y recrea tests/.out
+rmSync(OUT_DIR, { recursive: true, force: true })
+mkdirSync(OUT_DIR, { recursive: true })
+
+// 3) Bundle TS -> ESM node20. The @kwirthmagnify/* packages are externalised (they are resolved at
+//    runtime from node_modules, as the core's copy is in production).
+await esbuild.build({
+    entryPoints: entries,
+    bundle: true, format: 'esm', platform: 'node', target: 'node20',
+    outdir: OUT_DIR, outbase: TEST_DIR, outExtension: { '.js': '.mjs' },
+    sourcemap: process.env.COVERAGE ? 'inline' : false,   // COVERAGE=1 → sourcemaps to map coverage back to src/
+    external: [
+        'express',
+        '@kwirthmagnify/kwirth-common',
+        '@kwirthmagnify/kwirth-common-back',
+        '@kwirthmagnify/kwirth-common-ai',
+        '@kwirthmagnify/kwirth-common-ai/back',
+        '@kwirthmagnify/kwirth-common-front'
+    ],
+    loader: { '.ts': 'ts', '.tsx': 'tsx' },
+})
+
+// 4) Run the bundles with the native runner (each file in its own process)
+const bundled = readdirSync(OUT_DIR, { recursive: true }).map(String)
+    .filter(f => f.endsWith('.mjs')).map(f => path.join(OUT_DIR, f))
+const covArgs = process.env.COVERAGE ? ['--experimental-test-coverage', '--test-coverage-exclude=**/node_modules/**', '--test-coverage-exclude=**/tests/**'] : []
+try { execFileSync('node', ['--test', ...covArgs, ...bundled], { stdio: 'inherit' }) }
+catch { process.exit(1) }

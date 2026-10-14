@@ -11,6 +11,9 @@ const kwirthGlobalsPlugin = {
             '@mui/icons-material': 'window.__kwirth__.MUI.icons',
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
+            // the same as build.mjs: without the icons one, the icons barrel is bundled and asks for @emotion
+            '@kwirthmagnify/kwirth-common-front/icons': 'window.__kwirth__.MUI.icons',
+            '@kwirthmagnify/kwirth-common-ai/front': 'window.__kwirth__.kwirthCommonAiFront',
             '@codemirror/view': 'window.__kwirth__.codeMirrorView',
             '@codemirror/state': 'window.__kwirth__.codeMirrorState',
             '@codemirror/commands': 'window.__kwirth__.codeMirrorCommands',
@@ -21,18 +24,7 @@ const kwirthGlobalsPlugin = {
             '@uiw/react-codemirror': 'window.__kwirth__.uiwReactCodeMirror',
             // The file manager comes from DCE `file-manager`, which also puts its CSS on the page.
             '@jfvilas/react-file-manager': "window.__kwirth_dce__['file-manager'].instance.fileManager",
-
-            '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
-            '@codemirror/view': 'window.__kwirth__.codeMirrorView',
-            '@codemirror/state': 'window.__kwirth__.codeMirrorState',
-            '@codemirror/commands': 'window.__kwirth__.codeMirrorCommands',
-            '@codemirror/search': 'window.__kwirth__.codeMirrorSearch',
-            '@codemirror/language': 'window.__kwirth__.codeMirrorLanguage',
-            '@codemirror/lang-yaml': 'window.__kwirth__.codeMirrorLangYaml',
-            '@codemirror/theme-one-dark': 'window.__kwirth__.codeMirrorThemeOneDark',
-            '@uiw/react-codemirror': 'window.__kwirth__.uiwReactCodeMirror',
-            '@jfvilas/react-file-manager': "window.__kwirth_dce__['file-manager'].instance.fileManager",
-
+            'recharts': 'window.__kwirth__.recharts',
         }
         for (const pkg of Object.keys(globals)) {
             build.onResolve({ filter: new RegExp(`^${pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }, () => ({
@@ -92,6 +84,8 @@ const backCtx = await esbuild.context({
     platform: 'node',
     target: 'node20',
     outfile: 'dist/back.js',
+    // as in build.mjs: the kwirth-common* packages are the core's at runtime, never bundled
+    plugins: [kwirthBackGlobalsPlugin],
     external: ['express'],
     loader: { '.ts': 'ts', '.css': 'text' },
     minify: false,

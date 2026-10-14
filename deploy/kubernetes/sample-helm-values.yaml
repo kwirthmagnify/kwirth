@@ -5,7 +5,6 @@ kwirth:
   config:
     rootpath: /kwirth
     masterkey: change-me
-    channelMagnify: true
   ingress:
     enabled: true
     controller: nginx

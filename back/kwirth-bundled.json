@@ -1,6 +1,10 @@
 {
   "plugins": {
-    "metrics": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-metrics/-/kwirth-plugin-metrics-0.1.1.tgz"
+    "metrics": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-metrics/-/kwirth-plugin-metrics-0.1.1.tgz",
+    "magnify": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-magnify/-/kwirth-plugin-magnify-0.1.0.tgz"
+  },
+  "dces": {
+    "file-manager": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-file-manager/-/kwirth-dce-file-manager-0.1.0.tgz"
   },
   "providers": {
     "metrics": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-metrics/-/kwirth-provider-metrics-0.1.1.tgz",

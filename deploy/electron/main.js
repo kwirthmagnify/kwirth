@@ -123,7 +123,9 @@ async function createMainWindow() {
 			process.env.NODE_ENV = 'production'
 			process.env.ANSILOG = 'false'
 			process.env.BUNDLED_EXTENSIONS_PATH = path.join(__dirname, 'bundled')
-			
+			// the channel the desktop opens after login (the core opens it only if it is installed)
+			process.env.KWIRTH_START_CHANNEL = 'magnify'
+
 			const backendDir = path.join(__dirname, 'bundle')
 			process.chdir(backendDir)
 			

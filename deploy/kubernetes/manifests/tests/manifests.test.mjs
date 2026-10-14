@@ -75,11 +75,11 @@ for (const { file, authority } of MANIFESTS) {
         assert.ok(m.container.resources.limits.memory)
     })
 
-    test(`${file}: only the channel switch the back actually reads`, () => {
-        // LOG, ALERT, OPS, TRIVY and ECHO were listed here for a long time and did nothing, and METRICS
-        // joined them when it became a plugin: a plugin is turned off by not installing it.
+    test(`${file}: no channel switches, since every channel is a plugin`, () => {
+        // LOG, ALERT, OPS, TRIVY and ECHO were listed here for a long time and did nothing; METRICS and
+        // MAGNIFY joined them when they became plugins: a plugin is turned off by not installing it.
         const m = load(file)
-        assert.deepEqual(Object.keys(m.env).filter(n => n.startsWith('CHANNEL_')).sort(), ['CHANNEL_MAGNIFY'])
+        assert.deepEqual(Object.keys(m.env).filter(n => n.startsWith('CHANNEL_')), [])
     })
 
     test(`${file}: no password and no master key are written into the pod spec`, () => {
@@ -217,8 +217,6 @@ test('kwirth-zero.yaml: it is told what it is, because detection cannot work out
     // not 'docker': that profile still writes the legacy PLAIN-file format, and this manifest's whole
     // point is a store it can keep on a shared volume
     assert.notEqual(m.env.FORCE, 'docker')
-    // off: there is no cluster behind it
-    assert.equal(m.env.CHANNEL_MAGNIFY, 'false')
 })
 
 test('kwirth-zero.yaml: the database password comes from a Secret, never inline', () => {

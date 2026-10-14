@@ -111,7 +111,7 @@ root.render(
 	//<React.StrictMode>
 	<BrowserRouter basename={rootPath}>
 		<SnackbarProvider>
-			<App backendUrl={backendUrl} isDesktop={isDesktop} auth={auth.auth} authMethods={auth.methods || []}/>
+			<App backendUrl={backendUrl} isDesktop={isDesktop} auth={auth.auth} authMethods={auth.methods || []} startChannel={auth.startChannel}/>
 		</SnackbarProvider>
 	</BrowserRouter>
 	//</React.StrictMode>

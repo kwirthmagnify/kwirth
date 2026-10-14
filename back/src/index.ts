@@ -74,7 +74,6 @@ import * as _kwirthCommonSql from '@kwirthmagnify/kwirth-common-sql/back'
 import { ISqlServer } from '@kwirthmagnify/kwirth-common-sql'
 import { IChannel, createChannelInstance, TChannelConstructor } from './channels/IChannel'
 import { resolveChannelMode } from './tools/ChannelPlacement'
-import { MagnifyChannel } from './channels/magnify/MagnifyChannel'
 // NewsChannel, PinocchioChannel, FilemanChannel and MetricsChannel removed — now loaded as plugins
 
 import { IncomingMessage } from 'http'
@@ -258,7 +257,6 @@ const envAnsiLog = process.env.ANSILOG !== undefined ? process.env.ANSILOG === '
 const envExitLog = process.env.EXITLOG !== undefined ? process.env.EXITLOG === 'true' : true
 const envConfigMapPath = process.env.CONFIGMAPPATH !== undefined ? process.env.CONFIGMAPPATH : '.'
 const envSecretPath = process.env.SECRETPATH !== undefined ? process.env.SECRETPATH : '.'
-const envChannelMagnifyEnabled = (process.env.CHANNEL_MAGNIFY || 'true').toLowerCase() === 'true'
 
 const runningInstances:IRunningInstance[] = []
 let pluginManager: PluginManager | undefined
@@ -289,9 +287,9 @@ let idpManager: IdpManager | undefined
 // providers instantiated at startup for router-only access (config endpoints), not yet fully started
 const routerOnlyProviders = new Set<string>()
 
+// Every channel is a plugin, loaded by PluginManager: the core carries none of its own (Magnify, the
+// last one, became a plugin too).
 const registeredChannels = new Map<string, TChannelConstructor>()
-registeredChannels.set('magnify', MagnifyChannel)
-// 'echo', 'news', 'topology', 'pinocchio' and 'metrics' channels loaded dynamically by PluginManager
 
 if (envCommand!==undefined) {
     switch(envCommand) {
@@ -1549,7 +1547,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                                 const cfg = await providerManager.getConfig(provId)
                                 if (Object.keys(cfg).length > 0) providerInstance.configure(cfg)
                             }
-                            providerInstance.startProvider()
+                            // not awaited (as before): marked once it has come up, and only if it did
+                            Promise.resolve(providerInstance.startProvider())
+                                .then(() => { providerInstance.providerStarted = true })
+                                .catch(err => logError(ELogComponent.CORE, `Provider '${provId}' failed to start: ${err}`))
                             activeRI.clusterInfo.providers.push(providerInstance)
                             hotCreated.push(providerInstance)
                             logInfo(ELogComponent.CORE, `Provider '${provId}' started ${reason}`)
@@ -1981,9 +1982,8 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 
 
         // Channel management
-        let requiredChannels = []
-        if (envChannelMagnifyEnabled) requiredChannels.push('magnify')
-        // plugin channels: load installed plugins and add their ids to requiredChannels
+        let requiredChannels: string[] = []
+        // plugin channels — all of them: load installed plugins and add their ids to requiredChannels
         if (!pluginManager) {
             pluginManager = new PluginManager(runningInstance.configMaps)
             await pluginManager.init()
@@ -2041,6 +2041,9 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         if (!providerManager) {
             providerManager = new ProviderManager(runningInstance.configMaps)
             await providerManager.init()
+            // the ones the image or the desktop brings (they were fetched and never installed)
+            const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
+            if (bundledExtensionsPath) await providerManager.installBundled(bundledExtensionsPath, registeredProviders)
             await providerManager.loadAll(registeredProviders)
             providerManager.loadDevProviders(registeredProviders)
         }
@@ -2144,6 +2147,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     }
                     try {
                         await providerInstance!.startProvider()
+                        providerInstance!.providerStarted = true
                         logInfo(ELogComponent.CORE, `Provider '${provId}' started`)
                     } catch (err) {
                         logError(ELogComponent.CORE, `Provider '${provId}' failed to start: ${err}`)
@@ -2180,6 +2184,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     }
                     localClusterInfo.providers.push(tmpInstance)
                     await tmpInstance.startProvider()
+                    tmpInstance.providerStarted = true
                     logInfo(ELogComponent.CORE, `Provider '${provId}' auto-instantiated and started`)
                 }
             } catch {
@@ -2199,6 +2204,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                 if (coreLogInstance) {
                     localClusterInfo.providers.push(coreLogInstance)
                     await coreLogInstance.startProvider()
+                    coreLogInstance.providerStarted = true
                     logInfo(ELogComponent.CORE, `Provider 'corelog' started (in-memory log capture for non-Kubernetes environments)`)
                 }
             } catch (err) {

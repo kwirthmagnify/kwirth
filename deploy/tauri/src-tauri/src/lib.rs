@@ -152,6 +152,8 @@ pub fn run() {
                     .env("NODE_ENV", "production")
                     .env("ANSILOG", "false")
                     .env("FORCE", "desktop")
+                    // the channel the desktop opens after login (the core opens it only if it is installed)
+                    .env("KWIRTH_START_CHANNEL", "magnify")
                     .env("BUNDLED_EXTENSIONS_PATH", resource_dir.join("bundled").to_string_lossy().to_string());
 
                 let (mut rx, child) = sidecar.spawn().expect("failed to spawn kwirth-backend");

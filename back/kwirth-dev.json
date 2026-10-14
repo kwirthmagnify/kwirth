@@ -3,7 +3,9 @@
         "iter": "../plugins/iter/dist",
         "agora": "../plugins/agora/dist",
         "excubitor": "../plugins/excubitor/dist",
-        "montag": "../plugins/montag/dist"
+        "montag": "../plugins/montag/dist",
+        "fileman": "../plugins/fileman/dist",
+        "magnify": "../plugins/magnify/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",
@@ -30,6 +32,7 @@
         "suse-fleet": "../aitoolsets/suse-fleet/dist"
     },
     "dces": {
+        "file-manager": "../dces/file-manager/dist"
     },
     "docs": {}
 }

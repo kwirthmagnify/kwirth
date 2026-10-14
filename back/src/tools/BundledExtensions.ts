@@ -12,23 +12,38 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 // targetType (a bundled login carries one, so it ended up duplicated as docs), and PluginManager/IdpManager
 // attempted ALL of the directory's tgz files, leaning on the later failure to discard them.
 
-/** Reads the extensionType declared inside a tgz. undefined when it does not declare it or it cannot be read. */
-export const peekExtensionType = async (tgzPath: string): Promise<string|undefined> => {
+/** What a bundled tgz says about itself in its package.json. */
+export interface IBundledMeta {
+    id?: string
+    version?: string
+    extensionType?: string
+}
+
+/*
+    Reads a bundled tgz's own package.json. The tgz's FILE NAME says nothing reliable: the files are named
+    by whoever fetched them, and two extensions of different types can share an id (the 'metrics' plugin
+    and the 'metrics' provider), so the id is what the package declares. Empty when it cannot be read.
+*/
+export const peekBundledMeta = async (tgzPath: string): Promise<IBundledMeta> => {
     const peekDir = path.join(os.tmpdir(), `kwirth-type-peek-${path.basename(tgzPath, '.tgz')}-${Date.now()}`)
     try {
         fs.mkdirSync(peekDir, { recursive: true })
         await tar.x({ file: tgzPath, cwd: peekDir, filter: (p: string) => p.endsWith('package.json') })
         const pkgPath = [path.join(peekDir, 'package.json'), path.join(peekDir, 'package', 'package.json')].find(p => fs.existsSync(p))
-        if (!pkgPath) return undefined
-        return JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).extensionType
+        if (!pkgPath) return {}
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+        return { id: pkg.id, version: pkg.version, extensionType: pkg.extensionType }
     }
     catch {
-        return undefined
+        return {}
     }
     finally {
         fs.rmSync(peekDir, { recursive: true, force: true })
     }
 }
+
+/** Reads the extensionType declared inside a tgz. undefined when it does not declare it or it cannot be read. */
+export const peekExtensionType = async (tgzPath: string): Promise<string|undefined> => (await peekBundledMeta(tgzPath)).extensionType
 
 /** The tgz files of a bundled directory that are of the requested type, with their absolute path. */
 export const listBundledOfType = async (dir: string, extensionType: EExtensionType): Promise<string[]> => {

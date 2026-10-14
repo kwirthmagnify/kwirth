@@ -105,7 +105,13 @@ export class AuthApi {
                         methods.push({ id: inst.id, label: inst.label, kind: EAuthMethodKind.REDIRECT, startUrl: `/core/auth/${inst.id}/start` })
                     }
                 }
-                res.status(200).json({ auth: this.legacyAuth, methods })
+                /*
+                    'startChannel': the channel to open a tab of right after login, if it is installed.
+                    Whoever launches Kwirth names it (the desktop launchers set KWIRTH_START_CHANNEL); the
+                    core only passes it on. It travels here, with what the login screen needs, because it
+                    is THIS Kwirth's choice — the desktop's — even when the user goes on to a remote one.
+                */
+                res.status(200).json({ auth: this.legacyAuth, methods, startChannel: process.env.KWIRTH_START_CHANNEL || undefined })
             }
             catch (err) {
                 logError(ELogComponent.AUTH, `Error building auth methods: ${err}`)

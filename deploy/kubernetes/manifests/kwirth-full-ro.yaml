@@ -258,11 +258,8 @@ spec:
             # where 'kubectl logs --previous' looks anyway.
             - name: EXITLOG
               value: 'false'
-            # The only channel switch the back reads. The channels that used to be listed in
-            # kwirth.yaml (LOG, ALERT, OPS, TRIVY, ECHO, METRICS) are plugins now and those variables
-            # did nothing.
-            - name: CHANNEL_MAGNIFY
-              value: 'true'
+            # No channel switches: every channel is a plugin (MAGNIFY was the last one in the core), and
+            # a plugin is turned off by not installing it.
           ports:
             - name: kwirth
               containerPort: 3883

@@ -71,7 +71,6 @@ test('defaults: the env is exactly what the core reads today', () => {
         ROOTPATH: '/kwirth',
         PORT: '3883',
         AUTH: 'kwirth',
-        CHANNEL_MAGNIFY: 'true',
         METRICSINTERVAL: '15',
         BODYLIMIT: '8mb',
         KEEPALIVE: '65000',
@@ -547,13 +546,12 @@ test('zero: it is told what it is, because detection cannot work it out', () => 
     assert.ok(env.KWIRTH_STORE && env.KWIRTH_STORE !== 'etcd')
 })
 
-test('zero: the cluster-reading core channel is off, and the users Secret is not rendered', () => {
+test('zero: no channel variables at all, and the users Secret is not rendered', () => {
     const docs = render(ZERO)
     const env = envOf(find(docs, 'Deployment'))
-    // there is no cluster behind it: it would be a channel offered with nothing to show
-    assert.equal(env.CHANNEL_MAGNIFY, 'false')
-    // metrics is a plugin now: no variable left that nobody reads
-    assert.equal(env.CHANNEL_METRICS, undefined)
+    // every channel is a plugin now (metrics since 0.3.1, magnify since 0.3.2): no variable left that
+    // nobody reads. Without a cluster the core does not offer the ones that need Kubernetes.
+    assert.deepEqual(Object.keys(env).filter(n => n.startsWith('CHANNEL_')), [])
     // with the store on the volume the core seeds its own admin there
     assert.equal(find(docs, 'Secret', 'kwirth-users'), undefined)
 })
@@ -564,11 +562,6 @@ test('zero refuses the combinations that would quietly undo it', () => {
     // asking for RBAC in the mode whose whole point is having none
     renderFails([...ZERO, '--set', 'kwirth.rbac.create=true'], /renders no RBAC/)
     renderFails([...ZERO, '--set', 'kwirth.serviceAccount.create=true'], /default ServiceAccount/)
-})
-
-test('zero: what the operator sets still wins', () => {
-    const env = envOf(find(render([...ZERO, '--set', 'kwirth.config.channelMagnify=true']), 'Deployment'))
-    assert.equal(env.CHANNEL_MAGNIFY, 'true')
 })
 
 /*

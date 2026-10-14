@@ -73,8 +73,6 @@ spec:
               value: {{ .Values.kwirth.config.port | quote }}
             - name: AUTH
               value: {{ .Values.kwirth.config.auth | quote }}
-            - name: CHANNEL_MAGNIFY
-              value: {{ include "kwirth.channelMagnify" . | quote }}
             - name: METRICSINTERVAL
               value: {{ .Values.kwirth.config.metricsInterval | quote }}
             {{- if .Values.kwirth.config.previousLogLines }}

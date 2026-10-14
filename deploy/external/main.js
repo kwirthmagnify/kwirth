@@ -17,7 +17,6 @@ function startApp(options) {
     process.env.CHANNEL_ALERT = options.channelalert
     process.env.CHANNEL_ECHO = options.channelecho
     process.env.CHANNEL_TRIVY = options.trivy
-    process.env.CHANNEL_MAGNIFY = options.magnify
     process.env.CHANNEL_PINOCCHIO = options.pinocchio
 
     require('./bundle.js')
@@ -38,7 +37,6 @@ cli
   .option('-ce, --channelecho', 'Channel ECHO', { default: true })
   .option('-co, --channelops', 'Channel OPS', { default: true })
   .option('-ct, --channeltrivy', 'Channel TRIVY', { default: true })
-  .option('-cy, --channelmagnify', 'Channel MAGNIFY', { default: true })
   .option('-cp, --channelpinocchio', 'Channel PINOCCHIO', { default: true })
 
 cli.version(VERSION)

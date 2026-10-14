@@ -1,6 +1,33 @@
 [
   {
     "extensionType": "plugin",
+    "id": "magnify",
+    "version": "0.1.0",
+    "name": "Magnify",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-magnify/-/kwirth-plugin-magnify-0.1.0.tgz",
+    "description": "Magnify channel plugin for Kwirth - a complete Kubernetes management tool: every artifact and event of the cluster, live, and the actions to manage them",
+    "icon": "Search",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "dce",
+        "id": "file-manager",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "provider",
+        "id": "events",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "provider",
+        "id": "metrics",
+        "minVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
     "id": "censor",
     "version": "0.2.55",
     "name": "Censor",
@@ -442,6 +469,22 @@
     "description": "Alert channel plugin for Kwirth — regex and metric-based alerting",
     "icon": "Warning",
     "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "status",
+    "version": "0.7.4",
+    "name": "Kwirth Status",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-status/-/kwirth-plugin-status-0.7.4.tgz",
+    "description": "A look inside Kwirth: what is installed, how it is doing and who consumes what",
+    "icon": "<svg viewBox='0 0 24 24'><g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='2.6' y='4.6' width='18.8' height='14.8' rx='2.2'/><path d='M6 12h2.6l1.5-3.4 2.6 6.8 1.5-3.4H18'/></g></svg>",
+    "requires": [
+      {
+        "extensionType": "dce",
+        "id": "xyflow",
+        "minVersion": "0.1.0"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
