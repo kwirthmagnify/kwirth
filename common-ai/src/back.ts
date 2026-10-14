@@ -120,6 +120,12 @@ export class UsageLimitError extends Error {
 
 let usageService: IUsageService | undefined
 
+/*  Accounting that degrades has to SAY SO, and loudly: while the counters are unreachable the ceilings are
+    not being enforced, and that is the kind of thing nobody notices until the bill arrives. `console.warn`
+    on purpose — this module has no logger of its own and must not acquire a dependency on one to be able
+    to report that it is flying blind. */
+const logUsage = (msg: string): void => console.warn(`[kwirth-common-ai] ${msg}`)
+
 /* The core calls this at startup. Without it everything below is a no-op and the LLM is reached as ever. */
 export const setUsageService = (service: IUsageService | undefined): void => { usageService = service }
 
@@ -227,23 +233,79 @@ export const runWithUsageGuard = async (options: { model?: unknown }, call: () =
     const origin = options.model && typeof options.model === 'object' ? modelOrigin.get(options.model) : undefined
     if (!service || !origin) return await call()
 
-    const { daily, monthly } = await service.read(EUsageScope.LLM_KEY, origin.subject)
-    const exceeded = findExceeded(EUsageScope.LLM_KEY, origin.limits, daily, monthly)
-    if (exceeded) {
-        service.onCut?.(exceeded)
-        throw new UsageLimitError(exceeded)
+    /*
+        🔴 The bookkeeping must never be what breaks the feature.
+
+        Both halves of this used to be plain `await`s on a database, sitting in the critical path of every
+        AI call. When that database has a bad moment the cost is not a missing counter: it is the whole
+        call. Measured on 2026-10-14 — `core-ai-usage: Connection Error: Connection ended unexpectedly` one
+        second in, and then **exactly 120 seconds** until the caller's own timeout gave up. The AI never
+        got a chance; the two minutes were spent waiting on an accounting read that was never going to
+        answer, and the user saw a ticket open with no resolution guidance for no reason at all.
+
+        So: the read is BOUNDED and FAILS OPEN, and the write does not block the answer.
+
+        Failing open is a deliberate trade and it is the uncomfortable one: for the span of a sick usage
+        database, the ceilings are not enforced. The alternative is worse — an accounting hiccup leaving
+        every channel in Kwirth without AI. It is said loudly in the log so it cannot pass unnoticed, and
+        the limits apply again the moment the database answers.
+    */
+    const READ_TIMEOUT_MS = 5000
+    let read: { daily: IUsageAmounts, monthly: IUsageAmounts } | undefined
+    const readStarted = Date.now()
+    try {
+        read = await Promise.race([
+            service.read(EUsageScope.LLM_KEY, origin.subject),
+            new Promise<undefined>(r => setTimeout(() => r(undefined), READ_TIMEOUT_MS))
+        ])
+        if (!read) logUsage(`AI usage: the counters did not answer in ${READ_TIMEOUT_MS} ms — the call goes ahead and the LIMITS ARE NOT ENFORCED for it`)
+    }
+    catch (err) {
+        logUsage(`AI usage: the counters could not be read (${err}) — the call goes ahead and the LIMITS ARE NOT ENFORCED for it`)
+    }
+    /*  🔴 Se mide y se dice cuando pasa de un segundo, porque sin esto no hay forma de saber dónde se fue
+        el tiempo. El 2026-10-14 una llamada agotó un tope de 120 s y no se pudo determinar si el culpable
+        era el LLM o esta lectura: el `abortSignal` del llamante arranca ANTES de llegar aquí, así que el
+        aborto salta dentro del SDK en los dos casos y el mensaje es idéntico. Un tramo sin instrumentar
+        obliga a adivinar, y adivinar ya costó una tarde. */
+    const readMs = Date.now() - readStarted
+    if (readMs > 1000) logUsage(`AI usage: reading the counters took ${readMs} ms before the model was even called`)
+    if (read) {
+        const exceeded = findExceeded(EUsageScope.LLM_KEY, origin.limits, read.daily, read.monthly)
+        if (exceeded) {
+            service.onCut?.(exceeded)
+            throw new UsageLimitError(exceeded)
+        }
     }
 
-    const result = await call()
+    /*  🔴 En `finally`, no después del `await`. La primera versión medía solo el camino feliz, que es
+        justo el que no hacía falta medir: cuando una llamada se aborta por tiempo —el caso que se estaba
+        investigando— el log no se ejecutaba y seguíamos sin saber si el tiempo era del modelo o de la
+        contabilidad de aquí arriba (2026-10-14). Un tramo instrumentado solo cuando va bien no está
+        instrumentado. */
+    const callStarted = Date.now()
+    let ok = false
+    let result: { usage?: { inputTokens?: number, outputTokens?: number } }
+    try {
+        result = await call()
+        ok = true
+    }
+    finally {
+        const callMs = Date.now() - callStarted
+        if (callMs > 30_000 || !ok) logUsage(`AI usage: the model ${ok ? 'took' : 'FAILED after'} ${Math.round(callMs / 1000)} s (counters read in ${readMs} ms)`)
+    }
 
     const tokensIn = result.usage?.inputTokens ?? 0
     const tokensOut = result.usage?.outputTokens ?? 0
-    await service.add(EUsageScope.LLM_KEY, origin.subject, {
+    /*  Sin `await`: la respuesta ya está. Esperar al apunte solo añade el tiempo de la base a lo que el
+        usuario percibe, y si la base está mal, lo añade entero. Lo que se pierde al fallar es un contador;
+        lo que se perdía antes era la llamada. */
+    void service.add(EUsageScope.LLM_KEY, origin.subject, {
         tokensIn,
         tokensOut,
         calls: 1,
         cost: costOf(origin, tokensIn, tokensOut)
-    })
+    }).catch(err => logUsage(`AI usage: could not record ${tokensIn + tokensOut} token(s) of a call that DID happen (${err}) — the counters are now short`))
     return result
 }
 

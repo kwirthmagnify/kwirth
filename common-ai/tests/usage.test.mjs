@@ -210,3 +210,55 @@ test('a model with its OWN key does not share the budget of the provider key', a
     await runWithUsageGuard({ model: own }, answering(1, 1))
     assert.notEqual(reads[0].subject, reads[1].subject, 'different keys are different budgets')
 })
+
+/*
+    🔴 The bookkeeping must never be what breaks the feature.
+
+    Both halves of the guard used to be plain awaits on a database sitting in the critical path of every
+    AI call. Measured on 2026-10-14 against a sick `core-ai-usage` pool: the call burned its caller's
+    whole 120 s budget and the ticket was opened with no resolution guidance, for nothing. The counters
+    are worth having; they are not worth the feature.
+*/
+test('if the counters cannot be READ the call still goes out (fail open, limits unenforced)', async () => {
+    const providers = providerWith({ calls: { enabled: true, daily: 1 } })
+    const model = buildModel(llm(), providers)
+    setUsageService({
+        durable: true,
+        async read() { throw new Error('Connection ended unexpectedly') },
+        async add() {}
+    })
+    // Hay un tope de 1 llamada/día: si la lectura se tragara el error y devolviera 0, esto pasaría por
+    // otra razón. Lo que se prueba es que con la lectura ROTA la llamada sale igual.
+    const r = await runWithUsageGuard({ model }, answering(3, 4))
+    assert.deepEqual(r.usage, { inputTokens: 3, outputTokens: 4 })
+})
+
+test('if the counters HANG the call is not held hostage', async () => {
+    const model = buildModel(llm(), providerWith({ calls: { enabled: true, daily: 999 } }))
+    setUsageService({
+        durable: true,
+        read: () => new Promise(() => {}),   // no contesta JAMÁS: es el caso que costó los 120 s
+        async add() {}
+    })
+    const started = Date.now()
+    const r = await runWithUsageGuard({ model }, answering(1, 1))
+    const ms = Date.now() - started
+    assert.ok(r, 'la llamada se hizo')
+    assert.ok(ms < 8000, `esperó ${ms} ms: la lectura tiene que rendirse sola, no bloquear`)
+})
+
+test('recording the usage does NOT delay the answer', async () => {
+    // La respuesta ya está producida: esperar al apunte solo añade el tiempo de la base a lo que el
+    // usuario percibe, y si la base está mal, lo añade entero.
+    const model = buildModel(llm(), providerWith({ calls: { enabled: true, daily: 999 } }))
+    let addStarted = false
+    setUsageService({
+        durable: true,
+        async read() { return { daily: { ...ZERO }, monthly: { ...ZERO } } },
+        add: () => { addStarted = true; return new Promise(() => {}) }   // no termina nunca
+    })
+    const started = Date.now()
+    await runWithUsageGuard({ model }, answering(1, 1))
+    assert.ok(Date.now() - started < 2000, 'la respuesta no espera al apunte')
+    assert.equal(addStarted, true, 'pero el apunte SÍ se intenta')
+})
