@@ -1,0 +1,3 @@
+# Shell scripts run under bash (WSL, Linux, macOS): with CRLF bash fails on '\r'. core.autocrlf=true would
+# otherwise check them out with CRLF on Windows.
+*.sh text eol=lf
