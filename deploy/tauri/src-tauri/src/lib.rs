@@ -131,11 +131,18 @@ pub fn run() {
                 .and_then(|p| p.parent().map(|p| p.to_path_buf()))
                 .unwrap_or_else(|| std::path::PathBuf::from("."));
             // direct run: front/ is next to the exe (copied by build script)
-            // installed:  front/ is under resources/ (Tauri array-format resources)
+            // installed:  front/ is under resources/ (Tauri array-format resources), inside the directory
+            //             Tauri itself reports. It is NOT always the exe's: on Windows it is, but a deb or an
+            //             AppImage puts the exe in usr/bin and the resources in usr/lib/<product>/, and
+            //             spawning the backend with a working directory that does not exist failed with
+            //             "No such file or directory".
             let resource_dir = if exe_dir.join("front").join("index.html").exists() {
                 exe_dir
             } else {
-                exe_dir.join("resources")
+                app.path()
+                    .resource_dir()
+                    .map(|d| d.join("resources"))
+                    .unwrap_or_else(|_| exe_dir.join("resources"))
             };
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
