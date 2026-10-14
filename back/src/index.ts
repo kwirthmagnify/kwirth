@@ -2931,6 +2931,37 @@ const configureForward = (localClusterInfo:ClusterInfo, expressApp:Application) 
 let httpServer: http.Server | undefined
 let wsServer: WebSocketServer | undefined
 
+// true from KWI1500I on: until then the front's page is STARTING_PAGE (see the middleware that serves it)
+let kwirthReady = false
+const STARTING_PAGE = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="3">
+<title>Kwirth is starting</title>
+<style>
+    :root { --bg: #f5f6f8; --fg: #1f2933; --muted: #6b7785; --accent: #1976d2 }
+    @media (prefers-color-scheme: dark) { :root { --bg: #121417; --fg: #e4e7eb; --muted: #9aa5b1; --accent: #64b5f6 } }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+           background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif }
+    .box { text-align: center; padding: 16px }
+    .spinner { width: 36px; height: 36px; margin: 0 auto 20px; border-radius: 50%;
+               border: 3px solid var(--muted); border-top-color: var(--accent); animation: spin 1s linear infinite }
+    h1 { font-size: 1.4rem; font-weight: 600; margin: 0 0 8px }
+    p { margin: 0; color: var(--muted) }
+    @keyframes spin { to { transform: rotate(360deg) } }
+</style>
+</head>
+<body>
+<div class="box">
+    <div class="spinner"></div>
+    <h1>Kwirth is starting</h1>
+    <p>This page will reload by itself as soon as it is ready.</p>
+</div>
+</body>
+</html>`
+
 const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, instances:IRunningInstance[], localProcessClientMessage:(webSocket: WebSocket, message: string, ri:IRunningInstance) => Promise<void>) => {
     try {
         // create HTTP and WS servers
@@ -3416,6 +3447,24 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
     app.use(cors())
     app.use(fileUpload())
 
+    /*
+        Until the core says KWI1500I, whoever opens the front gets a "starting" page instead of the SPA.
+
+        The HTTP server listens long before Kwirth is ready (the launch of the environment comes after),
+        so the SPA used to load and then fail against an API answering 503 'No active instance': a broken
+        screen with no hint that it only had to wait. Only the PAGE is held back —the document requests
+        under the root and /front—; APIs, /healthz and the static assets behave as always. The page reloads
+        itself, so it turns into the SPA on its own once Kwirth is up.
+    */
+    app.use((req: Request, res: Response, next) => {
+        if (kwirthReady || !envFront || req.method !== 'GET') return next()
+        const front = `${envRootPath}/front`
+        const isPage = req.path === '/' || req.path === envRootPath || req.path === `${envRootPath}/` ||
+            req.path === front || req.path === `${front}/` || req.path === `${front}/index.html`
+        if (!isPage) return next()
+        res.status(503).set('Retry-After', '3').set('Cache-Control', 'no-store').type('html').send(STARTING_PAGE)
+    })
+
     // serve front
     if (envFront) {
         logInfo(ELogComponent.CORE, 'Front serving is enabled')
@@ -3496,6 +3545,7 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
             await launchKubernetes(envContext, kwirthData, app)
             break
     }
+    kwirthReady = true
     logInfo(ELogComponent.CORE, `KWI1500I Control is being given to Kwirth`)
  })
 .catch( (err) => {
