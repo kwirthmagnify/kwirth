@@ -19,7 +19,7 @@ interface IInstance {
 
 class EchoChannel implements IChannel {
     readonly channelId = 'echo'
-    readonly requirements = { storage: false, providers: ['otel'] }
+    readonly requirements = { storage: false, providers: [] }
     clusterInfo: any
     backChannelObject: IBackChannelObject
     webSockets: { ws: WebSocket; lastRefresh: number; instances: IInstance[] }[] = []
@@ -57,41 +57,10 @@ class EchoChannel implements IChannel {
 
     getChannelScopeLevel = (scope: string): number => ['', 'none', 'cluster', 'admin'].indexOf(scope)
 
-    /*
-        Subscribing through the core, not by grabbing the provider object and calling it directly.
-        Both reach otel, but only this way does the core get to know that echo consumes otel — which
-        is what the "who feeds whom" registry, and the graph drawn from it, are made of. Going around
-        it is not doing anything wrong, it just leaves the core blind, and that is the whole reason
-        the handle exists.
-    */
-    startChannel = async () => {
-        const otel = this.clusterInfo.getProvider?.('otel', this)
-        if (otel) {
-            otel.subscribe(this, {
-                spaces: [{ name: 'echo', signals: ['traces', 'metrics', 'logs'] }]
-            })
-        }
-    }
+    startChannel = async () => {}
 
-    processProviderEvent(_providerId: string, obj: any): void {
-        const event = obj?.last?.event
-        if (!event) return
-        for (const socket of this.webSockets) {
-            for (const instance of socket.instances) {
-                if (instance.paused) continue
-                const msg: IEchoMessageResponse = {
-                    msgtype: 'echomessageresponse',
-                    channel: 'echo',
-                    action: EInstanceMessageAction.NONE,
-                    flow: EInstanceMessageFlow.UNSOLICITED,
-                    type: EInstanceMessageType.DATA,
-                    instance: instance.instanceId,
-                    text: JSON.stringify(event)
-                }
-                socket.ws.send(JSON.stringify(msg))
-            }
-        }
-    }
+    // Echo consumes no provider: what it sends are its own periodic test messages.
+    processProviderEvent(_providerId: string, _obj: any): void {}
     endpointRequest(_endpoint: string, _req: Request, _res: Response, _accessKey?: AccessKey): void {}
 
     websocketRequest(newWebSocket: WebSocket, instanceId: string, instanceConfig: IInstanceConfig): void {

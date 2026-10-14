@@ -26,11 +26,8 @@ From Kwirth: **☰ → Manage extensions → Plugins**, find **Echo** in the mar
 ## Configuration
 
 The setup asks for the **interval** between heartbeats and, optionally, a **sender configuration** to
-forward them to. Nothing else: everything this channel produces, it produces by itself.
-
-It also subscribes to the **[OpenTelemetry provider](https://kwirthmagnify.dev)** when one is installed, so
-OTLP traffic sent to Kwirth shows up here too — which makes it the quickest way to check that an exporter
-is actually reaching the cluster.
+forward them to. Nothing else: everything this channel produces, it produces by itself, and it needs no
+other extension installed.
 
 ## Development
 

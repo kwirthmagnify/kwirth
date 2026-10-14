@@ -85,6 +85,15 @@
   {
     "extensionType": "plugin",
     "id": "echo",
+    "version": "0.2.28",
+    "name": "Echo",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.28.tgz",
+    "description": "Echo channel plugin for Kwirth - sends periodic test messages from watched resources",
+    "icon": "Science"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "echo",
     "version": "0.2.27",
     "name": "Echo",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-echo/-/kwirth-plugin-echo-0.2.27.tgz",
