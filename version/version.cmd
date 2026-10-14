@@ -1,1 +1,1 @@
-set KWIRTH_VERSION="0.6.70" 
+set KWIRTH_VERSION="0.6.73" 
