@@ -54,7 +54,15 @@ const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
 		props.data.onLink(k,n,ns)
     }
 
-	const items:ISpaceMenuItem[] = props.data.actions.filter((a:ISpaceMenuItem) => a.name !== 'details')
+	/*
+		The same predicates the list's menu applies: without them this toolbar offered every action of the
+		space, including the ones whose plugin is not installed (fileman, trivy, metrics...), which then
+		did nothing on click.
+	*/
+	const items:ISpaceMenuItem[] = props.data.actions.filter((a:ISpaceMenuItem) =>
+		a.name !== 'details' && (a.isVisible?.(a.name ?? '', props.data.source, props.selectedFiles) ?? true)
+	)
+	const isEnabled = (a:ISpaceMenuItem) => a.isEnabled?.(a.name ?? '', props.data.source, props.selectedFiles) ?? true
 
 	const actionClick = (action: string, currentTarget: Element) => {
 		if (props.selectedFiles[0].class==='Pod') {
@@ -113,9 +121,11 @@ const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
 								<Typography sx={{flexGrow: 1}}/>
 								:
 								<Tooltip key={index} title={action.text}>
-									<IconButton size="small" color='primary' onClick={(event) => actionClick(action.name!, event.currentTarget)}>
-										{action.icon}
-									</IconButton>
+									<span>
+										<IconButton size="small" color='primary' disabled={!isEnabled(action)} onClick={(event) => actionClick(action.name!, event.currentTarget)}>
+											{action.icon}
+										</IconButton>
+									</span>
 								</Tooltip>
 						))}
 					</Stack>
