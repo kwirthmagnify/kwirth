@@ -1,9 +1,15 @@
 #!/bin/bash
 set -e
 
-# Load nvm if available (needed when invoked non-interactively from WSL)
+# Under WSL the PATH carries every Windows directory (/mnt/c/...). Out with them: npm resolved to the
+# Windows one, and linuxdeploy walks the whole PATH and aborts on the first it cannot read
+# ("boost::filesystem::status: Permission denied: .../WindowsApps") — which is what killed the AppImage.
+export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/mnt/' | paste -sd: -)
+
+# Load nvm and cargo if available (needed when invoked non-interactively from WSL)
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+[ -s "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
 
 # Required for AppImage tools (linuxdeploy) to run in WSL without FUSE
 export APPIMAGE_EXTRACT_AND_RUN=1
@@ -66,22 +72,23 @@ cd ../../deploy/tauri
 echo "[tauri-build] Building Tauri application..."
 export CARGO_TARGET_DIR="$HOME/.kwirth-tauri-target"
 
-# Wrap linuxdeploy AppImages so they run without FUSE in WSL.
-# Python script written to /tmp (native Linux fs) via printf to guarantee LF-only endings.
-printf '%s\n' \
-    'import os, stat' \
-    'cache = os.path.expanduser("~/.cache/tauri")' \
-    'for name in ["linuxdeploy-x86_64.AppImage", "linuxdeploy-plugin-appimage.AppImage"]:' \
-    '    f = os.path.join(cache, name)' \
-    '    r = f + ".real"' \
-    '    if os.path.isfile(f) and not os.path.isfile(r):' \
-    '        os.rename(f, r)' \
-    '    if os.path.isfile(r):' \
-    '        open(f, "w", newline="").write("#!/bin/sh\nexport APPIMAGE_EXTRACT_AND_RUN=1\nexec \"" + r + "\" \"$@\"\n")' \
-    '        os.chmod(f, 0o755)' \
-    '        print("[tauri-build] Wrapped: " + f)' \
-    > /tmp/wrap-appimage.py
-python3 /tmp/wrap-appimage.py
+#   linuxdeploy runs without FUSE through APPIMAGE_EXTRACT_AND_RUN=1, exported above and inherited by it
+# and by its plugins. It used to be wrapped in a shell script instead, and that broke every AppImage:
+# tauri patches linuxdeploy-x86_64.AppImage by zeroing bytes 8-10 (the AppImage magic), which on the
+# wrapper fell on the shebang ('#!/bin/s\0\0\0') -> "failed to bundle project: No such file or directory".
+# Undo any wrapper left by older builds: the real AppImage goes back to its name.
+for name in linuxdeploy-x86_64.AppImage linuxdeploy-plugin-appimage.AppImage; do
+    f="$HOME/.cache/tauri/$name"
+    if [ -f "$f.real" ]; then
+        mv -f "$f.real" "$f"
+        echo "[tauri-build] Unwrapped: $f"
+    fi
+done
+
+# Only this build's packages: the bundle folders kept every previous one (a 0.5.134 .deb from May among
+# them), and the .cmd moves the FIRST it finds to releases.
+rm -rf "$CARGO_TARGET_DIR"/release/bundle/deb "$CARGO_TARGET_DIR"/release/bundle/appimage
+rm -rf src-tauri/target/release/bundle/deb src-tauri/target/release/bundle/appimage
 
 # Add tauri tool cache to PATH so linuxdeploy can find its plugins
 export PATH="$HOME/.cache/tauri:$PATH"
