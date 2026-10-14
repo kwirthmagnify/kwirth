@@ -2,6 +2,33 @@
   {
     "extensionType": "plugin",
     "id": "magnify",
+    "version": "0.1.1",
+    "name": "Magnify",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-magnify/-/kwirth-plugin-magnify-0.1.1.tgz",
+    "description": "Magnify channel plugin for Kwirth - a complete Kubernetes management tool: every artifact and event of the cluster, live, and the actions to manage them",
+    "icon": "Search",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "dce",
+        "id": "file-manager",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "provider",
+        "id": "events",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "provider",
+        "id": "metrics",
+        "minVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "magnify",
     "version": "0.1.0",
     "name": "Magnify",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-magnify/-/kwirth-plugin-magnify-0.1.0.tgz",
