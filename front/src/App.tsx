@@ -35,7 +35,7 @@ import { IWorkspace, IWorkspaceSummary } from './model/IWorkspace'
 
 import { SessionContext } from './model/SessionContext'
 import { addGetAuthorization, addDeleteAuthorization, addPostAuthorization, addPutAuthorization } from './tools/AuthorizationManagement'
-import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize, IAuthMethod, ILoginResponse, EExtensionType, EChannelMode } from '@kwirthmagnify/kwirth-common'
+import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, ESignalMessageReason, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize, IAuthMethod, ILoginResponse, EExtensionType, EChannelMode } from '@kwirthmagnify/kwirth-common'
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
@@ -1367,6 +1367,31 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                                 // clave vale y los mensajes van a llegar a alguien. Es el mismo criterio
                                 // que el back, y el único que hace que el indicador signifique algo.
                                 handlers.onState(conn.clusterId, ERemoteConnState.CONNECTED)
+                            }
+                            /*
+                                🔴 The channel is no longer installed over there, and the socket does NOT
+                                say so: uninstalling a plugin on a member leaves the cluster up and the
+                                connection open, so nothing here ever changes state. The tab went on
+                                believing that member was reporting — counting it in the coverage badge
+                                with data that had stopped arriving, and never re-subscribing to its
+                                findings when the plugin came back (a NEW tab did see them, because it
+                                starts from a snapshot). Reported 2026-10-14.
+
+                                Closing is the whole fix: `onclose` already reports RECONNECTING and the
+                                retry loop re-resolves the endpoint and re-STARTs. While the plugin is
+                                away each START is refused and the 10 s watchdog closes again; the moment
+                                it is back, the START is answered with an instance, state goes CONNECTED
+                                and the snapshot re-subscribes. Same criterion the back end uses.
+                            */
+                            // 🔴 SOLO por código: una frase en inglés no es un protocolo (ver ESignalMessageReason).
+                            // Sin mirar el `flow`: llega como respuesta a algo nuestro Y empujado por el core
+                            // al desinstalar (UNSOLICITED). Filtrar por RESPONSE descarta el que llega a tiempo.
+                            if (m?.reason === ESignalMessageReason.CHANNEL_UNSUPPORTED) {
+                                if (conn.instanceId) console.log(`Remote channel gone on ${conn.clusterId} (uninstalled?): closing to re-handshake`, new Date().toISOString())
+                                conn.instanceId = undefined
+                                handlers.onMessage(conn.clusterId, m)   // el plugin decide qué hacer con sus datos
+                                try { ws.close() } catch { /* noop */ }
+                                return
                             }
                             handlers.onMessage(conn.clusterId, m)
                         } catch { /* no-JSON: ignora */ }

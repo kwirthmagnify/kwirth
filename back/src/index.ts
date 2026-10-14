@@ -37,7 +37,7 @@ import { DceManager } from './tools/DceManager'
 import { buildPluginStatuses } from './tools/PluginStatus'
 import { DceApi } from './api/DceApi'
 import { findConsumers, IRequirer, setInstalledExtensionsSource, emptyInstalledIndex, normalizeRequires } from './tools/ExtensionDeps'
-import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
+import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, ESignalMessageReason, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
 import { ManageClusterApi } from './api/ManageClusterApi'
 import { AuthorizationManagement } from './tools/AuthorizationManagement'
 import { buildScopeCatalog, validScopeSet } from './tools/ScopeCatalog'
@@ -606,22 +606,36 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
     }
 }
 
-const sendChannelSignal = (webSocket: WebSocket, level: ESignalMessageLevel, text: string, instanceMessage: IInstanceMessage, localChannels:Map<string,IChannel>) => {
-    if (localChannels.has(instanceMessage.channel)) {
-        let signalMessage:ISignalMessage = {
-            action: instanceMessage.action,
-            flow: EInstanceMessageFlow.RESPONSE,
-            level,
-            channel: instanceMessage.channel,
-            instance: instanceMessage.instance,
-            type: EInstanceMessageType.SIGNAL,
-            text
-        }
-        webSocket.send(JSON.stringify(signalMessage))
+/*
+    🔴 This used to send ONLY when the channel was registered here, and write `Unsupported channel '<x>'
+    for sending signals` to our own log otherwise. The guard was backwards with respect to what most of its
+    callers are: several of them exist precisely BECAUSE the channel is not there — `Unsupported channel in
+    this Kwirth deployment`, `Channel not found for adding object`, `is unsupported sending asset info`.
+    Every one of those errors was swallowed, and the caller on the other end of the socket got silence.
+
+    What it cost (QA 2026-10-14): uninstall a federated plugin on a member and the socket stays open, so
+    the home keeps a valid instance and goes on sending. With no answer it never learns the channel is
+    gone, reports every delivery as done, and they are all lost — no queue, no warning, and the only trace
+    on the wrong machine. An assign made from the home produced no ticket, no owner and no error anywhere.
+
+    Silence is not a valid answer to "I cannot serve you": whoever is asking has to be able to tell "it is
+    not there" from "it is taking a while". So the signal always goes out, and a channel we do not have is
+    logged as well — it is worth knowing, it just must not replace the answer.
+*/
+const sendChannelSignal = (webSocket: WebSocket, level: ESignalMessageLevel, text: string, instanceMessage: IInstanceMessage, localChannels:Map<string,IChannel>, reason?: ESignalMessageReason) => {
+    if (!localChannels.has(instanceMessage.channel)) logError(ELogComponent.CORE, `Unsupported channel '${instanceMessage.channel}': answering '${text}' to the requester`)
+    let signalMessage:ISignalMessage = {
+        ...(reason ? { reason } : {}),
+        action: instanceMessage.action,
+        flow: EInstanceMessageFlow.RESPONSE,
+        level,
+        channel: instanceMessage.channel,
+        instance: instanceMessage.instance,
+        type: EInstanceMessageType.SIGNAL,
+        text
     }
-    else {
-        logError(ELogComponent.CORE, `Unsupported channel '${instanceMessage.channel}' for sending signals`)
-    }
+    try { webSocket.send(JSON.stringify(signalMessage)) }
+    catch (err) { logError(ELogComponent.CORE, `Could not send channel signal '${text}': ${err}`) }
 }
 
 const sendChannelSignalAsset = (webSocket: WebSocket, level: ESignalMessageLevel, event: ESignalMessageEvent, text: string, instanceMessage: IInstanceMessage, ri:IRunningInstance, namespace:string, pod:string, container?:string) => {
@@ -647,8 +661,50 @@ const sendChannelSignalAsset = (webSocket: WebSocket, level: ESignalMessageLevel
     }
 }
 
-const sendInstanceConfigSignalMessage = (ws:WebSocket, action:EInstanceMessageAction, flow: EInstanceMessageFlow, channel: string, instanceMessage:IInstanceMessage, text:string, data?:any) => {
+/*
+    🔴 Al desinstalar un canal se AVISA a quien lo estaba usando, en el acto.
+
+    Quien sabe que el canal se ha ido es quien lo desinstala. Si se calla, cada cliente tiene que
+    descubrirlo por su cuenta —y solo lo descubre cuando intenta algo—, así que el primer mensaje que le
+    manden se pierde: sale creyendo que hay alguien al otro lado y el rechazo llega un viaje después, con
+    el emisor ya convencido de haberlo entregado. Eso costó una tarde entera el 2026-10-14: un assign
+    sobre un finding de un miembro desaparecía con el log diciendo `delivered`, y la pestaña abierta
+    seguía contando a ese cluster como si reportara.
+
+    NO se cierra el socket, y es a propósito: una misma conexión puede llevar varios canales —el core
+    enruta cada mensaje por su campo `channel`—, así que cerrarla se llevaría por delante a los demás.
+    Se manda la negativa, que es lo que el cliente necesita para reaccionar; él decide si cierra.
+
+    Y solo a las conexiones de ESE canal: `containsConnection` lo sabe y está en el contrato `IChannel`,
+    así que vale para cualquier plugin sin pedirle nada nuevo.
+*/
+const announceChannelGone = (channelId: string, channel: IChannel): void => {
+    let told = 0
+    wsServer?.clients.forEach(client => {
+        try {
+            if (client.readyState !== 1) return
+            if (!channel.containsConnection(client as unknown as WebSocket)) return
+            const msg: ISignalMessage = {
+                action: EInstanceMessageAction.NONE,
+                flow: EInstanceMessageFlow.UNSOLICITED,
+                type: EInstanceMessageType.SIGNAL,
+                channel: channelId,
+                instance: '',
+                level: ESignalMessageLevel.ERROR,
+                reason: ESignalMessageReason.CHANNEL_UNSUPPORTED,
+                text: 'Unsupported channel in this Kwirth deployment'
+            }
+            client.send(JSON.stringify(msg))
+            told++
+        }
+        catch { /* una conexión que falla al avisar no puede frenar la desinstalación */ }
+    })
+    if (told > 0) logInfo(ELogComponent.CORE, `Channel '${channelId}' uninstalled: told ${told} connection(s) that it is gone`)
+}
+
+const sendInstanceConfigSignalMessage = (ws:WebSocket, action:EInstanceMessageAction, flow: EInstanceMessageFlow, channel: string, instanceMessage:IInstanceMessage, text:string, data?:any, reason?: ESignalMessageReason) => {
     let resp:IInstanceConfigResponse = {
+        ...(reason ? { reason } : {}),
         action,
         flow,
         channel,
@@ -1071,7 +1127,17 @@ const processPauseContinueInstanceConfig = async (instanceConfig: IInstanceConfi
 
 const processPing = (webSocket:WebSocket, instanceMessage:IInstanceMessage, localChannels:Map<string,IChannel>): void => {
     if (!localChannels.has(instanceMessage.channel)) {
-        sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.PING, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Channel not found for ping')
+        /*  🔴 Con el CÓDIGO, y es el sitio que más importa: el keepalive es lo ÚNICO que un cliente manda
+            por su cuenta, así que es su única oportunidad de descubrir que el canal ya no está sin tener
+            que intentar una operación primero.
+
+            Esta rama contestaba 'Channel not found for ping' — un tercer texto para el mismo hecho, junto
+            a 'Unsupported channel in this Kwirth deployment' y 'has not been found for command'. El
+            navegador lo recibía cada 30 s, no lo reconocía, y seguía creyendo que el miembro reportaba:
+            la pestaña abierta se quedaba con los datos viejos y no volvía a suscribirse al reinstalar el
+            plugin (QA 2026-10-14). Tres frases para una condición es exactamente por qué esto necesita un
+            código y no una cadena. */
+        sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.PING, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Channel not found for ping', undefined, ESignalMessageReason.CHANNEL_UNSUPPORTED)
         return
     }
     let channel = localChannels.get(instanceMessage.channel)!
@@ -1111,7 +1177,7 @@ const processChannelCommand = async (webSocket: WebSocket, instanceMessage: IIns
                     const redacted: any = { ...instanceMessage }
                     if (redacted.accessKey) redacted.accessKey = `${redacted.accessKey.substring(0, 8)}...`
                     logInfo(ELogComponent.CORE, redacted)
-                    sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, `Instance '${instanceMessage.instance}' has not been found for command`)
+                    sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, `Instance '${instanceMessage.instance}' has not been found for command`, undefined, ESignalMessageReason.INSTANCE_UNKNOWN)
                 }
             }   
         }
@@ -1226,7 +1292,9 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
         }
 
         if (!ri.channels.has(instanceMessage.channel)) {
-            sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, 'Unsupported channel in this Kwirth deployment', instanceMessage, ri.channels)
+            // Reaches the requester now: see the note on sendChannelSignal, whose guard used to swallow
+            // exactly the errors that exist because the channel is NOT here.
+            sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, 'Unsupported channel in this Kwirth deployment', instanceMessage, ri.channels, ESignalMessageReason.CHANNEL_UNSUPPORTED)
             return
         }
 
@@ -1665,6 +1733,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             const onPluginUninstalled = (id: string) => {
                 const activeRI = runningInstances.find(r => r.active)
                 if (activeRI) {
+                    // Primero avisar, después soltar: una vez fuera del registro ya no se sabe qué
+                    // conexiones eran suyas, y quedarían esperando a un canal que no va a contestar.
+                    const gone = activeRI.channels.get(id)
+                    if (gone) announceChannelGone(id, gone)
                     activeRI.channels.delete(id)
                     // Its routes stop being listed. (Express cannot unmount them: they stay answering until a
                     // restart, and the registry says what is PUBLISHED by an installed extension.)
@@ -2003,6 +2075,9 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                 for (const ri of runningInstances) {
                     const instance = ri.channels.get(id)
                     if (!instance) continue
+                    // Avisar ANTES del cleanup: después, el canal ya ha soltado sus conexiones y no hay
+                    // forma de saber cuáles eran suyas.
+                    announceChannelGone(id, instance)
                     try { if (typeof (instance as any).cleanup === 'function') (instance as any).cleanup() }
                     // A channel that throws on the way out must not stop the uninstall: it is already being
                     // removed, and leaving it half-registered would be worse than the failed cleanup.
@@ -3279,6 +3354,23 @@ const setupProcessHooks = (runningInstance: IRunningInstance, kwirthData:KwirthD
     })
 
     process.on('uncaughtException', async (err, origin) => {
+        /*
+            Lo mismo que arriba, y por la misma razón: el fallo de una EXTENSIÓN no se lleva el core por
+            delante. Que una excepción sea síncrona y no una promesa rechazada no la hace más grave —era
+            pura asimetría: el `trivy` con un fire-and-forget sin catch quedaba aislado, y un `throw` del
+            manejador de un canal mataba el proceso con todos los demás canales dentro (2026-10-14: un
+            `ReferenceError` en el back de un plugin, desde el manejador de un WebSocket).
+
+            La atribución es igual de conservadora: si no se puede señalar a una extensión, se trata como
+            fallo del core y el proceso muere, como siempre. Preferimos un reinicio de más que tragarnos
+            un fallo del core creyendo que era de un plugin.
+        */
+        const culprit = failureOrigin(err)
+        if (culprit) {
+            logError(ELogComponent.CORE, `❌ UNCAUGHT EXCEPTION in ${culprit.kind} '${culprit.id}' — isolated, kwirth keeps running`)
+            logError(ELogComponent.CORE, describeFailure(err))
+            return
+        }
         logError(ELogComponent.CORE, '🚨 UNCAUGHT EXCEPTION')
         exitAndLog(undefined, undefined, undefined, err, origin, 1, 10)
     })
