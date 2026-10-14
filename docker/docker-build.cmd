@@ -1,6 +1,8 @@
 set /p major=<..\version\major
 set /p minor=<..\version\minor
 set /p level=<..\version\level
+rem the level file ends in a space ("73 "): without this, "kwirth:%currentversion%-core" became two arguments
+set level=%level: =%
 set currentversion=%major%.%minor%.%level%
 
 set DOCKER_BUILDKIT=1
