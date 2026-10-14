@@ -1,10 +1,8 @@
 @echo off
 setlocal
 
-del c:\github\releases\*-t-installer.exe 2>nul
 del c:\github\releases\*-t.msi 2>nul
 del .\src-tauri\target\release\bundle\msi\*.* /q 2>nul
-del .\src-tauri\target\release\bundle\nsis\*.* /q 2>nul
 
 call ..\..\version\version.cmd
 set VER=%KWIRTH_VERSION:"=%
@@ -37,14 +35,14 @@ del package.json
 cd ..\..\deploy\tauri
 
 echo [tauri-build-windows] Building Tauri application...
-call npx @tauri-apps/cli build --config "{\"productName\":\"kwirth-magnify-%VER%-t\"}"
+rem Only the msi: the nsis installer was a second compression of the same ~140 MB that nobody used
+call npx @tauri-apps/cli build --bundles msi --config "{\"productName\":\"kwirth-magnify-%VER%-t\"}"
 
 echo [tauri-build-windows] Copying front assets to release target...
 if exist src-tauri\target\release\front rmdir /s /q src-tauri\target\release\front
 xcopy /e /i /q ..\..\back\bundle\front src-tauri\target\release\front
 
-echo [tauri-build-windows] Moving Windows installers to releases...
+echo [tauri-build-windows] Moving the Windows installer to releases...
 powershell -Command "Get-ChildItem 'src-tauri\target\release\bundle\msi\*.msi' | Select-Object -First 1 | Move-Item -Destination \github\releases\kwirth-magnify-%VER%-t.msi -Force"
-powershell -Command "$f=(Get-ChildItem 'src-tauri\target\release\bundle\nsis\*.exe'|Select-Object -First 1).FullName; if ($f) { $r=5; while($r -gt 0){ try{ Move-Item $f '\github\releases\kwirth-magnify-%VER%-t-installer.exe' -Force; break }catch{ $r--; if($r -eq 0){ Write-Warning \"Could not move NSIS installer: $_\" }else{ Start-Sleep 3 } } } }"
 
 echo [tauri-build-windows] Done!
