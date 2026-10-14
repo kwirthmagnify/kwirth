@@ -48,7 +48,7 @@ import { MenuNotification, INotification } from '@kwirthmagnify/kwirth-common-fr
 import { ContextSelector } from './components/common/ContextSelector'
 import { v4 as uuid } from 'uuid'
 import { About } from './components/home/About'
-import { makePluginDescriptor } from './components/extensions/PluginDescriptor'
+import { makePluginDescriptor, IInstalledPlugin } from './components/extensions/PluginDescriptor'
 import { providerDescriptor } from './components/extensions/ProviderDescriptor'
 import { makeIdpDescriptor } from './components/extensions/IdpDescriptor'
 import { senderDescriptor } from './components/extensions/SenderDescriptor'
@@ -1962,6 +1962,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 instanceConfig.data = tab.channelObject.instanceConfig
                 tab.ws.send(JSON.stringify(instanceConfig))
                 tab.channelStarted = true
+                tab.channelStartedAt = Date.now()
                 tab.channelPaused = false
                 
                 tab.channel.startChannel(tab.channelObject)
@@ -2024,6 +2025,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             if (selectedTab.current.channel.stopChannel(selectedTab.current.channelObject)) setChannelMessageAction({action : EChannelRefreshAction.REFRESH})
             if (tab.ws && tab.ws.readyState === tab.ws.OPEN) tab.ws.send(JSON.stringify(instanceConfig))
             tab.channelStarted = false
+            tab.channelStartedAt = undefined
             tab.channelPaused = false
         }
         else {
@@ -2174,6 +2176,56 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuTabOption.ChannelStop:
                 onClickChannelStop()
                 break
+            case MenuTabOption.PluginInfo:
+                showPluginInfo(selectedTab.current)
+                break
+        }
+    }
+
+    /*
+        What the tab's plugin is —the installed plugin's own metadata, asked of the back when it is wanted
+        (it is not kept in the front)— and how the tab itself is doing: since when its channel runs and
+        the state of its websocket. The message box renders HTML, so every value is escaped: they come
+        from a package's package.json.
+    */
+    const showPluginInfo = async (tab: ITabObject) => {
+        const esc = (s?: string) => (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        const channelId = tab.channel.channelId
+
+        const wsStates = ['connecting', 'open', 'closing', 'closed']
+        const wsState = tab.ws ? wsStates[tab.ws.readyState] ?? `unknown (${tab.ws.readyState})` : 'no connection'
+        const started = tab.channelStarted && tab.channelStartedAt
+            ? `${new Date(tab.channelStartedAt).toLocaleString()} (${Math.floor((Date.now() - tab.channelStartedAt) / 60000)} min ago)`
+            : 'not started'
+        const tabInfo = `
+            <br/><b>Tab</b>: ${esc(tab.name)}<br/>
+            <b>Started at</b>: ${esc(started)}<br/>
+            <b>Connection</b>: ${esc(wsState)}${tab.channelPaused ? ' (paused)' : ''}
+        `
+
+        try {
+            const plugins = await (await fetch(`${backendUrl}/core/plugins`, addGetAuthorization(accessString))).json() as IInstalledPlugin[]
+            const p = plugins.find(x => x.id === channelId)
+            if (!p) {
+                setMsgBox(MsgBoxOk('Info', `The channel <b>${esc(channelId)}</b> is not an installed plugin.<br/>${tabInfo}`, setMsgBox))
+                return
+            }
+            const origin = p.installedFrom === 'dev' ? 'development (kwirth-dev.json)'
+                : p.installedFrom === 'bundled' ? 'bundled with this Kwirth'
+                : p.marketplaceLabel ? `marketplace ${p.marketplaceLabel}`
+                : p.installedFrom ?? ''
+            const a = `
+                <b>${esc(p.displayName || p.id)}</b> (${esc(p.id)} ${esc(p.version)})<br/>
+                <b>Description</b>: ${esc(p.description)}<br/>
+                <b>Package</b>: ${esc(p.name)}<br/>
+                ${p.website ? `<b>Website</b>: <a href="${esc(p.website)}" target="_blank" rel="noopener noreferrer">${esc(p.website)}</a><br/>` : ''}
+                <b>Installed from</b>: ${esc(origin)}<br/>
+                ${tabInfo}
+            `
+            setMsgBox(MsgBoxOk('Info', a, setMsgBox))
+        }
+        catch (err) {
+            setMsgBox(MsgBoxOkError('Info', `Could not read the plugin's information: ${esc(String(err))}<br/>${tabInfo}`, setMsgBox))
         }
     }
 

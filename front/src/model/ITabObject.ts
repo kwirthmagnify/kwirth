@@ -10,6 +10,8 @@ interface ITabObject {
     channel: IChannel
     channelObject: IChannelObject
     channelStarted: boolean
+    /** When the channel was last started (ms since epoch); undefined while it has never run. */
+    channelStartedAt?: number
     channelPaused: boolean
     channelPending: boolean
     headerEl:any

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Collapse, Menu, MenuItem, MenuList, Typography } from '@mui/material'
+import { Collapse, Divider, Menu, MenuItem, MenuList, Typography } from '@mui/material'
 import { Check, Pause, PlayArrow, Delete, Stop, ExpandLess, ExpandMore, DriveFileRenameOutline, Info, FactCheck } from '@kwirthmagnify/kwirth-common-front/icons'
 import { Fullscreen } from '../icons'
 import { KeyboardArrowLeft, KeyboardArrowRight, KeyboardDoubleArrowLeft, KeyboardDoubleArrowRight } from './icons'
@@ -19,7 +19,8 @@ enum MenuTabOption {
     FullScreen,
     ChannelStart,
     ChannelPause,
-    ChannelStop
+    ChannelStop,
+    PluginInfo
 }
 
 interface IMenuTabProps {
@@ -56,6 +57,8 @@ const MenuTab: React.FC<IMenuTabProps> = (props:IMenuTabProps) => {
             <MenuItem key='channelstart' onClick={() => props.optionSelected(MenuTabOption.ChannelStart)} disabled={props.selectedTab?.channelStarted}><PlayArrow/>&nbsp;Start</MenuItem>
             <MenuItem key='channelpause' onClick={() => props.optionSelected(MenuTabOption.ChannelPause)} disabled={!props.selectedTab?.channelStarted || !pauseable}>{props.selectedTab?.channelPaused?<><PlayArrow/>Resume</>:<><Pause/>Pause</>}</MenuItem>
             <MenuItem key='channelstop' onClick={() => props.optionSelected(MenuTabOption.ChannelStop)} disabled={!props.selectedTab?.channelStarted}><Stop/>&nbsp;Stop</MenuItem>
+            <Divider/>
+            <MenuItem key='plugininfo' onClick={() => props.optionSelected(MenuTabOption.PluginInfo)} disabled={props.selectedTabIndex<0}><Info/>&nbsp;Info</MenuItem>
 
         </MenuList>
     </Menu>
