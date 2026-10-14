@@ -1,11 +1,13 @@
 [package]
 name = "kwirth-magnify"
-version = "0.6.69"
+version = "0.6.72"
 edition = "2021"
 
 [lib]
 name = "kwirth_magnify_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+# Only rlib: the binary links it. staticlib and cdylib are the template's, for iOS and Android, and with
+# LTO each of them was one more whole-program link on every build.
+crate-type = ["rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -21,7 +23,8 @@ tokio = { version = "1", features = ["full"] }
 
 [profile.release]
 opt-level = 3
-lto = true
-codegen-units = 1
+# thin and parallel, not fat with one codegen unit: this app only starts the backend and opens a window,
+# and fat LTO in a single thread made each build cost more than ten minutes for nothing measurable
+lto = "thin"
 panic = "abort"
 strip = true
