@@ -51,7 +51,7 @@ Consumidores: el canal **Magnify** (core) y los plugins **metrics**, **alert**, 
 | P1.6 | (pedido por el usuario) Magnify avisa en su overview si falta el provider: `USAGE` lleva `metricsProvider` (`IMagnifyClusterUsage`); test de back (3) y e2e `02-magnify-without-provider` (se salta si el provider está) | ✅ |
 | P1.5 | CL9: QA validado (7/7); guía (página nueva del provider, índices, Magnify, metrics, settings, referencia técnica); provider publicado; bundles `-readonly`/`-full`/desktop con provider + plugin; manifests públicos; tags | ✅ |
 | P1.7 | D5, parte OSS: `metrics` 0.1.1, `alert` 0.2.27 y `pinocchio` 0.2.41 con `requires` hacia `provider:metrics:0.1.0` (y common-back 0.6.1). La guía de pinocchio sale en lockstep **con README por primera vez**: su generador no lo metía y la 0.2.40 se publicó sin él | ✅ |
-| P1.8 | D5, parte de pago: `spectrum` y `agora` (+ sus guías en lockstep) al Nexus y al manifest privado | ⏳ bloqueado: GitLab privado caído |
+| P1.8 | D5, parte de pago: `spectrum` y `agora` (+ sus guías en lockstep) al Nexus y al manifest privado | 🟡 `spectrum` 0.7.4 + guía 0.7.4 publicados (2026-10-14). `agora` pendiente: su repo tiene una 0.2.5 a medias sin validar |
 
 ## P2 — las lecturas ya no se cuelgan ni se encadenan (2026-10-13)
 
