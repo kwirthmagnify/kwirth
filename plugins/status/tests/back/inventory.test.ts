@@ -50,6 +50,26 @@ test('un provider arrancado sale como INSTANTIATED, y sin motivo que explicar', 
     assert.equal(c.reason, undefined)
 })
 
+/*
+    'started' is "its PUBLIC router is mounted" in the core, not "running". events and metrics keep their
+    routes behind the access key (configRouter), so they never get it and this tab said "Not started" of
+    them while they ran. The core now says it with providerStarted.
+*/
+test('🔴 a provider with no public router that the core started is running, not "not started"', async () => {
+    const inv = await inventarioDe({ providers: [{ id: 'events', providerStarted: true }] })
+    assert.equal(inv.components[0].health, EComponentHealth.INSTANTIATED)
+})
+
+test('a provider the core created but that did not start (providerStarted false) is not started, router or not', async () => {
+    const inv = await inventarioDe({ providers: [{ id: 'broken', providerStarted: false, started: true }] })
+    assert.equal(inv.components[0].health, EComponentHealth.NOT_INSTANTIATED)
+})
+
+test('with a core that predates providerStarted, "started" is all there is to go by', async () => {
+    assert.equal((await inventarioDe({ providers: [{ id: 'old', started: true }] })).components[0].health, EComponentHealth.INSTANTIATED)
+    assert.equal((await inventarioDe({ providers: [{ id: 'old' }] })).components[0].health, EComponentHealth.NOT_INSTANTIATED)
+})
+
 test('🔴 un provider que NO informa no se marca como activo ni como ocioso', async () => {
     /*
         The case it would be easiest to spoil, and it still holds after S2: 'getStats' is OPTIONAL and

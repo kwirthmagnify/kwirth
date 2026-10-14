@@ -22,7 +22,7 @@ Eleven tabs, and it opens on the first:
 | **Providers** | each producer of data — providers and pluviders — with its state and why, consumers and deliveries |
 | **Graph** | who consumes whom |
 | **Performance** | the Kwirth process: memory, CPU, event-loop delay and uptime, with charts of the session |
-| **Plugins** | every installed plugin: running, remote, not started or failed, and how many instances and connections its channel reportsG (a dash when it does not report — never a zero) |
+| **Plugins** | every installed plugin: running, remote, not started or failed, and how many instances and connections its channel reports (a dash when it does not report — never a zero) |
 | **Extensions** | senders and webhooks, with their state |
 | **Routes** | every HTTP route published — core API, providers, plugins, webhooks — with its methods, and collisions marked |
 | **DCE** | every installed DCE: version, source, whether its back and front loaded (with the error), and who consumes it |

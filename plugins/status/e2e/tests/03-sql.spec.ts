@@ -62,7 +62,9 @@ test('the database list or an unreachable message is shown', async () => {
     // Either the server is reachable and the Databases heading shows a table, or it is not and the error
     // is shown. Both are valid; what is NOT valid is a blank tab.
     await expect(page.getByText('Databases', { exact: true })).toBeVisible()
-    const reachable = page.getByRole('chip', { name: 'reachable' })
+    // by its exact text: 'chip' is no ARIA role and a MUI Chip exposes none, so getByRole('chip') never
+    // matched — the test only ever passed through the unreachable branch
+    const reachable = page.getByText('reachable', { exact: true })
     const notReachable = page.getByText(/Could not list databases/)
     await expect(reachable.or(notReachable)).toBeVisible({ timeout: 10000 })
 })

@@ -21,7 +21,13 @@ import { ProcessProbe } from './ProcessProbe'
  */
 interface IProviderLike {
     id: string
+    /** In the core this means "its PUBLIC router is mounted", not "running": see providerStarted. */
     started?: boolean
+    /**
+     * Set by the core once startProvider() has returned without throwing. Absent in cores that predate it
+     * (they only had 'started', which a provider with no public router never gets).
+     */
+    providerStarted?: boolean
     configRouterStarted?: boolean
     providesRouter?: boolean
     configRouter?: unknown
@@ -361,8 +367,15 @@ class StatusChannel implements IChannel {
 
     private eventsOf = (p: IProviderLike): number | undefined => statsOf(p)?.events
 
+    /*
+        Running, by the core's own word. 'started' alone said "not started" of every provider without a
+        PUBLIC router — events and metrics among them since they keep their routes behind the access key —
+        while they ran. A core that predates providerStarted only has 'started' to go by.
+    */
+    private isProviderStarted = (p: IProviderLike): boolean => p.providerStarted ?? p.started === true
+
     private healthOfProvider = (p: IProviderLike, subscribers: number | undefined): { health: EComponentHealth, reason?: string } => {
-        if (p.started !== true) {
+        if (!this.isProviderStarted(p)) {
             /*
                 Stopped BUT with subscribers: the silent failure this screen exists to catch.
 

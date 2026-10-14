@@ -254,6 +254,23 @@ test('la columna de entregas distingue un numero de "no lo dice"', async () => {
     expect(conNumero, 'ningun componente informa de sus entregas').toBeGreaterThan(0)
 })
 
+/*
+    🔴 events and metrics keep their routes behind the access key (configRouter), so the core never set
+    'started' on them — that flag is "its PUBLIC router is mounted" — and this tab said "Not started" of
+    both while they ran. The core now says it with providerStarted.
+*/
+test('🔴 a running provider with no public router (events, metrics) is not shown as "Not started"', async () => {
+    const filas = page.locator('table tbody tr')
+    let vistos = 0
+    for (const id of ['events', 'metrics']) {
+        const fila = filas.filter({ has: page.getByText(id, { exact: true }) }).first()
+        if (await fila.count() === 0) continue
+        vistos++
+        await expect(fila, `${id} running, but shown as not started`).not.toContainText('Not started')
+    }
+    test.skip(vistos === 0, 'neither the events nor the metrics provider is installed here')
+})
+
 test('refrescar trae una foto nueva', async () => {
     await tab('Home').click()
     const antes = await page.getByText(/Snapshot taken at/).innerText()
