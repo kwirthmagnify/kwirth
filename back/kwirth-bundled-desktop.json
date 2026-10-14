@@ -5,7 +5,9 @@
     "alert": "latest",
     "magnify": "latest",
     "topology": "latest",
-    "echo": "latest"
+    "echo": "latest",
+    "ops": "latest",
+    "news": "latest"
   },
   "dces": {
     "file-manager": "latest",
