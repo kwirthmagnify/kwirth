@@ -2,12 +2,10 @@
   "plugins": {
     "log": "latest",
     "metrics": "latest",
-    "alert": "latest",
     "magnify": "latest",
+    "fileman": "latest",
     "topology": "latest",
-    "echo": "latest",
-    "ops": "latest",
-    "news": "latest"
+    "ops": "latest"
   },
   "dces": {
     "file-manager": "latest",
