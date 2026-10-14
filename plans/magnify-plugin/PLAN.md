@@ -87,6 +87,7 @@ Y Magnify usa del core:
 | G3.1 | `ProviderManager.installBundled`, como el de DCEs (misma versión → se salta; otra → `upgrade`) | ✅ |
 | G3.2 | `PluginManager.installBundled` saca id y versión del `package.json` del tgz (`peekBundledMeta` en `BundledExtensions`); con el nombre del fichero, una versión nueva en la imagen chocaba con "already installed" | ✅ |
 | G3.3 | `fetch-bundled.mjs`: fichero `<tipo>-<id>.tgz` y tipos `dces` y `aitoolsets` | ✅ |
+| G3.6 | (pedido por el usuario, 2026-10-14) cada build lleva la **última versión** de todo lo bundled: las entradas valen `"latest"` y `fetch-bundled` las resuelve contra el manifest público de su tipo (no contra npm: una versión retirada del manifest no entra); `build-image` resuelve en el host y mete el JSON ya resuelto (si no, la caché de Docker se quedaba con la primera); la carpeta de salida se vacía de `.tgz` antes (el desktop arrastraba `events.tgz`, `metrics.tgz` y una guía de julio versionada en git, ya fuera). `-readonly` + `echo`; `-full` + `fileman`, `topology`, `echo` y la DCE `three` | ✅ |
 | G3.4 | ~~orden de arranque~~ — no hacía falta (ver punto 4) | ✖ |
 | G3.5 | 5 tests en `bundledExtensions` (id y versión del paquete; providers del bundle instalados; misma versión se salta, otra actualiza; un plugin de la imagen se actualiza tras un reinicio). Con un bundle real descargado por `fetch-bundled` (providers `events` y `metrics`, plugins `metrics` y `magnify`, DCE `file-manager`) los gestores del core instalan las cuatro extensiones; core 710 (0 ✗) | ✅ |
 

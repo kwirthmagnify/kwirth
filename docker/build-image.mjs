@@ -34,9 +34,21 @@ if (!existsSync(scriptSrc)) {
     process.exit(1)
 }
 
-copyFileSync(manifestSrc, manifestDst)
+/*
+    The manifest goes into the context RESOLVED: every "latest" already turned into the URL of the newest
+    version, here on the host. Resolving it inside the Dockerfile would leave the RUN layer cached with
+    whatever was newest the first time, since neither the manifest nor the script would have changed;
+    resolved here, a new version changes the COPY and the layer is rebuilt.
+*/
+try {
+    execSync(`node "${scriptSrc}" "${manifestSrc}" --resolve "${manifestDst}"`, { stdio: 'inherit' })
+}
+catch {
+    console.error(`[build-image] ERROR: could not resolve ${manifestName}.`)
+    process.exit(1)
+}
 copyFileSync(scriptSrc, scriptDst)
-console.log(`[build-image] Bundled extensions manifest (${manifestName}) and script copied to docker context.`)
+console.log(`[build-image] Bundled extensions manifest (${manifestName}, resolved) and script copied to docker context.`)
 
 try {
     execSync(`docker build -t ${tag} .`, { stdio: 'inherit', cwd: __dirname })

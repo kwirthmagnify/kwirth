@@ -28,8 +28,8 @@ Kwirth, it is a different starting inventory:
 | tag | manifest | carries |
 |---|---|---|
 | `kwirth:<version>-core` | `back/kwirth-bundled-core.json` | nothing but the bundled guide |
-| `kwirth:<version>-readonly` | `back/kwirth-bundled-readonly.json` | + `log`, `metrics`, `alert` |
-| `kwirth:<version>-full` | `back/kwirth-bundled-full.json` | + `magnify` |
+| `kwirth:<version>-readonly` | `back/kwirth-bundled-readonly.json` | + plugins `log`, `metrics`, `alert`, `echo`; providers `metrics`, `events` |
+| `kwirth:<version>-full` | `back/kwirth-bundled-full.json` | + plugins `magnify`, `fileman`, `topology`; DCEs `file-manager`, `three` |
 
 `kwirth:latest`, the import into k3d and the push to Docker Hub all follow **`-full`**: Docker Hub keeps
 carrying the plain `kwirthmagnify/kwirth:<version>` tag it has always carried, and that tag is the

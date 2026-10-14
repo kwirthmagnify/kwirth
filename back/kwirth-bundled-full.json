@@ -1,16 +1,20 @@
 {
   "plugins": {
-    "log": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-log/-/kwirth-plugin-log-0.2.25.tgz",
-    "metrics": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-metrics/-/kwirth-plugin-metrics-0.1.1.tgz",
-    "alert": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-alert/-/kwirth-plugin-alert-0.2.27.tgz",
-    "magnify": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-magnify/-/kwirth-plugin-magnify-0.1.0.tgz"
+    "log": "latest",
+    "metrics": "latest",
+    "alert": "latest",
+    "magnify": "latest",
+    "fileman": "latest",
+    "topology": "latest",
+    "echo": "latest"
   },
   "dces": {
-    "file-manager": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-file-manager/-/kwirth-dce-file-manager-0.1.0.tgz"
+    "file-manager": "latest",
+    "three": "latest"
   },
   "providers": {
-    "metrics": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-metrics/-/kwirth-provider-metrics-0.1.1.tgz",
-    "events": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-events/-/kwirth-provider-events-0.1.0.tgz"
+    "metrics": "latest",
+    "events": "latest"
   },
   "senders": {
   },
