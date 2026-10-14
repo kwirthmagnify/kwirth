@@ -46,6 +46,7 @@ kwirth-dev.json
 kwirth-bundled.json
 # what fetch-bundled downloads at build time, and the copy of it build-image puts into docker/
 /deploy/tauri/src-tauri/resources/bundled/*.tgz
+/deploy/tauri/src-tauri/splash/kwirth-transparent.png
 /deploy/electron/bundled/
 /docker/fetch-bundled.mjs
 

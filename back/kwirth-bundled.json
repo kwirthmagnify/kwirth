@@ -1,10 +1,15 @@
 {
   "plugins": {
+    "log": "latest",
     "metrics": "latest",
-    "magnify": "latest"
+    "alert": "latest",
+    "magnify": "latest",
+    "topology": "latest",
+    "echo": "latest"
   },
   "dces": {
-    "file-manager": "latest"
+    "file-manager": "latest",
+    "three": "latest"
   },
   "providers": {
     "metrics": "latest",

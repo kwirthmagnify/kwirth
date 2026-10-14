@@ -112,7 +112,9 @@ ${darkCss ? darkCss.split('\n').map(l => '    ' + l).join('\n') : ''}
         writeFileSync(path.join(tmpDir, 'package.json'), packageJson)
         writeFileSync(path.join(tmpDir, 'index.html'), indexHtml)
         // Flatten: copy versioned content directly to tgz root (not inside a version subdir)
-        cpSync(docsSourceDir, tmpDir, { recursive: true })
+        // Without the diagram sources (.drawio, 2.4 MB) and draw.io's backups (.bkp, 2.2 MB): the guide
+        // shows the exported images, and these only added weight to every image and desktop.
+        cpSync(docsSourceDir, tmpDir, { recursive: true, filter: src => !/\.(drawio|bkp)$/.test(src) })
         // Overwrite _sidebar.md AFTER cpSync (it would otherwise restore the original)
         writeFileSync(path.join(tmpDir, '_sidebar.md'), sidebarContent)
 

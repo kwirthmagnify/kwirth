@@ -23,7 +23,7 @@ xcopy /e /i /q ..\..\back\bundle\front src-tauri\resources\front
 
 echo [tauri-build-windows] Generating Tauri icons...
 copy ..\electron\kwirth-transparent.png src-tauri\icons\source.png
-copy ..\electron\kwirth-transparent.png src-tauri\resources\kwirth-transparent.png
+copy ..\electron\kwirth-transparent.png src-tauri\splash\kwirth-transparent.png
 call npx @tauri-apps/cli icon src-tauri\icons\source.png
 
 echo [tauri-build-windows] Downloading bundled extensions...
