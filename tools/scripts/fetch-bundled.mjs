@@ -10,9 +10,10 @@
  *
  * Usage: node tools/scripts/fetch-bundled.mjs <manifest-path> <output-dir>
  *        node tools/scripts/fetch-bundled.mjs <manifest-path> --resolve <resolved-manifest-path>
- * Example (Electron):  node ../tools/scripts/fetch-bundled.mjs ../back/kwirth-bundled.json bundled
- * Example (Tauri):     node ../tools/scripts/fetch-bundled.mjs ../back/kwirth-bundled.json resources/bundled
+ * Example (Electron):  node ../tools/scripts/fetch-bundled.mjs ../back/kwirth-bundled-desktop.json bundled
+ * Example (Tauri):     node ../tools/scripts/fetch-bundled.mjs ../back/kwirth-bundled-desktop.json resources/bundled
  * Example (Docker):    node fetch-bundled.mjs kwirth-bundled.json /usr/kwirth/bundled
+ *                      (the context's fixed name: build-image writes the variant there, resolved)
  *
  * '--resolve' writes the same manifest with every "latest" replaced by its URL and downloads nothing.
  * docker/build-image.mjs uses it on the host, so the image is built from pinned URLs: a "latest" inside
@@ -30,7 +31,7 @@ import https from 'https'
 import http from 'http'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const manifestPath = resolve(process.argv[2] ?? join(__dirname, '..', 'back', 'kwirth-bundled.json'))
+const manifestPath = resolve(process.argv[2] ?? join(__dirname, '..', '..', 'back', 'kwirth-bundled-desktop.json'))
 const manifestDir = dirname(manifestPath)
 const resolveOnly = process.argv[3] === '--resolve'
 const resolvedPath = resolveOnly ? resolve(process.argv[4] ?? 'kwirth-bundled.resolved.json') : undefined

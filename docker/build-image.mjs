@@ -2,7 +2,7 @@
 /**
  * Prepares the Docker build context with bundled extensions support and runs docker build.
  * Usage (from docker/ directory): node build-image.mjs [image-tag] [bundled-manifest]
- * Default tag: kwirth. Default manifest: back/kwirth-bundled.json
+ * Default tag: kwirth. Default manifest: back/kwirth-bundled-full.json
  *
  * The manifest is the ONLY thing that separates the image variants (-core / -readonly / -full): same
  * Dockerfile, same core, different set of bundled extensions. It is named by file (resolved inside
@@ -18,7 +18,7 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
 const tag = process.argv[2] ?? 'kwirth'
-const manifestName = process.argv[3] ?? 'kwirth-bundled.json'
+const manifestName = process.argv[3] ?? 'kwirth-bundled-full.json'
 
 const manifestSrc = join(root, 'back', manifestName)
 const scriptSrc   = join(root, 'tools', 'scripts', 'fetch-bundled.mjs')
