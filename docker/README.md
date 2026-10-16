@@ -4,6 +4,11 @@ Run Kwirth as a plain container, on **Linux, Windows or macOS**, with the image 
 `kwirthmagnify/kwirth`. This folder holds what builds and publishes that image, and this page explains
 how to run it.
 
+> **To run Kwirth on Docker and keep it, use [`deploy/compose/`](../deploy/compose/README.md).** One
+> command installs it persistent, with its secrets **encrypted** and a master key generated for you, and
+> optionally with PostgreSQL, a kubeconfig or automatic updates. The plain `docker run` below writes its
+> secrets as plain JSON, and is kept for existing installations and quick tries.
+
 | file | what it is |
 |---|---|
 | `Dockerfile` | the image. Two stages, so the bundled guide travels once instead of three times |
@@ -156,7 +161,7 @@ remember that if you did not mount a volume that change disappears with the cont
 |---|---|
 | `PORT` | listening port (default `3883`) |
 | `ROOTPATH` | path prefix, when Kwirth hangs off a subpath behind a reverse proxy |
-| `MASTERKEY` | signs API keys. **Does not encrypt the store in this mode** |
+| `MASTERKEY` | signs API keys. **Does not encrypt the store in this mode** (it does with `FORCE=container` + `KWIRTH_STORE`, which is what `deploy/compose/` sets) |
 | `KWIRTH_CLUSTER_NAME` | the name Kwirth shows for itself |
 | `BODYLIMIT` | max request body (default `8mb`), for ingestion providers that batch |
 | `KEEPALIVE` | idle connection timeout in ms (default `65000`) |

@@ -220,6 +220,23 @@ With this setup, all kwirth configuration is persisted in the PVC and survives p
 
 > **Helm**: pass `--set store=/mnt/kwirth-data` together with the appropriate `volumes`/`volumeMounts` values, or configure them in your `values.yaml`.
 
+## Docker Compose: kwirth on any machine with Docker
+The [`deploy/compose/` folder](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/compose) installs
+kwirth with one command, and it is the way to run it on Docker you mean to keep: persistent, with its
+secrets **encrypted** with a master key generated for you, and optionally with PostgreSQL, a mounted
+kubeconfig or automatic updates.
+
+```bash
+./install.sh up                                     # Linux, macOS, WSL
+.\install.ps1 up                                    # Windows PowerShell
+./install.sh up --sql --kubeconfig ~/.kube/config   # + PostgreSQL, observing a cluster
+```
+
+It prints the URL (`http://127.0.0.1:3883`, published on this machine only) and the first login when kwirth
+is healthy. `update`, `down` and `destroy` do the rest. Keep a copy of the `.env` it writes: its
+`MASTERKEY` is the only key to the encrypted store. Every option is described in the
+[administration guide](guide/admin/01-deployment#docker-compose-recommended-without-kubernetes).
+
 ## Docker: kwirth in your local docker environment
 To run kwirth as a Docker container, mount your kubeconfig so kwirth can reach your cluster, **and mount
 a directory for its store** — without it, everything kwirth remembers dies with the container:
@@ -519,6 +536,9 @@ http://localhost/quirz
 ```
 
 ## Docker, ECS & External
+With Docker Compose the URL is the one `install` prints when it finishes — `http://127.0.0.1:3883` unless
+you passed `--port` or `--bind`.
+
 Accessing Docker, ECS and External installations is very similar to accessing a Kubernetes deployed kwirth, with the slight difference of not to access via a ingress controller. Instead, you just access kwirth at the port and path you have configured when you started the kwirth server — on ECS that means through whatever load balancer fronts the task, with `ROOTPATH` set if it routes by path.
 
 ### Docker

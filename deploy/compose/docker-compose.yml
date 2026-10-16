@@ -1,0 +1,42 @@
+# Kwirth with Docker Compose — the base. Kwirth alone, persistent, with its secrets encrypted.
+#
+#   docker compose up -d                        (after creating .env, see .env.example or run install)
+#
+# Add-ons, layered on top of this file (install does it for you and remembers them in .env as COMPOSE_FILE):
+#   docker-compose.sql.yml          PostgreSQL for the extensions that need a database
+#   docker-compose.kubeconfig.yml   mount a kubeconfig so Kwirth observes a cluster
+#   docker-compose.watchtower.yml   pull and restart Kwirth by itself when its image tag moves
+
+name: kwirth
+
+services:
+  kwirth:
+    image: kwirthmagnify/kwirth:${KWIRTH_TAG:-latest}
+    restart: unless-stopped
+    # Published on localhost only by default: nothing outside this machine reaches Kwirth until KWIRTH_BIND
+    # says otherwise (0.0.0.0 publishes it on every interface).
+    ports:
+      - "${KWIRTH_BIND:-127.0.0.1}:${KWIRTH_PORT:-3883}:3883"
+    environment:
+      # 'container' instead of the detected 'docker': it is what stores the secrets ENCRYPTED with MASTERKEY
+      # in KWIRTH_STORE. Detected docker keeps its historical plain-JSON format for existing installations.
+      FORCE: container
+      KWIRTH_STORE: /data
+      # Comes from .env, outside the volume: that is what makes the encryption at rest worth something.
+      # Lose it and the store cannot be read again.
+      MASTERKEY: ${MASTERKEY:?MASTERKEY is not set. Run install, or copy .env.example to .env and set it}
+      KWIRTH_CLUSTER_NAME: ${KWIRTH_CLUSTER_NAME:-compose}
+    volumes:
+      - kwirth-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3883/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    labels:
+      # Only containers with this label are touched by docker-compose.watchtower.yml.
+      com.centurylinklabs.watchtower.enable: "true"
+
+volumes:
+  kwirth-data:

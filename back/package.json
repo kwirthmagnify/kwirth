@@ -19,7 +19,8 @@
     "start:docker": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=docker nodemon src/index.ts",
     "start:desktop": "cross-env NODE_OPTIONS=\"--expose-gc --max-old-space-size=2048 --trace-warnings --unhandled-rejections=strict\" FORCE=desktop AUTH=kubeconfig KWIRTH_START_CHANNEL=magnify nodemon src/index.ts",
     "test": "node tests/run.mjs",
-    "e2e:boot": "node scripts/e2e-boot-runtimes.mjs"
+    "e2e:boot": "node scripts/e2e-boot-runtimes.mjs",
+    "e2e:compose": "node scripts/e2e-compose.mjs"
   },
   "author": "",
   "license": "ISC",

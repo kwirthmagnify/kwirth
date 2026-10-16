@@ -1,7 +1,7 @@
 import 'dotenv/config';
 // LogBuffer monkey-patches console.log/error to capture stdout in a ring buffer. Must be imported BEFORE
 // any log line is written so nothing is lost. The buffer is always capturing; the CoreLogProvider exposes
-// it only when there is no Kubernetes API.
+// it only when Kwirth is not running as a pod.
 import './tools/LogBuffer'
 import { ApisApi, CoreV1Api, AppsV1Api, KubeConfig, KubernetesObjectApi, Log, Watch, Exec, V1Pod, CustomObjectsApi, RbacAuthorizationV1Api, ApiextensionsV1Api, VersionApi, NetworkingV1Api, StorageV1Api, BatchV1Api, AutoscalingV2Api, NodeV1Api, SchedulingV1Api, CoordinationV1Api, AdmissionregistrationV1Api, PolicyV1Api, V1ConfigMap } from '@kubernetes/client-node'
 import { ConfigApi } from './api/ConfigApi'
@@ -58,7 +58,7 @@ import { NodeConfigMaps } from './tools/NodeConfigMaps'
 import { NodeSecrets } from './tools/NodeSecrets'
 
 import { IUserInfo, IKwirthSettings, EExecutionEnvironment, EExtensionType, ERouteOwnerKind, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
-import { EStoreKind, IEnvironmentCapabilities, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType } from './tools/ExecutionEnvironment'
+import { EStoreKind, IEnvironmentCapabilities, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType, servesCoreLogFromMemory } from './tools/ExecutionEnvironment'
 import { resolveInstallationIdentity, defaultProbes } from './tools/InstallationIdentity'
 
 // Where a generated installation identity (no Kubernetes, no platform source) is kept in Kwirth's store.
@@ -276,9 +276,9 @@ licenseManager.load()
 const registeredProviders = new Map<string, TProviderConstructor>()
 // 'events' and 'metrics' are installable providers now (providers/events, providers/metrics), loaded by the
 // ProviderManager
-// 'corelog' is registered conditionally after capabilities are resolved: only when there is no Kubernetes
-// API. In a pod the kubelet keeps the log and the REST endpoint serves it; everywhere else this provider
-// takes that role through the Status plugin's WebSocket.
+// 'corelog' is instantiated conditionally at startup: only when Kwirth is not running as a pod. In a pod
+// the kubelet keeps the log and the REST endpoint serves it; everywhere else this provider takes that
+// role through the Status plugin's WebSocket.
 
 // registry of IdP connectors (bundled ones are registered in code; dev ones through loadDevIdps; installable ones in EPIC G)
 const registeredIdps = new Map<string, TIdpConnectorConstructor>()
@@ -2268,19 +2268,21 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         }
 
         /*
-            Internal provider: the core's own log buffer. Only when there is no Kubernetes API — in a pod
-            the kubelet keeps the container log and the REST endpoint serves it. No channel declares it
+            Internal provider: the core's own log buffer. Whenever Kwirth is NOT a pod — with or without a
+            kubeconfig — because only in a pod does the kubelet keep the container log for the REST
+            endpoint to serve. Asking for the Kubernetes API instead left the Log tab empty in Docker with
+            a kubeconfig mounted: there was an API, but no pod to read the log from. No channel declares it
             (the Status plugin observes, it does not consume) and it has no router, so neither loop above
             creates it; it is instantiated here.
         */
-        if (!capabilities.kubernetes && !localClusterInfo.providers.some(p => p.id === 'corelog')) {
+        if (servesCoreLogFromMemory(localKwirthData.inCluster) && !localClusterInfo.providers.some(p => p.id === 'corelog')) {
             try {
                 const coreLogInstance = createProviderInstance(CoreLogProvider, localClusterInfo, localKwirthData, runningInstance.providerStorage)
                 if (coreLogInstance) {
                     localClusterInfo.providers.push(coreLogInstance)
                     await coreLogInstance.startProvider()
                     coreLogInstance.providerStarted = true
-                    logInfo(ELogComponent.CORE, `Provider 'corelog' started (in-memory log capture for non-Kubernetes environments)`)
+                    logInfo(ELogComponent.CORE, `Provider 'corelog' started (in-memory log capture, Kwirth is not running as a pod)`)
                 }
             } catch (err) {
                 logError(ELogComponent.CORE, `Provider 'corelog' failed to start: ${err}`)

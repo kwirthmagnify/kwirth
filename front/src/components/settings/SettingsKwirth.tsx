@@ -44,16 +44,28 @@ enum ESettingsKwirthTab {
 
 // An editable row: IMarketplace as it is (the token already travels inside manifestAuth) plus the state
 // that lives only on screen.
+/*  🔴 El resultado de un test lleva su VEREDICTO aparte del texto.
+
+    Antes era solo un string y el verde/rojo salía de `startsWith('Manifest OK')`. Es decir: el estado
+    —salió bien o no— vivía dentro de una frase, y la frase se construye 150 líneas más arriba en este
+    mismo fichero, que es lo que lo hacía parecer inofensivo. Deja de serlo en cuanto alguien reformule
+    el mensaje o lo traduzca: el tick verde desaparece y nada falla. El texto es para leerlo; `ok` es
+    para decidir. */
+interface ITestResult {
+    ok: boolean
+    text: string
+}
+
 interface IMarketplaceRow extends IMarketplace {
     tokenRevealed?: boolean
     testing?: boolean
-    testResult?: string
+    testResult?: ITestResult
 }
 
 interface IPackageRegistryRow extends IPackageRegistry {
     revealed?: boolean
     testing?: boolean
-    testResult?: string
+    testResult?: ITestResult
 }
 
 // What 'GET /senders' answers with, of which only these two are read here.
@@ -218,19 +230,22 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             })
             const response = await fetch(`${props.clusterUrl}/core/marketplace/test`, addPostAuthorization(props.accessString, payload))
             if (!response.ok) {
-                patchRow(index, { testing: false, testResult: `Test failed (HTTP ${response.status})` })
+                patchRow(index, { testing: false, testResult: { ok: false, text: `Test failed (HTTP ${response.status})` } })
                 return
             }
             const result = await response.json() as { ok: boolean, entries?: number, extensionTypes?: string[], error?: string }
             patchRow(index, {
                 testing: false,
-                testResult: result.ok
-                    ? `Manifest OK, ${result.entries} entries${result.extensionTypes?.length ? ` (${result.extensionTypes.join(', ')})` : ''}`
-                    : result.error ?? 'Manifest could not be read'
+                testResult: {
+                    ok: result.ok,
+                    text: result.ok
+                        ? `Manifest OK, ${result.entries} entries${result.extensionTypes?.length ? ` (${result.extensionTypes.join(', ')})` : ''}`
+                        : result.error ?? 'Manifest could not be read'
+                }
             })
         }
         catch {
-            patchRow(index, { testing: false, testResult: 'Could not reach Kwirth to run the test' })
+            patchRow(index, { testing: false, testResult: { ok: false, text: 'Could not reach Kwirth to run the test' } })
         }
     }
 
@@ -260,17 +275,17 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             })
             const response = await fetch(`${props.clusterUrl}/core/settings/registry/test`, addPostAuthorization(props.accessString, payload))
             if (!response.ok) {
-                patchRegistry(index, { testing: false, testResult: `Test failed (HTTP ${response.status})` })
+                patchRegistry(index, { testing: false, testResult: { ok: false, text: `Test failed (HTTP ${response.status})` } })
                 return
             }
             const result = await response.json() as { ok: boolean, error?: string }
             patchRegistry(index, {
                 testing: false,
-                testResult: result.ok ? 'Registry reachable' : result.error ?? 'Registry could not be reached'
+                testResult: { ok: result.ok, text: result.ok ? 'Registry reachable' : result.error ?? 'Registry could not be reached' }
             })
         }
         catch {
-            patchRegistry(index, { testing: false, testResult: 'Could not reach Kwirth to run the test' })
+            patchRegistry(index, { testing: false, testResult: { ok: false, text: 'Could not reach Kwirth to run the test' } })
         }
     }
 
@@ -374,7 +389,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                     </Tooltip>
                 </Stack>
                 { m.testing && <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}><CircularProgress size={14} /><Typography variant='caption'>Reading manifest…</Typography></Stack> }
-                { m.testResult && <Typography variant='caption' color={m.testResult.startsWith('Manifest OK') ? 'success.main' : 'error.main'}>{m.testResult}</Typography> }
+                { m.testResult && <Typography variant='caption' color={m.testResult.ok ? 'success.main' : 'error.main'}>{m.testResult.text}</Typography> }
             </Box>
         )
     }
@@ -433,7 +448,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                     </Tooltip>
                 </Stack>
                 { r.testing && <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}><CircularProgress size={14} /><Typography variant='caption'>Testing registry…</Typography></Stack> }
-                { r.testResult && <Typography variant='caption' color={r.testResult.startsWith('Registry reachable') ? 'success.main' : 'error.main'}>{r.testResult}</Typography> }
+                { r.testResult && <Typography variant='caption' color={r.testResult.ok ? 'success.main' : 'error.main'}>{r.testResult.text}</Typography> }
             </Box>
         )
     }

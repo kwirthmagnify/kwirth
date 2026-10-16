@@ -1,0 +1,40 @@
+# The Kwirth scan runner, next to Kwirth. Layer it on top of the base:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.scan-runner.yml up -d
+#
+# What it is for: an extension like Excubitor scans container images with Trivy. On Kubernetes it runs those
+# scans as Jobs; here there is no cluster to run Jobs in, so without this the extension inventories what it
+# can but reports no container CVEs. The runner is a container with the scanner that the extension calls over
+# HTTP — the same piece that runs as a sidecar on ECS.
+#
+# Then, in the extension's settings (Excubitor: ⋮ → Home settings → Scan runner):
+#   URL    http://scan-runner:8080
+#   Token  SCAN_RUNNER_TOKEN from .env
+#
+# Not needed with docker-compose.kubeconfig.yml: with a cluster in view, the extension can use its Jobs.
+#
+# The runner publishes no port: only Kwirth, on the compose network, reaches it — and the token is its only
+# protection, so it must stay that way.
+
+services:
+  scan-runner:
+    image: ${SCAN_RUNNER_IMAGE:?SCAN_RUNNER_IMAGE is not set. Run install --scan-runner IMAGE, or set it in .env}
+    restart: unless-stopped
+    environment:
+      # The runner refuses to start without it and rejects every request whose bearer token does not match.
+      SCAN_RUNNER_TOKEN: ${SCAN_RUNNER_TOKEN:?SCAN_RUNNER_TOKEN is not set. Run install --scan-runner IMAGE, or set it in .env}
+      MAX_CONCURRENCY: ${SCAN_RUNNER_CONCURRENCY:-3}
+      TRIVY_CACHE_DIR: /trivy-cache
+    volumes:
+      # The vulnerability database; without it every start downloads it again (~3 min).
+      - trivy-cache:/trivy-cache
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # The first start downloads that database: the health check must not give up during it.
+      start_period: 300s
+
+volumes:
+  trivy-cache:

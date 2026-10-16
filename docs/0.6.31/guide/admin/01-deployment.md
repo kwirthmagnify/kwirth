@@ -96,6 +96,58 @@ If you write your own `ClusterRole` instead of using the one in that manifest, g
 > kubectl auth can-i list jobs --as=system:serviceaccount:kwirth:kwirth-sa -A
 > ```
 
+## Docker Compose (recommended without Kubernetes)
+
+On any machine with Docker — Linux, Windows or macOS — the `deploy/compose/` folder of the repository
+installs kwirth with one command: it writes the configuration, **generates the master key**, starts the
+containers, waits until kwirth is healthy and prints where to log in.
+
+```bash
+./install.sh up          # Linux, macOS, WSL
+.\install.ps1 up         # Windows PowerShell
+```
+
+```
+Kwirth is up:  http://127.0.0.1:3883
+First login:   admin / password  (change it right away)
+```
+
+What it leaves running:
+
+- **kwirth**, published on `127.0.0.1:3883` only — nothing outside the machine reaches it until you pass
+  `--bind 0.0.0.0` — with `restart: unless-stopped` and a health check on `/healthz`.
+- A volume, `kwirth_kwirth-data`, holding users, settings, API keys and installed extensions, **encrypted**
+  with the master key. This is the difference with a plain `docker run` (next section), which writes its
+  secrets as plain JSON.
+- A `.env` file next to the scripts, with that master key.
+
+!> **Keep a copy of `.env`.** Its `MASTERKEY` is the only key to the encrypted store: lose it and kwirth
+cannot read its own data again. Later runs never overwrite it.
+
+The add-ons are options of the same command, and `up` can be run again at any time to change them — they
+are remembered in `.env`:
+
+| option (`install.sh` / `install.ps1`) | what it adds |
+|---|---|
+| `--sql` / `-Sql` | PostgreSQL, for the extensions that keep their data in a database. It publishes no port: only kwirth reaches it |
+| `--kubeconfig PATH` / `-Kubeconfig PATH` | mounts that kubeconfig read-only, so kwirth observes the cluster of its **current context** |
+| `--watchtower` / `-Watchtower` | Watchtower, which pulls and recreates kwirth by itself when its tag gets a new image. It needs the Docker socket, which is root on the machine |
+| `--tag TAG` / `-Tag TAG` | which kwirth: a version, `latest` (the default) or `develop` |
+| `--port N` / `-Port N` | the port on the machine (default `3883`) |
+
+And the other commands: `update` (pull the new image of the tag and recreate), `status`, `logs`, `down`
+(stop; the data stays) and `destroy` (remove everything, data included, after typing `destroy`).
+
+Two things that behave differently from a pod:
+
+- **Restart kwirth** exits the process and the restart policy starts it again — with the image it already
+  has. A new image comes with `update` or with Watchtower, never with a restart.
+- The startup log says `Execution environment: 'container'`, not `'docker'`. It is on purpose: it is what
+  makes kwirth encrypt its store.
+
+Everything else — backups, the variables in `.env`, kubeconfigs that point at `127.0.0.1` — is in the
+[`deploy/compose/` folder](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/compose).
+
 ## Docker
 
 Mount your kubeconfig so kwirth can reach the cluster, and a volume for kwirth's own data:
@@ -110,6 +162,9 @@ docker run -d --name kwirth -p 3883:3883 \
 ```
 
 Without the `/data` volume, users, API keys, settings and installed extensions live inside the container and disappear with `docker rm`. Without a kubeconfig kwirth still starts, observing no cluster.
+
+!> In this mode the secrets are written as **plain JSON** in `/data`. For a deployment you keep, use
+[Docker Compose](#docker-compose-recommended-without-kubernetes), which encrypts them.
 
 ## External (no Docker)
 
@@ -155,7 +210,7 @@ decides **what** kwirth writes. This is where you read it, without leaving kwirt
 which is exactly what you do not have at hand when something is going wrong inside the cluster.
 
 Open a [Status](../../channels/status.md) channel and go to its **Log** tab. It shows the last **1000 lines**
-the running container has written, with the colour kwirth put there: the timestamp in grey, the component in
+kwirth has written, with the colour kwirth put there: the timestamp in grey, the component in
 violet, and the level in its own colour — cyan for `INFO`, yellow for `WARN`, red for `ERRO`, green for
 `TRCE`. It is read again with every Status snapshot, so the channel's refresh button — or its auto-refresh —
 brings the latest lines; it does not follow the log by itself.
@@ -166,9 +221,11 @@ at how kwirth is doing.)
 It is **only for administrators**, for the same reason as the previous container's log below: these are
 kwirth's own internals. The endpoint behind it answers `403` to anybody else, and the tab says so.
 
-⚠️ **It needs kwirth to be running as a pod.** The lines come from the container's log in Kubernetes, so on
-desktop, on docker or on an ECS task there is nothing to read and the tab says so rather than showing an
-empty box.
+**Where the lines come from depends on where kwirth runs.** In a pod they are the container's log, read from
+Kubernetes. Anywhere else — Docker, Docker Compose, ECS, Cloud Run, ACI or desktop, with or without a
+kubeconfig mounted — kwirth keeps its own log **in memory** and the tab shows the last 1000 lines of it. The
+memory log holds 5000 lines by default (*Settings → Log → In-memory log buffer lines*, applied without a
+restart) and **starts empty on every restart**: what a crash wrote before is gone with the process.
 
 ⚠️ **The colour comes from the log itself.** If you turn *Colour the output (ANSI)* off — which is what you
 want when the log is going to end up in a file — the escape codes stop being written, and this viewer has

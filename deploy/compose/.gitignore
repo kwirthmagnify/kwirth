@@ -1,0 +1,2 @@
+# The real configuration: it holds MASTERKEY and the database password.
+.env

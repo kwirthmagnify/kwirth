@@ -74,7 +74,12 @@ export class KubernetesConfigMaps implements IConfigMaps {
                 return {}
             }
             catch (err:any) {
-                const conflict = err?.code === 409 || err?.body?.reason === 'Conflict' || String(err).includes('409')
+                /*  Solo por CÓDIGO. Había un tercer término, `String(err).includes('409')`, y se quitó:
+                    es el clásico «dejo el texto de respaldo por compatibilidad», que mantiene vivo el
+                    camino frágil para siempre y, sobre todo, **esconde el día en que es él quien
+                    decide** — si `code` dejara de llegar, nadie se enteraría. Y casaba de más: un 409 en
+                    una URL o en un contador dentro del mensaje bastaba para tomarlo por un conflicto. */
+                const conflict = err?.code === 409 || err?.body?.reason === 'Conflict'
                 if (conflict && attempt < MAX_ATTEMPTS) {
                     logWarning(ELogComponent.CORE, `Conflict writing configMap ${this.namespace}/${name}, retrying (${attempt}/${MAX_ATTEMPTS})`)
                     continue

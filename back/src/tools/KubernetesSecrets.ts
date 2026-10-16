@@ -60,7 +60,9 @@ export class KubernetesSecrets implements ISecrets {
                 return
             }
             catch (err:any) {
-                const conflict = err?.code === 409 || err?.body?.reason === 'Conflict' || String(err).includes('409')
+                // Solo por CÓDIGO: el respaldo por texto (`String(err).includes('409')`) se quitó por el
+                // mismo motivo que en KubernetesConfigMaps — ver el comentario de allí.
+                const conflict = err?.code === 409 || err?.body?.reason === 'Conflict'
                 if (conflict && attempt < MAX_ATTEMPTS) {
                     logWarning(ELogComponent.STORAGE, `Conflict writing secret ${name}, retrying (${attempt}/${MAX_ATTEMPTS})`)
                     continue

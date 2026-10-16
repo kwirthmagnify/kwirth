@@ -145,7 +145,7 @@
     <tr><td>ClusterRole</td><td>—</td><td>Kwirth needs read access to cluster resources. If you write your own role instead of using the supplied manifests, include the <code>batch</code> API group, or jobs will not appear in the resource selector</td></tr>
   </table>
   </div>
-  <p style="font-size:0.9rem;">Those are the prerequisites for running Kwirth <strong>on Kubernetes</strong>. Deploying on <a href="#installation">AWS ECS</a> has its own, listed with that option — and running there without a cluster to observe is a supported configuration in its own right.</p>
+  <p style="font-size:0.9rem;">Those are the prerequisites for running Kwirth <strong>on Kubernetes</strong>. Deploying on <a href="#installation">AWS ECS</a> or with <a href="#installation">Docker Compose</a> has its own, listed with that option — and running there without a cluster to observe is a supported configuration in its own right.</p>
 
   <h2>Installation</h2>
 
@@ -280,6 +280,54 @@
   <div class="callout"><strong>Info:</strong> What Kwirth <em>observes</em> on ECS is a separate question from where it runs. Mount a kubeconfig and it observes that cluster, with channels behaving exactly as they do in-cluster. Mount nothing and it observes no infrastructure — which is a complete configuration, not a half-started one: the front is served, users log in, autonomous channels run, ingestion providers receive, and you can federate against another Kwirth. Kwirth does <strong>not</strong> manage ECS tasks as if they were a cluster.</div>
 
   <p>SQL persistence is optional and separate — some extensions keep their data in PostgreSQL, which on ECS means RDS or Aurora. The connection is lazy, so Kwirth starts fine without it. Details, including why the database user needs <code>CREATEDB</code>, in the <a href="https://github.com/kwirthmagnify/kwirth/tree/master/deploy/ecs">deploy/ecs/ folder</a>.</p>
+
+  <h3>Option 4 — Docker Compose (any machine with Docker)</h3>
+  <p>Kwirth on your own machine or a VM, without Kubernetes: persistent, with its secrets encrypted, and optionally with PostgreSQL. One script does everything — it writes the configuration, generates the master key, starts the containers, waits until Kwirth is healthy and tells you where to log in.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Requirement</th><th>Notes</th></tr>
+    <tr><td>Docker</td><td>Docker Engine or Docker Desktop, with Compose v2 (<code>docker compose</code>)</td></tr>
+    <tr><td>The <code>deploy/compose/</code> folder</td><td>From the repository: the compose files and the two install scripts</td></tr>
+  </table>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <strong style="color:var(--text)">Install</strong>
+        <p style="margin:6px 0 8px;font-size:0.9rem;">From <code>deploy/compose/</code>. <code>install.sh</code> on Linux, macOS and WSL; <code>install.ps1</code> on Windows.</p>
+        <div class="code-block"><pre><span class="cmd">./install.sh up</span>                <span class="comment"># Linux, macOS, WSL</span>
+<span class="cmd">.\install.ps1 up</span>               <span class="comment"># Windows PowerShell</span>
+
+<span class="comment">Kwirth is up:  http://127.0.0.1:3883</span>
+<span class="comment">First login:   admin / password  (change it right away)</span></pre></div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <strong style="color:var(--text)">Add what you need</strong>
+        <p style="margin:6px 0 8px;font-size:0.9rem;">Run <code>up</code> again with options at any time; they are remembered in <code>.env</code>.</p>
+        <div class="code-block"><pre><span class="cmd">./install.sh up</span> <span class="flag">--sql</span>                      <span class="comment"># + PostgreSQL</span>
+<span class="cmd">./install.sh up</span> <span class="flag">--kubeconfig</span> <span class="val">~/.kube/k3d</span>    <span class="comment"># observe a cluster</span>
+<span class="cmd">./install.sh up</span> <span class="flag">--watchtower</span>               <span class="comment"># update itself when the tag moves</span>
+<span class="cmd">./install.sh up</span> <span class="flag">--tag</span> <span class="val">0.6.57</span> <span class="flag">--port</span> <span class="val">8080</span>    <span class="comment"># pin a version, another port</span></pre></div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <strong style="color:var(--text)">Update, stop, remove</strong>
+        <div class="code-block"><pre><span class="cmd">./install.sh update</span>     <span class="comment"># pull the new image of the tag and recreate</span>
+<span class="cmd">./install.sh down</span>       <span class="comment"># stop; the data stays in its volumes</span>
+<span class="cmd">./install.sh destroy</span>    <span class="comment"># remove everything, data included (asks first)</span></pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout warning"><strong>Warning:</strong> the first <code>up</code> writes a <code>MASTERKEY</code> into <code>deploy/compose/.env</code>, and that key is the only way to read Kwirth's encrypted store. <strong>Keep a copy of <code>.env</code></strong> — lose it and the data in the volume cannot be read again. It is never overwritten by later runs.</div>
+
+  <div class="callout"><strong>Info:</strong> the port is published on <code>127.0.0.1</code> only: nothing outside the machine reaches Kwirth until you pass <code>--bind 0.0.0.0</code>. "Restart Kwirth" restarts the container with the image it already has — to get a new one, use <code>update</code> or <code>--watchtower</code>. Everything else is in the <a href="https://github.com/kwirthmagnify/kwirth/tree/master/deploy/compose">deploy/compose/ folder</a>.</div>
 
   <h2>First Login</h2>
   <p>On first boot, Kwirth creates a default <strong>admin</strong> user with password <strong>password</strong>. You will be prompted to change the password on first login.</p>

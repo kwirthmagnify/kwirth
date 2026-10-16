@@ -1,0 +1,28 @@
+# Keep Kwirth on the latest image of its tag, by itself. Layer it on top of the base:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.watchtower.yml up -d
+#
+# Every WATCHTOWER_POLL_INTERVAL seconds Watchtower asks the registry whether KWIRTH_TAG points at a new image;
+# if it does, it pulls it and recreates the container with the same settings. It only touches containers
+# with the 'com.centurylinklabs.watchtower.enable' label, which in this project is Kwirth alone — Postgres
+# is never updated behind your back.
+#
+# ⚠️ Watchtower needs the Docker socket, and the Docker socket is root on this machine. That is why this is
+# an add-on and not part of the base.
+#
+# Without it, 'install update' does the same on demand. "Restart Kwirth" from the UI does NOT: a restart
+# reuses the image already pulled.
+
+services:
+  watchtower:
+    image: ${WATCHTOWER_IMAGE:-containrrr/watchtower:latest}
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_POLL_INTERVAL: ${WATCHTOWER_POLL_INTERVAL:-300}
+      WATCHTOWER_CLEANUP: "true"
+      # Watchtower speaks Docker API 1.25 unless told otherwise, and Docker Engine 29 refuses anything older
+      # than 1.40 ("client version 1.25 is too old"). 1.44 is accepted from Docker 25 on.
+      DOCKER_API_VERSION: ${WATCHTOWER_DOCKER_API_VERSION:-1.44}

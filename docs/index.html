@@ -496,12 +496,13 @@
   <div class="install-section">
     <div class="section-tag">Installation</div>
     <h2 class="section-title">Up and running in 2 minutes</h2>
-    <p class="section-sub" style="margin-bottom:32px;">No external databases, no message queues, no complex configuration. One Helm command on Kubernetes, one task definition on ECS.</p>
+    <p class="section-sub" style="margin-bottom:32px;">No external databases, no message queues, no complex configuration. One Helm command on Kubernetes, one task definition on ECS, one script with Docker Compose.</p>
     <div class="install-tabs">
       <button class="install-tab active" data-tab="i-helm">Helm</button>
       <button class="install-tab" data-tab="i-kubectl">kubectl</button>
       <button class="install-tab" data-tab="i-docker">Docker Desktop</button>
       <button class="install-tab" data-tab="i-ecs">AWS ECS</button>
+      <button class="install-tab" data-tab="i-compose">Docker Compose</button>
     </div>
     <div id="i-helm" class="install-panel active">
       <div class="code-block"><pre><span class="comment"># Add the Kwirth Helm repo</span>
@@ -559,6 +560,21 @@
       <p style="margin-top:12px;font-size:0.875rem;color:var(--muted);">
         Task definitions, a CloudFormation template for EFS, IAM and the target group, and a FireLens example:
         <a href="https://github.com/kwirthmagnify/kwirth/tree/master/deploy/ecs" style="color:var(--blue);">deploy/ecs/ folder</a>.
+      </p>
+    </div>
+    <div id="i-compose" class="install-panel">
+      <div class="code-block"><pre><span class="comment"># Any machine with Docker. From the repository's deploy/compose/ folder</span>
+<span class="cmd">./install.sh up</span>                <span class="comment"># Linux, macOS, WSL</span>
+<span class="cmd">.\install.ps1 up</span>               <span class="comment"># Windows PowerShell</span>
+
+<span class="comment"># Generates the master key, starts Kwirth, waits until it is healthy:</span>
+<span class="comment">#   Kwirth is up:  http://127.0.0.1:3883</span>
+
+<span class="comment"># Optional: + PostgreSQL, observe a cluster, update by itself</span>
+<span class="cmd">./install.sh up</span> <span class="flag">--sql</span> <span class="flag">--kubeconfig</span> <span class="val">~/.kube/config</span> <span class="flag">--watchtower</span></pre></div>
+      <p style="margin-top:12px;font-size:0.875rem;color:var(--muted);">
+        The compose files, the install scripts and what each option does:
+        <a href="https://github.com/kwirthmagnify/kwirth/tree/master/deploy/compose" style="color:var(--blue);">deploy/compose/ folder</a>.
       </p>
     </div>
     <p style="margin-top:20px;font-size:0.875rem;color:var(--muted);">

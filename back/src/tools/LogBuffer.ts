@@ -3,16 +3,16 @@ import { format } from 'util'
 /*
     A circular buffer of the last N lines written to stdout/stderr.
 
-    It exists for the case where there is no Kubernetes API: in a pod, the kubelet keeps the container's
-    log and the Status plugin reads it through the core's REST endpoint. In ECS, ACI, Cloud Run or a bare
+    It exists for the case where Kwirth is not a pod: in a pod, the kubelet keeps the container's log and
+    the Status plugin reads it through the core's REST endpoint. In Docker, ECS, ACI, Cloud Run or a bare
     process there is no such thing, and the only source of the log is the process's own stdout. This
     buffer captures it in memory so the CoreLogProvider can hand it to the Status plugin.
 
     The buffer is ALWAYS capturing — it costs a few KB and a function call per line — but the provider
-    that exposes it is only instantiated when the core has no Kubernetes API, so in a pod the REST
-    endpoint stays the source and nothing travels over the WebSocket.
+    that exposes it is only instantiated when Kwirth is not a pod, so in a pod the REST endpoint stays the
+    source and nothing travels over the WebSocket.
 
-    The size is configurable through KWIRTH_LOG_BUFFER_LINES and defaults to 5000.
+    The size is configurable in Settings → Log (IKwirthLogSettings.bufferLines) and defaults to 5000.
 */
 
 const DEFAULT_MAX_LINES = 5000

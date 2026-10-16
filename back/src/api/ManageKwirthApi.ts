@@ -5,6 +5,7 @@ import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
 import { getPreviousContainerLog } from '../tools/PreviousContainerLog'
 import { ELogComponent, logInfo } from '../tools/Logging'
+import { restartsByExitingProcess } from '../tools/ExecutionEnvironment'
 
 export class ManageKwirthApi {
     public router = express.Router()
@@ -26,16 +27,19 @@ export class ManageKwirthApi {
             .get( async (req:Request, res:Response) => {
                 try {
                     /*
-                        No Kubernetes API (ECS, ACI, Cloud Run, bare OS): there is no deployment to
-                        restart. The way to restart is to exit the process — the scheduler (ECS service,
-                        ACI, systemd…) starts a new task, and on Fargate that means a fresh image pull
-                        from the registry, so a newly pushed tag is picked up. The response is sent first
-                        so the client gets it before the process goes away.
+                        Not a pod (Docker, Compose, ECS, ACI, Cloud Run, bare OS), with or without a
+                        kubeconfig: there is no deployment of our own to restart. The way to restart is to
+                        exit the process and let the restart policy or the scheduler start it again. The
+                        response is sent first so the client gets it before the process goes away.
                     */
-                    if (!this.coreApi) {
-                        logInfo(ELogComponent.CORE, 'Restart requested in a non-Kubernetes environment: exiting the process so the scheduler starts a new task')
+                    if (restartsByExitingProcess(kwirthData.inCluster, kwirthData.isDesktop)) {
+                        logInfo(ELogComponent.CORE, 'Restart requested outside a pod: exiting the process so the restart policy or the scheduler starts it again')
                         res.status(200).json({ restarted: true, method: 'process-exit' })
                         setTimeout(() => process.exit(0), 500)
+                        return
+                    }
+                    if (!kwirthData.inCluster) {
+                        res.status(400).json({ error: 'Kwirth cannot restart itself on desktop: close and open the application' })
                         return
                     }
                     this.restartController(this.coreApi, this.appsApi, this.batchApi, kwirthData.namespace, 'deployment+' + kwirthData.deployment)

@@ -6,8 +6,8 @@ import { coreLogBuffer } from '../../tools/LogBuffer'
 /*
     The core's own log, as an in-memory ring buffer.
 
-    This provider exists only when there is no Kubernetes API (the core instantiates it conditionally in
-    index.ts). In a pod, the kubelet keeps the container log and the Status plugin reads it through the
+    This provider exists only when Kwirth is not running as a pod, with or without a kubeconfig (the core
+    instantiates it conditionally in index.ts). In a pod, the kubelet keeps the container log and the Status plugin reads it through the
     REST endpoint /managekwirth/log; where there is no pod, this provider takes that role: the Status
     plugin finds it in clusterInfo.providers, calls getLogLines(), and carries the lines over its
     WebSocket — no REST endpoint needed.

@@ -273,4 +273,21 @@ const resolveClusterType = (capabilities:IEnvironmentCapabilities): EClusterType
     return EClusterType.NONE
 }
 
-export { EStoreKind, IEnvironmentCapabilities, IEnvironmentProbes, detectExecutionEnvironment, probeAzureIdentityEndpoint, resolveEnvironmentCapabilities, resolveClusterType, hasKubeconfigSource, hasUsableKubeconfig }
+/*
+    Running AS a pod is not the same as having a Kubernetes API. A container or a desktop with a kubeconfig
+    mounted sees a cluster without being part of it: there is no deployment of its own to restart and no
+    kubelet keeping its log. Restart and the core log ask THIS, not capabilities.kubernetes — asking the
+    API is what broke both in Docker with a kubeconfig.
+*/
+
+/*
+    Outside a pod the way to restart is to exit: the container's restart policy, the ECS service or the
+    scheduler of the platform starts it again. Desktop is the exception — exiting would close the app the
+    user is looking at, and there is nothing outside it to bring it back.
+*/
+const restartsByExitingProcess = (inCluster:boolean, isDesktop:boolean): boolean => !inCluster && !isDesktop
+
+// Outside a pod nobody keeps the container log, so the core serves its own from the in-memory buffer.
+const servesCoreLogFromMemory = (inCluster:boolean): boolean => !inCluster
+
+export { EStoreKind, IEnvironmentCapabilities, IEnvironmentProbes, detectExecutionEnvironment, probeAzureIdentityEndpoint, resolveEnvironmentCapabilities, resolveClusterType, hasKubeconfigSource, hasUsableKubeconfig, restartsByExitingProcess, servesCoreLogFromMemory }
