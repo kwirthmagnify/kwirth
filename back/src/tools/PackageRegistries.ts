@@ -13,8 +13,8 @@ import http from 'http'
 // on npmjs. So the download credentials are chosen by matching the tarball's URL against the configured
 // registries.
 
-// Normalises for comparison: no trailing slash, the host in lower case. The path IS case sensitive — the
-// Nexus repo is called '031-299-IriaOperae' and it is not the same written any other way.
+// Normalises for comparison: no trailing slash, the host in lower case. The path IS case sensitive — a
+// Nexus repo called 'Acme-Private' is not the same written any other way.
 const normalize = (url: string): string => {
     const trimmed = url.trim().replace(/\/+$/, '')
     try {

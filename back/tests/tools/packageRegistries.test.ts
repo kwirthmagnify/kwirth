@@ -16,8 +16,8 @@ import { IPackageRegistry, EPackageRegistryAuthType } from '@kwirthmagnify/kwirt
 const reg = (id: string, url: string, enabled = true, auth?: IPackageRegistry['auth']): IPackageRegistry =>
     ({ id, label: id, url, enabled, auth })
 
-const NEXUS = 'https://nexus.plexus.services/repository/031-299-IriaOperae'
-const TGZ = `${NEXUS}/@iriaoperae/kwirth-docs-agora/-/kwirth-docs-agora-0.1.33.tgz`
+const NEXUS = 'https://nexus.example.com/repository/Acme-Private'
+const TGZ = `${NEXUS}/@acme/kwirth-docs-example/-/kwirth-docs-example-0.1.33.tgz`
 
 test('la URL de un tarball casa con el registro que la sirve', () => {
     assert.equal(matchRegistry(TGZ, [reg('nexus', NEXUS)])?.id, 'nexus')
@@ -29,7 +29,7 @@ test('una URL de otro sitio no casa: se baja anonima', () => {
 })
 
 test('gana el prefijo MAS LARGO, para que lo especifico pueda ganarle a lo general', () => {
-    const registries = [reg('todo-el-nexus', 'https://nexus.plexus.services'), reg('solo-mi-repo', NEXUS)]
+    const registries = [reg('todo-el-nexus', 'https://nexus.example.com'), reg('solo-mi-repo', NEXUS)]
     assert.equal(matchRegistry(TGZ, registries)?.id, 'solo-mi-repo')
     // and the order in the list must not matter
     assert.equal(matchRegistry(TGZ, [...registries].reverse())?.id, 'solo-mi-repo')
@@ -44,15 +44,15 @@ test('la barra final del registro es indiferente', () => {
 })
 
 test('el prefijo casa por SEGMENTO, no por texto suelto', () => {
-    // '.../031-299-IriaOperae' must not match '.../031-299-IriaOperae-privado', which is another repo
-    const otro = `https://nexus.plexus.services/repository/031-299-IriaOperae-privado/x/-/x-1.0.0.tgz`
+    // '.../Acme-Private' must not match '.../Acme-Private-raw', which is another repo
+    const otro = `https://nexus.example.com/repository/Acme-Private-raw/x/-/x-1.0.0.tgz`
     assert.equal(matchRegistry(otro, [reg('nexus', NEXUS)]), undefined)
 })
 
 test('la ruta distingue mayusculas, el host no', () => {
-    // the repo is called '031-299-IriaOperae': written any other way it is a DIFFERENT repo
+    // the repo is called 'Acme-Private': written any other way it is a DIFFERENT repo
     assert.equal(matchRegistry(TGZ, [reg('nexus', NEXUS.toLowerCase())]), undefined)
-    const hostRaro = TGZ.replace('nexus.plexus.services', 'NEXUS.Plexus.Services')
+    const hostRaro = TGZ.replace('nexus.example.com', 'NEXUS.Example.Com')
     assert.equal(matchRegistry(hostRaro, [reg('nexus', NEXUS)])?.id, 'nexus')
 })
 
@@ -122,13 +122,13 @@ test('sin configurar, packageHeaders NO manda credenciales (y la descarga saldri
 })
 
 test('configurado, packageHeaders inyecta la credencial del registro que sirve esa URL', async () => {
-    const registry = reg('nexus', NEXUS, true, { type: EPackageRegistryAuthType.BASIC, username: 'iriaoperae' })
+    const registry = reg('nexus', NEXUS, true, { type: EPackageRegistryAuthType.BASIC, username: 'acme' })
     const configMaps = { read: async () => ({ packageRegistries: [registry] }) } as unknown as IConfigMaps
     const secrets = { readAllKeys: async () => ({ nexus: 'fake-stored-password' }) } as unknown as ISecrets
 
     configurePackageRegistries(configMaps, secrets)
 
-    assert.deepEqual(await packageHeaders(TGZ), basicHeader('iriaoperae', 'fake-stored-password'))
+    assert.deepEqual(await packageHeaders(TGZ), basicHeader('acme', 'fake-stored-password'))
     // a URL that registry does not serve still downloads anonymously even with everything configured
     assert.deepEqual(await packageHeaders('https://registry.npmjs.org/x/-/x-1.0.0.tgz'), {})
 })
