@@ -73,3 +73,24 @@ test('un fichero que solo se PARECE al de una extension no cuenta', () => {
     err.stack = 'Error: boom\n    at x (/tmp/kwirth-something-weird-middle.js:1:1)'
     assert.equal(failureOrigin(err), undefined)
 })
+
+/*
+    An IdP connector's back is not required from a file: it is compiled with `new Function`, so until it
+    was given a sourceURL its stack read 'eval at loadBackConnector (…), <anonymous>' — no file name,
+    nobody to blame, and the core died for a connector's mistake. It happened for real: a connector
+    built against a newer common-back was installed before restarting the core, its getConfigSchema()
+    called an export that did not exist yet, and the process exited.
+*/
+test('un fallo nacido en el back de un conector IdP se atribuye a ese conector', () => {
+    const err = new Error('idpRedirectUriField is not a function')
+    err.stack = 'TypeError: x\n    at GitlabOnpremConnector.getConfigSchema (kwirth-idp-gitlab-onprem-back.js:71:57)'
+    assert.deepEqual(failureOrigin(err), { kind: 'idp', id: 'gitlab-onprem' })
+})
+
+// What the stack looked like BEFORE the sourceURL: this is the shape that killed the core, and it must
+// keep being unattributable — the point is that the name is now there, not that eval is now trusted.
+test('sin nombre de fichero (eval anonimo) no hay a quien atribuir, y el core muere: era el bug', () => {
+    const err = new Error('idpRedirectUriField is not a function')
+    err.stack = 'TypeError: x\n    at GitlabOnpremConnector.getConfigSchema (eval at loadBackConnector (/usr/kwirth/dist/bundle.js:344133:24), <anonymous>:71:57)'
+    assert.equal(failureOrigin(err), undefined)
+})

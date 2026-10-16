@@ -138,17 +138,26 @@ export class IdpApi {
         })
     }
 
-    private passwordFields(connectorId: string): string[] {
-        const schema = this.idpManager.getConnectorSchema(connectorId) ?? []
-        return schema.filter(f => f.type === 'password').map(f => f.name)
+    /** undefined = the schema could not be read, which is NOT the same as 'this connector has none'. */
+    private passwordFields(connectorId: string): string[] | undefined {
+        const schema = this.idpManager.getConnectorSchema(connectorId)
+        return schema?.filter(f => f.type === 'password').map(f => f.name)
     }
 
-    // returns a copy with the password fields masked (when they have a value)
+    /*
+        Returns a copy with the password fields masked (when they have a value).
+
+        🔴 With NO schema it masks EVERYTHING. A broken or incompatible connector cannot say which of its
+        fields are secrets, and the old `?? []` turned that into 'it has no secrets' — so the answer went
+        out with the client secret in the clear. Unreadable beats leaked: the admin sees masked fields
+        and a connector that says it is broken.
+    */
     private mask(inst: IIdpInstanceConfig): IIdpInstanceConfig {
         const fields = this.passwordFields(inst.connectorId)
         const config: Record<string, unknown> = { ...inst.config }
-        for (const f of fields) {
-            if (config[f] !== undefined && config[f] !== '') config[f] = SECRET_MASK
+        for (const [key, value] of Object.entries(config)) {
+            const isSecret = fields ? fields.includes(key) : typeof value === 'string'
+            if (isSecret && value !== undefined && value !== '') config[key] = SECRET_MASK
         }
         return { ...inst, config }
     }
@@ -161,12 +170,18 @@ export class IdpApi {
                 res.status(400).json({ error: 'id and connectorId are required' })
                 return
             }
-            // a merge of secrets: when a password field arrives masked, the stored one is kept
+            /*
+                A merge of secrets: a field that arrives masked keeps the stored value.
+
+                It looks at EVERY key instead of asking the schema which ones are passwords: the mask is
+                a value this API itself put there, so finding it is answer enough — and with a broken
+                connector the schema cannot be read, which used to mean the mask was persisted AS the
+                secret, quietly destroying the credential.
+            */
             const existing = await this.idpManager.getInstance(incoming.id)
-            const fields = this.passwordFields(incoming.connectorId)
             const config: Record<string, unknown> = { ...(incoming.config || {}) }
-            for (const f of fields) {
-                if (config[f] === SECRET_MASK) config[f] = existing?.config?.[f] ?? ''
+            for (const key of Object.keys(config)) {
+                if (config[key] === SECRET_MASK) config[key] = existing?.config?.[key] ?? ''
             }
             incoming.config = config
             await this.idpManager.saveInstance(incoming)

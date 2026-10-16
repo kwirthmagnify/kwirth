@@ -164,3 +164,80 @@ test('interpolateEnvDeep sustituye ${VAR} recursivamente', () => {
     assert.equal(out.config.missing, '')   // variable inexistente → ''
     delete process.env.KWIRTH_TEST_CID
 })
+
+/*
+    ── un conector roto NO se lleva el core por delante ──────────────────────────────────────────────
+
+    A connector is third-party code and constructing it, or asking it for its schema, can throw. The
+    real case: a connector built against a newer common-back, installed BEFORE restarting the core, so
+    its getConfigSchema() calls an export the running core does not have yet. Thrown from here it came
+    out of an async route, which Express does not catch, and the unhandledRejection took the core down
+    with every channel and every user inside.
+*/
+
+class BrokenCtorConnector implements IIdpConnector {
+    id = 'broken-ctor'
+    label = 'Broken'
+    kind = EIdpConnectorKind.OIDC
+    constructor() { throw new TypeError('idpRedirectUriField is not a function') }
+    getConfigSchema(): IIdpConfigFieldDef[] { return [] }
+    buildAuthorizationUrl(): string { return '' }
+    async handleCallback() { return { email: '', emailVerified: false } }
+}
+
+class BrokenSchemaConnector implements IIdpConnector {
+    id = 'broken-schema'
+    label = 'Broken schema'
+    kind = EIdpConnectorKind.OIDC
+    getConfigSchema(): IIdpConfigFieldDef[] { throw new TypeError('idpRedirectUriField is not a function') }
+    buildAuthorizationUrl(): string { return '' }
+    async handleCallback() { return { email: '', emailVerified: false } }
+}
+
+const managerWith = (id: string, ctor: TIdpConnectorConstructor) => {
+    const reg = new Map<string, TIdpConnectorConstructor>()
+    const mgr = new IdpManager(memSecrets(), memConfigMaps(), reg)
+    mgr.registerConnector(id, ctor)
+    return mgr
+}
+
+test('un conector que revienta al construirse devuelve undefined, no lanza', () => {
+    const mgr = managerWith('broken-ctor', BrokenCtorConnector as unknown as TIdpConnectorConstructor)
+    assert.doesNotThrow(() => mgr.getConnector('broken-ctor'))
+    assert.equal(mgr.getConnector('broken-ctor'), undefined)
+})
+
+test('un conector que revienta al pedirle el schema devuelve undefined, no lanza', () => {
+    const mgr = managerWith('broken-schema', BrokenSchemaConnector as unknown as TIdpConnectorConstructor)
+    assert.doesNotThrow(() => mgr.getConnectorSchema('broken-schema'))
+    assert.equal(mgr.getConnectorSchema('broken-schema'), undefined)
+})
+
+/*
+    undefined and [] must NOT be the same thing. Whoever masks secrets tells them apart: with no schema
+    there is no way to know which fields are passwords, and treating it as 'no password fields' sends
+    the client secret out in the clear.
+*/
+test('undefined (no se pudo leer) se distingue de [] (no tiene campos)', () => {
+    const roto = managerWith('broken-schema', BrokenSchemaConnector as unknown as TIdpConnectorConstructor)
+    assert.equal(roto.getConnectorSchema('broken-schema'), undefined)
+
+    class SinCampos implements IIdpConnector {
+        id = 'vacio'; label = 'Vacio'; kind = EIdpConnectorKind.OIDC
+        getConfigSchema(): IIdpConfigFieldDef[] { return [] }
+        buildAuthorizationUrl(): string { return '' }
+        async handleCallback() { return { email: '', emailVerified: false } }
+    }
+    const vacio = managerWith('vacio', SinCampos as unknown as TIdpConnectorConstructor)
+    assert.deepEqual(vacio.getConnectorSchema('vacio'), [])
+})
+
+test('listConnectors sigue en pie aunque uno de los conectores este roto', () => {
+    const reg = new Map<string, TIdpConnectorConstructor>()
+    const mgr = new IdpManager(memSecrets(), memConfigMaps(), reg)
+    mgr.registerConnector('fake', FakeConnector)
+    mgr.registerConnector('broken-ctor', BrokenCtorConnector as unknown as TIdpConnectorConstructor)
+    const list = mgr.listConnectors()
+    assert.equal(list.length, 1, 'el roto se descarta, el sano se sirve')
+    assert.equal(list[0].id, 'fake')
+})

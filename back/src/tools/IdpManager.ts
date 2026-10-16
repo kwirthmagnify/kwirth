@@ -95,10 +95,25 @@ export class IdpManager {
         if (installed) this.installedConnectorIds.add(connectorId)
     }
 
+    /*
+        A connector is THIRD-PARTY code, so constructing it can throw — and it does, for a real reason:
+        a connector built against a newer common-back calls an export the running core does not have
+        yet, which is exactly what happens between installing the connector and restarting the core.
+
+        It used to throw out of here. From an async route Express does not catch it, so it surfaced as an
+        unhandledRejection and took the whole core down. listConnectors() already guarded it; these two
+        did not, and that asymmetry was the bug.
+    */
     getConnector(connectorId: string): IIdpConnector | undefined {
         const Ctor = this.registeredIdps.get(connectorId)
         if (!Ctor) return undefined
-        return new Ctor()
+        try {
+            return new Ctor()
+        }
+        catch (err) {
+            logError(ELogComponent.AUTH, `Error instantiating IdP connector '${connectorId}': ${err}`)
+            return undefined
+        }
     }
 
     listConnectors(): IIdpConnectorInfo[] {
@@ -129,9 +144,22 @@ export class IdpManager {
         return result
     }
 
+    /*
+        undefined means 'the schema could NOT be read', which is not the same as a connector with no
+        fields ([]). Whoever masks secrets has to tell them apart: with no schema there is no way to know
+        which fields are passwords, and treating that as 'no password fields' would hand them over in
+        the clear.
+    */
     getConnectorSchema(connectorId: string): IIdpConfigFieldDef[] | undefined {
         const c = this.getConnector(connectorId)
-        return c ? c.getConfigSchema() : undefined
+        if (!c) return undefined
+        try {
+            return c.getConfigSchema()
+        }
+        catch (err) {
+            logError(ELogComponent.AUTH, `Error reading the config schema of IdP connector '${connectorId}': ${err}`)
+            return undefined
+        }
     }
 
     // ---------------- installable connectors (tgz), a mirror of ProviderManager ----------------
@@ -308,7 +336,20 @@ export class IdpManager {
             const { createRequire } = require('module')
             const localRequire = createRequire(path.join(process.cwd(), 'package.json'))
             const mod: { exports: Record<string, unknown> } = { exports: {} }
-            const wrap = new Function('module', 'exports', 'require', '__filename', '__dirname', backJs)
+            /*
+                The sourceURL is what gives the connector a NAME in the stack, and without it the core
+                dies for its mistakes. Compiled with new Function the code is anonymous, so a failure
+                born inside it shows up as 'eval at loadBackConnector (…), <anonymous>' — and
+                failureOrigin() attributes by file name. With nothing to attribute, an extension's
+                failure is counted as the core's and the process exits (see tools/FailureOrigin.ts).
+
+                The name is the shape that file already has everywhere else — kwirth-<type>-<id>-back.js
+                — so the existing heuristic recognises it without being told about IdPs. Note the
+                __filename ARGUMENT below does not do this: it is a variable the module can read, not
+                the name V8 writes in the stack.
+            */
+            const wrap = new Function('module', 'exports', 'require', '__filename', '__dirname',
+                `${backJs}\n//# sourceURL=kwirth-idp-${connectorId}-back.js`)
             wrap(mod, mod.exports, localRequire, `kwirth-idp-connector-${connectorId}-back.js`, process.cwd())
             const Ctor = (mod.exports.default as TIdpConnectorConstructor) ?? Object.values(mod.exports).find(v => typeof v === 'function') as TIdpConnectorConstructor | undefined
             if (Ctor) {

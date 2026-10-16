@@ -137,3 +137,75 @@ test('DELETE elimina la instancia', async () => {
     }
     finally { await srv.stop() }
 })
+
+/*
+    ── un conector ROTO no debe filtrar secretos ni matar el proceso ─────────────────────────────────
+
+    Masking asks the connector which of its fields are passwords. A connector built against a newer
+    common-back throws when asked, and the schema cannot be read at all — which used to end two ways,
+    both bad: the throw escaped an async route and took the core down, and once that was fixed the
+    `?? []` turned 'unknown' into 'no password fields' and the client secret went out in the clear.
+*/
+class BrokenSchemaConnector implements IIdpConnector {
+    id = 'broken'
+    label = 'Broken'
+    kind = EIdpConnectorKind.OIDC
+    getConfigSchema(): IIdpConfigFieldDef[] { throw new TypeError('idpRedirectUriField is not a function') }
+    buildAuthorizationUrl(): string { return '' }
+    async handleCallback() { return { email: '', emailVerified: false } }
+}
+
+async function startServerBroken() {
+    const reg = new Map<string, TIdpConnectorConstructor>()
+    const memConfigMaps: IConfigMaps = { read: async (_n, def?) => def, write: (() => {}) as any, writeKey: async () => {}, readAllKeys: async () => ({}) }
+    const idpManager = new IdpManager(memSecrets(), memConfigMaps, reg)
+    idpManager.registerConnector('broken', BrokenSchemaConnector as unknown as TIdpConnectorConstructor)
+    const idpApi = new IdpApi(idpManager, fakeApiKeyApi())
+    const app = express()
+    app.use(express.json())
+    app.use('/core/idps', idpApi.router)
+    const server = app.listen(0)
+    await new Promise<void>(r => server.once('listening', () => r()))
+    const port = (server.address() as AddressInfo).port
+    return { base: `http://127.0.0.1:${port}`, stop: () => new Promise<void>(r => server.close(() => r())) }
+}
+
+test('🔴 con un conector roto el GET responde, no tumba el proceso', async () => {
+    const srv = await startServerBroken()
+    try {
+        const inst = { id: 'ent', connectorId: 'broken', label: 'Roto', enabled: true, config: { clientId: 'cid', clientSecret: 'supersecret' } }
+        const post = await fetch(`${srv.base}/core/idps/instances`, j({ method: 'POST', body: JSON.stringify(inst) }))
+        assert.equal(post.status, 200)
+        const list = await fetch(`${srv.base}/core/idps/instances`, j())
+        assert.equal(list.status, 200, 'la ruta debe contestar aunque el conector reviente')
+    }
+    finally { await srv.stop() }
+})
+
+test('🔴 con un conector roto NO se filtra el secreto: se enmascara todo', async () => {
+    const srv = await startServerBroken()
+    try {
+        const inst = { id: 'ent', connectorId: 'broken', label: 'Roto', enabled: true, config: { clientId: 'cid', clientSecret: 'supersecret' } }
+        await fetch(`${srv.base}/core/idps/instances`, j({ method: 'POST', body: JSON.stringify(inst) }))
+        const body = await (await fetch(`${srv.base}/core/idps/instances/ent`, j())).json()
+        assert.equal(body.config.clientSecret, '********', 'el secreto NO puede salir en claro')
+        assert.equal(body.config.clientId, '********', 'sin schema no se sabe cual es secreto: se enmascara todo')
+    }
+    finally { await srv.stop() }
+})
+
+// And the mask must not be persisted AS the secret: with no schema the old merge skipped the swap-back
+// and the stored credential was quietly destroyed on the next save.
+test('🔴 con un conector roto, guardar la mascara NO destruye el secreto', async () => {
+    const srv = await startServerBroken()
+    try {
+        const inst = { id: 'ent', connectorId: 'broken', label: 'Roto', enabled: true, config: { clientId: 'cid', clientSecret: 'supersecret' } }
+        await fetch(`${srv.base}/core/idps/instances`, j({ method: 'POST', body: JSON.stringify(inst) }))
+        const upd = { ...inst, label: 'Roto 2', config: { clientId: 'cid', clientSecret: '********' } }
+        await fetch(`${srv.base}/core/idps/instances/ent`, j({ method: 'PUT', body: JSON.stringify(upd) }))
+        const exp = await (await fetch(`${srv.base}/core/idps/export`, j())).json()
+        assert.equal(exp.ent.label, 'Roto 2')
+        assert.equal(exp.ent.config.clientSecret, 'supersecret', 'el secreto almacenado debe conservarse')
+    }
+    finally { await srv.stop() }
+})
