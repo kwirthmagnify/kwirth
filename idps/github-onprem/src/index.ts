@@ -1,4 +1,4 @@
-import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpConnector, IIdpIdentity, githubIdentityFromToken, oauth2BuildAuthorizationUrl, oauth2HandleCallback } from '@kwirthmagnify/kwirth-common-back'
+import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpConnector, IIdpIdentity, githubIdentityFromToken, idpRedirectUriField, oauth2BuildAuthorizationUrl, oauth2HandleCallback } from '@kwirthmagnify/kwirth-common-back'
 
 /*
     The GitHub Enterprise Server (on-prem) connector — OAuth2. The same core as 'github-cloud' (oauth2* /
@@ -21,7 +21,11 @@ export default class GithubOnpremConnector implements IIdpConnector {
             { name: 'apiBaseUrl', label: 'API URL (default <baseUrl>/api/v3)', type: 'text' },
             { name: 'clientId', label: 'Client ID', type: 'text', required: true },
             { name: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
-            { name: 'scopes', label: 'Scopes', type: 'text' }
+            { name: 'scopes', label: 'Scopes', type: 'text' },
+            // GitHub Enterprise's OAuth App form calls it 'Authorization callback URL', so it is called
+            // that here too: what goes in both places has to be the same string. Empty = the value the
+            // core derives, which a reverse proxy can get wrong (scheme and ROOTPATH).
+            idpRedirectUriField('Authorization callback URL')
         ]
     }
 

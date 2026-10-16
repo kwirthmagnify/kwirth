@@ -72,4 +72,16 @@ const distMeta = {
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
+// The publish goes out of dist/, so a README that stays at the root never reaches npm: the package
+// lands on the registry with no page at all. It is copied, not optional — a published package without
+// a README says nothing about what it is or how it gets installed into Kwirth.
+if (fs.existsSync('README.md')) {
+    fs.copyFileSync('README.md', path.join('dist', 'README.md'))
+    console.log('Copied README.md')
+}
+else {
+    console.error('README.md missing — the published package would have no page on npm')
+    process.exit(1)
+}
+
 console.log(`Done. Run 'npm publish' on your 'dist' folder to publish to npmjs.`)

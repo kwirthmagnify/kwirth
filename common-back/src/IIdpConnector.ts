@@ -24,6 +24,41 @@ export type IdpFieldType = TConfigFieldType
 // It is the common contract IConfigFieldDef, with nothing of its own.
 export type IIdpConfigFieldDef = IConfigFieldDef
 
+/** The configuration key an instance pins its redirect_uri under. */
+export const IDP_REDIRECT_URI_FIELD = 'redirectUri'
+
+/*
+    The field a connector adds to its schema so the redirect_uri can be pinned. It is offered as a
+    factory, and not copied into each connector, so that the KEY cannot drift: the label is the
+    connector's business ('Redirect URI', 'Authorization callback URL'…), the name is the contract.
+*/
+export const idpRedirectUriField = (label = 'Redirect URI'): IIdpConfigFieldDef =>
+    ({ name: IDP_REDIRECT_URI_FIELD, label, type: 'text' })
+
+/*
+    The redirect_uri an instance actually uses: the one it has pinned, or the default the core derived
+    from the request (handed over in the context).
+
+    It has to be pinnable because the derived one is a guess that a proxy breaks. Inside the pod the
+    connection is plain HTTP, so without 'X-Forwarded-Proto' the scheme comes out as 'http' for a site
+    the browser reached over HTTPS, and the provider answers 'invalid redirect uri'. OAuth2 only accepts
+    'http' on loopback, so there is no deployment where guessing wrong is harmless.
+
+    A pinned value that is not a usable absolute URL falls back to the derived one instead of travelling:
+    sent as it is, the provider rejects it with a message that says nothing about where the typo is.
+*/
+export const resolveIdpRedirectUri = (config: Record<string, unknown>, derived: string): string => {
+    const pinned = config[IDP_REDIRECT_URI_FIELD]
+    if (typeof pinned !== 'string' || !pinned.trim()) return derived
+    const value = pinned.trim()
+    try {
+        const url = new URL(value)
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') return derived
+    }
+    catch (err) { return derived }
+    return value
+}
+
 // verified identity the connector extracts from the IdP after the callback
 export interface IIdpIdentity {
     email: string

@@ -80,3 +80,52 @@ test('oauth2HandleCallback lanza si el token endpoint no responde 200', async ()
         /returned 500/
     )
 })
+
+/*
+    ── redirect_uri fijado en la configuracion ───────────────────────────────────────────────────────
+
+    What the core derives from the request is only a default, and a proxy breaks it: inside the pod the
+    connection is plain HTTP, so without 'X-Forwarded-Proto' the scheme comes out as 'http' for a site
+    the browser reached over HTTPS, and the provider answers 'invalid redirect uri'. The instance can
+    pin it, exactly like it pins 'scopes' or 'issuer'.
+*/
+
+const PINNED = 'https://kwirth.example.com/kwirth-iria-demo/core/auth/github-cloud/callback'
+
+test('un redirectUri fijado gana sobre el derivado en la URL de autorizacion', () => {
+    const u = new URL(oauth2BuildAuthorizationUrl({ ...CONFIG, redirectUri: PINNED }, AUTH_CTX, EP))
+    assert.equal(u.searchParams.get('redirect_uri'), PINNED)
+})
+
+test('sin redirectUri fijado se usa el derivado que trae el contexto', () => {
+    const u = new URL(oauth2BuildAuthorizationUrl(CONFIG, AUTH_CTX, EP))
+    assert.equal(u.searchParams.get('redirect_uri'), AUTH_CTX.redirectUri)
+})
+
+// A typo sent as it is comes back as 'invalid redirect uri', which says nothing about where the typo
+// is. Falling back to the derived value at least fails the way it failed before.
+test('un redirectUri fijado invalido se ignora y se usa el derivado', () => {
+    for (const malo of ['no-es-una-url', 'ftp://kwirth.example.com/cb', '   ', '']) {
+        const u = new URL(oauth2BuildAuthorizationUrl({ ...CONFIG, redirectUri: malo }, AUTH_CTX, EP))
+        assert.equal(u.searchParams.get('redirect_uri'), AUTH_CTX.redirectUri, `con '${malo}'`)
+    }
+})
+
+// OAuth2 rejects the exchange when the two legs disagree, so the value the token request sends has to
+// be resolved the same way the authorization request resolved it.
+test('el canje manda el MISMO redirect_uri que la autorizacion', async () => {
+    let sentBody = ''
+    const original = globalThis.fetch
+    globalThis.fetch = (async (_url: string, init?: { body?: string }) => {
+        sentBody = String(init?.body ?? '')
+        return { ok: true, json: async () => ({ access_token: 'tok' }), text: async () => '' }
+    }) as unknown as typeof globalThis.fetch
+    try {
+        const config = { ...CONFIG, redirectUri: PINNED }
+        const authUri = new URL(oauth2BuildAuthorizationUrl(config, AUTH_CTX, EP)).searchParams.get('redirect_uri')
+        await oauth2HandleCallback(config, CB_CTX, EP, async () => ({ email: 'a@b.c', emailVerified: true }))
+        assert.equal(new URLSearchParams(sentBody).get('redirect_uri'), authUri)
+        assert.equal(authUri, PINNED)
+    }
+    finally { globalThis.fetch = original }
+})

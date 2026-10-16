@@ -1,4 +1,4 @@
-import { IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpIdentity } from './IIdpConnector'
+import { IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpIdentity, idpRedirectUriField, resolveIdpRedirectUri } from './IIdpConnector'
 
 /*
     OAuth2 (Authorization Code) logic shared by connectors that are NOT OIDC (GitHub, ...).
@@ -28,7 +28,8 @@ export function oauth2ConfigSchema(): IIdpConfigFieldDef[] {
     return [
         { name: 'clientId', label: 'Client ID', type: 'text', required: true },
         { name: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
-        { name: 'scopes', label: 'Scopes', type: 'text' }
+        { name: 'scopes', label: 'Scopes', type: 'text' },
+        idpRedirectUriField()
     ]
 }
 
@@ -36,7 +37,7 @@ export function oauth2BuildAuthorizationUrl(config: Record<string, unknown>, ctx
     const scope = (config.scopes as string) || ep.defaultScopes || ''
     const url = new URL(ep.authorizationEndpoint)
     url.searchParams.set('client_id', String(config.clientId ?? ''))
-    url.searchParams.set('redirect_uri', ctx.redirectUri)
+    url.searchParams.set('redirect_uri', resolveIdpRedirectUri(config, ctx.redirectUri))
     url.searchParams.set('response_type', 'code')
     url.searchParams.set('state', ctx.state)
     if (scope) url.searchParams.set('scope', scope)
@@ -59,7 +60,8 @@ export async function oauth2HandleCallback(
     body.set('code', ctx.code)
     body.set('client_id', String(config.clientId ?? ''))
     body.set('client_secret', String(config.clientSecret ?? ''))
-    body.set('redirect_uri', ctx.redirectUri)
+    // the SAME resolution as in the authorization request: OAuth2 rejects the exchange if the two differ
+    body.set('redirect_uri', resolveIdpRedirectUri(config, ctx.redirectUri))
     if (ep.usePkce) body.set('code_verifier', ctx.codeVerifier)
 
     // Accept: application/json → some IdPs (GitHub) return form-urlencoded without this header

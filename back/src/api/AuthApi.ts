@@ -74,6 +74,20 @@ export class AuthApi {
         return `${proto}://${host}${this.envRootPath}`
     }
 
+    /*
+        The DEFAULT redirect_uri, derived from the request. It is only a default: an instance that pins
+        'redirectUri' in its configuration overrides it, and that override is resolved where every other
+        configured field is resolved — the shared OIDC/OAuth2 helpers in common-back, next to 'issuer'
+        and 'scopes'. Here the core does the same job it does for those: supply the fallback.
+
+        It cannot be more than a default. Inside the pod the connection is plain HTTP, so without
+        'X-Forwarded-Proto' the scheme comes out as 'http' even though the browser spoke HTTPS, and the
+        provider answers 'invalid redirect uri'. That is the reason the configurable field exists.
+    */
+    private defaultRedirectUri(instanceId: string, req: Request): string {
+        return `${this.baseUrl(req)}/core/auth/${instanceId}/callback`
+    }
+
     private static randomToken(): string {
         return crypto.randomBytes(32).toString('base64url')
     }
@@ -144,7 +158,7 @@ export class AuthApi {
                 const codeChallenge = AuthApi.pkceChallenge(codeVerifier)
                 const returnTo = this.allowedReturnTo(typeof req.query.returnTo === 'string' ? req.query.returnTo : undefined, req)
                 this.stateStore.put(state, { instanceId, codeVerifier, returnTo })
-                const redirectUri = `${this.baseUrl(req)}/core/auth/${instanceId}/callback`
+                const redirectUri = this.defaultRedirectUri(instanceId, req)
                 const url = await connector.buildAuthorizationUrl(inst.config, { redirectUri, state, codeChallenge })
                 res.redirect(url)
             }
@@ -183,7 +197,7 @@ export class AuthApi {
 
             let identity
             try {
-                const redirectUri = `${this.baseUrl(req)}/core/auth/${instanceId}/callback`
+                const redirectUri = this.defaultRedirectUri(instanceId, req)
                 // the callback's raw params (code, state, iss, ...) so that the connector complies with RFC 9207
                 const params: Record<string, string> = {}
                 for (const [k, v] of Object.entries(req.query)) if (typeof v === 'string') params[k] = v

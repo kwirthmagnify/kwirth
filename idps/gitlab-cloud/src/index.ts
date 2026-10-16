@@ -1,4 +1,4 @@
-import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpConnector, IIdpIdentity, oidcBuildAuthorizationUrl, oidcHandleCallback } from '@kwirthmagnify/kwirth-common-back'
+import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpConnector, IIdpIdentity, idpRedirectUriField, oidcBuildAuthorizationUrl, oidcHandleCallback } from '@kwirthmagnify/kwirth-common-back'
 
 /*
     The GitLab.com (SaaS) connector — OIDC. A thin artefact: all the OIDC logic lives in common-back
@@ -18,7 +18,11 @@ export default class GitlabCloudConnector implements IIdpConnector {
         return [
             { name: 'clientId', label: 'Application ID', type: 'text', required: true },
             { name: 'clientSecret', label: 'Secret', type: 'password', required: true },
-            { name: 'scopes', label: 'Scopes', type: 'text' }
+            { name: 'scopes', label: 'Scopes', type: 'text' },
+            // 'Redirect URI' is what GitLab calls it in the application's own form; the two have to be
+            // the same string, and two names for one value is how they end up differing. Empty = the
+            // value the core derives, which a reverse proxy can get wrong (scheme and ROOTPATH).
+            idpRedirectUriField()
         ]
     }
 

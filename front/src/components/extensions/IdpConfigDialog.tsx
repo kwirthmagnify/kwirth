@@ -27,6 +27,29 @@ interface IIdpInstance {
     config: Record<string, unknown>
 }
 
+/** The connectors' own name for the field; the core reads it to build the redirect_uri. */
+const REDIRECT_URI_FIELD = 'redirectUri'
+
+/*
+    The value the admin has to register at the provider, suggested so they do not have to compose it by
+    hand — it must match BYTE FOR BYTE or the provider answers 'invalid redirect uri'.
+
+    'backendUrl' is already the public origin plus the ROOTPATH, so it carries the subpath a deployment
+    hangs off ('/kwirth'), which is what the documentation used to omit. The scheme is forced to https
+    because OAuth2 only accepts http on loopback — and the back end cannot derive it: inside the pod the
+    connection is plain HTTP, so a proxy that does not send 'X-Forwarded-Proto' yields 'http://' for a
+    site the browser reached over HTTPS.
+*/
+const defaultRedirectUri = (backendUrl: string, instanceId: string): string => {
+    try {
+        const url = new URL(backendUrl)
+        if (!['localhost', '127.0.0.1', '::1'].includes(url.hostname)) url.protocol = 'https:'
+        const base = `${url.origin}${url.pathname}`.replace(/\/+$/, '')
+        return `${base}/core/auth/${instanceId}/callback`
+    }
+    catch (err) { return '' }
+}
+
 interface IIdpConfigDialogProps {
     /** The connector it belongs to: the name and the form's fields come from it. */
     connectorId: string
@@ -40,9 +63,18 @@ interface IIdpConfigDialogProps {
 const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const esNueva = !props.existing
-    const [instancia, setInstancia] = useState<IIdpInstance>(props.existing
-        ? { ...props.existing, config: { ...props.existing.config } }
-        : { id: props.connectorId, connectorId: props.connectorId, label: props.connectorLabel, enabled: false, config: {} })
+    const [instancia, setInstancia] = useState<IIdpInstance>(() => {
+        const base: IIdpInstance = props.existing
+            ? { ...props.existing, config: { ...props.existing.config } }
+            : { id: props.connectorId, connectorId: props.connectorId, label: props.connectorLabel, enabled: false, config: {} }
+        // Only as a suggestion, and only while the connector offers the field and nothing has been saved
+        // in it: a value stored under a key no form shows would be invisible and impossible to correct.
+        if (props.schema.some(f => f.name === REDIRECT_URI_FIELD) && !base.config[REDIRECT_URI_FIELD]) {
+            const sugerida = defaultRedirectUri(backendUrl, base.id)
+            if (sugerida) base.config[REDIRECT_URI_FIELD] = sugerida
+        }
+        return base
+    })
     const [revelados, setRevelados] = useState<Record<string, boolean>>({})
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | undefined>()

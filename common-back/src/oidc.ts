@@ -1,6 +1,6 @@
 import { Issuer } from 'openid-client'
 import * as jose from 'jose'
-import { IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpIdentity } from './IIdpConnector'
+import { IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpIdentity, idpRedirectUriField, resolveIdpRedirectUri } from './IIdpConnector'
 
 /*
     OIDC logic shared by every OIDC connector (Google, Keycloak, GitLab, Microsoft/Entra, ...).
@@ -28,7 +28,8 @@ export function oidcConfigSchema(): IIdpConfigFieldDef[] {
         { name: 'clientId', label: 'Client ID', type: 'text', required: true },
         { name: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
         { name: 'scopes', label: 'Scopes', type: 'text' },
-        { name: 'issuer', label: 'Issuer URL', type: 'text' }
+        { name: 'issuer', label: 'Issuer URL', type: 'text' },
+        idpRedirectUriField()
     ]
 }
 
@@ -73,19 +74,22 @@ export function tenantAllowed(tid: string | undefined, allowed?: string[]): bool
 }
 
 export async function oidcBuildAuthorizationUrl(config: Record<string, unknown>, ctx: IIdpAuthContext, defaultIssuer?: string): Promise<string> {
-    const { client } = await makeClient(config, ctx.redirectUri, defaultIssuer)
+    const redirectUri = resolveIdpRedirectUri(config, ctx.redirectUri)
+    const { client } = await makeClient(config, redirectUri, defaultIssuer)
     const scope = (config.scopes as string) || 'openid email profile'
     return client.authorizationUrl({
         scope,
         state: ctx.state,
-        redirect_uri: ctx.redirectUri,
+        redirect_uri: redirectUri,
         code_challenge: ctx.codeChallenge,
         code_challenge_method: 'S256'
     })
 }
 
 export async function oidcHandleCallback(config: Record<string, unknown>, ctx: IIdpCallbackContext, defaultIssuer?: string, opts?: IOidcCallbackOptions): Promise<IIdpIdentity> {
-    const { issuer, client } = await makeClient(config, ctx.redirectUri, defaultIssuer)
+    // the SAME resolution as in the authorization request: OAuth2 rejects the exchange if the two differ
+    const redirectUri = resolveIdpRedirectUri(config, ctx.redirectUri)
+    const { issuer, client } = await makeClient(config, redirectUri, defaultIssuer)
 
     if (opts?.multiTenant) {
         // openid-client validates iss LITERALLY, and in multi-tenant the discovered issuer carries the
@@ -95,7 +99,7 @@ export async function oidcHandleCallback(config: Record<string, unknown>, ctx: I
         const tokenSet = await client.grant({
             grant_type: 'authorization_code',
             code: ctx.code,
-            redirect_uri: ctx.redirectUri,
+            redirect_uri: redirectUri,
             code_verifier: ctx.codeVerifier
         })
         if (!tokenSet.id_token) throw new Error('OIDC multi-tenant: token response has no id_token')
@@ -118,6 +122,6 @@ export async function oidcHandleCallback(config: Record<string, unknown>, ctx: I
     const params = ctx.params ?? { code: ctx.code }
     const checks: Record<string, unknown> = { code_verifier: ctx.codeVerifier }
     if (params.state !== undefined) checks.state = params.state
-    const tokenSet = await client.callback(ctx.redirectUri, params, checks)
+    const tokenSet = await client.callback(redirectUri, params, checks)
     return mapOidcIdentity(tokenSet.claims() as Record<string, unknown>, opts)
 }

@@ -1,4 +1,4 @@
-import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpConnector, IIdpIdentity, githubIdentityFromToken, oauth2BuildAuthorizationUrl, oauth2HandleCallback } from '@kwirthmagnify/kwirth-common-back'
+import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpConnector, IIdpIdentity, githubIdentityFromToken, idpRedirectUriField, oauth2BuildAuthorizationUrl, oauth2HandleCallback } from '@kwirthmagnify/kwirth-common-back'
 
 /*
     The GitHub.com (SaaS) connector — OAuth2 (GitHub is NOT OIDC). A thin artefact: the OAuth2 flow and
@@ -21,7 +21,11 @@ export default class GithubCloudConnector implements IIdpConnector {
         return [
             { name: 'clientId', label: 'Client ID', type: 'text', required: true },
             { name: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
-            { name: 'scopes', label: 'Scopes', type: 'text' }
+            { name: 'scopes', label: 'Scopes', type: 'text' },
+            // GitHub's OAuth App form calls it 'Authorization callback URL', so it is called that here
+            // too: what goes in both places has to be the same string. Empty = the value the core
+            // derives, which a reverse proxy can get wrong (scheme and ROOTPATH).
+            idpRedirectUriField('Authorization callback URL')
         ]
     }
 

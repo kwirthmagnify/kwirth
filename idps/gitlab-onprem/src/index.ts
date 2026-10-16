@@ -1,4 +1,4 @@
-import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpConnector, IIdpIdentity, oidcBuildAuthorizationUrl, oidcHandleCallback } from '@kwirthmagnify/kwirth-common-back'
+import { EIdpConnectorKind, IIdpAuthContext, IIdpCallbackContext, IIdpConfigFieldDef, IIdpConnector, IIdpIdentity, idpRedirectUriField, oidcBuildAuthorizationUrl, oidcHandleCallback } from '@kwirthmagnify/kwirth-common-back'
 
 /*
     The self-managed (on-prem) GitLab connector — OIDC. A thin artefact over common-back's OIDC helpers
@@ -16,7 +16,18 @@ export default class GitlabOnpremConnector implements IIdpConnector {
             { name: 'issuer', label: 'GitLab URL', type: 'text', required: true },
             { name: 'clientId', label: 'Application ID', type: 'text', required: true },
             { name: 'clientSecret', label: 'Secret', type: 'password', required: true },
-            { name: 'scopes', label: 'Scopes', type: 'text' }
+            { name: 'scopes', label: 'Scopes', type: 'text' },
+            /*
+                GitLab calls it 'Redirect URI' in the application's own form, so that is what it is
+                called here: what goes in both places has to be the same string, and two names for one
+                value is how they end up differing.
+
+                Left empty, the core's derived value is used — which is a guess that a reverse proxy
+                breaks: inside the pod the connection is plain HTTP, so without 'X-Forwarded-Proto' it
+                comes out as 'http://…' for a GitLab that was reached over HTTPS, and GitLab answers
+                'invalid redirect uri'.
+            */
+            idpRedirectUriField()
         ]
     }
 
