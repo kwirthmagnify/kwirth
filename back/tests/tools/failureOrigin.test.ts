@@ -94,3 +94,15 @@ test('sin nombre de fichero (eval anonimo) no hay a quien atribuir, y el core mu
     err.stack = 'TypeError: x\n    at GitlabOnpremConnector.getConfigSchema (eval at loadBackConnector (/usr/kwirth/dist/bundle.js:344133:24), <anonymous>:71:57)'
     assert.equal(failureOrigin(err), undefined)
 })
+
+/*
+    An INSTALLED provider's back is not require()d either: the cached file at
+    /tmp/kwirth-provider-<id>-back.js is read as TEXT and compiled with `new Function`, so the file
+    existing with the right name was never enough — the name has to be in the STACK. It now gets there
+    through a sourceURL, which is why the frame below has no directory in front of it.
+*/
+test('un fallo de un provider instalado (compilado, no require) se atribuye por su sourceURL', () => {
+    const err = new Error('boom')
+    err.stack = 'TypeError: boom\n    at TrivyProvider.start (kwirth-provider-trivy-back.js:120:9)'
+    assert.deepEqual(failureOrigin(err), { kind: 'provider', id: 'trivy' })
+})

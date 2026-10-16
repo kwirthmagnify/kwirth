@@ -277,7 +277,10 @@ export class ProviderManager {
                 const { createRequire } = await import('module')
                 const localRequire = createRequire(path.join(process.cwd(), 'package.json'))
                 const schemaMod = { exports: {} as Record<string, unknown> }
-                const wrapFn = new Function('module', 'exports', 'require', '__filename', '__dirname', backJs)
+                // sourceURL: see loadBackProvider below — without it the provider's frames are anonymous
+                // and a failure born in them is charged to the core, which then exits.
+                const wrapFn = new Function('module', 'exports', 'require', '__filename', '__dirname',
+                    `${backJs}\n//# sourceURL=kwirth-provider-${meta.id}-back.js`)
                 wrapFn(schemaMod, schemaMod.exports, localRequire, `kwirth-provider-${meta.id}-back.js`, process.cwd())
                 if (Array.isArray(schemaMod.exports['schema']) && (schemaMod.exports['schema'] as unknown[]).length > 0) {
                     schema = schemaMod.exports['schema'] as unknown[]
@@ -369,7 +372,25 @@ export class ProviderManager {
             const { createRequire } = await import('module')
             const localRequire = createRequire(path.join(process.cwd(), 'package.json'))
             const mod = { exports: {} as Record<string, unknown> }
-            const wrapFn = new Function('module', 'exports', 'require', '__filename', '__dirname', backJs)
+            /*
+                The sourceURL is what gives the provider a NAME in the stack, and without it the core
+                dies for its mistakes. Compiled with new Function the code is anonymous, so a failure
+                born inside it reads 'eval at loadBackProvider (…), <anonymous>' — and failureOrigin()
+                attributes by file name. With nothing to attribute, an extension's failure is counted as
+                the core's and the process exits (see tools/FailureOrigin.ts).
+
+                An INSTALLED provider is the odd one out among the extension types: a plugin's back is
+                require()d from its file in the tmpdir, so its frames already carry the name the
+                heuristic looks for, and a DEV provider is require()d from the repo's dist/. Only this
+                path reads the cached file as TEXT and compiles it, which is why the file existing at
+                /tmp/kwirth-provider-<id>-back.js was never enough: the name has to be in the stack, and
+                the only way to put it there is this comment.
+
+                The __filename ARGUMENT below does not do it: it is a variable the module can read, not
+                the name V8 writes in the stack.
+            */
+            const wrapFn = new Function('module', 'exports', 'require', '__filename', '__dirname',
+                `${backJs}\n//# sourceURL=kwirth-provider-${id}-back.js`)
             wrapFn(mod, mod.exports, localRequire, `kwirth-provider-${id}-back.js`, process.cwd())
             const ProviderClass = mod.exports['default'] ?? Object.values(mod.exports).find(v => typeof v === 'function')
             if (ProviderClass) {
