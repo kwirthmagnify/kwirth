@@ -31,11 +31,18 @@ In GitLab.com, create an **OAuth Application** (user avatar → Preferences → 
 | GitLab field | Value |
 |---|---|
 | **Name** | `Kwirth` |
-| **Redirect URI** | `https://<your-kwirth-host>/core/auth/gitlab-cloud/callback` |
+| **Redirect URI** | copy it from the connector's own **Redirect URI** field (Step 2) |
 | **Confidential** | ✅ Yes |
 | **Scopes** | `openid`, `email`, `profile` |
 
-> The redirect URI uses the **provider id** `gitlab-cloud` — this is fixed and is not an admin-assigned identifier.
+> **Copy it, do not compose it.** Its shape is
+> `<scheme>://<host><ROOTPATH>/core/auth/gitlab-cloud/callback`, and the two parts people get wrong —
+> the **`ROOTPATH`** subpath (`/kwirth` in the stock manifest and chart, so **most deployments need
+> it**) and the **scheme** (inside the pod the connection is plain HTTP) — are the two kwirth cannot
+> work out on its own. The connector shows the right value; register it unchanged. See
+> [Identity Provider integration](../../admin/07-idp-integration?id=the-redirect-uri).
+>
+> The `gitlab-cloud` segment is the **provider id** — fixed, not an admin-assigned identifier.
 
 Click **Save application**. GitLab shows an **Application ID** and a **Secret** — copy both.
 

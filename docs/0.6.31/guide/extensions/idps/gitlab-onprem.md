@@ -38,16 +38,21 @@ Fill in:
 | GitLab field | Value |
 |---|---|
 | **Name** | `Kwirth` (or any descriptive name) |
-| **Redirect URI** | `https://<your-kwirth-host>/core/auth/gitlab-onprem/callback` |
+| **Redirect URI** | copy it from the connector's own **Redirect URI** field (Step 2) |
 | **Confidential** | ✅ Yes |
 | **Scopes** | `openid`, `email`, `profile` |
 
-> The redirect URI uses the **provider id** `gitlab-onprem` — this is fixed for this connector and is **not** an admin-assigned identifier.
+> **Copy it, do not compose it.** Its shape is
+> `<scheme>://<host><ROOTPATH>/core/auth/gitlab-onprem/callback`, and the two parts people get wrong —
+> the **`ROOTPATH`** subpath (`/kwirth` in the stock manifest and chart, so **most deployments need
+> it**) and the **scheme** (inside the pod the connection is plain HTTP, so a proxy that does not
+> forward `X-Forwarded-Proto` yields `http://…` for a site reached over HTTPS) — are the two kwirth
+> cannot work out on its own. The connector shows the right value; register it unchanged. See
+> [Identity Provider integration](../../admin/07-idp-integration?id=the-redirect-uri).
 >
-> For local development point it at the backend directly:
-> `http://localhost:3883/core/auth/gitlab-onprem/callback`
->
-> If kwirth is served under a sub-path (`ROOTPATH`), include it in the URL.
+> The `gitlab-onprem` segment is the **provider id** — fixed, not an admin-assigned identifier. On a
+> local dev box, where kwirth sits at the root, it is
+> `http://localhost:3883/core/auth/gitlab-onprem/callback`.
 
 Click **Save application**. GitLab shows an **Application ID** and a **Secret** — copy both.
 

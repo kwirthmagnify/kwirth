@@ -43,8 +43,43 @@ Typical fields:
 | **Client ID / Client Secret** | The OAuth/OIDC credentials from the provider. Secrets are **write-only** and shown masked. |
 | **Scopes** | The scopes requested from the provider. |
 | **Issuer URL** | The provider's endpoint (needed especially for on-prem/self-managed connectors). |
+| **Redirect URI** | The callback the provider must have registered. Pre-filled with the right value — see below. GitHub's connectors call it **Authorization callback URL**, which is what GitHub's own form calls it. |
 
 Configuration for all connectors is stored in a single Kubernetes secret (`kwirth-idps`), and secrets are never shown back in clear.
+
+### The Redirect URI
+
+This is the single most common first-run failure, and it fails with a message that points at the wrong
+thing. **Copy the value from the connector's own field** and register it unchanged at the provider: it
+has to match **byte for byte**, with no trailing slash.
+
+Its shape is:
+
+```
+<scheme>://<host><ROOTPATH>/core/auth/<connector-id>/callback
+```
+
+Two parts of it are what go wrong, and neither is something kwirth can work out on its own:
+
+- **`ROOTPATH`** — the subpath kwirth is served under. It is **`/kwirth` in the stock manifest and in
+  the Helm chart**, so **most deployments need it**:
+  `https://kwirth.example.com/kwirth/core/auth/google/callback`. It is empty only when kwirth sits at
+  the root of its host, which is the case in a local dev box —
+  `http://localhost:3883/core/auth/google/callback` — and that is why the development example is the
+  exception, not the rule.
+- **The scheme** — inside the pod the connection is **plain HTTP**. If your reverse proxy does not
+  forward `X-Forwarded-Proto`, the value kwirth derives comes out as `http://…` for a site the browser
+  reached over HTTPS, and the provider rejects it. OAuth2 only accepts `http` on loopback, so there is
+  no deployment where guessing wrong is harmless.
+
+Leave the field **empty** and kwirth derives the value from the request (guessing the scheme). **Fill it
+in** and that exact string is what travels — in both the authorization request and the token exchange,
+which OAuth2 requires to be identical.
+
+> **If the provider says the redirect URI is invalid, check the `client_id` first.** The provider
+> resolves the application by `client_id` and only then compares the callback against *that*
+> application's registered URLs. A `client_id` left over from an older application fails with
+> *invalid redirect uri* even when the URI is perfect.
 
 ## Supported connectors
 

@@ -18,10 +18,17 @@ Then you create the users in kwirth as usual.
    - Fill in the application name and support email.
 3. Open **APIs & Services → Credentials → Create credentials → OAuth client ID**:
    - **Application type: Web application**.
-   - **Authorized redirect URIs**: add your kwirth callback URL:
-     - `https://<your-kwirth-host>/core/auth/google/callback`
-     - For local development (the redirect points at the backend): `http://localhost:3883/core/auth/google/callback`
-     - If kwirth is served under a sub-path (`ROOTPATH`), include it.
+   - **Authorized redirect URIs**: **copy the value from the connector's own Redirect URI field**
+     (Step 2) and register it unchanged — do not compose it by hand. Its shape is
+     `<scheme>://<host><ROOTPATH>/core/auth/google/callback`, and the two parts that go wrong are the
+     ones kwirth cannot work out on its own:
+     - the **`ROOTPATH`** subpath — `/kwirth` in the stock manifest and chart, so **most deployments
+       need it**: `https://kwirth.example.com/kwirth/core/auth/google/callback`;
+     - the **scheme** — inside the pod the connection is plain HTTP, so a proxy that does not forward
+       `X-Forwarded-Proto` yields `http://…` for a site reached over HTTPS and Google answers
+       *redirect_uri_mismatch*.
+     - Local development is the exception on both counts (kwirth at the root, and OAuth2 allows `http`
+       on loopback): `http://localhost:3883/core/auth/google/callback`.
    - On save, Google gives you a **Client ID** and a **Client Secret**. Keep them for Step 2.
 4. **Scopes**: Kwirth only needs `openid`, `email` and `profile`. These are *non-sensitive* scopes, so Google does **not** require any app verification/review.
 

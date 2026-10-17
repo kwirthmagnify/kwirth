@@ -434,3 +434,78 @@ Se añadió el scope de usuario **`admin`** (además de `cluster`). El usuario a
 - **El login NO pasa por `/user` ni `/key`**: vive en `LoginApi` (`/login`, `/login/password`) leyendo usuarios vía `IdentityService`; el login por IdP va por `AuthApi`+`IdentityService`. El gate NO afecta al login.
 - Consumidores de `/user`: solo `ManageUserSecurity` (pantalla admin, ya oculta). De `/key`: `ManageApiSecurity` (admin) + `FirstTimeLogin` (POST `/key`, siempre el **admin**, que lleva `admin,cluster` → pasa el gate).
 - **Caveats operativos**: (1) access keys emitidas **antes** de añadir `admin` (sesiones admin abiertas, permanent keys viejas) solo tienen `cluster` → 403 en `/user`/`/key` hasta **re-login/re-emisión**; (2) cualquier integración externa que gestione keys vía `/key` con una key **no-admin** debe pasar a usar una key con `admin`. Las apps tipo Backstage/Kubelog usan las APIs de **datos** (no `/key`), así que no se ven afectadas.
+
+---
+
+## 17. El `redirect_uri` se puede fijar por instancia — ✅ HECHO (2026-10-17)
+
+Seguimiento del plan ya cerrado, a raíz de un fallo real en producción: en `k3s-dev` el login por
+GitLab devolvía **`invalid redirect uri`** aunque lo registrado en GitLab fuese correcto.
+
+### El diagnóstico, que tardó en verse porque el mensaje culpa a otro sitio
+
+El core derivaba el `redirect_uri` de la petición (`AuthApi.baseUrl()`), y **esa derivación es una
+suposición que un proxy inverso rompe de dos maneras**, las dos presentes:
+
+- **El esquema.** Dentro del pod la conexión es HTTP plano, así que sin `X-Forwarded-Proto` el valor
+  sale como `http://…` para un sitio al que el navegador llegó por HTTPS. OAuth2 **solo acepta `http`
+  en loopback**, así que no hay despliegue donde equivocarse sea inocuo.
+- **El subpath.** `ROOTPATH` vale **`/kwirth` en el manifiesto y en el chart de serie**, de modo que la
+  callback real es `/kwirth/core/auth/<id>/callback` en la mayoría de instalaciones.
+
+🔴 **Y la documentación describía la única configuración en la que el prefijo no está: el dev del
+desarrollador.** Cuatro de los ocho ficheros mencionaban el `ROOTPATH`, pero como nota **después** del
+ejemplo — se copia el ejemplo y no se llega a la línea de abajo. Lo del esquema no estaba en ninguno.
+
+⚠️ Hubo además un segundo fallo encima, que confunde el diagnóstico y conviene recordar: el `client_id`
+configurado era el de **otra aplicación** de GitLab. El proveedor resuelve la aplicación por `client_id`
+y **solo entonces** compara la callback contra las URLs *de esa* aplicación, así que un Application ID
+viejo falla con **el mismo mensaje** aunque la URI sea perfecta.
+
+### Dónde se decidió ponerlo, y por qué NO en el core
+
+El primer intento fue resolverlo en `AuthApi` (un `resolveRedirectUri` en el core) y **se revirtió**. El
+argumento que lo tumbó: `issuer`, `clientId`, `clientSecret` y `scopes` se leen todos de `config` en los
+helpers compartidos de `common-back`, con un default cuando faltan. `redirectUri` encaja exactamente en
+ese patrón, y `ctx.redirectUri` **ya es** el default derivado que entrega el core — el mismo papel que
+`defaultIssuer`. Resolverlo en el core habría duplicado, en otro sitio, lo que debía ser una línea.
+
+- **`common-back` 0.6.5** — `IDP_REDIRECT_URI_FIELD`, `idpRedirectUriField(label?)` y
+  `resolveIdpRedirectUri(config, derived)` en `IIdpConnector.ts`; las **cuatro** funciones de `oidc.ts`
+  y `oauth2.ts` resuelven `config.redirectUri || ctx.redirectUri`. Un valor que no sea una URL http/https
+  utilizable **cae al derivado en vez de viajar**: enviado tal cual, el proveedor lo rechaza con un
+  mensaje que no dice dónde está la errata.
+- **El core solo aporta el DEFAULT**: `AuthApi.defaultRedirectUri()`. Sus tests fijan el derivado, el
+  derivado **con `ROOTPATH`**, el `http` sin `X-Forwarded-Proto` (dejado a propósito: forzar `https`
+  rompería un despliegue que de verdad es HTTP) y que el valor sea **el mismo en las dos patas**, que es
+  lo que OAuth2 exige.
+- **La etiqueta es del conector, el NOMBRE es del contrato**: `idpRedirectUriField()` es una factory
+  precisamente para que la clave no derive entre siete sitios mientras GitHub lo llama *Authorization
+  callback URL* y los demás *Redirect URI*.
+- **Front**: `IdpConfigDialog` pre-rellena el campo desde `backendUrl` (que ya es origen + `ROOTPATH`),
+  forzando `https` salvo en loopback. El admin **no compone la URL**: la copia.
+
+### Los seis conectores
+
+`gitlab-onprem` 0.1.8, `gitlab-cloud` 0.1.8, `github-cloud` 0.1.8, `github-onprem` 0.1.8, `google` 0.1.7
+(este último solo con subir la dependencia: usa `oidcConfigSchema()`, que ya incorpora el campo) y
+**`entraid` 0.1.1** contra el Nexus privado. Validado en producción en **Eulen** y **FSR**.
+
+⚠️ **Y el publish destapó que ninguno metía su README en el tarball**: el publish sale de `dist/` y el
+`build.mjs` no lo copiaba, así que los cinco que ya estaban en npm **no tenían página**. Ahora el build
+lo copia y **aborta si falta**; `google` no tenía README y se le escribió.
+
+### 🔴 Lo que esto rompió, y que era un fallo del core anterior a todo esto
+
+Instalar un conector nuevo **antes** de reiniciar el core —o sea, con `common-back` 0.6.4 todavía en
+memoria— hacía que `getConfigSchema()` llamara a un export inexistente. Fallar es correcto; **matar el
+proceso no**, y lo mataba. Tres defectos, en `fix(core): a broken IdP connector took the whole core down`:
+
+1. `IdpManager.getConnector()` y `getConnectorSchema()` llamaban a código de terceros **sin guardia**,
+   cuando `listConnectors()` sí lo envolvía — esa asimetría era el bug.
+2. Un conector IdP **no era atribuible**: su back se compila con `new Function`, así que sus frames son
+   `<anonymous>` y `failureOrigin()` no podía culparlo, de modo que el fallo contaba como del core y el
+   proceso salía **por diseño**. Ahora lleva `//# sourceURL=kwirth-idp-<id>-back.js`. Lo mismo se
+   arregló en `ProviderManager`, que tenía el mismo punto ciego.
+3. Dejar de caerse destapó uno peor: sin schema legible, el `?? []` del enmascarado significaba *"no
+   tiene secretos"* y el client secret **habría salido en claro**. Ahora, sin schema, se enmascara todo.

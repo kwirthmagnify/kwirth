@@ -26,12 +26,17 @@ In GitHub, go to **Settings → Developer settings → OAuth Apps → New OAuth 
 organization-owned OAuth App; on GHE, the same under your enterprise host):
 
 - **Application name**: `Kwirth`
-- **Authorization callback URL** — the kwirth callback for the connector you are configuring:
-  - GitHub Cloud: `https://<your-kwirth-host>/core/auth/github-cloud/callback`
-  - GitHub Enterprise: `https://<your-kwirth-host>/core/auth/github-onprem/callback`
-  - For local development the redirect points at the **backend**:
-    `http://localhost:3883/core/auth/github-cloud/callback`
-  - If kwirth is served under a sub-path (`ROOTPATH`), include it.
+- **Authorization callback URL** — **copy the value from the connector's own field** (Step 2) and
+  register it unchanged; do not compose it by hand. Its shape is
+  `<scheme>://<host><ROOTPATH>/core/auth/<github-cloud|github-onprem>/callback`, and the two parts that
+  go wrong are the ones kwirth cannot work out on its own:
+  - the **`ROOTPATH`** subpath — `/kwirth` in the stock manifest and chart, so **most deployments need
+    it**: `https://kwirth.example.com/kwirth/core/auth/github-cloud/callback`;
+  - the **scheme** — inside the pod the connection is plain HTTP, so a proxy that does not forward
+    `X-Forwarded-Proto` yields `http://…` for a site reached over HTTPS.
+  - Local development is the exception on both counts:
+    `http://localhost:3883/core/auth/github-cloud/callback`.
+  - ⚠️ For GitHub Enterprise it is the URL of **kwirth**, not of your GHE.
 - Register the app, then **generate a Client Secret**.
 
 Copy the **Client ID** and **Client Secret** for Step 2.

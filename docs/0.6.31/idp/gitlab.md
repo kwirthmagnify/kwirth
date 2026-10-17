@@ -19,12 +19,20 @@ In GitLab, create an OAuth **Application** (as an instance/admin application, a 
 application, or under your user *Preferences → Applications*):
 
 - **Name**: `Kwirth`
-- **Redirect URI** — the kwirth callback for the connector you are configuring:
-  - GitLab Cloud: `https://<your-kwirth-host>/core/auth/gitlab-cloud/callback`
-  - GitLab Self-Managed: `https://<your-kwirth-host>/core/auth/gitlab-onprem/callback`
-  - For local development the redirect points at the **backend**:
-    `http://localhost:3883/core/auth/gitlab-onprem/callback`
-  - If kwirth is served under a sub-path (`ROOTPATH`), include it.
+- **Redirect URI** — **copy the value from the connector's own field** (Step 2) and register it
+  unchanged; do not compose it by hand. Its shape is
+  `<scheme>://<host><ROOTPATH>/core/auth/<gitlab-cloud|gitlab-onprem>/callback`, and the two parts that
+  go wrong are the ones kwirth cannot work out on its own:
+  - the **`ROOTPATH`** subpath — `/kwirth` in the stock manifest and chart, so **most deployments need
+    it**: `https://kwirth.example.com/kwirth/core/auth/gitlab-onprem/callback`;
+  - the **scheme** — inside the pod the connection is plain HTTP, so a proxy that does not forward
+    `X-Forwarded-Proto` yields `http://…` for a site reached over HTTPS, and GitLab answers
+    *invalid redirect uri*.
+  - Local development is the exception on both counts:
+    `http://localhost:3883/core/auth/gitlab-onprem/callback`.
+  - If GitLab still rejects it, **check the `client_id` first**: it resolves the application by
+    `client_id` and only then compares the callback against *that* application's URLs, so a stale
+    Application ID fails with the same message even when the URI is perfect.
 - **Confidential**: yes.
 - **Scopes**: `openid`, `email`, `profile`.
 

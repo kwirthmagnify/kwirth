@@ -37,12 +37,22 @@ Open **☰ → Manage extensions → Identity providers → Login with Google �
 
 | Environment | Redirect URI |
 |---|---|
-| Production | `https://<your-kwirth-host>/core/auth/google/callback` |
+| Any deployment | copy it from the connector's own **Redirect URI** field (Step 2) |
 | Local development | `http://localhost:3883/core/auth/google/callback` |
 
-> The redirect URI uses the **provider id** `google` — this is fixed and is not an admin-assigned identifier.
+> **Copy it, do not compose it.** Its shape is `<scheme>://<host><ROOTPATH>/core/auth/google/callback`,
+> and the two parts people get wrong — the **`ROOTPATH`** subpath (`/kwirth` in the stock manifest and
+> chart, so **most deployments need it**: `https://kwirth.example.com/kwirth/core/auth/google/callback`)
+> and the **scheme** (inside the pod the connection is plain HTTP, so a proxy that does not forward
+> `X-Forwarded-Proto` yields `http://…` for a site reached over HTTPS, and Google answers
+> *redirect_uri_mismatch*) — are the two kwirth cannot work out on its own. The connector shows the
+> right value; register it unchanged. See
+> [Identity Provider integration](../../admin/07-idp-integration?id=the-redirect-uri).
 >
-> If kwirth is served under a sub-path (`ROOTPATH`), include it in the URL.
+> The local example is the **exception**: OAuth2 only accepts `http` on loopback, and a dev box is the
+> one place kwirth sits at the root of its host.
+>
+> The `google` segment is the **provider id** — fixed, not an admin-assigned identifier.
 
 4. On save, Google gives you a **Client ID** and a **Client Secret**. Copy both.
 
