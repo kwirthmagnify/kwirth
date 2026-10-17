@@ -31,9 +31,12 @@ const TrivyOperator: React.FC<ISettingsTrivyProps> = (props: ISettingsTrivyProps
                     <Typography>Status: {status}</Typography>
                     <Button variant='outlined' onClick={() => props.onClose('install')}>INSTALL</Button>
                     <Button variant='outlined' onClick={() => props.onClose('remove')}>REMOVE</Button>
-                    <Typography>Select scan mode: </Typography>
-                    <Button variant='outlined' onClick={() => props.onClose('configfs')}>FILESYSTEM</Button>
-                    <Button variant='outlined' onClick={() => props.onClose('configimg')}>IMAGE</Button>
+                    {/* The scan mode selector (FILESYSTEM / IMAGE) lived here and was removed on
+                        2026-10-17: the back end never had a handler for 'configfs' or 'configimg' —
+                        they appear exactly once in the repository's history, in the commit that turned
+                        Trivy into a plugin, and never on the back side — so both buttons fell into the
+                        switch's default and answered '500 Invalid action'. The mode is fixed to
+                        filesystem. A button that only ever returns a 500 is worse than no button. */}
                 </Stack>
             </DialogContent>
             <DialogActions>

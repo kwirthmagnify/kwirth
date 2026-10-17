@@ -54,10 +54,13 @@ class TrivyChannel implements IChannel {
         id: this.channelId, routable: false, pauseable: false, modifiable: false, reconnectable: false,
         metrics: false, sources: [EClusterType.KUBERNETES],
         endpoints: [{ name: 'operator', methods: ['GET'], requiresAccessKey: true }],
-        websocket: false, cluster: false, resourced: false
+        // cluster: Trivy reads reports for the WHOLE cluster, so it is a cluster-level channel and not
+        // an autonomous one. Declaring what it really is, is what makes 'does this key have cluster?'
+        // the right question to ask.
+        websocket: false, cluster: true, resourced: false
     })
 
-    getChannelScopeLevel = (scope: string): number => ['', ETrivyScope.WORKLOAD, ETrivyScope.KUBERNETES, 'cluster', 'admin'].indexOf(scope)
+    getChannelScopeLevel = (scope: string): number => ['', ETrivyScope.USER, ETrivyScope.KUBERNETES, 'cluster', 'admin'].indexOf(scope)
 
     getScopeCatalog = (): IExtensionScope[] => TRIVY_SCOPES   // RBAC: scopes que declara Trivy (validar/gestionar)
 
@@ -116,7 +119,7 @@ class TrivyChannel implements IChannel {
             whether Trivy is installed does sit at the channel's own minimum.
         */
         const ACTION_SCOPE: Record<string, string> = {
-            status: ETrivyScope.WORKLOAD,
+            status: ETrivyScope.USER,
             install: 'cluster',
             remove: 'cluster'
         }
@@ -179,6 +182,35 @@ class TrivyChannel implements IChannel {
     }
 
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, _podNamespace: string, _podName: string, _containerName: string): Promise<boolean> => {
+        /*
+            Two layers, and this is the first: STARTING the channel. It asks for the channel's OWN
+            minimum, the same way Agora checks 'agora$user' in its own addObject — and not for
+            'cluster', which is what it asked for at first and had to be undone: 'cluster' sits ABOVE
+            both trivy scopes in the ladder, so requiring it made 'trivy$user' and 'trivy$kubernetes'
+            impossible to use — anybody who could enter already outranked them. A permission that can be
+            granted and grants nothing is worse than no permission at all.
+
+            Asking for the minimum keeps 'cluster' and 'admin' working (the ladder puts them higher) and
+            lets somebody be given Trivy and nothing else.
+
+            The core does not check any of this: its cluster branch hands the channel '*all' without
+            looking at a single scope, so it is the channel that settles who may read its data — and
+            these are vulnerability reports, detected secrets and configuration audits.
+
+            The SECOND layer is what you may do once inside: 'cluster' for installing or removing the
+            operator, and 'trivy$kubernetes' for cluster-scoped reports (not filtered yet).
+
+            What the KEY carries is read, never `instanceConfig.scope`: that is a field of an unsigned
+            message, so the client could write anything in it and it would prove nothing.
+        */
+        const accessKey = accessKeyDeserialize(instanceConfig.accessKey)
+        if (!scopeAllows(accessKey.resources, ETrivyScope.USER, this.getChannelScopeLevel)) {
+            this.backChannelObject.logWarning?.(`Denied start to key ${accessKey.id}: '${ETrivyScope.USER}' required`)
+            this.sendSignalMessage(webSocket, EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR,
+                instanceConfig.instance, `You don't have permission to use Trivy. It requires the '${ETrivyScope.USER}' scope — ask an administrator.`)
+            return false
+        }
+
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
             const len = this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] })

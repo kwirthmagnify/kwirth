@@ -129,7 +129,19 @@ Expand a CVE to see its specifics — **CVE id** (linked to its advisory), the a
 
 - **Install / remove:** **☰ → Manage extensions → Plugins** → install **Trivy**.
 - **Trivy Operator:** the channel needs the **Trivy Operator** in the target cluster. Use **MANAGE TRIVY** in the config (after starting once) to deploy/manage it — no manual Helm needed.
-- **Permissions:** grant the Trivy scopes on the target objects — **`trivy$workload`** (scan workloads) and/or **`trivy$kubernetes`** (scan cluster objects). See [Security & permissions](../../admin/04-security-and-permissions).
+- **Permissions:** each scope includes the ones above it, so a user needs **one**, not several —
+  - **`trivy$user`** — use Trivy: open the channel and read workload reports (vulnerabilities, config
+    audit, secrets). **Without it the channel will not start**, and it says so.
+  - **`trivy$kubernetes`** — also read cluster-scoped reports (RBAC, infra assessment).
+  - **`cluster`** / **`admin`** — the above, **plus installing and removing the Trivy Operator** from
+    **MANAGE TRIVY**. Deploying an operator changes the cluster, so it is not something a Trivy scope
+    grants.
+
+  See [Security & permissions](../../admin/04-security-and-permissions).
+
+  > ⚠️ **`trivy$workload` was replaced by `trivy$user` in 0.2.30.** It did two jobs at once — being
+  > allowed to *use* Trivy and being allowed to *see* workload reports — so it could express neither.
+  > Keys still carrying it grant **nothing** for this channel: re-grant them as `trivy$user`.
 
 ## Notes
 

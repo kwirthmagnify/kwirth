@@ -32,7 +32,7 @@ export class TrivyChannel implements IChannel {
         backChannels: false
     }
 
-    getScope() { return ETrivyScope.WORKLOAD }
+    getScope() { return ETrivyScope.USER }
     getScopeCatalog(): IExtensionScope[] { return TRIVY_SCOPES }   // RBAC: scopes que declara Trivy (para el editor de seguridad)
     getChannelIcon(): JSX.Element { return TrivyIcon }
     getSetupVisibility(): boolean { return this.setupVisible }
@@ -84,6 +84,17 @@ export class TrivyChannel implements IChannel {
                 if (signalMessage.flow === EInstanceMessageFlow.RESPONSE) {
                     switch (signalMessage.action) {
                         case EInstanceMessageAction.START:
+                            /*
+                                A START response can be a REFUSAL. The core answers 'Instance Config
+                                accepted' before the channel's addObject has had its say, so a channel
+                                that refuses can only report it afterwards — and this branch used to
+                                read nothing but `instance`, so the refusal was thrown away and the tab
+                                sat there empty with no explanation.
+                            */
+                            if (signalMessage.level === ESignalMessageLevel.ERROR) {
+                                channelObject.notify?.('trivy', ENotifyLevel.ERROR, signalMessage.text ?? 'Trivy could not be started')
+                                break
+                            }
                             channelObject.instanceId = signalMessage.instance
                             if (!channelObject.data.ri) {
                                 channelObject.webSocket!.send(JSON.stringify({

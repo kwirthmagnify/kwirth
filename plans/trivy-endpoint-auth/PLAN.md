@@ -1,9 +1,13 @@
 # Plan — El endpoint de Trivy no comprueba ningún permiso
 
-> **Estado: sin empezar.** Hallazgo del **2026-10-17**, al revisar si `excubitor` y `trivy` compartían
-> el patrón de [fileman-target](../fileman-target/PLAN.md). `excubitor` **está bien** (§4); `trivy` no.
+> **Estado: ✅ ENTREGADO en `trivy` 0.2.30** (2026-10-17), validado en dev por el usuario. Hallazgo del
+> mismo día, al revisar si `excubitor` y `trivy` compartían el patrón de
+> [fileman-target](../fileman-target/PLAN.md). `excubitor` **está bien** (§4); `trivy` no lo estaba.
 >
-> ⚠️ **Verificado leyendo el código, NO ejecutado.**
+> El agujero se verificó leyendo el código y **no se ejecutó**: por decisión del usuario, *«es código
+> viejo inacabado»*, y confirmarlo habría significado instalar o desinstalar un operador.
+>
+> **Lo entregado va más allá del endpoint**, porque al probarlo apareció algo peor: ver §6.
 
 ---
 
@@ -86,3 +90,71 @@ endpoints, sin leer su código. Para `excubitor` era falsa.
 ℹ️ Observado sin juzgarlo: su `testRunner` hace un `fetch` a una URL que llega en el cuerpo. Está
 detrás de `POLICY_ADMIN` y es la función *"probar la conexión con el runner"*, así que es deliberado;
 queda dicho por si algún día se revisa la superficie de salida.
+
+---
+
+## 6. Lo entregado (0.2.30) — y lo que apareció al probarlo
+
+El endpoint era la mitad del problema. Al dárselo a probar al usuario salió lo otro:
+
+> **«usuario sin scopes arranca el canal pero no ve resultados»**
+
+🔴 **Arrancar el canal no comprobaba NADA.** Trivy se declaraba `cluster: false, resourced: false`, así
+que el core lo trataba como **canal autónomo** y entraba por una rama que llama a `addObject` con los
+selectores vacíos **sin mirar un solo scope** ([`index.ts:998`](../../back/src/index.ts#L998)).
+Cualquier clave válida veía los informes del clúster: vulnerabilidades, secretos detectados y auditoría
+de configuración.
+
+⚠️ **Y la rama de `cluster` tampoco comprueba**, al contrario de lo que afirmé en un primer momento
+leyendo el plan `channel-start-rbac` en vez del código. Las dos entregan y ninguna mira:
+
+```
+rama autónoma   →  addObject('', '', '')             sin chequeo
+rama cluster    →  addObject('*all','*all','*all')   sin chequeo
+```
+
+### Lo que se hizo, y dónde
+
+🔴 **Todo en el plugin, sin tocar el core.** Es lo que ya hacen Agora y Excubitor: el canal recibe el
+`instanceConfig` con la clave dentro y `addObject` **devuelve un booleano**, así que puede negarse él
+mismo. Agora lo hace exactamente así con `agora$user`.
+
+| capa | qué decide | exige |
+|---|---|---|
+| **arranque** (`addObject`) | abrir el canal y ver informes | `trivy$user` |
+| **endpoint** | `?action=status` | `trivy$user` |
+| | `install` / `remove` | **`cluster`** |
+
+- **`cluster: true`** en `getChannelData`: declara lo que el canal realmente es, en vez de pasar por
+  autónomo.
+- **`trivy$workload` → `trivy$user`** (ruptura). Hacía dos trabajos a la vez —poder *usar* Trivy y
+  poder *ver* informes de workload—, así que no expresaba ninguno. Las claves que lo lleven **no
+  conceden nada** hasta que se re-concedan.
+- **El front pinta la denegación.** Su `case START` solo leía `signalMessage.instance` —ni `text` ni
+  `level`—, así que la negativa del canal se tiraba y la pestaña quedaba **vacía y sin error**. Y como
+  el core manda `'Instance Config accepted'` **antes** de llamar a `addObject`, el canal "arranca"
+  igualmente; lo que el plugin puede hacer es no asignar el `instanceId` y avisar.
+
+### 🔴 Dos vueltas atrás, y por qué importan
+
+El gate del arranque pidió primero **`cluster`**, y hubo que deshacerlo: `cluster` está **por encima**
+de los dos scopes de Trivy en la escalera, así que exigirlo dejaba `trivy$user` y `trivy$kubernetes`
+**imposibles de usar** — quien podía entrar ya los superaba. Lo destapó el usuario en dos pruebas: una
+clave con solo `cluster` entraba y veía todo, y una con solo `trivy$user` recibía *«requires the
+'cluster' scope»*. Es, por quinta vez en el mismo día, **un permiso que se concede y no hace nada**.
+
+## 7. Lo que queda abierto
+
+- 🔴 **`trivy$kubernetes` no filtra nada.** Quien entra con `trivy$user` ve también los informes de
+  ámbito clúster. El scope existe, se concede y no cambia lo que se ve: sexta aparición del patrón. Es
+  la *segunda capa* de authz dentro del canal, y no está implementada.
+- **El core sigue sin comprobar scope al arrancar** ningún canal autónomo ni de clúster. Trivy se
+  defiende solo; los demás canales no-resourced, cada uno verá. El §4.1 de
+  [channel-start-rbac](../completed/channel-start-rbac/PLAN.md) lo pedía y no se hizo.
+- **Consolidar el helper.** `hasScopeKey` (excubitor), `scopeAllows` (fileman) y `scopeAllows` (trivy)
+  son la misma función escrita tres veces. Sigue perteneciendo a `common-back`.
+
+💡 De paso se quitaron dos botones muertos del diálogo *Manage*: **FILESYSTEM** y **IMAGE**
+(`configfs`/`configimg`). Aparecen **una sola vez en la historia del repositorio** —en el commit que
+convirtió Trivy en plugin— y **nunca en el back**, así que caían en el `default` del `switch` y
+respondían `500 Invalid action`. El modo está fijo en filesystem.
