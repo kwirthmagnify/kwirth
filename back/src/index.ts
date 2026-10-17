@@ -95,7 +95,7 @@ import { resolveConsumedProviders, wireProviderConsumers, wireExtensionConsumers
 import { buildProviderStorage } from './tools/ProviderStorage'
 import { CoreLogProvider } from './providers/corelog/CoreLogProvider'
 
-import { applyLogSettings, ELogComponent, logError, logInfo, logTrace, logWarning, providerLogger, setLogConfig } from './tools/Logging'
+import { applyLogSettings, componentLogger, ELogComponent, logError, logInfo, logTrace, logWarning, providerLogger, setLogConfig } from './tools/Logging'
 import { PluginManager } from './tools/PluginManager'
 import { LicenseManager } from './tools/LicenseManager'
 import { PluginApi } from './api/PluginApi'
@@ -135,6 +135,24 @@ const fs = require('fs')
 
 // Expose shared packages as Node globals so plugins can use them without bundling
 ;(global as any).__kwirth_back__ = { kwirthCommon: _kwirthCommon, kwirthCommonBack: _kwirthCommonBack, kwirthCommonAi: _kwirthCommonAi, kwirthCommonAiBack: _kwirthCommonAiBack, kwirthCommonSql: _kwirthCommonSql, express }
+
+/*
+    KubernetesTools wrote with console.log, so its lines came out raw —no timestamp, no component— and,
+    worse, could NOT be filtered: the filter works by component and they carried none. It now logs
+    through kwirth, under 'core:k8stools', so it can be silenced or raised like anything else.
+
+    It is installed HERE, right after the globals, because plugins do not bundle common-back: they
+    resolve it from that same global, so there is one module instance and this one call covers the core
+    and every plugin at once.
+*/
+{
+    const k8sToolsLog = componentLogger(ELogComponent.CORE, 'k8stools')
+    const join = (args: unknown[]) => args.map(a => a instanceof Error ? (a.stack ?? a.message) : typeof a === 'object' && a !== null ? JSON.stringify(a) : String(a)).join(' ')
+    _kwirthCommonBack.setKubernetesToolsLogger({
+        info: (...args: unknown[]) => k8sToolsLog.info(join(args)),
+        error: (...args: unknown[]) => k8sToolsLog.error(join(args))
+    })
+}
 
 /*
     common-sql: the relational storage service. The connection is pinned at startup from the KWIRTH_SQL_*

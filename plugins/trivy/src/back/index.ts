@@ -3,11 +3,13 @@ import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { Request, Response } from 'express'
 import { applyAllResources, deleteAllResources } from '@kwirthmagnify/kwirth-common-back'
 import { ETrivyCommand, ETrivyScope, TRIVY_SCOPES, IKnown, ITrivyMessage, ITrivyMessageResponse, ITrivyProviderEvent } from '../common/TrivyTypes'
+import { scopeAllows } from './scopeAllows'
 import zlib from 'zlib'
 // @ts-ignore
 import trivyOperatorYamlGz from './trivy-operator-0.30.1.yaml'
 
 const trivyOperatorYaml = zlib.gunzipSync(Buffer.from(trivyOperatorYamlGz, 'base64')).toString('utf-8')
+
 
 const TRIVY_API_VERSION = 'v1alpha1'
 const TRIVY_API_GROUP = 'aquasecurity.github.io'
@@ -81,9 +83,50 @@ class TrivyChannel implements IChannel {
         }
     }
 
-    async endpointRequest(endpoint: string, req: Request, res: Response): Promise<void> {
-        console.log(`[trivy] endpointRequest: ${endpoint} ${req.method} ${req.url}`)
+    /*
+        Whether the key was GRANTED enough for an operation that needs `required`.
+
+        🔴 It reads what the key carries (`accessKey.resources`), never what the client asked for: the
+        accessKey cannot be tampered with —a bearer key is an HMAC over its own resources, a registered
+        one is compared whole against the server's list— while anything in the request is the caller's
+        to write.
+
+        ⚠️ This is the THIRD copy of this function (excubitor has `hasScopeKey`, fileman has
+        `scopeAllows`). It belongs in common-back, and moving it there is written down in
+        plans/trivy-endpoint-auth/PLAN.md; it is kept local here so that the fix does not depend on the
+        core shipping a new common-back first — which is exactly the trap that took the core down on
+        2026-10-16 with the IdP connectors.
+    */
+    private allows = (accessKey: AccessKey | undefined, required: string): boolean =>
+        !!accessKey && scopeAllows(accessKey.resources, required, this.getChannelScopeLevel)
+
+    async endpointRequest(endpoint: string, req: Request, res: Response, accessKey?: AccessKey): Promise<void> {
+        this.backChannelObject.logInfo?.(`endpointRequest: ${endpoint} ${req.method} ${req.url}`)
         const action = req.query['action']
+
+        /*
+            Until now NOTHING was checked here: the handler did not even declare the accessKey the core
+            passes it, so there was nothing to check. Reaching this point only took ANY valid key --
+            `validKey` and `getKey` are authentication, not authorization -- and 'install'/'remove'
+            apply and delete the Trivy Operator across the cluster.
+
+            🔴 Installing an operator is a CLUSTER operation, not a channel one, so it asks for
+            'cluster' rather than a trivy$ scope: trivy$kubernetes means 'read cluster-scoped reports',
+            and being allowed to read reports is not being allowed to change the cluster. Reading
+            whether Trivy is installed does sit at the channel's own minimum.
+        */
+        const ACTION_SCOPE: Record<string, string> = {
+            status: ETrivyScope.WORKLOAD,
+            install: 'cluster',
+            remove: 'cluster'
+        }
+        const required = typeof action === 'string' ? ACTION_SCOPE[action] : undefined
+        if (required && !this.allows(accessKey, required)) {
+            this.backChannelObject.logWarning?.(`Denied '${action}' to key ${accessKey?.id ?? '(none)'}: '${required}' required`)
+            res.status(403).send(`'${required}' scope required`)
+            return
+        }
+
         switch (action) {
             case 'install':
                 try {

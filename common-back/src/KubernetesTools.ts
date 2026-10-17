@@ -4,13 +4,47 @@ import { randomUUID } from 'crypto'
 const jsYaml = require('js-yaml')
 const k8s = require('@kubernetes/client-node')
 
+/*
+    Where this module writes.
+
+    It used to write with `console.log`, which means it bypassed kwirth's logging entirely: no
+    timestamp, no component, no level — and, above all, **impossible to filter or silence**, because the
+    filter works by component and these lines carried none. Lines like
+    `[KubernetesTools] ConfigMap 'trivy-operator' removed.` turned up raw in the middle of a formatted
+    log.
+
+    Every signature here is public and used by plugins, so passing a logger down twenty functions would
+    be a breaking change for every consumer. Instead the module holds ONE logger that the core installs
+    at startup through `setKubernetesToolsLogger()`. It reaches the plugins too: they do not bundle
+    common-back, they resolve it from the core's global, so there is a single module instance and a
+    single logger for everybody.
+
+    The default stays `console` on purpose: nobody is obliged to install one, and a consumer that never
+    calls the setter keeps the old behaviour instead of going silent.
+*/
+// Variadic because many call sites here log a message and a value together ('Error applying:', err).
+// The installer joins them; that way converting the call sites was not an exercise in rewriting forty
+// lines by hand, which is where mistakes get made.
+export interface IKubernetesToolsLogger {
+    info(...args: unknown[]): void
+    error(...args: unknown[]): void
+}
+
+let log: IKubernetesToolsLogger = {
+    info: (...args: unknown[]) => console.log('[KubernetesTools]', ...args),
+    error: (...args: unknown[]) => console.error('[KubernetesTools]', ...args)
+}
+
+/** Installed once by the core; the id it logs under is the core's to choose. */
+export const setKubernetesToolsLogger = (logger: IKubernetesToolsLogger): void => { log = logger }
+
 export async function applyResource(resource: any, clusterInfo: any): Promise<string> {
     try {
         if (resource.metadata?.managedFields) delete resource.metadata.managedFields
         await clusterInfo.objectsApi.patch(resource, undefined, undefined, 'kwirth', true, 'application/apply-patch+yaml')
         return `${resource.kind} '${resource.metadata?.name}' applied successfully.`
     } catch (err: any) {
-        console.log('[KubernetesTools] Error applying:', err)
+        log.error('Error applying:', err)
         return 'Error applying: ' + err
     }
 }
@@ -22,14 +56,14 @@ export async function applyAllResources(yamlContent: string, clusterInfo: any): 
         for (const resource of resources) {
             try {
                 const result = await applyResource(resource, clusterInfo)
-                if (result !== '') console.log('[KubernetesTools]', result)
+                if (result !== '') log.info(result)
             } catch (err) {
-                console.log('[KubernetesTools] Error applying resource:', err)
+                log.error('Error applying resource:', err)
                 break
             }
         }
     } catch (err) {
-        console.log('[KubernetesTools] Error applying all resources:', err)
+        log.error('Error applying all resources:', err)
     }
 }
 
@@ -61,12 +95,12 @@ export async function deleteAllResources(yamlContent: string, clusterInfo: any):
                 case 'ServiceAccount':
                     await clusterInfo.coreApi.deleteNamespacedServiceAccount({ name, namespace }); break
                 default:
-                    console.log(`[KubernetesTools] Resource kind '${kind}' not implemented for deletion.`)
+                    log.info(`Resource kind '${kind}' not implemented for deletion.`)
                     return
             }
-            console.log(`[KubernetesTools] ${kind} '${name}' removed.`)
+            log.info(`${kind} '${name}' removed.`)
         } catch (err) {
-            console.log(`[KubernetesTools] Error removing ${kind} '${name}':`, err)
+            log.error(`Error removing ${kind} '${name}':`, err)
         }
     }
 
@@ -75,12 +109,12 @@ export async function deleteAllResources(yamlContent: string, clusterInfo: any):
         jsYaml.loadAll(yamlContent, (doc: any) => { if (doc) resources.push(doc) })
         for (const resource of resources) {
             try { await deleteResource(resource) } catch (err) {
-                console.log('[KubernetesTools] Error deleting resource:', err)
+                log.error('Error deleting resource:', err)
                 break
             }
         }
     } catch (err) {
-        console.log('[KubernetesTools] Error deleting all resources:', err)
+        log.error('Error deleting all resources:', err)
     }
 }
 
@@ -95,7 +129,7 @@ async function getSelector(kind: string, namespace: string, name: string, cluste
             case 'Job':           return (await clusterInfo.batchApi.readNamespacedJob({ name, namespace })).spec?.selector?.matchLabels
         }
     } catch (err) {
-        console.log('[KubernetesTools] Error getting selector:', err)
+        log.error('Error getting selector:', err)
     }
     return undefined
 }
@@ -245,12 +279,12 @@ export async function restartController(kind: string, namespace: string, name: s
             for (const pod of pods.items) {
                 if (pod.metadata?.name) {
                     await clusterInfo.coreApi.deleteNamespacedPod({ name: pod.metadata.name, namespace })
-                    console.log(`[KubernetesTools] Pod ${pod.metadata.name} deleted.`)
+                    log.info(`Pod ${pod.metadata.name} deleted.`)
                 }
             }
         }
     } catch (err) {
-        console.log('[KubernetesTools] Error restarting controller:', err)
+        log.error('Error restarting controller:', err)
     }
 }
 
@@ -287,10 +321,10 @@ export async function scaleController(kind: string, namespace: string, name: str
             default:
                 break
         }
-        console.log(`[KubernetesTools] ${kind} ${name} scaled to ${replicas}`)
+        log.info(`${kind} ${name} scaled to ${replicas}`)
     }
     catch (err) {
-        console.error('[KubernetesTools] Error scaling:', err)
+        log.error('Error scaling:', err)
     }
 }
 
@@ -304,10 +338,10 @@ async function nodeSetSchedulable(coreApi: CoreV1Api, nodeName: string, unschedu
             }
         ]
         await coreApi.patchNode({ name: nodeName, body: patch })
-        console.log(`[KubernetesTools] Node ${nodeName}: unschedulable = ${unschedulable}`)
+        log.info(`Node ${nodeName}: unschedulable = ${unschedulable}`)
     }
     catch (err: any) {
-        console.error(`[KubernetesTools] Error in patchNode: ${err.body?.message || err.message}`)
+        log.error(`Error in patchNode: ${err.body?.message || err.message}`)
     }
 }
 
@@ -356,7 +390,7 @@ export async function nodeShell(coreApi: CoreV1Api, nodeName: string, podNamespa
         await coreApi.createNamespacedPod({ namespace: podNamespace, body: podDefinition })
     }
     catch (err) {
-        console.log('[KubernetesTools] Error creating the node shell pod:', err)
+        log.error('Error creating the node shell pod:', err)
     }
 }
 
@@ -365,7 +399,7 @@ export async function nodeCordon(coreApi: CoreV1Api, nodeName: string): Promise<
         await nodeSetSchedulable(coreApi, nodeName, true)
     }
     catch (err) {
-        console.log('[KubernetesTools] Error in cordon:', err)
+        log.error('Error in cordon:', err)
     }
 }
 
@@ -374,7 +408,7 @@ export async function nodeUnCordon(coreApi: CoreV1Api, nodeName: string): Promis
         await nodeSetSchedulable(coreApi, nodeName, false)
     }
     catch (err) {
-        console.log('[KubernetesTools] Error in uncordon:', err)
+        log.error('Error in uncordon:', err)
     }
 }
 
@@ -390,16 +424,16 @@ export async function nodeDrain(coreApi: CoreV1Api, nodeName: string): Promise<v
             const isDaemonSet = pod.metadata?.ownerReferences?.some(ref => ref.kind === 'DaemonSet')
             const isStaticPod = pod.metadata?.annotations?.['kubernetes.io/config.mirror']
             if (isDaemonSet || isStaticPod) {
-                console.log(`[KubernetesTools] Omit system pod: ${name}`)
+                log.info(`Omit system pod: ${name}`)
                 return
             }
             await podEvict(coreApi, namespace, name)
         })
         await Promise.all(evictions)
-        console.log(`[KubernetesTools] Drain completed for node ${nodeName}`)
+        log.info(`Drain completed for node ${nodeName}`)
     }
     catch (err: any) {
-        console.error(`[KubernetesTools] Error draining node ${nodeName}: ${err.message}`)
+        log.error(`Error draining node ${nodeName}: ${err.message}`)
     }
 }
 
@@ -417,20 +451,20 @@ export async function throttleExcute(id: string, invoke: () => Promise<unknown>)
             return true
         }
         catch (err: any) {
-            console.log('[KubernetesTools] Throttling error on', id)
+            log.error('Throttling error on', id)
             if (err.code === 429) {
                 repeat = true
                 await new Promise((resolve) => { setTimeout(resolve, (+err.headers['retry-after'] || 1) * 1000) })
             }
             else {
                 retry--
-                console.log('[KubernetesTools] Error when throttling', id, err)
+                log.error('Error when throttling', id, err)
                 if (retry > 0) await new Promise((resolve) => { setTimeout(resolve, 3000) })
                 return false
             }
         }
     }
-    console.log('[KubernetesTools] Unexpected error when throttling', id)
+    log.error('Unexpected error when throttling', id)
     return false
 }
 
@@ -448,10 +482,10 @@ export async function cronJobTrigger(namespace: string, cronJobName: string, bat
             spec: cronJob.spec.jobTemplate.spec
         }
         await batchApi.createNamespacedJob({ namespace, body: jobManifest })
-        console.log(`[KubernetesTools] Manual Job created: ${manualJobName}`)
+        log.info(`Manual Job created: ${manualJobName}`)
     }
     catch (err: any) {
-        console.error('[KubernetesTools] Error launching CronJob:', err.response?.body?.message || err.message)
+        log.error('Error launching CronJob:', err.response?.body?.message || err.message)
     }
 }
 
@@ -466,10 +500,10 @@ export async function cronJobStatus(namespace: string, cronJobName: string, susp
             }
         ]
         await batchApi.patchNamespacedCronJob({ name: cronJobName, namespace, body: patch })
-        console.log(`[KubernetesTools] CronJob "${cronJobName}" ${suspend ? 'suspended' : 'activated'}.`)
+        log.info(`CronJob "${cronJobName}" ${suspend ? 'suspended' : 'activated'}.`)
     }
     catch (err: any) {
-        console.error('[KubernetesTools] Error patching CronJob:', err.response?.body?.message || err.message)
+        log.error('Error patching CronJob:', err.response?.body?.message || err.message)
     }
 }
 
@@ -481,10 +515,10 @@ export async function podEvict(coreApi: CoreV1Api, namespace: string, name: stri
     }
     try {
         await coreApi.createNamespacedPodEviction({ name, namespace, body })
-        console.log(`[KubernetesTools] Eviction successful for ${name}`)
+        log.info(`Eviction successful for ${name}`)
     }
     catch (err: any) {
-        console.error('[KubernetesTools] Error evicting:', err.response?.body?.message || err.message)
+        log.error('Error evicting:', err.response?.body?.message || err.message)
     }
 }
 
@@ -538,14 +572,14 @@ export async function podWork(coreApi: CoreV1Api, work: string): Promise<string 
                 }
             }
             catch {
-                console.log('[KubernetesTools] Waiting for pod...')
+                log.info('Waiting for pod...')
             }
             await new Promise(resolve => setTimeout(resolve, 2000))
         }
         return podDefinition.metadata!.name
     }
     catch (err: any) {
-        console.error('[KubernetesTools] Error creating the work pod:', err.response?.body?.message || err.message)
+        log.error('Error creating the work pod:', err.response?.body?.message || err.message)
     }
     return undefined
 }
@@ -560,10 +594,10 @@ export async function setIngressClassAsDefault(networkApi: NetworkingV1Api, name
     }
     try {
         await networkApi.patchIngressClass({ name, body: [patch] })
-        console.log(`[KubernetesTools] IngressClass "${name}" set as default.`)
+        log.info(`IngressClass "${name}" set as default.`)
     }
     catch (err) {
-        console.error('[KubernetesTools] Error setting default IngressClass:', err)
+        log.error('Error setting default IngressClass:', err)
     }
 }
 
@@ -636,13 +670,13 @@ export async function imageDelete(appsApi: AppsV1Api, imageName: string): Promis
     }
     try {
         await appsApi.createNamespacedDaemonSet({ namespace: 'default', body: daemonSet })
-        console.log(`[KubernetesTools] [${uniqueName}] DaemonSet created, waiting for node cleaning...`)
+        log.info(`[${uniqueName}] DaemonSet created, waiting for node cleaning...`)
         await new Promise((resolve) => setTimeout(resolve, 60000))
         await appsApi.deleteNamespacedDaemonSet({ name: uniqueName, namespace: 'default' })
-        console.log(`[KubernetesTools] [${uniqueName}] Image deleted and DaemonSet removed.`)
+        log.info(`[${uniqueName}] Image deleted and DaemonSet removed.`)
     }
     catch (err: any) {
-        console.error('[KubernetesTools] Error running imageDelete:', err.response?.body || err.message)
+        log.error('Error running imageDelete:', err.response?.body || err.message)
         try {
             await appsApi.deleteNamespacedDaemonSet({ name: uniqueName, namespace: 'default' })
         }
