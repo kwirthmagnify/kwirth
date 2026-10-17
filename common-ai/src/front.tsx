@@ -105,7 +105,10 @@ const UsageLimitsEditor: React.FC<IUsageLimitsEditorProps> = (props: IUsageLimit
             const spent = (amounts: IUsageAmounts | undefined): string | undefined =>
                 amounts ? `${formatSpent(of(amounts))} so far` : undefined
             return (<Stack key={unit} direction='row' spacing={1} alignItems='flex-start'>
-                <FormControlLabel sx={{ width: '150px', mr: 0, mt: 0.5 }} control={
+                {/* flexShrink: 0 — inside the row the label box would otherwise shrink below its width
+                    and split 'Input tokens' into two lines, which costs the height the two columns were
+                    meant to save. */}
+                <FormControlLabel sx={{ width: '150px', flexShrink: 0, mr: 0, mt: 0.5 }} control={
                     <Checkbox size='small' checked={!!w.enabled} disabled={props.disabled}
                         onChange={e => patch(unit, { enabled: e.target.checked })} />
                 } label={<Typography variant='body2'>{label}</Typography>} />
@@ -268,10 +271,13 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                             }
                             {/* Three numbers on one line: a field each cost a whole row, and the rows are
                                 what pushed the Add/Update button out of sight. */}
-                            <Stack direction='row' spacing={1}>
-                                <TextField value={temperature} onChange={e => setTemperature(+e.target.value)} label='Temperature' variant='standard' type='number' sx={{ width: '28%' }} />
-                                <TextField value={inputCostPerMillion} onChange={e => setInputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Input cost /M' variant='standard' type='number' fullWidth inputProps={{ min: 0, step: 0.01 }} />
-                                <TextField value={outputCostPerMillion} onChange={e => setOutputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Output cost /M' variant='standard' type='number' fullWidth inputProps={{ min: 0, step: 0.01 }} />
+                            {/* The three share the row evenly with a floor that fits the longest label:
+                                a percentage width truncated 'Temperature' to 'Tempe…' once the form
+                                became a column half as wide. */}
+                            <Stack direction='row' spacing={1} sx={{ flexWrap: 'wrap' }}>
+                                <TextField value={temperature} onChange={e => setTemperature(+e.target.value)} label='Temperature' variant='standard' type='number' sx={{ flex: 1, minWidth: '110px' }} />
+                                <TextField value={inputCostPerMillion} onChange={e => setInputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Input cost /M' variant='standard' type='number' sx={{ flex: 1, minWidth: '110px' }} inputProps={{ min: 0, step: 0.01 }} />
+                                <TextField value={outputCostPerMillion} onChange={e => setOutputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Output cost /M' variant='standard' type='number' sx={{ flex: 1, minWidth: '110px' }} inputProps={{ min: 0, step: 0.01 }} />
                             </Stack>
                             <Stack direction='row' alignItems='center'>
                                 <Typography flex={1}>Use provider API Key (or enter a specific one)</Typography>
