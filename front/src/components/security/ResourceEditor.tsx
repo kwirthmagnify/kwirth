@@ -36,7 +36,14 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
     const showResource = (resourceString:string) => {
         let resource = parseResource(resourceString)
 
-        setScopes(resource.scopes?.split(',')||[])
+        /*
+            `''.split(',')` returns [''], NOT [] — an array holding one empty string. That empty entry
+            survived into the selection, and buildResource joins with commas, so a resource with no
+            scopes yet turned into ',cluster::::' the moment the first scope was ticked. The leading
+            comma then travelled into the accessKey, where an empty scope is one more token the ladder
+            does not know.
+        */
+        setScopes(resource.scopes?.split(',').filter(s => s !== '') ?? [])
         setNamespace(resource.namespaces||'')
 
         let groups = (resource.groups as string)
@@ -78,7 +85,9 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
         if (replicationController.trim()!=='') groups.push (...replicationController.split(',').map(g => 'replicationcontroller+'+g))
         if (daemonset.trim()!=='') groups.push (...daemonset.split(',').map(g => 'daemonset+'+g))
         if (statefulset.trim()!=='') groups.push (...statefulset.split(',').map(g => 'statefulset+'+g))
-        let resource = buildResource(scopes, namespace.split(','), groups, pod.split(','), container.split(','))
+        // Empty scopes are filtered here as well as on reading: what is built here ends up inside the
+        // accessKey, and an empty token there is one more scope the channel ladders do not recognise.
+        let resource = buildResource(scopes.filter(s => s !== ''), namespace.split(','), groups, pod.split(','), container.split(','))
 
         let rs = allResources.filter(r => r!== selectedResource)
         rs = [...rs, resource]
