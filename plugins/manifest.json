@@ -1802,5 +1802,39 @@
         "minVersion": "0.1.7"
       }
     ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "fileman",
+    "version": "0.2.28",
+    "name": "Fileman",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-fileman/-/kwirth-plugin-fileman-0.2.28.tgz",
+    "description": "File Manager channel plugin for Kwirth",
+    "icon": "FolderCopy",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "dce",
+        "id": "file-manager",
+        "minVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "trivy",
+    "version": "0.2.31",
+    "name": "Trivy",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.31.tgz",
+    "description": "Trivy security scanning channel plugin for Kwirth",
+    "icon": "VerifiedUser",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "trivy",
+        "minVersion": "0.1.7"
+      }
+    ]
   }
 ]

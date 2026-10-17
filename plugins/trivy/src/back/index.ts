@@ -1,9 +1,9 @@
 import { IChannelInstances, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType, EClusterType, IBackChannelRequirements, IExtensionScope, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
+import { IBackChannelObject, IChannel, scopeAllows } from '@kwirthmagnify/kwirth-common-back'
 import { Request, Response } from 'express'
 import { applyAllResources, deleteAllResources } from '@kwirthmagnify/kwirth-common-back'
 import { ETrivyCommand, ETrivyScope, TRIVY_SCOPES, IKnown, ITrivyMessage, ITrivyMessageResponse, ITrivyProviderEvent } from '../common/TrivyTypes'
-import { scopeAllows } from './scopeAllows'
+
 import zlib from 'zlib'
 // @ts-ignore
 import trivyOperatorYamlGz from './trivy-operator-0.30.1.yaml'
@@ -87,18 +87,12 @@ class TrivyChannel implements IChannel {
     }
 
     /*
-        Whether the key was GRANTED enough for an operation that needs `required`.
+        Whether the key was GRANTED enough for an operation that needs `required`. The check itself
+        lives in common-back since 0.6.7 — it had been written here, in fileman and in excubitor, three
+        copies of one security check — and the ladder stays this channel's.
 
-        🔴 It reads what the key carries (`accessKey.resources`), never what the client asked for: the
-        accessKey cannot be tampered with —a bearer key is an HMAC over its own resources, a registered
-        one is compared whole against the server's list— while anything in the request is the caller's
-        to write.
-
-        ⚠️ This is the THIRD copy of this function (excubitor has `hasScopeKey`, fileman has
-        `scopeAllows`). It belongs in common-back, and moving it there is written down in
-        plans/trivy-endpoint-auth/PLAN.md; it is kept local here so that the fix does not depend on the
-        core shipping a new common-back first — which is exactly the trap that took the core down on
-        2026-10-16 with the IdP connectors.
+        🔴 It reads what the key carries, never what the client asked for: the accessKey cannot be
+        tampered with, while anything in the request is the caller's to write.
     */
     private allows = (accessKey: AccessKey | undefined, required: string): boolean =>
         !!accessKey && scopeAllows(accessKey.resources, required, this.getChannelScopeLevel)

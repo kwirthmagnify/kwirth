@@ -1,6 +1,6 @@
 {
   "name": "@kwirthmagnify/kwirth-common-back",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "description": "Backend interfaces for building Kwirth provider and channel plugins",
   "scripts": {
     "build": "tsc",

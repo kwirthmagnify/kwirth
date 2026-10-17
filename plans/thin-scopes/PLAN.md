@@ -25,7 +25,44 @@ Luego el trabajo de core es: **un campo en un interfaz, un helper, y el editor**
 
 ---
 
-## 2. Streams
+## 2. Fase previa (validada el 2026-10-17)
+
+Dos refactores que **no son del formato** pero que, sin ellos, cada stream de abajo escribe otra copia
+de algo que ya existe dos o tres veces. Salieron de revisar el plan contra el código real.
+
+### P2 · Consolidar el helper de scopes en `common-back`
+
+La misma función está escrita **tres veces**: `hasScopeKey` (excubitor), `scopeAllows` (fileman, 0.2.27)
+y `scopeAllows` (trivy, 0.2.30). Recorre los recursos de la clave y compara con la escalera del canal.
+
+Los thin scopes añaden `parseThinScope`, que **todo canal que los use tendrá que invocar**. Si cada uno
+se escribe su propio parseo de `channel#scope#config`, repetimos el error a mayor escala — y esta vez
+sobre un **formato de seguridad**, no sobre una comparación de niveles. Un chequeo de seguridad copiado
+es un chequeo que diverge.
+
+⚠️ **Arrastra cascada**: publicar `common-back`, subir la dependencia en los tres canales, y **el core
+antes que ellos** — los plugins resuelven `common-back` del global del core, que es la trampa que tumbó
+el core el 2026-10-16 con los conectores IdP.
+
+### P1 · Extraer el renderizador de `IConfigFieldDef[]`
+
+`ConfigFormDialog` **está atado a un endpoint** (recibe `endpoint`, hace el `GET` y el `PUT`), así que
+no vale tal cual para los thin scopes, cuyos valores no viven en ningún endpoint: se componen en un
+token dentro del editor de seguridad. Y su pintado de campos es una función local `field(f)` entre sus
+283 líneas, sin exportar.
+
+🔴 **Ya está duplicado**: `IdpConfigDialog` tiene su propio `campo(f)` haciendo lo mismo. Van dos
+copias, y S2 sería la tercera.
+
+Extraerlo a un componente que reciba `schema` + `values` + `onChange`, y que lo usen los dos diálogos
+actuales. Entonces S2 es *"píntame este schema"* y poco más.
+
+⚠️ **Tiene superficie de regresión**: ese renderizador lo usan logins, providers, senders y webhooks. Es
+refactor de un componente compartido del core, no un añadido.
+
+**Orden: P2 antes que P1.** Es más barato, su cascada es conocida, y es donde vivirá `parseThinScope`.
+
+## 3. Streams
 
 ### S1 · El contrato y el helper (`common`)
 
@@ -83,7 +120,7 @@ reabrirlo y ver el formulario relleno; y que salte el aviso de la guarda.
 
 ---
 
-## 3. Lo que este plan NO hace
+## 4. Lo que este plan NO hace
 
 - **No toca `AuthorizationManagement` ni `getScopeLevel`.** Es la decisión 2 del PRD y lo que da el
   fail-closed gratis. Si en algún momento parece necesario tocarlos, es que el diseño se ha torcido.
@@ -96,7 +133,7 @@ reabrirlo y ver el formulario relleno; y que salte el aviso de la guarda.
 
 ---
 
-## 4. Riesgos
+## 5. Riesgos
 
 | riesgo | mitigación |
 |---|---|
@@ -106,7 +143,7 @@ reabrirlo y ver el formulario relleno; y que salte el aviso de la guarda.
 
 ---
 
-## 5. Después de este plan: el primer canal
+## 6. Después de este plan: el primer canal
 
 **Magnify**, por interés del usuario. Su stream, no éste, y necesitará lo mismo que cualquier otro:
 

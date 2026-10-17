@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { scopeAllows } from '../src/back/index'
+import { scopeAllows } from '@kwirthmagnify/kwirth-common-back'
 import { EFilemanScope, FILEMAN_SCOPES, FILEMAN_SCOPE_LADDER } from '../src/common/FilemanTypes'
 
 /*

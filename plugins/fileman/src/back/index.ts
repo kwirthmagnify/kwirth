@@ -1,5 +1,5 @@
-import { IChannelInstances, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, EClusterType, IBackChannelRequirements, IExtensionScope } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
+import { IChannelInstances, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, BackChannelData, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, EClusterType, IBackChannelRequirements, IExtensionScope } from '@kwirthmagnify/kwirth-common'
+import { IBackChannelObject, IChannel, scopeAllows } from '@kwirthmagnify/kwirth-common-back'
 import { Readable, Writable } from 'stream'
 import { Request, Response } from 'express'
 import { v4 as uuid } from 'uuid'
@@ -11,35 +11,19 @@ const ParseListing = require('@jfvilas/parse-listing')
 import { EFilemanCommand, EFilemanScope, FILEMAN_SCOPES, FILEMAN_SCOPE_LADDER, IFilemanMessage, IFilemanMessageResponse } from '../common/FilemanTypes'
 
 /*
-    Whether a key's GRANTED resources reach the level an operation needs.
+    The scope check lives in common-back (`scopeAllows`) since 0.6.7. It was written here, in excubitor
+    and in trivy — three copies of the same security check, which is three chances for one of them to
+    drift.
 
-    🔴 It reads what the key was granted (`accessKey.resources`), never what the client asked for
-    (`instanceConfig.scope`). That distinction is the whole point: the accessKey cannot be tampered with
-    —a bearer key is an HMAC over its own resources, and a registered one is compared whole against the
-    server's list— while the instanceConfig is an unsigned JSON the browser composes. Reading the latter
-    would let a read-only user write by typing 'fileman$write' into a message.
+    What it answers, and what it does not: it reads what the key was GRANTED, never what the client
+    asked for in `instanceConfig.scope`, which is an unsigned field the browser composes. And it
+    answers about the VERB, not about the target: a key with write in one namespace passes for any
+    namespace. Checking the target is plans/fileman-target/PLAN.md.
 
-    The core already applies this criterion, but at ONE point only: `checkAkr`, when an object is
-    attached to the stream. Nothing re-evaluates it afterwards, so a session opened with read could
-    delete, rename and upload. Here the level required is not declared by anybody — it is implied by the
-    operation, which is why there is nothing to compare the client against.
-
-    Same semantics as the core's `getScopeLevel`: the HIGHEST of the granted scopes wins, and a scope
-    the ladder does not know is -1 (indexOf), so it grants nothing. 'cluster' and 'admin' sit above
-    write and therefore pass, which is what the ladder already meant.
-
-    ⚠️ It answers about the VERB, not about the target: a key with write in one namespace passes here
-    for any namespace. Checking the target against the key's resources is a separate piece of work.
+    The core applies the same criterion at ONE point only —`checkAkr`, when an object is attached to
+    the stream— and nothing re-evaluates it afterwards, which is why a session opened with read could
+    delete, rename and upload until 0.2.27.
 */
-export const scopeAllows = (resources: string, required: string, levelOf: (scope: string) => number): boolean => {
-    const requiredLevel = levelOf(required)
-    for (const resource of parseResources(resources)) {
-        for (const scope of resource.scopes.split(',')) {
-            if (levelOf(scope) >= requiredLevel) return true
-        }
-    }
-    return false
-}
 
 export interface IAsset {
     podNamespace: string
