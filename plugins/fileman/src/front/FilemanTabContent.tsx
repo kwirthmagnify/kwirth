@@ -195,8 +195,15 @@ const FilemanTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         }
     }
 
+    /*
+        The single place a file-manager failure is reported. When the failure was an upload, the server's
+        reason has just been stashed by onFileUploadError and is used instead of the library's generic
+        'Upload failed.' — it is consumed, so the next error does not inherit it.
+    */
     const onError = (error: IError, _file: IFileObject) => {
-        props.channelObject.notify?.(props.channelObject.channelId, ENotifyLevel.ERROR, error.message)
+        const reason = uploadErrorReason.current
+        uploadErrorReason.current = ''
+        props.channelObject.notify?.(props.channelObject.channelId, ENotifyLevel.ERROR, reason || error.message)
     }
 
     const onRename = (file: IFileObject, newName: string) => {
@@ -250,8 +257,24 @@ const FilemanTabContent: React.FC<IContentProps> = (props: IContentProps) => {
 
     const onFileUploaded = () => { }
 
-    const onFileUploadError = (file: IFileObject, _parentFolder: IFileObject) => {
-        return { filename: filemanData.currentPath + '/' + file.name }
+    /*
+        A failed upload reaches us TWICE: the library calls onFileUploadError with the response BODY and
+        then onError with its own generic text ('Upload failed.'). Notifying from both left two entries
+        for one failure, and the one the user actually saw was the generic one.
+
+        So this one does not notify: it remembers the server's reason, and onError —which fires after—
+        uses it instead of its own text. One failure, one notification, and the reason is the server's.
+
+        It matters now that uploading can be REFUSED: a 403 whose body says which scope is missing is the
+        difference between 'it is broken' and 'ask your administrator for fileman$write'.
+
+        ⚠️ The handler used to be a copy of onFileUploading —same (file, parentFolder) signature and the
+        same `return { filename }`— so the body was thrown away. The library passes the response here.
+    */
+    const uploadErrorReason = useRef<string>('')
+
+    const onFileUploadError = (response: unknown) => {
+        uploadErrorReason.current = typeof response === 'string' ? response.trim() : ''
     }
 
     return <>

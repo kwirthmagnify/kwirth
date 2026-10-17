@@ -3,7 +3,8 @@ import { IChannel, IChannelObject, IChannelRequirements, IContentProps, ISetupPr
 import { IChannelMessageAction } from '@kwirthmagnify/kwirth-common-front'
 import { FilemanInstanceConfig, FilemanConfig } from './FilemanConfig'
 import { FilemanSetup, FilemanIcon } from './FilemanSetup'
-import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageEvent, IInstanceMessage, ISignalMessage } from "@kwirthmagnify/kwirth-common"
+import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageEvent, IExtensionScope, IInstanceMessage, ISignalMessage } from "@kwirthmagnify/kwirth-common"
+import { EFilemanScope, FILEMAN_SCOPES } from '../common/FilemanTypes'
 import { EFilemanCommand, FilemanData, IFilemanMessageResponse, IFilemanData } from './FilemanData'
 import { FilemanTabContent } from './FilemanTabContent'
 import { v4 as uuid } from 'uuid'
@@ -45,7 +46,20 @@ export class FilemanChannel implements IChannel {
         backChannels: false,
     }
 
-    getScope() { return 'fileman$read' }
+    /*
+        The MINIMUM the channel needs to be opened, which is what the core compares the key against in
+        `checkAkr` when the instance starts. It used to be 'fileman$read', so opening the tab demanded
+        permission to read files — and browsing a tree is not reading its files.
+
+        Lowering it to USER is also what stops the catalogue from locking people out: see
+        plans/completed/channel-start-rbac/PLAN.md §4.2, which asks for exactly this (a channel's own
+        ladder plus its minimum scope here) and §5, the users left outside the day a plugin declares.
+    */
+    getScope() { return EFilemanScope.USER }
+
+    /** The scopes the security editor offers. Without this nobody can be granted them at all. */
+    getScopeCatalog(): IExtensionScope[] { return FILEMAN_SCOPES }
+
     getChannelIcon(): JSX.Element { return FilemanIcon }
 
     getSetupVisibility(): boolean { return this.setupVisible }

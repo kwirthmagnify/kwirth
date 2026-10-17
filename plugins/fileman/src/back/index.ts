@@ -1,4 +1,4 @@
-import { IChannelInstances, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, BackChannelData, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, EClusterType, IBackChannelRequirements } from '@kwirthmagnify/kwirth-common'
+import { IChannelInstances, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, EClusterType, IBackChannelRequirements, IExtensionScope } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
 import { Readable, Writable } from 'stream'
 import { Request, Response } from 'express'
@@ -8,7 +8,38 @@ import path from 'path'
 import fileUpload from 'express-fileupload'
 import os from 'os'
 const ParseListing = require('@jfvilas/parse-listing')
-import { EFilemanCommand, IFilemanMessage, IFilemanMessageResponse } from '../common/FilemanTypes'
+import { EFilemanCommand, EFilemanScope, FILEMAN_SCOPES, FILEMAN_SCOPE_LADDER, IFilemanMessage, IFilemanMessageResponse } from '../common/FilemanTypes'
+
+/*
+    Whether a key's GRANTED resources reach the level an operation needs.
+
+    🔴 It reads what the key was granted (`accessKey.resources`), never what the client asked for
+    (`instanceConfig.scope`). That distinction is the whole point: the accessKey cannot be tampered with
+    —a bearer key is an HMAC over its own resources, and a registered one is compared whole against the
+    server's list— while the instanceConfig is an unsigned JSON the browser composes. Reading the latter
+    would let a read-only user write by typing 'fileman$write' into a message.
+
+    The core already applies this criterion, but at ONE point only: `checkAkr`, when an object is
+    attached to the stream. Nothing re-evaluates it afterwards, so a session opened with read could
+    delete, rename and upload. Here the level required is not declared by anybody — it is implied by the
+    operation, which is why there is nothing to compare the client against.
+
+    Same semantics as the core's `getScopeLevel`: the HIGHEST of the granted scopes wins, and a scope
+    the ladder does not know is -1 (indexOf), so it grants nothing. 'cluster' and 'admin' sit above
+    write and therefore pass, which is what the ladder already meant.
+
+    ⚠️ It answers about the VERB, not about the target: a key with write in one namespace passes here
+    for any namespace. Checking the target against the key's resources is a separate piece of work.
+*/
+export const scopeAllows = (resources: string, required: string, levelOf: (scope: string) => number): boolean => {
+    const requiredLevel = levelOf(required)
+    for (const resource of parseResources(resources)) {
+        for (const scope of resource.scopes.split(',')) {
+            if (levelOf(scope) >= requiredLevel) return true
+        }
+    }
+    return false
+}
 
 export interface IAsset {
     podNamespace: string
@@ -94,15 +125,42 @@ class FilemanChannel implements IChannel {
         resourced: true
     })
 
-    getChannelScopeLevel = (scope: string): number => {
-        return ['', 'fileman$read', 'fileman$write', 'cluster', 'admin'].indexOf(scope)
-    }
+    getChannelScopeLevel = (scope: string): number => FILEMAN_SCOPE_LADDER.indexOf(scope)
+
+    /** The scopes the security editor offers. Without this nobody could be granted them (GET /core/scopes). */
+    getScopeCatalog = (): IExtensionScope[] => FILEMAN_SCOPES
+
+    /** Whether this key was granted enough for an operation that needs `required`. See `scopeAllows`. */
+    private allows = (accessKey: AccessKey, required: string): boolean =>
+        scopeAllows(accessKey.resources, required, this.getChannelScopeLevel)
 
     startChannel = async () => { }
 
     processProviderEvent(_providerId: string, _obj: any): void { }
 
     async endpointRequest(endpoint: string, req: Request, res: Response, accessKey: AccessKey): Promise<void> {
+        /*
+            The scope each endpoint needs. Until now NONE of them checked anything: the core's
+            `processHttpChannelRequest` only validates that the key is authentic (`getKey` is
+            authentication, not authorization) and the ladder declared above was never read, so any
+            holder of a valid key with an open fileman session could write files through `upload`.
+
+            It goes BEFORE looking the session up, on purpose: a caller who may not do this gets a 403
+            whether or not a session exists, so the answer stops telling them which it was.
+        */
+        const ENDPOINT_SCOPE: Record<string, string> = {
+            download: EFilemanScope.READ,
+            read: EFilemanScope.READ,
+            upload: EFilemanScope.WRITE,
+            write: EFilemanScope.WRITE
+        }
+        const required = ENDPOINT_SCOPE[endpoint]
+        if (required && !this.allows(accessKey, required)) {
+            this.backChannelObject.logWarning?.(`Denied '${endpoint}' to key ${accessKey.id}: '${required}' required`)
+            res.status(403).send(`'${required}' scope required`)
+            return
+        }
+
         let instanceId = req.query['key'] as string
         let socket = this.webSockets.find(ws => ws.instances.some(i => i.accessKey.id === accessKey.id && i.instanceId === instanceId))
         if (!socket) {
@@ -139,7 +197,7 @@ class FilemanChannel implements IChannel {
                             res.status(200).send(fs.readFileSync(tmpName))
                             fs.unlinkSync(tmpName)
                         } catch (err) {
-                            console.error('[fileman] error downloading folder', err)
+                            this.backChannelObject.logError?.(`error downloading folder: ${err}`)
                             this.sendSignalMessage(socket.ws, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.UNSOLICITED, ESignalMessageLevel.ERROR, instance.instanceId, 'Error building tar for download: ' + err)
                         }
                     } else {
@@ -231,7 +289,7 @@ class FilemanChannel implements IChannel {
     processCommand = async (webSocket: WebSocket, instanceMessage: IInstanceMessage): Promise<boolean> => {
         if (instanceMessage.flow === EInstanceMessageFlow.IMMEDIATE) return false
         let socket = this.webSockets.find(s => s.ws === webSocket)
-        if (!socket) { console.log('[fileman] Socket not found'); return false }
+        if (!socket) { this.backChannelObject.logWarning?.('Socket not found'); return false }
         let instances = socket.instances
         let instance = instances.find(i => i.instanceId === instanceMessage.instance)
         if (!instance) {
@@ -272,11 +330,11 @@ class FilemanChannel implements IChannel {
     }
 
     pauseContinueInstance = (_webSocket: WebSocket, _instanceConfig: IInstanceConfig, _action: EInstanceMessageAction): void => {
-        console.log('[fileman] Pause/Continue not supported')
+        this.backChannelObject.logInfo?.('Pause/Continue not supported')
     }
 
     modifyInstance = (_webSocket: WebSocket, _instanceConfig: IInstanceConfig): void => {
-        console.log('[fileman] Modify not supported')
+        this.backChannelObject.logInfo?.('Modify not supported')
     }
 
     stopInstance = (webSocket: WebSocket, instanceConfig: IInstanceConfig): void => {
@@ -296,7 +354,7 @@ class FilemanChannel implements IChannel {
             if (instances) {
                 let pos = instances.findIndex(t => t.instanceId === instanceId)
                 if (pos >= 0) instances.splice(pos, 1)
-                else console.log(`[fileman] Instance ${instanceId} not found, cannot delete`)
+                else this.backChannelObject.logWarning?.(`Instance ${instanceId} not found, cannot delete`)
             }
         }
     }
@@ -367,6 +425,34 @@ class FilemanChannel implements IChannel {
 
         if (!filemanMessage.command) { execResponse.data = 'No command received in data'; return execResponse }
 
+        /*
+            Navigating is free: being able to open fileman against a container is what authorises HOME
+            and DIR, and the core already decided that when the object was attached (`checkAkr`).
+
+            Everything that TOUCHES the filesystem needs write. Gating only the HTTP endpoints would
+            have been worse than not gating at all: these commands mutate just as much, and a fix that
+            closes one door while leaving the other open buys false confidence. UPLOAD and DOWNLOAD are
+            not here because they are signalling only — the transfer itself is the HTTP endpoint, which
+            is gated above.
+        */
+        const WRITE_COMMANDS: string[] = [
+            EFilemanCommand.CREATE, EFilemanCommand.RENAME, EFilemanCommand.DELETE,
+            EFilemanCommand.MOVE, EFilemanCommand.COPY
+        ]
+        if (WRITE_COMMANDS.includes(filemanMessage.command) && !this.allows(instance.accessKey, EFilemanScope.WRITE)) {
+            this.backChannelObject.logWarning?.(`Denied '${filemanMessage.command}' to key ${instance.accessKey.id}: '${EFilemanScope.WRITE}' required`)
+            /*
+                Reported through sendSignalMessage, NOT by filling execResponse.data: the front notifies
+                from `signalMessage.text` + `level` and ignores `data` on a COMMAND response, so putting
+                the reason in `data` made the denial SILENT — the operation did not happen and nobody was
+                told why, which is the one thing a refusal must never do. It is the same path the
+                channel's other errors already take ('Instance not found' above).
+            */
+            this.sendSignalMessage(webSocket, filemanMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR,
+                instance.instanceId, `Not allowed: '${EFilemanScope.WRITE}' scope is required to modify files`)
+            return undefined
+        }
+
         switch (filemanMessage.command) {
             case EFilemanCommand.HOME: {
                 execResponse.data = instance.assets.map(a => `${a.podNamespace}/${a.podName}/${a.containerName}`)
@@ -400,7 +486,7 @@ class FilemanChannel implements IChannel {
                     } else {
                         this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, 'Cannot get fileInfo for ' + srcClusterPath)
                     }
-                } catch (err) { console.log('[fileman]', err) }
+                } catch (err) { this.backChannelObject.logError?.(`${err}`) }
                 return
             }
             case EFilemanCommand.CREATE: {

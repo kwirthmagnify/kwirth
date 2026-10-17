@@ -98,12 +98,23 @@ Fileman moves data in every direction — in, out, and between containers.
 
 - **Install / remove:** **☰ → Manage extensions → Plugins** → install **Fileman**.
 - **Sources:** works on **Kubernetes** targets.
-- **Permissions (scopes):** grant on the target objects —
-  - **`fileman$read`** — browse, view, download.
-  - **`fileman$write`** — everything read can do, **plus** edit/save, upload, create, rename, move/copy and delete.
-  - **`cluster`** — full access.
+- **Permissions (scopes):** grant on the target objects. Each one includes the ones above it, so a user
+  needs **one**, not three —
+  - **`fileman$user`** — open Fileman on a container and **browse** its filesystem. Nothing else: folders
+    can be walked, files cannot be opened.
+  - **`fileman$read`** — everything `user` can do, **plus** viewing and downloading files.
+  - **`fileman$write`** — everything `read` can do, **plus** editing and saving, uploading, creating,
+    renaming, moving, copying and deleting.
+  - **`cluster`** / **`admin`** — full access, as everywhere else in kwirth.
+
+  They are offered in the scope picker of **☰ → User management** (and of API keys). A user with none of
+  them cannot open the channel at all.
 
   See [Security & permissions](../../admin/04-security-and-permissions).
+
+  > **Browsing is not reading.** The split exists because walking a tree to find out *what* a container
+  > ships is a different question from opening *what is inside* its files — a config file holds
+  > credentials far more often than a directory listing does.
 
 ## Notes
 
