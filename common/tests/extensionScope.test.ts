@@ -20,11 +20,16 @@ test('ida y vuelta: el canal recupera exactamente lo que metió', () => {
     assert.deepEqual(roundTrip({ path: '/usr/app', write: true, max: 3 }), { path: '/usr/app', write: true, max: 3 })
 })
 
-test('el canal y el scope se recuperan por separado', () => {
+test('el canal y el scope se recuperan por separado, y la forma ancha ya compuesta', () => {
     const parsed = parseThinScope(buildThinScope('fileman', 'write', '/tmp'))
     assert.equal(parsed?.channel, 'fileman')
-    // WITHOUT the channel: the wide form would be 'fileman$write', and composing it is the channel's job.
     assert.equal(parsed?.scope, 'write')
+    /*
+        🔴 The wide form is what the channel's LADDER is written in, so it is what getChannelScopeLevel()
+        takes. It is handed over composed because every channel reading a thin scope needs it, and a step
+        every consumer repeats is a step that drifts.
+    */
+    assert.equal(parsed?.wide, 'fileman$write')
 })
 
 /*

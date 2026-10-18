@@ -113,7 +113,7 @@ actuales. Entonces S2 es *"píntame este schema"* y poco más.
 
 ## 3. Streams
 
-### S1 · El contrato y el helper (`common`) — ✅ ENTREGADO (2026-10-18, `common` **0.5.70**)
+### S1 · El contrato y el helper (`common`) — ✅ ENTREGADO (2026-10-18, `common` **0.5.71**)
 
 El helper va en **`common`**, no en `common-back`: lo necesitan **los dos lados** —el canal para leer su
 token, el front para componerlo— y `common-back` y `common-front` reexportan `common`, así que ponerlo
@@ -124,8 +124,17 @@ ahí alcanza a todos sin duplicar.
 - Se añadió `isThinScope(token)`, que no estaba planeado: distinguir las dos formas mientras se recorre
   una clave es lo que va a hacer el editor en S2 y el canal al autorizar, y hacerlo con
   `parseThinScope(t) !== undefined` en cada sitio es la copia que P2 enseñó a no repetir.
-- El retorno se tipa: **`IThinScope`** (`{ channel, scope, config: unknown }`). El `config` va `unknown`
-  a propósito — solo el canal sabe su forma, y tiparlo de otra cosa sería mentir.
+- El retorno se tipa: **`IThinScope`** (`{ channel, scope, wide, config: unknown }`), validado por el
+  usuario. El `config` va `unknown` a propósito — solo el canal sabe su forma, y tiparlo de otra cosa
+  sería mentir.
+- **`wide`** (`'fileman$write'`) se entrega ya compuesto, en **0.5.71**. Es derivado y podría componerlo
+  cada canal, pero es lo que toma `getChannelScopeLevel()` y **lo necesitan todos**: un paso que repite
+  cada consumidor es un paso que diverge, que es exactamente la lección de P2.
+- 🔴 **Los comentarios del contrato van en `/** */`, no en `/* */`.** TypeScript **solo emite los JSDoc**
+  al `.d.ts`, así que con bloques normales el autor de una extensión veía `wide: string` y
+  `config?: IConfigFieldDef[]` pelados en su IDE, y se perdía justo lo que tiene que saber: que
+  `parseThinScope` nunca lanza y que `undefined` significa *no concede nada*. Se descubrió porque el
+  `.d.ts` salió **más pequeño** tras añadir un campo.
 - 🔴 **`buildThinScope` SÍ lanza, y `parseThinScope` nunca.** Es asimétrico a propósito. Los nombres de
   canal y scope salen del `getScopeCatalog()` del canal, no del admin: un separador ahí es un bug del
   catálogo, y un token mal construido se descubre meses después, cuando un **permiso** ha dejado de
@@ -137,9 +146,7 @@ ahí alcanza a todos sin duplicar.
   **8 tests**, y el del separador afirma la **propiedad** (que lo codificado no lleve `; : , #`) y no el
   alfabeto, así que sigue valiendo si algún día cambia la codificación.
 
-**Pendiente de decidir, aditivo y sin prisa**: si `parseThinScope` debe devolver también la forma ancha
-ya compuesta (`wide: 'fileman$write'`). Hoy cada canal la compone. A favor, el argumento de P2 —lo que
-cada canal se escribe, diverge—; en contra, es un campo derivado.
+**Nada pendiente.** El `wide` se decidió y entró en 0.5.71; el tipo está validado.
 
 1. `common/src/ExtensionScope.ts` — `IExtensionScope.config?: IConfigFieldDef[]`, opcional.
 2. En el mismo fichero, el par de funciones que define el formato:
