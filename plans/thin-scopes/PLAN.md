@@ -1,7 +1,8 @@
 # Plan — Thin scopes (core)
 
-> **Estado: sin empezar.** PRD validado el **2026-10-17** ([PRD.md](PRD.md)); las cuatro decisiones de
-> su §3 están tomadas y no se reabren aquí.
+> **Estado: fase previa ENTREGADA (P2 el 2026-10-17, P1 el 2026-10-18); los streams S1–S3, sin empezar.**
+> PRD validado el **2026-10-17** ([PRD.md](PRD.md)); las cuatro decisiones de su §3 están tomadas y no se
+> reabren aquí.
 >
 > **Alcance: solo el core.** Este plan entrega el *mecanismo*: el contrato, el helper y el editor. Que un
 > canal lo aproveche es **su** stream, y el primero será **magnify** (§5).
@@ -30,7 +31,13 @@ Luego el trabajo de core es: **un campo en un interfaz, un helper, y el editor**
 Dos refactores que **no son del formato** pero que, sin ellos, cada stream de abajo escribe otra copia
 de algo que ya existe dos o tres veces. Salieron de revisar el plan contra el código real.
 
-### P2 · Consolidar el helper de scopes en `common-back`
+### P2 · Consolidar el helper de scopes en `common-back` — ✅ ENTREGADO (2026-10-17), **menos excubitor**
+
+`scopeAllows()` y `keyAllows()` viven en `common-back` **0.6.7**, con los 9 tests que ninguna de las tres
+copias tenía. **fileman** y **trivy** ya consumen el helper, publicados y con su entrada de manifest.
+
+🔴 **Falta excubitor**: su fuente está convertida a `keyAllows` pero **sin publicar**. Hasta que se
+publique sigue con su `hasScopeKey` propio, que es exactamente la divergencia que P2 venía a cerrar.
 
 La misma función está escrita **tres veces**: `hasScopeKey` (excubitor), `scopeAllows` (fileman, 0.2.27)
 y `scopeAllows` (trivy, 0.2.30). Recorre los recursos de la clave y compara con la escalera del canal.
@@ -44,7 +51,49 @@ es un chequeo que diverge.
 antes que ellos** — los plugins resuelven `common-back` del global del core, que es la trampa que tumbó
 el core el 2026-10-16 con los conectores IdP.
 
-### P1 · Extraer el renderizador de `IConfigFieldDef[]`
+### P1 · Extraer el renderizador de `IConfigFieldDef[]` — ✅ ENTREGADO (2026-10-18)
+
+Vive en `front/src/components/extensions/ConfigFields.tsx`, y lo usan `ConfigFormDialog` (providers y
+logins) e `IdpConfigDialog` (IdPs). **Sin fetching**: `ConfigFormDialog` se queda el endpoint (GET/PUT y
+el TEST) y el componente solo dibuja, que es lo que permite reutilizarlo en S2, donde los valores no
+viven en ningún endpoint. QA validado en sus tres partes (provider, IdP y login).
+
+**Dos decisiones que obligaron las copias, porque guardaban en formatos distintos** — `ConfigFormDialog`
+guarda **texto** (`'true'`) e `IdpConfigDialog` guarda **tipado**:
+
+1. El componente emite **tipado** y `ConfigFormDialog` lo devuelve a texto con `String()`. 🔴 Un número
+   **vaciado** emite `''` y **no `0`**: con `0`, `buildBody` dejaría de omitirlo y guardaría un cero que
+   nadie tecleó.
+2. Los `number` de `ConfigFormDialog` pasan a `type='number'` (antes eran de texto), como ya hacían los
+   otros dos. Es el único cambio visible del refactor.
+
+El ojo de los secretos es **un control con dos significados**, resueltos con `onRevealSecret`: en
+providers y logins solo enseña lo que hay en el campo; en IdP va a buscar el valor real a
+`/core/idps/export`, porque lo que tiene es una máscara.
+
+**Efecto lateral bueno, latente**: el diálogo de IdP **no pintaba `select` ni `multiselect`** —caía a un
+campo de texto libre— y ahora sí, porque comparte renderizador. Hoy no se nota: ningún conector declara
+más que `text` y `password`. La prosa del contrato en `common/src/ExtensionConfig.ts` decía lo contrario
+y se ha corregido (solo comentario; no hay que publicar `common`).
+
+⚠️ **Corrección a lo que decía este plan**: la superficie de regresión **no** incluía senders ni webhooks.
+Esos dos van por `ConfigListDialog`, que es otro diálogo. Los consumidores reales eran **providers,
+logins e IdPs**, y nada más.
+
+#### Backlog que deja P1
+
+- **Queda una TERCERA copia del renderizador sin unificar: la de `ConfigListDialog`** (senders y
+  webhooks). Se dejó fuera **a propósito**, y no por pereza: es distinta de verdad —el booleano es una
+  fila con el switch a la derecha, el select es un `Select` con opción vacía `—`, y el `*` de obligatorio
+  va escrito a mano en la etiqueta en vez de por `required`—. Unificarla **cambia su aspecto**, así que es
+  decisión de UX y no de refactor. No bloquea S2.
+- **La rama de `multiselect` no la cubre nadie.** `provider-config-test` › *su formulario saca el botón
+  TEST, y un multiselect con checkbox* se **salta** porque ningún provider con `/test` usa el formulario
+  del core (`sugarless` y `aws` traen front propio), y **ninguna extensión del árbol declara un
+  `multiselect`** — ni pública ni privada. El código va copiado tal cual del original, pero conviene
+  saber que no hay red debajo.
+
+### P1 · El problema que resolvía (para el registro)
 
 `ConfigFormDialog` **está atado a un endpoint** (recibe `endpoint`, hace el `GET` y el `PUT`), así que
 no vale tal cual para los thin scopes, cuyos valores no viven en ningún endpoint: se componen en un
@@ -57,8 +106,7 @@ copias, y S2 sería la tercera.
 Extraerlo a un componente que reciba `schema` + `values` + `onChange`, y que lo usen los dos diálogos
 actuales. Entonces S2 es *"píntame este schema"* y poco más.
 
-⚠️ **Tiene superficie de regresión**: ese renderizador lo usan logins, providers, senders y webhooks. Es
-refactor de un componente compartido del core, no un añadido.
+⚠️ **Tiene superficie de regresión**: es refactor de un componente compartido del core, no un añadido.
 
 **Orden: P2 antes que P1.** Es más barato, su cascada es conocida, y es donde vivirá `parseThinScope`.
 

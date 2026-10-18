@@ -1,10 +1,10 @@
 import React, { useContext, useState } from 'react'
-import { Button, CircularProgress, Dialog, DialogActions, DialogContent, FormControlLabel, IconButton, Stack, Switch, TextField, Typography } from '@mui/material'
-import { Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Button, CircularProgress, Dialog, DialogActions, DialogContent, FormControlLabel, Stack, Switch, TextField, Typography } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
+import { ConfigFields } from './ConfigFields'
 
 /*
     An identity provider's configuration: a connector's INSTANCE.
@@ -75,7 +75,6 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
         }
         return base
     })
-    const [revelados, setRevelados] = useState<Record<string, boolean>>({})
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | undefined>()
 
@@ -86,23 +85,18 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
         Revealing a secret fetches its REAL value from the export (admin-only): what is in the form comes
         masked from the list, and saving the mask would leave the configuration broken without warning.
     */
-    const alternarSecreto = async (name: string) => {
-        if (revelados[name]) {
-            setRevelados(prev => ({ ...prev, [name]: false }))
-            return
-        }
-        if (!esNueva) {
-            try {
-                const res = await fetch(`${backendUrl}/core/idps/export`, addGetAuthorization(accessString))
-                if (res.ok) {
-                    const todo = await res.json()
-                    const real = todo?.[instancia.id]?.config?.[name]
-                    if (real !== undefined) setCampo(name, real)
-                }
+    const revelarSecreto = async (name: string) => {
+        // Nothing is stored yet, so what is in the field IS the real value.
+        if (esNueva) return
+        try {
+            const res = await fetch(`${backendUrl}/core/idps/export`, addGetAuthorization(accessString))
+            if (res.ok) {
+                const todo = await res.json()
+                const real = todo?.[instancia.id]?.config?.[name]
+                if (real !== undefined) setCampo(name, real)
             }
-            catch { /* si el export falla se enseña lo que haya en el campo */ }
         }
-        setRevelados(prev => ({ ...prev, [name]: true }))
+        catch { /* si el export falla se enseña lo que haya en el campo */ }
     }
 
     const guardar = async () => {
@@ -122,35 +116,6 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
         finally { setSaving(false) }
     }
 
-    const campo = (f: IConfigFieldDef) => {
-        const valor = instancia.config[f.name]
-        if (f.type === 'boolean') {
-            return <FormControlLabel key={f.name} label={f.label}
-                control={<Switch checked={Boolean(valor)} onChange={e => setCampo(f.name, e.target.checked)} />} />
-        }
-
-        const esSecreto = f.type === 'password'
-        const visible = revelados[f.name]
-        return (
-            <TextField key={f.name} size='small' fullWidth label={f.label} required={f.required}
-                type={f.type === 'number' ? 'number' : (esSecreto && !visible) ? 'password' : 'text'}
-                value={valor ?? ''}
-                onChange={e => setCampo(f.name, f.type === 'number' ? Number(e.target.value) : e.target.value)}
-                slotProps={{
-                    // Without this the browser fills 'tenant' and 'secret' with the username and password
-                    // Kwirth was logged into with.
-                    htmlInput: { autoComplete: esSecreto ? 'new-password' : 'off' },
-                    ...(esSecreto ? { input: {
-                        endAdornment: (
-                            <IconButton size='small' edge='end' aria-label={visible ? 'Hide' : 'Show'} onClick={() => alternarSecreto(f.name)} title={visible ? 'Hide' : 'Show'}>
-                                {visible ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' />}
-                            </IconButton>
-                        )
-                    } } : {})
-                }} />
-        )
-    }
-
     return (
         <Dialog open={true} maxWidth='sm' fullWidth>
             <DialogTitleHelp section='guide/admin/07-idp-integration?id=enabling-an-idp' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>
@@ -166,7 +131,7 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
                         control={<Switch checked={instancia.enabled} onChange={e => setInstancia(prev => ({ ...prev, enabled: e.target.checked }))} />} />
                     {props.schema.length === 0
                         ? <Typography variant='body2' color='text.secondary'>This connector has no configurable options.</Typography>
-                        : props.schema.map(f => campo(f))}
+                        : <ConfigFields schema={props.schema} values={instancia.config} onChange={setCampo} onRevealSecret={revelarSecreto} />}
                     {error && <Typography variant='caption' color='error'>{error}</Typography>}
                 </Stack>
             </DialogContent>

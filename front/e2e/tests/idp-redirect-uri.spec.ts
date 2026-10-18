@@ -13,7 +13,14 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 const DIALOG = /Identity providers/i
-const FIELD = /^Redirect URI$/i
+/*
+    The field is found by its NAME, which is the contract, and the label is read from each connector's
+    own schema — `idpRedirectUriField(label?)` lets every connector name it after the form the admin is
+    going to paste the value into, and github-cloud does exactly that ('Authorization callback URL',
+    which is what GitHub's OAuth App form calls it). Asserting a fixed label here tested the opposite of
+    what the contract promises.
+*/
+const REDIRECT_URI = 'redirectUri'
 
 interface IConnector {
     id: string
@@ -67,17 +74,28 @@ test.describe('IdP: la Redirect URI se sugiere y se puede fijar', () => {
         const configurables = connectors.filter(c => c.schema?.length > 0)
         // Until a connector ships the field in its getConfigSchema() there is nothing to assert: the
         // form only paints what the schema declares.
-        const conCampo = configurables.filter(c => c.schema.some(f => f.name === 'redirectUri'))
+        const conCampo = configurables.filter(c => c.schema.some(f => f.name === REDIRECT_URI))
         test.skip(conCampo.length === 0, 'ningun conector declara todavia redirectUri en su schema')
 
         for (const c of conCampo) {
-            const fila = dialog().locator('tr', { hasText: c.label }).first()
-            await fila.locator('button[title="Configure"]').click()
+            /*
+                The gear is reached from the NAME upwards, not from a row: the manager draws cards by
+                default and only draws `tr` in list view, so a locator anchored on the table matches
+                nothing. And the button carries its text in `aria-label`, not in `title` — MUI's Tooltip
+                labels the button, it does not set the attribute. Both were written against a layout
+                that is no longer the one on screen; the rest of the manager specs use this idiom.
+            */
+            const gear = dialog().getByText(c.label, { exact: true }).first()
+                .locator('xpath=ancestor::*[.//button[@aria-label="Configure"]][1]')
+                .locator('button[aria-label="Configure"]').first()
+            await gear.click()
             const cfg = page.getByRole('dialog').filter({ hasText: /^Configure:/ })
             await cfg.waitFor({ timeout: 20000 })
 
-            const campo = cfg.getByLabel(FIELD)
-            await expect(campo, `'${c.id}': falta el campo Redirect URI`).toBeVisible()
+            // Each connector's own wording for the field, which is what the form paints.
+            const etiqueta = c.schema.find(f => f.name === REDIRECT_URI)!.label
+            const campo = cfg.getByLabel(etiqueta, { exact: true })
+            await expect(campo, `'${c.id}': falta el campo '${etiqueta}'`).toBeVisible()
             await expect(campo, `'${c.id}': la URI sugerida no es la que el IdP tiene que tener registrada`)
                 .toHaveValue(expectedFor(c.id))
 

@@ -32,17 +32,26 @@
     What the front end draws today for each value:
       'text'      a text field. It is the default behaviour when 'type' is omitted.
       'number'    a numeric field.
-      'boolean'   a switch. The sender, webhook, idp and provider managers draw it; the login one does not.
+      'boolean'   a switch.
       'password'  a masked field with a visibility eye.
-      'select'    a dropdown fed by 'options'. The sender, webhook and login managers draw it; the idp and
-                  provider ones do not.
-      'json'      a free text area for JSON. NO manager draws it yet: today it falls back to a text field.
+      'select'    a dropdown fed by 'options', labelled by 'labels' when it brings them.
+      'json'      a free text area for JSON. NO form draws it yet: today it falls back to a text field.
                   Declaring it is valid, but do not expect a structured editor.
       'multiselect' a dropdown of SEVERAL values, fed by 'options'. The value is stored as a single
                   comma-separated string, not as an array: the configuration contract has no list type,
-                  and changing it would force migrating what is already stored for 25 fields. The core's
-                  generic form draws it (ConfigFormDialog); where it is not supported it falls back to a
-                  text field, and whatever the user types by hand still works.
+                  and changing it would force migrating what is already stored for 25 fields. Where it is
+                  not supported it falls back to a text field, and whatever the user types by hand still
+                  works — which is also what happens when 'options' comes back empty from a schema the
+                  extension generates hot.
+
+    WHICH form draws which, because they are not all the same form:
+      · The single-configuration form (providers, logins) and the identity providers' one draw ALL of the
+        above: they share one renderer, ConfigFields. Until 2026-10-17 they were two copies that had
+        drifted, and the IdP one silently fell back to a text field for 'select' and 'multiselect'.
+      · The multi-configuration list (senders, webhooks) has its own renderer and draws every type EXCEPT
+        'multiselect'. Its presentation is deliberately different —the switch sits at the right of a row,
+        the dropdown offers an empty option— because it edits a named configuration out of a list.
+      · Plugins are configured as free JSON and have no schema at all.
 */
 export type TConfigFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select' | 'json' | 'multiselect'
 

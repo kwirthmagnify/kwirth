@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, FormControlLabel, IconButton, ListItemText, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material'
-import { Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Button, CircularProgress, Dialog, DialogActions, DialogContent, Stack, Typography } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
+import { ConfigFields } from './ConfigFields'
 
 /*
     ONE configuration, as a form, built from the extension's `configSchema`.
@@ -17,6 +17,9 @@ import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '
     same three branches —text, secret with an eye, dropdown— and the same loading and saving against
     `<endpoint>` (GET and PUT). It is pulled out here while migrating logins to the generic manager, so
     that the remaining ones inherit it instead of bringing their own copy.
+
+    What this file keeps is the ENDPOINT: loading, saving and testing. Drawing the fields is ConfigFields',
+    because there are forms with no endpoint behind them.
 
     Secrets follow the project's rule: the back end returns the REAL value, the field arrives filled in
     and the only thing that changes is that it is shown with `type='password'` and an eye to reveal it.
@@ -63,7 +66,6 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
     const [values, setValues] = useState<Record<string, string>>({})
     // What was loaded from the back end, to know whether the form is dirty (and not test what is unsaved)
     const [loaded, setLoaded] = useState<Record<string, string>>({})
-    const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | undefined>()
     const [testing, setTesting] = useState(false)
@@ -163,87 +165,14 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
         finally { setTesting(false) }
     }
 
-    const field = (f: IConfigFieldDef) => {
-        // A boolean is a switch, not a text field with 'true' inside.
-        if (f.type === 'boolean') {
-            return (
-                <FormControlLabel key={f.name} label={f.label}
-                    control={<Switch size='small' checked={values[f.name] === 'true'}
-                        onChange={e => setValues(v => ({ ...v, [f.name]: String(e.target.checked) }))} />} />
-            )
-        }
+    /*
+        Everything is kept as TEXT, which is how the form was loaded and what `buildBody` converts from.
+        A switch arrives as a boolean and a number as a number; `String()` puts them back.
 
-        const esSecreto = f.type === 'password'
-        const comun = {
-            key: f.name,
-            label: f.label,
-            value: values[f.name] ?? '',
-            onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setValues(v => ({ ...v, [f.name]: e.target.value })),
-            size: 'small' as const,
-            fullWidth: true,
-            required: f.required,
-            sx: { '& .MuiOutlinedInput-root': { backgroundColor: 'transparent' } }
-        }
-
-        if (f.type === 'select') {
-            return <TextField {...comun} select>
-                {(f.options ?? []).map((opt, i) => <MenuItem key={opt} value={opt}>{f.labels?.[i] ?? opt}</MenuItem>)}
-            </TextField>
-        }
-
-        /*
-            Several values, stored as ONE comma-separated string: the configuration contract has no list
-            type, and giving it one would mean migrating what is already stored in every artifact.
-
-            The options come from the schema, which extensions may generate HOT —a cloud provider can
-            discover its regions with the stored credentials. If the discovery bears no fruit, the list
-            arrives empty; this then falls back to a text field and what is typed by hand still counts,
-            which is exactly what is needed the first time, when there are no credentials to ask with yet.
-        */
-        if (f.type === 'multiselect' && (f.options ?? []).length > 0) {
-            const seleccion = (values[f.name] ?? '').split(/[,\s]+/).map(x => x.trim()).filter(Boolean)
-            return <TextField {...comun} select
-                slotProps={{ select: { multiple: true, renderValue: (v: unknown) => (v as string[]).join(', ') } }}
-                value={seleccion}
-                onChange={e => {
-                    const elegidos = e.target.value as unknown as string[]
-                    setValues(v => ({ ...v, [f.name]: elegidos.join(',') }))
-                }}>
-                {/* Con CHECKBOX: es lo que le dice al usuario que puede marcar VARIOS. Un desplegable que
-                    solo cambia el fondo del item elegido parece de seleccion unica. */}
-                {(f.options ?? []).map((opt, i) => (
-                    <MenuItem key={opt} value={opt} dense>
-                        <Checkbox size='small' checked={seleccion.includes(opt)} sx={{ p: 0, mr: 1 }} />
-                        <ListItemText primary={f.labels?.[i] ?? opt} slotProps={{ primary: { variant: 'body2' } }} />
-                    </MenuItem>
-                ))}
-            </TextField>
-        }
-
-        return <TextField {...comun}
-            type={esSecreto && !showSecrets[f.name] ? 'password' : 'text'}
-            slotProps={{
-                /*
-                    Chrome IGNORES autocomplete='off' in what it believes to be a credentials form: on
-                    seeing a type='password' it fills the PREVIOUS text field as if it were the username
-                    ('admin' showed up in 'Client ID'). With 'new-password' it classifies it as creating
-                    or changing a credential and stops autofilling both the secret and the field before
-                    it. It is what ConfigListDialog and IdpConfigDialog already do; the bare 'off' was
-                    left here when the five dialogs were consolidated.
-                */
-                htmlInput: { autoComplete: esSecreto ? 'new-password' : 'off' },
-                ...(esSecreto ? {
-                    input: {
-                        endAdornment: (
-                            <IconButton size='small' edge='end' onClick={() => setShowSecrets(s => ({ ...s, [f.name]: !s[f.name] }))} title={showSecrets[f.name] ? 'Hide' : 'Show'}>
-                                {showSecrets[f.name] ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' />}
-                            </IconButton>
-                        )
-                    }
-                } : {})
-            }}
-        />
-    }
+        An emptied number arrives as '' and stays '' — NOT as a zero. That is what keeps `buildBody`
+        leaving it out instead of saving a 0 nobody typed.
+    */
+    const setField = (name: string, value: unknown) => setValues(v => ({ ...v, [name]: String(value) }))
 
     return (
         <Dialog open={true} maxWidth='xs' fullWidth>
@@ -255,7 +184,7 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
                 <Stack spacing={2} sx={{ mt: 1 }}>
                     {schema.length === 0
                         ? <Typography variant='body2' color='text.secondary'>{props.emptyText ?? 'Nothing to configure.'}</Typography>
-                        : schema.map(f => field(f))}
+                        : <ConfigFields schema={schema} values={values} onChange={setField} />}
                     {error && <Typography variant='caption' color='error'>{error}</Typography>}
                     {/* El resultado se queda a la vista hasta la siguiente prueba: es lo que se lee para corregir */}
                     {testOutcome && (

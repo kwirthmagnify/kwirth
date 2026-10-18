@@ -134,9 +134,22 @@ Each entry supports:
 |---|---|---|
 | `name` | string | Key name (matches the field in `login.json`). |
 | `label` | string | Human-readable label shown in the dialog. |
-| `type` | `text` \| `password` \| `number` \| `boolean` \| `select` | Field type. `password` adds a visibility toggle. `select` renders a dropdown using the `options` array. |
+| `type` | `text` \| `number` \| `boolean` \| `password` \| `select` \| `multiselect` \| `json` | Field type — see below. Omitting it means `text`. |
 | `required` | boolean | Marks the field as required in the dialog. |
-| `options` | string[] | For `type: "select"` — list of valid values. |
+| `options` | string[] | For `select` and `multiselect` — the list of valid values. |
+| `labels` | string[] | Optional display text for each entry of `options`, in the same order. Lets the stored value stay short while the dialog shows something readable. |
+
+What each type draws:
+
+| Type | Drawn as |
+|---|---|
+| `text` | A text field. The default when `type` is omitted. |
+| `number` | A numeric field. Leaving it empty stores *no value* — it is not the same as `0`. |
+| `boolean` | A switch. |
+| `password` | A masked field with an eye to reveal it. |
+| `select` | A dropdown, one value. |
+| `multiselect` | A dropdown with checkboxes, several values. The value is stored as **one comma-separated string**, not as an array. If `options` arrives empty it falls back to a text field, and what is typed by hand still counts. |
+| `json` | No structured editor yet: it falls back to a text field. Declaring it is valid, but do not expect more. |
 
 Example:
 
