@@ -2861,6 +2861,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             startup channel. The startup-channel effect opens it once its plugin's front has loaded, and
             opens nothing if it is not installed. It used to open Magnify here, by name.
         */
+        /*
+            🔴 The guard the start-up effect reads, cleared HERE because the desktop never logs in: it
+            comes in through the cluster selector, so `onLoginClosed` —the only other place that clears
+            it— does not run. Without this the FIRST context opened Magnify and every one after it landed
+            on the home page, because the ref was still true from the first.
+        */
+        autoStartedRef.current = false
+        if (props.startChannel) setAutoStartPending(true)
         if (props.startChannel) setUser({ ...user, startChannel: props.startChannel, startView: EInstanceConfigView.CLUSTER })
         setFirstLogin(false)
         setLogged(true)
@@ -2897,6 +2905,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
         // As in onContextSelectorLocal (the desktop's own choice, even against a remote Kwirth); there the
         // tab starts on the 'default' namespace.
+        // The same reset as the local path, and for the same reason: the selector is the desktop's way in.
+        autoStartedRef.current = false
+        if (props.startChannel) setAutoStartPending(true)
         if (props.startChannel) setUser({ ...user, startChannel: props.startChannel, startView: EInstanceConfigView.NAMESPACE, startNamespace: 'default' })
         setFirstLogin(false)
         setLogged(true)
