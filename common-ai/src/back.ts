@@ -121,10 +121,29 @@ export class UsageLimitError extends Error {
 let usageService: IUsageService | undefined
 
 /*  Accounting that degrades has to SAY SO, and loudly: while the counters are unreachable the ceilings are
-    not being enforced, and that is the kind of thing nobody notices until the bill arrives. `console.warn`
-    on purpose — this module has no logger of its own and must not acquire a dependency on one to be able
-    to report that it is flying blind. */
-const logUsage = (msg: string): void => console.warn(`[kwirth-common-ai] ${msg}`)
+    not being enforced, and that is the kind of thing nobody notices until the bill arrives.
+
+    🔴 It goes through the CORE's logger when there is one. These lines used to be plain `console.warn`,
+    and that is how they came out: bare, with no timestamp, no component and no level, in the middle of a
+    log where every other line has them. A line you cannot filter by component, cannot silence and cannot
+    place in time is a line nobody reads — and these are precisely the ones saying that the limits are not
+    being enforced right now. Seen in the dev log on 2026-10-18.
+
+    `console.warn` stays as the fallback, which is the point of injecting it: this module must not depend
+    on anyone's logger to be able to report that it is flying blind. Before the core registers one — or in
+    a test, or in a tool that only pulls in this package — the message still comes out. */
+type TAiLogger = (msg: string) => void
+let aiLogger: TAiLogger | undefined
+
+const logUsage = (msg: string): void => {
+    const line = `[kwirth-common-ai] ${msg}`
+    if (aiLogger) aiLogger(line)
+    else console.warn(line)
+}
+
+/*  The core registers its logger at startup, next to the usage service. Passing `undefined` goes back to
+    `console.warn` — useful when shutting down, so a late message is not handed to a logger that is gone. */
+export const setAiLogger = (logger: TAiLogger | undefined): void => { aiLogger = logger }
 
 /* The core calls this at startup. Without it everything below is a no-op and the LLM is reached as ever. */
 export const setUsageService = (service: IUsageService | undefined): void => { usageService = service }

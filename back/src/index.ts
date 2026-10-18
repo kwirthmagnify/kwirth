@@ -23,7 +23,7 @@ import { wsUpgradeAllowed } from './tools/WsPathGuard'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { buildPreviousContainerMessage, logPreviousContainerBanner, readPreviousContainerLog } from './tools/PreviousContainerLog'
 import { createUsageService } from './tools/AiUsage'
-import { setUsageService } from '@kwirthmagnify/kwirth-common-ai/back'
+import { setUsageService, setAiLogger } from '@kwirthmagnify/kwirth-common-ai/back'
 import { failureOrigin } from './tools/FailureOrigin'
 import { LoginApi } from './api/LoginApi'
 
@@ -2644,6 +2644,14 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             that refuses to start because it cannot count is worse than one that counts badly.
         */
         setUsageService(await createUsageService())
+        /*  Y su LOGGER, para que lo que escriba common-ai salga como todo lo demás.
+
+            Sus avisos salían por `console.warn`: sin hora, sin componente y sin nivel, en medio de un
+            log donde cada línea los lleva. Son justo los que dicen que los contadores no responden y que
+            los topes NO se están aplicando, o que una llamada al modelo tardó 38 s — lo que nadie quiere
+            descubrir por la factura. Pasando por el logger del core se pueden filtrar por componente y
+            silenciar como el resto. Visto en el log de dev el 2026-10-18. */
+        setAiLogger((m: string) => logWarning(ELogComponent.CORE, m))
 
         /*
             If the previous container died, its log is the only thing that explains why, and it is only
