@@ -49,15 +49,34 @@ When you edit a resource, **Scopes** is a **searchable selector** (filter box + 
 | `subscribe` | **Subscribe** to a channel's output (e.g. alerts). |
 | `ops$get` | Ops: **read/inspect** resources. |
 | `ops$restart` | Ops: **restart / delete** workloads. |
-| `trivy$workload` | Trivy: access **workload-scoped** reports (vulnerabilities, config audit, secrets). |
-| `trivy$kubernetes` | Trivy: access **cluster-scoped** reports (RBAC, infra assessment). |
-| `fileman$read` | Fileman: **browse / view / download** files. |
+| `trivy$user` | Trivy: **open the channel** and read workload-scoped reports (vulnerabilities, config audit, secrets). |
+| `trivy$kubernetes` | Trivy: everything above **plus** cluster-scoped reports (RBAC, infra assessment). |
+| `fileman$user` | Fileman: **open it and browse** a container's filesystem. Browsing is all it grants. |
+| `fileman$read` | Fileman: everything above **plus** **open / download** files. |
 | `fileman$write` | Fileman: everything read can do **plus** edit, upload, create, rename, move/copy, delete. |
 | `none` | Placeholder — no capability. |
 
 > **Plugins can add their own scopes.** The list above is the **core** catalog plus the Ops/Trivy channel scopes, but the Scopes selector is **populated at runtime** from every installed channel/plugin (`ops$…`, `trivy$…`, and any a plugin declares). So after installing a new channel you may see **extra scopes** appear here automatically. There is **no** `ops$xterm` / `ops$execute` scope — opening a shell or running a command in [Ops](../extensions/plugins/ops) is not behind its own scope in the current version.
 
 > **The `admin` scope is powerful.** It grants the whole security surface (users, keys, IdPs). Give it only to real administrators. The built-in `admin` account already carries it (plus `cluster`).
+
+## Narrowing a scope
+
+Object filters (namespaces, pods, containers) limit **where** a scope applies. Some scopes can also be limited by **what they act on**, which only the channel knows how to describe — a path for File Manager, a kind of resource for a topology channel.
+
+Every scope belonging to a channel (the ones with a `$`) has a **gear** on the right of the dropdown. Pressing it asks what to limit that permission to:
+
+- If the channel **declares a form**, you fill in its fields.
+- If it does not, you get **one free field**: a path, a regular expression or a comma-separated list — whatever that channel understands.
+- **Leaving it blank grants the scope in full**, exactly as ticking it does. The dialog says so before you save.
+
+What gets stored is a single token, and the selector shows it in words — `File Manager · Write → /tmp` — so the permission stays readable months later. You never type or see the encoded form.
+
+Ticking the row and narrowing it are **the same permission**: narrowing replaces the plain scope, it does not sit beside it. To change a limit, press the gear again — the form comes back filled in. To remove the permission, untick the row.
+
+> 🔴 **The wider form always wins.** Resources are combined with OR, so a key holding both `fileman$write` and a narrowed `fileman$write → /tmp` can write **everywhere**: the limit does nothing. This cannot happen through the editor any more, but it can in a key built by hand through the API, or in one granted before this existed — and the editor warns you when it sees both. The same applies to `cluster` and `admin`, which sit above every channel scope: a user holding either is not limited by anything you narrow here.
+
+> ⚠️ **A limit only applies if the channel enforces it.** The format is Kwirth's; the meaning is the channel's. A channel that does not yet read these limits will treat the permission as not granted at all — it fails closed, so nothing is exposed, but the permission will appear to do nothing. Check the channel's own page.
 
 ## How to think about it (grant least privilege)
 

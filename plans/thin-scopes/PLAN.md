@@ -1,7 +1,10 @@
 # Plan — Thin scopes (core)
 
-> **Estado: fase previa y S1 ENTREGADOS** (P2 el 2026-10-17, P1 y S1 el 2026-10-18); quedan **S2** (el
-> editor de seguridad, el grueso) y **S3** (documentación).
+> **Estado: fase previa, S1 y S2 ENTREGADOS** (P2 el 2026-10-17; P1, S1 y S2 el 2026-10-18). De **S3**
+> queda la guía de extensiones y el techo de tamaño: la de admin se hizo con S2.
+>
+> **El mecanismo está completo y vivo**: un admin ya puede acotar un permiso desde el editor. Lo que
+> falta para que ACOTE algo es que un canal lea su `config` — y eso es trabajo de cada canal (§4).
 > PRD validado el **2026-10-17** ([PRD.md](PRD.md)); las cuatro decisiones de su §3 están tomadas y no se
 > reabren aquí.
 >
@@ -163,7 +166,40 @@ ahí alcanza a todos sin duplicar.
 
 **Cierre:** publicar `common`, y la cascada de dependientes que toque. Sin esto nada más compila.
 
-### S2 · El editor de seguridad (core front)
+### S2 · El editor de seguridad (core front) — ✅ ENTREGADO (2026-10-18)
+
+`ScopeConfigDialog` (nuevo) pinta el formulario que declara el canal con `ConfigFields`, o **un campo
+libre** si no declara ninguno. Vacío devuelve el scope **ancho**: declarar `config` no puede hacer
+inalcanzable el permiso completo. QA validado en sus siete pasos.
+
+🔴 **El hallazgo que cambió el diseño.** MUI casa las opciones por igualdad EXACTA, así que con un token
+fino guardado la opción salía **sin marcar** y, al pulsarla, el `Select` **añadía la forma ancha al
+lado** — la propia UI fabricando el caso que la guarda denuncia, y en silencio, porque gana el ancho. El
+`value` de cada `MenuItem` pasa a ser **el token guardado**: marcar y desmarcar funcionan en las dos
+formas, y las dos son **exclusivas** por entrada. La rueda es un control aparte porque pulsar la fila
+conmuta el permiso; sin ella no habría forma de **cambiar** un límite, solo de revocar y reconceder.
+
+🔴 **Un bloqueo del back que este plan no preveía.** `unknownScopesIn` devolvía **400** al guardar un
+usuario o una API key con cualquier token fino, porque no está en el catálogo: el editor componía algo
+que no se podía guardar. Ahora un fino se juzga por el permiso que acota. **No guarda la puerta** —en
+runtime la escalera ya responde -1— guarda al **admin**, que se entera de que acotó un permiso
+inexistente en vez de conceder algo que no haría nada. Son +5 tests, los primeros que tenía esa función.
+
+**Lo que NO se pudo probar, y por qué:**
+- **El formulario declarado por un canal.** Ningún canal declara `config` todavía, así que solo se
+  ejercita el campo libre. El multiselect de `ConfigFields` sigue sin consumidor.
+- **La guarda de ancha+fina.** Ya **no se puede producir desde el editor** —son exclusivas por diseño—,
+  así que solo salta con una clave escrita a mano por `/key`. Que no sea alcanzable es la propiedad
+  fuerte; el aviso queda para lo que venga de fuera.
+
+⚠️ **Dos trampas de Playwright con MUI**, anotadas en el spec porque costaron la mitad del rato:
+`getByLabel` **no engancha un `Select`** (es un div `role=combobox` y la etiqueta solo se ata con un
+`labelId` explícito), y con el desplegable abierto **el popover es un `Modal` que marca `aria-hidden` el
+diálogo de detrás**, así que cualquier locator hacia él encuentra cero — hay que cerrarlo antes de leer.
+
+#### El detalle original
+
+
 
 Es el grueso. Hoy `ResourceEditor` es un multi-select cuyo `value` son los scopes
 (`front/src/components/security/ResourceEditor.tsx`), y un thin scope **no es una opción más**: es una
@@ -189,10 +225,15 @@ opción que al marcarse abre un formulario y produce un token.
 **Cierre:** CL9 del core (sin publish ni tag). E2E sobre el editor: conceder un thin scope, guardarlo,
 reabrirlo y ver el formulario relleno; y que salte el aviso de la guarda.
 
-### S3 · Documentación
+### S3 · Documentación — queda la mitad
 
-1. **Guía de admin** — `04-security-and-permissions`: qué es un thin scope, cómo se lee
-   `channel#scope#config`, y 🔴 que **gana el ancho**, con el ejemplo de la trampa.
+1. ✅ **Guía de admin** — hecha en el CL9 de S2, porque la UI ya está viva y enviarla sin documentar no
+   era una opción. `04-security-and-permissions` gana la sección *Narrowing a scope*, con 🔴 que **gana
+   el ancho** (y que `cluster`/`admin` también), y con el aviso de que **un límite solo aplica si el
+   canal lo comprueba**. De paso se corrigió la tabla de scopes, que seguía listando `trivy$workload`
+   —retirado el 2026-10-17— y no listaba `fileman$user`. La captura `admin-scopes.png` se rehízo **por
+   código** (`capture-admin-scopes.spec.ts`, que no existía): la anterior era a mano, no enseñaba las
+   ruedas y llevaba **tres correos reales** dentro.
 2. **Guía de extensiones** — cómo declara un canal su `config` en `getScopeCatalog()`, con ejemplo.
 3. **Límite de tamaño** — documentar el techo práctico (§5 del PRD): el config no es sitio para una
    lista de cien namespaces.

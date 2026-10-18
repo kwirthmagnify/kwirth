@@ -5,7 +5,7 @@
 // FOLLOW-UP: the built-ins are today DUPLICATED with the front end's enum (ResourceEditor). Unify them in
 // `common` (a single IExtensionScope list shared front+back) and consume the /core/scopes endpoint from the
 // front end.
-import { IExtensionScope } from '@kwirthmagnify/kwirth-common'
+import { IExtensionScope, parseThinScope } from '@kwirthmagnify/kwirth-common'
 import { TChannelConstructor } from '../channels/IChannel'
 
 // The core's general scopes (not a plugin's). The descriptions are aligned with AccessKey's documentation.
@@ -45,12 +45,25 @@ export const buildScopeCatalog = (registeredChannels: Map<string, TChannelConstr
 export const validScopeSet = (registeredChannels: Map<string, TChannelConstructor>): Set<string> =>
     new Set(buildScopeCatalog(registeredChannels).map(s => s.scope))
 
-/** Returns the UNRECOGNISED scopes present in a resources string (`scopes:ns:groups:pods:containers;…`). */
+/*
+    Returns the UNRECOGNISED scopes present in a resources string (`scopes:ns:groups:pods:containers;…`).
+
+    A THIN scope (`channel#scope#<b64>`) is judged by the permission it narrows: `magnify#read#…` is known
+    exactly when `magnify$read` is. Without this the editor would compose a token that saving rejects with
+    a 400, which is the shape of bug where a feature works everywhere except where it is used.
+
+    It is still a check worth making. At runtime an unknown token already grants nothing —the channel's
+    ladder answers -1— so this does not guard the door; what it guards is the admin, who gets told they
+    narrowed a scope that does not exist instead of granting something that will silently do nothing.
+*/
 export const unknownScopesIn = (resources: string, valid: Set<string>): string[] => {
     const bad: string[] = []
     for (const resource of (resources || '').split(';')) {
         const scopes = (resource.split(':')[0] || '').split(',').map(s => s.trim()).filter(Boolean)
-        for (const sc of scopes) if (!valid.has(sc) && !bad.includes(sc)) bad.push(sc)
+        for (const sc of scopes) {
+            const known = valid.has(parseThinScope(sc)?.wide ?? sc)
+            if (!known && !bad.includes(sc)) bad.push(sc)
+        }
     }
     return bad
 }
