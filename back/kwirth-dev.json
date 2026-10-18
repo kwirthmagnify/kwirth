@@ -5,7 +5,8 @@
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
         "fileman": "../plugins/fileman/dist",
-        "magnify": "../plugins/magnify/dist"
+        "magnify": "../plugins/magnify/dist",
+        "trivy": "../plugins/trivy/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",
