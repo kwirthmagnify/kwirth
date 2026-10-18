@@ -9,7 +9,21 @@
 > reabren aquí.
 >
 > **Alcance: solo el core.** Este plan entrega el *mecanismo*: el contrato, el helper y el editor. Que un
-> canal lo aproveche es **su** stream, y el primero será **magnify** (§5).
+> canal lo aproveche es **su** stream, y el primero fue **magnify** — ✅ entregado el 2026-10-18 en
+> `plugin/magnify@0.2.0`, con su propio CL9 y su histórico en `plugins/magnify/docs/qa/`.
+>
+> Lo que dejó para este plan, porque no se vio hasta tener un canal de verdad detrás:
+> - 🔴 **Un canal puede no tener dónde enganchar el `config`.** Magnify no declaraba un solo scope
+>   propio: hubo que darle vocabulario (`user`/`read`/`write`) **antes** de poder acotar nada. No se
+>   acota lo que no existe, y eso será lo normal en el resto de canales, no la excepción.
+> - 🔴 **Acotar obliga a tapar TODAS las salidas, no solo la que se mira.** En magnify el listado era la
+>   obvia; el feed de eventos entregaba igual un Secret oculto en cuanto alguien lo tocaba. Cada canal
+>   tiene que enumerar las suyas.
+> - **Los namespaces NO van en el `config`.** `resources` ya tiene ese campo; meterlos en el token sería
+>   una segunda forma de decir lo mismo. El `config` es para lo que solo el canal sabe nombrar.
+> - **El front también necesita preguntar**, para no ofrecer lo que el back va a rechazar. Y no puede:
+>   `scopeAllows` vive en `common-back`. Magnify lo resolvió con una copia en su propio `src/common/`;
+>   si se repite en el segundo canal, es señal de que el helper debe bajar a `common`.
 
 ---
 

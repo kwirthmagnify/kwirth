@@ -51,6 +51,9 @@ When you edit a resource, **Scopes** is a **searchable selector** (filter box + 
 | `ops$restart` | Ops: **restart / delete** workloads. |
 | `trivy$user` | Trivy: **open the channel** and read workload-scoped reports (vulnerabilities, config audit, secrets). |
 | `trivy$kubernetes` | Trivy: everything above **plus** cluster-scoped reports (RBAC, infra assessment). |
+| `magnify$user` | Magnify: **open it** and see the cluster's health (metrics and events). It does **not** list resources. |
+| `magnify$read` | Magnify: also **see what the cluster has** — the resources, with their contents. Narrowable by kind (see [Narrowing a scope](#narrowing-a-scope)). |
+| `magnify$write` | Magnify: also **change** the cluster — apply, delete, evict, drain, scale, restart. |
 | `fileman$user` | Fileman: **open it and browse** a container's filesystem. Browsing is all it grants. |
 | `fileman$read` | Fileman: everything above **plus** **open / download** files. |
 | `fileman$write` | Fileman: everything read can do **plus** edit, upload, create, rename, move/copy, delete. |

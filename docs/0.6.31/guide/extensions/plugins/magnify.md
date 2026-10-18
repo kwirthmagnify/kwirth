@@ -16,7 +16,7 @@ On top of that live stream it adds:
 - **LogSearch** — full-text search across pod logs without opening individual log streams.
 - **Multi-cluster**: manage all your clusters from one place.
 
-> Magnify is **built-in** — there's nothing to install. It's the closest thing to "a whole cluster IDE" inside kwirth, which is why it's the crown jewel.
+> Magnify is the closest thing to "a whole cluster IDE" inside kwirth, which is why it's the crown jewel. It used to be built into the core; since `plugin/magnify@0.1.0` it is a **plugin**, installed and updated like any other.
 
 ## When to use it
 
@@ -27,6 +27,33 @@ On top of that live stream it adds:
 ## Starting Magnify
 
 It needs **no configuration**. Put **any** resource in the selector (it doesn't matter which), set **Channel = `magnify`**, **ADD**, then **gear ⚙ → Start**. The cluster overview appears and fills in within milliseconds.
+
+## Permissions
+
+Magnify declares three scopes, each granting everything below it. They are set per user or API key in [Security & permissions](../../admin/04-security-and-permissions).
+
+| Scope | Grants |
+|---|---|
+| `magnify$user` | **Open** Magnify and see the cluster's **health**: its metrics and its event feed. It does **not** list resources. |
+| `magnify$read` | Also **see what the cluster has** — the resources, with their contents. |
+| `magnify$write` | Also **change** the cluster: apply, delete, evict, drain, scale, restart, trigger a CronJob, delete an image. |
+
+`cluster` and `admin` sit above all three, so an administrator is unaffected.
+
+> ⚠️ **Before `plugin/magnify@0.2.0` Magnify checked nothing.** Any key that could reach the channel opened it and saw the whole cluster. If you upgrade and somebody loses access, that is why: give them `magnify$user` or above.
+
+### Limiting what is seen
+
+Two limits apply on top of the scopes, and both are enforced by Magnify itself:
+
+- **Namespaces.** The `Namespaces` field of the resource limits Magnify to them. 🔴 A key limited to namespaces does **not** see what lives in none of them — Nodes, PersistentVolumes, ClusterRoles, StorageClasses, CRDs, and the Namespace list itself. "You may operate in `pre`" is not the same as "you may see the cluster".
+- **Hidden kinds.** `magnify$read` can be narrowed from the **gear ⚙** next to it in the scope selector: tick the kinds to hide — typically **ConfigMap** and **Secret**, the two that carry credentials — and that key stops seeing them, in the listings and in the live event feed alike.
+
+> ⚠️ Hiding **fails open** for anything new: a kind nobody ticked is visible, so a CRD added later shows up until somebody hides it.
+
+### What the Preferences panel offers
+
+The panel's sections follow the same scopes, and are shown disabled with the reason rather than hidden: **Display** always, **External content**, **Data management** and **Debug** with `magnify$read`, **Custom actions** with `magnify$write` (they run pods and shells), and **Extensions** with `admin` — it opens the core's extension managers, which are not Magnify's to grant.
 
 ## The cluster overview
 

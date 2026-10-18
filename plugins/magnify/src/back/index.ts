@@ -1,5 +1,7 @@
-import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, EClusterType} from '@kwirthmagnify/kwirth-common'
+import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, EClusterType, IExtensionScope} from '@kwirthmagnify/kwirth-common'
 import { IBackChannelRequirements, IChannelInstances } from '@kwirthmagnify/kwirth-common'
+import { EMagnifyScope, MAGNIFY_SCOPES, MAGNIFY_SCOPE_LADDER } from '../common/MagnifyScopes'
+import { allows, canSee, canSeeAnyOf, filterItems, needsFiltering } from '../common/MagnifyAuth'
 import { IBackChannelObject, IChannel, IProvider, IProviderHandle, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 import { Request, Response } from 'express'
 // Types only: at runtime every Kubernetes client is the core's, reached through clusterInfo.
@@ -89,8 +91,30 @@ export interface IMagnifyMessageResponse extends IInstanceMessage {
     data?: any
 }
 
+/*
+    The commands that change the cluster, as opposed to looking at it. They are the ones gated by
+    `magnify$write`; everything else only reads.
+
+    POD, NODE, CONTROLLER, IMAGE, CRONJOB and INGRESSCLASS each carry an action in their parameters, and
+    every one of those actions mutates — evict, drain, cordon, shell, scale, restart, delete an image,
+    trigger a cron job, make an IngressClass the default. There is no read-only use of them, so the whole
+    command is listed rather than each of its actions.
+*/
+const MUTATING_COMMANDS = new Set<string>([
+    EMagnifyCommand.CREATE, EMagnifyCommand.APPLY, EMagnifyCommand.DELETE,
+    EMagnifyCommand.POD, EMagnifyCommand.NODE, EMagnifyCommand.CONTROLLER,
+    EMagnifyCommand.IMAGE, EMagnifyCommand.CRONJOB, EMagnifyCommand.INGRESSCLASS
+])
+
 export interface IInstance {
     instanceId: string
+    /*
+        🔴 The key the instance was opened with, and the only thing this channel authorises from. It is
+        read from the instanceConfig the CORE validated, never from what a later message carries: a
+        message is composed by the browser, and a channel that believed it would let anybody grant
+        themselves whatever they typed.
+    */
+    accessKey: AccessKey
 }
 
 class MagnifyChannel implements IChannel {
@@ -151,9 +175,14 @@ class MagnifyChannel implements IChannel {
         }
     }
 
-    getChannelScopeLevel = (scope: string): number => {
-        return ['', 'cluster', 'admin'].indexOf(scope)
-    }
+    getChannelScopeLevel = (scope: string): number => MAGNIFY_SCOPE_LADDER.indexOf(scope)
+
+    /*
+        What the security editor offers for Magnify. Until this existed the editor showed nothing of this
+        channel, so the only way to grant it was `cluster` — admin-level over the whole product — and
+        there was no way to say 'look but do not touch' or 'only this namespace'.
+    */
+    getScopeCatalog = (): IExtensionScope[] => MAGNIFY_SCOPES
 
     startChannel = async () =>  {
         this.clusterInfo.addSubscriber('metrics', this, {})
@@ -167,6 +196,12 @@ class MagnifyChannel implements IChannel {
             case 'events':
                 for (let socket of this.webSockets) {
                     for (let instance of socket.instances) {
+                        /*
+                            🔴 The other way out, and the one that is easy to forget: a Secret hidden from
+                            the listing would still have arrived here the moment somebody changed it.
+                            A permission that holds until the cluster moves is not a permission.
+                        */
+                        if (!canSee(instance.accessKey, obj.obj?.kind, obj.obj?.metadata?.namespace)) continue
                         let magnifyMessage:IMagnifyMessageResponse = {
                             msgtype: 'magnifymessageresponse',
                             id: '1',
@@ -247,6 +282,25 @@ class MagnifyChannel implements IChannel {
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
         this.log.info(`Start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
 
+        /*
+            🔴 The door, and it is checked BEFORE anything is registered. The core does not guard it:
+            Magnify is a cluster channel, so `checkAkr` is never called for it and until now ANY key that
+            reached the channel got the whole cluster.
+
+            Checking first is not tidiness: refusing after pushing the socket left an entry with no
+            instances in it for the rest of the connection's life.
+
+            The view still has to be CLUSTER for the channel to start at all — that is the core's part —
+            but what is checked here is the scope, the same way agora, excubitor and trivy do it.
+        */
+        const accessKey = accessKeyDeserialize(instanceConfig.accessKey)
+        if (!allows(accessKey, EMagnifyScope.USER)) {
+            this.log.warning(`Denied instance ${instanceConfig.instance} to key ${accessKey?.id}: '${EMagnifyScope.USER}' required`)
+            this.sendSignalMessage(webSocket, EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceConfig.instance,
+                `You don't have permission to use Magnify. Opening it requires the '${EMagnifyScope.USER}' scope — ask an administrator.`)
+            return false
+        }
+
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
             let len = this.webSockets.push( {ws:webSocket, lastRefresh: Date.now(), instances:[]} )
@@ -258,6 +312,7 @@ class MagnifyChannel implements IChannel {
         if (!instance) {
             instance = {
                 instanceId: instanceConfig.instance,
+                accessKey
             }
             instances.push(instance)
         }
@@ -355,7 +410,42 @@ class MagnifyChannel implements IChannel {
     // PRIVATE
     // *************************************************************************************
 
+    /*
+        🔴 Where a listing is cut down to what the key may see, and the ONLY place it happens.
+
+        It is done here, on the serialised body, and not in each of the forty-odd branches of
+        `executeList`: a filter that has to be remembered in forty places is a filter that will be
+        missing from one of them, and the one it is missing from is a kind somebody can read and should
+        not. Everything Magnify lists leaves through this method.
+
+        A key that narrows nothing does no work at all.
+    */
+    private filterListPayload = (accessKey:AccessKey, data:any): any => {
+        if (typeof data !== 'string') return data
+        try {
+            const body = JSON.parse(data)
+            if (!Array.isArray(body?.items)) return data
+            // Kubernetes answers a listing with its own kind: 'PodList', 'SecretList', 'PodMetricsList'.
+            const kind = typeof body.kind === 'string' && body.kind.endsWith('List') ? body.kind.slice(0, -4) : undefined
+            if (!kind) {
+                /*
+                    Without the kind there is no way to decide, and the key HAS limits — so nothing goes
+                    out. It is said out loud because an empty list is indistinguishable from a cluster
+                    with nothing in it, and somebody will report it as a bug.
+                */
+                this.log.warning(`A listing with no kind reached a limited key: nothing is sent (${String(data).slice(0, 80)})`)
+                return JSON.stringify({ ...body, items: [] })
+            }
+            return JSON.stringify({ ...body, items: filterItems(accessKey, kind, body.items) })
+        }
+        catch (err) {
+            this.log.warning(`A listing could not be read to be filtered, so nothing is sent: ${err}`)
+            return JSON.stringify({ items: [] })
+        }
+    }
+
     private sendDataMessage = (webSocket:WebSocket, instance:IInstance, id:string, command: EMagnifyCommand, data:any): void => {
+        if (command === EMagnifyCommand.LIST && needsFiltering(instance.accessKey)) data = this.filterListPayload(instance.accessKey, data)
         let resp: IMagnifyMessageResponse = {
             action: EInstanceMessageAction.COMMAND,
             flow: EInstanceMessageFlow.RESPONSE,
@@ -425,6 +515,22 @@ class MagnifyChannel implements IChannel {
             if (!magnifyMessage.command) {
                 execResponse.data = 'No command received in data'
                 return execResponse
+            }
+
+            /*
+                🔴 Everything that CHANGES the cluster, behind one door.
+
+                Listed by command and not by a flag on each branch, so that adding a mutating command
+                without adding it here is visible: the list is what this channel calls writing, and it is
+                read next to the switch that serves them.
+
+                `cluster` and `admin` sit above WRITE in the ladder, so an administrator is unaffected.
+            */
+            if (MUTATING_COMMANDS.has(magnifyMessage.command) && !allows(instance.accessKey, EMagnifyScope.WRITE)) {
+                this.log.warning(`Denied '${magnifyMessage.command}' to key ${instance.accessKey?.id}: '${EMagnifyScope.WRITE}' required`)
+                this.sendSignalMessage(webSocket, magnifyMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId,
+                    `You don't have permission to change the cluster from Magnify — that requires the '${EMagnifyScope.WRITE}' scope.`)
+                return undefined
             }
 
             switch (magnifyMessage.command) {
@@ -687,6 +793,16 @@ class MagnifyChannel implements IChannel {
     
     private async executeList (webSocket:WebSocket, instance:IInstance, magnifyMessage:IMagnifyMessage) {
         for (let param of magnifyMessage.params!) {
+            /*
+                A kind nobody holding this key can see is not even asked of Kubernetes. Two things are
+                settled here that filtering the answer would not: a hidden kind never leaves the cluster,
+                and a key limited to namespaces does not get the cluster-scoped kinds, which have no
+                namespace to be filtered by.
+            */
+            if (!canSeeAnyOf(instance.accessKey, param)) {
+                this.log.info(`Not listing '${param}' for key ${instance.accessKey?.id}: not granted`)
+                continue
+            }
             switch (param) {
                 case 'ComponentStatus':
                     throttleExcute(param, async () => {

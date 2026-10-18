@@ -24,7 +24,7 @@ import { templates } from './components/Templates'
 import { ArtifactSearch, IArtifactSearchData } from './components/ArtifactSearch'
 import { LogSearchPanel, ILogSearchData } from './components/LogSearchPanel'
 import { rfmSetup, setLeftItem, setPropertyFunction } from './components/RFMSetup'
-import { createChannelInstance, getChannelIconOf, getChannelIconSafe, getIconFromKind } from '@kwirthmagnify/kwirth-common-front'
+import { getChannelIconSafe, getIconFromKind } from '@kwirthmagnify/kwirth-common-front'
 import { MenuKubeWorks } from './components/MenuKubeWorks'
 import { useTheme } from '@mui/material'
 import { MenuKwirthWorks } from './components/MenuKwirthWorks'
@@ -772,32 +772,23 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     // *********************************************************
 
 
-    // Sync cluster-type plugins into classClusterOverview left bar on every render
+    /*
+        The cluster overview's left bar is the three items the space declares —Search, Log search and
+        Add— and nothing else.
+
+        It used to sync every installed plugin into it. That was never right: an installed plugin is not
+        an action of the cluster overview, and the items went in with `permission: true` written by hand,
+        so the bar offered channels the user may not be allowed to open. It went unnoticed for months
+        because the filter was `!BUILTIN_CHANNELS.has(id)` and almost everything WAS builtin; as log,
+        metrics, trivy and ops left the core, they started falling through it one by one.
+
+        The pruning stays so the items a previous build pushed into this module-level map do not survive
+        a reload.
+    */
     {
         const STATIC_CLUSTER_ITEMS = new Set(['search', 'logsearch', 'add'])
         const spcClusterOverview = spaces.get('classClusterOverview')!
-        const clusterPluginIds = Array.from(props.channelObject.frontChannels?.keys() ?? []).filter(id => {
-            if (id === 'magnify') return false
-            const backChannel = props.channelObject.backChannels?.find(c => c.id === id)
-            return backChannel?.cluster === true
-        })
-        spcClusterOverview.leftItems = spcClusterOverview.leftItems!.filter(item =>
-            !item.name || STATIC_CLUSTER_ITEMS.has(item.name) || clusterPluginIds.includes(item.name)
-        )
-        for (const pluginId of clusterPluginIds) {
-            if (!spcClusterOverview.leftItems!.some(item => item.name === pluginId)) {
-                const ChannelClass = props.channelObject.frontChannels!.get(pluginId)!
-                const ch = createChannelInstance(ChannelClass)
-                spcClusterOverview.leftItems!.push({
-                    name: pluginId,
-                    icon: getChannelIconOf(ch ?? undefined, pluginId),
-                    text: pluginId.charAt(0).toUpperCase() + pluginId.slice(1),
-                    permission: true
-                })
-            }
-            const pluginItem = spcClusterOverview.leftItems!.find(li => li.name === pluginId)!
-            pluginItem.onClick = (_paths: string[]) => launchObjectExternal(pluginId, [], EInstanceConfigView.CLUSTER, undefined, undefined)
-        }
+        spcClusterOverview.leftItems = spcClusterOverview.leftItems!.filter(item => !item.name || STATIC_CLUSTER_ITEMS.has(item.name))
     }
 
     let spcClassOverview = spaces.get('classOverview')!

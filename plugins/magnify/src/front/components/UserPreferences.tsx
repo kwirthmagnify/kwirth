@@ -5,7 +5,9 @@ import { allKinds, IKind, MagnifyUserPreferences } from './MagnifyUserPreference
 import { IFileObject } from '@jfvilas/react-file-manager'
 import { IChannelObject, useKeyboard } from '@kwirthmagnify/kwirth-common-front'
 import { About } from './About'
-import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { accessKeyDeserialize, EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { allows } from '../../common/MagnifyAuth'
+import { EMagnifyScope, MAGNIFY_ADMIN_SCOPE } from '../../common/MagnifyScopes'
 
 interface IUserPreferencesProps {
     channelObject: IChannelObject
@@ -23,7 +25,29 @@ export interface ICustomAction {
     podYaml: string
 }
 
+/*
+    What this panel offers, by what the key is allowed to do.
+
+    Display is everybody's: it is the theme and nothing else. The rest acts on the cluster or on what is
+    read from it, so offering them to somebody who cannot read is offering switches that do nothing —
+    the same defect as a toolbar full of channels that reject you when clicked.
+
+    They are DISABLED and not hidden, and they say why: a section that comes and goes is one the user
+    cannot look for, and 'it is not there' and 'you may not' are different answers.
+
+    🔴 This decides nothing. The back end is the only place a permission is enforced, and it checks every
+    one of these again. What it decides is what to OFFER.
+*/
+const sectionNeeds = (accessString: string|undefined, required: EMagnifyScope|string): boolean => {
+    try { return allows(accessKeyDeserialize(accessString ?? ''), required) }
+    catch (err) { return false }
+}
+
 const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferencesProps) => {
+    const canRead = sectionNeeds(props.channelObject.accessString, EMagnifyScope.READ)
+    const canWrite = sectionNeeds(props.channelObject.accessString, EMagnifyScope.WRITE)
+    // 'admin' is on Magnify's ladder above its own three, so the same walk answers for it.
+    const canAdmin = sectionNeeds(props.channelObject.accessString, MAGNIFY_ADMIN_SCOPE)
     const [palette, setPalette] = useState(props.preferences.palette || 'light')
     const [logLines, setLogLines] = useState(props.preferences.logLines)
     const [tracing, setTracing ] = useState(props.preferences.tracing)
@@ -110,9 +134,11 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
             </AccordionActions>
         </Accordion>
 
-        <Accordion>
+        {/* They run things in the cluster: a pod, a shell. That is writing. */}
+        <Accordion disabled={!canWrite}>
             <AccordionSummary expandIcon={<ExpandMore />}>
                 <Typography component='span'><b>Custom actions</b></Typography>
+                {!canWrite && <Typography variant='caption' color='text.secondary' sx={{ ml: 1 }}>— needs '{EMagnifyScope.WRITE}'</Typography>}
             </AccordionSummary>
             <AccordionDetails>
                 {customActions.map((ca, index) => (
@@ -146,9 +172,10 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
             </AccordionActions>
         </Accordion>
 
-        <Accordion>
+        <Accordion disabled={!canRead}>
             <AccordionSummary expandIcon={<ExpandMore />}>
                 <Typography component='span'><b>External content</b></Typography>
+                {!canRead && <Typography variant='caption' color='text.secondary' sx={{ ml: 1 }}>— needs '{EMagnifyScope.READ}'</Typography>}
             </AccordionSummary>
             <AccordionDetails>
                 <TextField value={logLines} onChange={(e) => { setLogLines(+e.target.value); setExternalChanged(true) }} variant='standard' label='Max messages' type='number' fullWidth />
@@ -158,9 +185,11 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
             </AccordionActions>
         </Accordion>
 
-        <Accordion>
+        {/* It chooses WHICH kinds are fetched and kept: without read there is nothing to choose from. */}
+        <Accordion disabled={!canRead}>
             <AccordionSummary expandIcon={<ExpandMore />}>
                 <Typography component='span'><b>Data management</b></Typography>
+                {!canRead && <Typography variant='caption' color='text.secondary' sx={{ ml: 1 }}>— needs '{EMagnifyScope.READ}'</Typography>}
             </AccordionSummary>
             <AccordionDetails>
                 <Stack direction='row' spacing={2}>
@@ -188,9 +217,10 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
             </AccordionActions>
         </Accordion>
 
-        <Accordion>
+        <Accordion disabled={!canRead}>
             <AccordionSummary expandIcon={<ExpandMore />}>
                 <Typography component='span'><b>Debug</b></Typography>
+                {!canRead && <Typography variant='caption' color='text.secondary' sx={{ ml: 1 }}>— needs '{EMagnifyScope.READ}'</Typography>}
             </AccordionSummary>
             <AccordionDetails>
                 <Stack direction='column' spacing={0.5}>
@@ -219,9 +249,13 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
             </AccordionActions>
         </Accordion>
 
-        <Accordion>
+        {/* It opens the core's extension MANAGERS — installing and removing plugins, providers, senders
+            and themes. That is not a Magnify permission: it is 'admin', the same scope the core's own
+            menu puts them behind. Offering it to anybody else is a door that opens onto a refusal. */}
+        <Accordion disabled={!canAdmin}>
             <AccordionSummary expandIcon={<ExpandMore />}>
                 <Typography component='span'><b>Extensions</b></Typography>
+                {!canAdmin && <Typography variant='caption' color='text.secondary' sx={{ ml: 1 }}>— needs 'admin'</Typography>}
             </AccordionSummary>
             <AccordionDetails>
                 <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>

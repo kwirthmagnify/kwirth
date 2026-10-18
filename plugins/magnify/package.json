@@ -4,15 +4,27 @@
     "displayName": "Magnify",
     "extensionType": "plugin",
     "publisher": "@kwirthmagnify",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "description": "Magnify channel plugin for Kwirth - a complete Kubernetes management tool: every artifact and event of the cluster, live, and the actions to manage them",
     "icon": "Search",
     "website": "https://kwirthmagnify.dev",
     "requiresRestart": false,
     "requiresExtension": [
-        { "extensionType": "dce", "id": "file-manager", "minVersion": "0.1.0" },
-        { "extensionType": "provider", "id": "events", "minVersion": "0.1.0" },
-        { "extensionType": "provider", "id": "metrics", "minVersion": "0.1.0" }
+        {
+            "extensionType": "dce",
+            "id": "file-manager",
+            "minVersion": "0.1.0"
+        },
+        {
+            "extensionType": "provider",
+            "id": "events",
+            "minVersion": "0.1.0"
+        },
+        {
+            "extensionType": "provider",
+            "id": "metrics",
+            "minVersion": "0.1.0"
+        }
     ],
     "type": "module",
     "scripts": {
@@ -28,8 +40,8 @@
         "@codemirror/state": "^6.0.0",
         "@codemirror/theme-one-dark": "^6.0.0",
         "@codemirror/view": "^6.0.0",
-        "@kwirthmagnify/kwirth-common": "^0.5.66",
-        "@kwirthmagnify/kwirth-common-back": "^0.6.4",
+        "@kwirthmagnify/kwirth-common": "^0.5.71",
+        "@kwirthmagnify/kwirth-common-back": "^0.6.7",
         "@kwirthmagnify/kwirth-common-front": "^0.5.66",
         "@uiw/react-codemirror": "^4.25.3",
         "clipboard-copy": "^4.0.1",

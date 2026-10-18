@@ -2,7 +2,7 @@ import { FC } from 'react'
 import { EChannelRefreshAction, IChannel, IChannelMessageAction, IChannelObject, IChannelRequirements, IContentProps, ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { MagnifyInstanceConfig, MagnifyConfig } from './MagnifyConfig'
 import { MagnifySetup, MagnifyIcon } from './MagnifySetup'
-import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageEvent, IInstanceMessage, ISignalMessage } from "@kwirthmagnify/kwirth-common"
+import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageEvent, ESignalMessageLevel, IInstanceMessage, ISignalMessage } from "@kwirthmagnify/kwirth-common"
 import { EMagnifyCommand, MagnifyData, IMagnifyMessageResponse, IMagnifyData } from './MagnifyData'
 import { MagnifyTabContent } from './MagnifyTabContent'
 import { v4 as uuid } from 'uuid'
@@ -242,6 +242,17 @@ class MagnifyChannel implements IChannel {
                 let signalMessage = JSON.parse(wsEvent.data) as ISignalMessage
                 if (signalMessage.flow === EInstanceMessageFlow.RESPONSE) {
                     if (signalMessage.action === EInstanceMessageAction.START) {
+                        /*
+                            🔴 A REFUSED start is not a start. Without this the instanceId was assigned
+                            anyway and the three requests below went out, so the back end answered
+                            'Instance not found' to each one — and kept answering, turning a single
+                            'you have no permission' into a notification every few seconds that said
+                            nothing about the real reason.
+                        */
+                        if (signalMessage.level === ESignalMessageLevel.ERROR) {
+                            channelObject.notify?.(this.channelId, ENotifyLevel.ERROR, signalMessage.text || 'Magnify could not be started')
+                            return { action: EChannelRefreshAction.NONE }
+                        }
                         channelObject.instanceId = signalMessage.instance
                         // +++ improve setTimeout mechanism (find something better!!!)
                         setTimeout( () => {
