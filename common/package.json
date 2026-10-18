@@ -1,9 +1,10 @@
 {
   "name": "@kwirthmagnify/kwirth-common",
-  "version": "0.5.69",
+  "version": "0.5.70",
   "description": "Common interfaces for integrating applications with Kwirth",
   "scripts": {
-    "build": "del .\\dist\\* /s /q && tsc"
+    "build": "del .\\dist\\* /s /q && tsc",
+    "test": "node tests/run.mjs"
   },
   "publishConfig": {
     "access": "public",
@@ -46,6 +47,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "esbuild": "^0.27.2",
     "typescript": "^5.8.3"
   }
 }

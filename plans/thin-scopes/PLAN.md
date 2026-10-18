@@ -1,6 +1,7 @@
 # Plan — Thin scopes (core)
 
-> **Estado: fase previa ENTREGADA (P2 el 2026-10-17, P1 el 2026-10-18); los streams S1–S3, sin empezar.**
+> **Estado: fase previa y S1 ENTREGADOS** (P2 el 2026-10-17, P1 y S1 el 2026-10-18); quedan **S2** (el
+> editor de seguridad, el grueso) y **S3** (documentación).
 > PRD validado el **2026-10-17** ([PRD.md](PRD.md)); las cuatro decisiones de su §3 están tomadas y no se
 > reabren aquí.
 >
@@ -112,11 +113,33 @@ actuales. Entonces S2 es *"píntame este schema"* y poco más.
 
 ## 3. Streams
 
-### S1 · El contrato y el helper (`common`)
+### S1 · El contrato y el helper (`common`) — ✅ ENTREGADO (2026-10-18, `common` **0.5.70**)
 
 El helper va en **`common`**, no en `common-back`: lo necesitan **los dos lados** —el canal para leer su
 token, el front para componerlo— y `common-back` y `common-front` reexportan `common`, así que ponerlo
 ahí alcanza a todos sin duplicar.
+
+**Cómo quedó, y en qué se desvía de lo escrito abajo:**
+
+- Se añadió `isThinScope(token)`, que no estaba planeado: distinguir las dos formas mientras se recorre
+  una clave es lo que va a hacer el editor en S2 y el canal al autorizar, y hacerlo con
+  `parseThinScope(t) !== undefined` en cada sitio es la copia que P2 enseñó a no repetir.
+- El retorno se tipa: **`IThinScope`** (`{ channel, scope, config: unknown }`). El `config` va `unknown`
+  a propósito — solo el canal sabe su forma, y tiparlo de otra cosa sería mentir.
+- 🔴 **`buildThinScope` SÍ lanza, y `parseThinScope` nunca.** Es asimétrico a propósito. Los nombres de
+  canal y scope salen del `getScopeCatalog()` del canal, no del admin: un separador ahí es un bug del
+  catálogo, y un token mal construido se descubre meses después, cuando un **permiso** ha dejado de
+  significar lo que dice. Al leer es al revés — llega lo que sea, porque una clave se fabrica a mano con
+  `/key`, y una excepción sube por un handler async y se vuelve el `unhandledRejection` del 2026-10-16.
+- **Sin `Buffer`**: `common` va también al navegador y no lleva tipos de node. Va con `TextEncoder` +
+  `btoa`, que además arregla que `btoa` solo acepta code points < 256 — una ruta con acentos reventaría.
+- `common` **no tenía harness**; se le añadió uno con el patrón de `common-back` (esbuild → `node --test`).
+  **8 tests**, y el del separador afirma la **propiedad** (que lo codificado no lleve `; : , #`) y no el
+  alfabeto, así que sigue valiendo si algún día cambia la codificación.
+
+**Pendiente de decidir, aditivo y sin prisa**: si `parseThinScope` debe devolver también la forma ancha
+ya compuesta (`wide: 'fileman$write'`). Hoy cada canal la compone. A favor, el argumento de P2 —lo que
+cada canal se escribe, diverge—; en contra, es un campo derivado.
 
 1. `common/src/ExtensionScope.ts` — `IExtensionScope.config?: IConfigFieldDef[]`, opcional.
 2. En el mismo fichero, el par de funciones que define el formato:
@@ -140,7 +163,8 @@ Es el grueso. Hoy `ResourceEditor` es un multi-select cuyo `value` son los scope
 opción que al marcarse abre un formulario y produce un token.
 
 1. **Elegir** — al marcar un scope cuyo catálogo declara `config`, abrir el formulario
-   (`ConfigFormDialog` con ese `IConfigFieldDef[]`). Al aceptar, el token entra en `scopes[]`; al
+   (**`ConfigFields`** con ese `IConfigFieldDef[]` — no `ConfigFormDialog`, que está atado a un endpoint
+   y es justo lo que P1 vino a separar). Al aceptar, el token entra en `scopes[]`; al
    cancelar, no se marca.
 2. **Sin `config` declarado** — un único textfield libre, que es el default del PRD. Sirve para una
    ruta, una regex o una lista por comas.

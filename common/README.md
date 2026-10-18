@@ -14,6 +14,11 @@ has no runtime dependencies on Node or on the browser, so the same types are use
 - **Access** — API keys and access keys, and parsing their resources and scopes.
 - **Extensions** — the extension types, their configuration fields and RBAC scopes, marketplace and
   package-registry metadata, configuration bundles.
+- **Thin scopes** — a scope a channel narrows with a configuration only it understands, as
+  `channel#scope#<base64>` beside the usual `channel$scope`. `buildThinScope()` composes one and
+  `parseThinScope()` takes it apart, returning `undefined` for anything it does not recognise — including
+  a classic scope — so a token a channel does not understand grants nothing without anybody writing code
+  for it.
 - **Where Kwirth runs** — the execution environment (`EExecutionEnvironment`: Kubernetes, Docker, desktop,
   ECS, Cloud Run, ACI) and the installation identity (`IInstallationIdentity`, `EInstallationIdSource`): the
   stable id extensions persist and federate by, also when there is no Kubernetes.
