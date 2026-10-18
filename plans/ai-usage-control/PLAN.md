@@ -95,6 +95,27 @@ El eje por clave sí sigue aplicándose: S1 no depende de esto.
   `channelObject.notify()`, y eso necesita el `consumerId` de S2.
 - **El tope por canal no se aplica hasta republicar cada plugin** (S2): sin `consumerId` la llamada no se
   atribuye, y el PRD descarta el cajón de «no atribuido». El eje por clave sí funciona desde S1.
+- **El logging de `logUsage` está mal por dos sitios** (`common-ai/src/back.ts:127`, `:261`, `:272`):
+
+  ```
+  [kwirth-common-ai] AI usage: the counters did not answer in 5000 ms — the call goes ahead and the LIMITS ARE NOT ENFORCED for it
+  [kwirth-common-ai] AI usage: reading the counters took 5025 ms before the model was even called
+  ```
+
+  **(a) Un evento, dos líneas, y la segunda miente.** Cuando la carrera vence por el timeout salta la de
+  `:261` y, como 5025 > 1000, salta también la de `:272`. Pero «reading the counters took 5025 ms» se lee
+  como que la lectura terminó, y no terminó: se abandonó a los 5000. El aviso de lentitud solo tiene
+  sentido cuando la lectura **respondió** — si ya hubo timeout, la línea sobra.
+
+  **(b) El prefijo va a mano y por `console.warn`.** Es el mismo defecto que tenía `KubernetesTools` y que
+  se corrigió el 2026-10-16: un mensaje con el prefijo escrito dentro no lo puede filtrar nadie, y además
+  sale por stdout en crudo en vez de por el logging de Kwirth. El comentario de `:123` justifica el
+  `console.warn` con que el módulo «no debe adquirir una dependencia de un logger para poder avisar de que
+  está a ciegas», y eso **sigue siendo cierto**: la solución no es importar uno, es la misma de
+  `KubernetesTools` — una interfaz inyectable con `console` de **default**, que el core sustituye en el
+  arranque por su `componentLogger(ELogComponent.CORE, 'ai-usage')`. El módulo se queda sin dependencias y
+  el mensaje se vuelve filtrable por id.
+
 - ⏭ **Los dos tests de SQL se saltan** salvo que se apunte `KWIRTH_SQL_HOST` a una base. `common-sql` se
   configura en el arranque del core, así que desde el harness no hay servidor. Escriben en
   `core-ai-usage-test`, nunca en la base del core.
