@@ -34,6 +34,22 @@ It needs three other extensions, which the marketplace asks for when you install
 The two providers come already installed in the images that carry channels (`-readonly`, `-full`) and in the
 desktop app.
 
+## Permissions
+
+Since **0.2.0** Magnify checks who is asking. It declares three scopes, each granting everything below it:
+
+- **`magnify$user`** — open it and see the cluster's health: its metrics and its events. It does **not**
+  list resources.
+- **`magnify$read`** — also see what the cluster has: the resources, with their contents. It can be
+  narrowed from the security editor to **hide kinds** — typically ConfigMap and Secret.
+- **`magnify$write`** — also change the cluster: apply, delete, evict, drain, scale, restart.
+
+`cluster` and `admin` sit above all three. The `Namespaces` of the key limit it too, and a key limited to
+namespaces does not see what lives in none of them (Nodes, PersistentVolumes, ClusterRoles…).
+
+> ⚠️ **Before 0.2.0 it checked nothing**: any key that reached the channel saw the whole cluster. If
+> somebody loses access after upgrading, that is why — grant them `magnify$user` or above.
+
 ## Development
 
 ```
