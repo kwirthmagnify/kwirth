@@ -267,7 +267,17 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
                         ⚠️ <b>{e.label}</b> is granted in full as well, so the limit below it does nothing — resources are combined, and the wider form wins. Remove <b>{e.scope}</b> to make the limit apply.
                     </Typography>
                 ))}
-                <TextField value={namespace} onChange={(e) => setNamespace(e.target.value)} variant='standard' label='Namespaces'></TextField>
+                {/*
+                    🔴 Said here, once, above the fields it applies to. Everything below is a list of
+                    REGULAR EXPRESSIONS and they are matched UNANCHORED, which is not what the names of
+                    the fields suggest: granting 'kwirth' also grants 'kwirth-system', and 'pre' also
+                    grants 'pre-produccion'. An administrator who did not know that has granted more
+                    than they think, and nothing on this screen told them.
+                */}
+                <Typography variant='caption' color='text.secondary'>
+                    Namespaces, workloads, pods and containers below are <b>regular expressions</b>, separated by commas, and they match <b>anywhere in the name</b>: <code>kwirth</code> also matches <code>kwirth-system</code>. Write <code>^kwirth$</code> to mean that one and no other.
+                </Typography>
+                <TextField value={namespace} onChange={(e) => setNamespace(e.target.value)} variant='standard' label='Namespaces' placeholder='e.g. ^kwirth$, pre-.*'></TextField>
 
                 <Stack direction={'row'} spacing={1}>
                     <TextField value={deployment} onChange={(e) => setDeployment(e.target.value)} variant='standard' label='Deployments' fullWidth/>

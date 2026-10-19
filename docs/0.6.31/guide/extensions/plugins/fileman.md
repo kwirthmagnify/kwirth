@@ -116,6 +116,21 @@ Fileman moves data in every direction — in, out, and between containers.
   > ships is a different question from opening *what is inside* its files — a config file holds
   > credentials far more often than a directory listing does.
 
+- **Where those scopes apply.** The scope says *what* may be done; the rest of the resource — namespaces,
+  workloads, pods, containers — says *where*. Both are enforced, on every path Fileman touches: browsing,
+  viewing, downloading, uploading, editing and the five operations that modify. A key granted on one
+  namespace cannot reach a container in another, whatever path is asked for.
+
+  > 🔴 **Since `fileman@0.2.29`.** Before it, only the scope was checked: a session opened on a container
+  > the key allowed could read and write **any container in the cluster** by changing the path in the
+  > request. If you granted Fileman expecting the namespace to limit it, re-read those grants — until
+  > that version it did not.
+
+  > ⚠️ **Those fields are regular expressions, and they match anywhere in the name.** A key granted on
+  > `kwirth` also reaches `kwirth-system`, and one on `pre` also reaches `pre-produccion`. Write
+  > `^kwirth$` to mean that namespace and no other. This is how it works everywhere in kwirth, not only
+  > here, and the security editor says so above the fields.
+
 ## Notes
 
 - Fileman needs a **shell + coreutils** in the container (`sh`, `ls`, `cat`, `mv`, `cp`, `rm`, `mkdir`, `tar`). Distroless images won't work.

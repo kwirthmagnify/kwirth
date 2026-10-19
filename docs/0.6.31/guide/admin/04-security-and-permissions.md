@@ -24,11 +24,25 @@ Each filter field takes a **comma-separated** list of names — **regular expres
 | Field value | Meaning |
 |---|---|
 | *(blank)* | all objects of that kind |
-| `production` | exactly that namespace |
-| `production,staging` | either namespace |
+| `production` | every name **containing** `production` — including `production-jobs` and `pre-production` |
+| `^production$` | that namespace **and no other** |
+| `production,staging` | either of the two, with the same matching |
 | `web-.*` | every object whose name matches the regex |
 
-So a resource with **Namespaces = `production`** and everything else blank means *"these scopes, on all objects inside `production`"*.
+> 🔴 **They are regular expressions, and they are matched ANYWHERE in the name — not against the whole
+> name.** This page used to say `production` meant *exactly that namespace*, and it does not: internally
+> the check is `new RegExp(value).test(name)`, with no anchors. So granting `kwirth` also grants
+> `kwirth-system`, and granting `dev` also grants `dev-datos`.
+>
+> It matters because it is the difference between what an administrator **thinks** they granted and what
+> they granted. **Write `^name$` whenever you mean one object and not a family of them.** The security
+> editor now says this above the fields.
+>
+> ⚠️ It is not being changed to match the whole name: every grant made until now relies on the current
+> behaviour, and anchoring it would quietly take away access people are using. It is written down
+> instead.
+
+So a resource with **Namespaces = `^production$`** and everything else blank means *"these scopes, on all objects inside `production`"*.
 
 ## The scopes
 

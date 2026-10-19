@@ -1,7 +1,46 @@
 # Plan — File Manager comprueba SOBRE QUÉ actúa
 
-> **Estado: sin empezar. Vulnerabilidad CONFIRMADA en dev el 2026-10-17** (ver §1.1). Hallazgo surgido
-> al cerrar el gate de verbos (`fileman` 0.2.27): el verbo está resuelto y publicado; **el objetivo no**.
+# ✅ PLAN COMPLETO — cerrado el 2026-10-19 en `plugin/fileman@0.2.29`
+>
+> **Vulnerabilidad confirmada en dev el 2026-10-17** (§1.1) y **cerrada el 19**, con el QA validado en
+> sus siete pasos: la misma clave y la misma ruta del exploit devuelven ahora **403**, y el control
+> positivo (su propio pod) sigue devolviendo el fichero.
+>
+> **Cómo quedó, y en qué se desvía de lo escrito abajo:**
+>
+> - **El matcher es `matchesResource` / `keyMatchesResource`** de `common-back` **0.6.8**, compartido
+>   como pedía §3.2. 9 tests propios.
+> - **Se aplica en DOS sitios, no en los nueve** de §3.3: uno para los cuatro endpoints —todos sacan el
+>   destino del mismo `filename`, del query en tres y del body en `upload`— y otro para los comandos.
+>   Trece copias de un chequeo de seguridad son doce oportunidades de olvidar una.
+> - 🔴 **Los comandos declaran qué parámetro es ruta** (`PATH_PARAMS`) en vez de recorrer `params`:
+>   `COPY`/`MOVE` llevan ruta en los dos, pero el segundo de `RENAME` es un **nombre**. A ciegas se
+>   habría rechazado un rename por no parecer una ruta.
+> - 🔴 **`DIR` entra también**, y eso no estaba decidido: el scope permite navegar, pero navegar un
+>   contenedor que la clave no concede es enumerar el filesystem de otro.
+>
+> **La decisión de §4 sobre `groups`**: el matcher **refleja al core** y no lo evalúa, por lo que dice
+> A10 — arreglarlo en un solo canal lo dejaría más estricto que el resto con la misma clave. Va
+> documentado en el propio helper para que no se lea como un olvido.
+>
+> 🔴 **Y lo que cambió el plan sobre la marcha: el matcher NO ancla.** Al escribirlo salió que
+> `getValidValues` del core hace `new RegExp(r).test(v)` sin anclar, así que **`kwirth` alcanza
+> `kwirth-system`** — es decir, la clave exacta del exploit habría seguido pasando. Las tres salidas
+> (anclar aquí / reflejar / anclar en el core) se plantearon y el usuario eligió **reflejar y
+> advertirlo**: el editor de seguridad dice ahora que son regex y que `^kwirth$` es como se escribe uno
+> exacto, y la guía de admin —que afirmaba lo contrario, *«`production` = exactly that namespace»*— se
+> corrigió. Anclar habría sido ruptura con víctimas silenciosas.
+>
+> ⚠️ **Magnify venía anclado** (lo escribí así el 18 sin saberlo) y se desancló para no quedar más
+> estricto que el resto con la misma clave.
+>
+> ⚠️ **Hallazgo lateral**: `0.2.27` y `0.2.28` estaban publicadas en npm y **no en el manifest**, así que
+> el gate de verbos del 17 nunca llegó al marketplace — quien instalara desde ahí seguía cogiendo la
+> 0.2.26, sin ese arreglo. La entrada de 0.2.29 lo cubre.
+>
+> **Lo que NO entra y queda en [auth-hardening](../auth-hardening/PLAN.md)**: `excubitor` y `trivy`
+> tienen endpoints de la misma forma y el mismo riesgo (§4), sin tocar. El matcher ya es compartido para
+> que entren sin reescribirlo.
 
 ---
 

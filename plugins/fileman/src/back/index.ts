@@ -1,5 +1,5 @@
 import { IChannelInstances, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, BackChannelData, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, EClusterType, IBackChannelRequirements, IExtensionScope } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject, IChannel, scopeAllows } from '@kwirthmagnify/kwirth-common-back'
+import { IBackChannelObject, IChannel, keyMatchesResource, scopeAllows } from '@kwirthmagnify/kwirth-common-back'
 import { Readable, Writable } from 'stream'
 import { Request, Response } from 'express'
 import { v4 as uuid } from 'uuid'
@@ -118,6 +118,34 @@ class FilemanChannel implements IChannel {
     private allows = (accessKey: AccessKey, required: string): boolean =>
         scopeAllows(accessKey.resources, required, this.getChannelScopeLevel)
 
+    /*
+        `res.send()` of an object yields the string '[object Object]', which is what the user saw instead
+        of the reason their request failed — the message of a failed exec is not always a string.
+    */
+    private reasonOf = (message: unknown): string =>
+        typeof message === 'string' ? message : (message === undefined || message === null ? 'the operation failed' : JSON.stringify(message))
+
+    /*
+        🔴 The OTHER half of the check, and the one that was missing until now.
+
+        Every path File Manager works with is `/<namespace>/<pod>/<container>/<path inside>`, and it
+        comes from the CLIENT — the query string of an endpoint, or a command's parameters. The scope
+        gate says whether this key may read or write; this says whether it may do so THERE.
+
+        Without it the two were independent: a key granted on one namespace, with File Manager open on a
+        pod it was allowed, read `/etc/group` from a pod in `kwirth-system` by changing the path in the
+        request. Exploited on dev on 2026-10-17.
+
+        ⚠️ The matching is the core's, unanchored: a key on 'kwirth' DOES reach 'kwirth-system'. That is
+        deliberate —see `matchesResource`— and the security editor now says so, so that whoever wants one
+        namespace writes '^kwirth$'.
+    */
+    private mayReach = (accessKey: AccessKey, clusterPath: string | undefined): boolean => {
+        if (!clusterPath) return true          // nothing to check; the handler answers 400 on its own
+        const [namespace, pod, container] = clusterPath.split('/').slice(1)
+        return keyMatchesResource(accessKey, { namespace, pod, container })
+    }
+
     startChannel = async () => { }
 
     processProviderEvent(_providerId: string, _obj: any): void { }
@@ -142,6 +170,21 @@ class FilemanChannel implements IChannel {
         if (required && !this.allows(accessKey, required)) {
             this.backChannelObject.logWarning?.(`Denied '${endpoint}' to key ${accessKey.id}: '${required}' required`)
             res.status(403).send(`'${required}' scope required`)
+            return
+        }
+
+        /*
+            And WHERE, checked once for the four endpoints instead of once per branch. They all act on a
+            `filename` the caller sends —three in the query string, `upload` in the body— so the target
+            is read from both and contrasted with the key BEFORE the session is looked up.
+
+            Checked here and not inside each case for the same reason as the scope above: four copies of
+            a security check is three chances to forget one, and the one forgotten is the hole.
+        */
+        const target = (req.query['filename'] ?? req.body?.filename) as string | undefined
+        if (!this.mayReach(accessKey, target)) {
+            this.backChannelObject.logWarning?.(`Denied '${endpoint}' to key ${accessKey.id}: '${target}' is outside its resources`)
+            res.status(403).send('That container is not in your permissions')
             return
         }
 
@@ -170,7 +213,7 @@ class FilemanChannel implements IChannel {
                             res.setHeader('Content-Disposition', `attachment; filename="${encodedFilename}"`)
                             res.status(200).send(fs.readFileSync(tmpName))
                         } else {
-                            res.status(400).send(result.message)
+                            res.status(400).send(this.reasonOf(result.message))
                         }
                         try { fs.unlinkSync(tmpName) } catch {}
                     } else if (fileInfo.type === 1) {
@@ -230,7 +273,7 @@ class FilemanChannel implements IChannel {
                     res.setHeader('Content-Type', 'text/plain; charset=utf-8')
                     res.status(200).send(content)
                 } else {
-                    res.status(400).send(result.message)
+                    res.status(400).send(this.reasonOf(result.message))
                 }
                 break
             }
@@ -246,7 +289,7 @@ class FilemanChannel implements IChannel {
                 const result = await this.uploadFile(wns, wpod, wcont, tmpName, wpath)
                 try { fs.unlinkSync(tmpName) } catch {}
                 if (result.status === ExecutionStatus.FAILURE) {
-                    res.status(400).send(result.message)
+                    res.status(400).send(this.reasonOf(result.message))
                 } else {
                     res.status(200).send()
                 }
@@ -434,6 +477,35 @@ class FilemanChannel implements IChannel {
             */
             this.sendSignalMessage(webSocket, filemanMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR,
                 instance.instanceId, `Not allowed: '${EFilemanScope.WRITE}' scope is required to modify files`)
+            return undefined
+        }
+
+        /*
+            🔴 And WHERE each command acts, which is the half the write gate above does not cover: it
+            says this key may modify files, not that it may modify THESE.
+
+            Which parameter carries a cluster path is declared rather than guessed, because they are not
+            uniform: COPY and MOVE take a path in both, while RENAME's second parameter is the new NAME.
+            Walking `params` blindly would reject a rename for not looking like a path.
+
+            🔴 Navigating is not exempt. The scope lets somebody browse —that was decided when the verb
+            gate went in— but browsing a container the key does not grant is enumerating somebody else's
+            filesystem, and DIR takes its path from the client like all the rest.
+        */
+        const PATH_PARAMS: Record<string, number[]> = {
+            [EFilemanCommand.DIR]: [0],
+            [EFilemanCommand.CREATE]: [0],
+            [EFilemanCommand.DELETE]: [0],
+            [EFilemanCommand.RENAME]: [0],
+            [EFilemanCommand.COPY]: [0, 1],
+            [EFilemanCommand.MOVE]: [0, 1]
+        }
+        for (const index of PATH_PARAMS[filemanMessage.command] ?? []) {
+            const path = filemanMessage.params?.[index]
+            if (this.mayReach(instance.accessKey, path)) continue
+            this.backChannelObject.logWarning?.(`Denied '${filemanMessage.command}' to key ${instance.accessKey.id}: '${path}' is outside its resources`)
+            this.sendSignalMessage(webSocket, filemanMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR,
+                instance.instanceId, 'Not allowed: that container is not in your permissions')
             return undefined
         }
 

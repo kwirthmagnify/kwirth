@@ -24,7 +24,15 @@ From Kwirth: **☰ → Manage extensions → Plugins**, find **File Manager** in
 
 ⚠️ It reaches the container's filesystem, so treat access to it as you would a shell: give the scope to
 whoever you would let in with `kubectl exec`, and no one else. Its RBAC scopes are declared by the plugin
-and manageable from Kwirth's security screens.
+and manageable from Kwirth's security screens: `fileman$user` browses, `fileman$read` opens and downloads,
+`fileman$write` modifies.
+
+🔴 **Upgrade to 0.2.29 if you are on an earlier version.** Until it, only the scope was checked and not
+the TARGET: a session opened on a container the key allowed could read and write **any container in the
+cluster** by changing the path in the request. Both are now enforced, on every path — browsing included.
+
+⚠️ The namespaces, pods and containers of a key are **regular expressions matched anywhere in the name**,
+so a grant on `kwirth` also reaches `kwirth-system`. Write `^kwirth$` to mean one and no other.
 
 ## Development
 
