@@ -1,10 +1,14 @@
 # Plan — Thin scopes (core)
 
-> **Estado: fase previa, S1 y S2 ENTREGADOS** (P2 el 2026-10-17; P1, S1 y S2 el 2026-10-18). De **S3**
-> queda la guía de extensiones y el techo de tamaño: la de admin se hizo con S2.
+> # ✅ PLAN COMPLETO — cerrado el 2026-10-18
 >
-> **El mecanismo está completo y vivo**: un admin ya puede acotar un permiso desde el editor. Lo que
-> falta para que ACOTE algo es que un canal lea su `config` — y eso es trabajo de cada canal (§4).
+> P2 el 2026-10-17; P1, S1, S2 y S3 el 2026-10-18. Y el primer canal que lo usa, **magnify**, entregado
+> el mismo día en `plugin/magnify@0.2.0` con su propio CL9.
+>
+> **Funciona de punta a punta**: un admin acota un permiso desde el editor, el token viaja dentro del
+> accessKey, y magnify lo cumple — oculta ConfigMaps y Secrets a quien se le diga, y respeta los
+> namespaces de la clave. Lo que falta no es de este plan: que **el resto de canales** lean su `config`,
+> cada uno en su stream (§4).
 > PRD validado el **2026-10-17** ([PRD.md](PRD.md)); las cuatro decisiones de su §3 están tomadas y no se
 > reabren aquí.
 >
@@ -239,7 +243,7 @@ opción que al marcarse abre un formulario y produce un token.
 **Cierre:** CL9 del core (sin publish ni tag). E2E sobre el editor: conceder un thin scope, guardarlo,
 reabrirlo y ver el formulario relleno; y que salte el aviso de la guarda.
 
-### S3 · Documentación — queda la mitad
+### S3 · Documentación — ✅ ENTREGADO (2026-10-18)
 
 1. ✅ **Guía de admin** — hecha en el CL9 de S2, porque la UI ya está viva y enviarla sin documentar no
    era una opción. `04-security-and-permissions` gana la sección *Narrowing a scope*, con 🔴 que **gana
@@ -248,9 +252,17 @@ reabrirlo y ver el formulario relleno; y que salte el aviso de la guarda.
    —retirado el 2026-10-17— y no listaba `fileman$user`. La captura `admin-scopes.png` se rehízo **por
    código** (`capture-admin-scopes.spec.ts`, que no existía): la anterior era a mano, no enseñaba las
    ruedas y llevaba **tres correos reales** dentro.
-2. **Guía de extensiones** — cómo declara un canal su `config` en `getScopeCatalog()`, con ejemplo.
-3. **Límite de tamaño** — documentar el techo práctico (§5 del PRD): el config no es sitio para una
-   lista de cien namespaces.
+2. ✅ **Guía de extensiones** — `docs/<ver>/plugins/developing.md` gana dos secciones. *Permissions*
+   explica lo que ningún autor tenía escrito en ninguna parte: que **el core no autoriza por él**, y que
+   para un canal de cluster ni siquiera mira los recursos. *Narrowing a scope* explica el `config`, con
+   el ejemplo real de magnify y `parseThinScope`, y con **las cuatro trampas** que salieron de
+   implementarlo: gana el ancho, hay que tapar TODAS las salidas (no solo el listado), los límites de
+   varios recursos **intersecan** en vez de sumarse, y el canal tiene que **versionar** su propio
+   config. De paso se arreglaron los dos enlaces de esa página, que apuntaban a `back/src/channels/echo`
+   — echo es plugin desde hace meses.
+3. ✅ **Límite de tamaño** — documentado donde lo va a leer quien lo pueda romper, en la misma página:
+   ~270 caracteres por cada JSON de 200 B, ~1 KB con tres o cuatro scopes finos, techo práctico ~8 KB,
+   y dicho explícitamente que **los namespaces no van ahí** porque `resources` ya los tiene.
 
 ---
 
