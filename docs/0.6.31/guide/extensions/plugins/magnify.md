@@ -35,10 +35,14 @@ Magnify declares three scopes, each granting everything below it. They are set p
 | Scope | Grants |
 |---|---|
 | `magnify$user` | **Open** Magnify and see the cluster's **health**: its metrics and its event feed. It does **not** list resources. |
-| `magnify$read` | Also **see what the cluster has** — the resources, with their contents. |
-| `magnify$write` | Also **change** the cluster: apply, delete, evict, drain, scale, restart, trigger a CronJob, delete an image. |
+| `magnify$read` | Also see the **workloads and configuration** — pods, deployments, services, config maps… — with their contents. |
+| `magnify$write` | Also **change** those: apply, delete, evict, scale, restart, trigger a CronJob. |
 
 `cluster` and `admin` sit above all three, so an administrator is unaffected.
+
+🔴 **The infrastructure is not in any of them.** Nodes, CustomResourceDefinitions, PersistentVolumes, ClusterRoles, StorageClasses, IngressClasses and the Namespace list belong to the **installation**, not to a slice of it, so seeing them — *or touching them* — asks for **`cluster`**.
+
+That is the line between a developer and an administrator: `read` and `write` are for what a developer works with. A developer with `magnify$write` can delete a pod and **cannot drain a node**, cordon it, open a shell on it or delete an image from it.
 
 > ⚠️ **Before `plugin/magnify@0.2.0` Magnify checked nothing.** Any key that could reach the channel opened it and saw the whole cluster. If you upgrade and somebody loses access, that is why: give them `magnify$user` or above.
 
@@ -46,7 +50,7 @@ Magnify declares three scopes, each granting everything below it. They are set p
 
 Two limits apply on top of the scopes, and both are enforced by Magnify itself:
 
-- **Namespaces.** The `Namespaces` field of the resource limits Magnify to them. 🔴 A key limited to namespaces does **not** see what lives in none of them — Nodes, PersistentVolumes, ClusterRoles, StorageClasses, CRDs, and the Namespace list itself. "You may operate in `pre`" is not the same as "you may see the cluster".
+- **Namespaces.** The `Namespaces` field of the resource limits Magnify to them: a key limited to `pre` sees the pods, deployments and config maps of `pre`, and nothing of `pro`. It does not affect the infrastructure, which is behind `cluster` either way.
 - **Hidden kinds.** `magnify$read` can be narrowed from the **gear ⚙** next to it in the scope selector: tick the kinds to hide — typically **ConfigMap** and **Secret**, the two that carry credentials — and that key stops seeing them, in the listings and in the live event feed alike.
 
 > ⚠️ Hiding **fails open** for anything new: a kind nobody ticked is visible, so a CRD added later shows up until somebody hides it.

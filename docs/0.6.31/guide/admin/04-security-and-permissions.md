@@ -52,8 +52,8 @@ When you edit a resource, **Scopes** is a **searchable selector** (filter box + 
 | `trivy$user` | Trivy: **open the channel** and read workload-scoped reports (vulnerabilities, config audit, secrets). |
 | `trivy$kubernetes` | Trivy: everything above **plus** cluster-scoped reports (RBAC, infra assessment). |
 | `magnify$user` | Magnify: **open it** and see the cluster's health (metrics and events). It does **not** list resources. |
-| `magnify$read` | Magnify: also **see what the cluster has** — the resources, with their contents. Narrowable by kind (see [Narrowing a scope](#narrowing-a-scope)). |
-| `magnify$write` | Magnify: also **change** the cluster — apply, delete, evict, drain, scale, restart. |
+| `magnify$read` | Magnify: also see the **workloads and configuration**, with their contents. **Not the infrastructure** (nodes, CRDs, cluster roles…), which needs `cluster`. Narrowable by kind (see [Narrowing a scope](#narrowing-a-scope)). |
+| `magnify$write` | Magnify: also **change those** — apply, delete, evict, scale, restart. Draining or cordoning a **node** needs `cluster`. |
 | `fileman$user` | Fileman: **open it and browse** a container's filesystem. Browsing is all it grants. |
 | `fileman$read` | Fileman: everything above **plus** **open / download** files. |
 | `fileman$write` | Fileman: everything read can do **plus** edit, upload, create, rename, move/copy, delete. |

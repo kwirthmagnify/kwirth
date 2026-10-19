@@ -40,12 +40,16 @@ Since **0.2.0** Magnify checks who is asking. It declares three scopes, each gra
 
 - **`magnify$user`** — open it and see the cluster's health: its metrics and its events. It does **not**
   list resources.
-- **`magnify$read`** — also see what the cluster has: the resources, with their contents. It can be
+- **`magnify$read`** — also see the **workloads and configuration**, with their contents. It can be
   narrowed from the security editor to **hide kinds** — typically ConfigMap and Secret.
-- **`magnify$write`** — also change the cluster: apply, delete, evict, drain, scale, restart.
+- **`magnify$write`** — also change those: apply, delete, evict, scale, restart.
 
-`cluster` and `admin` sit above all three. The `Namespaces` of the key limit it too, and a key limited to
-namespaces does not see what lives in none of them (Nodes, PersistentVolumes, ClusterRoles…).
+`cluster` and `admin` sit above all three, and the `Namespaces` of the key limit where it all applies.
+
+🔴 **The infrastructure is behind `cluster`, not behind these.** Nodes, CRDs, PersistentVolumes,
+ClusterRoles, StorageClasses — seeing them *or touching them* asks for `cluster`. That is the line
+between a developer and an administrator: somebody with `magnify$write` deletes a pod and cannot drain a
+node.
 
 > ⚠️ **Before 0.2.0 it checked nothing**: any key that reached the channel saw the whole cluster. If
 > somebody loses access after upgrading, that is why — grant them `magnify$user` or above.

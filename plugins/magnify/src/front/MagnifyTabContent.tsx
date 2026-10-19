@@ -3,7 +3,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { EMagnifyCommand, IMagnifyMessage, IMagnifyData } from './MagnifyData'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Tooltip, Typography } from '@mui/material'
-import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
+import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, accessKeyDeserialize } from '@kwirthmagnify/kwirth-common'
+import { allows } from '../common/MagnifyAuth'
+import { EMagnifyScope, MAGNIFY_CLUSTER_SCOPE } from '../common/MagnifyScopes'
 import { ICategory, IError, IFileManagerHandle, IFileManagerMenuItem, IFileObject } from '@jfvilas/react-file-manager'
 import { FileManager } from '@jfvilas/react-file-manager'
 import { v4 as uuid } from 'uuid'
@@ -89,6 +91,18 @@ export interface IContentWindow {
 const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const theme = useTheme()
     let magnifyData:IMagnifyData = props.channelObject.data
+    /*
+        What this key may do, asked once. It is the FRONT asking the same two questions the back end will
+        ask when the request arrives: the back is what DECIDES, this only avoids offering a button whose
+        only outcome is a refusal.
+    */
+    const keyAllows = (required: EMagnifyScope|string): boolean => {
+        try { return allows(accessKeyDeserialize(props.channelObject.accessString ?? ''), required) }
+        catch (err) { return false }
+    }
+    const mayWrite = keyAllows(EMagnifyScope.WRITE)
+    const mayTouchInfra = keyAllows(MAGNIFY_CLUSTER_SCOPE)
+
     let permissions = {
         create: false,
         delete: false,
@@ -789,6 +803,41 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         const STATIC_CLUSTER_ITEMS = new Set(['search', 'logsearch', 'add'])
         const spcClusterOverview = spaces.get('classClusterOverview')!
         spcClusterOverview.leftItems = spcClusterOverview.leftItems!.filter(item => !item.name || STATIC_CLUSTER_ITEMS.has(item.name))
+
+    }
+
+    /*
+        🔴 Every action that CHANGES something, across every section, asks for the permission the back
+        end will ask for. Done in one loop over the spaces rather than item by item in RFMConfig: the
+        actions are declared in thirty-odd places and a `permission: true` written by hand in one of them
+        is a button that ends in a refusal — which is how the cluster overview ended up offering plugins
+        nobody could open.
+
+        Two levels, the same line the back end draws: changing a workload or its configuration is a
+        developer's (`magnify$write`), and touching the INFRASTRUCTURE —draining or cordoning a node,
+        opening a shell on one, making an IngressClass the default— is an administrator's (`cluster`).
+
+        Everything not named here only reads (details, logs, metrics, the columns), and is left alone.
+    */
+    {
+        const WRITE_ACTIONS = new Set(['create', 'add', 'edit', 'delete', 'scale', 'restart', 'suspend', 'resume', 'trigger', 'instantiate', 'evict', 'kubeworks', 'kwirthworks'])
+        const INFRA_ACTIONS = new Set(['cordon', 'uncordon', 'drain', 'shell', 'default'])
+        /*
+            Through `isVisible`, which is what the library actually asks. The `permission` the items
+            carry is Magnify's own field and the library ignores it on custom items — it only reads
+            `permission` on the ones it builds itself, from the `permissions` prop. Setting it hid
+            nothing, which is how a `create` stayed on the toolbar of somebody who could not create.
+
+            `isVisible(name, files, path)` is called by both the list's menu and the details window's
+            toolbar, so one assignment covers the two places an action is offered from.
+        */
+        for (const space of spaces.values()) {
+            for (const item of space.leftItems ?? []) {
+                if (!item.name) continue
+                if (WRITE_ACTIONS.has(item.name)) { item.permission = mayWrite; item.isVisible = () => mayWrite }
+                else if (INFRA_ACTIONS.has(item.name)) { item.permission = mayTouchInfra; item.isVisible = () => mayTouchInfra }
+            }
+        }
     }
 
     let spcClassOverview = spaces.get('classOverview')!

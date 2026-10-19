@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { AccessKey, buildThinScope } from '@kwirthmagnify/kwirth-common'
-import { allows, canSee, canSeeAnyOf, needsFiltering } from '../../src/common/MagnifyAuth'
+import { allows, canChange, canSee, canSeeAnyOf, needsFiltering } from '../../src/common/MagnifyAuth'
 import { EMagnifyScope, MAGNIFY_HIDE_KINDS } from '../../src/common/MagnifyScopes'
 
 /*
@@ -88,18 +88,55 @@ test('los namespaces del recurso acotan donde se ve', () => {
 })
 
 /*
-    🔴 La decision tomada para este canal: una clave acotada a namespaces NO ve lo que no vive en
-    ninguno. 'Puedes operar en pre' no incluye los nodos del cluster ni sus ClusterRoles.
+    🔴 La línea entre desarrollador y administrador. `read` y `write` son para lo que trabaja un
+    desarrollador —workloads y configuración—; la INFRAESTRUCTURA pide 'cluster', se mire o se toque.
+
+    Sustituye a una regla que se leía bien y se portaba mal: lo cluster-scoped lo veía cualquiera cuya
+    clave no acotara namespaces, así que AÑADIR un namespace para acotar le quitaba los ClusterRoles.
+    Acotar por un eje no puede mover otro.
 */
-test('con namespaces acotados, lo cluster-scoped no se ve', () => {
-    const k = key(`${EMagnifyScope.READ}:pre:::`)
-    for (const kind of ['Node', 'PersistentVolume', 'ClusterRole', 'StorageClass', 'Namespace']) {
-        assert.equal(canSee(k, kind), false, kind)
-        assert.equal(canSeeAnyOf(k, kind), false, kind)
+const INFRA = ['Node', 'PersistentVolume', 'ClusterRole', 'StorageClass', 'Namespace', 'CustomResourceDefinition']
+
+test('la infraestructura no se ve con read ni con write, acote o no namespaces', () => {
+    for (const resources of [`${EMagnifyScope.READ}::::`, `${EMagnifyScope.READ}:pre:::`, `${EMagnifyScope.WRITE}::::`]) {
+        for (const kind of INFRA) {
+            assert.equal(canSee(key(resources), kind), false, `'${resources}' / ${kind}`)
+            assert.equal(canSeeAnyOf(key(resources), kind), false, `'${resources}' / ${kind}`)
+        }
     }
-    // y sin acotar, se ve
-    const libre = key(`${EMagnifyScope.READ}::::`)
-    assert.equal(canSee(libre, 'Node'), true)
+})
+
+test('con cluster o admin sí se ve', () => {
+    for (const scope of ['cluster', 'admin']) {
+        for (const kind of INFRA) assert.equal(canSee(key(`${scope}::::`), kind), true, `'${scope}' / ${kind}`)
+    }
+})
+
+/*
+    🔴 Y no se toca tampoco: un desarrollador que no puede VER un nodo no puede drenarlo. Ver y cambiar
+    se deciden con el mismo nivel por kind, para que no puedan separarse por descuido.
+*/
+test('la infraestructura tampoco se cambia con write', () => {
+    for (const kind of INFRA) {
+        assert.equal(canChange(key(`${EMagnifyScope.WRITE}::::`), kind), false, kind)
+        assert.equal(canChange(key('cluster::::'), kind), true, kind)
+    }
+})
+
+test('lo que SÍ es del desarrollador: namespaced con write, y solo donde alcanza', () => {
+    const k = key(`${EMagnifyScope.WRITE}:pre:::`)
+    assert.equal(canChange(k, 'Pod', 'pre'), true)
+    assert.equal(canChange(k, 'ConfigMap', 'pre'), true)
+    assert.equal(canChange(k, 'Pod', 'pro'), false)
+    // leer no basta para cambiar
+    assert.equal(canChange(key(`${EMagnifyScope.READ}::::`), 'Pod', 'pre'), false)
+})
+
+// No se escribe en lo que no se puede ver: hacerlo sería una forma de averiguar que está ahí.
+test('un kind oculto no se cambia', () => {
+    const k = key(`${hiding('Secret')}::::;${EMagnifyScope.WRITE}::::`)
+    assert.equal(canChange(key(`${hiding('Secret')}::::`), 'Secret', 'pre'), false)
+    assert.equal(canSee(k, 'Secret', 'pre'), true)   // el recurso ancho de al lado sí lo concede
 })
 
 test('cada recurso decide por su cuenta: kinds y namespaces no se mezclan', () => {

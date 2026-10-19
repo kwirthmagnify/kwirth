@@ -22,7 +22,13 @@ export enum EMagnifyScope {
         mistake is a leak.
     */
     USER = 'magnify$user',
-    /** See what the cluster HAS: the resources, with their contents. */
+    /*
+        See what the cluster HAS: the resources, with their contents.
+
+        🔴 The resources a DEVELOPER works with — workloads and configuration, in the namespaces the key
+        reaches. The infrastructure (Nodes, CRDs, PersistentVolumes, ClusterRoles, StorageClasses) is not
+        here: it asks for 'cluster', because it is the installation and not a slice of it.
+    */
     READ = 'magnify$read',
     /** Change the cluster: apply, delete, evict, drain, scale, restart… */
     WRITE = 'magnify$write'
@@ -59,7 +65,7 @@ export const MAGNIFY_SCOPES: IExtensionScope[] = [
     {
         scope: EMagnifyScope.READ,
         label: 'Magnify · Read',
-        description: 'Also see what the cluster has: its resources, with their contents',
+        description: "Also see the cluster's workloads and configuration, with their contents. NOT its infrastructure (nodes, CRDs, cluster roles…), which needs 'cluster'",
         /*
             Narrowing READ by KIND, because that is what Magnify knows how to describe and the core does
             not. 'Everything except ConfigMaps and Secrets' is the case this exists for: the two kinds
@@ -79,7 +85,7 @@ export const MAGNIFY_SCOPES: IExtensionScope[] = [
     {
         scope: EMagnifyScope.WRITE,
         label: 'Magnify · Write',
-        description: 'Also change the cluster: apply, delete, evict, drain, scale and restart'
+        description: "Also change those workloads: apply, delete, evict, scale and restart. NOT the infrastructure — draining or cordoning a node needs 'cluster'"
     }
 ]
 

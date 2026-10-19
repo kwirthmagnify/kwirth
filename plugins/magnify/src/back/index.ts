@@ -1,7 +1,7 @@
 import { IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, EClusterType, IExtensionScope} from '@kwirthmagnify/kwirth-common'
 import { IBackChannelRequirements, IChannelInstances } from '@kwirthmagnify/kwirth-common'
-import { EMagnifyScope, MAGNIFY_SCOPES, MAGNIFY_SCOPE_LADDER } from '../common/MagnifyScopes'
-import { allows, canSee, canSeeAnyOf, filterItems, needsFiltering } from '../common/MagnifyAuth'
+import { EMagnifyScope, MAGNIFY_CLUSTER_SCOPE, MAGNIFY_SCOPES, MAGNIFY_SCOPE_LADDER } from '../common/MagnifyScopes'
+import { allows, canChange, canSee, canSeeAnyOf, filterItems, needsFiltering } from '../common/MagnifyAuth'
 import { IBackChannelObject, IChannel, IProvider, IProviderHandle, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 import { Request, Response } from 'express'
 // Types only: at runtime every Kubernetes client is the core's, reached through clusterInfo.
@@ -104,6 +104,19 @@ const MUTATING_COMMANDS = new Set<string>([
     EMagnifyCommand.CREATE, EMagnifyCommand.APPLY, EMagnifyCommand.DELETE,
     EMagnifyCommand.POD, EMagnifyCommand.NODE, EMagnifyCommand.CONTROLLER,
     EMagnifyCommand.IMAGE, EMagnifyCommand.CRONJOB, EMagnifyCommand.INGRESSCLASS
+])
+
+/*
+    🔴 Of those, the ones that act on the INFRASTRUCTURE, which asks for 'cluster' and not for
+    `magnify$write`: cordoning or draining a node, deleting an image from one, making an IngressClass the
+    default. `magnify$write` is a developer's permission — workloads and configuration — and a developer
+    who cannot SEE a node must not be able to drain it either.
+
+    CREATE, APPLY and DELETE are not here because they carry the object's YAML: what they touch is
+    decided per object, by its kind, further down.
+*/
+const INFRA_COMMANDS = new Set<string>([
+    EMagnifyCommand.NODE, EMagnifyCommand.IMAGE, EMagnifyCommand.INGRESSCLASS
 ])
 
 export interface IInstance {
@@ -444,6 +457,30 @@ class MagnifyChannel implements IChannel {
         }
     }
 
+    /*
+        🔴 May this key change THIS object? Asked per object, because the command does not say enough:
+        'delete' on a Pod is a developer's business and 'delete' on a ClusterRole is the installation's.
+        The kind travels inside the YAML, which is what makes the question answerable here.
+
+        It refuses one object and carries on with the rest rather than failing the whole batch: a
+        selection of twelve pods and one node should apply to the twelve.
+    */
+    private mayChange = (webSocket:WebSocket, instance:IInstance, obj:any, what:string): boolean => {
+        const kind = typeof obj?.kind === 'string' ? obj.kind : undefined
+        if (!kind) {
+            this.log.warning(`Refused to ${what} an object with no kind: there is no way to tell what it is`)
+            this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId,
+                `Could not ${what} an object: it does not say what kind it is.`)
+            return false
+        }
+        if (canChange(instance.accessKey, kind, obj?.metadata?.namespace)) return true
+        const name = obj?.metadata?.name ?? '(unnamed)'
+        this.log.warning(`Denied ${what} of ${kind}/${name} to key ${instance.accessKey?.id}`)
+        this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId,
+            `You don't have permission to ${what} the ${kind} '${name}'.`)
+        return false
+    }
+
     private sendDataMessage = (webSocket:WebSocket, instance:IInstance, id:string, command: EMagnifyCommand, data:any): void => {
         if (command === EMagnifyCommand.LIST && needsFiltering(instance.accessKey)) data = this.filterListPayload(instance.accessKey, data)
         let resp: IMagnifyMessageResponse = {
@@ -526,11 +563,16 @@ class MagnifyChannel implements IChannel {
 
                 `cluster` and `admin` sit above WRITE in the ladder, so an administrator is unaffected.
             */
-            if (MUTATING_COMMANDS.has(magnifyMessage.command) && !allows(instance.accessKey, EMagnifyScope.WRITE)) {
-                this.log.warning(`Denied '${magnifyMessage.command}' to key ${instance.accessKey?.id}: '${EMagnifyScope.WRITE}' required`)
-                this.sendSignalMessage(webSocket, magnifyMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId,
-                    `You don't have permission to change the cluster from Magnify — that requires the '${EMagnifyScope.WRITE}' scope.`)
-                return undefined
+            if (MUTATING_COMMANDS.has(magnifyMessage.command)) {
+                const required = INFRA_COMMANDS.has(magnifyMessage.command) ? MAGNIFY_CLUSTER_SCOPE : EMagnifyScope.WRITE
+                if (!allows(instance.accessKey, required)) {
+                    this.log.warning(`Denied '${magnifyMessage.command}' to key ${instance.accessKey?.id}: '${required}' required`)
+                    this.sendSignalMessage(webSocket, magnifyMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId,
+                        INFRA_COMMANDS.has(magnifyMessage.command)
+                            ? `That acts on the cluster's infrastructure, which requires the '${MAGNIFY_CLUSTER_SCOPE}' scope.`
+                            : `You don't have permission to change the cluster from Magnify — that requires the '${EMagnifyScope.WRITE}' scope.`)
+                    return undefined
+                }
             }
 
             switch (magnifyMessage.command) {
@@ -1094,6 +1136,7 @@ class MagnifyChannel implements IChannel {
         try {
             for (let obj of params) {
                 try {
+                    if (!this.mayChange(webSocket, instance, yaml.load(obj), 'delete')) continue
                     await this.clusterInfo.objectsApi.delete(yaml.load(obj))
                 }
                 catch (err:any) {
@@ -1112,7 +1155,9 @@ class MagnifyChannel implements IChannel {
         try {
             for (let param of params) {
                 try {
-                    this.clusterInfo.objectsApi.create(yaml.load(param))
+                    const res = yaml.load(param)
+                    if (!this.mayChange(webSocket, instance, res, 'create')) continue
+                    this.clusterInfo.objectsApi.create(res)
                 }
                 catch (err:any) {
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instance.instanceId, JSON.stringify(err))
@@ -1130,6 +1175,7 @@ class MagnifyChannel implements IChannel {
             for (let param of params) {
                 try {
                     const res = yaml.load(param)
+                    if (!this.mayChange(webSocket, instance, res, 'apply')) continue
                     let result = await applyResource(res, this.clusterInfo)
                     this.sendSignalMessage(webSocket, EInstanceMessageAction.COMMAND, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.INFO, instance.instanceId, result)
                 }

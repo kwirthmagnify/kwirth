@@ -1,5 +1,5 @@
 import { AccessKey, parseResources, parseThinScope } from '@kwirthmagnify/kwirth-common'
-import { EMagnifyScope, MAGNIFY_HIDE_KINDS, MAGNIFY_SCOPE_LADDER } from './MagnifyScopes'
+import { EMagnifyScope, MAGNIFY_CLUSTER_SCOPE, MAGNIFY_HIDE_KINDS, MAGNIFY_SCOPE_LADDER } from './MagnifyScopes'
 
 /*
     Who may see what, inside Magnify.
@@ -26,12 +26,16 @@ import { EMagnifyScope, MAGNIFY_HIDE_KINDS, MAGNIFY_SCOPE_LADDER } from './Magni
 export const levelOf = (scope: string): number => MAGNIFY_SCOPE_LADDER.indexOf(scope)
 
 /*
-    Kubernetes objects that do NOT live in a namespace.
+    Kubernetes objects that do NOT live in a namespace — the INFRASTRUCTURE.
 
-    They matter because of a decision taken for this channel: a key narrowed to some namespaces does NOT
-    see them. 'You may operate in pre' does not include the cluster's nodes, its ClusterRoles or its
-    StorageClasses — those are the whole installation, not a slice of it. A key with no namespace
-    restriction sees them as before.
+    🔴 They are the line this channel draws between a developer and an administrator. `magnify$read` and
+    `magnify$write` are for the things a developer works with: workloads and configuration, in the
+    namespaces their key reaches. Nodes, CRDs, PersistentVolumes, ClusterRoles and StorageClasses are the
+    installation itself, and seeing them —or touching them— asks for `cluster`.
+
+    It replaced a rule that read well and behaved badly: cluster-scoped kinds used to be visible to
+    anybody whose key did not narrow namespaces, so ADDING a namespace to narrow a key silently took
+    ClusterRoles away from it. Narrowing on one axis must not move another.
 */
 const CLUSTER_SCOPED = new Set<string>([
     'CSIDriver', 'CSINode', 'ClusterRole', 'ClusterRoleBinding', 'ComponentStatus',
@@ -126,25 +130,40 @@ export const allows = (accessKey: AccessKey | undefined, required: EMagnifyScope
     A cluster-scoped kind arrives with no namespace, and is only granted by a resource that restricts
     none — the decision described at CLUSTER_SCOPED.
 */
-export const canSee = (accessKey: AccessKey | undefined, kind: string, namespace?: string): boolean => {
-    const requiredLevel = levelOf(EMagnifyScope.READ)
-    return grantsOf(accessKey).some(g => {
-        if (g.level < requiredLevel) return false
+export const canSee = (accessKey: AccessKey | undefined, kind: string, namespace?: string): boolean =>
+    grantsOf(accessKey).some(g => {
+        if (g.level < levelFor(kind, EMagnifyScope.READ)) return false
         if (g.hidden.has(kind)) return false
-        if (CLUSTER_SCOPED.has(kind)) return g.namespaces.length === 0
-        return reaches(g, namespace ?? '')
+        // Infrastructure has no namespace to be matched against; reaching 'cluster' is the whole check.
+        return CLUSTER_SCOPED.has(kind) || reaches(g, namespace ?? '')
     })
-}
 
 /** Whether the kind is worth asking Kubernetes about at all: nobody can see it, so nobody fetches it. */
-export const canSeeAnyOf = (accessKey: AccessKey | undefined, kind: string): boolean => {
-    const requiredLevel = levelOf(EMagnifyScope.READ)
-    return grantsOf(accessKey).some(g => {
-        if (g.level < requiredLevel) return false
+export const canSeeAnyOf = (accessKey: AccessKey | undefined, kind: string): boolean =>
+    grantsOf(accessKey).some(g => g.level >= levelFor(kind, EMagnifyScope.READ) && !g.hidden.has(kind))
+
+/*
+    🔴 May this key CHANGE an object of this kind, here? Asked per object and not per command, because
+    'delete' means one thing on a Pod and another on a Node: the first is a developer's, the second is
+    the installation's.
+
+    A hidden kind cannot be changed either — writing to what you are not allowed to see would be a way
+    of finding out it is there.
+*/
+export const canChange = (accessKey: AccessKey | undefined, kind: string, namespace?: string): boolean =>
+    grantsOf(accessKey).some(g => {
+        if (g.level < levelFor(kind, EMagnifyScope.WRITE)) return false
         if (g.hidden.has(kind)) return false
-        return !CLUSTER_SCOPED.has(kind) || g.namespaces.length === 0
+        return CLUSTER_SCOPED.has(kind) || reaches(g, namespace ?? '')
     })
-}
+
+/*
+    What a kind asks for: its own level if it belongs to a namespace, and `cluster` if it is
+    infrastructure — whatever was being asked of it. That is the developer/administrator line, in one
+    place, so that seeing and changing cannot drift apart.
+*/
+const levelFor = (kind: string, asked: EMagnifyScope): number =>
+    levelOf(CLUSTER_SCOPED.has(kind) ? MAGNIFY_CLUSTER_SCOPE : asked)
 
 /*
     Does this key restrict anything at all? A key that narrows neither namespaces nor kinds —`cluster`,
