@@ -65,7 +65,24 @@ test.describe('gestor generico de extensiones: packs', () => {
         const instalable = dialog().locator('span[aria-label="Install"] button:not([disabled])')
         test.skip(await instalable.count() === 0, 'no hay ningun pack del catalogo sin instalar')
 
-        await instalable.first().click()
+        /*
+            🔴 A pack REFUSES to install when one of its members is already installed on its own, and
+            that is deliberate: it does not take over an extension somebody put there by hand. So in an
+            environment where `plugin:censor` is installed separately — a normal state on a developer's
+            machine — this cycle cannot be exercised AT ALL, and the test used to fail with a bare
+            'received 0', 90 seconds of waiting and nothing saying why.
+
+            The refusal is read from the back's own answer and the test is SKIPPED with it: a red that
+            depends on what else happens to be installed is not a signal, and silencing it with a
+            hardcoded condition would hide a real failure of the install the day there is one.
+        */
+        const [respuesta] = await Promise.all([
+            page.waitForResponse(r => r.url().includes('/core/packs/install'), { timeout: 60000 }),
+            instalable.first().click()
+        ])
+        const motivo = respuesta.status() === 200 ? '' : await respuesta.text().catch(() => '')
+        test.skip(/already installed/i.test(motivo), `un miembro del pack ya esta instalado por separado: ${motivo.slice(0, 200)}`)
+        expect(respuesta.status(), `la instalacion del pack fallo: ${motivo.slice(0, 200)}`).toBe(200)
 
         // Installed = the generic dialog draws it at the top with ITS OWN uninstall warning, not the generic one.
         const desinstalar = dialog().locator('span[aria-label="Uninstall pack (removes all member extensions)"] button')

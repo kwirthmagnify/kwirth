@@ -1,8 +1,8 @@
 import { IChannelInstances, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType, EClusterType, IBackChannelRequirements, IExtensionScope, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject, IChannel, scopeAllows } from '@kwirthmagnify/kwirth-common-back'
+import { IBackChannelObject, IChannel, keyMatchesResource, scopeAllows } from '@kwirthmagnify/kwirth-common-back'
 import { Request, Response } from 'express'
 import { applyAllResources, deleteAllResources } from '@kwirthmagnify/kwirth-common-back'
-import { ETrivyCommand, ETrivyScope, TRIVY_SCOPES, IKnown, ITrivyMessage, ITrivyMessageResponse, ITrivyProviderEvent } from '../common/TrivyTypes'
+import { ETrivyCommand, ETrivyScope, TRIVY_SCOPES, IKnown, ITrivyMessage, ITrivyMessageResponse, ITrivyProviderEvent, isWorkloadKind } from '../common/TrivyTypes'
 
 import zlib from 'zlib'
 // @ts-ignore
@@ -60,7 +60,14 @@ class TrivyChannel implements IChannel {
         websocket: false, cluster: true, resourced: false
     })
 
-    getChannelScopeLevel = (scope: string): number => ['', ETrivyScope.USER, ETrivyScope.KUBERNETES, 'cluster', 'admin'].indexOf(scope)
+    /*
+        'trivy$user' opens the channel and reads what the key reaches; 'cluster' reaches everything,
+        because that is what it means everywhere else; 'admin' also manages the operator.
+
+        There is no step of its own between user and cluster any more: 'trivy$kubernetes' gated reports
+        this channel never asked Kubernetes for.
+    */
+    getChannelScopeLevel = (scope: string): number => ['', ETrivyScope.USER, 'cluster', 'admin'].indexOf(scope)
 
     getScopeCatalog = (): IExtensionScope[] => TRIVY_SCOPES   // RBAC: scopes que declara Trivy (validar/gestionar)
 
@@ -76,11 +83,17 @@ class TrivyChannel implements IChannel {
         // The provider sends pe.podName = `resource.name` (the workload that owns the
         // report, a ReplicaSet for instance), not the real pod. We match by scope
         // (namespace + workload + container) against the instance's selectors.
+        // Only workloads: a ConfigAuditReport of a Service or an Ingress has no place on this screen
+        if (!isWorkloadKind(pe.kind)) return
         const isAudit = pe.plural === TRIVY_API_AUDIT_PLURAL
+        // Defaulting as in the priming below: a report may arrive without a container
+        const namespace = pe.namespace ?? ''
+        const workloadName = pe.podName ?? ''
+        const containerName = pe.containerName ?? ''
         for (const socket of this.webSockets) {
             for (const instance of socket.instances) {
-                if (!this.matchesScope(instance, pe.namespace, pe.podName, pe.containerName, isAudit)) continue
-                const payload = this.buildDataPayload(instance.instanceId, pe.namespace, pe.podName, pe.containerName, pe.plural, pe.event, pe.report)
+                if (!this.matchesScope(instance, namespace, workloadName, containerName, isAudit)) continue
+                const payload = this.buildDataPayload(instance.instanceId, namespace, workloadName, containerName, pe.plural, pe.event, pe.report, pe.kind)
                 socket.ws.send(JSON.stringify(payload))
             }
         }
@@ -107,15 +120,18 @@ class TrivyChannel implements IChannel {
             `validKey` and `getKey` are authentication, not authorization -- and 'install'/'remove'
             apply and delete the Trivy Operator across the cluster.
 
-            🔴 Installing an operator is a CLUSTER operation, not a channel one, so it asks for
-            'cluster' rather than a trivy$ scope: trivy$kubernetes means 'read cluster-scoped reports',
-            and being allowed to read reports is not being allowed to change the cluster. Reading
-            whether Trivy is installed does sit at the channel's own minimum.
+            🔴 Installing or removing the operator is CONFIGURING the tool, not using it: it applies or
+            deletes a deployment, its CRDs and its RBAC across the whole cluster. That is an
+            administrator's, so it asks for 'admin' — being allowed to read every report is not the same
+            as being allowed to install the thing that writes them.
+
+            Reading WHETHER Trivy is installed sits at the channel's own minimum: without it the screen
+            cannot even say why it is empty.
         */
         const ACTION_SCOPE: Record<string, string> = {
             status: ETrivyScope.USER,
-            install: 'cluster',
-            remove: 'cluster'
+            install: 'admin',
+            remove: 'admin'
         }
         const required = typeof action === 'string' ? ACTION_SCOPE[action] : undefined
         if (required && !this.allows(accessKey, required)) {
@@ -180,9 +196,9 @@ class TrivyChannel implements IChannel {
             Two layers, and this is the first: STARTING the channel. It asks for the channel's OWN
             minimum, the same way Agora checks 'agora$user' in its own addObject — and not for
             'cluster', which is what it asked for at first and had to be undone: 'cluster' sits ABOVE
-            both trivy scopes in the ladder, so requiring it made 'trivy$user' and 'trivy$kubernetes'
-            impossible to use — anybody who could enter already outranked them. A permission that can be
-            granted and grants nothing is worse than no permission at all.
+            the channel's scope in the ladder, so requiring it made 'trivy$user' impossible to use —
+            anybody who could enter already outranked it. A permission that can be granted and grants
+            nothing is worse than no permission at all.
 
             Asking for the minimum keeps 'cluster' and 'admin' working (the ladder puts them higher) and
             lets somebody be given Trivy and nothing else.
@@ -191,8 +207,9 @@ class TrivyChannel implements IChannel {
             looking at a single scope, so it is the channel that settles who may read its data — and
             these are vulnerability reports, detected secrets and configuration audits.
 
-            The SECOND layer is what you may do once inside: 'cluster' for installing or removing the
-            operator, and 'trivy$kubernetes' for cluster-scoped reports (not filtered yet).
+            The SECOND layer is what you see and do once inside: the reports are filtered by the key's
+            own namespaces (`matchesScope`), 'cluster' reaches them all, and installing or removing the
+            operator asks for 'admin' — that is configuring the tool, not using it.
 
             What the KEY carries is read, never `instanceConfig.scope`: that is a field of an unsigned
             message, so the client could write anything in it and it would prove nothing.
@@ -255,12 +272,26 @@ class TrivyChannel implements IChannel {
                 }
                 for (const obj of items) {
                     const labels = obj.metadata?.labels ?? {}
-                    const ns = labels['trivy-operator.resource.namespace']
-                    const workloadName = labels['trivy-operator.resource.name']
-                    const containerName = labels['trivy-operator.container.name']
+                    /*
+                        🔴 Defaulted to '', because not every report HAS a container.
+
+                        A ConfigAuditReport is written for whatever the operator audits — a Service, an
+                        Ingress, a Role — and those carry no `container.name`. Since the channel stopped
+                        being `resourced` (0.2.x, when the core no longer discovered the pods for it),
+                        those reports reach the front end too, and an `undefined` travelling as the
+                        container was enough to take the screen down the moment somebody typed in the
+                        filter: it did `container.toLowerCase()`.
+
+                        A missing label is an empty string here and nowhere else.
+                    */
+                    // Only workloads, the same cut as the live events above
+                    if (!isWorkloadKind(labels['trivy-operator.resource.kind'])) continue
+                    const ns = labels['trivy-operator.resource.namespace'] ?? ''
+                    const workloadName = labels['trivy-operator.resource.name'] ?? ''
+                    const containerName = labels['trivy-operator.container.name'] ?? ''
                     const isAudit = plural === TRIVY_API_AUDIT_PLURAL
                     if (!this.matchesScope(instance, ns, workloadName, containerName, isAudit)) continue
-                    const payload = this.buildDataPayload(instance.instanceId, ns, workloadName, containerName, plural, 'add', obj.report)
+                    const payload = this.buildDataPayload(instance.instanceId, ns, workloadName, containerName, plural, 'add', obj.report, labels['trivy-operator.resource.kind'])
                     webSocket.send(JSON.stringify(payload))
                 }
             }
@@ -320,6 +351,25 @@ class TrivyChannel implements IChannel {
     // ─── PRIVATE ────────────────────────────────────────────────────────────────
 
     private matchesScope = (instance: IInstance, namespace: string, workloadName: string, containerName: string, isAudit: boolean): boolean => {
+        /*
+            🔴 FIRST, what the KEY grants — and only then what the client asked for.
+
+            Everything below this line is the SELECTION: the view, the namespaces and the workloads come
+            from the `instanceConfig`, which the browser composes. Until now that was the only filter, so
+            opening Trivy on the cluster view handed over the vulnerability reports and the DETECTED
+            SECRETS of every namespace, whatever the key granted. It took no tampering: it is what the
+            UI does when you pick the cluster.
+
+            Both ways reports leave this channel go through here — the priming at start and the live
+            events from the provider — so one check covers them.
+
+            ⚠️ Only the NAMESPACE is matched, deliberately. A report names the workload that owns it (a
+            ReplicaSet, say), not the pod, so contrasting it with the key's `pods` would reject reports
+            the grant was meant to cover. Namespaces are the dimension that answers 'whose cluster slice
+            is this', which is the question being asked.
+        */
+        if (!keyMatchesResource(instance.accessKey, { namespace })) return false
+
         switch (instance.view) {
             case EInstanceConfigView.CLUSTER:
             case EInstanceConfigView.NONE:
@@ -336,7 +386,7 @@ class TrivyChannel implements IChannel {
         }
     }
 
-    private buildDataPayload = (instanceId: string, namespace: string, podName: string, containerName: string, plural: string, event: string, report: any): ITrivyMessageResponse => {
+    private buildDataPayload = (instanceId: string, namespace: string, podName: string, containerName: string, plural: string, event: string, report: any, kind?: string): ITrivyMessageResponse => {
         const payload: ITrivyMessageResponse = {
             msgtype: 'trivymessageresponse',
             msgsubtype: event,
@@ -352,10 +402,10 @@ class TrivyChannel implements IChannel {
             instance: instanceId
         }
         if (event === 'delete') {
-            payload.data = { resource: plural, known: { name: podName, namespace, container: containerName, report: undefined } satisfies IKnown }
+            payload.data = { resource: plural, known: { name: podName, namespace, container: containerName, kind, report: undefined } satisfies IKnown }
         }
         else {
-            payload.data = { resource: plural, known: { name: podName, namespace, container: containerName, report } }
+            payload.data = { resource: plural, known: { name: podName, namespace, container: containerName, kind, report } }
         }
         return payload
     }

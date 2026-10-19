@@ -2903,12 +2903,24 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             return
         }
 
-        // As in onContextSelectorLocal (the desktop's own choice, even against a remote Kwirth); there the
-        // tab starts on the 'default' namespace.
         // The same reset as the local path, and for the same reason: the selector is the desktop's way in.
         autoStartedRef.current = false
         if (props.startChannel) setAutoStartPending(true)
-        if (props.startChannel) setUser({ ...user, startChannel: props.startChannel, startView: EInstanceConfigView.NAMESPACE, startNamespace: 'default' })
+        /*
+            🔴 CLUSTER, the same as onContextSelectorLocal — not the 'default' namespace this used to ask
+            for.
+
+            The core accepts a CLUSTER channel, which is what Magnify is, ONLY when the view is CLUSTER
+            (index.ts, the branch that hands it '*all'). Anything else falls through to the branch that
+            matches pods, and a channel declaring `resourced: false` has none to match, so the answer was
+            'Access denied: there are no filters that match requested instance config' — with a
+            `cluster,admin::::` key, which grants everything.
+
+            The mismatch had been here all along and never ran: this path did not clear the start-up
+            guard, so the remote desktop never got as far as opening its channel. Clearing it on
+            2026-10-19 is what made the line reachable, and the bug visible.
+        */
+        if (props.startChannel) setUser({ ...user, startChannel: props.startChannel, startView: EInstanceConfigView.CLUSTER })
         setFirstLogin(false)
         setLogged(true)
     }

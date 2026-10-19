@@ -27,7 +27,7 @@ On **Start**, the config lets you choose **which severities count** — tick **I
 | Control | What it does |
 |---|---|
 | **Ignore — Critical / High / Medium / Low** | Exclude that severity from reports and from the score. |
-| **MANAGE TRIVY** | Install / manage the **Trivy Operator** in the cluster from kwirth. *(You must start the channel once before you can configure the operator.)* |
+| **MANAGE TRIVY** | Install / manage the **Trivy Operator** in the cluster from kwirth. *(You must start the channel once before you can configure the operator.)* The button is **disabled without `admin`** — it is not a permission you discover by being refused. |
 | **Set as default** | Remember this configuration. |
 
 ## The cards view
@@ -37,6 +37,21 @@ Once started you get one **card per object**. Each card shows the object **icon*
 ![Trivy cards view with filters](../../../_media/guide/channel-trivy-cards.png)
 
 Red bars are **findings** (higher = worse); the green **SBOM** bar is just the package count (informational, not a risk). At a glance you can compare the security posture of every object in your scope side by side.
+
+**What gets a card.** Only **workloads** — the things that run containers: pods and the controllers that
+own them (ReplicaSet, Deployment, StatefulSet, DaemonSet, Job, CronJob). The Trivy Operator also audits
+Services, Ingresses and Roles, and those are not shown: there is no image to scan behind them.
+
+**Reading the title.** The first line is the object and the second its **container**; both are cut to fit
+the card, so **hover over either to read it whole** — two pods of the same deployment are identical up to
+the last few characters. Beside the name there is a **chip with the kind** (`ReplicaSet`, `Pod`,
+`DaemonSet`…), and it matters more than it looks: Trivy names a report after the **owner** of the pods it
+scanned, so most rows are a controller wearing a pod's name.
+
+> ⚠️ **The Audit figure belongs to the workload, not to the container.** A `ConfigAuditReport` is written
+> once per workload while vulnerabilities and SBOM are written per container, so a workload with several
+> containers shows the **same** Audit number on each of its cards. That is what the report says: the
+> audit is of the thing that owns them all.
 
 ## Filtering & sorting
 
@@ -130,12 +145,25 @@ Expand a CVE to see its specifics — **CVE id** (linked to its advisory), the a
 - **Install / remove:** **☰ → Manage extensions → Plugins** → install **Trivy**.
 - **Trivy Operator:** the channel needs the **Trivy Operator** in the target cluster. Use **MANAGE TRIVY** in the config (after starting once) to deploy/manage it — no manual Helm needed.
 - **Permissions:** each scope includes the ones above it, so a user needs **one**, not several —
-  - **`trivy$user`** — use Trivy: open the channel and read workload reports (vulnerabilities, config
-    audit, secrets). **Without it the channel will not start**, and it says so.
-  - **`trivy$kubernetes`** — also read cluster-scoped reports (RBAC, infra assessment).
-  - **`cluster`** / **`admin`** — the above, **plus installing and removing the Trivy Operator** from
-    **MANAGE TRIVY**. Deploying an operator changes the cluster, so it is not something a Trivy scope
-    grants.
+  - **`trivy$user`** — open Trivy and read the reports (vulnerabilities, config audit, secrets) **of the
+    namespaces the key grants**. **Without it the channel will not start**, and it says so.
+  - **`cluster`** — the reports of **every** namespace.
+  - **`admin`** — also **installing and removing the Trivy Operator** from **MANAGE TRIVY**. That
+    deploys a workload, its CRDs and its RBAC across the cluster: it is configuring the tool, not using
+    it, and reading every report is not the same as installing the thing that writes them.
+
+  > 🔴 **Since `trivy@0.2.32` the reports are limited by the key.** Before it, only what the screen
+  > *asked for* was filtered — so opening Trivy on the cluster view handed over the vulnerability
+  > reports and the **detected secrets** of every namespace, whatever the key granted. If you gave Trivy
+  > expecting the namespaces to limit it, re-read those grants.
+  >
+  > ⚠️ Only **namespaces** limit them. A report names the workload that owns it, not the pod, so
+  > narrowing a key by pod or container does not narrow its reports.
+
+  > ⚠️ **`trivy$kubernetes` no longer exists** (removed in `0.2.32`). It promised the cluster-scoped
+  > reports (RBAC, infra assessment) and the channel never asked Kubernetes for them, so it granted
+  > nothing. **A key still carrying it loses Trivy altogether** until it is re-granted `trivy$user` —
+  > an unknown scope grants nothing, which is the safe way round but silent.
 
   See [Security & permissions](../../admin/04-security-and-permissions).
 

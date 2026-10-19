@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Avatar, Box, Card, CardContent, CardHeader, CardMedia, Divider, IconButton, Menu, MenuItem, MenuList, Stack, Typography } from '@mui/material'
+import { Avatar, Box, Card, CardContent, CardHeader, CardMedia, Chip, Divider, IconButton, Menu, MenuItem, MenuList, Stack, Tooltip, Typography } from '@mui/material'
 import { MoreVert, Visibility as VisibilityIcon, Replay as ReplayIcon } from '@mui/icons-material'
 import { assetAvatarColor, getAvatarContent } from '../TrivyCommon'
 import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
@@ -17,6 +17,19 @@ interface ITrivyTabContentAssetProps {
     onShowSbom: (asset: IAsset) => void
     onRescan: (asset: IAsset) => void
 }
+
+/*
+    Cut to fit the card, with the ellipsis only when something was actually cut. It used to be appended
+    always, so a short name read 'kwirth...' and looked truncated when it was whole.
+*/
+const shorten = (value: string | undefined, max: number): string => {
+    if (!value) return 'NA'
+    return value.length > max ? `${value.substring(0, max)}…` : value
+}
+
+/** The whole thing, for the tooltip: what is on the card is never enough to tell two pods apart. */
+const fullName = (asset: IAsset): string =>
+    `${asset.namespace || 'NA'} / ${asset.name || 'NA'}${asset.container ? ` / ${asset.container}` : ''}`
 
 export const getTotalIssues = (plural: string, asset: IAsset) => {
     let sum = (asset as any)[plural]?.report?.summary
@@ -86,7 +99,27 @@ const TrivyTabContentAsset: React.FC<ITrivyTabContentAssetProps> = (props: ITriv
         <Card sx={{ width: '100%', height: '280px', borderWidth: '1px', borderStyle: 'solid', borderColor: 'divider' }}>
             <CardHeader
                 avatar={<Avatar sx={{ background: assetAvatarColor(props.asset.vulnerabilityreports?.report?.os?.family || 'X') }}>{getAvatarContent(props.asset.vulnerabilityreports?.report?.os?.family || 'X')}</Avatar>}
-                title={<><Typography variant='body2'>{`${props.asset.name?.substring(0, 20)}...`}</Typography><Typography variant='body2'>{`${props.asset.container?.substring(0, 20) || 'NA'}...`}</Typography></>}
+                /*
+                    The card has room for about twenty characters and a pod's name is longer than that,
+                    so the names are cut — and the tooltip is the only way to read which object this is.
+                    Without it two pods of the same deployment look identical on screen.
+                */
+                title={<Box>
+                    {/* One tooltip per line, each showing ITS own full value: the object on top and the
+                        container below. Both are cut to fit the card, so both need it.
+
+                        The KIND goes beside the name because Trivy names a report after the owner of
+                        the pods it scanned: without it a ReplicaSet and a Pod read identically. */}
+                    <Stack direction='row' alignItems='center' spacing={0.5}>
+                        <Tooltip title={fullName(props.asset)} placement='top-start'>
+                            <Typography variant='body2'>{shorten(props.asset.name, 20)}</Typography>
+                        </Tooltip>
+                        {props.asset.kind && <Chip label={props.asset.kind} size='small' variant='outlined' sx={{ height: 16, fontSize: '0.6rem' }} />}
+                    </Stack>
+                    <Tooltip title={props.asset.container || 'no container (workload-level report)'} placement='bottom-start'>
+                        <Typography variant='body2'>{shorten(props.asset.container, 20)}</Typography>
+                    </Tooltip>
+                </Box>}
                 action={<IconButton onClick={(event) => setAnchorMenu(event?.currentTarget)}><MoreVert /></IconButton>}
             />
             <CardMedia>{simpleBarChart(props.asset)}</CardMedia>
@@ -105,7 +138,14 @@ const TrivyTabContentAsset: React.FC<ITrivyTabContentAssetProps> = (props: ITriv
                 <Stack direction='row' width='50%' p={1} alignItems='center'>
                     <Avatar sx={{ background: assetAvatarColor(props.asset.vulnerabilityreports?.report?.os?.family || 'X') }}>{getAvatarContent(props.asset.vulnerabilityreports?.report?.os?.family || 'X')}</Avatar>
                     <Stack direction='column' ml={1}>
-                        <Typography variant='body2'><b>{`${props.asset.name?.substring(0, 20) ?? 'NA'}.../${props.asset.container?.substring(0, 10) ?? 'NA'}...`}</b></Typography>
+                        {/* The same two things as the card: the full name on hover, and the kind, which
+                            is what tells a controller from a pod. */}
+                        <Stack direction='row' alignItems='center' spacing={0.5}>
+                            <Tooltip title={fullName(props.asset)} placement='top-start'>
+                                <Typography variant='body2'><b>{`${shorten(props.asset.name, 20)}/${shorten(props.asset.container, 10)}`}</b></Typography>
+                            </Tooltip>
+                            {props.asset.kind && <Chip label={props.asset.kind} size='small' variant='outlined' sx={{ height: 16, fontSize: '0.6rem' }} />}
+                        </Stack>
                         <Typography variant='body2'>{`${props.asset.vulnerabilityreports?.report?.updateTimestamp || props.asset.configauditreports?.report?.updateTimestamp}`}</Typography>
                     </Stack>
                 </Stack>

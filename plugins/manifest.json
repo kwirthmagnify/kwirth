@@ -461,10 +461,10 @@
   {
     "extensionType": "plugin",
     "id": "trivy",
-    "version": "0.2.31",
+    "version": "0.2.32",
     "name": "Trivy",
     "displayName": "Trivy",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.31.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-trivy/-/kwirth-plugin-trivy-0.2.32.tgz",
     "description": "Trivy security scanning channel plugin for Kwirth",
     "icon": "VerifiedUser",
     "website": "https://kwirthmagnify.dev",

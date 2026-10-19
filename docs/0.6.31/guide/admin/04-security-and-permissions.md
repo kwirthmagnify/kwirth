@@ -63,8 +63,7 @@ When you edit a resource, **Scopes** is a **searchable selector** (filter box + 
 | `subscribe` | **Subscribe** to a channel's output (e.g. alerts). |
 | `ops$get` | Ops: **read/inspect** resources. |
 | `ops$restart` | Ops: **restart / delete** workloads. |
-| `trivy$user` | Trivy: **open the channel** and read workload-scoped reports (vulnerabilities, config audit, secrets). |
-| `trivy$kubernetes` | Trivy: everything above **plus** cluster-scoped reports (RBAC, infra assessment). |
+| `trivy$user` | Trivy: **open the channel** and read the reports (vulnerabilities, config audit, secrets) **of the namespaces the key grants**. `cluster` reads them all; `admin` also installs and removes the operator. |
 | `magnify$user` | Magnify: **open it** and see the cluster's health (metrics and events). It does **not** list resources. |
 | `magnify$read` | Magnify: also see the **workloads and configuration**, with their contents. **Not the infrastructure** (nodes, CRDs, cluster roles…), which needs `cluster`. Narrowable by kind (see [Narrowing a scope](#narrowing-a-scope)). |
 | `magnify$write` | Magnify: also **change those** — apply, delete, evict, scale, restart. Draining or cordoning a **node** needs `cluster`. |
@@ -117,8 +116,9 @@ Start from *what the person needs to do*, pick the **matching scopes**, then **n
 
 **D) A security auditor**
 
-- **Scopes** `trivy$workload`, `trivy$kubernetes` · filters blank.
-- Can run vulnerability scans across the cluster, but has no log/ops access.
+- **Scopes** `trivy$user`, `cluster` · filters blank.
+- Reads the vulnerability, config-audit and secret reports of **every** namespace, and has no log/ops
+  access. With `trivy$user` alone and namespaces in the filters, they would read only those.
 
 **E) An external integration (API)**
 

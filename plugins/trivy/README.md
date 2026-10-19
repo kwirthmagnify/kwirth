@@ -26,6 +26,27 @@ requires the **Trivy provider**, which the marketplace installs with it.
 as CRDs in your cluster, so the operator has to be installed and running: without it there are no reports
 to show, and an empty screen means exactly that.
 
+## What it shows
+
+**Workloads only**: pods and the controllers that own them (ReplicaSet, Deployment, StatefulSet,
+DaemonSet, Job, CronJob). Trivy Operator also audits Services, Ingresses and Roles, but those are not
+things that run containers and they are dropped here.
+
+⚠️ A report is usually named after the **owner** rather than the pod, so most rows are a ReplicaSet
+wearing a pod's clothes. The card says which one it is.
+
+## Permissions
+
+| What the key carries | What it can do |
+|---|---|
+| `trivy$user` | Open Trivy and read the reports of **the namespaces its resources reach** |
+| `cluster` | The same, over the whole cluster |
+| `admin` | The above, plus installing and removing the Trivy operator (`Manage`) |
+
+⚠️ **Breaking in 0.2.32**: `trivy$kubernetes` no longer exists (it gated a feature that was never built),
+and `trivy$workload` is gone since 0.2.30. A key carrying either grants **nothing** for this channel
+until it is re-granted as `trivy$user`.
+
 ## Development
 
 ```

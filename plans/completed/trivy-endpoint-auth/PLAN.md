@@ -1,6 +1,14 @@
 # Plan — El endpoint de Trivy no comprueba ningún permiso
 
-> **Estado: ✅ ENTREGADO en `trivy` 0.2.30** (2026-10-17), validado en dev por el usuario. Hallazgo del
+> **Estado: ✅ CERRADO en `trivy` 0.2.32** (2026-10-19), validado en dev por el usuario. El endpoint y el
+> arranque quedaron resueltos en **0.2.30** (2026-10-17); lo que mantenía el plan abierto —el scope
+> `trivy$kubernetes`, que se concedía y no filtraba nada— se cierra en **0.2.32** (§7), junto con un
+> agujero mayor que apareció al tirar del hilo: los informes no estaban limitados por la clave.
+>
+> Lo que sigue abierto no es de este plan: vive en **A12** y **A13** de
+> [auth-hardening](../../auth-hardening/PLAN.md).
+>
+> Hallazgo del
 > mismo día, al revisar si `excubitor` y `trivy` compartían el patrón de
 > [fileman-target](../fileman-target/PLAN.md). `excubitor` **está bien** (§4); `trivy` no lo estaba.
 >
@@ -52,7 +60,7 @@ conceder (plan `ops-trivy-scopes`), de modo que el administrador los ve en el ed
 algo. Para el streaming puede que sí; **para este endpoint, no**.
 
 Es el mismo patrón que ya ha aparecido cuatro veces: *un permiso que se concede y no hace nada*
-(`groups` que la puerta no mira — [A10](../auth-hardening/PLAN.md), los scopes de Agora que no gradúan,
+(`groups` que la puerta no mira — [A10](../../auth-hardening/PLAN.md), los scopes de Agora que no gradúan,
 los de File Manager que no se podían conceder, y ahora éste).
 
 ## 3. Qué hay que hacer
@@ -101,7 +109,7 @@ El endpoint era la mitad del problema. Al dárselo a probar al usuario salió lo
 
 🔴 **Arrancar el canal no comprobaba NADA.** Trivy se declaraba `cluster: false, resourced: false`, así
 que el core lo trataba como **canal autónomo** y entraba por una rama que llama a `addObject` con los
-selectores vacíos **sin mirar un solo scope** ([`index.ts:998`](../../back/src/index.ts#L998)).
+selectores vacíos **sin mirar un solo scope** ([`index.ts:998`](../../../back/src/index.ts#L998)).
 Cualquier clave válida veía los informes del clúster: vulnerabilidades, secretos detectados y auditoría
 de configuración.
 
@@ -145,14 +153,24 @@ clave con solo `cluster` entraba y veía todo, y una con solo `trivy$user` recib
 
 ## 7. Lo que queda abierto
 
-- 🔴 **`trivy$kubernetes` no filtra nada.** Quien entra con `trivy$user` ve también los informes de
-  ámbito clúster. El scope existe, se concede y no cambia lo que se ve: sexta aparición del patrón. Es
-  la *segunda capa* de authz dentro del canal, y no está implementada.
+- ~~🔴 **`trivy$kubernetes` no filtra nada.**~~ ✅ **Cerrado en `0.2.32`** (2026-10-19). No se implementó
+  la segunda capa: al mirarlo de cerca **no había nada que separar**, porque el canal nunca pide los
+  informes de ámbito clúster —su lista son los cuatro *namespaced*—. El scope **se elimina** (🔴 ruptura:
+  una clave que lo lleve no concede nada hasta re-concederle `trivy$user`) y lo que acota pasa a ser lo
+  mismo que en el resto del producto: los **recursos** de la clave.
+  ⚠️ **Y había un agujero mayor debajo**: hasta `0.2.31` el canal filtraba **lo que la pantalla pedía**,
+  no lo que la clave alcanzaba, así que abrir Trivy en vista de clúster entregaba los informes —y los
+  **secretos detectados**— de todos los namespaces. Desde `0.2.32`, `keyMatchesResource` sobre el
+  namespace es lo **primero** de `matchesScope`.
 - **El core sigue sin comprobar scope al arrancar** ningún canal autónomo ni de clúster. Trivy se
   defiende solo; los demás canales no-resourced, cada uno verá. El §4.1 de
-  [channel-start-rbac](../completed/channel-start-rbac/PLAN.md) lo pedía y no se hizo.
+  [channel-start-rbac](../channel-start-rbac/PLAN.md) lo pedía y no se hizo.
 - **Consolidar el helper.** `hasScopeKey` (excubitor), `scopeAllows` (fileman) y `scopeAllows` (trivy)
   son la misma función escrita tres veces. Sigue perteneciendo a `common-back`.
+  ⚠️ **Y ya no basta con `common-back`**: en `0.2.32` el **front** de trivy tuvo que deshabilitar
+  *Manage* sin `admin`, y desde el front no se alcanza `common-back`, así que se escribió una copia más
+  (`keyReaches`, en `src/common/`). Es la misma conclusión a la que llegó magnify. El sitio es `common`,
+  y queda apuntado en **A13** de [auth-hardening](../../auth-hardening/PLAN.md).
 
 💡 De paso se quitaron dos botones muertos del diálogo *Manage*: **FILESYSTEM** y **IMAGE**
 (`configfs`/`configimg`). Aparecen **una sola vez en la historia del repositorio** —en el commit que

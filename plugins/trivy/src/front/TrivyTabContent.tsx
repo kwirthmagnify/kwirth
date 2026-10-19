@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react'
-import { Box, Button, Stack, Typography, TextField, InputAdornment, Card, ToggleButton, ToggleButtonGroup, useTheme } from '@mui/material'
+import { Box, Button, Stack, Typography, TextField, InputAdornment, Card, ToggleButton, ToggleButtonGroup, Tooltip, useTheme } from '@mui/material'
+import { keyReaches } from '../common/TrivyTypes'
 import { Search as SearchIcon } from '@mui/icons-material'
 import { TReportType } from './TrivyCommon'
 import { IContentProps, MsgBoxOk, MsgBoxOkError, MsgBoxWaitCancel } from '@kwirthmagnify/kwirth-common-front'
@@ -25,6 +26,8 @@ const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [assetList, setAssetList] = useState<IAsset[]>(trivyData.assets)
     const [filterText, setFilterText] = useState('')
     const [showOperatorManage, setShowOperatorManage] = useState<boolean>(false)
+    // The front asks the same question the back will ask; the back is what decides.
+    const mayManage = keyReaches(props.channelObject.accessString?.split('|')[2] ?? '', 'admin')
     const [msgBox, setMsgBox] = useState<React.ReactNode>(<></>)
 
     useEffect(() => {
@@ -59,8 +62,18 @@ const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
 
     const filteredAssets = assetList.filter(asset => {
         const search = filterText.toLowerCase()
-        const matchesText = !filterText || asset.name.toLowerCase().includes(search) || asset.namespace.toLowerCase().includes(search) || asset.container.toLowerCase().includes(search)
-        return matchesText
+        /*
+            🔴 Nothing is assumed to be a string here. Not every asset HAS a container: a
+            ConfigAuditReport is written for whatever the operator audits — a Service, an Ingress, a
+            Role — and those have none. Since the channel stopped being `resourced` they reach this
+            screen too, and `asset.container.toLowerCase()` took the whole tab down with 'Script error'
+            the moment anybody typed a letter in the filter.
+
+            The back end defaults these to '' now, but the screen does not depend on that: a field that
+            arrives missing must not be able to break a search box.
+        */
+        const matches = (value?: string) => (value ?? '').toLowerCase().includes(search)
+        return !filterText || matches(asset.name) || matches(asset.namespace) || matches(asset.container)
     })
 
     const rescanAsset = (asset: IAsset) => { setAssetList(prev => prev.filter(a => a.namespace !== asset.namespace || a.name !== asset.name || a.container !== asset.container)) }
@@ -92,7 +105,18 @@ const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 <ToggleButton value='card' sx={{ textTransform: 'none', px: 1.5 }}>Card</ToggleButton>
                                 <ToggleButton value='list' sx={{ textTransform: 'none', px: 1.5 }}>List</ToggleButton>
                             </ToggleButtonGroup>
-                            <Button size='small' variant='outlined' disableElevation onClick={() => setShowOperatorManage(true)} disabled={!trivyData.ri} sx={{ textTransform: 'none', height: '30px' }}>Manage</Button>
+                            {/*
+                                Disabled, with the reason, when the key cannot manage the operator:
+                                installing or removing it asks for 'admin' since 0.2.32, and a button
+                                that opens a dialog whose every action answers 403 is worse than no
+                                button. Visible and disabled rather than hidden — one that comes and
+                                goes is one nobody can look for.
+                            */}
+                            <Tooltip title={mayManage ? '' : "Installing or removing the Trivy Operator requires the 'admin' scope"}>
+                                <span>
+                                    <Button size='small' variant='outlined' disableElevation onClick={() => setShowOperatorManage(true)} disabled={!trivyData.ri || !mayManage} sx={{ textTransform: 'none', height: '30px' }}>Manage</Button>
+                                </span>
+                            </Tooltip>
                         </Stack>
                     </Stack>
                 </Card>
