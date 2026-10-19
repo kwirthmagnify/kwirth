@@ -35,5 +35,7 @@
     "dces": {
         "file-manager": "../dces/file-manager/dist"
     },
-    "docs": {}
+    "docs": {
+        "excubitor": "../plugins/excubitor/docs/excubitor.tgz"
+    }
 }
