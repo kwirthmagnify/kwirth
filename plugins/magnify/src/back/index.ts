@@ -1132,12 +1132,38 @@ class MagnifyChannel implements IChannel {
         }
     }
 
+    /*
+        The objects to delete, and 'force' appended as the LAST parameter when the delete must not wait.
+
+        At the end and not at the front on purpose: a list with no flag is exactly what it always was —
+        every entry an object— so nothing has to be sent for the normal case and an older front end goes
+        on working unchanged. 'force' is not valid YAML for an object, so it cannot be confused with one.
+
+        It is Kubernetes' `--force`: a grace period of ZERO, which is the only thing that flag does. The
+        object leaves the API immediately instead of being asked to stop first.
+
+        ⚠️ On a Pod that means the container may still be running on its node. It is what you want when
+        the node is unreachable and the pod will never confirm it died; it is NOT a faster delete. The
+        dialog that offers it says so, which is why it is offered and never applied by default.
+    */
     private async executeDelete (webSocket:WebSocket, instance:IInstance, params:string[]) {
+        const force = params[params.length - 1] === 'force'
+        const objects = force ? params.slice(0, -1) : params
+        this.log.info(`DELETE of ${objects.length} object(s)${force ? ' FORCED (gracePeriodSeconds=0)' : ''}`)
         try {
-            for (let obj of params) {
+            for (let obj of objects) {
                 try {
-                    if (!this.mayChange(webSocket, instance, yaml.load(obj), 'delete')) continue
-                    await this.clusterInfo.objectsApi.delete(yaml.load(obj))
+                    const res = yaml.load(obj)
+                    if (!this.mayChange(webSocket, instance, res, 'delete')) continue
+                    /*
+                        What `kubectl delete --force --grace-period=0` sends: a grace period of ZERO.
+                        It goes BOTH as the query parameter and in the DeleteOptions body, which is what
+                        kubectl itself does — the API server accepts either, and sending both removes
+                        the question of which one this client version actually puts on the wire.
+                    */
+                    await this.clusterInfo.objectsApi.delete(res, undefined, undefined,
+                        force ? 0 : undefined, undefined, undefined,
+                        force ? { gracePeriodSeconds: 0 } : undefined)
                 }
                 catch (err:any) {
                     this.log.info(err)

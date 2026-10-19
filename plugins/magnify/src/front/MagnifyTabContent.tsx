@@ -2,7 +2,7 @@ import React from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { EMagnifyCommand, IMagnifyMessage, IMagnifyData } from './MagnifyData'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, accessKeyDeserialize } from '@kwirthmagnify/kwirth-common'
 import { allows } from '../common/MagnifyAuth'
 import { EMagnifyScope, MAGNIFY_CLUSTER_SCOPE } from '../common/MagnifyScopes'
@@ -617,9 +617,35 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 }))
             }
             else {
-                setMsgBox(MsgBoxYesNo('Delete '+f[0].data.origin.kind,<Box>Are you sure you want to delete {f[0].data.origin.kind}<b> {f[0].displayName}</b>{p.length>1?` (and other ${p.length-1} items)`:''}?</Box>, setMsgBox, (a) => {
+                /*
+                    Deleting a Pod is offered with FORCE, because a pod on a node that is gone never
+                    confirms it died and a normal delete leaves it Terminating for ever. The box asks
+                    instead of deciding: forcing removes the object from the API while the container may
+                    still be running on its node, so it is a choice and not a faster button.
+
+                    Only for Pods: on a Deployment or a Service there is nothing to wait for, and an
+                    option that does nothing is an option that teaches people to tick it.
+                */
+                const isPod = f[0].data.origin.kind === 'Pod'
+                const force = { on: false }
+                const others = p.length>1 ? ` (and other ${p.length-1} items)` : ''
+                const message = <Box>
+                    Are you sure you want to delete {f[0].data.origin.kind}<b> {f[0].displayName}</b>{others}?
+                    {/* On its own line: a FormControlLabel is inline-flex, so without a block of its
+                        own the checkbox sat glued to the end of the question. */}
+                    { isPod && <Box sx={{ mt: 1 }}>
+                        <FormControlLabel label={<Typography variant='body2'>Force (do not wait for it to terminate)</Typography>}
+                            control={<Checkbox size='small' onChange={(e) => { force.on = e.target.checked }} />} />
+                        <Typography variant='caption' color='warning.main' display='block'>
+                            Forcing removes the pod from Kubernetes immediately. If its node is still alive the container may keep running. Use it for a node that is unreachable.
+                        </Typography>
+                    </Box> }
+                </Box>
+                setMsgBox(MsgBoxYesNo('Delete '+f[0].data.origin.kind, message, setMsgBox, (a) => {
                     if (a === MsgBoxButtons.Yes) {
-                        sendCommand(EMagnifyCommand.DELETE, f.map(o => yamlParser.dump(o.data.origin, { indent: 2 })))
+                        const objects = f.map(o => yamlParser.dump(o.data.origin, { indent: 2 }))
+                        // 'force' travels LAST, and only when asked: without it the parameters are what they always were
+                        sendCommand(EMagnifyCommand.DELETE, force.on ? [...objects, 'force'] : objects)
                     }
                 }))
             }

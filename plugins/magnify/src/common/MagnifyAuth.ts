@@ -112,7 +112,16 @@ const reaches = (grant: IGrant, namespace: string): boolean => {
     if (grant.namespaces.length === 0) return true
     if (!namespace) return false
     return grant.namespaces.some(pattern => {
-        try { return new RegExp(`^${pattern}$`).test(namespace) }
+        /*
+            🔴 UNANCHORED, like everywhere else in Kwirth. `new RegExp(r).test(v)` is what the core's
+            `getValidValues` does, so 'kwirth' reaches 'kwirth-system' and 'pre' reaches 'pre-produccion'.
+
+            It was written anchored at first, which closed that door — and made Magnify stricter than
+            every other channel reading the SAME key. An administrator writing 'kwirth' would have got
+            one namespace here and a prefix everywhere else, with nothing saying why. Whoever wants it
+            exact writes '^kwirth$', and the security editor now says so above the field.
+        */
+        try { return new RegExp(pattern).test(namespace) }
         catch (err) { return false }   // a pattern that does not compile matches nothing
     })
 }

@@ -79,10 +79,19 @@ test('los namespaces del recurso acotan donde se ve', () => {
     const k = key(`${EMagnifyScope.READ}:pre:::`)
     assert.equal(canSee(k, 'Pod', 'pre'), true)
     assert.equal(canSee(k, 'Pod', 'pro'), false)
-    // son EXPRESIONES REGULARES, como en todo el accessKey
+    /*
+        🔴 Son EXPRESIONES REGULARES y casan SIN ANCLAR, como en todo Kwirth: 'kwirth' alcanza
+        'kwirth-system'. No es un descuido de este canal — es lo que hace `getValidValues` del core, y
+        Magnify no puede ser más estricto que el resto con la misma clave. Quien lo quiera exacto
+        escribe '^kwirth$', y el editor de seguridad lo dice encima del campo.
+    */
+    assert.equal(canSee(key(`${EMagnifyScope.READ}:kwirth:::`), 'Pod', 'kwirth-system'), true)
+    assert.equal(canSee(key(`${EMagnifyScope.READ}:^kwirth$:::`), 'Pod', 'kwirth-system'), false)
+    assert.equal(canSee(key(`${EMagnifyScope.READ}:^kwirth$:::`), 'Pod', 'kwirth'), true)
+
     const re = key(`${EMagnifyScope.READ}:pre-.*:::`)
     assert.equal(canSee(re, 'Pod', 'pre-uno'), true)
-    assert.equal(canSee(re, 'Pod', 'preuno'), false)
+    assert.equal(canSee(re, 'Pod', 'otro'), false)
     // sin namespaces, todo
     assert.equal(canSee(key(`${EMagnifyScope.READ}::::`), 'Pod', 'cualquiera'), true)
 })
