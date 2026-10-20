@@ -14,7 +14,7 @@
       node deploy/kubernetes/helm/publish-chart.mjs
 */
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { copyFileSync, existsSync, readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -43,6 +43,23 @@ if (existsSync(tgz)) {
 }
 
 console.log(`Publishing kwirth chart ${version} (app ${appVersion}) to ${repoDir}`)
+
+/*
+    ONE README, two places it has to show up: this folder, which is what GitHub renders when somebody opens
+    deploy/kubernetes/helm, and the inside of the tgz, which is what `helm show readme` and any chart viewer
+    read. It was written twice before, and the one down here was already saying things the chart had stopped
+    doing -- the tag was 'pinned to appVersion' when the default had been 'develop' for a while.
+
+    So it is copied at publish time, and the copy is committed with the rest: the chart folder stays
+    self-contained for anyone packaging it by hand.
+*/
+const readmeSrc = path.join(here, 'README.md')
+const readmeDst = path.join(chartDir, 'README.md')
+if (readFileSync(readmeSrc, 'utf8') !== (existsSync(readmeDst) ? readFileSync(readmeDst, 'utf8') : '')) {
+    copyFileSync(readmeSrc, readmeDst)
+    console.log(`> copied README.md into the chart (${path.relative(process.cwd(), readmeDst)})`)
+}
+
 run('helm', ['lint', chartDir])
 run(process.execPath, ['--test', path.join(here, 'tests', 'chart.test.mjs')])
 run('helm', ['package', chartDir, '-d', repoDir])

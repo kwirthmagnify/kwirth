@@ -71,7 +71,7 @@ helm repo update
 helm install kwirth kwirth/kwirth -n kwirth --create-namespace
 ```
 
-> **Where the chart lives in this repo.** The source is [`deploy/kubernetes/helm/kwirth/`](deploy/kubernetes/helm/kwirth) — one single source, versioned in its `Chart.yaml` — and its [README](deploy/kubernetes/helm/kwirth/README.md) documents every value. What `helm repo add` downloads are the packaged `.tgz` files in [`docs/helm-charts/`](docs/helm-charts), which GitHub Pages serves as the repository above; they are built from that source by `deploy/kubernetes/helm/publish-chart.mjs` and are never edited by hand. [The folder's README](deploy/kubernetes/helm/README.md) explains the versioning and how to publish.
+> **Where the chart lives in this repo.** [`deploy/kubernetes/helm/`](deploy/kubernetes/helm) is the chart's home: its README documents **every value**, and the source itself is the `kwirth/` folder next to it, versioned in its `Chart.yaml`. What `helm repo add` downloads are the packaged `.tgz` files in [`docs/helm-charts/`](docs/helm-charts), which GitHub Pages serves as the repository above; they are built from that source by `publish-chart.mjs` and are never edited by hand. Releasing a version is [PUBLISHING.md](deploy/kubernetes/helm/PUBLISHING.md).
 
 This installs Kwirth in the `kwirth` namespace (created if needed) with the default options. Read the notes Helm prints: the chart generates the admin password on the first install and shows it there, and that is the only place it is shown in the clear.
 
@@ -100,7 +100,7 @@ helm install kwirth kwirth/kwirth -n kwirth --create-namespace \
 
 ⚠️ `readonly` does not stop Kwirth from reading Secrets. Kubernetes RBAC has no deny rules, so a role that covers every resource Kwirth watches (including CRDs, which differ from cluster to cluster) can't leave Secrets out.
 
-All the chart's values are documented in its [README](deploy/kubernetes/helm/kwirth/README.md) and in [`values.yaml`](deploy/kubernetes/helm/kwirth/values.yaml).
+All the chart's values are documented in its [README](deploy/kubernetes/helm/README.md) and in [`values.yaml`](deploy/kubernetes/helm/kwirth/values.yaml).
 
 #### Images
 The Kwirth image is published in three variants, built from the same Dockerfile and the same core. The only difference is which extensions are already **inside** the image when the container starts:

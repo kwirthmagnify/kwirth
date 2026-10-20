@@ -1,6 +1,0 @@
-apiVersion: v2
-name: kwirth
-description: A Helm chart for deploying Kwirth on Kubernetes
-type: application
-version: 0.1.5
-appVersion: "0.4.235"

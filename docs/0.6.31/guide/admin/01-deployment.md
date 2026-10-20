@@ -60,7 +60,7 @@ Anything missing can still be installed at runtime from the marketplace (see [Ex
 | `kwirth.image.tag` | Image tag (and with it, the variant) | the chart's `appVersion` |
 | `kwirth.ingress.*` | Ingress (`nginx` / `agic`), hostname and TLS | disabled |
 
-Every value is documented in the chart's [README](https://github.com/kwirthmagnify/kwirth/blob/master/deploy/kubernetes/helm/kwirth/README.md).
+Every value is documented in the chart's [README](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/kubernetes/helm).
 
 > **Channels are plugins.** Log, Metrics, Alert, Ops, Trivy, Fileman and the rest are **plugins**, not Helm flags: install them from the plugin management UI (see [Extending kwirth](08-extending-kwirth)), or run an image that already carries them.
 

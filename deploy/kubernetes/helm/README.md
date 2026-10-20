@@ -1,56 +1,241 @@
-# Kwirth Helm chart: source, versioning and publishing
+# Kwirth Helm chart
 
-This folder is the **source** of the chart. What users install comes from the repository at
-`https://kwirthmagnify.dev/helm-charts`, which is nothing more than the `docs/helm-charts` folder of this
-repo served by GitHub Pages (`docs/` is the website root, `CNAME` = `kwirthmagnify.dev`).
+[Kwirth](https://kwirthmagnify.dev) is a Kubernetes observability platform: logs, metrics, ops and a
+marketplace of extensions (plugins, providers, senders, webhooks, IdP connectors...), served from a single
+pod inside your cluster. Source and issues: <https://github.com/kwirthmagnify/kwirth>.
 
+**This page is the chart's reference: how to install it and every value it takes.** The chart's source is
+[`deploy/kubernetes/helm/kwirth/`](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/kubernetes/helm/kwirth),
+and what `helm repo add` downloads are the packaged `.tgz` files in
+[`docs/helm-charts/`](https://github.com/kwirthmagnify/kwirth/tree/master/docs/helm-charts), which GitHub
+Pages serves — built from that source, never edited by hand. If you came to **release** a version rather
+than to use one, that is
+[PUBLISHING.md](https://github.com/kwirthmagnify/kwirth/blob/master/deploy/kubernetes/helm/PUBLISHING.md):
+versioning, the tests and the publish script.
+
+## Install
+
+```bash
+helm repo add kwirth https://kwirthmagnify.dev/helm-charts
+helm repo update
+helm install kwirth kwirth/kwirth -n kwirth --create-namespace
 ```
-deploy/kubernetes/helm/
-├── kwirth/             the chart (ONE source; the version lives in Chart.yaml)
-│   ├── Chart.yaml
-│   ├── values.yaml
-│   ├── README.md       the user-facing reference, packaged inside the tgz
-│   └── templates/
-├── tests/
-│   ├── chart.test.mjs  unit tests: helm template + assertions (no cluster needed)
-│   └── run-e2e.mjs     e2e against the current kube context: install, upgrade, uninstall, and the migration from 0.1.5
-├── publish-chart.mjs   lint + tests + package + index, into docs/helm-charts
-└── 0.1.0 … 0.1.5       the old layout (a full copy per version). Kept for the record, no longer packaged.
+
+Then follow the notes Helm prints: without an Ingress, a `port-forward` to the service and
+`http://localhost:3883/kwirth`.
+
+**Read the notes before you close the terminal.** The chart generates the admin password on the first
+install and prints it there; that is the only place it is shown in the clear. Until somebody logs in you
+can still read it out of the `kwirth-users` Secret — the notes print the exact command — and after the
+first login the core has replaced it with a bcrypt hash and it cannot be read back at all.
+
+### Three modes
+
+`kwirth.mode` is how much of the cluster the install is allowed to touch. It is one value, and it
+carries with it everything that has to travel with it.
+
+| mode | the ClusterRole | what it gives up |
+| - | - | - |
+| `normal` | every verb on the listed API groups | nothing |
+| `readonly` | one rule: `get`, `list`, `watch` | the actions that change the cluster |
+| `zero` | there is none | everything that reads the cluster |
+
+```bash
+# everything works, including the actions that change the cluster
+helm install kwirth kwirth/kwirth -n kwirth --create-namespace
+
+# read-only: it sees everything and changes nothing
+helm install kwirth kwirth/kwirth -n kwirth --create-namespace \
+  --set kwirth.mode=readonly --set kwirth.persistence.enabled=true
+
+# zero: no permissions at all, and no credential in the container
+helm install kwirth kwirth/kwirth -n kwirth --create-namespace \
+  --set kwirth.mode=zero --set kwirth.persistence.enabled=true
 ```
 
-## Versioning
+In **`readonly`** the Magnify commands (restart, scale, cordon, drain, evict, apply, delete) and the
+`ops` and `fileman` plugins answer 403 with the button still in the UI. Do not install those two there.
+Logs, metrics, events and the resource browser work exactly the same.
 
-Two numbers, two meanings:
+In **`zero`** there is no ClusterRole, no binding and no ServiceAccount of its own, and the token the
+kubelet projects into every pod is turned off, so there is no credential in the container either. It is
+the ECS deployment, in a pod: it serves the front end, installs and runs extensions, keeps its
+configuration on the volume, uses the database, and federates against other kwirths that do have
+access. What it loses is everything that reads the cluster it lives in, so the two core channels are
+off and the chart launches the core with `FORCE=container` — without which the pod would be identified
+as a Kubernetes workload and refuse to start without an API it is not allowed to reach.
 
-| field | meaning | when it moves |
+Both of those modes keep their configuration outside the cluster, which is what `persistence` is for,
+and the chart **refuses to render** without it rather than hand you an install that looks healthy and
+loses its users on the first restart. It refuses a few other combinations too — asking for RBAC in
+`zero`, or `clusterAdmin` in `readonly`, or an `extraRules` with a write verb in it — because quietly
+picking one of two opposite answers leaves somebody believing they installed what they did not.
+
+## Upgrade from chart 0.1.x
+
+`helm upgrade` works as it is, with the same values file: the keys that still mean something are honoured
+and the dead channel switches (`channelLog`, `channelOps`, `channelTrivy`, `channelEcho`, `channelFileman`,
+`channelAlert`) are ignored, because those capabilities are plugins now. Two things change:
+
+- The image is no longer `latest`. The default tag is **`develop`**, the moving one that always carries the
+  newest core (and is therefore pulled with `Always`); an empty tag resolves to the chart `appVersion`.
+  **Pin `kwirth.image.tag` for anything you need to reproduce** (or use the 0.1.x string form
+  `kwirth.image: kwirthmagnify/kwirth:x.y.z`).
+- The `MASTERKEY` moves from the pod spec to a Secret (`<release>-env`).
+
+Users and API keys survive the upgrade: the chart reads the live `kwirth-users` Secret and `kwirth.keys`
+ConfigMap back and never overwrites them.
+
+## Values
+
+All under `kwirth:`.
+
+### Image and pod
+
+| key | default | what |
 |---|---|---|
-| `version` | the chart itself (templates, values) | every change to this folder; SemVer: patch for a fix, minor for new values or resources, major for a breaking change in values |
-| `appVersion` | the Kwirth image the chart was tested with, and the default image tag | every time the chart is re-tested against a new Kwirth release |
+| `image.repository` / `image.tag` / `image.pullPolicy` | `kwirthmagnify/kwirth` / `develop` / `IfNotPresent` | The image. A plain string (`image: repo:tag`) is also accepted, and is pulled with `Always`. 🔴 **`pullPolicy` is ignored on a moving tag**: with `develop` or `latest` the chart forces `Always`, because the image behind them changes without the tag changing and the node would otherwise serve its first cached copy for ever — through `helm upgrade` included, since nothing in the Pod spec changes either. Pin a tag and `pullPolicy` does what you say. |
+| `imagePullSecrets` | `[]` | For a private registry. |
+| `replicas` | `1` | More than one needs sticky sessions at the Ingress (the nginx defaults set them). |
+| `resources` | 256Mi..2Gi, up to 1 CPU | Pod resources. |
+| `podAnnotations`, `podLabels`, `podSecurityContext`, `securityContext`, `nodeSelector`, `tolerations`, `affinity`, `priorityClassName` | empty | Passed through as they are. |
+| `terminationGracePeriodSeconds` | `5` | |
+| `probes.startup` / `probes.readiness` / `probes.liveness` | see values.yaml | Timings; all three hit `GET /healthz`. |
+| `extraEnv`, `extraEnvFrom`, `extraVolumes`, `extraVolumeMounts` | `[]` | Anything else the container needs. IdP connectors resolve `${VAR}` placeholders against the environment, so this is where their client secrets go. |
 
-A published chart is **immutable**: `publish-chart.mjs` refuses to package a version whose tgz is already in
-the repository. To ship a change, bump `version`.
+### Configuration (`config.*`, one env var each)
 
-The old layout (one folder per version, all re-packaged on every publish) is gone: it re-generated the old
-tgz files every time, which is how the same `0.1.5` ended up twice in `index.yaml` with two different
-`appVersion`s. Git history is the record of what each version contained.
+`kwirth.mode` sits above this table rather than in it: it is `normal` or `readonly`, and it is the one
+value that decides several others. See [Two modes](#two-modes).
 
-## Publishing
+| key | env var | default | what |
+|---|---|---|---|
+| `rootpath` | `ROOTPATH` | `/kwirth` | URL path Kwirth is served under. Empty = the root. |
+| `port` | `PORT` | `3883` | Listening (and container) port. |
+| `masterkey` | `MASTERKEY` | generated | Signs access keys and, with a filesystem store, encrypts secrets at rest. **Empty generates a random one on the first install** and keeps it in `<release>-kwirth-masterkey`, which is looked up on every upgrade and kept on uninstall. Changing it later is data loss: every access key stops validating and a filesystem store stops decrypting. Set your own if you deploy from rendered output (Argo CD and friends) — `helm template` has no cluster to look the live one up in, so it would mint a new key on every sync. |
+| `auth` | `AUTH` | `kwirth` | `kwirth` (built-in users) or the id of an installed IdP connector. |
+| `metricsInterval` | `METRICSINTERVAL` | `15` | Seconds between metrics samples. |
+| `previousLogLines` | `PREVIOUSLOGLINES` | unset | Lines of the previous container log shown after a restart. |
+| `bodyLimit` | `BODYLIMIT` | `8mb` | Request body ceiling (log ingestion). |
+| `keepAlive` | `KEEPALIVE` | `65000` | Idle connection keep-alive, ms. |
+| `front` | `FRONT` | `true` | Serve the web front end. |
+| `ansiLog` | `ANSILOG` | `true` | Colour in the log. |
+| `exitLog` | `EXITLOG` | unset | Log the reason on exit. It also writes the post-mortem to a `kwirth-secure-log` ConfigMap, which mode `readonly` cannot. Unset means `true` in `normal` and `false` in `readonly`. |
+| `clusterName` | `KWIRTH_CLUSTER_NAME` | unset | The name Kwirth gives its cluster. |
+| `store` | `KWIRTH_STORE` | unset | Empty/`etcd` = Secrets and ConfigMaps in the namespace. A path = encrypted files there (see persistence). |
+| `license` | `KWIRTH_LICENSE` | unset | The license blob for paid extensions. Delivered through a Secret. |
 
+`existingSecret`: the name of a Secret of yours with `MASTERKEY` and, if needed, `KWIRTH_LICENSE` and
+`KWIRTH_SQL_PASSWORD`. When set, the chart renders no Secret and ignores `masterkey`, `license` and
+`sql.password`.
+
+### Configuration persistence (`persistence.*`)
+
+By default Kwirth keeps its configuration in Secrets and ConfigMaps of its own namespace. Where that is not
+wanted, a volume:
+
+| key | default | what |
+|---|---|---|
+| `persistence.enabled` | `false` | Mount a claim and set `KWIRTH_STORE` to `mountPath`. Switches the Deployment to `Recreate`. |
+| `persistence.existingClaim` | `""` | Use this claim instead of creating one. |
+| `persistence.storageClass`, `accessModes`, `size` | `""`, `[ReadWriteOnce]`, `1Gi` | The created claim. It is kept on uninstall. |
+| `persistence.mountPath` | `/mnt/kwirth-data` | |
+
+### Data persistence (`sql.*`)
+
+Extensions with data of their own (findings, histories, conversations) use a PostgreSQL server that the
+chart does **not** deploy. The core connects lazily, only when an extension asks.
+
+| key | env var | default |
+|---|---|---|
+| `sql.enabled` | | `false` |
+| `sql.client` | `KWIRTH_SQL_CLIENT` | `pg` |
+| `sql.host`, `sql.port` | `KWIRTH_SQL_HOST`, `KWIRTH_SQL_PORT` | `""`, `5432` |
+| `sql.user`, `sql.password` | `KWIRTH_SQL_USER`, `KWIRTH_SQL_PASSWORD` (Secret) | `postgres`, `""` |
+| `sql.ssl` | `KWIRTH_SQL_SSL` | `false` |
+| `sql.maintenanceDb` | `KWIRTH_SQL_MAINTDB` | `postgres` |
+
+### Users
+
+| key | default | what |
+|---|---|---|
+| `users.bootstrap` | unset | Create the `kwirth-users` Secret on the first install. Never overwritten afterwards; kept on uninstall (delete it by hand for a clean wipe). Unset means `true` in mode `normal` and `false` in `readonly`, where the core keeps its users on the volume and seeds the admin itself. |
+| `users.adminId` / `users.adminName` | `admin` / `Nicklaus Wirth` | Who the bootstrap admin is. |
+| `users.adminPassword` | `""` | **Empty generates one and prints it in the install notes.** Set your own to skip that; either way it is stored as a bcrypt hash, never in the clear. |
+| `users.admin` | `""` | The whole user as base64 JSON, for full control. Wins over the three above, and then nothing is generated or printed. |
+
+The password is stored as `bcrypt(sha256(password))`, which is how the core compares it — the browser
+sends the SHA-256, never the clear text. **A password stored in the clear is refused at login**, so do
+not hand-craft a `users.admin` blob with one inside.
+
+### RBAC and service account
+
+The ClusterRole follows `kwirth.mode`. In `readonly` it is one rule, `get`/`list`/`watch` on everything,
+and the keys below that shape the permissive role are **ignored** — the wildcard already covers them,
+CustomResourceDefinitions included, which is why it is a wildcard. The chart refuses to render
+`readonly` together with `rbac.clusterAdmin`, or with an `rbac.extraRules` that grants a write verb,
+rather than letting either quietly undo the mode.
+
+| key | default | what |
+|---|---|---|
+| `serviceAccount.create` / `name` / `annotations` | `true` / `<release>-sa` / `{}` | Annotations are where IRSA / Workload Identity go. The 0.1.x `sa.serviceAccount.annotations` still works. |
+| `rbac.create` | `true` | ClusterRole + ClusterRoleBinding. |
+| `rbac.clusterAdmin` | `false` | `*` on `*` (the 0.1.x behaviour). Refused in mode `readonly`. |
+| `rbac.apiGroups` | core, apps, batch, autoscaling, policy, coordination, metrics, rbac, networking, storage, apiextensions, admissionregistration, node, scheduling, events, discovery, aquasecurity.github.io | Every verb on every resource of these groups. Ignored in mode `readonly`. |
+| `rbac.extraApiGroups` | `[]` | For providers that watch CRDs (`fleet.cattle.io`, `longhorn.io`, `openreports.io`...). Ignored in mode `readonly`. |
+| `rbac.extraRules` | `[]` | Whole PolicyRule objects. In mode `readonly` only `get`, `list` and `watch` are accepted. |
+
+### Service and Ingress
+
+| key | default | what |
+|---|---|---|
+| `service.type` / `service.port` / `service.annotations` | `ClusterIP` / `3883` / `{}` | |
+| `ingress.enabled` | `false` | |
+| `ingress.controller` | `nginx` | `nginx`, `agic` or `generic`. nginx gets sticky sessions and one-hour proxy timeouts (websockets); agic gets its health probe settings. |
+| `ingress.className` | controller default | `nginx` / `azure-application-gateway`; required for `generic`. |
+| `ingress.annotations` | `{}` | Merged over the controller defaults; yours win. |
+| `ingress.hostname` | `www.myhost.com` | |
+| `ingress.tls` | `[]` | Generic TLS: `[{ secretName, hosts }]`. |
+| `ingress.nginx.tls` / `ingress.nginx.secret` | `false` / — | TLS the 0.1.x way. |
+| `ingress.agic.privateip` / `ingress.agic.timeout` | `false` / `"300"` | |
+
+The Ingress path is `rootpath` (or `/`), `Prefix`.
+
+## Examples
+
+Pinned image, nginx with TLS, a PostgreSQL for the extensions:
+
+```yaml
+kwirth:
+  image:
+    tag: 0.6.38
+  config:
+    rootpath: /kwirth
+    masterkey: change-me
+  ingress:
+    enabled: true
+    controller: nginx
+    hostname: kwirth.example.com
+    nginx:
+      tls: true
+      secret: kwirth-example-com-tls
+  sql:
+    enabled: true
+    host: postgres.data.svc
+    user: kwirth
+    password: change-me-too
 ```
-node deploy/kubernetes/helm/publish-chart.mjs
+
+Configuration on a volume, no writes to Secrets/ConfigMaps, license for the paid extensions:
+
+```yaml
+kwirth:
+  persistence:
+    enabled: true
+    size: 2Gi
+  config:
+    license: <the license blob>
+  rbac:
+    extraApiGroups:
+      - fleet.cattle.io
 ```
-
-It lints, runs the unit tests, packages into `docs/helm-charts` and regenerates `index.yaml` from every tgz
-present there, all with the website URL. Then the closing checklist as usual: commit `docs/helm-charts`
-(the new tgz and the index), tag `chart/kwirth@<version>` and push. Pages publishes it with the commit.
-
-## Testing
-
-```
-node --test deploy/kubernetes/helm/tests/chart.test.mjs   # unit: needs helm, no cluster
-node deploy/kubernetes/helm/tests/run-e2e.mjs             # e2e: needs a cluster (current kube context), creates and deletes its own namespace
-```
-
-The unit tests render the chart with `helm template` and assert on values. What they cannot see is the
-behaviour that depends on `lookup` (the users Secret is re-rendered from the live one on upgrade so that
-passwords survive), and that is precisely what the e2e checks, together with the upgrade from chart 0.1.5.

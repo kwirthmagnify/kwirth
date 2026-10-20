@@ -1,8 +1,17 @@
-# Kwirth
+# Kwirth Helm chart
 
 [Kwirth](https://kwirthmagnify.dev) is a Kubernetes observability platform: logs, metrics, ops and a
 marketplace of extensions (plugins, providers, senders, webhooks, IdP connectors...), served from a single
 pod inside your cluster. Source and issues: <https://github.com/kwirthmagnify/kwirth>.
+
+**This page is the chart's reference: how to install it and every value it takes.** The chart's source is
+[`deploy/kubernetes/helm/kwirth/`](https://github.com/kwirthmagnify/kwirth/tree/master/deploy/kubernetes/helm/kwirth),
+and what `helm repo add` downloads are the packaged `.tgz` files in
+[`docs/helm-charts/`](https://github.com/kwirthmagnify/kwirth/tree/master/docs/helm-charts), which GitHub
+Pages serves — built from that source, never edited by hand. If you came to **release** a version rather
+than to use one, that is
+[PUBLISHING.md](https://github.com/kwirthmagnify/kwirth/blob/master/deploy/kubernetes/helm/PUBLISHING.md):
+versioning, the tests and the publish script.
 
 ## Install
 
