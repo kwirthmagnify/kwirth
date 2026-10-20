@@ -6,12 +6,12 @@
       1. refuses to publish a chart version that is already in the repository (a published tgz is immutable:
          bump 'version' in Chart.yaml instead)
       2. helm lint
-      3. the unit tests (node --test deploy/helm/tests/chart.test.mjs)
+      3. the unit tests (node --test deploy/kubernetes/helm/tests/chart.test.mjs)
       4. helm package  -> docs/helm-charts/kwirth-<version>.tgz
       5. helm repo index, regenerated from every tgz in the folder, with the website URL
 
     It does NOT commit, tag or push: that is the closing checklist. Run from anywhere:
-      node deploy/helm/publish-chart.mjs
+      node deploy/kubernetes/helm/publish-chart.mjs
 */
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'

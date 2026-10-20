@@ -4,7 +4,7 @@
     cluster — which is also why the lookup-based behaviour of the users Secret (keep the live one on upgrade)
     is out of their reach: that one lives in the e2e run against a real cluster (see run-e2e.mjs).
 
-    Run:  node --test deploy/helm/tests/chart.test.mjs
+    Run:  node --test deploy/kubernetes/helm/tests/chart.test.mjs
 */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -56,12 +56,40 @@ test('defaults: the eight resources, with the 0.1.x names so upgrades keep worki
 test('defaults: the image is develop, never latest, and appVersion stays a real version', () => {
     const dep = find(render(), 'Deployment')
     assert.equal(container(dep).image, 'kwirthmagnify/kwirth:develop')
-    assert.equal(container(dep).imagePullPolicy, 'IfNotPresent')
     assert.doesNotMatch(String(chartMeta.appVersion), /latest|develop/)
 })
 
-test('a pinned tag wins over the default', () => {
-    assert.equal(container(find(render(['--set', 'kwirth.image.tag=0.6.65']), 'Deployment')).image, 'kwirthmagnify/kwirth:0.6.65')
+/*
+    🔴 A MOVING TAG PULLS ALWAYS, and the values do not get a say.
+
+    'develop' and 'latest' do not name a build, they name "the newest one": the image behind them changes
+    without the tag changing. With IfNotPresent -- which is this chart's default, and the right thing for a
+    pinned tag -- the kubelet sees it already has something called 'develop' and never pulls again. The node
+    serves what it cached the first time for ever, and `helm upgrade` changes nothing because nothing in the
+    Pod spec changed either.
+
+    This test used to assert IfNotPresent on the default values, which is how the bug got written down as
+    the expected behaviour. It cost a k3d coming up on 0.5.45 against a repository on 0.6.9x, with the
+    deployment looking perfectly healthy and the only clue being Kwirth's own 'new version available' line.
+*/
+test('🔴 a moving tag (develop/latest) forces Always, whatever pullPolicy says', () => {
+    for (const tag of ['develop', 'latest']) {
+        const dep = find(render(['--set', `kwirth.image.tag=${tag}`]), 'Deployment')
+        assert.equal(container(dep).imagePullPolicy, 'Always', `tag '${tag}' did not force Always`)
+        // even when the operator asks for the opposite: a cached moving tag is not a preference, it is a bug
+        const forced = find(render(['--set', `kwirth.image.tag=${tag}`, '--set', 'kwirth.image.pullPolicy=IfNotPresent']), 'Deployment')
+        assert.equal(container(forced).imagePullPolicy, 'Always', `tag '${tag}' honoured IfNotPresent`)
+    }
+    // and the default values, which carry tag: develop
+    assert.equal(container(find(render(), 'Deployment')).imagePullPolicy, 'Always')
+})
+
+test('a pinned tag wins over the default, and keeps the pullPolicy it is given', () => {
+    const dep = find(render(['--set', 'kwirth.image.tag=0.6.65']), 'Deployment')
+    assert.equal(container(dep).image, 'kwirthmagnify/kwirth:0.6.65')
+    // a pinned tag names one build: not pulling it again is correct, and it is what the values are for
+    assert.equal(container(dep).imagePullPolicy, 'IfNotPresent')
+    assert.equal(container(find(render(['--set', 'kwirth.image.tag=0.6.65', '--set', 'kwirth.image.pullPolicy=Always']), 'Deployment')).imagePullPolicy, 'Always')
 })
 
 test('defaults: the env is exactly what the core reads today', () => {

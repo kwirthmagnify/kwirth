@@ -88,9 +88,21 @@ appVersion as the default tag.
 
 {{/*
 Pull policy: a string image keeps the 0.1.x behaviour (Always), the object says.
+
+🔴 EXCEPT on a MOVING tag, where Always is forced whatever the values say. 'develop' and 'latest' do not
+name a build, they name "the newest one", and the image behind them changes without the tag changing. With
+IfNotPresent -- which is this chart's default, and right for a pinned tag -- the kubelet sees it already has
+something called 'develop' and never pulls again: the node keeps serving whatever it cached the first time,
+for ever, and a `helm upgrade` changes nothing because nothing in the Pod spec changed either.
+
+That is not theoretical. A k3d running the chart with its default tag came up on 0.5.45 while the repository
+was on 0.6.9x, and the only visible sign was Kwirth's own "new version available" notice in the log -- the
+deployment looked healthy and up to date.
 */}}
 {{- define "kwirth.imagePullPolicy" -}}
 {{- if kindIs "string" .Values.kwirth.image }}
+{{- "Always" }}
+{{- else if has (default .Chart.AppVersion .Values.kwirth.image.tag) (list "develop" "latest") }}
 {{- "Always" }}
 {{- else }}
 {{- default "IfNotPresent" .Values.kwirth.image.pullPolicy }}

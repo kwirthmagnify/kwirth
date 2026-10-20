@@ -18,7 +18,7 @@
       - in readonly, the API server really does deny exec, eviction, delete, patch and escalate — and
         the core seeds its admin on the VOLUME, with no users Secret anywhere, which the login proves
 
-    Run:  node deploy/helm/tests/run-e2e.mjs
+    Run:  node deploy/kubernetes/helm/tests/run-e2e.mjs
     Exit code 0 = every check passed. Needs helm and kubectl on the PATH.
 */
 import { execFileSync, spawn } from 'node:child_process'

@@ -71,6 +71,8 @@ helm repo update
 helm install kwirth kwirth/kwirth -n kwirth --create-namespace
 ```
 
+> **Where the chart lives in this repo.** The source is [`deploy/kubernetes/helm/kwirth/`](deploy/kubernetes/helm/kwirth) — one single source, versioned in its `Chart.yaml` — and its [README](deploy/kubernetes/helm/kwirth/README.md) documents every value. What `helm repo add` downloads are the packaged `.tgz` files in [`docs/helm-charts/`](docs/helm-charts), which GitHub Pages serves as the repository above; they are built from that source by `deploy/kubernetes/helm/publish-chart.mjs` and are never edited by hand. [The folder's README](deploy/kubernetes/helm/README.md) explains the versioning and how to publish.
+
 This installs Kwirth in the `kwirth` namespace (created if needed) with the default options. Read the notes Helm prints: the chart generates the admin password on the first install and shows it there, and that is the only place it is shown in the clear.
 
 The option that matters most is **`kwirth.mode`**: how much of the cluster Kwirth is allowed to touch. It is a single value, and everything that has to change with it (RBAC, service account, where the configuration lives, the container's security context) changes with it.

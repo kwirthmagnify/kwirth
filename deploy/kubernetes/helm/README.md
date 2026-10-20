@@ -5,7 +5,7 @@ This folder is the **source** of the chart. What users install comes from the re
 repo served by GitHub Pages (`docs/` is the website root, `CNAME` = `kwirthmagnify.dev`).
 
 ```
-deploy/helm/
+deploy/kubernetes/helm/
 ├── kwirth/             the chart (ONE source; the version lives in Chart.yaml)
 │   ├── Chart.yaml
 │   ├── values.yaml
@@ -37,7 +37,7 @@ tgz files every time, which is how the same `0.1.5` ended up twice in `index.yam
 ## Publishing
 
 ```
-node deploy/helm/publish-chart.mjs
+node deploy/kubernetes/helm/publish-chart.mjs
 ```
 
 It lints, runs the unit tests, packages into `docs/helm-charts` and regenerates `index.yaml` from every tgz
@@ -47,8 +47,8 @@ present there, all with the website URL. Then the closing checklist as usual: co
 ## Testing
 
 ```
-node --test deploy/helm/tests/chart.test.mjs   # unit: needs helm, no cluster
-node deploy/helm/tests/run-e2e.mjs             # e2e: needs a cluster (current kube context), creates and deletes its own namespace
+node --test deploy/kubernetes/helm/tests/chart.test.mjs   # unit: needs helm, no cluster
+node deploy/kubernetes/helm/tests/run-e2e.mjs             # e2e: needs a cluster (current kube context), creates and deletes its own namespace
 ```
 
 The unit tests render the chart with `helm template` and assert on values. What they cannot see is the

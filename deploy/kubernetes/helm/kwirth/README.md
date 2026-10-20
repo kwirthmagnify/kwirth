@@ -68,8 +68,10 @@ picking one of two opposite answers leaves somebody believing they installed wha
 and the dead channel switches (`channelLog`, `channelOps`, `channelTrivy`, `channelEcho`, `channelFileman`,
 `channelAlert`) are ignored, because those capabilities are plugins now. Two things change:
 
-- The image is **pinned** to the chart `appVersion` instead of `latest`. Set `kwirth.image.tag` (or the
-  0.1.x string form `kwirth.image: kwirthmagnify/kwirth:x.y.z`) to choose another.
+- The image is no longer `latest`. The default tag is **`develop`**, the moving one that always carries the
+  newest core (and is therefore pulled with `Always`); an empty tag resolves to the chart `appVersion`.
+  **Pin `kwirth.image.tag` for anything you need to reproduce** (or use the 0.1.x string form
+  `kwirth.image: kwirthmagnify/kwirth:x.y.z`).
 - The `MASTERKEY` moves from the pod spec to a Secret (`<release>-env`).
 
 Users and API keys survive the upgrade: the chart reads the live `kwirth-users` Secret and `kwirth.keys`
@@ -83,7 +85,7 @@ All under `kwirth:`.
 
 | key | default | what |
 |---|---|---|
-| `image.repository` / `image.tag` / `image.pullPolicy` | `kwirthmagnify/kwirth` / `""` (= appVersion) / `IfNotPresent` | The image. A plain string (`image: repo:tag`) is also accepted, and is pulled with `Always`. |
+| `image.repository` / `image.tag` / `image.pullPolicy` | `kwirthmagnify/kwirth` / `develop` / `IfNotPresent` | The image. A plain string (`image: repo:tag`) is also accepted, and is pulled with `Always`. 🔴 **`pullPolicy` is ignored on a moving tag**: with `develop` or `latest` the chart forces `Always`, because the image behind them changes without the tag changing and the node would otherwise serve its first cached copy for ever — through `helm upgrade` included, since nothing in the Pod spec changes either. Pin a tag and `pullPolicy` does what you say. |
 | `imagePullSecrets` | `[]` | For a private registry. |
 | `replicas` | `1` | More than one needs sticky sessions at the Ingress (the nginx defaults set them). |
 | `resources` | 256Mi..2Gi, up to 1 CPU | Pod resources. |

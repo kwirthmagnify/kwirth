@@ -55,7 +55,15 @@ kwirth:
     # needs it to log in at all, because earlier cores rejected the $2a$ bcrypt the chart writes.
     # Do NOT use "latest": it is not moved with every release.
     tag: develop
-    # When to pull. IfNotPresent is right for a pinned tag. Always is forced when a string image is used.
+    # When to pull. IfNotPresent is right for a PINNED tag, and that is what this setting is for.
+    #
+    # 🔴 It is IGNORED on a moving tag: with 'develop' or 'latest' the chart forces Always, because the
+    # image behind them changes without the tag changing. With IfNotPresent the node keeps serving the
+    # copy it cached the first time — for ever, and through `helm upgrade`, since nothing in the Pod spec
+    # changes either. A k3d came up on 0.5.45 against a repository on 0.6.9x exactly like this, looking
+    # perfectly healthy.
+    #
+    # Always is also forced when the image is given as a plain string (0.1.x compatibility).
     pullPolicy: IfNotPresent
 
   # Pull secrets for a private registry. List of { name: "my-secret" } objects.
