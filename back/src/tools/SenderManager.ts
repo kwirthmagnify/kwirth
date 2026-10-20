@@ -10,6 +10,7 @@ import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
+import { updateIndex } from './IndexLock'
 
 export interface ISenderMeta {
     id: string
@@ -379,10 +380,22 @@ export class SenderManager implements ISenderAccess {
             await this.configMaps.write(`kwirth-sender-${meta.id}-meta`, meta)
             await this.configMaps.write(`kwirth-sender-${meta.id}-back`, meta.backStored ? { code: backCompressed, compressed: true } : null)
 
-            const existingIdx = index.findIndex(s => s.id === meta.id)
-            if (existingIdx >= 0) index[existingIdx] = meta
-            else index.push(meta)
-            await this.configMaps.write('kwirth-senders-index', index)
+            /*
+                🔴 RE-READ INSIDE THE LOCK, instead of writing the list read many awaits ago: between
+                that read and here sit the download and the code writes, in which another install can
+                have added ITS entry. Writing the stale list dropped it silently while the thing stayed
+                registered in memory, so a retry answered 'already installed' and the list never showed
+                it (see IndexLock.ts).
+            */
+            await updateIndex<ISenderMeta>('kwirth-senders-index',
+                async () => (await this.configMaps.read('kwirth-senders-index', []) as ISenderMeta[]) || [],
+                async (list) => { await this.configMaps.write('kwirth-senders-index', list) },
+                (list) => {
+                    const at = list.findIndex(e => e.id === meta.id)
+                    if (at >= 0) list[at] = meta
+                    else list.push(meta)
+                    return list
+                })
             if (!this.installedIds.includes(meta.id)) this.installedIds.push(meta.id)
             this.installedMetas.set(meta.id, meta)
 
@@ -425,7 +438,11 @@ export class SenderManager implements ISenderAccess {
         this.installedIds = this.installedIds.filter(i => i !== id)
 
         const index = (await this.configMaps.read('kwirth-senders-index', []) as ISenderMeta[]) || []
-        await this.configMaps.write('kwirth-senders-index', index.filter(s => s.id !== id))
+        // re-read inside the lock: a removal must not write back a list that predates somebody else's install
+        await updateIndex<ISenderMeta>('kwirth-senders-index',
+            async () => (await this.configMaps.read('kwirth-senders-index', []) as ISenderMeta[]) || [],
+            async (list) => { await this.configMaps.write('kwirth-senders-index', list) },
+            (list) => list.filter(s => s.id !== id))
         await this.configMaps.write(`kwirth-sender-${id}-meta`, null)
         await this.configMaps.write(`kwirth-sender-${id}-back`, null)
         await this.configMaps.write(`kwirth-sender-${id}-front`, null)

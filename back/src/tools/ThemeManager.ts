@@ -9,6 +9,7 @@ import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHea
 import { assertInstallable } from './ExtensionInstallGuard'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 import { IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
+import { updateIndex } from './IndexLock'
 
 export interface IThemeMeta {
     id: string
@@ -168,10 +169,21 @@ export class ThemeManager {
 
             await this.configMaps.write(`kwirth-theme-${meta.id}`, { meta, code: meta.frontStored ? frontCompressed : undefined, compressed: true })
 
-            const existingIdx = index.findIndex(t => t.id === meta.id)
-            if (existingIdx >= 0) index[existingIdx] = meta
-            else index.push(meta)
-            await this.configMaps.write('kwirth-themes-index', index)
+            /*
+                🔴 RE-READ INSIDE THE LOCK, instead of writing the list read many awaits ago: between that read
+                and here sit the download and the code writes, in which another install can have added ITS
+                entry. Writing the stale list dropped it silently while the thing stayed registered in memory,
+                so a retry answered 'already installed' and the list never showed it (see IndexLock.ts).
+            */
+            await updateIndex<IThemeMeta>('kwirth-themes-index',
+                async () => (await this.configMaps.read('kwirth-themes-index', []) as IThemeMeta[]) || [],
+                async (list) => { await this.configMaps.write('kwirth-themes-index', list) },
+                (list) => {
+                    const at = list.findIndex(e => e.id === meta.id)
+                    if (at >= 0) list[at] = meta
+                    else list.push(meta)
+                    return list
+                })
             if (!this.installedIds.includes(meta.id)) this.installedIds.push(meta.id)
 
             logInfo(ELogComponent.CORE, `Theme '${meta.id}' v${meta.version} installed`)
@@ -206,7 +218,11 @@ export class ThemeManager {
 
     private async _doUninstall(id: string, index: IThemeMeta[]): Promise<void> {
         this.installedIds = this.installedIds.filter(i => i !== id)
-        await this.configMaps.write('kwirth-themes-index', index.filter(t => t.id !== id))
+        // re-read inside the lock: a removal must not write back a list that predates somebody else's install
+        await updateIndex<IThemeMeta>('kwirth-themes-index',
+            async () => (await this.configMaps.read('kwirth-themes-index', []) as IThemeMeta[]) || [],
+            async (list) => { await this.configMaps.write('kwirth-themes-index', list) },
+            (list) => list.filter(t => t.id !== id))
         await this.configMaps.write(`kwirth-theme-${id}`, null)
         // The preview's key is still deleted even though the feature no longer exists: it may have been
         // left written by an earlier installation, and uninstalling has to leave everything clean.

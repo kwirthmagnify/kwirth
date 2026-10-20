@@ -33,6 +33,20 @@ test.describe('gestores migrados al generico: logins y docs', () => {
         await dismissOpenDialogs(page)
     })
 
+    /*
+        🔴 The dialog is closed after EVERY test, not only at the end.
+
+        These run serially and each one opens its own manager, so a test that ends without closing
+        leaves the next unable to open anything — and `test.skip()` ends it RIGHT THERE, skipping the
+        `dismissOpenDialogs` at the bottom. Adding the first skip to this file turned the next test red
+        for that reason alone, which reads like a product failure and is not one.
+
+        Here and not in each test: the ones that do close are left closing nothing, which costs nothing.
+    */
+    test.afterEach(async () => {
+        await dismissOpenDialogs(page).catch(() => {})
+    })
+
     test.afterAll(async () => {
         await dismissOpenDialogs(page).catch(() => {})
         await page.close()
@@ -58,10 +72,22 @@ test.describe('gestores migrados al generico: logins y docs', () => {
         // out. It is checked that it is there and that it is alive; it is NOT pressed, because it would
         // open a real tab.
         const dialog = await abrir('Login extensions', LOGINS)
-        await expect(dialog.getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
 
+        /*
+            ⚠️ It needs a login INSTALLED, and an environment may have none: they are all paid ones, so a
+            core without the private marketplace, or one where the last one was uninstalled, has an empty
+            section and nothing to check. It used to wait 60 s for a version chip and go red, which reads
+            exactly like a broken product and is not one — it cost a diagnosis on 2026-10-20, with the
+            cluster's configmaps as the thing that settled it (there is no kwirth-logins-index at all).
+
+            Skipped rather than adapted: what this guards is that EVERY installed login offers to open
+            its page, and with none installed that sentence has nothing to be true or false about.
+        */
         const abrirPagina = dialog.locator('span[aria-label="Open login page in new tab"] button')
         const instalados = await dialog.locator('span[aria-label^="Uninstall"] button, span[aria-label^="Dev login"] button, span[aria-label^="Installed via pack"] button').count()
+        test.skip(instalados === 0, 'no hay ninguna extension de login instalada en este entorno')
+
+        await expect(dialog.getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
         expect(await abrirPagina.count(), 'ningun login instalado ofrece abrir su pagina').toBeGreaterThan(0)
         expect(await abrirPagina.count(), 'la accion no sale en TODOS los instalados').toBe(instalados)
         await expect(abrirPagina.first()).toBeEnabled()
@@ -76,13 +102,15 @@ test.describe('gestores migrados al generico: logins y docs', () => {
     test('logins: el engranaje solo en los que declaran configuracion', async () => {
         // canConfigure belongs to the CARD and not to the type: a login with no configSchema has nothing to open.
         const dialog = await abrir('Login extensions', LOGINS)
-        await expect(dialog.getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
 
         // The gear stays visible and disabled on those that declare nothing (the project's UI rule), so
         // what tells one card from another is how many are ALIVE.
         const vivas = await dialog.locator('button[aria-label="Configure"]:not([disabled])').count()
         const instalados = await dialog.locator('span[aria-label^="Uninstall"] button, span[aria-label^="Dev login"] button, span[aria-label^="Installed via pack"] button').count()
-        expect(instalados, 'no hay logins instalados con los que comprobar nada').toBeGreaterThan(0)
+        // same as above: with none installed there is nothing for this sentence to be true or false about
+        test.skip(instalados === 0, 'no hay ninguna extension de login instalada en este entorno')
+
+        await expect(dialog.getByText(/^v\d+\.\d+\.\d+$/).first()).toBeVisible({ timeout: 60000 })
         expect(vivas, 'todas las ruedas estan vivas: se estaria ofreciendo por tipo y no por tarjeta').toBeLessThan(instalados + 1)
         await dismissOpenDialogs(page)
     })

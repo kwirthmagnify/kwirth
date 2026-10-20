@@ -12,6 +12,7 @@ import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
+import { updateIndex } from './IndexLock'
 
 export interface IPluginMeta {
     id: string
@@ -306,10 +307,22 @@ export class PluginManager {
             // be what the package carries.
             await this.configMaps.write(`kwirth-plugin-${meta.id}-front`, meta.frontStored ? { code: frontCompressed, compressed: true } : null)
 
-            const existingIdx = index.findIndex(p => p.id === meta.id)
-            if (existingIdx >= 0) index[existingIdx] = meta
-            else index.push(meta)
-            await this.configMaps.write('kwirth-plugins-index', index)
+            /*
+                🔴 RE-READ INSIDE THE LOCK, instead of writing the list read many awaits ago.
+
+                Between that read and here sit the download and the code writes — seconds, in which another
+                install can have added ITS entry. Writing the stale list dropped it silently, while the thing
+                stayed registered in memory: 'already installed' on retry, and absent from the list.
+            */
+            await updateIndex<IPluginMeta>('kwirth-plugins-index',
+                async () => (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || [],
+                async (list) => { await this.configMaps.write('kwirth-plugins-index', list) },
+                (list) => {
+                    const at = list.findIndex(e => e.id === meta.id)
+                    if (at >= 0) list[at] = meta
+                    else list.push(meta)
+                    return list
+                })
             if (!this.installedIds.includes(meta.id)) this.installedIds.push(meta.id)
 
             await this.loadBackPlugin(meta.id, backJs, registeredChannels)
@@ -356,7 +369,11 @@ export class PluginManager {
         this.onPluginUninstalled?.(id)
         this.installedIds = this.installedIds.filter(i => i !== id)
 
-        await this.configMaps.write('kwirth-plugins-index', index.filter(p => p.id !== id))
+        // re-read inside the lock: a removal must not write back a list that predates somebody else's install
+        await updateIndex<IPluginMeta>('kwirth-plugins-index',
+            async () => (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || [],
+            async (list) => { await this.configMaps.write('kwirth-plugins-index', list) },
+            (list) => list.filter(p => p.id !== id))
         await this.configMaps.write(`kwirth-plugin-${id}-back`, null)
         await this.configMaps.write(`kwirth-plugin-${id}-front`, null)
         await this.configMaps.write(`kwirth-plugin-${id}-config`, null)

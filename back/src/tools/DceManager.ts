@@ -13,6 +13,7 @@ import os from 'os'
 import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
+import { updateIndex } from './IndexLock'
 
 /*
     Manager of the `dce` extension type (plan: plans/completed/dce/PLAN.md, S1).
@@ -321,10 +322,21 @@ export class DceManager implements IDceAccess {
             meta.frontStored = await store('front', frontPath, hasFront)
 
             await this.configMaps.write(`kwirth-dce-${meta.id}-meta`, meta)
-            const existingIdx = index.findIndex(m => m.id === meta.id)
-            if (existingIdx >= 0) index[existingIdx] = meta
-            else index.push(meta)
-            await this.configMaps.write(INDEX_KEY, index)
+            /*
+                🔴 RE-READ INSIDE THE LOCK, instead of writing the list read many awaits ago: between that read
+                and here sit the download and the code writes, in which another install can have added ITS
+                entry. Writing the stale list dropped it silently while the thing stayed registered in memory,
+                so a retry answered 'already installed' and the list never showed it (see IndexLock.ts).
+            */
+            await updateIndex<IDceMeta>(INDEX_KEY,
+                async () => (await this.configMaps.read(INDEX_KEY, []) as IDceMeta[]) || [],
+                async (list) => { await this.configMaps.write(INDEX_KEY, list) },
+                (list) => {
+                    const at = list.findIndex(e => e.id === meta.id)
+                    if (at >= 0) list[at] = meta
+                    else list.push(meta)
+                    return list
+                })
             this.cachedIndex = index
 
             // Hot: the factory runs now, so a consumer installed afterwards finds the instance. On an
@@ -375,7 +387,11 @@ export class DceManager implements IDceAccess {
         await this.configMaps.write(`kwirth-dce-${id}-front`, null)
 
         const index = ((await this.configMaps.read(INDEX_KEY, []) as IDceMeta[]) || []).filter(m => m.id !== id)
-        await this.configMaps.write(INDEX_KEY, index)
+        // re-read inside the lock, as the install above
+        await updateIndex<IDceMeta>(INDEX_KEY,
+            async () => (await this.configMaps.read(INDEX_KEY, []) as IDceMeta[]) || [],
+            async (list) => { await this.configMaps.write(INDEX_KEY, list) },
+            () => index)
         this.cachedIndex = index
         this.devDces.delete(id)
 

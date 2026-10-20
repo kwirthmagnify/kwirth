@@ -125,9 +125,29 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const [installed, setInstalled] = useState<TInstalled[]>([])
     const [available, setAvailable] = useState<TEntry[]>([])
     const [loadingManifest, setLoadingManifest] = useState(false)
-    const [installingKey, setInstallingKey] = useState<string | undefined>()
-    const [uninstallingKey, setUninstallingKey] = useState<string | undefined>()
-    const [updatingKey, setUpdatingKey] = useState<string | undefined>()
+    /*
+        🔴 SETS, not a single key each.
+
+        They used to hold ONE key, and pressing Install on a second card overwrote the first: its
+        spinner vanished, its button became pressable again, and when the first install finished its
+        `finally` cleared the key of the SECOND, still in flight. Pressing two in a row — which is what
+        anybody installing several toolsets does — left both buttons live and two installs racing.
+
+        The race itself was in the back end (see IndexLock.ts) and is fixed there; this is the other
+        half: a button for something already in flight must not be pressable at all.
+    */
+    const [installingKeys, setInstallingKeys] = useState<Set<string>>(new Set())
+    const [uninstallingKeys, setUninstallingKeys] = useState<Set<string>>(new Set())
+    const [updatingKeys, setUpdatingKeys] = useState<Set<string>>(new Set())
+
+    /** Adds or removes a key from one of the in-flight sets, always on a NEW Set so React re-renders. */
+    const markBusy = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, key: string, busy: boolean) =>
+        setter(prev => {
+            const next = new Set(prev)
+            if (busy) next.add(key)
+            else next.delete(key)
+            return next
+        })
     const [installingCustom, setInstallingCustom] = useState(false)
     const [installingFile, setInstallingFile] = useState(false)
     const [customUrl, setCustomUrl] = useState('')
@@ -145,11 +165,24 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const [pluginSel, setPluginSel] = useState<Record<string, string[]>>({})
     const [pluginSelError, setPluginSelError] = useState<Record<string, string>>({})
 
+    /*
+        🔴 Which refresh is the NEWEST. Every install and uninstall refreshes the list when it finishes,
+        so several can be in flight at once — and responses do not come back in the order they were
+        asked for. An older one landing last painted a list that predated the newest install, which
+        looked exactly like "it did not install": the extension was there, the screen said it was not,
+        and pressing again got 'already installed' from the back end.
+
+        A ref and not state: it is compared inside an async function that captured its own render.
+    */
+    const loadSeq = useRef(0)
+
     const loadInstalled = async () => {
+        const mine = ++loadSeq.current
         try {
             const res = await fetch(`${backendUrl}${d.endpoints.installed}`, addGetAuthorization(accessString))
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data = await res.json() as TInstalled[]
+            if (mine !== loadSeq.current) return   // a newer refresh already answered: this one is stale
             /*
                 The TYPE's data is loaded BEFORE painting what is installed, not after.
 
@@ -161,6 +194,8 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                 painted just the same, with the chips in their default state.
             */
             if (d.loadExtraData) await d.loadExtraData().catch(() => undefined)
+            // checked again: loadExtraData is another await, and a newer refresh may have finished during it
+            if (mine !== loadSeq.current) return
             setInstalled(d.filterInstalled ? data.filter(d.filterInstalled) : data)
         }
         catch (err) {
@@ -400,16 +435,16 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const installFromCatalog = async (entry: TEntry, replaced?: TInstalled) => {
         const key = d.keyOf(entry)
         setError(undefined)
-        if (replaced) setUpdatingKey(key)
-        else setInstallingKey(key)
+        const setter = replaced ? setUpdatingKeys : setInstallingKeys
+        markBusy(setter, key, true)
         try {
             const body = { url: entry.url, marketplaceId: entry.marketplaceId, marketplaceLabel: entry.marketplaceLabel ?? PUBLIC_MARKETPLACE_LABEL, upgrade: Boolean(replaced) }
             await afterInstall(await postInstall(body), replaced)
         }
         catch (err) { setError(`Failed to ${replaced ? 'update' : 'install'} ${d.toModel(entry).name}: ${err}`) }
         finally {
-            setUpdatingKey(undefined)
-            setInstallingKey(undefined)
+            // only THIS key: clearing them all used to switch off a sibling install still in flight
+            markBusy(setter, key, false)
         }
     }
 
@@ -451,7 +486,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const uninstall = async (entry: TInstalled) => {
         const key = d.keyOf(entry)
         setError(undefined)
-        setUninstallingKey(key)
+        markBusy(setUninstallingKeys, key, true)
         try {
             const res = await fetch(`${backendUrl}${d.endpoints.remove(entry)}`, addDeleteAuthorization(accessString))
             if (!res.ok) {
@@ -464,7 +499,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
             if (entry.requiresRestart) props.onRestartRequired?.(key, ERestartAction.UNINSTALL)
         }
         catch (err) { setError(`Failed to uninstall ${d.toModel(entry).name}: ${err}`) }
-        finally { setUninstallingKey(undefined) }
+        finally { markBusy(setUninstallingKeys, key, false) }
     }
 
     // ── chips and actions per section ──────────────────────────────────────────
@@ -552,18 +587,18 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
             exactly where the row above's update was.
         */
         actions.push({
-            icon: updatingKey === key ? <CircularProgress size={16} /> : <Upgrade fontSize='small' />,
+            icon: updatingKeys.has(key) ? <CircularProgress size={16} /> : <Upgrade fontSize='small' />,
             tooltip: updateTooltip(entry, newer),
-            disabled: !newer || updatingKey === key,
+            disabled: !newer || updatingKeys.has(key),
             color: 'primary',
             onClick: () => { if (newer) installFromCatalog(newer, entry) }
         })
 
         const verdict = d.canUninstall(entry)
         actions.push({
-            icon: uninstallingKey === key ? <CircularProgress size={16} /> : <Delete fontSize='small' />,
+            icon: uninstallingKeys.has(key) ? <CircularProgress size={16} /> : <Delete fontSize='small' />,
             tooltip: verdict.allowed ? (d.uninstallTooltip ?? 'Uninstall') : (verdict.reason ?? 'Cannot be uninstalled'),
-            disabled: !verdict.allowed || uninstallingKey === key,
+            disabled: !verdict.allowed || uninstallingKeys.has(key),
             color: 'error',
             onClick: () => uninstall(entry)
         })
@@ -581,7 +616,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         const isUpgrade = Boolean(current && !updateBlocked(current)
             && current.version && entry.version && versionGreaterThan(entry.version, current.version))
         const already = Boolean(current) && !isUpgrade
-        const busy = installingKey === key || updatingKey === key
+        const busy = installingKeys.has(key) || updatingKeys.has(key)
         return [
             ...(d.actions?.(entry, EManagerSection.AVAILABLE) ?? []),
             {

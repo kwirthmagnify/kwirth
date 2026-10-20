@@ -13,6 +13,7 @@ import { assertInstallable } from './ExtensionInstallGuard'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 import { listBundledOfType, peekBundledMeta } from './BundledExtensions'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { updateIndex } from './IndexLock'
 
 /**
  * @deprecated use IProviderFieldDef from kwirth-common-back, which is the contract common to every
@@ -265,10 +266,21 @@ export class ProviderManager {
             await this.configMaps.write(`kwirth-provider-${meta.id}-meta`, meta)
             await this.configMaps.write(`kwirth-provider-${meta.id}-back`, meta.backStored ? { code: backCompressed, compressed: true } : null)
 
-            const existingIdx = index.findIndex(p => p.id === meta.id)
-            if (existingIdx >= 0) index[existingIdx] = meta
-            else index.push(meta)
-            await this.configMaps.write('kwirth-providers-index', index)
+            /*
+                🔴 RE-READ INSIDE THE LOCK, instead of writing the list read many awaits ago: between that read
+                and here sit the download and the code writes, in which another install can have added ITS
+                entry. Writing the stale list dropped it silently while the thing stayed registered in memory,
+                so a retry answered 'already installed' and the list never showed it (see IndexLock.ts).
+            */
+            await updateIndex<IProviderMeta>('kwirth-providers-index',
+                async () => (await this.configMaps.read('kwirth-providers-index', []) as IProviderMeta[]) || [],
+                async (list) => { await this.configMaps.write('kwirth-providers-index', list) },
+                (list) => {
+                    const at = list.findIndex(e => e.id === meta.id)
+                    if (at >= 0) list[at] = meta
+                    else list.push(meta)
+                    return list
+                })
             if (!this.installedIds.includes(meta.id)) this.installedIds.push(meta.id)
 
             await this.loadBackProvider(meta.id, backJs, registeredProviders)
@@ -333,7 +345,11 @@ export class ProviderManager {
         registeredProviders.delete(id)
         this.installedIds = this.installedIds.filter(i => i !== id)
 
-        await this.configMaps.write('kwirth-providers-index', index.filter(p => p.id !== id))
+        // re-read inside the lock: a removal must not write back a list that predates somebody else's install
+        await updateIndex<IProviderMeta>('kwirth-providers-index',
+            async () => (await this.configMaps.read('kwirth-providers-index', []) as IProviderMeta[]) || [],
+            async (list) => { await this.configMaps.write('kwirth-providers-index', list) },
+            (list) => list.filter(p => p.id !== id))
         await this.configMaps.write(`kwirth-provider-${id}-meta`, null)
         await this.configMaps.write(`kwirth-provider-${id}-back`, null)
         await this.configMaps.write(`kwirth-provider-${id}-front`, null)

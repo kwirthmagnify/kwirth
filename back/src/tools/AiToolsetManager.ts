@@ -10,6 +10,7 @@ import tar from 'tar'
 import os from 'os'
 import path from 'path'
 import fs from 'fs'
+import { updateIndex } from './IndexLock'
 import zlib from 'zlib'
 
 // Manager of the `aitoolset` extension type (plan: plans/ai-tools/PLAN.md, S1).
@@ -294,11 +295,24 @@ export class AiToolsetManager {
             */
             await this.configMaps.write(`kwirth-aitoolset-${meta.id}-back`, meta.backStored ? { code: backCompressed, compressed: true } : null)
 
-            const existingIdx = index.findIndex(t => t.id === meta.id)
-            if (existingIdx >= 0) index[existingIdx] = meta
-            else index.push(meta)
-            await this.configMaps.write(INDEX_KEY, index)
-            this.cachedIndex = index
+            /*
+                🔴 RE-READ INSIDE THE LOCK, do not write the list read at the top of this method.
+
+                Between that read and here sit the download, the meta write and the back.js write —
+                seconds, during which another install can have added ITS entry. Writing the stale list
+                silently dropped it: A reads [], B reads [], A writes [A], B writes [B] and A is gone
+                from the index while still registered in memory, so it answered 'already installed' and
+                never appeared in the list. Reported on aitoolsets, and every manager had it.
+            */
+            this.cachedIndex = await updateIndex<IAiToolsetMeta>(INDEX_KEY,
+                async () => (await this.configMaps.read(INDEX_KEY, []) as IAiToolsetMeta[]) || [],
+                async (list) => { await this.configMaps.write(INDEX_KEY, list) },
+                (list) => {
+                    const at = list.findIndex(t => t.id === meta.id)
+                    if (at >= 0) list[at] = meta
+                    else list.push(meta)
+                    return list
+                })
 
             // Reinstalling over something already registered (a dev one, or a new version) has to
             // replace and not clash: registerToolset blows up when the id is taken, so it is removed first.
@@ -351,9 +365,11 @@ export class AiToolsetManager {
         await this.configMaps.write(`kwirth-aitoolset-${id}-meta`, null)
         await this.configMaps.write(`kwirth-aitoolset-${id}-back`, null)
 
-        const index = ((await this.configMaps.read(INDEX_KEY, []) as IAiToolsetMeta[]) || []).filter(t => t.id !== id)
-        await this.configMaps.write(INDEX_KEY, index)
-        this.cachedIndex = index
+        // the same lock as install: a removal must not resurrect an entry somebody added meanwhile
+        this.cachedIndex = await updateIndex<IAiToolsetMeta>(INDEX_KEY,
+            async () => (await this.configMaps.read(INDEX_KEY, []) as IAiToolsetMeta[]) || [],
+            async (list) => { await this.configMaps.write(INDEX_KEY, list) },
+            (list) => list.filter(t => t.id !== id))
         this.devToolsets.delete(id)
 
         logInfo(ELogComponent.CORE, `AI toolset '${id}' uninstalled`)
@@ -376,9 +392,11 @@ export class AiToolsetManager {
         await this.configMaps.write(`kwirth-aitoolset-${id}-meta`, null)
         await this.configMaps.write(`kwirth-aitoolset-${id}-back`, null)
 
-        const index = ((await this.configMaps.read(INDEX_KEY, []) as IAiToolsetMeta[]) || []).filter(t => t.id !== id)
-        await this.configMaps.write(INDEX_KEY, index)
-        this.cachedIndex = index
+        // the same lock as install: a removal must not resurrect an entry somebody added meanwhile
+        this.cachedIndex = await updateIndex<IAiToolsetMeta>(INDEX_KEY,
+            async () => (await this.configMaps.read(INDEX_KEY, []) as IAiToolsetMeta[]) || [],
+            async (list) => { await this.configMaps.write(INDEX_KEY, list) },
+            (list) => list.filter(t => t.id !== id))
         this.devToolsets.delete(id)
 
         logInfo(ELogComponent.CORE, `AI toolset '${id}' uninstalled (pack)`)

@@ -10,6 +10,7 @@ import tar from 'tar'
 import os from 'os'
 import path from 'path'
 import fs from 'fs'
+import { updateIndex } from './IndexLock'
 
 export interface ILoginMeta {
     id: string
@@ -220,12 +221,20 @@ export class LoginManager {
 
             await this.configMaps.write(`kwirth-login-${meta.id}`, payload)
 
-            const index = (await this.configMaps.read('kwirth-logins-index', []) as ILoginMeta[]) || []
-            const existingIdx = index.findIndex(m => m.id === meta.id)
-            if (existingIdx >= 0) index[existingIdx] = meta
-            else index.push(meta)
-            await this.configMaps.write('kwirth-logins-index', index)
-            this.cachedIndex = index
+            /*
+                🔴 RE-READ INSIDE THE LOCK. Here the read sits right above the write, so the window is
+                narrow — but it is not zero, and the same two installs racing would still lose one. Done
+                the same way as everywhere else so there is one shape to look at (see IndexLock.ts).
+            */
+            this.cachedIndex = await updateIndex<ILoginMeta>('kwirth-logins-index',
+                async () => (await this.configMaps.read('kwirth-logins-index', []) as ILoginMeta[]) || [],
+                async (list) => { await this.configMaps.write('kwirth-logins-index', list) },
+                (list) => {
+                    const at = list.findIndex(e => e.id === meta.id)
+                    if (at >= 0) list[at] = meta
+                    else list.push(meta)
+                    return list
+                })
 
             logInfo(ELogComponent.CORE, `Login extension '${meta.id}' v${meta.version} installed`)
             return meta
@@ -336,7 +345,11 @@ export class LoginManager {
     }
 
     private async _doUninstall(id: string, index: ILoginMeta[]): Promise<void> {
-        await this.configMaps.write('kwirth-logins-index', index.filter(m => m.id !== id))
+        // re-read inside the lock: a removal must not write back a list that predates somebody else's install
+        await updateIndex<ILoginMeta>('kwirth-logins-index',
+            async () => (await this.configMaps.read('kwirth-logins-index', []) as ILoginMeta[]) || [],
+            async (list) => { await this.configMaps.write('kwirth-logins-index', list) },
+            (list) => list.filter(m => m.id !== id))
         await this.configMaps.write(`kwirth-login-${id}`, null)
         this.cachedIndex = this.cachedIndex.filter(m => m.id !== id)
         logInfo(ELogComponent.CORE, `Login extension '${id}' uninstalled`)
