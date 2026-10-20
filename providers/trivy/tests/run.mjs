@@ -2,9 +2,28 @@
 // It bundles tests/**/*.test.ts with esbuild -> tests/.out (ESM node20) and runs `node --test`.
 // The tests import straight from ../src (the real code, not the dist).
 import esbuild from 'esbuild'
-import { readdirSync, mkdirSync, rmSync, writeFileSync } from 'fs'
+import { readdirSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'fs'
 import { execFileSync } from 'child_process'
 import path from 'path'
+import zlib from 'zlib'
+
+/*
+    The same YAML loader build.mjs uses, and it is needed here for the same reason: since the provider
+    took over managing the operator (0.4.0), src/index.ts imports the trivy-operator manifest, and
+    anything that bundles that file without a loader for '.yaml' fails outright — which is what this
+    runner did the first time, with "No loader is configured for .yaml files".
+
+    It is gzipped to base64 exactly as in the build, so what the tests exercise is what ships.
+*/
+const yamlGzipPlugin = {
+    name: 'yaml-gzip',
+    setup(build) {
+        build.onLoad({ filter: /\.yaml$/ }, (args) => ({
+            contents: `module.exports = "${zlib.gzipSync(readFileSync(args.path)).toString('base64')}"`,
+            loader: 'js',
+        }))
+    },
+}
 
 const TEST_DIR = 'tests'
 const OUT_DIR = 'tests/.out'
@@ -50,6 +69,7 @@ await esbuild.build({
         '@kwirthmagnify/kwirth-common-front'
     ],
     loader: { '.ts': 'ts', '.tsx': 'tsx' },
+    plugins: [yamlGzipPlugin],
 })
 
 // 4) Run the bundles with the native runner (each file in its own process)

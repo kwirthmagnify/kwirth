@@ -41,7 +41,11 @@ wearing a pod's clothes. The card says which one it is.
 |---|---|
 | `trivy$user` | Open Trivy and read the reports of **the namespaces its resources reach** |
 | `cluster` | The same, over the whole cluster |
-| `admin` | The above, plus installing and removing the Trivy operator (`Manage`) |
+
+🔴 **Installing and removing the Trivy Operator is NOT done from this channel** since `0.3.0`. It is the
+**Trivy provider's** job — ☰ → *Manage extensions → Providers → Trivy → the gear* — and it asks for
+`admin` there. The operator writes the CRDs the provider reads; this channel only paints reports that
+already exist. This version therefore **requires `provider/trivy` 0.4.0 or later**.
 
 ⚠️ **Breaking in 0.2.32**: `trivy$kubernetes` no longer exists (it gated a feature that was never built),
 and `trivy$workload` is gone since 0.2.30. A key carrying either grants **nothing** for this channel

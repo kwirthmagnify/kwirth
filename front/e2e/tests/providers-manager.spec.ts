@@ -168,6 +168,21 @@ test.describe('gestor generico de extensiones: providers', () => {
         await dialog().waitFor({ timeout: 40000 })
     })
 
+    test('🔴 el provider de trivy trae front propio: es desde donde se gestiona el operador', async () => {
+        /*
+            Desde `provider/trivy@0.4.0` el Trivy Operator se instala y se quita desde la rueda de ESTE
+            provider, no desde un boton 'Manage' en el canal. El operador escribe los CRDs que el
+            provider lee: desplegarlo nunca fue cosa del canal, que solo pinta informes ya existentes.
+
+            Antes de eso este provider no traia front ni declaraba schema, asi que su rueda salia muerta
+            con 'No configuration available'. Si alguien quita el front, el operador se queda sin UI
+            desde la que gestionarse y el sintoma es una rueda apagada que nadie relaciona con esto.
+        */
+        const trivy = delBack.find(p => p.id === 'trivy' && !p.core)
+        test.skip(!trivy, 'el provider trivy no esta instalado en este entorno')
+        expect(trivy!.hasFront, 'el provider trivy perdio su front: el operador se queda sin gestion').toBe(true)
+    })
+
     test('un provider con schema se configura con el formulario del core', async () => {
         const conSchema = delBack.find(p => !p.core && !p.hasFront && p.hasSchema)
         test.skip(!conSchema, 'ningun provider con schema del core en este entorno')

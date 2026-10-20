@@ -1,4 +1,4 @@
-import { IInstanceMessage, IExtensionScope, parseResources } from "@kwirthmagnify/kwirth-common"
+import { IInstanceMessage, IExtensionScope } from "@kwirthmagnify/kwirth-common"
 
 // ─── Authorisation scopes (Trivy's own RBAC) ──────────────────────────────────
 // Namespaced with 'trivy$' (the project convention). They define the channel's access ladder.
@@ -118,24 +118,18 @@ export const TRIVY_WORKLOAD_KINDS: string[] = [
 /** Whether a report is about a workload. An unlabelled report is not shown: it cannot be placed. */
 export const isWorkloadKind = (kind?: string): boolean => !!kind && TRIVY_WORKLOAD_KINDS.includes(kind)
 
-/** This channel's ladder, in one place so the back and the front cannot read it differently. */
-export const TRIVY_SCOPE_LADDER: string[] = ['', ETrivyScope.USER, 'cluster', 'admin']
-
 /*
-    Does this key reach `required`? The back uses `scopeAllows` of common-back; this exists because the
-    FRONT cannot — common-back is resolved from the core's server-side global, which does not exist in a
-    browser — and the front has to ask the same question to avoid offering a button whose every action
-    will answer 403.
+    `TRIVY_SCOPE_LADDER` and `keyReaches` lived here and are GONE (0.3.0).
 
-    🔴 SECOND copy of the same walk: Magnify wrote one in its own `src/common` three days ago for the
-    same reason. The condition recorded there was 'if a second channel copies it, the helper belongs in
-    `common`', and this is that second channel — moving `scopeAllows` down from common-back to common is
-    the next step, and then this goes away.
+    They existed for one reason: the front had to decide whether to light up the 'Manage' button, and the
+    front cannot use `scopeAllows` from common-back — that is resolved from the core's server-side
+    global, which does not exist in a browser. So the ladder was walked a second time here.
+
+    With the operator moved to the trivy PROVIDER, this channel's front asks no permission questions at
+    all, and the copy went with the button. The back still has its ladder in `getChannelScopeLevel`,
+    where it belongs, and uses common-back's `scopeAllows` against it.
+
+    ℹ️ This was the SECOND copy, the one that made A13 of auth-hardening stop being a hypothesis —
+    "if a second channel copies it, the helper belongs in `common`". Magnify's copy is still there, so
+    the finding stands; this channel simply no longer contributes to it.
 */
-export const keyReaches = (resources: string, required: string): boolean => {
-    const level = (scope: string) => TRIVY_SCOPE_LADDER.indexOf(scope)
-    try {
-        return parseResources(resources).some(r => r.scopes.split(',').some(sc => level(sc) >= level(required)))
-    }
-    catch (err) { return false }
-}

@@ -11,9 +11,16 @@ Part of [Kwirth](https://kwirthmagnify.dev) — real-time Kubernetes observabili
 
 ## Requirements
 
-**Trivy Operator must already be installed in the cluster.** This provider does not scan anything
-and does not install it: it reads the reports Trivy Operator produces. Without it there is simply
-nothing to watch.
+**Trivy Operator has to be running in the cluster**: this provider does not scan anything, it reads
+the reports Trivy Operator produces. Without it there is simply nothing to watch.
+
+**And it can install it for you.** Since `0.4.0` this provider manages the operator from its gear in
+Kwirth — ☰ → *Manage extensions → Providers → Trivy → ⚙* — with INSTALL, REMOVE and the current status.
+It used to be a `Manage` button inside the Trivy *channel*; the operator writes the CRDs this provider
+reads, so it belongs here. 🔴 It asks for the **`admin`** scope: installing deploys a workload, its CRDs
+and its RBAC across the whole cluster, and removing takes them away.
+
+⚠️ The matching channel is `plugin/trivy` **0.3.0 or later** — the one that no longer carries the button.
 
 It also expects the standard installation layout to read the Trivy version — namespace
 `trivy-system`, configmap `trivy-operator-trivy-config`, deployment `trivy-operator`. A

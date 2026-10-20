@@ -1,14 +1,7 @@
 import { IChannelInstances, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, parseResources, BackChannelData, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, EInstanceMessageChannel, EInstanceMessageType, EClusterType, IBackChannelRequirements, IExtensionScope, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { IBackChannelObject, IChannel, keyMatchesResource, scopeAllows } from '@kwirthmagnify/kwirth-common-back'
 import { Request, Response } from 'express'
-import { applyAllResources, deleteAllResources } from '@kwirthmagnify/kwirth-common-back'
 import { ETrivyCommand, ETrivyScope, TRIVY_SCOPES, IKnown, ITrivyMessage, ITrivyMessageResponse, ITrivyProviderEvent, isWorkloadKind } from '../common/TrivyTypes'
-
-import zlib from 'zlib'
-// @ts-ignore
-import trivyOperatorYamlGz from './trivy-operator-0.30.1.yaml'
-
-const trivyOperatorYaml = zlib.gunzipSync(Buffer.from(trivyOperatorYamlGz, 'base64')).toString('utf-8')
 
 
 const TRIVY_API_VERSION = 'v1alpha1'
@@ -53,7 +46,10 @@ class TrivyChannel implements IChannel {
     getChannelData = (): BackChannelData => ({
         id: this.channelId, routable: false, pauseable: false, modifiable: false, reconnectable: false,
         metrics: false, sources: [EClusterType.KUBERNETES],
-        endpoints: [{ name: 'operator', methods: ['GET'], requiresAccessKey: true }],
+        // No endpoints: the 'operator' one went to the trivy PROVIDER in provider/trivy@0.4.0. Leaving it
+        // declared would advertise a route that now answers 404, and the Status channel's Routes tab
+        // would list it as if it worked.
+        endpoints: [],
         // cluster: Trivy reads reports for the WHOLE cluster, so it is a cluster-level channel and not
         // an autonomous one. Declaring what it really is, is what makes 'does this key have cluster?'
         // the right question to ask.
@@ -100,75 +96,18 @@ class TrivyChannel implements IChannel {
     }
 
     /*
-        Whether the key was GRANTED enough for an operation that needs `required`. The check itself
-        lives in common-back since 0.6.7 — it had been written here, in fileman and in excubitor, three
-        copies of one security check — and the ladder stays this channel's.
+        🔴 THIS CHANNEL NO LONGER EXPOSES ENDPOINTS.
 
-        🔴 It reads what the key carries, never what the client asked for: the accessKey cannot be
-        tampered with, while anything in the request is the caller's to write.
+        Installing, removing and querying the Trivy Operator used to live here, behind a 'Manage' button
+        in the tab. They moved to the trivy PROVIDER in `provider/trivy@0.4.0`, where they belong: the
+        operator is what WRITES the CRDs the provider reads, while this channel only paints reports that
+        already exist. They are now its gear in ☰ → Manage extensions → Providers → Trivy.
+
+        The method stays because IChannel requires it — it is not optional — so it answers 404 and says
+        where the thing went, rather than disappearing and leaving a caller with a bare 'not found'.
     */
-    private allows = (accessKey: AccessKey | undefined, required: string): boolean =>
-        !!accessKey && scopeAllows(accessKey.resources, required, this.getChannelScopeLevel)
-
-    async endpointRequest(endpoint: string, req: Request, res: Response, accessKey?: AccessKey): Promise<void> {
-        this.backChannelObject.logInfo?.(`endpointRequest: ${endpoint} ${req.method} ${req.url}`)
-        const action = req.query['action']
-
-        /*
-            Until now NOTHING was checked here: the handler did not even declare the accessKey the core
-            passes it, so there was nothing to check. Reaching this point only took ANY valid key --
-            `validKey` and `getKey` are authentication, not authorization -- and 'install'/'remove'
-            apply and delete the Trivy Operator across the cluster.
-
-            🔴 Installing or removing the operator is CONFIGURING the tool, not using it: it applies or
-            deletes a deployment, its CRDs and its RBAC across the whole cluster. That is an
-            administrator's, so it asks for 'admin' — being allowed to read every report is not the same
-            as being allowed to install the thing that writes them.
-
-            Reading WHETHER Trivy is installed sits at the channel's own minimum: without it the screen
-            cannot even say why it is empty.
-        */
-        const ACTION_SCOPE: Record<string, string> = {
-            status: ETrivyScope.USER,
-            install: 'admin',
-            remove: 'admin'
-        }
-        const required = typeof action === 'string' ? ACTION_SCOPE[action] : undefined
-        if (required && !this.allows(accessKey, required)) {
-            this.backChannelObject.logWarning?.(`Denied '${action}' to key ${accessKey?.id ?? '(none)'}: '${required}' required`)
-            res.status(403).send(`'${required}' scope required`)
-            return
-        }
-
-        switch (action) {
-            case 'install':
-                try {
-                    await applyAllResources(trivyOperatorYaml, this.clusterInfo)
-                    res.status(200).send('ok')
-                } catch (err) { res.status(500).send(err) }
-                break
-            case 'remove':
-                try {
-                    await deleteAllResources(trivyOperatorYaml, this.clusterInfo)
-                    res.status(200).send()
-                } catch (err) { res.status(500).send(err) }
-                break
-            case 'status':
-                try {
-                    const cm = await this.clusterInfo.coreApi?.readNamespacedConfigMap({ name: 'trivy-operator-trivy-config', namespace: 'trivy-system' })
-                    if (!cm.data) {
-                        res.status(404).send(`No Trivy config map exist on namespace 'trivy-system', Trivy seems not to be installed.`)
-                    }
-                    else {
-                        res.status(200).send(`Installed [${cm.data['trivy.command']}, 0.30.1]`)
-                    }
-                } catch (err) {
-                    res.status(200).send(`Not installed (Trivy configMap not found in 'trivy-system')`)
-                }
-                break
-            default:
-                res.status(500).send('Invalid action ' + action)
-        }
+    async endpointRequest(endpoint: string, _req: Request, res: Response): Promise<void> {
+        res.status(404).send(`The trivy channel exposes no endpoints ('${endpoint}'). Managing the Trivy Operator moved to the trivy PROVIDER: Manage extensions → Providers → Trivy → the gear.`)
     }
 
     async websocketRequest(_newWebSocket: WebSocket): Promise<void> { }

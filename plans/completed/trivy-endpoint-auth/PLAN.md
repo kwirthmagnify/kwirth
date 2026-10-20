@@ -8,6 +8,15 @@
 > Lo que sigue abierto no es de este plan: vive en **A12** y **A13** de
 > [auth-hardening](../../auth-hardening/PLAN.md).
 >
+> ⚠️ **Dónde está hoy lo que este plan protegió** (2026-10-20): el endpoint ya no existe en el canal. La
+> gestión del Trivy Operator —`install`, `remove`, `status`— se mudó al **provider** en
+> `provider/trivy@0.4.0`, a su `configRouter` (`/core/providerconfig/trivy`), y el canal pasó a
+> `plugin/trivy@0.3.0` sin botón, sin endpoints y sin escalera en el front. **El gate de `admin` viajó
+> con la función**: el core monta ese router detrás de `validKey`, que es *autenticación*, así que sin
+> la comprobación propia cualquier clave válida desplegaría o borraría el operador con un `curl` — el
+> mismo agujero que cerró este plan, que no se reabre por mudarse de sitio. Cubierto por 5 tests nuevos
+> en el harness del provider.
+>
 > Hallazgo del
 > mismo día, al revisar si `excubitor` y `trivy` compartían el patrón de
 > [fileman-target](../fileman-target/PLAN.md). `excubitor` **está bien** (§4); `trivy` no lo estaba.

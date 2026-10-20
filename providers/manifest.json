@@ -102,9 +102,9 @@
   {
     "extensionType": "provider",
     "id": "trivy",
-    "version": "0.3.2",
+    "version": "0.4.0",
     "name": "Trivy Provider",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.3.2.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.4.0.tgz",
     "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
     "website": "https://kwirthmagnify.dev"
   },

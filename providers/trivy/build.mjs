@@ -2,6 +2,25 @@ import esbuild from 'esbuild'
 import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
+import zlib from 'zlib'
+
+/*
+    The trivy-operator manifest is 131 KB of YAML that has to travel INSIDE back.js: it is what the
+    provider applies when somebody installs the operator, and there is nowhere to read it from at
+    runtime. It is gzipped into a base64 string at build time and unpacked on first use.
+
+    It came from the plugin, which carried it while the Manage button lived there.
+*/
+const yamlGzipPlugin = {
+    name: 'yaml-gzip',
+    setup(build) {
+        build.onLoad({ filter: /\.yaml$/ }, (args) => {
+            const content = fs.readFileSync(args.path)
+            const compressed = zlib.gzipSync(content).toString('base64')
+            return { contents: `module.exports = "${compressed}"`, loader: 'js' }
+        })
+    },
+}
 
 // esbuild erases the types without looking at them: without this step the build would pass broken TS.
 // watch.mjs deliberately leaves it out, so that saving stays instantaneous.
@@ -59,11 +78,53 @@ await esbuild.build({
     target: 'node20',
     outfile: 'dist/back.js',
     external: ['express'],
-    plugins: [kwirthBackGlobalsPlugin],
+    plugins: [kwirthBackGlobalsPlugin, yamlGzipPlugin],
     loader: { '.ts': 'ts' },
     minify: false,
 })
 console.log('Built dist/back.js')
+
+/*
+    The front is what the gear of the providers manager opens, and it is optional: while src/front does
+    not exist the core paints that gear disabled ('No configuration available'), which is exactly what
+    this provider showed until it took over managing the operator.
+
+    It brings neither React nor MUI: it takes them from the ones the core has already loaded.
+*/
+if (fs.existsSync('src/front/index.tsx')) {
+    const kwirthFrontGlobalsPlugin = {
+        name: 'kwirth-front-globals',
+        setup(build) {
+            const globals = {
+                'react': 'window.__kwirth__.React',
+                '@mui/material': 'window.__kwirth__.MUI.material',
+                '@mui/icons-material': 'window.__kwirth__.MUI.icons',
+                '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
+                '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
+            }
+            build.onResolve({ filter: /.*/ }, (args) => {
+                if (globals[args.path]) return { path: args.path, namespace: 'kwirth-globals' }
+            })
+            build.onLoad({ filter: /.*/, namespace: 'kwirth-globals' }, (args) => ({
+                contents: 'module.exports = ' + globals[args.path],
+                loader: 'js',
+            }))
+        },
+    }
+    await esbuild.build({
+        entryPoints: ['src/front/index.tsx'],
+        bundle: true,
+        format: 'iife',
+        outfile: 'dist/front.js',
+        plugins: [kwirthFrontGlobalsPlugin],
+        loader: { '.tsx': 'tsx', '.ts': 'ts' },
+        minify: false,
+    })
+    console.log('Built dist/front.js')
+}
+else {
+    console.log('No src/front/index.tsx yet — skipping front build')
+}
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = { type: 'commonjs', extensionType: 'provider',

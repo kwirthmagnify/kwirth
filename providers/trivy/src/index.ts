@@ -1,4 +1,9 @@
-import { IExtensionLogger, IProvider, IProviderSubscriber, createCrdInformer, ICrdInformerHandlers } from '@kwirthmagnify/kwirth-common-back'
+import express, { Request, Response, NextFunction } from 'express'
+import zlib from 'zlib'
+import { IExtensionLogger, IProvider, IProviderSubscriber, createCrdInformer, ICrdInformerHandlers, applyAllResources, deleteAllResources, scopeAllows } from '@kwirthmagnify/kwirth-common-back'
+import { accessKeyDeserialize } from '@kwirthmagnify/kwirth-common'
+// @ts-ignore the build gzips it into a base64 string: 131 KB of YAML cannot be read from disk at runtime
+import trivyOperatorYamlGz from './trivy-operator-0.30.1.yaml'
 import { ITrivyAsset, ITrivySubscriptionData, ITrivyProviderEvent, ITrivyMeta, ITrivyMetaEvent, ETrivyEventKind, TRIVY_API_VERSION, TRIVY_API_GROUP, TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_RBAC_PLURAL, TRIVY_API_CLUSTER_RBAC_PLURAL } from './TrivyTypes'
 
 const ALL_PLURALS = [TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_RBAC_PLURAL, TRIVY_API_CLUSTER_RBAC_PLURAL]
@@ -48,9 +53,108 @@ export class TrivyProvider implements IProvider {
     private informers: Map<string, any> = new Map()
     private clusterInfo: any
 
+    /*
+        Managing the Trivy Operator — installing it, removing it, saying whether it is there.
+
+        🔴 It lives HERE and not in the trivy plugin, where it was until `provider/trivy@0.4.0`. The
+        operator is what writes the CRDs this provider reads: it is this extension's business, not the
+        channel's. The channel's job is to paint reports that already exist, and it should not stop
+        working — or stop being installable — because of who deploys the operator.
+
+        It is `configRouter` and NOT `router`: the core mounts configRouter at
+        '/core/providerconfig/trivy' ALWAYS behind accessKey validation, which it puts there itself,
+        while `router` is public and takes external traffic that carries no Kwirth key. Mounting this on
+        the public one would hand the cluster to anybody who can reach the port.
+
+        ⚠️ Side effect, and it is the one we want: having a configRouter makes the core INSTANTIATE this
+        provider at start-up even when no channel has asked for it yet. Without that, the gear would
+        open on a provider that does not exist until somebody opens the Trivy tab.
+    */
+    public configRouter = express.Router()
+
     constructor(clusterInfo: any, _kwirthData: unknown) {
         this.clusterInfo = clusterInfo
+        this.buildConfigRouter()
     }
+
+    /*
+        🔴 ADMIN, and the core does not check it for us.
+
+        What the core puts in front of configRouter is `validKey`, which is AUTHENTICATION: it proves the
+        caller holds a valid Kwirth key, not that the key may do this. The providers manager is an
+        admin-only screen, but a screen is not a door — these routes answer to curl with any valid key.
+        And what is behind them applies or DELETES a deployment, its CRDs and its RBAC across the whole
+        cluster.
+
+        This is the same hole that `trivy-endpoint-auth` closed in the plugin on 2026-10-17, and moving
+        the feature is no reason to reopen it. It is the ONLY permission check that survived the move:
+        everything else the plugin carried for this went away with the button.
+    */
+    private isAdmin = (req: Request): boolean => {
+        const header = req.headers['authorization']
+        const bearer = typeof header === 'string' && header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : ''
+        if (!bearer) return false
+        try {
+            const key = accessKeyDeserialize(bearer)
+            // 'admin' is the top of any ladder; a flat one is enough to ask just this question
+            return scopeAllows(key.resources, 'admin', (scope: string) => ['', 'admin'].indexOf(scope))
+        }
+        catch {
+            // A key that cannot be read authorises nothing, and an exception from an async handler would
+            // escape as an unhandledRejection and take the core down with it.
+            return false
+        }
+    }
+
+    private buildConfigRouter = (): void => {
+        this.configRouter.use((req: Request, res: Response, next: NextFunction) => {
+            if (!this.isAdmin(req)) {
+                this.log.warning(`Denied '${req.path}' on the Trivy operator: 'admin' required`)
+                res.status(403).send("'admin' scope required")
+                return
+            }
+            next()
+        })
+
+        this.configRouter.get('/status', async (_req: Request, res: Response) => {
+            try {
+                const cm = await this.clusterInfo.coreApi?.readNamespacedConfigMap({ name: TRIVY_CONFIGMAP, namespace: TRIVY_NS })
+                if (!cm?.data) res.status(200).json({ installed: false, detail: `No Trivy config map in namespace '${TRIVY_NS}'` })
+                else res.status(200).json({ installed: true, detail: `Installed [${cm.data['trivy.command']}, 0.30.1]` })
+            }
+            catch {
+                // Not an error: the configMap missing is exactly how 'not installed' looks
+                res.status(200).json({ installed: false, detail: `Not installed (no Trivy configMap in '${TRIVY_NS}')` })
+            }
+        })
+
+        this.configRouter.post('/install', async (_req: Request, res: Response) => {
+            try {
+                await applyAllResources(this.operatorYaml(), this.clusterInfo)
+                this.log.info('Trivy Operator installed')
+                res.status(200).json({ ok: true })
+            }
+            catch (err) {
+                this.log.error(`Installing the Trivy Operator failed: ${err}`)
+                res.status(500).json({ ok: false, error: String(err) })
+            }
+        })
+
+        this.configRouter.post('/remove', async (_req: Request, res: Response) => {
+            try {
+                await deleteAllResources(this.operatorYaml(), this.clusterInfo)
+                this.log.info('Trivy Operator removed')
+                res.status(200).json({ ok: true })
+            }
+            catch (err) {
+                this.log.error(`Removing the Trivy Operator failed: ${err}`)
+                res.status(500).json({ ok: false, error: String(err) })
+            }
+        })
+    }
+
+    /** Unpacked on use and not at import time: 131 KB of YAML that most runs never need. */
+    private operatorYaml = (): string => zlib.gunzipSync(Buffer.from(trivyOperatorYamlGz as unknown as string, 'base64')).toString('utf-8')
 
     addSubscriber = async (c: IProviderSubscriber, data: ITrivySubscriptionData) => {
         /*

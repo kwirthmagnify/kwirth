@@ -10,7 +10,7 @@ The **Trivy** channel brings **security & vulnerability scanning** into kwirth, 
 
 As always, scope is flexible: you can assess the whole security posture of an **application** made of pods/replica sets/containers across namespaces, all at once.
 
-> Trivy relies on the **Trivy Operator** running in the cluster. If it isn't installed, Magnify/Trivy can **deploy it for you** (see *Manage Trivy* below).
+> Trivy relies on the **Trivy Operator** running in the cluster. If it isn't installed, kwirth can **deploy it for you**, from the **Trivy provider**: ☰ → **Manage extensions → Providers → Trivy → the gear**. See [Trivy (provider)](../providers/trivy).
 
 ## When to use it
 
@@ -27,7 +27,6 @@ On **Start**, the config lets you choose **which severities count** — tick **I
 | Control | What it does |
 |---|---|
 | **Ignore — Critical / High / Medium / Low** | Exclude that severity from reports and from the score. |
-| **MANAGE TRIVY** | Install / manage the **Trivy Operator** in the cluster from kwirth. *(You must start the channel once before you can configure the operator.)* The button is **disabled without `admin`** — it is not a permission you discover by being refused. |
 | **Set as default** | Remember this configuration. |
 
 ## The cards view
@@ -143,14 +142,21 @@ Expand a CVE to see its specifics — **CVE id** (linked to its advisory), the a
 ## Admin guide
 
 - **Install / remove:** **☰ → Manage extensions → Plugins** → install **Trivy**.
-- **Trivy Operator:** the channel needs the **Trivy Operator** in the target cluster. Use **MANAGE TRIVY** in the config (after starting once) to deploy/manage it — no manual Helm needed.
+- **Trivy Operator:** the channel needs the **Trivy Operator** in the target cluster, and kwirth can
+  deploy it — no manual Helm needed. It is **not done from here**: it is the **Trivy provider's** job,
+  at ☰ → **Manage extensions → Providers → Trivy → the gear**. See
+  [Trivy (provider)](../providers/trivy).
+
+  > ⚠️ **It used to be a `MANAGE TRIVY` button in this tab, and it is gone since `trivy@0.3.0`.** The
+  > operator is what *writes* the CRDs the provider reads, so deploying it was never this channel's
+  > business — this tab paints reports that already exist. If you are looking for the button, it is in
+  > the provider's gear, and it needs `admin` there just as it did here.
 - **Permissions:** each scope includes the ones above it, so a user needs **one**, not several —
   - **`trivy$user`** — open Trivy and read the reports (vulnerabilities, config audit, secrets) **of the
     namespaces the key grants**. **Without it the channel will not start**, and it says so.
   - **`cluster`** — the reports of **every** namespace.
-  - **`admin`** — also **installing and removing the Trivy Operator** from **MANAGE TRIVY**. That
-    deploys a workload, its CRDs and its RBAC across the cluster: it is configuring the tool, not using
-    it, and reading every report is not the same as installing the thing that writes them.
+  - **`admin`** — it no longer grants anything *in this channel*: managing the operator moved to the
+    provider, and that is where `admin` is asked for now.
 
   > 🔴 **Since `trivy@0.2.32` the reports are limited by the key.** Before it, only what the screen
   > *asked for* was filtered — so opening Trivy on the cluster view handed over the vulnerability

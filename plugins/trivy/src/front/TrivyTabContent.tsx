@@ -1,16 +1,12 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { Box, Button, Stack, Typography, TextField, InputAdornment, Card, ToggleButton, ToggleButtonGroup, Tooltip, useTheme } from '@mui/material'
-import { keyReaches } from '../common/TrivyTypes'
 import { Search as SearchIcon } from '@mui/icons-material'
 import { TReportType } from './TrivyCommon'
-import { IContentProps, MsgBoxOk, MsgBoxOkError, MsgBoxWaitCancel } from '@kwirthmagnify/kwirth-common-front'
+import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { IAsset, ITrivyData, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_VULN_PLURAL } from './TrivyData'
 import { TrivyTabContentAssetDetails } from './components/TrivyTabContentAssetDetails'
 import { getTotalIssues, TrivyTabContentAsset } from './components/TrivyTabContentAsset'
 import { MenuOrder } from './components/MenuOrder'
-import { TrivyOperator } from './TrivyOperator'
-
-const addGetAuthorization = (accessString: string) => ({ headers: { 'Authorization': 'Bearer ' + accessString } })
 
 const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const theme = useTheme()
@@ -25,10 +21,7 @@ const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const [orderSource, setOrderSource] = useState<'vuln' | 'audit' | 'exposed'>('vuln')
     const [assetList, setAssetList] = useState<IAsset[]>(trivyData.assets)
     const [filterText, setFilterText] = useState('')
-    const [showOperatorManage, setShowOperatorManage] = useState<boolean>(false)
-    // The front asks the same question the back will ask; the back is what decides.
-    const mayManage = keyReaches(props.channelObject.accessString?.split('|')[2] ?? '', 'admin')
-    const [msgBox, setMsgBox] = useState<React.ReactNode>(<></>)
+    const [msgBox] = useState<React.ReactNode>(<></>)
 
     useEffect(() => {
         if (trivyBoxRef.current) {
@@ -78,18 +71,6 @@ const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
 
     const rescanAsset = (asset: IAsset) => { setAssetList(prev => prev.filter(a => a.namespace !== asset.namespace || a.name !== asset.name || a.container !== asset.container)) }
 
-    const onOperatorManageClosed = async (action?: string) => {
-        setShowOperatorManage(false)
-        if (action) {
-            setMsgBox(MsgBoxWaitCancel('Manage Trivy', `We are waiting for the action to complete...`, setMsgBox))
-            const result = await fetch(`${props.channelObject.clusterUrl}/${trivyData.ri}/channel/trivy/operator?action=${action}`, addGetAuthorization(props.channelObject.accessString!))
-            if (result.status === 200)
-                setMsgBox(MsgBoxOk('Trivy', `Action '${action}' successfully sent, check results on your cluster.`, setMsgBox))
-            else
-                setMsgBox(MsgBoxOkError('Trivy', `Trivy action has shown some errors: ${await result.text()}.`, setMsgBox))
-        }
-    }
-
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 1, color: 'text.primary' }}>
             {trivyData.started && <>
@@ -106,17 +87,13 @@ const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                                 <ToggleButton value='list' sx={{ textTransform: 'none', px: 1.5 }}>List</ToggleButton>
                             </ToggleButtonGroup>
                             {/*
-                                Disabled, with the reason, when the key cannot manage the operator:
-                                installing or removing it asks for 'admin' since 0.2.32, and a button
-                                that opens a dialog whose every action answers 403 is worse than no
-                                button. Visible and disabled rather than hidden — one that comes and
-                                goes is one nobody can look for.
+                                The 'Manage' button lived here and went to the trivy PROVIDER in
+                                provider/trivy@0.4.0 (Manage extensions → Providers → Trivy → the gear).
+                                The operator writes the CRDs the provider reads: deploying it was never
+                                this channel's business, and keeping it here meant the channel also had
+                                to carry a permission ladder just to decide whether to light the button.
+                                This tab now does one thing: paint the reports that already exist.
                             */}
-                            <Tooltip title={mayManage ? '' : "Installing or removing the Trivy Operator requires the 'admin' scope"}>
-                                <span>
-                                    <Button size='small' variant='outlined' disableElevation onClick={() => setShowOperatorManage(true)} disabled={!trivyData.ri || !mayManage} sx={{ textTransform: 'none', height: '30px' }}>Manage</Button>
-                                </span>
-                            </Tooltip>
                         </Stack>
                     </Stack>
                 </Card>
@@ -152,7 +129,6 @@ const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
             </>}
             {selectedAsset !== undefined && <TrivyTabContentAssetDetails asset={selectedAsset} onClose={() => setSelectedAsset(undefined)} detail={selectedType} />}
             {anchorMenu !== undefined && <MenuOrder anchorParent={anchorMenu} onClose={() => setAnchorMenu(undefined)} onReorder={onReorder} orderSource={orderSource} orderType={orderType} />}
-            {showOperatorManage && <TrivyOperator onClose={onOperatorManageClosed} clusterUrl={props.channelObject.clusterUrl!} accessString={props.channelObject.accessString!} channelObject={props.channelObject} />}
             {msgBox}
         </Box>
     )
