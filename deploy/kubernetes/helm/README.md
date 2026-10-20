@@ -163,91 +163,34 @@ first write, which looks like an extension bug and is not one.
 
 The chart deploys no database on purpose: a real one brings decisions it has no business making for you
 (storage class, volume size, backups, failover). But you need one to try the extensions that store data,
-so here is a small one. **It is for development and demos** — a single pod, one volume, no backups and no
-HA — and it is worth saying out loud because this kind of snippet has a way of reaching production.
+so if you have none at hand, install one **with Helm**, like everything else here:
 
 ```bash
-kubectl create namespace kwirth-data
-
-kubectl -n kwirth-data create secret generic postgres \
-  --from-literal=POSTGRES_PASSWORD="$(openssl rand -base64 24)"
-
-kubectl -n kwirth-data apply -f - <<'EOF'
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres
-spec:
-  accessModes: [ReadWriteOnce]
-  resources:
-    requests:
-      storage: 8Gi
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: postgres
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate            # one volume, one writer: never two pods at once
-  selector:
-    matchLabels: { app: postgres }
-  template:
-    metadata:
-      labels: { app: postgres }
-    spec:
-      containers:
-        - name: postgres
-          image: postgres:17-alpine
-          ports:
-            - containerPort: 5432
-          envFrom:
-            - secretRef: { name: postgres }
-          env:
-            # the data lives in a SUBDIRECTORY of the mount: on many storage classes the
-            # volume root is not empty (lost+found) and initdb refuses to start there
-            - name: PGDATA
-              value: /var/lib/postgresql/data/pgdata
-          volumeMounts:
-            - name: data
-              mountPath: /var/lib/postgresql/data
-          readinessProbe:
-            exec:
-              command: [sh, -c, 'pg_isready -U postgres']
-            initialDelaySeconds: 10
-      volumes:
-        - name: data
-          persistentVolumeClaim: { claimName: postgres }
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres
-spec:
-  selector: { app: postgres }
-  ports:
-    - port: 5432
-      targetPort: 5432
-EOF
+helm install postgres oci://registry-1.docker.io/bitnamicharts/postgresql \
+  --version 16.7.27 -n kwirth-data --create-namespace
 ```
 
-Then point Kwirth at it. The password is the one just generated, so read it back rather than retyping it:
+Then point kwirth at it, reading the generated password back rather than retyping it:
 
 ```bash
 helm upgrade --install kwirth kwirth/kwirth -n kwirth --create-namespace \
   --set kwirth.sql.enabled=true \
-  --set kwirth.sql.host=postgres.kwirth-data.svc \
+  --set kwirth.sql.host=postgres-postgresql.kwirth-data.svc \
   --set kwirth.sql.user=postgres \
-  --set kwirth.sql.password="$(kubectl -n kwirth-data get secret postgres -o jsonpath='{.data.POSTGRES_PASSWORD}' | base64 -d)"
+  --set kwirth.sql.password="$(kubectl -n kwirth-data get secret postgres-postgresql -o jsonpath='{.data.postgres-password}' | base64 -d)"
 ```
 
-The `postgres` superuser is what makes this work without further setup, since it already has `CREATE`.
-For anything beyond trying it out, give Kwirth a role of its own and turn on `sql.ssl`.
+The `postgres` superuser is what makes this work with no further setup, since it already has `CREATE`.
+For anything beyond trying it out, give kwirth a role of its own and turn on `sql.ssl`.
+
+**Pin the chart version**, as above: the service name kwirth connects to — `<release>-postgresql` — and
+the Secret key the command reads — `postgres-password` — are that chart's conventions, not Postgres's,
+and a major bump may change them.
 
 > **In production, use a database somebody maintains**: your cloud's managed PostgreSQL, or an operator
-> such as CloudNativePG or Zalando's. Both give you backups, failover and upgrades, which the snippet
-> above does not even pretend to.
+> such as CloudNativePG. Both give you backups, failover and upgrades, which a single-pod install does
+> not even pretend to.
+
 
 ### Users
 
