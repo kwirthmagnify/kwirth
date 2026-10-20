@@ -98,6 +98,16 @@ const TrivyTabContentAsset: React.FC<ITrivyTabContentAssetProps> = (props: ITriv
     if (props.mode === 'card') return (<>
         <Card sx={{ width: '100%', height: '280px', borderWidth: '1px', borderStyle: 'solid', borderColor: 'divider' }}>
             <CardHeader
+                /*
+                    🔴 `minWidth: 0` on the header's content, or the chip is the one that gets clipped.
+
+                    A flex item will not shrink below its content's size by default, so with the name on
+                    one line the row grew past the card and the kind chip was cut off at the edge
+                    ('ReplicaS…'). With this the NAME gives way —it has an ellipsis and a tooltip with
+                    the whole thing— and the chip, which is short and is what tells a controller from a
+                    pod, stays whole.
+                */
+                sx={{ '& .MuiCardHeader-content': { minWidth: 0, overflow: 'hidden' } }}
                 avatar={<Avatar sx={{ background: assetAvatarColor(props.asset.vulnerabilityreports?.report?.os?.family || 'X') }}>{getAvatarContent(props.asset.vulnerabilityreports?.report?.os?.family || 'X')}</Avatar>}
                 /*
                     The card has room for about twenty characters and a pod's name is longer than that,
@@ -110,15 +120,35 @@ const TrivyTabContentAsset: React.FC<ITrivyTabContentAssetProps> = (props: ITriv
 
                         The KIND goes beside the name because Trivy names a report after the owner of
                         the pods it scanned: without it a ReplicaSet and a Pod read identically. */}
-                    <Stack direction='row' alignItems='center' spacing={0.5}>
-                        <Tooltip title={fullName(props.asset)} placement='top-start'>
-                            <Typography variant='body2'>{shorten(props.asset.name, 20)}</Typography>
-                        </Tooltip>
-                        {props.asset.kind && <Chip label={props.asset.kind} size='small' variant='outlined' sx={{ height: 16, fontSize: '0.6rem' }} />}
-                    </Stack>
-                    <Tooltip title={props.asset.container || 'no container (workload-level report)'} placement='bottom-start'>
-                        <Typography variant='body2'>{shorten(props.asset.container, 20)}</Typography>
+                    {/*
+                        🔴 ONE LINE EACH, and that is what `noWrap` is for. The card is 280px tall and
+                        fixed; with the kind chip beside it the name lost width, wrapped to a third line
+                        and pushed the scan date out of the bottom of the card — visible on every
+                        workload whose name is long, which is most of them. The chip does not shrink
+                        (`flexShrink: 0`): it is short, and it is what tells a controller from a pod.
+                        Nothing is lost by clipping, the tooltip carries the whole name.
+                    */}
+                    {/*
+                        🔴 The NAME gets the whole first line, and the chip rides with the CONTAINER.
+
+                        Side by side with the name, the chip took about 70px of the ~190 the line has
+                        (avatar and ⋮ eat the rest) and left room for some fourteen characters: two pods
+                        of the same deployment came out as the same 'kwirth-pos…', which is precisely
+                        what the chip and the tooltip were added to prevent. The container line is
+                        short —'postgres', 'controller'— so the chip fits there with room to spare.
+
+                        It still describes the OBJECT and not the container; they share a line, not a
+                        meaning, and the one on the left is already a container name.
+                    */}
+                    <Tooltip title={fullName(props.asset)} placement='top-start'>
+                        <Typography variant='body2' noWrap>{shorten(props.asset.name, 20)}</Typography>
                     </Tooltip>
+                    <Stack direction='row' alignItems='center' spacing={0.5} sx={{ minWidth: 0 }}>
+                        <Tooltip title={props.asset.container || 'no container (workload-level report)'} placement='bottom-start'>
+                            <Typography variant='body2' noWrap sx={{ minWidth: 0 }}>{shorten(props.asset.container, 20)}</Typography>
+                        </Tooltip>
+                        {props.asset.kind && <Chip label={props.asset.kind} size='small' variant='outlined' sx={{ height: 16, fontSize: '0.6rem', flexShrink: 0 }} />}
+                    </Stack>
                 </Box>}
                 action={<IconButton onClick={(event) => setAnchorMenu(event?.currentTarget)}><MoreVert /></IconButton>}
             />
