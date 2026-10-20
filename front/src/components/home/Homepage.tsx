@@ -339,7 +339,14 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                                             */
                                             return <Tooltip key={ci} title={c.trim()}><Box sx={{ display:'flex', alignItems:'center' }}>{newElement}</Box></Tooltip>
                                         }
-                                        return <></>
+                                        /*
+                                            null, not <></>: a short fragment CANNOT take a key, so returning one here
+                                            put a keyless child in the list and React complained about it on every
+                                            render ("Each child in a list should have a unique key prop" pointing at
+                                            Homepage). null is dropped from the list altogether, which is what this
+                                            branch means anyway — the channel is not installed, so there is no icon.
+                                        */
+                                        return null
                                     })
                                 }
                             </Stack>
