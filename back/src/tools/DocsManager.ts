@@ -1,6 +1,6 @@
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
-import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType } from './BundledExtensions'
 import tar from 'tar'
 import os from 'os'
@@ -187,8 +187,27 @@ export class DocsManager {
 
             const existing = bundleId && bundleTargetType ? this.cachedIndex.find(d => d.targetType === bundleTargetType && d.id === bundleId) : undefined
             const destDir = path.join(this.docsPath, bundleTargetType ?? '', bundleId ?? '')
-            if (existing && bundleVersion && existing.version === bundleVersion && fs.existsSync(destDir)) {
-                logInfo(ELogComponent.CORE, `Bundled docs '${bundleTargetType}/${bundleId}' v${bundleVersion} up to date — skipping`)
+            /*
+                🔴 Only FORWARDS, the same rule as the bundled plugins and providers: what the image
+                carries steps in only when it is NEWER than what is installed. Reinstalling whenever the
+                versions DIFFERED undid, on the next restart and without a word, a guide updated from the
+                catalogue.
+
+                ⚠️ Two conditions are kept alongside it, and neither is decoration:
+
+                · `fs.existsSync(destDir)` — the index persists in ConfigMaps and the extracted files
+                  live in the SYSTEM'S temp directory, which does not. Without this, an index saying
+                  'installed' over files that are gone would now skip for ever instead of repairing
+                  itself, and the guide would answer 404 with nothing saying why.
+                · `existing.installedFrom === 'bundled'` — repairing is only ours to do when what is
+                  installed IS the bundled one. If it was updated from somewhere else, restoring it is
+                  `rehydrate()`'s job, from its own source; stepping in here would quietly take the user
+                  back to the version inside the image.
+            */
+            const _canRepair = existing?.installedFrom === 'bundled'
+            if (existing && (fs.existsSync(destDir) || !_canRepair)
+                && (!bundleVersion || !existing.version || !versionGreaterThan(bundleVersion, existing.version))) {
+                logInfo(ELogComponent.CORE, `Bundled docs '${bundleTargetType}/${bundleId}' v${bundleVersion ?? '?'} is not newer than the installed v${existing.version ?? '?'} — skipping`)
                 continue
             }
             /*

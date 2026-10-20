@@ -243,3 +243,75 @@ test('🔴 a bundled plugin is known by the id its package declares: a new versi
         assert.deepEqual(index.map(p => [p.id, p.version]), [['e2e-bundled-plugin', '1.1.0']])
     })
 })
+
+/*
+    🔴 THE IMAGE IS A STARTING POINT, NOT A CEILING.
+
+    Both managers used to reinstall the bundled extension whenever its version DIFFERED from the
+    installed one. Since an image carries a fixed version, that undid every update installed from the
+    marketplace the next time the container restarted, and in silence: the image carries 1.0.0, the
+    operator installs 1.2.0, the pod restarts and they are back on 1.0.0 with nothing to show why — while
+    the extension manager had blocked the update button precisely because 'bundled is updated with
+    Kwirth itself'. Both halves are gone: the button is enabled and the restart respects what it finds.
+
+    What is checked here is the direction. Forwards still works (the test above), backwards must not.
+*/
+test('🔴 a bundled plugin updated from the marketplace is NOT rolled back by a restart', async () => {
+    await withBundledDir(async dir => {
+        const { cm, store } = storeConfigMaps()
+        const manager = new PluginManager(cm)
+        await manager.init()
+
+        await makePluginTgz(dir, 'e2e-keep-plugin', '1.0.0')
+        await manager.installBundled(dir, new Map<string, TChannelConstructor>())
+
+        // the operator updates it from the catalogue: a newer package, installed OVER the bundled one
+        const newer = path.join(dir, 'catalog')
+        fs.mkdirSync(newer, { recursive: true })
+        await makePluginTgz(newer, 'e2e-keep-plugin', '1.2.0')
+        await manager.install(path.join(newer, 'plugins-e2e-keep-plugin.tgz'), new Map<string, TChannelConstructor>(),
+            'https://registry.example/e2e-keep-plugin-1.2.0.tgz', undefined, undefined, true)
+
+        const afterUpdate = store.get('kwirth-plugins-index') as { id: string, version: string, installedFrom?: string }[]
+        assert.deepEqual(afterUpdate.map(p => [p.id, p.version]), [['e2e-keep-plugin', '1.2.0']])
+        // and it stops being bundled, which is what lets the restart tell the two apart
+        assert.notEqual(afterUpdate[0].installedFrom, 'bundled')
+
+        // the container restarts: same image (1.0.0 in the bundle), fresh manager over the stored index
+        const restarted = new PluginManager(cm)
+        await restarted.init()
+        await restarted.installBundled(dir, new Map<string, TChannelConstructor>())
+
+        const index = store.get('kwirth-plugins-index') as { id: string, version: string }[]
+        assert.deepEqual(index.map(p => [p.id, p.version]), [['e2e-keep-plugin', '1.2.0']], 'the restart rolled the update back')
+    })
+})
+
+test('🔴 a bundled provider updated from the marketplace is NOT rolled back by a restart', async () => {
+    await withBundledDir(async dir => {
+        const { cm, store } = storeConfigMaps()
+        const manager = new ProviderManager(cm)
+        await manager.init()
+        const registered = new Map<string, TProviderConstructor>()
+
+        await makeProviderTgz(dir, 'providers-keep', 'e2e-keep-provider', '1.0.0')
+        await manager.installBundled(dir, registered)
+
+        const newer = path.join(dir, 'catalog')
+        fs.mkdirSync(newer, { recursive: true })
+        await makeProviderTgz(newer, 'providers-keep', 'e2e-keep-provider', '1.2.0')
+        await manager.install(path.join(newer, 'providers-keep.tgz'), registered,
+            'https://registry.example/e2e-keep-provider-1.2.0.tgz', undefined, undefined, true)
+
+        const afterUpdate = store.get('kwirth-providers-index') as IProviderMeta[]
+        assert.deepEqual(afterUpdate.map(p => [p.id, p.version]), [['e2e-keep-provider', '1.2.0']])
+        assert.notEqual(afterUpdate[0].installedFrom, 'bundled')
+
+        const restarted = new ProviderManager(cm)
+        await restarted.init()
+        await restarted.installBundled(dir, registered)
+
+        const index = store.get('kwirth-providers-index') as IProviderMeta[]
+        assert.deepEqual(index.map(p => [p.id, p.version]), [['e2e-keep-provider', '1.2.0']], 'the restart rolled the update back')
+    })
+})

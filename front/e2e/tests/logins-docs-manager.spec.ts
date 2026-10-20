@@ -127,4 +127,35 @@ test.describe('gestores migrados al generico: logins y docs', () => {
         expect(await dialog.getByText(/^(dev|bundled)$/).count(), 'ninguna enseña de donde viene').toBeGreaterThanOrEqual(n)
         await dismissOpenDialogs(page)
     })
+
+    test('🔴 lo bundled ya NO se bloquea para actualizar: no se puede quitar, pero sí subir de version', async () => {
+        /*
+            Las dos cosas iban juntas y no son la misma. Que algo venga DENTRO de la imagen explica que no
+            se desinstale —volvería en el siguiente arranque—, pero no que no se pueda actualizar: trae
+            version, el back instala encima como con cualquier otra, y el arranque respeta lo instalado
+            desde que solo reinstala lo que viene en la imagen si es MAS NUEVO.
+
+            Hasta entonces el boton salia muerto con «Bundled with Kwirth — it is updated with Kwirth
+            itself», y como el aviso de arranque SI anunciaba la version nueva, el operador recibia en
+            cada login una actualizacion que no podia aplicar ni silenciar, y la unica salida era una
+            imagen nueva.
+
+            Se comprueba la AUSENCIA de ese bloqueo, que es la regresion a evitar. El tooltip que tenga
+            ahora depende del catalogo del entorno («Up to date», «Not in any catalog», «Update to vX»),
+            asi que nombrarlo haria el test dependiente de lo que haya publicado ese dia.
+        */
+        const dialog = await abrir('Documentation', DOCS)
+        await expect(dialog.getByText(/^(dev|bundled)$/).first()).toBeVisible({ timeout: 60000 })
+
+        expect(await dialog.locator('span[aria-label*="updated with Kwirth itself"]').count(),
+            'el gestor sigue alegando la procedencia bundled para no actualizar').toBe(0)
+
+        // y lo que SI sigue bloqueado: una dev no se actualiza desde el catalogo, se cambia en kwirth-dev.json
+        const devs = await dialog.getByText(/^dev$/).count()
+        if (devs > 0) {
+            expect(await dialog.locator('span[aria-label*="kwirth-dev.json"]').count(),
+                'una dev deberia seguir diciendo que se cambia en kwirth-dev.json').toBeGreaterThan(0)
+        }
+        await dismissOpenDialogs(page)
+    })
 })

@@ -106,14 +106,34 @@ version to update`**. Going backwards would leave the extension's configuration 
 built for a version that is no longer there, and that is a worse place to be than the version you wanted to
 leave.
 
-**Three things that are not updated this way**, each of which says so in its tooltip instead of failing when
+**Two things that are not updated this way**, each of which says so in its tooltip instead of failing when
 you click:
 
 | Case | Why | What to do instead |
 |---|---|---|
 | **`dev`** | It is not coming from a catalog at all, but from a local build | Change it in `kwirth-dev.json` |
-| **`bundled`** | It travels inside kwirth itself | It updates when kwirth does |
 | **packs** | Installing a pack also refuses if any of its members is already installed, so replacing one means updating everything it brought | Uninstall the pack and install the new one |
+
+### Bundled extensions update like any other
+
+An image such as `kwirth-full` **travels with extensions inside** — its plugins, its providers, its DCEs and
+this very guide — and they show up with a **`Bundled`** chip. That chip says where they came from, **not**
+that they are frozen: if the catalog has a newer version, you update it from here like anything else, and
+you do not have to wait for a new image.
+
+**What the image carries is a starting point, not a ceiling.** Two consequences worth knowing:
+
+- Once updated, the extension **stops being `bundled`** — the chip changes to the marketplace it came from,
+  because that is now where it comes from. From that moment it can also be **uninstalled**, which a bundled
+  one cannot; uninstalling it brings back the version inside the image on the next restart.
+- A restart **never moves you backwards**. On start-up kwirth reinstalls what the image carries only when it
+  is **newer** than what is installed, so your update survives restarts and a new image still updates you.
+
+> ⚠️ **Before `0.6.93` this did not work**: the button was disabled with *«Bundled with kwirth — it is
+> updated with kwirth itself»*, and the start-up reinstalled the bundled version whenever it **differed**
+> from the installed one. Anybody who got past the button —by installing from a URL, say— had their update
+> silently rolled back on the next restart. If you ever saw a version you had installed go back on its own,
+> that was it.
 
 > **What you end up with is exactly what the new package contains.** An update is a replacement, not a merge:
 > whatever the previous version brought and the new one does not is **removed**. If a login extension used to

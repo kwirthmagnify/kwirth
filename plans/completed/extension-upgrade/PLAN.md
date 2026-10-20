@@ -57,6 +57,35 @@ It fires **once per login**. There is no periodic re-check and no re-check when 
 Entregado en un solo stream. **A** y **B** hechos con una decisión de diseño distinta a la propuesta,
 **C** resultó estar ya hecho.
 
+> ### Añadido el 2026-10-20 — lo `bundled` también se actualiza
+>
+> Este plan dejó fuera una procedencia, y el hueco se vio en producción: **una extensión `bundled` no se
+> podía actualizar**, con el botón muerto y el texto *«Bundled with Kwirth — it is updated with Kwirth
+> itself»*. Lo que lo convirtió en un problema real es que el **aviso de arranque sí la anunciaba**: en
+> una imagen `kwirth-full`, que trae ocho plugins, dos providers, dos DCEs y la guía, el operador recibía
+> en **cada login** una actualización que no podía aplicar desde el único sitio al que el aviso le mandaba,
+> ni silenciar. La única salida era una imagen nueva.
+>
+> 🔴 **Y desbloquear el botón no bastaba**, que fue el hallazgo: `installBundled()` reinstalaba lo de la
+> imagen siempre que la versión **difiriese** de la instalada, no solo cuando fuese mayor. Quien se
+> saltara el botón —instalando desde URL— veía su actualización **revertida en el siguiente reinicio, en
+> silencio**. Las dos mitades iban juntas o ninguna servía.
+>
+> Lo entregado: el front deja de bloquear por procedencia (solo `dev` sigue, que no viene de un catálogo),
+> y `PluginManager`, `ProviderManager` y `DocsManager` reinstalan lo de la imagen **solo si es más nuevo**
+> —los otros cuatro con `installBundled` ya saltaban lo instalado, fuese cual fuese su versión—. Al
+> actualizar, `installedFrom` pasa de `bundled` a su origen, con lo que el arranque distingue lo que trae
+> la imagen de lo que puso el operador, y la extensión gana de paso poder desinstalarse.
+>
+> ⚠️ **En `DocsManager` la condición llevaba `fs.existsSync(destDir)`** y no es decoración: es lo que
+> repara un índice que dice *instalado* sobre ficheros que el temp del sistema se llevó. Se conserva, y se
+> le añade que solo repare cuando lo instalado **es** la bundled: si vino de otro sitio, restaurarlo es de
+> `rehydrate()`, y hacerlo aquí devolvería al usuario, sin decir nada, a la guía de la imagen.
+>
+> ⚠️ **Consecuencia de producto**: la imagen pasa a ser un punto de partida y no un techo, así que dos
+> instalaciones con la misma imagen pueden acabar con extensiones distintas. Es lo buscado, pero cambia lo
+> que significa «la versión que tengo».
+
 ### Lo que se hizo
 
 **El back ya sabía reemplazar; solo faltaba dejarle.** El cuerpo de `install()` de los once managers ya

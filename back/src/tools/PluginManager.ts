@@ -1,5 +1,5 @@
 import { IConfigMaps } from './IConfigMap'
-import { EExtensionType, IConfigFieldDef, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IConfigFieldDef, IExtensionRequirement, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType, peekBundledMeta } from './BundledExtensions'
 import { TChannelConstructor } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
@@ -461,8 +461,18 @@ export class PluginManager {
             }
             const _bvVersion = bundled.version
             const _bvExisting = this.cachedIndex.find(p => p.id === id)
-            if (_bvExisting && _bvVersion && _bvExisting.version === _bvVersion) {
-                logInfo(ELogComponent.CORE, `Bundled plugin '${id}' v${_bvVersion} up to date — skipping`)
+            /*
+                🔴 Only FORWARDS. This used to reinstall whenever the two versions DIFFERED, which meant
+                that updating a bundled plugin from the marketplace was undone on the next restart, in
+                silence: the image carries v0.3.0, you install v0.3.1, the container restarts and you are
+                back on v0.3.0 with nothing saying why.
+
+                The image is a STARTING POINT, not a ceiling. So it steps in only when what it carries is
+                NEWER than what is installed — a new image does update you, your own update is respected,
+                and going back is not something a restart decides on its own.
+            */
+            if (_bvExisting && (!_bvVersion || !_bvExisting.version || !versionGreaterThan(_bvVersion, _bvExisting.version))) {
+                logInfo(ELogComponent.CORE, `Bundled plugin '${id}' v${_bvVersion ?? '?'} is not newer than the installed v${_bvExisting.version ?? '?'} — skipping`)
                 continue
             }
             if (_bvExisting) {

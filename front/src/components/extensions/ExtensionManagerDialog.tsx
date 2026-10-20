@@ -305,17 +305,23 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const isDevInstalled = (key: string) => installedByKey.get(key)?.['installedFrom' as keyof TInstalled] === 'dev'
 
     /*
-        Why something installed is NOT updated from the catalogue, already worded for the tooltip.
+        Why something installed is NOT updated from the catalogue, already worded for the tooltip. It is
+        not the defence —the back end decides— it is being able to say the reason instead of leaving a
+        dead button.
 
-        These are the two provenances a marketplace does not serve: the dev one is changed in
-        kwirth-dev.json and the bundled one travels inside Kwirth. The back end rejects them anyway —it
-        does not know their version— so this is not the defence, it is being able to say the reason
-        instead of leaving a dead button.
+        🔴 Only `dev` is left: it is governed by kwirth-dev.json and the catalogue has no say over it.
+
+        A `bundled` one USED TO BE here too, and that was wrong: it travels inside the image, but it
+        carries a version and the back end installs over it like over anything else. Blocking it meant
+        that every login announced an update that could not be applied from the one place the notice
+        sends you to — and the only way out was a new image. Now the image is a STARTING POINT, not a
+        ceiling. What makes this safe is the other half, in the managers' `installBundled`: a bundled
+        extension is reinstalled on start-up only when it is NEWER than what is installed, so an update
+        survives the restart instead of being silently rolled back.
     */
     const notUpdatableReason = (installedFrom?: string): string | undefined => {
         switch (installedFrom) {
             case 'dev': return 'A dev version is loaded — change it in kwirth-dev.json'
-            case 'bundled': return 'Bundled with Kwirth — it is updated with Kwirth itself'
             default: return undefined
         }
     }

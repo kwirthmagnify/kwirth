@@ -1,4 +1,5 @@
 import { IProviderFieldDef, IExtensionRequirement } from '@kwirthmagnify/kwirth-common-back'
+import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { IConfigMaps } from './IConfigMap'
 import { TProviderConstructor } from '../providers/IProvider'
 import { ELogComponent, logError, logInfo } from './Logging'
@@ -454,8 +455,14 @@ export class ProviderManager {
             const file = path.basename(filePath)
             const bundled = await peekBundledMeta(filePath)
             const existing = bundled.id ? index.find(p => p.id === bundled.id) : undefined
-            if (existing && bundled.version && existing.version === bundled.version) {
-                logInfo(ELogComponent.CORE, `Bundled provider '${bundled.id}' v${bundled.version} up to date — skipping`)
+            /*
+                🔴 Only FORWARDS, the same rule as the bundled plugins. Reinstalling whenever the two
+                versions DIFFERED undid, on the next restart and in silence, any update installed from
+                the marketplace on top of what the image carries. The image is a starting point: it steps
+                in only when what it brings is NEWER.
+            */
+            if (existing && (!bundled.version || !existing.version || !versionGreaterThan(bundled.version, existing.version))) {
+                logInfo(ELogComponent.CORE, `Bundled provider '${bundled.id}' v${bundled.version ?? '?'} is not newer than the installed v${existing.version ?? '?'} — skipping`)
                 continue
             }
             try {
