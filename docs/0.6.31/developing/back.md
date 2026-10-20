@@ -45,11 +45,11 @@ interface IChannel {
 And this is a short explanation on each function:
 
   - `getChannelData`. The back channel must implement this function to inform kwirth core which capabilities does it support. This refers to things like 'pausing', 'reconnecting', source support (Kubernetes, or none for an autonomous channel), routing, metrics, etc.
-  - `getChannelScopeLevel`. Your channel may need to offer different scope levels to your users. For example, in the metrics channel the clients can just do SNAPSHOT (obtaining a set of metrics and its values) or do STREAM (that is, obtaining metrics through a stream of data implemented as an instance inside a WebSocket). This function returns an id that kwirth core uses for deciding if a specific user has an Access Key with a scope for performing the function he requested.
+  - `getChannelScopeLevel`. Your channel may need to offer different scope levels to your users. For example, in the metrics channel the clients can just do SNAPSHOT (obtaining a set of metrics and its values) or do STREAM (that is, obtaining metrics through a stream of data implemented as an instance inside a WebSocket). This function returns the position of a scope on **your** ladder, and it is **you** who asks the question with it — see [Who guards the door](#who-guards-the-door) before assuming the core does it for you.
   - `endpointRequest`. If your channel will receive HTTP requests from your clients once the channel is started you need to provide this function implementation. When a connected client performs an HTTP POST to your channel, the kwirth request processor will send you the request by means of this function. See a working example in Trivy channel or Fileman channel.
   - `websocketRequest`. If your channel will receive WebSocket connection requests from your clients once the channel is started, you need to provide this function implementation. See a working example in Magnify channel.
   - `processObjectEvent`. If your channel is subscribed to Kubernetes cluster events, the kwirth request processor will send you all ADDED/MODIFIED/DELETED events of all the Kubernetes objects in the cluster.
-  - `addObject`. Whenever a new object is detected that fulfills the conditions of a kwirth instance, the kwirth request processor will invoke this function sending you the proper information.
+  - `addObject`. Whenever a new object is detected that fulfills the conditions of a kwirth instance, the kwirth request processor will invoke this function sending you the proper information. 🔴 **For a cluster or an autonomous channel this is also where your authorisation goes**, because the core does not do it for you — see [Who guards the door](#who-guards-the-door).
   - `deleteObject`. Conversely, if an object disappears, you will be notified by means of this function.
   - `pauseContinueInstance`. This function will be invoked when the client connected to the channel wants to pause receiving data (but not stopping the instance) or continue receiving data if the instance has been previously paused.
   - `modifyInstance`. Modify instance (if enabled for your channel) will be invoked if the connected client wants to make some changes on instance configuration.
@@ -72,6 +72,55 @@ And this is a short explanation on each function:
   - `updateConnection`. If your channel supports reconnect actions, this is the function call your channel will receive when a client connects an existing instance with a new WebSocket.
 
 Please be aware of the difference that exists between an instance and the real communications transport (a WebSocket). When a client starts an instance, a WebSocket must be created and connected previously. And remember, **a WebSocket can carry multiple instances of the same channel**.
+
+## Who guards the door
+
+🔴 **Read this before assuming the core checks permissions for you. For most channels, it does not.**
+
+When a client asks to start an instance, the core always verifies that the access key is **valid** — a
+bearer signed with the master key, or a registered API key — and, if the key carries `enabledChannels`,
+that your channel is on that list. That is **authentication** plus an optional per-user allow-list. What
+happens next depends on what **your channel declares** in `getChannelData`:
+
+| your channel | the core | what it hands you |
+|---|---|---|
+| `resourced: true` | cross-checks the key's **resources** and refuses when nothing matches | only the namespaces, pods and containers the key reaches |
+| `cluster: true`, started on the cluster view | **does not look at scopes** | `'*all'` for namespace, pod and container |
+| autonomous (`cluster: false`, `resourced: false`) | **does not look at scopes** | three empty strings |
+
+So if your channel is a cluster or an autonomous one, **a key carrying no scopes at all reaches your
+`addObject`**. Measured, not assumed. If your data deserves a permission, you are the one who has to ask
+for it — and the core gives you everything you need to:
+
+```ts
+// your ladder: the position IS the level, and anything unknown answers -1 and grants nothing
+getChannelScopeLevel = (scope: string): number => ['', 'mychannel$user', 'cluster', 'admin'].indexOf(scope)
+
+addObject = async (webSocket, instanceConfig, ns, pod, container): Promise<boolean> => {
+    if (!scopeAllows(accessKeyDeserialize(instanceConfig.accessKey).resources, 'mychannel$user', this.getChannelScopeLevel)) {
+        // the core already answered 'accepted', so SAY SO or the tab sits there empty
+        this.sendSignalMessage(webSocket, EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE,
+            ESignalMessageLevel.ERROR, instanceConfig.instance, "This channel requires the 'mychannel$user' scope")
+        return false
+    }
+    ...
+}
+```
+
+Three things in that snippet are there for a reason:
+
+- **`scopeAllows` comes from `@kwirthmagnify/kwirth-common`** (0.5.72 and later), so the same call works
+  in your front end. It used to live in `kwirth-common-back`, which a browser cannot reach, and the
+  result was five extensions each writing their own copy of the same walk.
+- **Ask for YOUR minimum, never for `cluster`.** `cluster` sits *above* your own scopes in your own
+  ladder, so demanding it makes them unusable: anybody who could enter already outranked them. That
+  mistake was made in `trivy@0.2.30` and had to be undone.
+- **Say it out loud.** The core answers `Instance Config accepted` **before** calling `addObject`, so a
+  refusal of yours arrives afterwards. Returning `false` in silence leaves the user with an open tab and
+  no explanation.
+
+> ⚠️ Put `'admin'` at the top of your ladder unless you have a reason not to. A Kwirth administrator not
+> being able to open a channel of their own product is a surprise nobody wants to debug.
 
 ## Available data structures
 
