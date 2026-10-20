@@ -7,6 +7,7 @@ import { ApisApi, CoreV1Api, AppsV1Api, KubeConfig, KubernetesObjectApi, Log, Wa
 import { ConfigApi } from './api/ConfigApi'
 import { KubernetesSecrets } from './tools/KubernetesSecrets'
 import { KubernetesConfigMaps } from './tools/KubernetesConfigMaps'
+import { socketsToCloseOnReload } from './tools/ChannelReload'
 import { VERSION } from './version'
 import { getLastKwirthVersion, showLogo } from './tools/branding/Branding'
 
@@ -718,6 +719,45 @@ const announceChannelGone = (channelId: string, channel: IChannel): void => {
         catch { /* una conexión que falla al avisar no puede frenar la desinstalación */ }
     })
     if (told > 0) logInfo(ELogComponent.CORE, `Channel '${channelId}' uninstalled: told ${told} connection(s) that it is gone`)
+}
+
+/*
+    Los sockets que servía un canal que va a ser REEMPLAZADO (hot-reload de un plugin).
+
+    🔴 Por qué cerrarlos, y por qué no basta con reemplazar el canal y ya. La instancia nueva nace sin
+    conexiones: `addObject()` solo se llama en un START, y ningún navegador va a mandar otro porque su
+    socket NO se ha caído. El resultado es un canal que recibe comandos de instancias que no conoce y un
+    front convencido de que todo sigue bien: los botones giran para siempre, no llega ni un dato nuevo
+    —todos los broadcast recorren las conexiones del canal, que están vacías— y en el log no aparece nada.
+    Costó una tarde de diagnóstico con Excubitor, que es el que más lo sufre por tener el watch puesto,
+    pero le pasa a CUALQUIER plugin que se recargue en caliente.
+
+    Cerrar el socket es lo que enciende la maquinaria que YA existe y ya funciona: el navegador recibe su
+    `onclose`, avisa, y rehace el `RECONNECT` —que el canal nuevo atiende con `updateConnection`— o un START
+    limpio. No hace falta un camino nuevo ni que el front aprenda nada.
+
+    ⚠️ Un socket que ADEMÁS esté sirviendo a otro canal no se toca: cerrarlo tiraría de paso una pestaña que
+    no tiene nada que ver con el plugin recargado, y eso sería un efecto colateral invisible.
+*/
+const socketsOfChannel = (channel: IChannel): WebSocket[] =>
+    [...(wsServer?.clients ?? [])]
+        .filter(client => { try { return client.readyState === 1 && channel.containsConnection(client as unknown as WebSocket) } catch { return false } })
+        .map(client => client as unknown as WebSocket)
+
+const closeOrphanSockets = (channelId: string, sockets: WebSocket[], stillServed: (ws: WebSocket) => boolean): void => {
+    // La DECISIÓN (cuáles, y sobre todo cuáles no) vive en `tools/ChannelReload`, con sus tests: aquí solo
+    // se cierra. Lo que no puede romperse es la segunda regla —no tocar un socket que sirve a otro canal—,
+    // y eso no se asegura con cuidado al escribirlo sino con una prueba.
+    const victims = socketsToCloseOnReload(sockets, stillServed)
+    let closed = 0
+    for (const ws of victims) {
+        try {
+            ;(ws as unknown as { close: () => void }).close()
+            closed++
+        }
+        catch { /* un socket que falla al cerrarse no puede frenar la recarga */ }
+    }
+    if (closed > 0) logInfo(ELogComponent.CORE, `Channel '${channelId}' reloaded: closed ${closed} socket(s) so they re-handshake with the new instance`)
 }
 
 const sendInstanceConfigSignalMessage = (ws:WebSocket, action:EInstanceMessageAction, flow: EInstanceMessageFlow, channel: string, instanceMessage:IInstanceMessage, text:string, data?:any, reason?: ESignalMessageReason) => {
@@ -2108,6 +2148,11 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                 for (const ri of runningInstances) {
                     if (!ri.channels.has(id)) continue
                     const oldInstance = ri.channels.get(id)
+                    /*  Los sockets que servía el canal que se va, ANTES de tirarlo: después ya ha soltado
+                        sus conexiones y no hay forma de saber cuáles eran suyas (misma razón por la que el
+                        uninstall avisa antes del cleanup). Se cierran al final, cuando el canal nuevo ya
+                        está en su sitio y puede atender el handshake que vendrá a continuación. */
+                    const orphans = oldInstance ? socketsOfChannel(oldInstance) : []
                     if (typeof (oldInstance as any).cleanup === 'function') (oldInstance as any).cleanup()
                     const newInstance = createChannelInstance(ChannelClass, ri.clusterInfo, ri.backChannelObject, id)
                     if (newInstance) {
@@ -2122,6 +2167,15 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                         // now that channels implement cleanup() to drop the OLD subscription first (no dupes).
                         newInstance.startChannel().catch(err => logError(ELogComponent.CORE, `[dev] Plugin '${id}' startChannel after reload failed: ${err}`))
                         logInfo(ELogComponent.CORE, `[dev] Plugin '${id}' channel instance replaced in running instance`)
+                        /*  🔴 Y ahora los sockets huérfanos. El canal nuevo ya está en `ri.channels`, así
+                            que el RECONNECT o el START que llegue a continuación lo atiende él.
+
+                            Sin esto, el navegador se queda hablando con una instancia que ya no existe sin
+                            enterarse: su socket nunca se cayó, así que no dispara su lógica de reconexión;
+                            los comandos llegan a un canal que no los reconoce y los broadcast no salen
+                            —recorren unas conexiones vacías—. Desde fuera parece que el back no responde,
+                            y en el log no aparece nada. */
+                        closeOrphanSockets(id, orphans, ws => [...ri.channels.values()].some(c => c !== newInstance && c.containsConnection(ws)))
                     }
                 }
             }
