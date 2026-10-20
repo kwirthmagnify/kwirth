@@ -1,4 +1,4 @@
-import { accessKeyDeserialize, parseResources } from '@kwirthmagnify/kwirth-common'
+import { accessKeyDeserialize, scopeAllows } from '@kwirthmagnify/kwirth-common'
 import { IStatusCoreLog, IStatusPreviousLog } from '../common/StatusTypes'
 
 /*
@@ -73,7 +73,16 @@ export const filterLogLines = (lines: string[], filter: string): string[] => {
 export const isAdmin = (accessString: string | undefined): boolean => {
     if (!accessString) return false
     try {
-        return parseResources(accessKeyDeserialize(accessString).resources).some(r => r.scopes.split(',').includes('admin'))
+        /*
+            `scopeAllows` of kwirth-common (0.5.72), which is where this question lives since A13 of
+            auth-hardening. It used to walk the resources here — `scopes.split(',').includes('admin')` —
+            one of five copies of the same walk scattered across the extensions, because the helper only
+            existed in common-back and the FRONT cannot reach that.
+
+            The ladder is a two-rung one on purpose: this channel has no scopes of its own, it only asks
+            whether the key is an administrator's. Everything unknown sits at -1 and grants nothing.
+        */
+        return scopeAllows(accessKeyDeserialize(accessString).resources, 'admin', (scope) => ['', 'admin'].indexOf(scope))
     }
     catch {
         return false

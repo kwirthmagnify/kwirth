@@ -1,4 +1,5 @@
 import { IConfigFieldDef } from './ExtensionConfig'
+import { AccessKey, parseResources } from './AccessKey'
 
 // Catalogue of RBAC scopes an extension (a channel) declares. It is used to populate the security
 // editor (User/API Security) in the front end and to validate and manage permissions in the back end.
@@ -124,4 +125,82 @@ const decodeBase64 = (encoded: string): string => {
     const bytes = new Uint8Array(binary.length)
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
     return new TextDecoder().decode(bytes)
+}
+
+/*
+    ─── Deciding whether a key was granted enough ────────────────────────────────────────────────────
+
+    🔴 THIS LIVES IN `common` AND NOT IN `common-back` BECAUSE BOTH SIDES ASK.
+
+    It was written in common-back first, and that was half the answer: the back can import it, the FRONT
+    cannot — common-back is resolved from the core's server-side global, which does not exist in a
+    browser. So every extension whose UI had to decide whether to offer something wrote the walk again,
+    each one slightly different: agora's `agoraScopeAllows`, magnify's `levelFor`, excubitor's
+    `maxExcubitorScopeLevel`, status's `scopes.includes('admin')` and trivy's `keyReaches`, now gone.
+    A security check copied into every plugin is a security check that diverges — the day one of them
+    gets the comparison wrong, nothing says so.
+
+    🔴 What is read is what the KEY CARRIES, never what the client asked for. An accessKey cannot be
+    tampered with —a bearer key is an HMAC over its own resources, a registered one is compared whole
+    against the server's list— while `instanceConfig.scope` is a field of an unsigned JSON the browser
+    composes. Reading the latter would let anybody grant themselves a scope by typing it.
+
+    The ladder stays the extension's: it is passed in as `levelOf`, usually its own
+    `getChannelScopeLevel`. This module does not know what 'fileman$write' means, and should not.
+*/
+
+/**
+ * Whether any granted scope reaches the level `required` needs.
+ *
+ * Same semantics as the core's `getScopeLevel`: resources are OR'd, the HIGHEST scope wins, and a scope
+ * the ladder does not know is -1 (indexOf), so it grants nothing. That last part is what makes an
+ * unknown token —a thin scope on a channel that does not understand it, a scope that was renamed— fail
+ * CLOSED without anybody writing code for it.
+ *
+ * ⚠️ It NEVER throws: malformed resources authorise nothing. An exception from an async handler would
+ * escape as an unhandledRejection and take the process with it.
+ */
+export const scopeAllows = (resources: string, required: string, levelOf: (scope: string) => number): boolean => {
+    const requiredLevel = levelOf(required)
+    /*
+        🔴 ASKING FOR A SCOPE THAT IS NOT ON THE LADDER REFUSES EVERYBODY. It used to grant everybody.
+
+        `levelOf` answers -1 for what it does not know, so a required level of -1 was reached by every
+        scope — including another -1. A channel asking for a misspelled or renamed scope
+        (`this.allows(key, 'fileman$writte')`) therefore opened the door to ANY key, and the only visible
+        sign was a permission that never seemed to deny anything.
+
+        Found by a test written when this moved down from common-back (A13), not in production: today
+        the three callers —excubitor, fileman, trivy— all ask for scopes that are on their own ladder,
+        which is why it never showed. An unknown required scope is a bug in the channel, and a bug in a
+        channel must not end in an open door.
+    */
+    if (requiredLevel < 0) return false
+    try {
+        return parseResources(resources).some(r => r.scopes.split(',').some(sc => levelOf(sc.trim()) >= requiredLevel))
+    }
+    catch {
+        return false
+    }
+}
+
+/** The same question when what is at hand is the key the core handed over. No key, no permission. */
+export const keyAllows = (accessKey: AccessKey | undefined, required: string, levelOf: (scope: string) => number): boolean =>
+    !!accessKey && scopeAllows(accessKey.resources, required, levelOf)
+
+/**
+ * The HIGHEST level the key reaches on a ladder, or -1 when it reaches none.
+ *
+ * `scopeAllows` answers yes/no, which is what a door needs; a UI often needs the level itself, to show
+ * three different things rather than hide one. Excubitor wrote this separately for that reason
+ * (`maxExcubitorScopeLevel`), and without it here the copy would just be made again.
+ */
+export const scopeLevelOf = (resources: string, levelOf: (scope: string) => number): number => {
+    try {
+        return parseResources(resources).reduce((max, r) =>
+            r.scopes.split(',').reduce((m, sc) => Math.max(m, levelOf(sc.trim())), max), -1)
+    }
+    catch {
+        return -1
+    }
 }

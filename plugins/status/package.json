@@ -12,7 +12,7 @@
     "test": "node tests/run.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common": "^0.5.68",
+    "@kwirthmagnify/kwirth-common": "^0.5.72",
     "@kwirthmagnify/kwirth-common-back": "^0.6.4",
     "@kwirthmagnify/kwirth-common-front": "^0.5.66"
   },
