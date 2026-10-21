@@ -49,6 +49,16 @@ const verifyPassword = async (incoming: string, stored: string, userId: string) 
     return { valid, firstLogin }
 }
 
+/*
+    🔴 A user bound to an IdP never logs in with a password, neither here nor on the password change.
+
+    Their identity is the IdP's to prove: the UI creates them with an empty password, which UserApi stores
+    as bcrypt(''), so without this gate a POST /login with their email and '' got an AccessKey without
+    ever going through the IdP. Refused as any other bad credential (401, and it counts for the rate
+    limiter), so the answer does not tell a local user from an IdP one.
+*/
+const isIdpUser = (user: IUser) => typeof user.idp === 'string' && user.idp !== ''
+
 export class LoginApi {
     secrets: ISecrets
     configMaps: IConfigMaps
@@ -94,6 +104,12 @@ export class LoginApi {
                     return
                 }
                 let user:IUser = JSON.parse(atob(users[req.body.user]))
+                if (user && isIdpUser(user)) {
+                    logWarning(ELogComponent.AUTH, `Password login refused for '${user.id}': bound to IdP '${user.idp}'`)
+                    LoginApi.rateLimiter.fail(rateKey)
+                    res.status(401).json({})
+                    return
+                }
                 if (user) {
                     const { valid, firstLogin } = await verifyPassword(req.body.password, user.password, user.id)
                     if (!valid) {
@@ -155,6 +171,12 @@ export class LoginApi {
                 }
 
                 let user:IUser = JSON.parse (atob(users[req.body.user]))
+                if (user && isIdpUser(user)) {
+                    logWarning(ELogComponent.AUTH, `Password change refused for '${user.id}': bound to IdP '${user.idp}'`)
+                    LoginApi.rateLimiter.fail(rateKey)
+                    res.status(401).send()
+                    return
+                }
                 if (user) {
                     const { valid } = await verifyPassword(req.body.password, user.password, user.id)
                     if (!valid) {

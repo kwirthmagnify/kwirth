@@ -261,3 +261,49 @@ test('se aceptan los tres prefijos de bcrypt, no solo $2b$', async () => {
     }
     finally { await srv.stop() }
 })
+
+/*
+    🔴 A user bound to an IdP cannot log in with a password (signup S0).
+
+    The UI creates them with an empty password, stored as bcrypt(''): before the gate, a POST /login with
+    their email and '' handed out an AccessKey without going through the IdP. The second case proves the
+    gate does not depend on the password being empty: even the right one is refused.
+*/
+const IDP_USER = (password: string) => makeUser({ idp: 'google', password: bcrypt.hashSync(password, 4) })
+
+test('POST /login de un usuario IdP con password vacia devuelve 401 (antes daba accessKey)', async () => {
+    const srv = await startServer(encodeUsers([IDP_USER('')]))
+    try {
+        const res = await post(srv.base, '/login', { user: 'alice@example.com', password: '' })
+        assert.equal(res.status, 401)
+    }
+    finally { await srv.stop() }
+})
+
+test('POST /login de un usuario IdP con su password correcta tambien devuelve 401', async () => {
+    const srv = await startServer(encodeUsers([IDP_USER(sha256('secret'))]))
+    try {
+        const res = await post(srv.base, '/login', { user: 'alice@example.com', password: sha256('secret') })
+        assert.equal(res.status, 401)
+    }
+    finally { await srv.stop() }
+})
+
+test('POST /login/password de un usuario IdP devuelve 401 y no da accessKey', async () => {
+    const srv = await startServer(encodeUsers([IDP_USER('')]))
+    try {
+        const res = await post(srv.base, '/login/password', { user: 'alice@example.com', password: '', newpassword: sha256('nuevo') })
+        assert.equal(res.status, 401)
+    }
+    finally { await srv.stop() }
+})
+
+test('POST /login de un usuario con idp vacio se trata como local', async () => {
+    // '' is what the drawer stores for "Local": it must keep logging in with its password
+    const srv = await startServer(encodeUsers([makeUser({ idp: '' })]))
+    try {
+        const res = await post(srv.base, '/login', { user: 'alice@example.com', password: sha256('secret') })
+        assert.equal(res.status, 200)
+    }
+    finally { await srv.stop() }
+})

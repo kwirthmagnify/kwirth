@@ -82,7 +82,7 @@ Select it in **Resource List** and click **REMOVE**.
 Every user authenticates in one of two ways, selected with the **IdP** field of the editor:
 
 - **Local user** — the **IdP** field is `Local (user/password)`. They log in with the Id + Password you set here.
-- **IdP-bound user** — the **IdP** field points to an Identity Provider connector; they log in through that provider and **no password is used**.
+- **IdP-bound user** — the **IdP** field points to an Identity Provider connector; they log in through that provider and **only** through it: the user/password login refuses them.
 
 ## IdP-bound users
 
@@ -94,7 +94,7 @@ Rules that make an IdP user work (all must hold):
 
 - The **Id must be the user's verified email** — this is what the provider will return and what kwirth matches against.
 - The user must be **bound to the exact connector** they will use to sign in. A verified email arriving from a *different* provider is rejected.
-- **No password** is stored for IdP users; the Password field is irrelevant for them.
+- **No password** is used for IdP users; the Password field is irrelevant for them. An IdP-bound user **cannot log in with a password at all**, not even through the API: Kwirth refuses the user/password login (and the password change) for any user bound to an IdP, as it would refuse a wrong password, and logs a warning under the **Authentication** log component. Their only way in is their Identity Provider.
 - **No auto-provisioning** — you must create the user here first. Signing in with Google/GitLab/GitHub never creates an account by itself.
 
 ### Create an IdP-bound user (example)
