@@ -40,6 +40,12 @@ if (interactive) console.log('\n── Kwirth plugin scaffold ──────
 
 const id          = flag('id') ?? await ask('Plugin ID (kebab-case, e.g. my-plugin)')
 const name        = flag('name') ?? await ask('Display name', id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(' '))
+/*  🔴 The publisher scope is ASKED FOR, never assumed, and the generated build.mjs/watch.mjs read it
+    back from package.json instead of carrying a literal. They used to write "@kwirthmagnify" into
+    dist/package.json and into the publish URL, so a plugin scaffolded under any other scope still
+    announced itself as ours — and the dist name is what the marketplace and the installer go by.
+    The '@kwirthmagnify/kwirth-common-*' names further down are DEPENDENCIES on Kwirth's own libraries,
+    which is a different thing and stays fixed. */
 const publisher   = flag('publisher') ?? await ask('Publisher name (e.g. @my-scope)', '@my-scope')
 const description = flag('description') ?? await ask('Description', `${name} channel plugin for Kwirth`)
 const icon        = flag('icon') ?? await ask('MUI icon name', 'Extension')
@@ -271,7 +277,7 @@ console.log('Built dist/back.js')
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = {
     id: meta.id,
-    name: \`@kwirthmagnify/kwirth-plugin-\${meta.id}\`,
+    name: \`\${meta.publisher}/kwirth-plugin-\${meta.id}\`,
     displayName: meta.displayName,
     extensionType: 'plugin',
     version: meta.version,
@@ -284,7 +290,7 @@ const distMeta = {
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
-const npmName = \`@kwirthmagnify/kwirth-plugin-\${meta.id}\`
+const npmName = \`\${meta.publisher}/kwirth-plugin-\${meta.id}\`
 console.log("Done. Run 'npm publish --access=public' on your 'dist' folder in order to publish your package to npmjs.")
 console.log(\`Package will be accessible (and installable on Kwirth) via this URL: https://registry.npmjs.org/\${npmName}/-/kwirth-plugin-\${meta.id}-\${meta.version}.tgz\`)
 `)
@@ -336,7 +342,7 @@ fs.mkdirSync('dist', { recursive: true })
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
-    id: meta.id, name: \`@kwirthmagnify/kwirth-plugin-\${meta.id}\`, displayName: meta.displayName,
+    id: meta.id, name: \`\${meta.publisher}/kwirth-plugin-\${meta.id}\`, displayName: meta.displayName,
     version: meta.version, description: meta.description, icon: meta.icon,
     ...(meta.website ? { website: meta.website } : {}),
     requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? []

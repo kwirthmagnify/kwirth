@@ -81,7 +81,7 @@ fs.mkdirSync(loginDir, { recursive: true })
 
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
-    "name": "${publisher}/login-${id}",
+    "name": "${publisher}/kwirth-login-${id}",
     "id": "${id}",
     "publisher": "${publisher}",
     "displayName": "${displayName}",
