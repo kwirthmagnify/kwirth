@@ -1,7 +1,8 @@
-// Generates docs/pinocchio.tgz from docs/guide/ for kwirth's docs marketplace (extensionType: docs).
+// Generates docs/<scope>-docs-pinocchio-<version>.tgz from docs/guide/ for kwirth's docs marketplace
+// (extensionType: docs).
 // It runs on import alone, so build.mjs can do `await import('./build-docs-tgz.mjs')` and watch.mjs can
 // relaunch it as a child process on every change to the guide.
-import { cpSync, mkdirSync, existsSync, readFileSync, writeFileSync, rmSync } from 'fs'
+import { cpSync, mkdirSync, existsSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { tmpdir } from 'os'
@@ -12,12 +13,25 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const pkg = createRequire(import.meta.url)('./package.json')
 
 const guideDir = join(__dirname, 'docs', 'guide')
-const outTgz = join(__dirname, 'docs', 'pinocchio.tgz')
+const docsDir = join(__dirname, 'docs')
+
+/*  🔴 The scope is DERIVED from the package, never typed: there are three houses and two are public, so a
+    literal here is how a paid guide ends up announcing itself as OSS.
+
+    The tarball used to be 'pinocchio.tgz' — no scope, no type and, above all, no VERSION. Previous ones
+    are deleted before packing: with the version in the name they would pile up, and since the dev config
+    now points at this FOLDER and takes the tgz inside, a leftover would be a guide that does not match
+    the code, served without a word. */
+const scope = (pkg.publisher ?? pkg.name.split('/')[0]).replace(/^@/, '')
+const npmName = `@${scope}/docs-pinocchio`
+const outTgz = join(docsDir, `${scope}-docs-pinocchio-${pkg.version}.tgz`)
 
 if (!existsSync(guideDir)) {
     console.error('docs/guide/ not found')
     process.exit(1)
 }
+
+for (const f of readdirSync(docsDir)) if (f.endsWith('.tgz')) rmSync(join(docsDir, f))
 
 const tmpDir = join(tmpdir(), `kwirth-docs-pinocchio-${Date.now()}`)
 mkdirSync(tmpDir, { recursive: true })
@@ -42,7 +56,7 @@ try {
         extensionType: 'docs',
         targetType: 'plugin',
         id: 'pinocchio',
-        name: '@kwirthmagnify/kwirth-docs-pinocchio',
+        name: npmName,
         displayName: 'Kwirth Pinocchio — Guide',
         version: pkg.version,
         description: 'User and administrator guide for the Kwirth Pinocchio plugin'

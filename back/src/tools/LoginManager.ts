@@ -1,11 +1,12 @@
 import { IConfigMaps } from './IConfigMap'
-import { ELogComponent, logError, logInfo } from './Logging'
+import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 import { ILoginFieldDef } from '@kwirthmagnify/kwirth-common-back'
 import { EExtensionType, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType } from './BundledExtensions'
 import { downloadFile, packageHeaders } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
+import { resolveDevTgz } from './Utils'
 import tar from 'tar'
 import os from 'os'
 import path from 'path'
@@ -315,7 +316,13 @@ export class LoginManager {
     }
 
     private async registerDevLogin(id: string, tgzPath: string): Promise<string | undefined> {
-        const absPath = path.resolve(tgzPath)
+        // The entry may name the tgz or the folder holding it — see resolveDevTgz. A login's tarball
+        // carries scope and version now, so naming the file would mean editing kwirth-dev.json on every
+        // bump, and forgetting it loads an older login without a word.
+        const { tgz, warning } = resolveDevTgz(path.resolve(tgzPath), `Login '${id}'`)
+        if (warning) logWarning(ELogComponent.CORE, warning)
+        if (!tgz) return undefined
+        const absPath = tgz
         try {
             const installed = await this.install(absPath, 'dev')
             this.devLogins.set(id, { tgzPath: absPath, meta: installed })

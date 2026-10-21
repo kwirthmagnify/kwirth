@@ -13,7 +13,7 @@
  *   --version     The pack's version                  (default: 1.0.0)
  *   --description Description                         (default: "")
  *   --website     The pack's website URL              (default: "")
- *   --output      Path of the output tgz              (default: <id>-<version>.pack.tgz)
+ *   --output      Path of the output tgz              (default: <scope>-pack-<id>-<version>.tgz)
  *
  * Examples:
  *   # From already built tgzs
@@ -93,8 +93,10 @@ if (!packId) { console.error('Error: falta pack-id'); process.exit(1) }
 if (!includes.length && !inputTgzs.length) { console.error('Error: se necesita al menos un --include o un tgz'); process.exit(1) }
 
 opts.name   = opts.name   ?? packId
-// The file is named after the package too, so what is on disk and what is published say the same thing.
-opts.output = opts.output ?? `kwirth-pack-${packId}-${opts.version}.tgz`
+// The file is named after the package too, so what is on disk and what is published say the same thing:
+// '<scope>-pack-<id>-<version>.tgz', which is what `npm pack` produces for @scope/pack-<id>.
+const packScope = opts.publisher.replace(/^@/, '')
+opts.output = opts.output ?? `${packScope}-pack-${packId}-${opts.version}.tgz`
 
 // --- helpers ---
 async function readPkgFromTgz(tgzPath) {
@@ -185,7 +187,27 @@ for (const rawPath of inputTgzs) {
     // (targetType, id), so its entry has to carry the targetType along too.
     if (extType === 'docs' && !pkg.targetType) { console.error(`\n  ✗ Sin 'targetType' en package.json (obligatorio en docs)`); process.exit(1) }
 
-    const tgzName = basename(tgzPath)
+    /*
+        The name INSIDE the pack is normalised to '<scope>-<type>-<id>-<version>.tgz', the same shape
+        every artifact now carries on its own.
+
+        The incoming name is not good enough, because each artifact used to build it its own way and a
+        single pack ended up holding three styles side by side: 'iriaoperae-kwirth-provider-cloud-config-
+        0.4.0.tgz' (from `npm pack`), 'excubitor.tgz' (the guides, written by each build-docs-tgz.mjs
+        with no scope and no version) and 'kwirth-login-excubitor.tgz' (no version). Opening a pack and
+        not being able to tell which version each piece is, is precisely what you go to look at when
+        something does not add up.
+
+        🔴 The scope is read from the member's OWN package.json — not from the pack's --publisher. A pack
+        may legitimately bundle artifacts from more than one house (a paid plugin with a public DCE), and
+        stamping the pack's scope on all of them would rename somebody else's artifact.
+
+        Everything needed is already read from the tgz itself, so there is nothing to guess. The name is
+        internal to the pack — pack.json refers to this very one — and does not change how each extension
+        is published.
+    */
+    const memberScope = (pkg.publisher ?? pkg.name?.split('/')[0] ?? opts.publisher).replace(/^@/, '')
+    const tgzName = `${memberScope}-${extType}-${extId}${pkg.version ? `-${pkg.version}` : ''}.tgz`
     copyFileSync(tgzPath, join(pkgDir, tgzName))
     extensions.push({ extensionType: extType, id: extId, tgz: tgzName, ...(extType === 'docs' ? { targetType: pkg.targetType } : {}) })
     members.push({ extensionType: extType, id: extId, version: pkg.version ?? '?' })
@@ -194,7 +216,7 @@ for (const rawPath of inputTgzs) {
 
 // pack's package.json
 //
-// The name follows the same 'kwirth-<type>-<id>' pattern as every other extension type. It used to be
+// The name follows the same '@<scope>/<type>-<id>' pattern as every other extension type. It used to be
 // just '@kwirthmagnify/<packId>', which put a package named after nothing in particular ('censor') at the
 // top of the scope, next to the core's own packages.
 //
@@ -203,7 +225,7 @@ for (const rawPath of inputTgzs) {
 // cannot be unpublished and where its very name discloses a product. The pack carries no code of its own,
 // but it names what it bundles.
 const packPkgJson = {
-    name:          `${opts.publisher}/kwirth-pack-${packId}`,
+    name:          `${opts.publisher}/pack-${packId}`,
     id:            packId,
     displayName:   opts.name,
     version:       opts.version,

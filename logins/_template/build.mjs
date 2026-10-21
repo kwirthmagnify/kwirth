@@ -2,7 +2,7 @@
  * Build script for a login extension.
  * Packs package.json + login.json + background.png (if present) into dist/<id>.tgz
  */
-import { mkdirSync, existsSync, copyFileSync, statSync } from 'fs'
+import { mkdirSync, existsSync, copyFileSync, statSync, readdirSync, rmSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { join, resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -64,7 +64,22 @@ if (existsSync(bgHiSrc)) {
 }
 
 // pack into tgz
-const tgzName = `${id}.tgz`
+/*  Named `<scope>-login-<id>-<version>.tgz`, exactly what `npm pack` would produce for @scope/login-<id>.
+
+    A login is not packed by npm (it is a tar of two files and a couple of images), so the name is this
+    script's job, and for a while it got it wrong: `<id>.tgz`, with no scope, no type and no version.
+    Gathering several into a pack meant three styles side by side with no way to tell which version each
+    piece was — the first thing anyone looks at when something does not add up.
+
+    🔴 The SCOPE is derived from package.json, never typed: there are three houses and two of them are
+    public, so a literal here is a paid login announcing itself as OSS.
+
+    🔴 Previous tarballs are DELETED: with the version in the name each build would leave a new one next
+    to the old, so whoever grabs "the tgz in dist" could walk off with a previous version unnoticed. */
+for (const f of readdirSync(distDir)) if (f.endsWith('.tgz')) rmSync(join(distDir, f))
+
+const scope = (pkg.publisher ?? pkg.name.split('/')[0]).replace(/^@/, '')
+const tgzName = `${scope}-login-${id}-${pkg.version}.tgz`
 execSync(`tar -czf ${tgzName} package.json login.json${existsSync(bgSrc) ? ' background.png' : ''}` +
     `${existsSync(bgHiSrc) ? ' background-hi.png' : ''}`, { cwd: distDir })
 

@@ -91,7 +91,7 @@ const backCtx = await esbuild.context({
 await frontCtx.watch()
 await backCtx.watch()
 
-// Docs: rebuilds docs/pinocchio.tgz when the guide changes, just as front/back do with src/. The packer
+// Docs: rebuilds the guide's tarball in docs/ when the guide changes, as front/back do with src/. The packer
 // has no watch mode of its own, so we relaunch it as a child process with a debounce to group bursts of
 // changes. The core installs the tgz at startup (loadDevDocs), so a change to the guide shows after
 // restarting it — but the tarball will already be fresh. Disable with PINOCCHIO_NO_DOCS_WATCH=1.
@@ -100,7 +100,7 @@ const rebuildDocs = () => {
     clearTimeout(docsTimer)
     docsTimer = setTimeout(() => {
         const child = spawn(process.execPath, ['build-docs-tgz.mjs'], { stdio: 'inherit' })
-        child.on('exit', (code) => console.log(`[docs-watch] docs/pinocchio.tgz rebuilt (exit ${code})`))
+        child.on('exit', (code) => console.log(`[docs-watch] docs tgz rebuilt (exit ${code})`))
     }, 600)
 }
 
@@ -116,6 +116,6 @@ if (docsWatchEnabled) {
 }
 
 console.log('[watch] Watching src/ — front.js and back.js rebuild on every change.')
-if (docsWatchEnabled) console.log('[watch] Watching docs/guide — docs/pinocchio.tgz rebuilds on every change.')
+if (docsWatchEnabled) console.log('[watch] Watching docs/guide — the docs tgz rebuilds on every change.')
 console.log('[watch] kwirth backend hot-reloads back.js automatically.')
 console.log('[watch] kwirth frontend polls for front.js changes every 2s.')

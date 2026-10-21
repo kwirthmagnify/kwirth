@@ -38,8 +38,8 @@
         "aws-auth": "../dces/aws-auth/dist"
     },
     "docs": {
-        "excubitor": "../plugins/excubitor/docs/excubitor.tgz",
-        "cloud-config": "../providers/cloud-config/docs/cloud-config.tgz",
-        "agora": "../plugins/agora/docs/agora.tgz"
+        "excubitor": "../plugins/excubitor/docs/",
+        "cloud-config": "../providers/cloud-config/docs/",
+        "agora": "../plugins/agora/docs/"
     }
 }

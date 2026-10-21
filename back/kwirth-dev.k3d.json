@@ -17,11 +17,11 @@
   "senders": {},
   "webhooks": {},
   "logins": {
-    "excubitor": "../plugins/excubitor/login/dist/excubitor.tgz",
-    "montag": "../plugins/montag/login/dist/montag.tgz",
-    "iter": "../plugins/iter/login/dist/iter.tgz",
-    "santander": "../logins/santander/dist/santander.tgz",
-    "agora": "../plugins/agora/login/dist/agora.tgz"
+    "excubitor": "../plugins/excubitor/login/dist/",
+    "montag": "../plugins/montag/login/dist/",
+    "iter": "../plugins/iter/login/dist/",
+    "santander": "../logins/santander/dist/",
+    "agora": "../plugins/agora/login/dist/"
   },
   "homepages": {},
   "themes": {
@@ -50,10 +50,10 @@
   },
   "docs": {
     "kwirth": "bundle/docs/kwirth.tgz",
-    "excubitor": "../plugins/excubitor/docs/excubitor.tgz",
-    "montag": "../plugins/montag/docs/montag.tgz",
-    "iter": "../plugins/iter/docs/iter.tgz",
-    "situs": "../plugins/situs/docs/situs.tgz",
-    "agora": "../plugins/agora/docs/agora.tgz"
+    "excubitor": "../plugins/excubitor/docs/",
+    "montag": "../plugins/montag/docs/",
+    "iter": "../plugins/iter/docs/",
+    "situs": "../plugins/situs/docs/",
+    "agora": "../plugins/agora/docs/"
   }
 }

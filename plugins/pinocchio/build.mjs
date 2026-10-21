@@ -124,7 +124,7 @@ console.log('Wrote dist/package.json')
 fs.copyFileSync('README.md', path.join('dist', 'README.md'))
 console.log('Copied README.md to dist/')
 
-// Docs: the user/admin guide is packaged as a 'docs' extension (docs/pinocchio.tgz). A single
+// Docs: the user/admin guide is packaged as a 'docs' extension (docs/<scope>-docs-pinocchio-<ver>.tgz). A single
 // 'npm run build' leaves all three pieces ready: front.js, back.js and the guide's tarball.
 await import('./build-docs-tgz.mjs')
 

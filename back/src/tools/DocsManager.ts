@@ -8,6 +8,7 @@ import path from 'path'
 import fs from 'fs'
 import { downloadFile, packageHeaders } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
+import { resolveDevTgz } from './Utils'
 
 export interface IDocsMeta {
     id: string
@@ -297,13 +298,12 @@ export class DocsManager {
             for (const [label, tgzPath] of entries) {
                 if (typeof tgzPath !== 'string') continue
                 declaredLabels.add(label)
-                const resolved = path.resolve(process.cwd(), tgzPath)
-                if (!fs.existsSync(resolved)) {
-                    logWarning(ELogComponent.CORE, `[dev] Docs '${label}' tgz not found at ${resolved} — run 'npm run build' in back/ first`)
-                    continue
-                }
+                // The entry may name the tgz or the folder holding it — see resolveDevTgz.
+                const { tgz, warning } = resolveDevTgz(path.resolve(process.cwd(), tgzPath), `Docs '${label}'`)
+                if (warning) logWarning(ELogComponent.CORE, warning)
+                if (!tgz) continue
                 try {
-                    const meta = await this.install(resolved, 'dev')
+                    const meta = await this.install(tgz, 'dev')
                     installedPairs.add(`${meta.targetType}/${meta.id}`)
                     logInfo(ELogComponent.CORE, `[dev] Docs '${meta.targetType}/${meta.id}' v${meta.version} installed`)
                 }
