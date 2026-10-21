@@ -1,4 +1,4 @@
-// Generates docs/<scope>-docs-pinocchio-<version>.tgz from docs/guide/ for kwirth's docs marketplace
+// Generates docs/<scope>-kwirth-docs-pinocchio-<version>.tgz from docs/guide/ for kwirth's docs marketplace
 // (extensionType: docs).
 // It runs on import alone, so build.mjs can do `await import('./build-docs-tgz.mjs')` and watch.mjs can
 // relaunch it as a child process on every change to the guide.
@@ -23,8 +23,8 @@ const docsDir = join(__dirname, 'docs')
     now points at this FOLDER and takes the tgz inside, a leftover would be a guide that does not match
     the code, served without a word. */
 const scope = (pkg.publisher ?? pkg.name.split('/')[0]).replace(/^@/, '')
-const npmName = `@${scope}/docs-pinocchio`
-const outTgz = join(docsDir, `${scope}-docs-pinocchio-${pkg.version}.tgz`)
+const npmName = `@${scope}/kwirth-docs-pinocchio`
+const outTgz = join(docsDir, `${scope}-kwirth-docs-pinocchio-${pkg.version}.tgz`)
 
 if (!existsSync(guideDir)) {
     console.error('docs/guide/ not found')

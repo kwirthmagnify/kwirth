@@ -65,7 +65,7 @@ if (existsSync(bgHiSrc)) {
 
 // pack into tgz
 /*  Named like every other extension type: '<scope>-<type>-<id>-<version>', which is exactly what
-    `npm pack` would produce for @scope/login-<id>.
+    `npm pack` would produce for @scope/kwirth-login-<id>.
 
     🔴 The SCOPE is derived from package.json, never typed: there are three houses and two of them are
     public, so a literal here is a paid login announcing itself as OSS.
@@ -75,7 +75,7 @@ if (existsSync(bgHiSrc)) {
     pile up, and whoever grabs "the tgz in dist" could walk off with a previous one without noticing. */
 for (const f of readdirSync(distDir)) if (f.endsWith('.tgz')) rmSync(join(distDir, f))
 const scope = (pkg.publisher ?? pkg.name.split('/')[0]).replace(/^@/, '')
-const tgzName = `${scope}-login-${id}-${pkg.version}.tgz`
+const tgzName = `${scope}-kwirth-login-${id}-${pkg.version}.tgz`
 execSync(`tar -czf ${tgzName} package.json login.json${existsSync(bgSrc) ? ' background.png' : ''}` +
     `${existsSync(bgHiSrc) ? ' background-hi.png' : ''}`, { cwd: distDir })
 

@@ -188,8 +188,8 @@ if (existsSync(bgHiSrc)) {
     copyFileSync(bgHiSrc, join(distDir, 'background-hi.png'))
 }
 
-/*  The tarball is named \`<scope>-login-<id>-<version>.tgz\`, the same shape npm gives every other
-    extension type — 'npm pack' on @scope/login-<id> would produce exactly this.
+/*  The tarball is named \`<scope>-kwirth-login-<id>-<version>.tgz\`, the same shape npm gives every other
+    extension type — 'npm pack' on @scope/kwirth-login-<id> would produce exactly this.
 
     A login is not packed by npm (it is a tar of two files and a couple of images), so the name is this
     script's job, and for a while it got it wrong: \`<id>.tgz\`, with no scope, no type and no version.
@@ -206,7 +206,7 @@ if (existsSync(bgHiSrc)) {
 for (const f of readdirSync(distDir)) if (f.endsWith('.tgz')) rmSync(join(distDir, f))
 
 const scope = (pkg.publisher ?? pkg.name.split('/')[0]).replace(/^@/, '')
-const tgzName = \`\${scope}-login-\${id}-\${pkg.version}.tgz\`
+const tgzName = \`\${scope}-kwirth-login-\${id}-\${pkg.version}.tgz\`
 execSync(\`tar -czf \${tgzName} package.json login.json\${existsSync(bgSrc) ? ' background.png' : ''}\` +
     \`\${existsSync(bgHiSrc) ? ' background-hi.png' : ''}\`, { cwd: distDir })
 

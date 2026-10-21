@@ -13,7 +13,7 @@
  *   --version     The pack's version                  (default: 1.0.0)
  *   --description Description                         (default: "")
  *   --website     The pack's website URL              (default: "")
- *   --output      Path of the output tgz              (default: <scope>-pack-<id>-<version>.tgz)
+ *   --output      Path of the output tgz              (default: <scope>-kwirth-pack-<id>-<version>.tgz)
  *
  * Examples:
  *   # From already built tgzs
@@ -94,9 +94,9 @@ if (!includes.length && !inputTgzs.length) { console.error('Error: se necesita a
 
 opts.name   = opts.name   ?? packId
 // The file is named after the package too, so what is on disk and what is published say the same thing:
-// '<scope>-pack-<id>-<version>.tgz', which is what `npm pack` produces for @scope/pack-<id>.
+// '<scope>-kwirth-pack-<id>-<version>.tgz', which is what `npm pack` produces for @scope/kwirth-pack-<id>.
 const packScope = opts.publisher.replace(/^@/, '')
-opts.output = opts.output ?? `${packScope}-pack-${packId}-${opts.version}.tgz`
+opts.output = opts.output ?? `${packScope}-kwirth-pack-${packId}-${opts.version}.tgz`
 
 // --- helpers ---
 async function readPkgFromTgz(tgzPath) {
@@ -188,8 +188,8 @@ for (const rawPath of inputTgzs) {
     if (extType === 'docs' && !pkg.targetType) { console.error(`\n  ✗ Sin 'targetType' en package.json (obligatorio en docs)`); process.exit(1) }
 
     /*
-        The name INSIDE the pack is normalised to '<scope>-<type>-<id>-<version>.tgz', the same shape
-        every artifact now carries on its own.
+        The name INSIDE the pack is normalised to '<scope>-kwirth-<type>-<id>-<version>.tgz', the same
+        shape every artifact now carries on its own.
 
         The incoming name is not good enough, because each artifact used to build it its own way and a
         single pack ended up holding three styles side by side: 'iriaoperae-kwirth-provider-cloud-config-
@@ -207,7 +207,7 @@ for (const rawPath of inputTgzs) {
         is published.
     */
     const memberScope = (pkg.publisher ?? pkg.name?.split('/')[0] ?? opts.publisher).replace(/^@/, '')
-    const tgzName = `${memberScope}-${extType}-${extId}${pkg.version ? `-${pkg.version}` : ''}.tgz`
+    const tgzName = `${memberScope}-kwirth-${extType}-${extId}${pkg.version ? `-${pkg.version}` : ''}.tgz`
     copyFileSync(tgzPath, join(pkgDir, tgzName))
     extensions.push({ extensionType: extType, id: extId, tgz: tgzName, ...(extType === 'docs' ? { targetType: pkg.targetType } : {}) })
     members.push({ extensionType: extType, id: extId, version: pkg.version ?? '?' })
@@ -216,7 +216,7 @@ for (const rawPath of inputTgzs) {
 
 // pack's package.json
 //
-// The name follows the same '@<scope>/<type>-<id>' pattern as every other extension type. It used to be
+// The name follows the same '@<scope>/kwirth-<type>-<id>' pattern as every other extension type. It used to be
 // just '@kwirthmagnify/<packId>', which put a package named after nothing in particular ('censor') at the
 // top of the scope, next to the core's own packages.
 //
@@ -225,7 +225,7 @@ for (const rawPath of inputTgzs) {
 // cannot be unpublished and where its very name discloses a product. The pack carries no code of its own,
 // but it names what it bundles.
 const packPkgJson = {
-    name:          `${opts.publisher}/pack-${packId}`,
+    name:          `${opts.publisher}/kwirth-pack-${packId}`,
     id:            packId,
     displayName:   opts.name,
     version:       opts.version,

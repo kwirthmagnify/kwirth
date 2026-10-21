@@ -284,7 +284,7 @@ ${distMetaBlock}
 console.log('Wrote dist/package.json')
 
 console.log("Done. Run 'npm publish --access=public' on your 'dist' folder to publish to npmjs.")
-console.log(\`Installable on Kwirth via: https://registry.npmjs.org/\${meta.name}/-/provider-\${meta.id}-\${meta.version}.tgz\`)
+console.log(\`Installable on Kwirth via: https://registry.npmjs.org/\${meta.name}/-/kwirth-provider-\${meta.id}-\${meta.version}.tgz\`)
 `)
 
 write('watch.mjs', `import esbuild from 'esbuild'

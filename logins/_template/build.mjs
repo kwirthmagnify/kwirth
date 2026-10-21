@@ -64,7 +64,8 @@ if (existsSync(bgHiSrc)) {
 }
 
 // pack into tgz
-/*  Named `<scope>-login-<id>-<version>.tgz`, exactly what `npm pack` would produce for @scope/login-<id>.
+/*  Named `<scope>-kwirth-login-<id>-<version>.tgz`, exactly what `npm pack` would produce for
+    @scope/kwirth-login-<id>.
 
     A login is not packed by npm (it is a tar of two files and a couple of images), so the name is this
     script's job, and for a while it got it wrong: `<id>.tgz`, with no scope, no type and no version.
@@ -79,7 +80,7 @@ if (existsSync(bgHiSrc)) {
 for (const f of readdirSync(distDir)) if (f.endsWith('.tgz')) rmSync(join(distDir, f))
 
 const scope = (pkg.publisher ?? pkg.name.split('/')[0]).replace(/^@/, '')
-const tgzName = `${scope}-login-${id}-${pkg.version}.tgz`
+const tgzName = `${scope}-kwirth-login-${id}-${pkg.version}.tgz`
 execSync(`tar -czf ${tgzName} package.json login.json${existsSync(bgSrc) ? ' background.png' : ''}` +
     `${existsSync(bgHiSrc) ? ' background-hi.png' : ''}`, { cwd: distDir })
 

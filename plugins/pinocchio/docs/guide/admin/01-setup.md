@@ -49,7 +49,7 @@ En un entorno de desarrollo, el backend carga los plugins desde disco leyendo `b
 La entrada de `docs` es la que hace que **esta guía** quede accesible desde la propia UI de Kwirth.
 
 Apunta a la **carpeta**, no al `.tgz`: el nombre del paquete lleva la versión dentro
-(`kwirthmagnify-docs-pinocchio-0.2.42.tgz`), así que nombrar el fichero obligaría a editar esto en cada
+(`kwirthmagnify-kwirth-docs-pinocchio-0.2.42.tgz`), así que nombrar el fichero obligaría a editar esto en cada
 versión — y olvidarse no da ningún error: Kwirth serviría una guía antigua sin avisar. Kwirth coge el
 `.tgz` que encuentre dentro de la carpeta, y el build deja siempre uno solo.
 

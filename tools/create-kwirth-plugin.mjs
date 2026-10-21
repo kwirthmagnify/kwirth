@@ -69,12 +69,11 @@ if (rl) rl.close()
 /*  A DCE is named ACROSS scopes: a paid plugin regularly consumes a public DCE, which is why the scope
     is part of what is typed here and is NOT assumed to be the plugin's own. Three forms are accepted:
 
-      xyflow                                 → @<this plugin's publisher>/dce-xyflow
-      @kwirthmagnify/xyflow                  → @kwirthmagnify/dce-xyflow
+      xyflow                                 → @<this plugin's publisher>/kwirth-dce-xyflow
+      @kwirthmagnify/xyflow                  → @kwirthmagnify/kwirth-dce-xyflow
       @kwirthmagnify/kwirth-dce-xyflow       → taken verbatim
 
-    The third form exists because the DCEs published so far still carry the old 'kwirth-' infix, so a
-    plugin that consumes one has to be able to name the package that actually resolves today. The id —
+    The third form lets anyone name a package exactly as it is published, whatever its shape. The id —
     what `requiresExtension` and the mapping key go by — is the same in all three: 'xyflow'. */
 const dces = dceRaw.split(',').map(s => s.trim()).filter(Boolean).map(entry => {
     const colon   = entry.lastIndexOf(':')
@@ -199,7 +198,8 @@ const dceGlobal = (registry) => ({
         // wrong. 🔴 It matches ANY scope on purpose: a paid plugin consuming a public DCE is the normal
         // case, and a filter pinned to one house silently skipped those imports, leaving the DCE bundled
         // in instead of resolved against the registry — the exact duplicate-instance bug the mapping is
-        // there to prevent. The optional 'kwirth-' covers the DCEs published before the rename.
+        // there to prevent. The 'kwirth-' is optional so a DCE published under any other shape still
+        // reaches DCE_PACKAGES, which is what decides.
         build.onResolve({ filter: /^@[^/]+\\/(kwirth-)?dce-/ }, (args) => (
             DCE_PACKAGES[args.path] ? { path: args.path, namespace: 'kwirth-dce' } : undefined
         ))
@@ -309,7 +309,7 @@ console.log('Built dist/back.js')
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = {
     id: meta.id,
-    name: \`\${meta.publisher}/plugin-\${meta.id}\`,
+    name: \`\${meta.publisher}/kwirth-plugin-\${meta.id}\`,
     displayName: meta.displayName,
     extensionType: 'plugin',
     version: meta.version,
@@ -322,9 +322,9 @@ const distMeta = {
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
-const npmName = \`\${meta.publisher}/plugin-\${meta.id}\`
+const npmName = \`\${meta.publisher}/kwirth-plugin-\${meta.id}\`
 console.log("Done. Run 'npm publish --access=public' on your 'dist' folder in order to publish your package to npmjs.")
-console.log(\`Package will be accessible (and installable on Kwirth) via this URL: https://registry.npmjs.org/\${npmName}/-/plugin-\${meta.id}-\${meta.version}.tgz\`)
+console.log(\`Package will be accessible (and installable on Kwirth) via this URL: https://registry.npmjs.org/\${npmName}/-/kwirth-plugin-\${meta.id}-\${meta.version}.tgz\`)
 `)
 
 // ─── watch.mjs ─────────────────────────────────────────────────────────────
@@ -374,7 +374,7 @@ fs.mkdirSync('dist', { recursive: true })
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
-    id: meta.id, name: \`\${meta.publisher}/plugin-\${meta.id}\`, displayName: meta.displayName,
+    id: meta.id, name: \`\${meta.publisher}/kwirth-plugin-\${meta.id}\`, displayName: meta.displayName,
     version: meta.version, description: meta.description, icon: meta.icon,
     ...(meta.website ? { website: meta.website } : {}),
     requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? []
