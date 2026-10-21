@@ -9,7 +9,7 @@
     importing '@kwirthmagnify/kwirth-common-back', just like ISender/IProvider.
 */
 
-import { TConfigFieldType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
+import { TConfigFieldType, IConfigFieldDef, IIdpSignupPolicy } from '@kwirthmagnify/kwirth-common'
 import { IExtension } from './IExtension'
 
 export enum EIdpConnectorKind {
@@ -98,6 +98,7 @@ export interface IIdpInstanceConfig {
     label: string
     enabled: boolean
     config: Record<string, unknown>
+    signup?: IIdpSignupPolicy   // the core's, not the connector's; undefined = signup disabled
 }
 
 export type TIdpConnectorConstructor = new () => IIdpConnector

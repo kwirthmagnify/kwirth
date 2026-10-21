@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import express from 'express'
 import type { AddressInfo } from 'net'
 import { UserApi } from '../../src/api/UserApi'
+import { IdentityService } from '../../src/tools/auth/IdentityService'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { accessKeySerialize } from '@kwirthmagnify/kwirth-common'
 
@@ -60,4 +61,22 @@ test('GET /user con scope admin → 200', async () => {
         assert.ok((await res.json()).includes('admin'))
     }
     finally { await srv.stop() }
+})
+
+// 🔴 D6 (signup S1): UserApi takes THE identity lock, the same the login and the signups take. It used to
+// have a semaphore of its own, which serialised the admin with the admin and with nobody else.
+test('GET /user espera mientras alguien tiene IdentityService.lock', async () => {
+    const srv = await startServer()
+    let release!: () => void
+    const held = new Promise<void>(r => { release = r })
+    const holder = IdentityService.lock.use(async () => { await held })
+    try {
+        let answered = false
+        const pending = fetch(`${srv.base}/user`, { headers: AUTH }).then(r => { answered = true; return r })
+        await new Promise(r => setTimeout(r, 100))
+        assert.equal(answered, false, 'the request must be waiting for the lock')
+        release()
+        assert.equal((await pending).status, 200)
+    }
+    finally { release(); await holder; await srv.stop() }
 })

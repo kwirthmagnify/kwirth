@@ -1,5 +1,4 @@
 import express, { Request, Response} from 'express'
-import Semaphore from 'ts-semaphore'
 import bcrypt from 'bcryptjs'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
@@ -12,7 +11,6 @@ import { ELogComponent } from '../tools/Logging'
 export class UserApi {
     secrets: ISecrets
     private validScopes?: () => Set<string>   // conjunto de scopes conocidos, para validar al guardar
-    static semaphore: Semaphore = new Semaphore(1)
     public router = express.Router()
 
     // it delegates to IdentityService: it re-indexes by real id and handles the key's base64url encoding
@@ -32,7 +30,7 @@ export class UserApi {
                 next()
             })
             .get( (req:Request,res:Response) => {
-                guard(UserApi.semaphore.use ( async () => {
+                guard(IdentityService.lock.use ( async () => {
                     try {
                         let users = await this.readUsersSecret(this.secrets)
                         if (users) {
@@ -49,7 +47,7 @@ export class UserApi {
                 }), res, ELogComponent.CORE)
             })
             .post( (req:Request,res:Response) => {
-                guard(UserApi.semaphore.use ( async () => {
+                guard(IdentityService.lock.use ( async () => {
                     try {
                         let users = await this.readUsersSecret(this.secrets)
                         if (!users) {
@@ -77,7 +75,7 @@ export class UserApi {
             next()
         })
         .get( (req:Request,res:Response) => {
-            guard(UserApi.semaphore.use ( async () => {
+            guard(IdentityService.lock.use ( async () => {
                 try {
                     let users = await this.readUsersSecret(this.secrets)
                     if (!users) {
@@ -96,7 +94,7 @@ export class UserApi {
         })
         .delete( (req:Request,res:Response) => {
             try {
-                guard(UserApi.semaphore.use ( async () => {
+                guard(IdentityService.lock.use ( async () => {
                     let users = await this.readUsersSecret(this.secrets)
                     if (!users) {
                         res.status(400).json([])
@@ -113,7 +111,7 @@ export class UserApi {
             }
         })
         .put( (req:Request,res:Response) => {
-            guard(UserApi.semaphore.use ( async () => {
+            guard(IdentityService.lock.use ( async () => {
                 try {
                     let users = await this.readUsersSecret(this.secrets)
                     if (!users) {

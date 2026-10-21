@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs'
 import express from 'express'
 import type { AddressInfo } from 'net'
 import { LoginApi } from '../../src/api/LoginApi'
+import { IdentityService } from '../../src/tools/auth/IdentityService'
 import { IUser } from '@kwirthmagnify/kwirth-common'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
@@ -135,7 +136,7 @@ test('POST /login/password con password incorrecta devuelve 401', async () => {
 
 // ---- the process does not fall over because of a rejected promise ----
 //
-// The handlers fire their work with `LoginApi.semaphore.use(async () => {...})` without awaiting it, so
+// The handlers fire their work with `IdentityService.lock.use(async () => {...})` without awaiting it, so
 // express never sees an exception from inside: it comes out as an 'unhandledRejection', and this process
 // treats that as fatal. A POST with no password against a user already migrated to bcrypt did exactly
 // that — bcrypt.compare demands two strings and throws 'Illegal arguments: undefined, string' — and
@@ -306,4 +307,22 @@ test('POST /login de un usuario con idp vacio se trata como local', async () => 
         assert.equal(res.status, 200)
     }
     finally { await srv.stop() }
+})
+
+// 🔴 D6 (signup S1): the login takes THE identity lock, the same UserApi takes. While somebody holds it
+// (an admin editing users, a signup being approved), a login waits instead of reading a half-written map.
+test('POST /login espera mientras alguien tiene IdentityService.lock', async () => {
+    const srv = await startServer(encodeUsers([makeUser()]))
+    let release!: () => void
+    const held = new Promise<void>(r => { release = r })
+    const holder = IdentityService.lock.use(async () => { await held })
+    try {
+        let answered = false
+        const pending = post(srv.base, '/login', { user: 'alice@example.com', password: sha256('secret') }).then(r => { answered = true; return r })
+        await new Promise(r => setTimeout(r, 100))
+        assert.equal(answered, false, 'the login must be waiting for the lock')
+        release()
+        assert.equal((await pending).status, 200)
+    }
+    finally { release(); await holder; await srv.stop() }
 })

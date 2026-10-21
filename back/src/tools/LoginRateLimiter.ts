@@ -1,5 +1,5 @@
 /*
-    A small in-memory limiter for the login endpoints. The semaphore in LoginApi only serialises the
+    A small in-memory limiter for the login endpoints. The lock LoginApi takes (IdentityService.lock) only serialises the
     requests (one at a time), it does not slow an attacker down: a script can still try thousands of
     passwords, just not in parallel. This caps FAILED attempts per key (ip + user) in a window, and blocks
     further tries for a cooldown once the cap is hit. A successful login clears the key, so a legitimate

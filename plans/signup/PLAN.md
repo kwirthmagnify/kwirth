@@ -1,6 +1,6 @@
 # PLAN — Signup (auto-registro vía IdP)
 
-> **Estado:** vivo · 2026-10-21 · ✅ S0 entregado · siguiente: S1
+> **Estado:** vivo · 2026-10-21 · ✅ S0 y S1 entregados · siguiente: S2
 >
 > Producto y decisiones (D1–D9) en [PRD.md](PRD.md); este plan no las repite.
 
@@ -35,7 +35,7 @@
 | # | Entrega | Validación | Depende de |
 |---|---|---|---|
 | ✅ **S0** | `LoginApi` devuelve 401 a cualquier usuario con `idp` | harness: password vacía y password correcta de usuario IdP → 401; local sigue OK | — |
-| **S1** | Tipos (§2) publicados (`common`, `common-back`); `ESsoResult` sustituye los strings en back y front sin cambio de comportamiento; `SignupStore` sobre `kwirth-signups`; lock único en `IdentityService` (D6) usado por `UserApi`, `LoginApi`, `AuthApi` y `SignupStore` | harness del store + regresión `AuthApi.test.ts` | — |
+| ✅ **S1** | Tipos (§2) publicados (`common`, `common-back`); `ESsoResult` sustituye los strings en back y front sin cambio de comportamiento; `SignupStore` sobre `kwirth-signups`; lock único en `IdentityService` (D6) usado por `UserApi`, `LoginApi`, `AuthApi` y `SignupStore` | harness del store + regresión `AuthApi.test.ts` | — |
 | **S2** | Back: rama signup en el callback (dominio, `pending`/`rejected`, tope D9) → `?signup=<code>`; `POST /core/auth/signup`; API admin `GET /user/signups`, `POST …/:id/approve` (crea usuario con `idp`, borra petición), `POST …/:id/reject`, `DELETE …/:id` | harness: criterios de aceptación 1–7 del PRD | S1 |
 | **S3** | Front: sección *Signup* en `IdpConfigDialog`; diálogo "Request access" tras `?signup`; mensajes de `ESsoResult`; *Pending requests* en *User security* (approve con editor de recursos, reject, delete) con contador; toast al admin tras login | e2e Playwright + QA manual | S2 |
 | **S4** | Aviso por sender: `signupSenderId`/`signupSenderConfigName` en settings | harness + QA | S2 |
@@ -58,3 +58,13 @@ Cada stream cierra su CL9.
   AccessKey**. Harness 757 (+4), e2e `login-idp-password` (4 casos), QA manual validado por el usuario
   (incluida la regresión de admin y del login con Google). Guía de admin `03-user-management` corregida:
   decía *"no password is stored"*, y se guarda `bcrypt('')`.
+- 2026-10-21 — ✅ **S1 cerrado.** Publicados `kwirth-common@0.5.74` (`ESsoResult`, `ESignupStatus`,
+  `ISignupRequest`, `IIdpSignupPolicy`) y `kwirth-common-back@0.6.10` (`IIdpInstanceConfig.signup?`); back y
+  front los usan. **Desviación de §2:** `IIdpSignupPolicy` vive en `common`, no en `common-back`, porque el
+  diálogo del IdP (front) la necesita; la copia `IIdpInstance` del front se queda y gana `signup?` en S3.
+  🔴 El lock era **doble** (un semáforo en `UserApi` y otro en `LoginApi`): ahora ambos toman
+  `IdentityService.lock`. `SignupStore` sobre `kwirth-signups` (sin lock propio: lo toma quien llama). Los
+  motivos del callback son `ESsoResult` en back y front (`Record` sobre el enum). **Cascada de common a las
+  extensiones: aplazada al cierre del plan** (decisión del usuario; ninguna extensión usa estos tipos).
+  Harness 773 (+11 de S1), common 20 (+3), e2e `sso-result-messages` (6 casos); QA manual validado
+  (7 pasos, incluido el login con Google de una cuenta no registrada).

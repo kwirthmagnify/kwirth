@@ -23,7 +23,7 @@ import { TabContent } from './components/home/TabContent'
 import { SettingsKwirth } from './components/settings/SettingsKwirth'
 import { SettingsExport } from './components/settings/SettingsExport'
 import { SettingsImport } from './components/settings/SettingsImport'
-import { IKwirthSettings, IMarketplaceEntry, EClusterType } from '@kwirthmagnify/kwirth-common'
+import { IKwirthSettings, IMarketplaceEntry, EClusterType, ESsoResult } from '@kwirthmagnify/kwirth-common'
 import { SettingsUser } from './components/settings/SettingsUser'
 import { MenuTab, MenuTabOption } from './menus/MenuTab'
 import { MenuDrawer, MenuDrawerOption } from './menus/MenuDrawer'
@@ -2776,17 +2776,23 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const remaining = params.toString()
         window.history.replaceState({}, '', window.location.pathname + (remaining ? '?' + remaining : ''))
         if (ssoerror) {
-            // reasons the back end emits in the IdP's callback (AuthApi); a readable message for each one
-            const ssoErrorMessages: Record<string, string> = {
-                unverified: 'Your email address is not verified by the identity provider.',
-                notfound: 'This account is not authorized to access Kwirth.',
-                idpmismatch: 'This account is registered with a different identity provider.',
-                callback: 'Sign-in could not be completed. Please try again.',
-                state: 'The sign-in request expired or was invalid. Please try again.',
-                unavailable: 'Single Sign-On is currently unavailable.',
-                issue: 'Your access key could not be issued. Please try again.'
+            // what the back end emits in the IdP's callback (AuthApi); a readable message for each one. A
+            // Record over the enum, so a new outcome does not compile until it has its message.
+            const ssoErrorMessages: Record<ESsoResult, string> = {
+                [ESsoResult.UNVERIFIED]: 'Your email address is not verified by the identity provider.',
+                [ESsoResult.NOTFOUND]: 'This account is not authorized to access Kwirth.',
+                [ESsoResult.IDPMISMATCH]: 'This account is registered with a different identity provider.',
+                [ESsoResult.CALLBACK]: 'Sign-in could not be completed. Please try again.',
+                [ESsoResult.STATE]: 'The sign-in request expired or was invalid. Please try again.',
+                [ESsoResult.UNAVAILABLE]: 'Single Sign-On is currently unavailable.',
+                [ESsoResult.ISSUE]: 'Your access key could not be issued. Please try again.',
+                [ESsoResult.PENDING]: 'Your access request is pending. An administrator will review it.',
+                [ESsoResult.REJECTED]: 'Your access request was rejected.',
+                [ESsoResult.SIGNUPLIMIT]: 'Access requests cannot be accepted right now. Please contact an administrator.'
             }
-            const ssoMsg = ssoErrorMessages[ssoerror] ?? `Single Sign-On failed (${ssoerror}).`
+            // a back end newer than this front end may send an outcome it does not know yet
+            const known = (Object.values(ESsoResult) as string[]).includes(ssoerror)
+            const ssoMsg = known ? ssoErrorMessages[ssoerror as ESsoResult] : `Single Sign-On failed (${ssoerror}).`
             setMsgBox(MsgBoxOkError('Login', ssoMsg, setMsgBox))
             return
         }

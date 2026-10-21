@@ -1,5 +1,4 @@
 import express, { Request, Response} from 'express'
-import Semaphore from 'ts-semaphore'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { ApiKeyApi } from './ApiKeyApi'
@@ -63,7 +62,6 @@ export class LoginApi {
     secrets: ISecrets
     configMaps: IConfigMaps
     apiKeyApi: ApiKeyApi
-    static semaphore:Semaphore = new Semaphore(1)
     static rateLimiter: LoginRateLimiter = new LoginRateLimiter()
     public router = express.Router()
 
@@ -81,7 +79,7 @@ export class LoginApi {
 
         // authentication (login)
         this.router.post('/', async (req:Request,res:Response) => {
-            guard(LoginApi.semaphore.use ( async () => {
+            guard(IdentityService.lock.use ( async () => {
                 const rateKey = LoginApi.rateKey(req)
                 const retryMs = LoginApi.rateLimiter.retryAfterMs(rateKey)
                 if (retryMs > 0) {
@@ -147,7 +145,7 @@ export class LoginApi {
         // did not let the guard act either. Right in the first-startup flow, where the admin is forced
         // to change the default password.
         this.router.post('/password', async (req:Request,res:Response) => {
-            guard(LoginApi.semaphore.use ( async () => {
+            guard(IdentityService.lock.use ( async () => {
                 const rateKey = LoginApi.rateKey(req)
                 const retryMs = LoginApi.rateLimiter.retryAfterMs(rateKey)
                 if (retryMs > 0) {

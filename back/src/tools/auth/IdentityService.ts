@@ -1,3 +1,4 @@
+import Semaphore from 'ts-semaphore'
 import { AccessKey, accessKeyCreate, ApiKey, ILoginResponse, IUser } from '@kwirthmagnify/kwirth-common'
 import { AuthorizationManagement } from '../AuthorizationManagement'
 import { ApiKeyApi } from '../../api/ApiKeyApi'
@@ -9,6 +10,17 @@ import { IConfigMaps } from '../IConfigMap'
     All the logic that decides/issues AccessKeys lives here (the core's trusted code).
 */
 export class IdentityService {
+
+    /*
+        🔴 THE lock for the identity Secrets, 'kwirth-users' and 'kwirth-signups'. Both are written as
+        read-modify-write ('writeUsers' rewrites the whole map), so two writers outside one lock lose a
+        write. It used to be two semaphores, one in UserApi and one in LoginApi, which serialised each
+        API with itself and not with the other: a password change and an admin edit could still race.
+        Approving a signup writes both Secrets, which is what made a single lock necessary.
+
+        ⚠️ Not re-entrant: whatever runs inside 'use' must not call 'use' again, or it waits for itself.
+    */
+    static lock: Semaphore = new Semaphore(1)
 
     // reads the users secret (with the historical 'kwirth.users' fallback) and returns it RE-INDEXED by
     // the user's real id (decoded from each value), not by the Secret's key. The key of a K8s Secret's

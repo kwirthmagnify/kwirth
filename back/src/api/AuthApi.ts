@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express'
 import * as crypto from 'crypto'
-import { EAuthMethodKind, IAuthMethod, ILoginResponse } from '@kwirthmagnify/kwirth-common'
+import { EAuthMethodKind, ESsoResult, IAuthMethod, ILoginResponse } from '@kwirthmagnify/kwirth-common'
 import { ISecrets } from '../tools/ISecrets'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { ApiKeyApi } from './ApiKeyApi'
@@ -175,10 +175,10 @@ export class AuthApi {
             // end) and is updated to the returnTo the front end supplied (validated) once the state has
             // been recovered.
             let front = `${this.baseUrl(req)}/front`
-            const fail = (reason: string) => res.redirect(`${front}${front.includes('?') ? '&' : '?'}ssoerror=${reason}`)
+            const fail = (reason: ESsoResult) => res.redirect(`${front}${front.includes('?') ? '&' : '?'}ssoerror=${reason}`)
 
             const idpManager = this.getIdpManager()
-            if (!idpManager) return fail('unavailable')
+            if (!idpManager) return fail(ESsoResult.UNAVAILABLE)
 
             const state = String(req.query.state || '')
             const code = String(req.query.code || '')
@@ -186,14 +186,14 @@ export class AuthApi {
             const entry = this.stateStore.take(state)
             if (!entry || entry.instanceId !== instanceId) {
                 logWarning(ELogComponent.AUTH, `Invalid/expired state on callback for '${instanceId}'`)
-                return fail('state')
+                return fail(ESsoResult.STATE)
             }
             const allowedReturn = this.allowedReturnTo(entry.returnTo, req)
             if (allowedReturn) front = allowedReturn
 
             const inst = await idpManager.getInstance(instanceId)
             const connector = inst ? idpManager.getConnector(inst.connectorId) : undefined
-            if (!inst || !connector) return fail('state')
+            if (!inst || !connector) return fail(ESsoResult.STATE)
 
             let identity
             try {
@@ -205,34 +205,34 @@ export class AuthApi {
             }
             catch (err) {
                 logError(ELogComponent.AUTH, `Callback exchange failed for '${instanceId}': ${err}`)
-                return fail('callback')
+                return fail(ESsoResult.CALLBACK)
             }
 
             if (!identity.emailVerified) {
                 logWarning(ELogComponent.AUTH, `Unverified email from '${instanceId}': ${identity.email}`)
-                return fail('unverified')
+                return fail(ESsoResult.UNVERIFIED)
             }
 
             const ctx = this.getContext()
             if (!ctx) {
                 logError(ELogComponent.AUTH, 'No active instance available on callback')
-                return fail('unavailable')
+                return fail(ESsoResult.UNAVAILABLE)
             }
 
             const users = await IdentityService.readUsers(ctx.secrets)
             const user = users ? IdentityService.findUser(users, identity.email) : undefined
             if (!user) {
                 logWarning(ELogComponent.AUTH, `IdP user not in whitelist: ${identity.email}`)
-                return fail('notfound')
+                return fail(ESsoResult.NOTFOUND)
             }
             if (user.idp !== instanceId) {
                 logWarning(ELogComponent.AUTH, `IdP mismatch for ${identity.email}: bound to '${user.idp}', used '${instanceId}'`)
-                return fail('idpmismatch')
+                return fail(ESsoResult.IDPMISMATCH)
             }
 
             const ip = (req as any).clientIp || req.headers['x-forwarded-for'] || req.socket.remoteAddress
             const apiKey = await IdentityService.createApiKey(user, String(ip), ctx.configMaps, ctx.apiKeyApi)
-            if (!apiKey) return fail('issue')
+            if (!apiKey) return fail(ESsoResult.ISSUE)
             user.accessKey = apiKey.accessKey
 
             const handoffCode = AuthApi.randomToken()
