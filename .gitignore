@@ -79,6 +79,18 @@ kwirth-bundled.json
 /senders/datadog/
 /common-cloud/
 
+# DCEs de pago: COMODIN a proposito, igual que la familia SUSE. Los DCE publicos (nettools, three, xyflow,
+# file-manager, sample) estan listados uno a uno como EXCEPCION mas abajo, de modo que un DCE nuevo nace
+# PRIVADO y hay que sacarlo a mano para publicarlo. Al reves —listar los privados— se olvida, y el olvido
+# aqui es publicar codigo de pago en GitHub.
+/dces/*/
+!/dces/nettools/
+!/dces/three/
+!/dces/xyflow/
+!/dces/file-manager/
+!/dces/sample/
+!/dces/manifest.json
+
 # Familia SUSE (de pago): COMODIN a proposito, para que cada artefacto suse-* nuevo quede cubierto desde
 # el minuto cero y no dependa de que alguien se acuerde de anadir su linea. Duplicado en
 # .git/info/exclude y en el hook pre-commit, que son los que abortan el commit; este es el unico de los
