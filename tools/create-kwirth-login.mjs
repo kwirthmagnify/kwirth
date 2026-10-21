@@ -30,6 +30,7 @@ prompt and takes the remaining values from the flags (or their defaults).
 
   --id <kebab-case>
   --name <text>
+  --publisher <@scope>
   --description <text>
   --title <text>            heading shown on the login page
   --website <url>
@@ -49,6 +50,15 @@ if (interactive) console.log('\n── Kwirth login scaffold ──────�
 const id          = flag('id') ?? await ask('Login ID (kebab-case, e.g. my-login)')
 const displayName = flag('name') ?? await ask('Display name', id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(' '))
 const description = flag('description') ?? await ask('Description', `${displayName} login page for Kwirth`)
+/*
+    🔴 It is ASKED FOR, never assumed. This scaffolder wrote "@kwirthmagnify" into the package name and
+    did not write `publisher` at all, which is why every login in the repo ended up without the field —
+    its scope lived only inside `name`. Anybody generating a login also walked away with OUR scope, and
+    these tools exist precisely so that anyone can build one.
+
+    The same shape the plugin, provider, dce and aitoolset scaffolders already use.
+*/
+const publisher   = flag('publisher') ?? await ask('Publisher name (e.g. @my-scope)', '@my-scope')
 const title       = flag('title') ?? await ask('Title shown on the page', displayName)
 const website     = flag('website') ?? await ask('Website URL (optional)', '')
 if (rl) rl.close()
@@ -71,8 +81,9 @@ fs.mkdirSync(loginDir, { recursive: true })
 
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
-    "name": "@kwirthmagnify/login-${id}",
+    "name": "${publisher}/login-${id}",
     "id": "${id}",
+    "publisher": "${publisher}",
     "displayName": "${displayName}",
     "version": "0.1.0",
     "files": [
@@ -122,7 +133,7 @@ write('build.mjs', `/**
  * Build script for a login extension.
  * Packs package.json + login.json + background.png + background-hi.png (si existen) into dist/<id>.tgz
  */
-import { mkdirSync, existsSync, copyFileSync, statSync } from 'fs'
+import { mkdirSync, existsSync, copyFileSync, statSync, readdirSync, rmSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -176,7 +187,24 @@ if (existsSync(bgHiSrc)) {
     copyFileSync(bgHiSrc, join(distDir, 'background-hi.png'))
 }
 
-const tgzName = \`\${id}.tgz\`
+/*  El tgz se llama \`<casa>-login-<id>-<version>.tgz\`, donde la casa es \`kwirth\` si es OSS e
+    \`iriaoperae\` si es de pago.
+
+    Un login no se empaqueta con npm —es un tar de dos ficheros y un par de imagenes— asi que el nombre lo
+    pone este script, y durante un tiempo lo puso mal: \`<id>.tgz\`, sin casa, sin tipo y sin version. Cada
+    login lo fue corrigiendo por su cuenta y a medias, y al reunirlos en un pack convivian tres estilos,
+    sin poder saber que version llevaba cada pieza — que es lo primero que uno mira cuando algo no cuadra.
+
+    🔴 La casa se DEDUCE del scope del package.json, nunca se escribe a mano: en cuanto se teclea, es
+    cuestion de tiempo que un login de pago acabe anunciandose como OSS.
+
+    🔴 Y los tgz anteriores se BORRAN antes de empaquetar: al llevar la version en el nombre, cada build
+    dejaria uno nuevo y el anterior se quedaria ahi, de modo que cualquiera que coja "el tgz del dist"
+    puede acabar cogiendo una version vieja sin enterarse. */
+for (const f of readdirSync(distDir)) if (f.endsWith('.tgz')) rmSync(join(distDir, f))
+
+const house = pkg.name.startsWith('@iriaoperae/') ? 'iriaoperae' : 'kwirth'
+const tgzName = \`\${house}-login-\${id}-\${pkg.version}.tgz\`
 execSync(\`tar -czf \${tgzName} package.json login.json\${existsSync(bgSrc) ? ' background.png' : ''}\` +
     \`\${existsSync(bgHiSrc) ? ' background-hi.png' : ''}\`, { cwd: distDir })
 

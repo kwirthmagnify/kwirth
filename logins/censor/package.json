@@ -1,6 +1,7 @@
 {
     "name": "@kwirthmagnify/kwirth-login-censor",
     "id": "censor",
+    "publisher": "@kwirthmagnify",
     "displayName": "Censor",
     "version": "0.1.5",
     "files": [

@@ -1,6 +1,7 @@
 {
     "name": "@kwirthmagnify/login-template",
     "id": "template",
+    "publisher": "@kwirthmagnify",
     "displayName": "Template",
     "version": "0.0.1",
     "files": [

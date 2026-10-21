@@ -17,10 +17,11 @@ Usage: node tools/create-kwirth-theme.mjs [options]
 With no options the script asks everything interactively. Passing --id skips every
 prompt and takes the remaining values from the flags (or their defaults).
 
-  --id <kebab-case>       
-  --name <text>           
-  --description <text>    
-  --website <url>         
+  --id <kebab-case>
+  --name <text>
+  --publisher <@scope>
+  --description <text>
+  --website <url>
   --help                    this text
 `)
     process.exit(0)
@@ -37,6 +38,14 @@ if (interactive) console.log('\n── Kwirth theme scaffold ──────�
 const id          = flag('id') ?? await ask('Theme ID (kebab-case, e.g. my-theme)')
 const displayName = flag('name') ?? await ask('Display name', id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(' '))
 const description = flag('description') ?? await ask('Description', `${displayName} theme for Kwirth`)
+/*
+    🔴 It is ASKED FOR, never assumed. This scaffolder used to write "@kwirthmagnify" into both the
+    package name and the publisher, so anybody generating a theme walked away with OUR scope inside
+    their extension — and these tools exist precisely so that anyone can build one.
+
+    The same shape the plugin, provider, dce and aitoolset scaffolders already use.
+*/
+const publisher   = flag('publisher') ?? await ask('Publisher name (e.g. @my-scope)', '@my-scope')
 const website     = flag('website') ?? await ask('Website URL (optional)', '')
 if (rl) rl.close()
 
@@ -59,8 +68,8 @@ fs.mkdirSync(path.join(themeDir, 'src', 'front'), { recursive: true })
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
     "id": "${id}",
-    "name": "@kwirthmagnify/kwirth-theme-${id}",
-    "publisher": "@kwirthmagnify",
+    "name": "${publisher}/kwirth-theme-${id}",
+    "publisher": "${publisher}",
     "version": "0.1.0",
     "displayName": "${displayName}",
     "extensionType": "theme",

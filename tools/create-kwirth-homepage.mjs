@@ -17,10 +17,11 @@ Usage: node tools/create-kwirth-homepage.mjs [options]
 With no options the script asks everything interactively. Passing --id skips every
 prompt and takes the remaining values from the flags (or their defaults).
 
-  --id <kebab-case>       
-  --name <text>           
-  --description <text>    
-  --website <url>         
+  --id <kebab-case>
+  --name <text>
+  --publisher <@scope>
+  --description <text>
+  --website <url>
   --help                    this text
 `)
     process.exit(0)
@@ -37,6 +38,16 @@ if (interactive) console.log('\n── Kwirth homepage scaffold ─────�
 const id          = flag('id') ?? await ask('Homepage ID (kebab-case, e.g. my-homepage)')
 const displayName = flag('name') ?? await ask('Display name', id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(' '))
 const description = flag('description') ?? await ask('Description', `${displayName} homepage for Kwirth`)
+/*
+    🔴 It is ASKED FOR, never assumed. This scaffolder used to write "@kwirthmagnify" into both the
+    package name and the publisher, so anybody generating a homepage walked away with OUR scope inside
+    their extension — and these tools exist precisely so that anyone can build one.
+
+    The same shape the plugin, provider, dce and aitoolset scaffolders already use. The
+    '@kwirthmagnify/kwirth-common-*' further down are DEPENDENCIES on Kwirth's own libraries, which is a
+    different thing and stays as it is.
+*/
+const publisher   = flag('publisher') ?? await ask('Publisher name (e.g. @my-scope)', '@my-scope')
 const website     = flag('website') ?? await ask('Website URL (optional)', '')
 if (rl) rl.close()
 
@@ -60,10 +71,10 @@ fs.mkdirSync(path.join(homepageDir, 'src', 'front'), { recursive: true })
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
     "id": "${id}",
-    "name": "@kwirthmagnify/kwirth-homepage-${id}",
+    "name": "${publisher}/kwirth-homepage-${id}",
     "displayName": "${displayName}",
     "extensionType": "homepage",
-    "publisher": "@kwirthmagnify",
+    "publisher": "${publisher}",
     "version": "0.1.0",
     "description": "${description}",${websiteLine}
     "requiresRestart": false,

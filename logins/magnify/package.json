@@ -1,6 +1,7 @@
 {
     "name": "@kwirthmagnify/kwirth-login-magnify",
     "id": "magnify",
+    "publisher": "@kwirthmagnify",
     "displayName": "Magnify",
     "version": "0.1.5",
     "files": [
