@@ -2,6 +2,7 @@
 import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
+import { artifactName } from './artifact-name.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -110,7 +111,7 @@ if (!['public', 'internal'].includes(sensitivity)) {
     process.exit(1)
 }
 
-const npmName    = `${publisher}/aitoolset-${id}`
+const npmName    = artifactName(publisher, 'aitoolset', id)
 const toolsetDir = path.resolve('aitoolsets', id)
 const camelId    = id.split('-').map((s, i) => i ? s[0].toUpperCase() + s.slice(1) : s).join('')
 

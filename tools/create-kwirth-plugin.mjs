@@ -2,6 +2,7 @@
 import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
+import { artifactName } from './artifact-name.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -83,7 +84,7 @@ const dces = dceRaw.split(',').map(s => s.trim()).filter(Boolean).map(entry => {
     const scope   = slash >= 0 ? spec.slice(0, slash) : publisher
     const tail    = slash >= 0 ? spec.slice(slash + 1) : spec
     const dceId   = tail.replace(/^(kwirth-)?dce-/, '')
-    return { id: dceId, version: version || '0.1.0', pkg: `${scope}/${tail === dceId ? `dce-${dceId}` : tail}` }
+    return { id: dceId, version: version || '0.1.0', pkg: tail === dceId ? artifactName(scope, 'dce', dceId) : `${scope}/${tail}` }
 })
 for (const d of dces) {
     if (!/^[a-z][a-z0-9-]*$/.test(d.id)) {
@@ -124,7 +125,7 @@ fs.mkdirSync(path.join(pluginDir, 'src', 'front'), { recursive: true })
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
     "id": "${id}",
-    "name": "${publisher}/plugin-${id}",
+    "name": "${artifactName(publisher, 'plugin', id)}",
     "displayName": "${name}",
     "extensionType": "plugin",
     "publisher": "${publisher}",

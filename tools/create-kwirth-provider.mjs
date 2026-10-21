@@ -2,6 +2,7 @@
 import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
+import { artifactName } from './artifact-name.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -81,7 +82,7 @@ if (!['none', 'schema', 'front'].includes(configMode)) {
 
 const className   = id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join('')
 const constPrefix = id.toUpperCase().replace(/-/g, '_')
-const npmName     = `${publisher}/provider-${id}`
+const npmName     = artifactName(publisher, 'provider', id)
 const providerDir = path.resolve('providers', id)
 
 const hasFront   = configMode === 'front'

@@ -2,6 +2,7 @@
 import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
+import { artifactName } from './artifact-name.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -68,7 +69,7 @@ fs.mkdirSync(path.join(themeDir, 'src', 'front'), { recursive: true })
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
     "id": "${id}",
-    "name": "${publisher}/theme-${id}",
+    "name": "${artifactName(publisher, 'theme', id)}",
     "publisher": "${publisher}",
     "version": "0.1.0",
     "displayName": "${displayName}",

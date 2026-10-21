@@ -2,6 +2,7 @@
 import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
+import { artifactName } from './artifact-name.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -68,7 +69,7 @@ if (badSides.length || !sides.length) {
 const hasBack  = sides.includes('back')
 const hasFront = sides.includes('front')
 
-const npmName = `${publisher}/dce-${id}`
+const npmName = artifactName(publisher, 'dce', id)
 const dceDir  = path.resolve('dces', id)
 const pascal  = id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join('')
 

@@ -2,6 +2,7 @@
 import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
+import { artifactName } from './artifact-name.mjs'
 
 /*
     Scaffold of a LOGIN extension.
@@ -81,7 +82,7 @@ fs.mkdirSync(loginDir, { recursive: true })
 
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
-    "name": "${publisher}/login-${id}",
+    "name": "${artifactName(publisher, 'login', id)}",
     "id": "${id}",
     "publisher": "${publisher}",
     "displayName": "${displayName}",
