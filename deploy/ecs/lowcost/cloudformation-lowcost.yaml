@@ -1,0 +1,874 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Kwirth on ECS Fargate with PostgreSQL RDS, at the lowest cost that still runs it properly. Same Kwirth as
+  cloudformation-full-sql.yaml, minus what costs money for nothing in a test or low-traffic install: no NAT
+  gateway (the task gets a public IP instead), Fargate Spot, HTTPS through CloudFront with no domain to buy,
+  and a Paused switch that removes the load balancer and the service while keeping every byte of data.
+
+# What it costs, roughly, in eu-west-1 (list prices, a whole month; the Spot discount moves):
+#   running, Spot, 1 vCPU / 2 GB : ~59 USD  (Fargate Spot ~11, ALB ~20 + its 2 public IPs ~7, RDS ~16,
+#                                             task public IP ~4, secrets ~1, logs ~1, CloudFront ~0)
+#   + scan runner (2 vCPU / 4 GB): ~+11 USD (the task doubles; one more secret)
+#   + demo workloads (WithDemo)  : ~+6 USD  (nginx on 0.25 vCPU Spot ~3, its public IP ~4; the Lambda ~0)
+#   paused                       : ~4 USD   (RDS storage, secrets, EFS, ECR) — once the RDS is stopped by hand
+# cloudformation-full-sql.yaml, for comparison, is ~106 USD running and cannot be paused.
+#
+# Pause:   aws cloudformation update-stack --stack-name <name> --use-previous-template \
+#            --parameters ParameterKey=Paused,ParameterValue=true <the others with UsePreviousValue=true> \
+#            --capabilities CAPABILITY_NAMED_IAM
+#          aws rds stop-db-instance --db-instance-identifier <DbInstanceId output>
+# Resume:  aws rds start-db-instance … ; wait for it; then the same update-stack with Paused=false.
+# The URL (the HttpsUrl output) is the same before and after: it belongs to CloudFront, which stays.
+
+Parameters:
+  ImageTag:
+    Type: String
+    Default: 'develop'
+    Description: Tag of kwirthmagnify/kwirth to run. Pin a version; avoid 'latest' outside demos
+  Paused:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['false', 'true']
+    Description: >-
+      'true' removes the load balancer, its target group and the ECS service — the pieces that cost money
+      just by existing — and keeps the VPC, EFS, the RDS, the secrets and the CloudFront distribution, so
+      nothing is lost and the URL does not change. Stop the RDS by hand too (CloudFormation cannot). 'false'
+      brings them back.
+  UseSpot:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: >-
+      Run the task on Fargate Spot, about 70% cheaper. AWS may reclaim it with two minutes' notice; the
+      service starts a new one by itself and the data is on EFS, so what you see is a reconnect.
+  TaskCpu:
+    Type: String
+    Default: '1024'
+    AllowedValues: ['512', '1024', '2048']
+    Description: Fargate vCPU units for the task. 512 halves the price but leaves little room for extensions
+  TaskMemory:
+    Type: String
+    Default: '2048'
+    AllowedValues: ['1024', '2048', '3072', '4096']
+    Description: Fargate memory (MB) for the task. Must be valid for TaskCpu (512 → 1024-4096, 1024 → 2048-8192)
+  WithDemo:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: >-
+      Deploy two small demo workloads next to Kwirth, so there is something for it to find in the account:
+      a Lambda function and an ECS service running nginx. Both at the smallest size AWS offers; the ECS one
+      is removed while the stack is paused.
+  ScanRunnerImage:
+    Type: String
+    Default: ''
+    Description: >-
+      Optional. Image of the Kwirth scan runner (a container with Trivy), run as a sidecar. Leave empty and
+      nothing is deployed. With it the task is raised to 2048 CPU / 4096 MB. The image must be pullable by
+      Fargate without credentials, which in practice means an ECR repository in this same account.
+  CloudFrontPrefixListId:
+    Type: String
+    Default: 'pl-4fa04526'
+    Description: >-
+      The AWS-managed prefix list 'com.amazonaws.global.cloudfront.origin-facing' IN THIS REGION. Only
+      CloudFront can then reach the load balancer. The default is eu-west-1's; elsewhere read it with
+      aws ec2 describe-managed-prefix-lists --filters Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing
+  VpcCidr:
+    Type: String
+    Default: '10.0.0.0/16'
+    Description: CIDR block for the VPC
+  AlbIdleTimeout:
+    Type: Number
+    Default: 3600
+    MinValue: 1
+    MaxValue: 4000
+    Description: >
+      Seconds the load balancer keeps an idle connection open. A Kwirth session is a WebSocket that only
+      speaks when something changes, so the AWS default of 60 cuts it about once a minute.
+  DbInstanceClass:
+    Type: String
+    Default: db.t4g.micro
+    Description: >-
+      RDS instance class. db.t4g.micro is the cheapest. If AWS answers that no zone has capacity for it,
+      use db.t3.micro.
+  DbAllocatedStorage:
+    Type: Number
+    Default: 20
+    MinValue: 20
+    Description: Storage in GB. 20 is the minimum for gp3
+  DbEngineVersion:
+    Type: String
+    Default: '15.13'
+    Description: PostgreSQL engine version
+  DbStopSchedule:
+    Type: String
+    Default: 'cron(0 2 ? * MON *)'
+    Description: >-
+      When to stop the RDS instance, as an EventBridge Scheduler expression. The default is the night from
+      Sunday to Monday, at 02:00 on Monday. It catches the restart AWS forces on a database stopped for seven days, and a database left
+      running by mistake. It stops it whether Kwirth is running or not. Empty disables it.
+  DbStopTimezone:
+    Type: String
+    Default: 'Europe/Madrid'
+    Description: Time zone DbStopSchedule is read in
+
+Conditions:
+  Running: !Equals [!Ref Paused, 'false']
+  OnSpot: !Equals [!Ref UseSpot, 'true']
+  WithScanRunner: !Not [!Equals [!Ref ScanRunnerImage, '']]
+  DemoEnabled: !Equals [!Ref WithDemo, 'true']
+  DemoRunning: !And [!Condition Running, !Condition DemoEnabled]
+  DbStopScheduled: !Not [!Equals [!Ref DbStopSchedule, '']]
+
+Resources:
+
+  # ── VPC and subnets ──────────────────────────────────────────────────────────────────────────────
+  # Public subnets for the load balancer AND the task; private ones, with no way out to the internet,
+  # for EFS and RDS. There is no NAT gateway: it is the single most expensive piece of the full template
+  # (~37 USD/month with its IP) and it is only there to let a private task reach the internet. Here the
+  # task has a public IP and goes out through the internet gateway, which is free. It is still not
+  # reachable from outside: its security group only lets the load balancer in.
+
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [0, !Cidr [!Ref VpcCidr, 4, 12]]
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags: [{ Key: Name, Value: !Sub '${AWS::StackName}-public-1' }]
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [1, !Cidr [!Ref VpcCidr, 4, 12]]
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags: [{ Key: Name, Value: !Sub '${AWS::StackName}-public-2' }]
+
+  # No route to the internet: they use the VPC's main route table, which only knows the VPC itself.
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [2, !Cidr [!Ref VpcCidr, 4, 12]]
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags: [{ Key: Name, Value: !Sub '${AWS::StackName}-private-1' }]
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [3, !Cidr [!Ref VpcCidr, 4, 12]]
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags: [{ Key: Name, Value: !Sub '${AWS::StackName}-private-2' }]
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  # ── Security groups ──────────────────────────────────────────────────────────────────────────────
+
+  # Only CloudFront reaches the load balancer, through AWS's own list of its origin-facing addresses. The
+  # plain-HTTP URL of the balancer does not answer anybody else, so HTTPS is the only way in.
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HTTP to the load balancer from CloudFront only
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourcePrefixListId: !Ref CloudFrontPrefixListId
+
+  TaskSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Kwirth task, reachable from the load balancer only
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3883
+          ToPort: 3883
+          SourceSecurityGroupId: !GetAtt AlbSecurityGroup.GroupId
+
+  FileSystemSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: NFS from the Kwirth task only
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !GetAtt TaskSecurityGroup.GroupId
+
+  DbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: PostgreSQL from the Kwirth task only
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !GetAtt TaskSecurityGroup.GroupId
+
+  # ── Load balancer (only while running) ──────────────────────────────────────────────────────────
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Condition: Running
+    Properties:
+      Name: !Sub '${AWS::StackName}-alb'
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !GetAtt AlbSecurityGroup.GroupId
+      LoadBalancerAttributes:
+        # See cloudformation-full-sql.yaml: a Kwirth session is a quiet WebSocket, and 60 s cuts it.
+        - Key: idle_timeout.timeout_seconds
+          Value: !Ref AlbIdleTimeout
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: Running
+    Properties:
+      VpcId: !Ref Vpc
+      Port: 3883
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: /healthz
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: 'true'
+        - Key: stickiness.type
+          Value: lb_cookie
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: Running
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # ── HTTPS: CloudFront in front of the load balancer ─────────────────────────────────────────────
+  # https://<id>.cloudfront.net, with AWS's certificate: HTTPS without buying a domain. It stays when the
+  # stack is paused, so the URL never changes; only its origin moves to the new load balancer on resume.
+  # Nothing is cached (Kwirth is an application, not a website), and every header, cookie and query string
+  # goes through: the WebSocket upgrade and the load balancer's sticky cookie depend on it.
+  # From CloudFront to the load balancer the traffic is HTTP, inside AWS's network.
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub 'Kwirth (${AWS::StackName})'
+        PriceClass: PriceClass_100
+        HttpVersion: http2
+        Origins:
+          - Id: kwirth
+            # While paused there is no load balancer. The origin then points at a name that does not
+            # resolve, and the URL answers 502 until the stack is resumed — which is the honest answer.
+            DomainName: !If [Running, !GetAtt LoadBalancer.DNSName, !Sub '${AWS::StackName}-paused.invalid']
+            CustomOriginConfig:
+              OriginProtocolPolicy: http-only
+              HTTPPort: 80
+              OriginReadTimeout: 60
+              OriginKeepaliveTimeout: 60
+        DefaultCacheBehavior:
+          TargetOriginId: kwirth
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE]
+          Compress: true
+          # AWS-managed, the same ids in every account: CachingDisabled and AllViewer.
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+          OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3
+
+  # ── ECS cluster ──────────────────────────────────────────────────────────────────────────────────
+
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub '${AWS::StackName}-cluster'
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
+
+  # ── EFS for the store ───────────────────────────────────────────────────────────────────────────
+
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: true
+      PerformanceMode: generalPurpose
+      # What Kwirth does not touch for a week moves to the infrequent-access class, ~10 times cheaper.
+      LifecyclePolicies:
+        - TransitionToIA: AFTER_7_DAYS
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-store'
+
+  AccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref FileSystem
+      PosixUser:
+        Uid: '0'
+        Gid: '0'
+      RootDirectory:
+        Path: /kwirth
+        CreationInfo:
+          OwnerUid: '0'
+          OwnerGid: '0'
+          Permissions: '0755'
+
+  MountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Ref PrivateSubnet1
+      SecurityGroups:
+        - !GetAtt FileSystemSecurityGroup.GroupId
+
+  MountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Ref PrivateSubnet2
+      SecurityGroups:
+        - !GetAtt FileSystemSecurityGroup.GroupId
+
+  # ── RDS PostgreSQL ───────────────────────────────────────────────────────────────────────────────
+  # Kwirth creates a database per extension through the maintenance database, so the master user needs
+  # CREATEDB; the RDS master user has it. Kept while paused: stop it by hand to stop paying for compute.
+
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Private subnets for Kwirth RDS
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+  DbPasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'kwirth/${AWS::StackName}-db-password'
+      Description: PostgreSQL master password for Kwirth RDS
+      GenerateSecretString:
+        PasswordLength: 32
+        ExcludePunctuation: true
+
+  DbInstance:
+    Type: AWS::RDS::DBInstance
+    # Deleting the stack deletes the database WITHOUT a final snapshot: this is the low-cost template, and
+    # a snapshot is storage that keeps being billed after everything else is gone.
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Engine: postgres
+      EngineVersion: !Ref DbEngineVersion
+      DBInstanceClass: !Ref DbInstanceClass
+      AllocatedStorage: !Ref DbAllocatedStorage
+      StorageType: gp3
+      MasterUsername: kwirth
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DbPasswordSecret}:SecretString}}'
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VPCSecurityGroups:
+        - !GetAtt DbSecurityGroup.GroupId
+      MultiAZ: false
+      BackupRetentionPeriod: 1
+      DeletionProtection: false
+      DeleteAutomatedBackups: true
+      PubliclyAccessible: false
+
+  # ── The weekly stop of the database ──────────────────────────────────────────────────────────────
+  # AWS starts a stopped RDS by itself after seven days, and a forgotten one keeps billing. A schedule stops
+  # it every week, by calling the RDS API directly: no Lambda, nothing to maintain, free at this volume.
+  # Stopping a database that is already stopped fails, and that failure is the expected outcome: no retries.
+
+  DbStopRole:
+    Type: AWS::IAM::Role
+    Condition: DbStopScheduled
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: stop-this-database
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: rds:StopDBInstance
+                Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${DbInstance}'
+
+  DbWeeklyStop:
+    Type: AWS::Scheduler::Schedule
+    Condition: DbStopScheduled
+    Properties:
+      Name: !Sub '${AWS::StackName}-stop-db'
+      Description: Stops the Kwirth RDS instance, so a forgotten or auto-restarted database stops billing
+      ScheduleExpression: !Ref DbStopSchedule
+      ScheduleExpressionTimezone: !Ref DbStopTimezone
+      FlexibleTimeWindow:
+        Mode: 'OFF'
+      State: ENABLED
+      Target:
+        Arn: arn:aws:scheduler:::aws-sdk:rds:stopDBInstance
+        RoleArn: !GetAtt DbStopRole.Arn
+        Input: !Sub '{"DbInstanceIdentifier":"${DbInstance}"}'
+        RetryPolicy:
+          MaximumRetryAttempts: 0
+
+  # ── Identity ─────────────────────────────────────────────────────────────────────────────────────
+
+  MasterKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'kwirth/${AWS::StackName}-masterkey'
+      Description: >-
+        Derives the encryption key for Kwirth secrets at rest. Changing it makes everything already
+        written unreadable - there is no migration.
+      GenerateSecretString:
+        PasswordLength: 48
+        ExcludePunctuation: true
+
+  ScanRunnerTokenSecret:
+    Condition: WithScanRunner
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'kwirth/${AWS::StackName}-scan-runner-token'
+      Description: Bearer token shared by the scan runner and whoever sends it images to scan.
+      GenerateSecretString:
+        PasswordLength: 48
+        ExcludePunctuation: true
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: read-secrets
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource:
+                  - !Ref MasterKeySecret
+                  - !Ref DbPasswordSecret
+                  - !If [WithScanRunner, !Ref ScanRunnerTokenSecret, !Ref 'AWS::NoValue']
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: efs-access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - elasticfilesystem:ClientMount
+                  - elasticfilesystem:ClientWrite
+                Resource: !GetAtt FileSystem.Arn
+                Condition:
+                  StringEquals:
+                    elasticfilesystem:AccessPointArn: !GetAtt AccessPoint.Arn
+        - !If
+          - WithScanRunner
+          - PolicyName: ecr-read
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action: ecr:GetAuthorizationToken
+                  Resource: '*'
+                - Effect: Allow
+                  Action:
+                    - ecr:BatchCheckLayerAvailability
+                    - ecr:GetDownloadUrlForLayer
+                    - ecr:BatchGetImage
+                    - ecr:DescribeImages
+                    - ecr:ListImages
+                    - ecr:DescribeRepositories
+                  Resource: !Sub 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/*'
+          - !Ref AWS::NoValue
+
+  # A week of logs instead of a month: CloudWatch bills what it keeps.
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/${AWS::StackName}-kwirth'
+      RetentionInDays: 7
+
+  # ── The task ─────────────────────────────────────────────────────────────────────────────────────
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub '${AWS::StackName}-kwirth'
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      # Trivy shares the task with Kwirth, and scanning large images is memory-hungry: with the runner in, the
+      # task is at least 2 vCPU / 4 GB whatever TaskCpu and TaskMemory say.
+      Cpu: !If [WithScanRunner, '2048', !Ref TaskCpu]
+      Memory: !If [WithScanRunner, '4096', !Ref TaskMemory]
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      Volumes:
+        - Name: kwirth-store
+          EFSVolumeConfiguration:
+            FilesystemId: !Ref FileSystem
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              AccessPointId: !Ref AccessPoint
+              IAM: ENABLED
+        - !If
+          - WithScanRunner
+          - Name: trivy-cache
+          - !Ref AWS::NoValue
+      ContainerDefinitions:
+        - Name: kwirth
+          Image: !Sub 'kwirthmagnify/kwirth:${ImageTag}'
+          # Every task resolves the tag when it starts, so "Restart Kwirth" picks up a newly pushed image.
+          VersionConsistency: disabled
+          Essential: true
+          PortMappings:
+            - ContainerPort: 3883
+              Protocol: tcp
+          MountPoints:
+            - SourceVolume: kwirth-store
+              ContainerPath: /data/kwirth
+              ReadOnly: false
+          Environment:
+            - Name: KWIRTH_STORE
+              Value: /data/kwirth
+            - Name: KWIRTH_CLUSTER_NAME
+              Value: !Ref AWS::StackName
+            - Name: KWIRTH_SQL_HOST
+              Value: !GetAtt DbInstance.Endpoint.Address
+            - Name: KWIRTH_SQL_PORT
+              Value: '5432'
+            - Name: KWIRTH_SQL_USER
+              Value: kwirth
+            - Name: KWIRTH_SQL_SSL
+              Value: 'true'
+          Secrets:
+            - Name: MASTERKEY
+              ValueFrom: !Ref MasterKeySecret
+            - Name: KWIRTH_SQL_PASSWORD
+              ValueFrom: !Ref DbPasswordSecret
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - wget -q -O - http://localhost:3883/healthz || exit 1
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: kwirth
+
+        - !If
+          - WithScanRunner
+          - Name: scan-runner
+            Image: !Ref ScanRunnerImage
+            Essential: false
+            PortMappings:
+              - ContainerPort: 8080
+                Protocol: tcp
+            Environment:
+              - Name: PORT
+                Value: '8080'
+              - Name: MAX_CONCURRENCY
+                Value: '1'
+              - Name: TRIVY_CACHE_DIR
+                Value: /trivy-cache
+            Secrets:
+              - Name: SCAN_RUNNER_TOKEN
+                ValueFrom: !Ref ScanRunnerTokenSecret
+            MountPoints:
+              - SourceVolume: trivy-cache
+                ContainerPath: /trivy-cache
+                ReadOnly: false
+            HealthCheck:
+              Command:
+                - CMD-SHELL
+                - wget -q -O - http://localhost:8080/healthz || exit 1
+              Interval: 30
+              Timeout: 5
+              Retries: 3
+              StartPeriod: 300
+            LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-group: !Ref LogGroup
+                awslogs-region: !Ref AWS::Region
+                awslogs-stream-prefix: scan-runner
+          - !Ref AWS::NoValue
+
+  # Only while running. Paused, there is no service at all — not one at zero tasks — because a service
+  # wired to a target group needs that target group's load balancer to exist.
+  Service:
+    Type: AWS::ECS::Service
+    Condition: Running
+    DependsOn: Listener
+    Properties:
+      Cluster: !Ref EcsCluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 1
+      CapacityProviderStrategy:
+        - CapacityProvider: !If [OnSpot, FARGATE_SPOT, FARGATE]
+          Weight: 1
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 0
+        MaximumPercent: 100
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          # Public subnets and a public IP: that is how the task reaches Docker Hub, Secrets Manager,
+          # CloudWatch and the marketplace without a NAT gateway. The security group keeps it closed.
+          Subnets:
+            - !Ref PublicSubnet1
+            - !Ref PublicSubnet2
+          SecurityGroups:
+            - !GetAtt TaskSecurityGroup.GroupId
+          AssignPublicIp: ENABLED
+      LoadBalancers:
+        - ContainerName: kwirth
+          ContainerPort: 3883
+          TargetGroupArn: !Ref TargetGroup
+
+  # ── Demo workloads (WithDemo) ───────────────────────────────────────────────────────────────────
+  # Something for Kwirth to find in the account: an ECS service and a Lambda function, both at the smallest
+  # size AWS sells. They do nothing useful and are meant to be looked at, inventoried and scanned.
+
+  # No inbound rule at all: nginx is running, but nothing can reach it. It only needs to go OUT, to pull its
+  # image from ECR Public.
+  DemoTaskSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: DemoEnabled
+    Properties:
+      GroupDescription: Demo ECS task, no inbound traffic
+      VpcId: !Ref Vpc
+
+  DemoLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: DemoEnabled
+    Properties:
+      LogGroupName: !Sub '/ecs/${AWS::StackName}-demo'
+      RetentionInDays: 1
+
+  DemoTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Condition: DemoEnabled
+    Properties:
+      Family: !Sub '${AWS::StackName}-demo'
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      # The smallest Fargate size there is.
+      Cpu: '256'
+      Memory: '512'
+      # Kwirth's execution role is reused: it already pulls images and writes logs, and a second role is one
+      # more thing to read when looking at what the stack created.
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      ContainerDefinitions:
+        - Name: nginx
+          # ECR Public's mirror of the official image: no Docker Hub rate limit, and no credentials.
+          Image: public.ecr.aws/docker/library/nginx:alpine
+          Essential: true
+          PortMappings:
+            - ContainerPort: 80
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref DemoLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: nginx
+
+  # Removed while paused, like Kwirth's own service.
+  DemoService:
+    Type: AWS::ECS::Service
+    Condition: DemoRunning
+    Properties:
+      ServiceName: !Sub '${AWS::StackName}-demo'
+      Cluster: !Ref EcsCluster
+      TaskDefinition: !Ref DemoTaskDefinition
+      DesiredCount: 1
+      CapacityProviderStrategy:
+        - CapacityProvider: !If [OnSpot, FARGATE_SPOT, FARGATE]
+          Weight: 1
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 0
+        MaximumPercent: 100
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - !Ref PublicSubnet1
+            - !Ref PublicSubnet2
+          SecurityGroups:
+            - !GetAtt DemoTaskSecurityGroup.GroupId
+          AssignPublicIp: ENABLED
+
+  DemoFunctionRole:
+    Type: AWS::IAM::Role
+    Condition: DemoEnabled
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # Created here, with a one-day retention, so Lambda does not create its own that keeps logs forever.
+  DemoFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: DemoEnabled
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-demo'
+      RetentionInDays: 1
+
+  # Nothing calls it, so it costs nothing: Lambda bills invocations, not existence. Kept while paused.
+  DemoFunction:
+    Type: AWS::Lambda::Function
+    Condition: DemoEnabled
+    DependsOn: DemoFunctionLogGroup
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-demo'
+      Description: Demo function deployed next to Kwirth, for it to inventory
+      Runtime: nodejs22.x
+      Architectures:
+        - arm64
+      Handler: index.handler
+      MemorySize: 128
+      Timeout: 3
+      Role: !GetAtt DemoFunctionRole.Arn
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            console.log('kwirth demo invoked', JSON.stringify(event))
+            return { statusCode: 200, body: JSON.stringify({ message: 'Hello from the Kwirth demo function' }) }
+          }
+
+Outputs:
+  HttpsUrl:
+    Description: Where Kwirth is reachable. The same while running and after a pause
+    Value: !Sub 'https://${Distribution.DomainName}'
+  DbInstanceId:
+    Description: The RDS instance, to stop it while paused and start it before resuming
+    Value: !Ref DbInstance
+  DbWeeklyStopName:
+    Condition: DbStopScheduled
+    Description: The schedule that stops the RDS instance every week
+    Value: !Ref DbWeeklyStop
+  FileSystemId:
+    Description: EFS holding the Kwirth store
+    Value: !Ref FileSystem
+  MasterKeySecretArn:
+    Description: Generated MASTERKEY. Do not change it once Kwirth has written secrets.
+    Value: !Ref MasterKeySecret
+  DbPasswordSecretArn:
+    Description: PostgreSQL master password
+    Value: !Ref DbPasswordSecret
+  EcsClusterName:
+    Description: ECS cluster running Kwirth
+    Value: !Ref EcsCluster
+  ScanRunnerTokenSecretArn:
+    Condition: WithScanRunner
+    Description: The token the scan runner expects. Read it here and type it into the extension's settings
+    Value: !Ref ScanRunnerTokenSecret
+  DemoFunctionName:
+    Condition: DemoEnabled
+    Description: The demo Lambda function
+    Value: !Ref DemoFunction
+  DemoServiceName:
+    Condition: DemoRunning
+    Description: The demo ECS service, in the same cluster as Kwirth
+    Value: !GetAtt DemoService.Name

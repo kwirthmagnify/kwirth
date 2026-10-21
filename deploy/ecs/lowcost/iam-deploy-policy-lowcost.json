@@ -1,0 +1,104 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DemoLambdaFunction",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction",
+        "lambda:DeleteFunction",
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration",
+        "lambda:ListTags",
+        "lambda:TagResource",
+        "lambda:UntagResource",
+        "lambda:GetRuntimeManagementConfig"
+      ],
+      "Resource": [
+        "arn:aws:lambda:*:*:function:kwirth*",
+        "arn:aws:lambda:*:*:function:*kwirth*"
+      ]
+    },
+    {
+      "Sid": "PrivateEcrForTheScanRunner",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreateRepository",
+        "ecr:DeleteRepository",
+        "ecr:DescribeRepositories",
+        "ecr:DescribeImages",
+        "ecr:ListImages",
+        "ecr:PutLifecyclePolicy",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:PutImage",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchDeleteImage"
+      ],
+      "Resource": [
+        "arn:aws:ecr:*:*:repository/kwirth*"
+      ]
+    },
+    {
+      "Sid": "EcrLoginTakesNoResource",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "WeeklyDatabaseStop",
+      "Effect": "Allow",
+      "Action": [
+        "scheduler:CreateSchedule",
+        "scheduler:UpdateSchedule",
+        "scheduler:DeleteSchedule",
+        "scheduler:GetSchedule",
+        "scheduler:TagResource",
+        "scheduler:ListTagsForResource"
+      ],
+      "Resource": [
+        "arn:aws:scheduler:*:*:schedule/default/kwirth*",
+        "arn:aws:scheduler:*:*:schedule/default/*kwirth*"
+      ]
+    },
+    {
+      "Sid": "PassTheStopRoleToScheduler",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:role/kwirth*",
+        "arn:aws:iam::*:role/*kwirth*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "scheduler.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "PassTheDemoRoleToLambda",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:role/kwirth*",
+        "arn:aws:iam::*:role/*kwirth*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "lambda.amazonaws.com"
+        }
+      }
+    }
+  ]
+}

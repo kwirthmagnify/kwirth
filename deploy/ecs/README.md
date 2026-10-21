@@ -8,12 +8,19 @@ What is in this folder:
 | file | what it is |
 |---|---|
 | [`cloudformation-full.yaml`](cloudformation-full.yaml) | **start here on an empty account**: VPC, subnets, NAT, ALB, ECS cluster, EFS, and Kwirth — one stack, nothing else needed |
+| [`lowcost/`](lowcost/README.md) | **the cheapest**: the same as `cloudformation-full-sql.yaml` without a NAT gateway (the task gets a public IP), on Fargate Spot, with **HTTPS through CloudFront** and no domain to buy, a `Paused` parameter that keeps all the data and the URL, the database stopped every Sunday, and optional demo workloads. ~59 USD/month running, ~4 paused |
 | [`task-definition-minimal.json`](task-definition-minimal.json) | the smallest thing that runs. Nothing persists. Start here to see it come up |
 | [`task-definition-fargate.json`](task-definition-fargate.json) | the real one: EFS for storage, Secrets Manager for the master key, behind a load balancer |
 | [`task-definition-ec2.json`](task-definition-ec2.json) | the same on the EC2 launch type, and with a **kubeconfig mounted** so Kwirth observes a cluster |
 | [`cloudformation.yaml`](cloudformation.yaml) | EFS, security groups, target group, IAM roles — for an account that **already has** a VPC, cluster and ALB |
 | [`iam-deploy-policy.json`](iam-deploy-policy.json) | the permissions **you** need to deploy all of the above |
 | [`firelens-sidecar.json`](firelens-sidecar.json) | how **another** task ships its log into this Kwirth |
+
+## The cheapest
+
+For a test or low-traffic install, [`lowcost/`](lowcost/README.md) has a stack that costs about half of
+`cloudformation-full-sql.yaml` running (~59 against ~106 USD/month) and ~4 USD/month paused, with HTTPS and
+no domain to buy. What it gives up, and how to pause it, is in its own README.
 
 ## Quick start: empty account
 
