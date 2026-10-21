@@ -25,7 +25,16 @@ export default defineConfig({
         or directly with an empty --testIgnore; the usual thing is to launch it by name with the config
         below temporarily disabled. See the spec's own header.
     */
-    testIgnore: process.env.STATUS_E2E_CAPTURE ? [] : ['**/zz-capture*.spec.ts'],
+    /*
+        The GRAPH is out of every run for good, by the user's decision (2026-10-21): opening the Graph tab
+        froze the headless browser for minutes — with DCE xyflow installed and loaded — and every run that
+        touched it fell over. Neither its spec nor its capture runs, with or without STATUS_E2E_CAPTURE.
+    */
+    testIgnore: [
+        '**/02-graph.spec.ts',
+        '**/zz-capture-graph.spec.ts',
+        ...(process.env.STATUS_E2E_CAPTURE ? [] : ['**/zz-capture.spec.ts'])
+    ],
     timeout: 180_000,   // the front end's dev server recompiles; the login alone can take ~1 min
     fullyParallel: false,
     workers: 1,

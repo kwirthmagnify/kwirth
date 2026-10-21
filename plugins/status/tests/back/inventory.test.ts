@@ -515,3 +515,20 @@ test('🔴 getInstances counts instances and the connections that carry them', a
     assert.deepEqual(canal.getInstances(), { instances: 2, connections: 1 })
     canal.cleanup?.()
 })
+
+test('🔴 the DCE code sizes travel from the core as they are, and only when the core gives them', async () => {
+    const inv = await inventarioDe({
+        dces: {
+            listInstalled: async () => [
+                meta('sized', { backBytes: 43110, frontBytes: 120000 }),
+                meta('older-core')
+            ],
+            status: () => ({ state: 'loaded' }),
+            consumers: async () => []
+        }
+    })
+    assert.equal(inv.dces?.[0].backBytes, 43110)
+    assert.equal(inv.dces?.[0].frontBytes, 120000)
+    assert.equal('backBytes' in inv.dces![1], false)
+    assert.equal('frontBytes' in inv.dces![1], false)
+})

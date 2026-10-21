@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { DCE_REGISTRY, EDceState, TDceRegistry } from '@kwirthmagnify/kwirth-common'
-import { filterDces, frontPartOf, isBroken, partLabel, readFrontRegistry, sortDces, summarizeDces } from '../../src/front/StatusDces'
+import { dceBytes, filterDces, formatBytes, frontPartOf, isBroken, partLabel, readFrontRegistry, sortDces, summarizeDces } from '../../src/front/StatusDces'
 import { IStatusDce } from '../../src/common/StatusTypes'
 
 const dce = (id: string, over: Partial<IStatusDce> = {}): IStatusDce => ({
@@ -98,4 +98,30 @@ test('the page registry is read from the global, and is empty when there is none
         if (before === undefined) delete g[DCE_REGISTRY]
         else g[DCE_REGISTRY] = before
     }
+})
+
+// ── code sizes ───────────────────────────────────────────────────────────────────────────────────────
+
+test('sizes read as people read them: B, then KB, then MB, binary units', () => {
+    assert.equal(formatBytes(0), '0 B')
+    assert.equal(formatBytes(1023), '1023 B')
+    assert.equal(formatBytes(1024), '1.0 KB')
+    assert.equal(formatBytes(43_110), '42.1 KB')
+    assert.equal(formatBytes(1024 * 1024 - 1), '1024.0 KB')
+    assert.equal(formatBytes(1024 * 1024), '1.0 MB')
+    assert.equal(formatBytes(5 * 1024 * 1024 + 300 * 1024), '5.3 MB')
+})
+
+test('🔴 a DCE weighs back + front; a side the core did not give counts as nothing, both missing is unknown', () => {
+    assert.equal(dceBytes(dce('both', { backBytes: 100, frontBytes: 50 })), 150)
+    assert.equal(dceBytes(dce('front-only', { hasBack: false, frontBytes: 50 })), 50)
+    assert.equal(dceBytes(dce('back-only', { backBytes: 100 })), 100)
+    // An older core says nothing: unknown, never zero.
+    assert.equal(dceBytes(dce('unknown')), undefined)
+})
+
+test('the summary adds the sizes it knows, and says nothing when it knows none', () => {
+    const s = summarizeDces([dce('a', { backBytes: 1000, frontBytes: 24 }), dce('b', { frontBytes: 1000 }), dce('c')], {})
+    assert.equal(s.bytes, 2024)
+    assert.equal('bytes' in summarizeDces([dce('x'), dce('y')], {}), false)
 })

@@ -46,7 +46,17 @@ export const StatusRoutesTab: React.FC<IRoutesTabProps> = ({ routes, filter }) =
                 {clashes.size > 0 &&
                     <Chip size='small' color='warning' label={`${clashes.size} collision${clashes.size === 1 ? '' : 's'}`} />}
             </Stack>
-            <Table size='small' stickyHeader>
+            {/*
+                Fixed layout, 50 / 25 / 25: the path gets half, methods and owner a quarter each. With the
+                automatic layout the widths followed the rows on screen, and moved with every letter typed in
+                the filter. What does not fit wraps inside its own column.
+            */}
+            <Table size='small' stickyHeader sx={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                    <col style={{ width: '50%' }} />
+                    <col style={{ width: '25%' }} />
+                    <col style={{ width: '25%' }} />
+                </colgroup>
                 <TableHead>
                     <TableRow>
                         <TableCell>Path</TableCell>
@@ -67,15 +77,15 @@ export const StatusRoutesTab: React.FC<IRoutesTabProps> = ({ routes, filter }) =
                                         </Tooltip>}
                                 </Stack>
                             </TableCell>
-                            {/* '1%' + nowrap = as narrow as its chips. (In sx, width: 1 means 100%, which squashed the path.) */}
-                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>
-                                <Stack direction='row' spacing={0.5}>
+                            {/* Many methods wrap to a second row inside the quarter, instead of widening it. */}
+                            <TableCell>
+                                <Stack direction='row' spacing={0.5} useFlexGap flexWrap='wrap'>
                                     {r.methods.map(m =>
                                         <Chip key={m} size='small' label={m} color={METHOD_COLOR[m] ?? 'default'} variant='outlined'
                                             sx={{ fontFamily: 'monospace', minWidth: 52 }} />)}
                                 </Stack>
                             </TableCell>
-                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }}>
+                            <TableCell sx={{ overflowWrap: 'anywhere' }}>
                                 <Typography variant='body2' component='span' color='text.secondary'>{OWNER_LABEL[r.ownerKind]} </Typography>
                                 <Typography variant='body2' component='span' sx={{ fontWeight: 500 }}>{r.ownerId}</Typography>
                             </TableCell>

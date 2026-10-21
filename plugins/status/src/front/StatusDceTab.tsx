@@ -1,7 +1,7 @@
 import React from 'react'
 import { Chip, Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material'
 import { IStatusDce, IStatusDcePart } from '../common/StatusTypes'
-import { filterDces, frontPartOf, partLabel, readFrontRegistry, sortDces, summarizeDces } from './StatusDces'
+import { filterDces, formatBytes, frontPartOf, partLabel, readFrontRegistry, sortDces, summarizeDces } from './StatusDces'
 
 /*
     The DCE tab: every installed DCE, whether each of its halves loaded, where it came from and who
@@ -20,11 +20,33 @@ interface IPartCellProps {
     side: string
 }
 
+interface ISizeCellProps {
+    dce: IStatusDce
+}
+
+/*
+    Back and front apart, as the two states are: they weigh on different things — the back.js in the
+    server's memory, the front.js in every browser that loads Kwirth. A side the DCE does not have, or the
+    core did not report, is a dash and never a zero.
+*/
+const SizeCell: React.FC<ISizeCellProps> = ({ dce }) => {
+    const side = (bytes: number | undefined) => bytes === undefined ? '—' : formatBytes(bytes)
+    return (
+        <TableCell aria-label='Size'>
+            <Tooltip title='back.js · front.js'>
+                <Typography variant='body2' component='span' sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                    {side(dce.backBytes)} · {side(dce.frontBytes)}
+                </Typography>
+            </Tooltip>
+        </TableCell>
+    )
+}
+
 /** One half's state. The error is written out, not only in a tooltip: it is the reason to open the tab. */
 const PartCell: React.FC<IPartCellProps> = ({ has, part, side }) => {
     const l = partLabel(has, part)
     return (
-        <TableCell sx={{ width: '1%', whiteSpace: 'nowrap' }} aria-label={`${side} state`}>
+        <TableCell sx={{ whiteSpace: 'nowrap' }} aria-label={`${side} state`}>
             {has
                 ? <Tooltip title={part ? '' : `This ${side.toLowerCase()} end has not been loaded`}>
                     <Chip size='small' label={l.label} color={l.color} variant={l.color === 'success' ? 'outlined' : 'filled'} />
@@ -62,14 +84,29 @@ export const StatusDceTab: React.FC<IDceTabProps> = ({ dces, filter }) => {
                 {s.broken > 0 && <Chip size='small' color='error' label={`${s.broken} broken`} />}
                 {/* Not a fault: installed and of use to nobody, which is worth knowing before uninstalling. */}
                 {s.unused > 0 && <Chip size='small' label={`${s.unused} unused`} />}
+                {s.bytes !== undefined &&
+                    <Tooltip title='All the back.js the core loaded and all the front.js it serves'>
+                        <Chip size='small' variant='outlined' label={`${formatBytes(s.bytes)} of code`} />
+                    </Tooltip>}
             </Stack>
-            <Table size='small' stickyHeader>
+            {/* Fixed widths, like every table of this plugin: the filter must not move the columns. */}
+            <Table size='small' stickyHeader sx={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: 90 }} />
+                    <col style={{ width: 120 }} />
+                    <col style={{ width: 120 }} />
+                    <col style={{ width: 170 }} />
+                    <col />
+                    <col style={{ width: '22%' }} />
+                </colgroup>
                 <TableHead>
                     <TableRow>
                         <TableCell>DCE</TableCell>
                         <TableCell>Version</TableCell>
                         <TableCell>Back</TableCell>
                         <TableCell>Front</TableCell>
+                        <TableCell>Size</TableCell>
                         <TableCell>Source</TableCell>
                         <TableCell>Consumed by</TableCell>
                     </TableRow>
@@ -82,9 +119,10 @@ export const StatusDceTab: React.FC<IDceTabProps> = ({ dces, filter }) => {
                                 {d.name !== d.id &&
                                     <Typography variant='caption' color='text.secondary' sx={{ fontFamily: 'monospace' }}>{d.id}</Typography>}
                             </TableCell>
-                            <TableCell sx={{ width: '1%', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{d.version}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{d.version}</TableCell>
                             <PartCell has={d.hasBack} part={d.back} side='Back' />
                             <PartCell has={d.hasFront} part={frontPartOf(d, registry)} side='Front' />
+                            <SizeCell dce={d} />
                             <TableCell>
                                 <Typography variant='body2' color='text.secondary' sx={{ fontFamily: 'monospace', overflowWrap: 'anywhere' }}>{d.source ?? '—'}</Typography>
                             </TableCell>

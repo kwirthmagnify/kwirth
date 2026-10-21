@@ -74,11 +74,31 @@ export interface IDceSummary {
     consumers: number
     /** DCEs nobody requires: installed and of use to nobody. */
     unused: number
+    /** Bytes of all the code the core reports (back and front). Absent when it reports none at all. */
+    bytes?: number
 }
 
-export const summarizeDces = (dces: IStatusDce[], registry: TDceRegistry): IDceSummary => ({
-    total: dces.length,
-    broken: dces.filter(d => isBroken(d, registry)).length,
-    consumers: new Set(dces.flatMap(d => d.consumers.map(c => `${c.type}:${c.id}`))).size,
-    unused: dces.filter(d => d.consumers.length === 0).length
-})
+/** The bytes of one DCE's code, back and front together; undefined when the core gave neither. */
+export const dceBytes = (dce: IStatusDce): number | undefined =>
+    dce.backBytes === undefined && dce.frontBytes === undefined ? undefined : (dce.backBytes ?? 0) + (dce.frontBytes ?? 0)
+
+export const summarizeDces = (dces: IStatusDce[], registry: TDceRegistry): IDceSummary => {
+    const sized = dces.map(dceBytes).filter((b): b is number => b !== undefined)
+    return {
+        total: dces.length,
+        broken: dces.filter(d => isBroken(d, registry)).length,
+        consumers: new Set(dces.flatMap(d => d.consumers.map(c => `${c.type}:${c.id}`))).size,
+        unused: dces.filter(d => d.consumers.length === 0).length,
+        ...(sized.length ? { bytes: sized.reduce((a, b) => a + b, 0) } : {})
+    }
+}
+
+/*
+    A size as people read it: bytes under one KB, KB under one MB, MB above. Binary units (1 KB = 1024 B),
+    like the browser's network panel the front.js figure will be compared with.
+*/
+export const formatBytes = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}

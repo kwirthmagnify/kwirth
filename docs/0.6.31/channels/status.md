@@ -310,7 +310,9 @@ published it: the core's own API, a provider's router, a plugin's endpoints, the
 
 The header counts both **paths** (lines) and **routes** (one per method), and how many each owner published.
 The filter matches a path, an owner, or an exact method — type `delete` and only the lines that answer DELETE
-remain, with all their methods in view.
+remain, with all their methods in view. The path takes half the table and the methods and the owner a
+quarter each, and the columns keep their width while you type: a long path or many methods wrap inside
+their own column.
 
 They are **patterns**, never values: the webhook receiver appears as `/webhook/:provider/:token`, and no
 token, id or secret ever travels with the list.
@@ -339,8 +341,15 @@ line each:
 | **Version** | the version installed |
 | **Back** | whether its back end loaded in the core: **Loaded**, **Failed** (with the reason written underneath), **Not loaded**, or **—** when it has none |
 | **Front** | the same for its front end, **in this browser** |
+| **Size** | the size of its code, back and front apart — `42.1 KB · 118.3 KB` — and a dash on a side it does not have |
 | **Source** | where it was installed from: a marketplace URL, `dev`, `bundled`, `local` |
 | **Consumed by** | the extensions that require it (`plugin nettools`), or *nobody* |
+
+**Size is what each side weighs where it runs.** The `back.js` lives in the memory of the Kwirth process;
+the `front.js` is downloaded by every browser that opens Kwirth. They are measured when the core **loads**
+the code, so every DCE shows them — also those installed before Kwirth measured anything — and they are the
+real bytes of the JavaScript, not of the compressed package. The header adds them all up (*"N KB of code"*).
+With a core older than this, the column shows dashes: unknown, never zero.
 
 **Back and front are two states, not one.** The back end loads in the Kwirth process and comes with the
 snapshot; the front end loads in your browser, and this tab reads it from the page you are looking at. One

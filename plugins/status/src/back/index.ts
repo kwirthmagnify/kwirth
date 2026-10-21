@@ -148,7 +148,9 @@ export const toStatusDces = async (access: IDceAccess | undefined): Promise<ISta
             hasBack: m.hasBack,
             hasFront: m.hasFront,
             ...(entry ? { back: { state: entry.state, ...(entry.error ? { error: entry.error } : {}) } } : {}),
-            consumers
+            consumers,
+            ...(m.backBytes !== undefined ? { backBytes: m.backBytes } : {}),
+            ...(m.frontBytes !== undefined ? { frontBytes: m.frontBytes } : {})
         }
     }))
 }

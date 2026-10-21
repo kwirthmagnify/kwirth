@@ -70,6 +70,14 @@ export interface IDceMeta {
     /** Always true (PRD RNF3): consumers keep the previous instance until the server restarts. */
     requiresRestart?: boolean
     requiresExtension?: IExtensionRequirement[]
+    /**
+     * Size in bytes of the back.js the core loaded — what this DCE weighs in the server's memory. Measured
+     * when the code is loaded, not stored on install: absent when the DCE has no back end or it has not
+     * been loaded in this process.
+     */
+    backBytes?: number
+    /** Size in bytes of the front.js the core serves — what every browser downloads. Absent likewise. */
+    frontBytes?: number
 }
 
 /** What the core lends of its DCEs, read-only (ClusterInfo.dces; the Status channel's DCE tab). */

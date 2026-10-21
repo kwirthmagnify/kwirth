@@ -192,6 +192,10 @@ export interface IStatusDce {
     /** The back end's state; absent when it has no back end or it has not been loaded. */
     back?: IStatusDcePart
     consumers: IStatusDceConsumer[]
+    /** Bytes of the back.js the core loaded; absent when there is none, or with a core that does not say. */
+    backBytes?: number
+    /** Bytes of the front.js the core serves; absent likewise. */
+    frontBytes?: number
 }
 
 /*

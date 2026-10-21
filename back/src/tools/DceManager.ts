@@ -49,6 +49,12 @@ interface IDevDce {
     meta: IDceMeta
 }
 
+/** The bytes of each side's code, as loaded. A side the DCE does not have, or did not load, is absent. */
+interface IDceCodeSizes {
+    back?: number
+    front?: number
+}
+
 interface IStoredCode {
     code: string
     compressed: boolean
@@ -73,6 +79,8 @@ export class DceManager implements IDceAccess {
     private devDces = new Map<string, IDevDce>()
     /** front.js by id, for serving. Filled when loading; a dev one is read from its dist on every request. */
     private frontCache = new Map<string, string>()
+    /** Bytes of the code loaded for each DCE in this process (IDceMeta.backBytes / frontBytes). */
+    private sizes = new Map<string, IDceCodeSizes>()
     private consumersOf: TDceConsumerResolver | undefined
 
     constructor(configMaps: IConfigMaps, secrets: ISecrets) {
@@ -93,7 +101,26 @@ export class DceManager implements IDceAccess {
         const stored = (await this.configMaps.read(INDEX_KEY, [])) as IDceMeta[] || []
         const devMetas = Array.from(this.devDces.values()).map(d => d.meta)
         const devIds = new Set(devMetas.map(m => m.id))
-        return [...stored.filter(m => !devIds.has(m.id)), ...devMetas]
+        // The sizes are this process's, not the index's: added on the way out, never written back.
+        return [...stored.filter(m => !devIds.has(m.id)), ...devMetas].map(m => {
+            const s = this.sizes.get(m.id)
+            return {
+                ...m,
+                ...(s?.back !== undefined ? { backBytes: s.back } : {}),
+                ...(s?.front !== undefined ? { frontBytes: s.front } : {})
+            }
+        })
+    }
+
+    /** Records the size of the code just loaded for one side of a DCE. */
+    private measure(id: string, side: 'back' | 'front', code: string): void {
+        this.sizes.set(id, { ...this.sizes.get(id), [side]: Buffer.byteLength(code, 'utf-8') })
+    }
+
+    /** Keeps a DCE's front.js to serve, and its size. Every front that is cached comes through here. */
+    private cacheFront(id: string, code: string): void {
+        this.frontCache.set(id, code)
+        this.measure(id, 'front', code)
     }
 
     isDevDce(id: string): boolean {
@@ -138,6 +165,8 @@ export class DceManager implements IDceAccess {
      * consumer asking later gets the cause, not an `undefined`.
      */
     private async activate(id: string, backJs: string): Promise<void> {
+        // Measured even if the factory fails: the code was loaded all the same.
+        this.measure(id, 'back', backJs)
         const registry = dceRegistry()
         const tmpPath = path.join(os.tmpdir(), `kwirth-dce-${id}-back.js`)
         fs.writeFileSync(tmpPath, backJs)
@@ -201,7 +230,7 @@ export class DceManager implements IDceAccess {
         const meta = this.cachedIndex.find(m => m.id === id)
         if (!meta?.hasFront) return undefined
         const code = await this.readStoredCode(meta, 'front')
-        if (code) this.frontCache.set(id, code)
+        if (code) this.cacheFront(id, code)
         return code
     }
 
@@ -217,7 +246,7 @@ export class DceManager implements IDceAccess {
                 }
                 if (meta.hasFront) {
                     const frontJs = await this.readStoredCode(meta, 'front')
-                    if (frontJs) this.frontCache.set(meta.id, frontJs)
+                    if (frontJs) this.cacheFront(meta.id, frontJs)
                 }
             }
             catch (err) {
@@ -342,9 +371,11 @@ export class DceManager implements IDceAccess {
             // Hot: the factory runs now, so a consumer installed afterwards finds the instance. On an
             // update the consumers already running keep the old one — hence requiresRestart.
             this.frontCache.delete(meta.id)
+            // A new version that dropped a side must not keep the old side's size.
+            this.sizes.delete(meta.id)
             if (hasBack) await this.activate(meta.id, fs.readFileSync(backPath, 'utf-8'))
             else delete dceRegistry()[meta.id]
-            if (hasFront) this.frontCache.set(meta.id, fs.readFileSync(frontPath, 'utf-8'))
+            if (hasFront) this.cacheFront(meta.id, fs.readFileSync(frontPath, 'utf-8'))
 
             logInfo(ELogComponent.CORE, `DCE '${meta.id}' v${meta.version} installed (${[hasBack && 'back', hasFront && 'front'].filter(Boolean).join(' + ')})`)
             return meta
@@ -382,6 +413,7 @@ export class DceManager implements IDceAccess {
         // consumers that already hold it keep it until the restart the type demands.
         delete dceRegistry()[id]
         this.frontCache.delete(id)
+        this.sizes.delete(id)
         await this.configMaps.write(`kwirth-dce-${id}-meta`, null)
         await this.configMaps.write(`kwirth-dce-${id}-back`, null)
         await this.configMaps.write(`kwirth-dce-${id}-front`, null)

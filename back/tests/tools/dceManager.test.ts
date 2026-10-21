@@ -297,3 +297,39 @@ test('dev, bundled and pack installs are not checked here: they have their own r
     // And with no source registered yet (startup), nothing is refused either.
     await assertExtensionRequirements('Plugin', 'p', dep, 'local')
 })
+
+// ── code sizes (Status channel's DCE tab) ──────────────────────────────────────────────────────────
+
+const BACK = `module.exports.default = { create: async () => ({ ok: true }) } // ñ`
+const FRONT = `window.__kwirth_dce_factories__ = { sized: { create: () => ({}) } } // ñ`
+
+test('🔴 listInstalled says the bytes of the back.js and front.js it loaded — in BYTES, not characters', async () => {
+    const { manager } = await newManager()
+    await manager.install(await makeDceTgz('sized', { backJs: BACK, frontJs: FRONT }), 'local')
+    const meta = (await manager.listInstalled()).find(m => m.id === 'sized')!
+    // The 'ñ' is two bytes in UTF-8: a length in characters would be one short.
+    assert.equal(meta.backBytes, Buffer.byteLength(BACK, 'utf-8'))
+    assert.equal(meta.frontBytes, Buffer.byteLength(FRONT, 'utf-8'))
+    assert.equal(meta.backBytes, BACK.length + 1)
+})
+
+test('a side the DCE does not have has no size, and the sizes are never written to the index', async () => {
+    const { manager, keys } = await newManager()
+    await manager.install(await makeDceTgz('backonly', { backJs: BACK, frontJs: null }), 'local')
+    const meta = (await manager.listInstalled()).find(m => m.id === 'backonly')!
+    assert.equal(meta.backBytes, Buffer.byteLength(BACK, 'utf-8'))
+    assert.equal('frontBytes' in meta, false)
+    // They belong to this process: what is persisted is the package's metadata, as always.
+    assert.equal(JSON.stringify([...keys.values()]).includes('backBytes'), false)
+})
+
+test('🔴 an update that drops a side forgets its old size; uninstalling forgets both', async () => {
+    const { manager } = await newManager()
+    await manager.install(await makeDceTgz('shrink', { backJs: BACK, frontJs: FRONT }), 'local')
+    await manager.install(await makeDceTgz('shrink', { version: '1.0.1', backJs: BACK, frontJs: null }), 'local', undefined, undefined, true)
+    const meta = (await manager.listInstalled()).find(m => m.id === 'shrink')!
+    assert.equal(meta.backBytes, Buffer.byteLength(BACK, 'utf-8'))
+    assert.equal('frontBytes' in meta, false, 'the size of a front.js the new version no longer has')
+    await manager.uninstall('shrink', true)
+    assert.equal((await manager.listInstalled()).some(m => m.id === 'shrink'), false)
+})
