@@ -64,7 +64,7 @@ if (rawArgs.length < 1) {
     process.exit(1)
 }
 
-const opts = { name: undefined, version: '1.0.0', description: '', website: '', output: undefined }
+const opts = { name: undefined, version: '1.0.0', description: '', website: '', output: undefined, publisher: '@kwirthmagnify' }
 const includes   = []   // { type, name } from --include
 const inputTgzs  = []   // tgz paths provided directly
 let packId
@@ -83,6 +83,8 @@ for (let i = 0; i < rawArgs.length; i++) {
     if (a === '--description') { opts.description  = rawArgs[++i]; continue }
     if (a === '--website')     { opts.website      = rawArgs[++i]; continue }
     if (a === '--output')      { opts.output       = rawArgs[++i]; continue }
+    // El scope npm del pack. Por defecto el público; un pack de artefactos de pago usa `@iriaoperae`.
+    if (a === '--publisher')   { opts.publisher    = rawArgs[++i]; continue }
     if (!packId) { packId = a; continue }
     inputTgzs.push(a)
 }
@@ -195,8 +197,13 @@ for (const rawPath of inputTgzs) {
 // The name follows the same 'kwirth-<type>-<id>' pattern as every other extension type. It used to be
 // just '@kwirthmagnify/<packId>', which put a package named after nothing in particular ('censor') at the
 // top of the scope, next to the core's own packages.
+//
+// 🔴 The scope is an OPTION, and defaults to the public one. A pack whose extensions are paid artifacts
+// belongs in the private scope, and the default would have silently aimed it at public npm — where it
+// cannot be unpublished and where its very name discloses a product. The pack carries no code of its own,
+// but it names what it bundles.
 const packPkgJson = {
-    name:          `@kwirthmagnify/kwirth-pack-${packId}`,
+    name:          `${opts.publisher}/kwirth-pack-${packId}`,
     id:            packId,
     displayName:   opts.name,
     version:       opts.version,

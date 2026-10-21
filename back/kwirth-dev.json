@@ -6,7 +6,8 @@
         "montag": "../plugins/montag/dist",
         "fileman": "../plugins/fileman/dist",
         "magnify": "../plugins/magnify/dist",
-        "trivy": "../plugins/trivy/dist"
+        "trivy": "../plugins/trivy/dist",
+        "status": "../plugins/status/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",
@@ -34,7 +35,8 @@
         "suse-fleet": "../aitoolsets/suse-fleet/dist"
     },
     "dces": {
-        "file-manager": "../dces/file-manager/dist"
+        "file-manager": "../dces/file-manager/dist",
+        "aws-auth": "../dces/aws-auth/dist"
     },
     "docs": {
         "excubitor": "../plugins/excubitor/docs/excubitor.tgz",

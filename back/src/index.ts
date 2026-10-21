@@ -2431,61 +2431,75 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
     }
 }
 
+/*
+    Carga las DCE y deja el registro listo. Idempotente: se llama en el arranque y en cada preparación de
+    instancia, y solo hace algo la primera vez.
+
+    🔴 Va ANTES que cualquier manager que evalúe código de extensión — plugins y providers incluidos —,
+    que es lo que RF6 pide (plans/completed/dce/PRD.md) y lo que NO se cumplía: estaba en
+    prepareRunningInstance(), que corre DESPUÉS de createRunningInstance(), donde los plugins y los
+    providers ya se han cargado y arrancado. Un provider que pidiese su DCE al arrancar no lo encontraba,
+    y el fallo no se veía: getDce() lanza, el consumidor cuidadoso lo cuenta como «no está instalado», y lo
+    que el usuario ve es una funcionalidad que no hace nada. Lo destapó cloud-config al estrenar aws-auth
+    (2026-10-21).
+
+    ⚠️ Lo que sigue pendiente es de dónde cuelga: el almacén del core lo decide la INSTALACIÓN (el entorno
+    de ejecución y KWIRTH_STORE, que en Kubernetes puede mandar los datos a ficheros), nunca el cluster al
+    que uno se conecte. Construirlo dentro del flujo de una instancia funciona por casualidad, no por
+    diseño. Ver plans/dce-load-order/PRD.md.
+*/
+const ensureDceManager = async (runningInstance:IRunningInstance) : Promise<void> => {
+    if (!dceManager) {
+        dceManager = new DceManager(runningInstance.configMaps, runningInstance.secrets)
+        await dceManager.init()
+        const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
+        if (bundledExtensionsPath) await dceManager.installBundled(bundledExtensionsPath)
+        await dceManager.loadAll()
+        await dceManager.loadDevDces()
+        // From here on, installing an extension that requires another checks it is there (RF8).
+        const manager = dceManager
+        setInstalledExtensionsSource(async () => {
+            const idx = emptyInstalledIndex()
+            const add = async (type: keyof typeof idx, mgr: { listInstalled(): Promise<{ id: string, version: string }[]> } | undefined): Promise<void> => {
+                if (mgr) for (const m of await mgr.listInstalled()) idx[type].push({ id: m.id, version: m.version })
+            }
+            await add('dce', dceManager)
+            if (pluginManager) await add('plugin', pluginManager)
+            if (providerManager) await add('provider', providerManager)
+            if (senderManager) await add('sender', senderManager)
+            if (webhookManager) await add('webhook', webhookManager)
+            if (themeManager) await add('theme', themeManager)
+            if (homepageManager) await add('homepage', homepageManager)
+            if (idpManager) for (const m of await idpManager.listInstalledMeta()) idx.idp.push({ id: m.id, version: m.version })
+            if (aiToolsetManager) await add('aitoolset', aiToolsetManager)
+            return idx
+        })
+        /*
+            Who consumes a DCE: uninstalling one in use and updating one across a major are refused
+            with the list (RF9, RF11). The managers are read on every call, not copied — they do not
+            exist yet at this point, and what is installed changes hot.
+        */
+        manager.setConsumerResolver(async (dceId: string) => {
+            const requirers: IRequirer[] = []
+            const add = (type: EExtensionType, metas: { id: string, requiresExtension?: IExtensionRequirement[] }[]): void => {
+                for (const m of metas) requirers.push({ type, id: m.id, requiresExtension: m.requiresExtension })
+            }
+            if (pluginManager) add(EExtensionType.PLUGIN, await pluginManager.listInstalled())
+            if (providerManager) add(EExtensionType.PROVIDER, await providerManager.listInstalled())
+            if (senderManager) add(EExtensionType.SENDER, await senderManager.listInstalled())
+            if (webhookManager) add(EExtensionType.WEBHOOK, await webhookManager.listInstalled())
+            if (themeManager) add(EExtensionType.THEME, await themeManager.listInstalled())
+            if (homepageManager) add(EExtensionType.HOMEPAGE, await homepageManager.listInstalled())
+            if (idpManager) add(EExtensionType.IDP, await idpManager.listInstalledMeta())
+            if (aiToolsetManager) add(EExtensionType.AITOOLSET, await aiToolsetManager.listInstalled())
+            return findConsumers(requirers, EExtensionType.DCE, dceId)
+        })
+    }
+}
+
 const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstance:IRunningInstance) : Promise<void> => {
     try {
-        /*
-            DCEs go FIRST, before any manager that evaluates extension code (plan: plans/completed/dce/PRD.md, RF6):
-            a consumer's back.js may ask for its DCE at module level, so the instance has to be in the
-            registry before the senders, webhooks, toolsets, providers, IdP connectors and plugins load.
-            Startup is prepareRunningInstance() -> startRunningInstance() -> setUpRoutes(), so this is
-            the earliest point. The dev ones are awaited for the same reason.
-        */
-        if (!dceManager) {
-            dceManager = new DceManager(runningInstance.configMaps, runningInstance.secrets)
-            await dceManager.init()
-            const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
-            if (bundledExtensionsPath) await dceManager.installBundled(bundledExtensionsPath)
-            await dceManager.loadAll()
-            await dceManager.loadDevDces()
-            // From here on, installing an extension that requires another checks it is there (RF8).
-            const manager = dceManager
-            setInstalledExtensionsSource(async () => {
-                const idx = emptyInstalledIndex()
-                const add = async (type: keyof typeof idx, mgr: { listInstalled(): Promise<{ id: string, version: string }[]> } | undefined): Promise<void> => {
-                    if (mgr) for (const m of await mgr.listInstalled()) idx[type].push({ id: m.id, version: m.version })
-                }
-                await add('dce', dceManager)
-                if (pluginManager) await add('plugin', pluginManager)
-                if (providerManager) await add('provider', providerManager)
-                if (senderManager) await add('sender', senderManager)
-                if (webhookManager) await add('webhook', webhookManager)
-                if (themeManager) await add('theme', themeManager)
-                if (homepageManager) await add('homepage', homepageManager)
-                if (idpManager) for (const m of await idpManager.listInstalledMeta()) idx.idp.push({ id: m.id, version: m.version })
-                if (aiToolsetManager) await add('aitoolset', aiToolsetManager)
-                return idx
-            })
-            /*
-                Who consumes a DCE: uninstalling one in use and updating one across a major are refused
-                with the list (RF9, RF11). The managers are read on every call, not copied — they do not
-                exist yet at this point, and what is installed changes hot.
-            */
-            manager.setConsumerResolver(async (dceId: string) => {
-                const requirers: IRequirer[] = []
-                const add = (type: EExtensionType, metas: { id: string, requiresExtension?: IExtensionRequirement[] }[]): void => {
-                    for (const m of metas) requirers.push({ type, id: m.id, requiresExtension: m.requiresExtension })
-                }
-                if (pluginManager) add(EExtensionType.PLUGIN, await pluginManager.listInstalled())
-                if (providerManager) add(EExtensionType.PROVIDER, await providerManager.listInstalled())
-                if (senderManager) add(EExtensionType.SENDER, await senderManager.listInstalled())
-                if (webhookManager) add(EExtensionType.WEBHOOK, await webhookManager.listInstalled())
-                if (themeManager) add(EExtensionType.THEME, await themeManager.listInstalled())
-                if (homepageManager) add(EExtensionType.HOMEPAGE, await homepageManager.listInstalled())
-                if (idpManager) add(EExtensionType.IDP, await idpManager.listInstalledMeta())
-                if (aiToolsetManager) add(EExtensionType.AITOOLSET, await aiToolsetManager.listInstalled())
-                return findConsumers(requirers, EExtensionType.DCE, dceId)
-            })
-        }
+        await ensureDceManager(runningInstance)
         if (!senderManager) {
             senderManager = new SenderManager(runningInstance.configMaps)
             await senderManager.init()
@@ -2671,6 +2685,19 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         runningInstance.backChannelObject = backChannelObject
         runningInstance.providerStorage = buildProviderStorage(runningInstance.configMaps, runningInstance.secrets)
         runningInstance.clusterInfo.type = localKwirthData.clusterType
+        /*
+            🔴 Las DCE, ANTES de que se evalúe el código de ninguna extensión.
+
+            `setKubernetesClusterKwirthRequirements()` carga y arranca los PLUGINS y los PROVIDERS, y hasta
+            hoy las DCE se cargaban después, en `prepareRunningInstance()`. Eso incumplía RF6 —el propio
+            comentario de allí decía que iban primero— y el fallo no se veía: un provider que pedía su DCE
+            al arrancar recibía la excepción de `getDce()`, la contaba como «no instalado», y lo que
+            quedaba era una funcionalidad que no hacía nada y un log mudo.
+
+            Aquí ya está todo lo que necesitan: el almacén del core (`configMaps`/`secrets`) se resuelve
+            mucho antes, en este mismo `createRunningInstance`.
+        */
+        await ensureDceManager(runningInstance)
         await setKubernetesClusterKwirthRequirements(runningInstance, localKwirthData, runningInstance.clusterInfo, backChannelObject)
 
         // this '.channels' object is sent to clients when they want to know something about support channels on the backend they're connected to.
