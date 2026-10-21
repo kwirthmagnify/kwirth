@@ -68,7 +68,7 @@ if (badSides.length || !sides.length) {
 const hasBack  = sides.includes('back')
 const hasFront = sides.includes('front')
 
-const npmName = `${publisher}/kwirth-dce-${id}`
+const npmName = `${publisher}/dce-${id}`
 const dceDir  = path.resolve('dces', id)
 const pascal  = id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join('')
 

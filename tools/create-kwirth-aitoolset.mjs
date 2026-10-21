@@ -110,7 +110,7 @@ if (!['public', 'internal'].includes(sensitivity)) {
     process.exit(1)
 }
 
-const npmName    = `${publisher}/kwirth-aitoolset-${id}`
+const npmName    = `${publisher}/aitoolset-${id}`
 const toolsetDir = path.resolve('aitoolsets', id)
 const camelId    = id.split('-').map((s, i) => i ? s[0].toUpperCase() + s.slice(1) : s).join('')
 

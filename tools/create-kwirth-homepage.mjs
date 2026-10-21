@@ -71,7 +71,7 @@ fs.mkdirSync(path.join(homepageDir, 'src', 'front'), { recursive: true })
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
     "id": "${id}",
-    "name": "${publisher}/kwirth-homepage-${id}",
+    "name": "${publisher}/homepage-${id}",
     "displayName": "${displayName}",
     "extensionType": "homepage",
     "publisher": "${publisher}",

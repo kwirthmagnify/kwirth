@@ -81,7 +81,7 @@ fs.mkdirSync(loginDir, { recursive: true })
 
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
-    "name": "${publisher}/kwirth-login-${id}",
+    "name": "${publisher}/login-${id}",
     "id": "${id}",
     "publisher": "${publisher}",
     "displayName": "${displayName}",
@@ -172,9 +172,9 @@ const bgSrc = join(__dir, 'background.png')
 if (existsSync(bgSrc)) {
     const bytes = statSync(bgSrc).size
     if (bytes > CONFIGMAP_BACKGROUND_LIMIT) {
-        console.error(\`background.png son \${(bytes / 1024).toFixed(0)} KB y el tope es \${CONFIGMAP_BACKGROUND_LIMIT / 1024} KB \` +
-            \`(\${(bytes * 4 / 3 / 1024).toFixed(0)} KB en base64, sobre un limite de 800 KB en el ConfigMap). \` +
-            \`Si lo que quieres es MAS CALIDAD, deja este dentro del tope y añade background-hi.png, que no lo tiene.\`)
+        console.error(\`background.png is \${(bytes / 1024).toFixed(0)} KB and the ceiling is \${CONFIGMAP_BACKGROUND_LIMIT / 1024} KB \` +
+            \`(\${(bytes * 4 / 3 / 1024).toFixed(0)} KB once base64-encoded, against a 800 KB limit in the ConfigMap). \` +
+            \`If what you want is MORE QUALITY, keep this one under the ceiling and add background-hi.png, which has none.\`)
         process.exit(1)
     }
     copyFileSync(bgSrc, join(distDir, 'background.png'))
@@ -183,28 +183,29 @@ if (existsSync(bgSrc)) {
 const bgHiSrc = join(__dir, 'background-hi.png')
 if (existsSync(bgHiSrc)) {
     const hiBytes = statSync(bgHiSrc).size
-    console.log(\`background-hi.png: \${(hiBytes / 1024).toFixed(0)} KB — se usara donde el almacenamiento lo admita\`)
+    console.log(\`background-hi.png: \${(hiBytes / 1024).toFixed(0)} KB — it will be used wherever storage allows it\`)
     copyFileSync(bgHiSrc, join(distDir, 'background-hi.png'))
 }
 
-/*  El tgz se llama \`<casa>-login-<id>-<version>.tgz\`, donde la casa es \`kwirth\` si es OSS e
-    \`iriaoperae\` si es de pago.
+/*  The tarball is named \`<scope>-login-<id>-<version>.tgz\`, the same shape npm gives every other
+    extension type — 'npm pack' on @scope/login-<id> would produce exactly this.
 
-    Un login no se empaqueta con npm —es un tar de dos ficheros y un par de imagenes— asi que el nombre lo
-    pone este script, y durante un tiempo lo puso mal: \`<id>.tgz\`, sin casa, sin tipo y sin version. Cada
-    login lo fue corrigiendo por su cuenta y a medias, y al reunirlos en un pack convivian tres estilos,
-    sin poder saber que version llevaba cada pieza — que es lo primero que uno mira cuando algo no cuadra.
+    A login is not packed by npm (it is a tar of two files and a couple of images), so the name is this
+    script's job, and for a while it got it wrong: \`<id>.tgz\`, with no scope, no type and no version.
+    Each login then fixed it on its own and halfway, so a pack ended up holding three styles side by
+    side with no way to tell which version each piece was — the first thing anyone looks at when
+    something does not add up.
 
-    🔴 La casa se DEDUCE del scope del package.json, nunca se escribe a mano: en cuanto se teclea, es
-    cuestion de tiempo que un login de pago acabe anunciandose como OSS.
+    🔴 The scope is DERIVED from package.json, never typed. There are three houses and two of them are
+    public, so a literal here is a paid login announcing itself as OSS, sooner or later.
 
-    🔴 Y los tgz anteriores se BORRAN antes de empaquetar: al llevar la version en el nombre, cada build
-    dejaria uno nuevo y el anterior se quedaria ahi, de modo que cualquiera que coja "el tgz del dist"
-    puede acabar cogiendo una version vieja sin enterarse. */
+    🔴 And previous tarballs are DELETED before packing: with the version in the name each build would
+    leave a new one next to the old, so whoever grabs "the tgz in dist" could walk off with a previous
+    version without noticing. */
 for (const f of readdirSync(distDir)) if (f.endsWith('.tgz')) rmSync(join(distDir, f))
 
-const house = pkg.name.startsWith('@iriaoperae/') ? 'iriaoperae' : 'kwirth'
-const tgzName = \`\${house}-login-\${id}-\${pkg.version}.tgz\`
+const scope = (pkg.publisher ?? pkg.name.split('/')[0]).replace(/^@/, '')
+const tgzName = \`\${scope}-login-\${id}-\${pkg.version}.tgz\`
 execSync(\`tar -czf \${tgzName} package.json login.json\${existsSync(bgSrc) ? ' background.png' : ''}\` +
     \`\${existsSync(bgHiSrc) ? ' background-hi.png' : ''}\`, { cwd: distDir })
 

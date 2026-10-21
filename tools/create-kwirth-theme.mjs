@@ -68,7 +68,7 @@ fs.mkdirSync(path.join(themeDir, 'src', 'front'), { recursive: true })
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
     "id": "${id}",
-    "name": "${publisher}/kwirth-theme-${id}",
+    "name": "${publisher}/theme-${id}",
     "publisher": "${publisher}",
     "version": "0.1.0",
     "displayName": "${displayName}",

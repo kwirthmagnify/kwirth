@@ -23,8 +23,12 @@ prompt and takes the remaining values from the flags (or their defaults).
   --description <text>    
   --icon <MUI name>
   --website <url>
-  --dce <id[:version],…>    DCEs this plugin consumes. It leaves the dependency declared and the
-                            build ready to resolve them against the registry (default version 0.1.0)
+  --dce <[@scope/]id[:version],…>
+                            DCEs this plugin consumes. It leaves the dependency declared and the
+                            build ready to resolve them against the registry (default version 0.1.0).
+                            The scope is part of the name and defaults to this plugin's publisher —
+                            a paid plugin consuming a public DCE is spelled @kwirthmagnify/xyflow, and
+                            a DCE still published under the old name, @kwirthmagnify/kwirth-dce-xyflow
   --help                    this text
 `)
     process.exit(0)
@@ -58,22 +62,45 @@ const website     = flag('website') ?? await ask('Website URL (optional)', '')
     expensive mistake: the plugin BUNDLES the DCE's code, builds its own object, and the single instance
     the type guarantees quietly becomes two, with nothing failing.
 */
-const dceRaw      = flag('dce') ?? (interactive ? await ask('DCEs it consumes (id[:version], comma separated; empty for none)', '') : '')
+const dceRaw      = flag('dce') ?? (interactive ? await ask('DCEs it consumes ([@scope/]id[:version], comma separated; empty for none)', '') : '')
 if (rl) rl.close()
 
+/*  A DCE is named ACROSS scopes: a paid plugin regularly consumes a public DCE, which is why the scope
+    is part of what is typed here and is NOT assumed to be the plugin's own. Three forms are accepted:
+
+      xyflow                                 → @<this plugin's publisher>/dce-xyflow
+      @kwirthmagnify/xyflow                  → @kwirthmagnify/dce-xyflow
+      @kwirthmagnify/kwirth-dce-xyflow       → taken verbatim
+
+    The third form exists because the DCEs published so far still carry the old 'kwirth-' infix, so a
+    plugin that consumes one has to be able to name the package that actually resolves today. The id —
+    what `requiresExtension` and the mapping key go by — is the same in all three: 'xyflow'. */
 const dces = dceRaw.split(',').map(s => s.trim()).filter(Boolean).map(entry => {
-    const [dceId, version] = entry.split(':')
-    return { id: dceId, version: version || '0.1.0' }
+    const colon   = entry.lastIndexOf(':')
+    const spec    = colon > 0 ? entry.slice(0, colon) : entry
+    const version = colon > 0 ? entry.slice(colon + 1) : '0.1.0'
+    const slash   = spec.lastIndexOf('/')
+    const scope   = slash >= 0 ? spec.slice(0, slash) : publisher
+    const tail    = slash >= 0 ? spec.slice(slash + 1) : spec
+    const dceId   = tail.replace(/^(kwirth-)?dce-/, '')
+    return { id: dceId, version: version || '0.1.0', pkg: `${scope}/${tail === dceId ? `dce-${dceId}` : tail}` }
 })
 for (const d of dces) {
     if (!/^[a-z][a-z0-9-]*$/.test(d.id)) {
         console.error(`Error: DCE id '${d.id}' must be lowercase kebab-case`)
         process.exit(1)
     }
+    if (!d.pkg.startsWith('@')) {
+        console.error(`Error: DCE '${d.id}' resolves to package '${d.pkg}', which is not scoped — pass the scope as @scope/${d.id}`)
+        process.exit(1)
+    }
 }
 // What goes into package.json, and the package → registry entry mapping the builds need.
 const requiresExtension = dces.map(d => `{ "extensionType": "dce", "id": "${d.id}", "minVersion": "${d.version}" }`).join(', ')
-const dceMappings = dces.map(d => `            '@kwirthmagnify/kwirth-dce-${d.id}': '${d.id}',`).join('\n')
+const dceMappings = dces.map(d => `            '${d.pkg}': '${d.id}',`).join('\n')
+// Declared as a real dependency too: the mapping only tells the BUILD what to resolve against the
+// registry, and without the entry here neither npm install nor the typechecker ever sees the package.
+const dceDeps = dces.map(d => `        "${d.pkg}": "^${d.version}",\n`).join('')
 
 if (!id || !/^[a-z][a-z0-9-]*$/.test(id)) {
     console.error('Error: Plugin ID must be lowercase kebab-case (e.g. my-plugin)')
@@ -97,7 +124,7 @@ fs.mkdirSync(path.join(pluginDir, 'src', 'front'), { recursive: true })
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 write('package.json', `{
     "id": "${id}",
-    "name": "${name}",
+    "name": "${publisher}/plugin-${id}",
     "displayName": "${name}",
     "extensionType": "plugin",
     "publisher": "${publisher}",
@@ -112,7 +139,7 @@ write('package.json', `{
         "watch": "node watch.mjs"
     },
     "dependencies": {
-        "@kwirthmagnify/kwirth-common": "^0.5.62",
+${dceDeps}        "@kwirthmagnify/kwirth-common": "^0.5.62",
         "@kwirthmagnify/kwirth-common-back": "^0.6.0",
         "@kwirthmagnify/kwirth-common-front": "^0.5.52"
     },
@@ -166,9 +193,13 @@ ${dceMappings}
 const dceGlobal = (registry) => ({
     name: 'kwirth-dce-globals',
     setup(build) {
-        // A fixed filter, and the decision inside: every DCE package shares this prefix, so there is no
-        // regex to build per id — and no escaping to get wrong.
-        build.onResolve({ filter: /^@kwirthmagnify\\/kwirth-dce-/ }, (args) => (
+        // A fixed filter, and the decision inside: DCE_PACKAGES is what actually decides, so the regex
+        // only has to be wide enough to let every entry reach it — no regex per id, no escaping to get
+        // wrong. 🔴 It matches ANY scope on purpose: a paid plugin consuming a public DCE is the normal
+        // case, and a filter pinned to one house silently skipped those imports, leaving the DCE bundled
+        // in instead of resolved against the registry — the exact duplicate-instance bug the mapping is
+        // there to prevent. The optional 'kwirth-' covers the DCEs published before the rename.
+        build.onResolve({ filter: /^@[^/]+\\/(kwirth-)?dce-/ }, (args) => (
             DCE_PACKAGES[args.path] ? { path: args.path, namespace: 'kwirth-dce' } : undefined
         ))
         build.onLoad({ filter: /.*/, namespace: 'kwirth-dce' }, (args) => ({
@@ -277,7 +308,7 @@ console.log('Built dist/back.js')
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = {
     id: meta.id,
-    name: \`\${meta.publisher}/kwirth-plugin-\${meta.id}\`,
+    name: \`\${meta.publisher}/plugin-\${meta.id}\`,
     displayName: meta.displayName,
     extensionType: 'plugin',
     version: meta.version,
@@ -290,9 +321,9 @@ const distMeta = {
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
-const npmName = \`\${meta.publisher}/kwirth-plugin-\${meta.id}\`
+const npmName = \`\${meta.publisher}/plugin-\${meta.id}\`
 console.log("Done. Run 'npm publish --access=public' on your 'dist' folder in order to publish your package to npmjs.")
-console.log(\`Package will be accessible (and installable on Kwirth) via this URL: https://registry.npmjs.org/\${npmName}/-/kwirth-plugin-\${meta.id}-\${meta.version}.tgz\`)
+console.log(\`Package will be accessible (and installable on Kwirth) via this URL: https://registry.npmjs.org/\${npmName}/-/plugin-\${meta.id}-\${meta.version}.tgz\`)
 `)
 
 // ─── watch.mjs ─────────────────────────────────────────────────────────────
@@ -342,7 +373,7 @@ fs.mkdirSync('dist', { recursive: true })
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
-    id: meta.id, name: \`\${meta.publisher}/kwirth-plugin-\${meta.id}\`, displayName: meta.displayName,
+    id: meta.id, name: \`\${meta.publisher}/plugin-\${meta.id}\`, displayName: meta.displayName,
     version: meta.version, description: meta.description, icon: meta.icon,
     ...(meta.website ? { website: meta.website } : {}),
     requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? []
