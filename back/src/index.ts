@@ -2275,7 +2275,14 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
             .flatMap(([channelId, channel]) => channel.requirements.providers.map(targetId => ({ consumerId: channelId, targetId })))
         const missing = findMissingSubscriptionTargets(requests, Array.from(registeredProviders.keys()), localClusterInfo.pluviders)
         for (const provider of missing.missingProviders) {
-            logError(ELogComponent.CORE, `Required provider '${provider.id}' is not registered — required by: ${provider.consumers.join(', ')}`)
+            /*
+                WARNING, not ERROR. 'Not registered' means the provider's EXTENSION is not installed here,
+                which is the administrator's choice, not a misconfiguration — the same absence the pluvider
+                branch below already treats as legitimate. The consumer degrades on its own (e.g. Excubitor
+                without the 'trivy' provider runs on the scan runner instead of Trivy Operator), and an
+                ERROR here made every ECS/desktop startup look broken while working perfectly.
+            */
+            logWarning(ELogComponent.CORE, `Required provider '${provider.id}' is not installed here — required by: ${provider.consumers.join(', ')} (they will run without it)`)
         }
         for (const pluvider of missing.missingPluviders) {
             logWarning(ELogComponent.CORE, `Pluvider '${pluvider.id}' is not available here (its plugin is not installed, or is not hosted by this Kwirth) — required by: ${pluvider.consumers.join(', ')}`)

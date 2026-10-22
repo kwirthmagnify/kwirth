@@ -562,6 +562,37 @@ Resources:
                     - ecr:DescribeRepositories
                   Resource: !Sub 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/*'
           - !Ref AWS::NoValue
+        # What Excubitor needs to INVENTORY the account when the AWS connector uses the environment
+        # identity (this very task role): which ECS services and Lambda functions run, which image,
+        # which role, what is in front of them. Without it the Trivy scanner has nothing to scan:
+        # ECR pull alone is not enough, someone has to say WHAT runs. Read-only, from the guide's
+        # serverless table (plugins/excubitor/docs/guide/admin/11-cloud-aws.md).
+        - PolicyName: excubitor-inventory-read
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:ListClusters
+                  - ecs:ListServices
+                  - ecs:DescribeServices
+                  - ecs:ListTasks
+                  - ecs:DescribeTasks
+                  - ecs:DescribeTaskDefinition
+                  - lambda:ListFunctions
+                  - lambda:GetFunction
+                  - lambda:GetPolicy
+                  - lambda:GetFunctionUrlConfig
+                  - iam:GetRole
+                  - iam:ListAttachedRolePolicies
+                  - iam:ListRolePolicies
+                  - iam:GetPolicy
+                  - iam:GetPolicyVersion
+                  - iam:GetRolePolicy
+                  - elasticloadbalancing:Describe*
+                  - apigateway:GET
+                  - cloudfront:ListDistributions
+                Resource: '*'
 
   # A week of logs instead of a month: CloudWatch bills what it keeps.
   LogGroup:
