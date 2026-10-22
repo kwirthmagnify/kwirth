@@ -71,3 +71,7 @@ const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
 const distMeta = { type: 'commonjs', extensionType: 'sender', id: meta.id, name: meta.name, displayName: meta.displayName, version: meta.version, description: meta.description, requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? [] }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
+
+// The package page on npm is this README: publishing without it leaves a page that says nothing.
+fs.copyFileSync('README.md', path.join('dist', 'README.md'))
+console.log('Copied README.md to dist/')

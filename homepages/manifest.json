@@ -10,9 +10,9 @@
   {
     "extensionType": "homepage",
     "id": "clusterized",
-    "version": "0.1.10",
+    "version": "0.1.11",
     "name": "Clusterized",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-clusterized/-/kwirth-homepage-clusterized-0.1.10.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-homepage-clusterized/-/kwirth-homepage-clusterized-0.1.11.tgz",
     "description": "Cluster-centric homepage for Kwirth — one card per cluster with status indicator and quick Magnify access"
   },
   {

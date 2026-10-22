@@ -101,19 +101,19 @@
   {
     "extensionType": "sender",
     "id": "ratelimit",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "name": "Rate Limit Sender",
     "displayName": "Rate Limit Sender",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-ratelimit/-/kwirth-sender-ratelimit-0.1.7.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-ratelimit/-/kwirth-sender-ratelimit-0.1.8.tgz",
     "description": "Rate limit filter sender for Kwirth — queues messages exceeding a configurable rate and delivers them in the next time window"
   },
   {
     "extensionType": "sender",
     "id": "regex",
-    "version": "0.1.14",
+    "version": "0.1.15",
     "name": "Regex Sender",
     "displayName": "Regex Sender",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-regex/-/kwirth-sender-regex-0.1.14.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-regex/-/kwirth-sender-regex-0.1.15.tgz",
     "description": "Regex sender plugin for Kwirth — routes or drops messages based on ordered regex rules evaluated against any message field"
   },
   {
@@ -146,10 +146,10 @@
   {
     "extensionType": "sender",
     "id": "tee",
-    "version": "0.1.13",
+    "version": "0.1.14",
     "name": "Tee Sender",
     "displayName": "Tee Sender",
-    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-tee/-/kwirth-sender-tee-0.1.13.tgz",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-tee/-/kwirth-sender-tee-0.1.14.tgz",
     "description": "Tee sender plugin for Kwirth — fans out an incoming message to multiple downstream senders simultaneously, acting as an intermediate pipeline node"
   },
   {
