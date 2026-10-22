@@ -1,6 +1,7 @@
 # PLAN — Signup (auto-registro vía IdP)
 
-> **Estado:** vivo · 2026-10-22 · ✅ S0–S4 entregados · queda la **cascada de common** a las extensiones
+> **Estado:** vivo · 2026-10-22 · ✅ S0–S4 entregados y ✅ cascada hecha · solo quedan dos restos de la cascada que
+> no son de este plan: **excubitor** (lo publica el usuario en otra sesión) y **providers/azure** (WIP sin commitear)
 >
 > Producto y decisiones (D1–D9) en [PRD.md](PRD.md); este plan no las repite.
 
@@ -105,3 +106,21 @@ Cada stream cierra su CL9.
   perdidos): rojos que cambiaban de sitio en cada corrida y nunca en S4; relanzados, en verde.
   **Queda la cascada** de `common` (0.5.74 → 0.5.76) y `common-back` (0.6.10) a las extensiones, aplazada
   hasta aquí por decisión del usuario.
+- 2026-10-22 — ✅ **Cascada hecha** (workflow de 18 agentes, ~5 artefactos cada uno). `common-front` 0.5.67 y
+  `common-ai` 0.5.74 primero; luego cada extensión que depende de alguna `kwirth-common*` sube a las nuevas y se
+  republica con SU patch, con sus docs en lockstep. Nadie cambió comportamiento; ningún plugin necesitó añadir
+  `implements IChannel` (ya lo declaraban). De paso, varios senders/providers que salían **sin README** en el
+  tarball lo llevan ya.
+  - **Públicas** (npm `@kwirthmagnify`): 48 + docs de pinocchio, manifests por tipo, 49 tags, commit `ade6da3a`.
+    🔴 El clasificador del modo automático **denegó `npm publish` público** a los subagentes (*Create Public
+    Surface*) y luego también a la sesión; los 25 que quedaron preparados los publicó el usuario aprobándolo en
+    modo manual. Los agentes no intentaron saltárselo.
+  - **De pago** (Nexus `@iriaoperae`): 22 (+ docs en lockstep), cada una con commit y tag en su repo privado;
+    manifest privado commit `7c0dbfc`. **excubitor** se publicó (0.2.65 + docs) pero el usuario lo cierra en otra
+    sesión: sin entrada en el manifest privado y con su pack sin publicar.
+  - **jfvilas** (npm `@jfvilas`): 10 + `v16map`/`flightmap` 0.1.3, que llegaron por un PR mientras tanto.
+  - **Fuera**: `providers/azure` (WIP del usuario sin commitear), `senders/gitlab-issues` y
+    `webhooks/gitlab-issues` (nunca publicados).
+  - ⚠️ Visto de paso, **no arreglado**: varios manifests públicos iban por detrás de npm antes de la cascada
+    (validating 0.1.13 vs 0.3.2, http-pull-push 0.1.3 vs 0.3.2, idps 0.1.7 vs 0.1.8): las versiones intermedias
+    se publicaron sin su entrada.
