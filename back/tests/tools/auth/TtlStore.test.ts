@@ -34,3 +34,22 @@ test('purge elimina caducadas y deja las vigentes', () => {
     assert.equal(s.size, 1)
     assert.equal(s.take('new'), 'b')
 })
+
+// peek (signup S2): the signup dialog shows the code's identity before the submit spends it
+test('peek devuelve sin borrar: un take posterior aun lo encuentra', () => {
+    const s = new TtlStore<string>(1000)
+    s.put('k', 'v')
+    assert.equal(s.peek('k'), 'v')
+    assert.equal(s.peek('k'), 'v')
+    assert.equal(s.take('k'), 'v')
+    assert.equal(s.peek('k'), undefined)
+})
+
+test('peek de algo caducado devuelve undefined y lo quita', () => {
+    let t = 0
+    const s = new TtlStore<string>(1000, () => t)
+    s.put('k', 'v')
+    t = 1001
+    assert.equal(s.peek('k'), undefined)
+    assert.equal(s.size, 0)
+})

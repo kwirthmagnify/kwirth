@@ -109,20 +109,24 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
     }
 
     return (<>
-        <Dialog open={true} ref={escapeRef} fullWidth maxWidth={false} PaperProps={{ sx: { height: '75vh', maxWidth: '1080px', width: '100%' } }} disableEnforceFocus>
+        <Dialog open={true} ref={escapeRef} fullWidth maxWidth={false} PaperProps={{ sx: { maxWidth: '1280px', width: '100%' } }} disableEnforceFocus>
             <DialogTitleHelp section='guide/admin/05-api-management?id=create-an-api-key' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>API Key management</DialogTitleHelp>
-            <DialogContent sx={{ display: 'flex', height: '100%' }}>
-                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxWidth: 'calc(50% - 8px)' }}>
-                    <Stack flexDirection='row' alignItems='center' sx={{ width: '100%', pr: 2 }}>
-                        <TextField value={filterText} onChange={(e) => setFilterText(e.target.value)} variant='standard' label='Filter' size='small' sx={{ flexGrow: 1 }} />
-                        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, ml: 1 }}>
-                            <Checkbox checked={showPermanent} onChange={() => setShowPermanent(!showPermanent)} /><Typography variant='body2'>Permanent</Typography>
-                            <Checkbox checked={showVolatile} onChange={() => setShowVolatile(!showVolatile)} /><Typography variant='body2'>Volatile</Typography>
+            {/* The dialog takes the size of its content, and the content has a fixed shape: the editor on the
+                right sets the height and the key list on the left only stretches to it, scrolling inside
+                (flex-basis 0, so however many keys there are it never pushes the dialog taller). */}
+            <DialogContent sx={{ display: 'flex' }}>
+                <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', minWidth: 0 }}>
+                    {/* the filters in two rows: the text on top, the key types underneath */}
+                    <Stack sx={{ width: '100%', pr: 2 }}>
+                        <TextField value={filterText} onChange={(e) => setFilterText(e.target.value)} variant='standard' label='Filter' size='small' fullWidth />
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Checkbox checked={showPermanent} onChange={() => setShowPermanent(!showPermanent)} sx={{ pl: 0 }} /><Typography variant='body2'>Permanent</Typography>
+                            <Checkbox checked={showVolatile} onChange={() => setShowVolatile(!showVolatile)} sx={{ ml: 2 }} /><Typography variant='body2'>Volatile</Typography>
                         </Box>
                     </Stack>
 
-                    <Box sx={{ flex: 1, overflowY: 'auto', pr: 2 }}>
-                        <List sx={{ width: '100%', overflowY: 'auto' }}>
+                    <Box sx={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto', pr: 2 }}>
+                        <List sx={{ width: '100%' }}>
                                 { keys?.filter(k =>
                                     ((showPermanent && k.accessKey.type==='permanent') || (showVolatile && k.accessKey.type==='volatile')) &&
                                     (filterText==='' || k.description.toLowerCase().includes(filterText.toLowerCase()) || k.accessKey.id.toLowerCase().includes(filterText.toLowerCase()))
@@ -138,7 +142,7 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
                     </Box>
                 </Box>
 
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'start', pl: 4 }}>
+                <Box sx={{ flex: 3, display: 'flex', alignItems: 'start', pl: 4, minWidth: 0 }}>
                     <Stack spacing={1} sx={{ width: '100%' }}>
                         <TextField value={description} onChange={(e) => setDescrition(e.target.value)} variant='standard' label='Description' />
                         <Stack direction='row' spacing={1}>

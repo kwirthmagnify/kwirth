@@ -220,7 +220,8 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
                 </Select>
             </FormControl>
 
-            <Stack direction={'column'} spacing={1} sx={{paddingLeft:3}}>
+            {/* the selected resource's editor, boxed: the list above chooses WHICH resource, this edits it */}
+            <Stack direction={'column'} spacing={1} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
                 <FormControl variant='standard'>
                     <InputLabel>Scopes</InputLabel>
                     {/* The label and what it is narrowed to — NEVER the raw token: a line of base64 in

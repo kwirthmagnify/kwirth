@@ -1,7 +1,11 @@
-import { ESignupStatus, ISignupRequest } from '@kwirthmagnify/kwirth-common'
+import { ESignupStatus, IIdpSignupPolicy, ISignupRequest } from '@kwirthmagnify/kwirth-common'
 import { ISecrets } from '../ISecrets'
 
 const SIGNUPS_SECRET = 'kwirth-signups'
+
+// D9: how many requests may wait on ONE IdP. With a public IdP and no domain filter anybody in the world
+// can ask, and every request is a key in a Secret with a ~1 MiB ceiling.
+const SIGNUP_PENDING_CAP = 50
 
 /*
     The signup requests (plan: plans/signup, D1). They live in their OWN Secret and not in 'kwirth-users'
@@ -55,4 +59,25 @@ export class SignupStore {
     static countPending = async (secrets: ISecrets, idp: string): Promise<number> => {
         return (await SignupStore.list(secrets)).filter(r => r.idp === idp && r.status === ESignupStatus.PENDING).length
     }
+
+    static isFull = async (secrets: ISecrets, idp: string): Promise<boolean> => {
+        return (await SignupStore.countPending(secrets, idp)) >= SIGNUP_PENDING_CAP
+    }
+
+    /*
+        Whether an IdP's policy lets this email ask. No policy, or a disabled one, is a no. The domain is
+        compared WHOLE and without case: 'example.com' admits 'bob@example.com' and NOT
+        'bob@mail.example.com' nor 'bob@notexample.com' — a subdomain is somebody else's, and a suffix
+        match is how a filter gets bypassed by registering a lookalike.
+    */
+    static allows = (policy: IIdpSignupPolicy | undefined, email: string): boolean => {
+        if (!policy?.enabled) return false
+        const domains = (policy.allowedDomains ?? []).map(d => d.trim().toLowerCase()).filter(d => d !== '')
+        if (domains.length === 0) return true
+        const at = email.lastIndexOf('@')
+        if (at < 0) return false
+        return domains.includes(email.slice(at + 1).toLowerCase())
+    }
 }
+
+export { SIGNUP_PENDING_CAP }

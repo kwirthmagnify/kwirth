@@ -16,6 +16,7 @@ import { SelectWorkspace }  from './components/workspace/SelectWorkspace'
 import { WorkspacePickerDialog } from './components/workspace/WorkspacePickerDialog'
 import { ManageApiSecurity } from './components/security/ManageApiSecurity'
 import { Login } from './components/login/Login'
+import { SignupDialog } from './components/login/SignupDialog'
 import { ManageClusters } from './components/home/ManageClusters'
 import { ManageUserSecurity } from './components/security/ManageUserSecurity'
 import { ResourceSelector, IResourceSelected } from './components/home/ResourceSelector'
@@ -23,7 +24,7 @@ import { TabContent } from './components/home/TabContent'
 import { SettingsKwirth } from './components/settings/SettingsKwirth'
 import { SettingsExport } from './components/settings/SettingsExport'
 import { SettingsImport } from './components/settings/SettingsImport'
-import { IKwirthSettings, IMarketplaceEntry, EClusterType, ESsoResult } from '@kwirthmagnify/kwirth-common'
+import { IKwirthSettings, IMarketplaceEntry, EClusterType, ESsoResult, ESignupStatus, ISignupRequest } from '@kwirthmagnify/kwirth-common'
 import { SettingsUser } from './components/settings/SettingsUser'
 import { MenuTab, MenuTabOption } from './menus/MenuTab'
 import { MenuDrawer, MenuDrawerOption } from './menus/MenuDrawer'
@@ -114,6 +115,23 @@ interface IAiUsageResponse {
     durable: boolean
     providers: Record<string, IUsageTotals>
     llms: Record<string, IUsageTotals>
+}
+
+/*
+    What the back end emits in the IdP's callback (AuthApi), and in a refused signup: a readable message for
+    each one. A Record over the enum, so a new outcome does not compile until it has its message.
+*/
+const SSO_RESULT_MESSAGES: Record<ESsoResult, string> = {
+    [ESsoResult.UNVERIFIED]: 'Your email address is not verified by the identity provider.',
+    [ESsoResult.NOTFOUND]: 'This account is not authorized to access Kwirth.',
+    [ESsoResult.IDPMISMATCH]: 'This account is registered with a different identity provider.',
+    [ESsoResult.CALLBACK]: 'Sign-in could not be completed. Please try again.',
+    [ESsoResult.STATE]: 'The sign-in request expired or was invalid. Please try again.',
+    [ESsoResult.UNAVAILABLE]: 'Single Sign-On is currently unavailable.',
+    [ESsoResult.ISSUE]: 'Your access key could not be issued. Please try again.',
+    [ESsoResult.PENDING]: 'Your access request is pending. An administrator will review it.',
+    [ESsoResult.REJECTED]: 'Your access request was rejected.',
+    [ESsoResult.SIGNUPLIMIT]: 'Access requests cannot be accepted right now. Please contact an administrator.'
 }
 
 const App: React.FC<IAppProps> = (props:IAppProps) => {
@@ -280,6 +298,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [autoStartPending, setAutoStartPending] = useState<boolean>(false)
     const [pluginsLoaded, setPluginsLoaded] = useState<boolean>(false)
     const [ssoExchangePending, setSsoExchangePending] = useState<boolean>(() => !!new URLSearchParams(window.location.search).get('sso'))
+    const [signupCode, setSignupCode] = useState<string | undefined>(undefined)
 
     const [backChannels, setBackChannels] = useState<BackChannelData[]>([])
     const backChannelsRef = useRef(backChannels)
@@ -881,6 +900,20 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             } catch {}
         }
         checkPreviousContainer()
+
+        // RF6 (signup): an admin logging in is told there are people waiting for access. On EVERY login
+        // while they wait — a request nobody looks at is a person locked out.
+        const checkPendingSignups = async () => {
+            if (!hasAdminScope()) return
+            try {
+                const response = await fetch(`${backendUrl}/core/signups`, addGetAuthorization(accessString))
+                if (!response.ok) return
+                const pending = (await response.json() as ISignupRequest[]).filter(r => r.status === ESignupStatus.PENDING).length
+                if (pending === 0) return
+                notify(undefined, ENotifyLevel.WARNING, `${pending} access request${pending === 1 ? ' is' : 's are'} waiting for approval. Review ${pending === 1 ? 'it' : 'them'} in User security.`)
+            } catch {}
+        }
+        checkPendingSignups()
 
 
         // load user tabs
@@ -2769,30 +2802,23 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const params = new URLSearchParams(window.location.search)
         const sso = params.get('sso')
         const ssoerror = params.get('ssoerror')
-        if (!sso && !ssoerror) return
+        const signup = params.get('signup')
+        if (!sso && !ssoerror && !signup) return
         const loginExt = params.get('loginExt')
         params.delete('sso')
         params.delete('ssoerror')
+        params.delete('signup')
         const remaining = params.toString()
         window.history.replaceState({}, '', window.location.pathname + (remaining ? '?' + remaining : ''))
+        // not a user, but the IdP lets them ask for access: the dialog takes it from here
+        if (signup) {
+            setSignupCode(signup)
+            return
+        }
         if (ssoerror) {
-            // what the back end emits in the IdP's callback (AuthApi); a readable message for each one. A
-            // Record over the enum, so a new outcome does not compile until it has its message.
-            const ssoErrorMessages: Record<ESsoResult, string> = {
-                [ESsoResult.UNVERIFIED]: 'Your email address is not verified by the identity provider.',
-                [ESsoResult.NOTFOUND]: 'This account is not authorized to access Kwirth.',
-                [ESsoResult.IDPMISMATCH]: 'This account is registered with a different identity provider.',
-                [ESsoResult.CALLBACK]: 'Sign-in could not be completed. Please try again.',
-                [ESsoResult.STATE]: 'The sign-in request expired or was invalid. Please try again.',
-                [ESsoResult.UNAVAILABLE]: 'Single Sign-On is currently unavailable.',
-                [ESsoResult.ISSUE]: 'Your access key could not be issued. Please try again.',
-                [ESsoResult.PENDING]: 'Your access request is pending. An administrator will review it.',
-                [ESsoResult.REJECTED]: 'Your access request was rejected.',
-                [ESsoResult.SIGNUPLIMIT]: 'Access requests cannot be accepted right now. Please contact an administrator.'
-            }
             // a back end newer than this front end may send an outcome it does not know yet
             const known = (Object.values(ESsoResult) as string[]).includes(ssoerror)
-            const ssoMsg = known ? ssoErrorMessages[ssoerror as ESsoResult] : `Single Sign-On failed (${ssoerror}).`
+            const ssoMsg = known ? SSO_RESULT_MESSAGES[ssoerror as ESsoResult] : `Single Sign-On failed (${ssoerror}).`
             setMsgBox(MsgBoxOkError('Login', ssoMsg, setMsgBox))
             return
         }
@@ -2954,6 +2980,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         {loginExtSlug
                             ? <LoginExtensionPage slug={loginExtSlug} backendUrl={backendUrl} methods={props.authMethods} initialError={loginExtError} onClose={onLoginClosed} onNotFound={() => { const p = new URLSearchParams(window.location.search); p.delete('loginExt'); window.history.replaceState({}, '', window.location.pathname + (p.toString() ? '?' + p.toString() : '')); setLoginExtSlug(undefined) }} />
                             : <Login methods={props.authMethods} onClose={onLoginClosed} key={refresh} />
+                        }
+                        { signupCode &&
+                            <SignupDialog backendUrl={backendUrl} code={signupCode}
+                                onSent={() => { setSignupCode(undefined); setMsgBox(MsgBoxOk('Request access', 'Your request has been sent. An administrator will review it; until then you will not be able to sign in.', setMsgBox)) }}
+                                onRefused={(result) => { setSignupCode(undefined); setMsgBox(MsgBoxOkError('Request access', result ? SSO_RESULT_MESSAGES[result] : 'Your request could not be accepted. Try signing in again.', setMsgBox)) }}
+                                onExpired={() => { setSignupCode(undefined); setMsgBox(MsgBoxOkError('Request access', 'The request expired. Sign in again to ask for access.', setMsgBox)) }}
+                                onCancel={() => setSignupCode(undefined)} />
                         }
                         { msgBox }
                     </SessionContext.Provider>

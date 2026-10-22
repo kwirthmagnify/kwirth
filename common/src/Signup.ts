@@ -5,6 +5,8 @@
     approving turns it into a user and removes the request.
 */
 
+import { ESsoResult } from './AuthMethod'
+
 enum ESignupStatus {
     PENDING = 'pending',      // waiting for an admin
     REJECTED = 'rejected'     // kept until an admin deletes it, so the same person cannot ask in a loop
@@ -28,4 +30,38 @@ interface IIdpSignupPolicy {
     allowedDomains: string[]  // the email domains that may ask ('example.com'); empty = any
 }
 
-export { ESignupStatus, ISignupRequest, IIdpSignupPolicy }
+/*
+    The signup handshake between the front end and the back end. The IdP callback redirects to
+    `?signup=<code>` when the person may ask for access; the code stands for the identity the IdP verified,
+    so the email NEVER comes from the front end — not in the info, not in the submit.
+*/
+
+// POST /core/auth/signup/info {code} → what the dialog shows and prefills (it does not spend the code)
+interface ISignupInfo {
+    id: string                // the verified email
+    name: string              // the IdP's name for them, possibly ''
+    idp: string               // the IdP instance id
+    idpLabel: string          // its label, for "you signed in with ..."
+}
+
+// POST /core/auth/signup: the request itself (it spends the code)
+interface ISignupSubmit {
+    code: string
+    name: string
+    comment?: string
+}
+
+// the body of a refused submit (409): why. Absent when there is no outcome to name.
+interface ISignupReply {
+    result?: ESsoResult
+}
+
+// POST /core/signups/:id/approve: what the new user gets. The id, name and idp come from the request.
+interface ISignupApproval {
+    resources: string
+    enabledChannels?: string[]
+    startChannel?: string
+    exitFullScreen?: boolean
+}
+
+export { ESignupStatus, ISignupRequest, IIdpSignupPolicy, ISignupInfo, ISignupSubmit, ISignupReply, ISignupApproval }

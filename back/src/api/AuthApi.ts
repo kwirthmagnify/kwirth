@@ -1,12 +1,14 @@
 import express, { Request, Response } from 'express'
 import * as crypto from 'crypto'
-import { EAuthMethodKind, ESsoResult, IAuthMethod, ILoginResponse } from '@kwirthmagnify/kwirth-common'
+import { EAuthMethodKind, ESignupStatus, ESsoResult, IAuthMethod, ILoginResponse, ISignupInfo, ISignupReply, ISignupRequest, ISignupSubmit } from '@kwirthmagnify/kwirth-common'
 import { ISecrets } from '../tools/ISecrets'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { ApiKeyApi } from './ApiKeyApi'
 import { IdpManager } from '../tools/IdpManager'
 import { IdentityService } from '../tools/auth/IdentityService'
 import { TtlStore } from '../tools/auth/TtlStore'
+import { SIGNUP_PENDING_CAP, SignupStore } from '../tools/auth/SignupStore'
+import { guard } from '../tools/RequestGuard'
 import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
 
 // the active running instance's context (for reading users and issuing an AccessKey)
@@ -22,8 +24,17 @@ interface IStateEntry {
     returnTo?: string   // URL del front a la que devolver el handoff (la aporta el front, validada)
 }
 
+// what a signup code stands for: the identity the IdP verified, so the submit cannot name another email
+interface ISignupHandoff {
+    email: string
+    name: string
+    idp: string
+}
+
 const STATE_TTL_MS = 10 * 60 * 1000
 const HANDOFF_TTL_MS = 60 * 1000
+const SIGNUP_NAME_MAX = 100
+const SIGNUP_COMMENT_MAX = 500
 
 /*
     Pre-login authentication endpoints (mounted at /core/auth/, exempt from validKey).
@@ -42,6 +53,7 @@ export class AuthApi {
     private includePasswordMethod: boolean
     private stateStore = new TtlStore<IStateEntry>(STATE_TTL_MS)
     private handoffStore = new TtlStore<ILoginResponse>(HANDOFF_TTL_MS)
+    private signupCodes = new TtlStore<ISignupHandoff>(HANDOFF_TTL_MS)
 
     constructor(getIdpManager: () => IdpManager | undefined, getContext: () => IAuthContext | undefined, envRootPath: string, legacyAuth: string) {
         this.getIdpManager = getIdpManager
@@ -222,8 +234,25 @@ export class AuthApi {
             const users = await IdentityService.readUsers(ctx.secrets)
             const user = users ? IdentityService.findUser(users, identity.email) : undefined
             if (!user) {
-                logWarning(ELogComponent.AUTH, `IdP user not in whitelist: ${identity.email}`)
-                return fail(ESsoResult.NOTFOUND)
+                /*
+                    Not a user. If this IdP lets them ask for access, say where their request stands, or
+                    hand them a code to ask with. Otherwise, the whitelist as it has always been.
+                */
+                if (!SignupStore.allows(inst.signup, identity.email)) {
+                    logWarning(ELogComponent.AUTH, `IdP user not in whitelist: ${identity.email}`)
+                    return fail(ESsoResult.NOTFOUND)
+                }
+                const existing = await SignupStore.get(ctx.secrets, identity.email)
+                if (existing?.status === ESignupStatus.PENDING) return fail(ESsoResult.PENDING)
+                if (existing?.status === ESignupStatus.REJECTED) return fail(ESsoResult.REJECTED)
+                if (await SignupStore.isFull(ctx.secrets, instanceId)) {
+                    logWarning(ELogComponent.AUTH, `Signup refused for ${identity.email}: '${instanceId}' already has ${SIGNUP_PENDING_CAP} pending requests`)
+                    return fail(ESsoResult.SIGNUPLIMIT)
+                }
+                const signupCode = AuthApi.randomToken()
+                this.signupCodes.put(signupCode, { email: identity.email, name: identity.name ?? '', idp: instanceId })
+                logInfo(ELogComponent.AUTH, `IdP user not in whitelist, offered signup: ${identity.email} via '${instanceId}'`)
+                return res.redirect(`${front}${front.includes('?') ? '&' : '?'}signup=${signupCode}`)
             }
             if (user.idp !== instanceId) {
                 logWarning(ELogComponent.AUTH, `IdP mismatch for ${identity.email}: bound to '${user.idp}', used '${instanceId}'`)
@@ -250,6 +279,70 @@ export class AuthApi {
                 return
             }
             res.status(200).json(response)
+        })
+
+        // what the signup dialog shows. It does NOT spend the code: the submit does.
+        this.router.post('/signup/info', async (req: Request, res: Response) => {
+            const entry = this.signupCodes.peek(String(req.body?.code || ''))
+            if (!entry) {
+                res.status(404).json({})
+                return
+            }
+            const inst = await this.getIdpManager()?.getInstance(entry.idp)
+            const info: ISignupInfo = { id: entry.email, name: entry.name, idp: entry.idp, idpLabel: inst?.label ?? entry.idp }
+            res.status(200).json(info)
+        })
+
+        /*
+            The signup request itself. The code is spent first, whatever happens next: a code is good for one
+            try. Everything the callback checked is checked AGAIN inside the identity lock, because up to a
+            minute has gone by and two submits may race for the last place under the cap.
+        */
+        this.router.post('/signup', async (req: Request, res: Response) => {
+            const body = (req.body ?? {}) as Partial<ISignupSubmit>
+            const entry = this.signupCodes.take(String(body.code || ''))
+            if (!entry) {
+                res.status(404).json({})
+                return
+            }
+            const name = typeof body.name === 'string' ? body.name.trim() : ''
+            const comment = typeof body.comment === 'string' ? body.comment.trim() : ''
+            if (name === '' || name.length > SIGNUP_NAME_MAX || comment.length > SIGNUP_COMMENT_MAX) {
+                res.status(400).json({})
+                return
+            }
+            const ctx = this.getContext()
+            const idpManager = this.getIdpManager()
+            if (!ctx || !idpManager) {
+                res.status(503).json({})
+                return
+            }
+            const refuse = (result?: ESsoResult) => {
+                const reply: ISignupReply = { result }
+                res.status(409).json(reply)
+            }
+            guard(IdentityService.lock.use(async () => {
+                // the admin may have switched signup off, or narrowed the domains, since the callback
+                const inst = await idpManager.getInstance(entry.idp)
+                if (!inst?.enabled || !SignupStore.allows(inst.signup, entry.email)) return refuse(ESsoResult.NOTFOUND)
+                const users = await IdentityService.readUsers(ctx.secrets)
+                if (users && IdentityService.findUser(users, entry.email)) return refuse()
+                const existing = await SignupStore.get(ctx.secrets, entry.email)
+                if (existing?.status === ESignupStatus.PENDING) return refuse(ESsoResult.PENDING)
+                if (existing?.status === ESignupStatus.REJECTED) return refuse(ESsoResult.REJECTED)
+                if (await SignupStore.isFull(ctx.secrets, entry.idp)) return refuse(ESsoResult.SIGNUPLIMIT)
+                const request: ISignupRequest = {
+                    id: entry.email,
+                    idp: entry.idp,
+                    name,
+                    comment: comment || undefined,
+                    requestedAt: Date.now(),
+                    status: ESignupStatus.PENDING
+                }
+                await SignupStore.save(ctx.secrets, request)
+                logInfo(ELogComponent.AUTH, `Signup request from ${entry.email} via '${entry.idp}'`)
+                res.status(200).json({})
+            }), res, ELogComponent.AUTH)
         })
     }
 }

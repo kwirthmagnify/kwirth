@@ -209,3 +209,34 @@ test('🔴 con un conector roto, guardar la mascara NO destruye el secreto', asy
     }
     finally { await srv.stop() }
 })
+
+// 🔴 signup S3: the policy is read by the IdP callback, which has no guard; a malformed one stored as-is
+// would throw there and take the core down. It is stored normalised, whatever arrives.
+test('la politica de signup se guarda normalizada: dominios en minusculas y sin basura', async () => {
+    const srv = await startServer()
+    try {
+        const inst = { id: 'google', connectorId: 'fake', label: 'Google', enabled: true, config: {},
+            signup: { enabled: true, allowedDomains: [' Example.COM ', '', 42, null, 'corp.example'] } }
+        assert.equal((await fetch(`${srv.base}/core/idps/instances`, j({ method: 'POST', body: JSON.stringify(inst) }))).status, 200)
+        const body = await (await fetch(`${srv.base}/core/idps/instances/google`, j())).json()
+        assert.deepEqual(body.signup, { enabled: true, allowedDomains: ['example.com', 'corp.example'] })
+    }
+    finally { await srv.stop() }
+})
+
+test('una politica de signup con forma equivocada no llega a guardarse tal cual', async () => {
+    const srv = await startServer()
+    try {
+        for (const [signup, expected] of [
+            [{ enabled: 'yes', allowedDomains: 'example.com' }, { enabled: false, allowedDomains: [] }],
+            ['on', undefined],
+            [undefined, undefined]
+        ] as const) {
+            const inst = { id: 'google', connectorId: 'fake', label: 'Google', enabled: true, config: {}, signup }
+            await fetch(`${srv.base}/core/idps/instances/google`, j({ method: 'PUT', body: JSON.stringify(inst) }))
+            const body = await (await fetch(`${srv.base}/core/idps/instances/google`, j())).json()
+            assert.deepEqual(body.signup, expected, JSON.stringify(signup))
+        }
+    }
+    finally { await srv.stop() }
+})

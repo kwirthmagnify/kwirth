@@ -48,7 +48,7 @@ In every case the key carries its own **scopes and object filters**, so it can o
 | **volatile** | No — lives only in the memory of the kwirth instance that created it. | Machine-to-machine, single replica, disposable. |
 | **bearer** | No — signed and handed to the client at login (OAuth-style). | Issued to clients automatically; presented in an `Authorization: Bearer …` header. |
 
-The permanent/volatile filter at the top of the dialog lets you list keys by type; the left column shows all keys (except bearer) with their description and expiry.
+The filters at the top of the left column narrow the list: the **Filter** box matches a key's id or description, and the **Permanent** / **Volatile** checks underneath list keys by type. The left column shows all keys (except bearer) with their description and expiry, and scrolls on its own when there are many; the editor on the right keeps the resource being edited in its own **box**, as in [User management](03-user-management).
 
 ## Create an API key
 

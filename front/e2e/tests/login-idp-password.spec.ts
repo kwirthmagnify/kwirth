@@ -8,7 +8,7 @@ import { createHash } from 'crypto'
     POST /login with that email and '' handed out an AccessKey without going through the IdP. This runs
     the real path against the dev core: the user is created exactly as the drawer does it.
 
-    NON-destructive: the only user it creates carries the `e2e-s0-` prefix and is deleted at the end, even
+    NON-destructive: the only user it creates carries the `e2e-s0-` prefix (and a timestamp) and is deleted at the end, even
     on failure. The IdP it binds to does not need to exist: the gate is on the binding, not on the IdP.
 */
 
@@ -16,7 +16,12 @@ const BACK = process.env.KWIRTH_E2E_BACK ?? 'http://localhost:3883'
 const USER = process.env.KWIRTH_E2E_USER ?? 'admin'
 const PASS = process.env.KWIRTH_E2E_PASS ?? ''
 
-const IDP_USER = 'e2e-s0-idp-user@example.com'
+/*
+    A different user on EVERY run. Each run makes three refused attempts, and the login's rate limiter
+    counts refusals per ip + user (5 in 15 minutes): with a fixed id, a second run inside that window got a
+    429 instead of the 401 it pins — the gate working, and the test reading it as a failure.
+*/
+const IDP_USER = `e2e-s0-idp-user-${Date.now()}@example.com`
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
 
 interface IAccessKey { id: string, type: string, resources: string }

@@ -184,6 +184,20 @@ export class IdpApi {
                 if (config[key] === SECRET_MASK) config[key] = existing?.config?.[key] ?? ''
             }
             incoming.config = config
+            /*
+                The signup policy is read by the IdP callback, which has no guard around it: a value of the
+                wrong shape there throws out of an async handler and takes the core down. So it is stored
+                normalised or not at all, whatever arrived.
+            */
+            const signup = incoming.signup
+            incoming.signup = signup && typeof signup === 'object'
+                ? {
+                    enabled: signup.enabled === true,
+                    allowedDomains: Array.isArray(signup.allowedDomains)
+                        ? signup.allowedDomains.filter((d): d is string => typeof d === 'string').map(d => d.trim().toLowerCase()).filter(d => d !== '')
+                        : []
+                }
+                : undefined
             await this.idpManager.saveInstance(incoming)
             res.status(200).json(this.mask(incoming))
         }

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { ESignupStatus, ISignupRequest } from '@kwirthmagnify/kwirth-common'
-import { SignupStore } from '../../../src/tools/auth/SignupStore'
+import { SignupStore, SIGNUP_PENDING_CAP } from '../../../src/tools/auth/SignupStore'
 import { IdentityService } from '../../../src/tools/auth/IdentityService'
 import { ISecrets } from '../../../src/tools/ISecrets'
 
@@ -121,4 +121,34 @@ test('IdentityService.lock serializa: el segundo no entra hasta que el primero s
     release()
     await Promise.all([first, second])
     assert.deepEqual(order, ['first:in', 'first:out', 'second:in'])
+})
+
+// ---- the IdP's policy (S2) ----
+
+test('allows: sin politica, o deshabilitada, es que no', () => {
+    assert.equal(SignupStore.allows(undefined, 'bob@example.com'), false)
+    assert.equal(SignupStore.allows({ enabled: false, allowedDomains: [] }, 'bob@example.com'), false)
+})
+
+test('allows: sin dominios, cualquiera', () => {
+    assert.equal(SignupStore.allows({ enabled: true, allowedDomains: [] }, 'bob@anything.org'), true)
+    assert.equal(SignupStore.allows({ enabled: true, allowedDomains: ['  ', ''] }, 'bob@anything.org'), true, 'blank entries are no filter')
+})
+
+test('allows: el dominio se compara ENTERO y sin mayusculas', () => {
+    const policy = { enabled: true, allowedDomains: [' Example.COM '] }
+    assert.equal(SignupStore.allows(policy, 'bob@example.com'), true)
+    assert.equal(SignupStore.allows(policy, 'Bob@EXAMPLE.com'), true)
+    assert.equal(SignupStore.allows(policy, 'bob@mail.example.com'), false, 'a subdomain is somebody else')
+    assert.equal(SignupStore.allows(policy, 'bob@notexample.com'), false, 'a suffix match is a bypass')
+    assert.equal(SignupStore.allows(policy, 'bob@example.com.evil.org'), false)
+    assert.equal(SignupStore.allows(policy, 'example.com'), false, 'no @, no email')
+})
+
+test('isFull salta justo en el tope', async () => {
+    const { secrets } = memorySecrets()
+    for (let i = 0; i < SIGNUP_PENDING_CAP - 1; i++) await SignupStore.save(secrets, request({ id: `u${i}@example.com` }))
+    assert.equal(await SignupStore.isFull(secrets, 'google'), false)
+    await SignupStore.save(secrets, request({ id: 'last@example.com' }))
+    assert.equal(await SignupStore.isFull(secrets, 'google'), true)
 })

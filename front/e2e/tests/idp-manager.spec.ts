@@ -118,6 +118,25 @@ test.describe('gestor generico de extensiones: idp', () => {
         await expect(cfg).toBeVisible({ timeout: 20000 })
         // The switch is what allows leaving an IdP ready and turning it on the day of the cutover.
         await expect(cfg.getByText('Enabled', { exact: true })).toBeVisible()
+
+        /*
+            Signup (plan: plans/signup, S3): the core's own section, the same in every connector. The
+            domains only make sense with signup on, and an empty list WARNS, because with a public IdP it
+            means anybody in the world can ask. Toggled and left with Cancel: nothing is saved.
+        */
+        const allow = cfg.getByRole('checkbox', { name: /Allow signup/ })
+        const domains = cfg.getByLabel('Allowed email domains')
+        await expect(allow).toBeVisible()
+        if (!await allow.isChecked()) {
+            await expect(domains).toBeDisabled()
+            await allow.click()
+        }
+        await expect(domains).toBeEnabled()
+        await domains.fill('')
+        await expect(cfg.getByText(/anyone with an account at this provider can request access/i)).toBeVisible()
+        await domains.fill('example.com')
+        await expect(cfg.getByText(/subdomains are not included/i)).toBeVisible()
+
         await cfg.getByRole('button', { name: /cancel/i }).click()
     })
 })

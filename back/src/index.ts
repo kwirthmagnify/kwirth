@@ -14,6 +14,7 @@ import { getLastKwirthVersion, showLogo } from './tools/branding/Branding'
 // HTTP server for serving front, api and websockets
 import { StoreApi } from './api/StoreApi'
 import { UserApi } from './api/UserApi'
+import { SignupApi } from './api/SignupApi'
 import { ApiKeyApi } from './api/ApiKeyApi'
 import { SettingsApi } from './api/SettingsApi'
 import { MarketplaceApi } from './api/MarketplaceApi'
@@ -1564,6 +1565,9 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         let userApi:UserApi = new UserApi(ri.secrets, apiKeyApi, () => validScopeSet(registeredChannels))
         riRouter.use(`/user`, userApi.router)
         recordRoute(`${envRootPath}/user`, ERouteOwnerKind.CORE, 'user', userApi.router)
+        let signupApi:SignupApi = new SignupApi(ri.secrets, apiKeyApi, () => validScopeSet(registeredChannels))
+        riRouter.use(`/core/signups`, signupApi.router)
+        recordRoute(`${envRootPath}/core/signups`, ERouteOwnerKind.CORE, 'signup', signupApi.router)
 
         // Kwirth's own persisted configuration. It reflects the metrics interval in kwirthData, which is
         // what /config/info serves to the front end AND the very object the providers were handed: the

@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react'
 import { Button, CircularProgress, Dialog, DialogActions, DialogContent, FormControlLabel, Stack, Switch, TextField, Typography } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, IIdpSignupPolicy } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { ConfigFields } from './ConfigFields'
@@ -25,7 +25,12 @@ interface IIdpInstance {
     label: string
     enabled: boolean
     config: Record<string, unknown>
+    signup?: IIdpSignupPolicy
 }
+
+// the domains are typed as one comma-separated line; stored as a list without blanks or case
+const parseDomains = (text: string): string[] =>
+    text.split(',').map(d => d.trim().toLowerCase()).filter(d => d !== '')
 
 /** The connectors' own name for the field; the core reads it to build the redirect_uri. */
 const REDIRECT_URI_FIELD = 'redirectUri'
@@ -77,6 +82,8 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
     })
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | undefined>()
+    const [signupEnabled, setSignupEnabled] = useState<boolean>(props.existing?.signup?.enabled === true)
+    const [signupDomains, setSignupDomains] = useState<string>(props.existing?.signup?.allowedDomains?.join(', ') ?? '')
 
     const setCampo = (name: string, value: unknown) =>
         setInstancia(prev => ({ ...prev, config: { ...prev.config, [name]: value } }))
@@ -103,9 +110,11 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
         setSaving(true)
         setError(undefined)
         try {
+            const signup: IIdpSignupPolicy = { enabled: signupEnabled, allowedDomains: parseDomains(signupDomains) }
+            const payload = JSON.stringify({ ...instancia, signup })
             const res = esNueva
-                ? await fetch(`${backendUrl}/core/idps/instances`, addPostAuthorization(accessString, JSON.stringify(instancia)))
-                : await fetch(`${backendUrl}/core/idps/instances/${instancia.id}`, addPutAuthorization(accessString, JSON.stringify(instancia)))
+                ? await fetch(`${backendUrl}/core/idps/instances`, addPostAuthorization(accessString, payload))
+                : await fetch(`${backendUrl}/core/idps/instances/${instancia.id}`, addPutAuthorization(accessString, payload))
             if (!res.ok) {
                 const detalle = await res.json().catch(() => ({}))
                 throw new Error(detalle.error ?? `HTTP ${res.status}`)
@@ -132,6 +141,15 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
                     {props.schema.length === 0
                         ? <Typography variant='body2' color='text.secondary'>This connector has no configurable options.</Typography>
                         : <ConfigFields schema={props.schema} values={instancia.config} onChange={setCampo} onRevealSecret={revelarSecreto} />}
+                    {/* Signup belongs to the core, not to the connector: the same two fields for every IdP. */}
+                    <Typography variant='subtitle2' sx={{ pt: 1 }}>Signup</Typography>
+                    <FormControlLabel label='Allow signup (people who are not users may request access)'
+                        control={<Switch checked={signupEnabled} onChange={e => setSignupEnabled(e.target.checked)} />} />
+                    <TextField size='small' fullWidth label='Allowed email domains' placeholder='e.g. example.com, example.org'
+                        disabled={!signupEnabled} value={signupDomains} onChange={e => setSignupDomains(e.target.value)}
+                        helperText={signupEnabled && parseDomains(signupDomains).length === 0
+                            ? 'Empty: anyone with an account at this provider can request access.'
+                            : 'Comma-separated. The whole domain must match: subdomains are not included.'} />
                     {error && <Typography variant='caption' color='error'>{error}</Typography>}
                 </Stack>
             </DialogContent>

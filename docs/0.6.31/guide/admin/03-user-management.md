@@ -4,7 +4,9 @@ Kwirth users are managed by the **admin** account from **☰ → User security**
 
 ![User management dialog](../../_media/guide/admin-user-security.png)
 
-The dialog has two areas: the **list of users** on the left, and the **editor** on the right. There is always a built-in **`admin`** user (the one you first logged in with).
+The dialog has two areas: the **list of users** on the left, and the **editor** on the right. There is always a built-in **`admin`** user (the one you first logged in with). When people have asked for access through an Identity Provider, the left column also lists their **Access requests** below the users — see [Access requests (signup)](#access-requests-signup).
+
+The editor's permissions part — **Scopes**, the object filters and their **NEW / SAVE / REMOVE** buttons — sits in its own **box**, apart from the user's own data above it: everything inside the box edits **one resource**, everything outside it edits the **user**.
 
 > **Being an administrator is a scope, not a fixed single account.** Kwirth ships with a built-in `admin` user, but "admin" is really the **`admin` scope** — you can grant it to **any user**, so you can have **as many administrators as you want**. What every user (admin or not) can do is controlled entirely by the **scopes and resources** you assign (see [Security & permissions](04-security-and-permissions)).
 
@@ -33,7 +35,12 @@ The dialog has two areas: the **list of users** on the left, and the **editor** 
 5. Repeat step 4 for as many resources as you need.
 6. Click **SAVE** (bottom-left) to persist the user.
 
-The **bottom-left buttons** act on the **whole user**: **NEW** (start a new user), **SAVE** (persist the user and all its resources), **COPY PASSWORD** (copy the user's password to share it), **DELETE** (delete the selected user — disabled for the built-in `admin`). **CLOSE** is on the far right. *(The **NEW / SAVE / REMOVE** buttons on the **right**, inside the resource editor, act on a single **resource** — not the user; see below.)*
+The **bottom-left buttons** are always all there; what is selected only enables or disables them. They come in two groups, split by a thin line:
+
+- **On a user**: **NEW** (start a new user), **SAVE** (persist the user and all its resources), **COPY PASSWORD** (copy the user's password to share it), **DELETE** (delete the selected user — disabled for the built-in `admin`).
+- **On an access request**: **APPROVE**, **REJECT** and **DELETE REQUEST** — enabled only while a request is selected; see [Access requests (signup)](#access-requests-signup).
+
+**CLOSE** is on the far right. *(The **NEW / SAVE / REMOVE** buttons inside the resource editor's box act on a single **resource** — not the user; see below.)*
 
 ## Working with resources and scopes
 
@@ -95,7 +102,7 @@ Rules that make an IdP user work (all must hold):
 - The **Id must be the user's verified email** — this is what the provider will return and what kwirth matches against.
 - The user must be **bound to the exact connector** they will use to sign in. A verified email arriving from a *different* provider is rejected.
 - **No password** is used for IdP users; the Password field is irrelevant for them. An IdP-bound user **cannot log in with a password at all**, not even through the API: Kwirth refuses the user/password login (and the password change) for any user bound to an IdP, as it would refuse a wrong password, and logs a warning under the **Authentication** log component. Their only way in is their Identity Provider.
-- **No auto-provisioning** — you must create the user here first. Signing in with Google/GitLab/GitHub never creates an account by itself.
+- **No auto-provisioning** — signing in with Google/GitLab/GitHub never creates an account by itself. Either you create the user here first, or — if you enabled **signup** on that IdP — the person **asks for access** and you approve the request: see [Access requests (signup)](#access-requests-signup).
 
 ### Create an IdP-bound user (example)
 
@@ -111,6 +118,37 @@ To let `alice@example.com` sign in with Google:
 Alice can now click *"Login with Google"* on the login screen; once Google verifies her, kwirth lets her in with the permissions you assigned.
 
 > The prerequisite is the connector: the **IdP** dropdown only offers providers that are installed **and enabled** in [Manage extensions → Identity providers](07-idp-integration). If Google isn't in the list, enable it there first.
+
+## Access requests (signup)
+
+If you turned **signup** on for an Identity Provider (see [Signup](07-idp-integration#signup-access-requests)), people who sign in through it **without being users** can **ask for access**. Each request waits here, in the left column under the users, until an administrator decides:
+
+![An access request under review](../../_media/guide/admin-signup-request.png)
+
+A request **is not a user**: it lives apart from the users, and the person **cannot get into Kwirth in any way** while it is pending — not through the IdP, and not with a password. The header says how many are **pending**, and each request carries a chip with its state, **pending** or **rejected**.
+
+When you log in as an administrator and there are pending requests, Kwirth tells you so — *"1 access request is waiting for approval…"* — on **every** login while they wait. The notice also stays in the **notifications bell** in the top bar.
+
+Click a request to review it. The editor shows the person's **email** (it will be their Id), the **name** they gave and the **IdP** they came through — all three fixed, because they are the request's and not yours to change here. The small box at the foot of the left column shows **when** they asked and **why**, if they wrote it.
+
+| Action | What it does |
+|---|---|
+| **APPROVE** | Creates the user — Id = their email, bound to the IdP they came through, **no password** — with the **resources** you set in the editor, and removes the request. Enabled once you have added **at least one resource**: approving with nothing would create a user who can do nothing. Auto-start channel, Enabled channels and Can exit fullscreen are taken from the editor too. The next time they sign in, they get in. |
+| **REJECT** | Keeps the request, marked **rejected**. When they sign in they are told *"Your access request was rejected"*, and they **cannot ask again** while the rejected request exists. |
+| **DELETE REQUEST** | Removes the request, pending or rejected. They will be able to ask again. |
+
+> **Reject or delete?** Reject when the answer is *no* and you do not want the same person asking again and again. Delete a rejected request when you want to give them another chance.
+
+### Example — approving a request
+
+`jane.doe@example.com` signed in with Google and asked for access:
+
+1. **☰ → User security**. Under **Access requests**, click `jane.doe@example.com`.
+2. Read the box at the foot of the left column: when she asked and why.
+3. In the resource editor's box, pick her **Scopes** (e.g. `view`, `stream`), optionally narrow the **Namespaces**, and click the box's **SAVE** to add the resource.
+4. Click **APPROVE**. The request disappears from *Access requests* and `jane.doe@example.com` appears in the list of users.
+
+Jane can now click *"Login with Google"* and gets in with exactly the permissions you gave her.
 
 ## Login behaviour settings
 

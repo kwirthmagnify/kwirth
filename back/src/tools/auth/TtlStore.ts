@@ -33,6 +33,18 @@ class TtlStore<T> {
         return entry.value
     }
 
+    // returns WITHOUT deleting: for what has to be shown before it is spent (the signup dialog's info).
+    // undefined when it does not exist or has expired, and an expired entry is dropped on the way.
+    peek(key: string): T | undefined {
+        const entry = this.map.get(key)
+        if (!entry) return undefined
+        if (this.now() - entry.createdAt > this.ttlMs) {
+            this.map.delete(key)
+            return undefined
+        }
+        return entry.value
+    }
+
     // a sweep of expired entries
     purge(): void {
         const t = this.now()

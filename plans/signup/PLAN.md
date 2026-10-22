@@ -1,6 +1,6 @@
 # PLAN — Signup (auto-registro vía IdP)
 
-> **Estado:** vivo · 2026-10-21 · ✅ S0 y S1 entregados · siguiente: S2
+> **Estado:** vivo · 2026-10-22 · ✅ S0, S1, S2 y S3 entregados · siguiente: S4 (y, al cerrarlo, la cascada de common)
 >
 > Producto y decisiones (D1–D9) en [PRD.md](PRD.md); este plan no las repite.
 
@@ -36,8 +36,8 @@
 |---|---|---|---|
 | ✅ **S0** | `LoginApi` devuelve 401 a cualquier usuario con `idp` | harness: password vacía y password correcta de usuario IdP → 401; local sigue OK | — |
 | ✅ **S1** | Tipos (§2) publicados (`common`, `common-back`); `ESsoResult` sustituye los strings en back y front sin cambio de comportamiento; `SignupStore` sobre `kwirth-signups`; lock único en `IdentityService` (D6) usado por `UserApi`, `LoginApi`, `AuthApi` y `SignupStore` | harness del store + regresión `AuthApi.test.ts` | — |
-| **S2** | Back: rama signup en el callback (dominio, `pending`/`rejected`, tope D9) → `?signup=<code>`; `POST /core/auth/signup`; API admin `GET /user/signups`, `POST …/:id/approve` (crea usuario con `idp`, borra petición), `POST …/:id/reject`, `DELETE …/:id` | harness: criterios de aceptación 1–7 del PRD | S1 |
-| **S3** | Front: sección *Signup* en `IdpConfigDialog`; diálogo "Request access" tras `?signup`; mensajes de `ESsoResult`; *Pending requests* en *User security* (approve con editor de recursos, reject, delete) con contador; toast al admin tras login | e2e Playwright + QA manual | S2 |
+| ✅ **S2** | Back: rama signup en el callback (dominio, `pending`/`rejected`, tope D9) → `?signup=<code>`; `POST /core/auth/signup`; API admin `GET /user/signups`, `POST …/:id/approve` (crea usuario con `idp`, borra petición), `POST …/:id/reject`, `DELETE …/:id` | harness: criterios de aceptación 1–7 del PRD | S1 |
+| ✅ **S3** | Front: sección *Signup* en `IdpConfigDialog`; diálogo "Request access" tras `?signup`; mensajes de `ESsoResult`; *Pending requests* en *User security* (approve con editor de recursos, reject, delete) con contador; toast al admin tras login | e2e Playwright + QA manual | S2 |
 | **S4** | Aviso por sender: `signupSenderId`/`signupSenderConfigName` en settings | harness + QA | S2 |
 
 Cada stream cierra su CL9.
@@ -68,3 +68,28 @@ Cada stream cierra su CL9.
   extensiones: aplazada al cierre del plan** (decisión del usuario; ninguna extensión usa estos tipos).
   Harness 773 (+11 de S1), common 20 (+3), e2e `sso-result-messages` (6 casos); QA manual validado
   (7 pasos, incluido el login con Google de una cuenta no registrada).
+- 2026-10-21/22 — ✅ **S2 y S3 cerrados juntos.** S2 era solo back y el usuario **no hace QA con scripts**:
+  su QA se hizo con la UI de S3, y los dos comparten CL9 (S2 no se commiteó hasta entonces).
+  - **S2**: rama de signup en el callback (`?signup=<code>` de 60 s con la identidad verificada; `pending`
+    / `rejected` / `signuplimit` con **50** pendientes por IdP); `POST /core/auth/signup/info` (no gasta el
+    código) y `POST /core/auth/signup` (lo gasta y **lo recomprueba todo dentro del lock**: el admin puede
+    haber apagado el signup, y dos envíos pelean por la última plaza — test de la carrera). El email sale
+    **siempre** de la identidad, nunca del body. `SignupApi` en `/core/signups` (no bajo `/user`, que tomaría
+    `signups` por un usuario): listar, aprobar —escribe el usuario **antes** de borrar la petición—,
+    rechazar, borrar. Cuatro tipos más en `common@0.5.75` (`ISignupInfo`, `ISignupSubmit`, `ISignupReply`,
+    `ISignupApproval`), validados por el usuario.
+  - **S3**: sección *Signup* del diálogo del IdP (el back la **normaliza** al guardar: el callback la lee sin
+    `guard` y una con forma rara tumbaría el core); diálogo *Request access*; peticiones en *User security*
+    con Approve (exige un recurso) / Reject / Delete request; aviso al admin en cada login.
+  - **Rehecho en el QA, a petición del usuario** (la UX era *"una chapuza"*): el diálogo **se adapta al
+    contenido y el contenido tiene forma fija** — nada aparece ni desaparece moviendo lo demás (la lista hace
+    scroll dentro de su columna, el detalle de la petición tiene un hueco reservado); la botonera tiene
+    **siempre los siete botones**, solo se habilitan/deshabilitan; el editor de un recurso va en su **caja**
+    (dentro de `ResourceEditor`, así que también en *API Security*), que además se ensanchó y partió sus
+    filtros en dos filas. Fijado por e2e (`signup-ui`, `security-dialogs-layout`).
+  - 🔴 `login-idp-password` (de S0) fallaba en la segunda corrida: 3 rechazos por corrida y el rate limiter
+    corta a 5/15 min → 429. Ahora usa un usuario por corrida.
+  - Guía: `03-user-management` (sección *Access requests*), `07-idp-integration` (sección *Signup*, campos
+    del formulario —de paso, *Login button label* y *Enabled (show on login screen)* ya no se llamaban así—),
+    `05-api-management` (filtros). Capturas por código (`capture-signup.spec.ts`): 4 rehechas y 2 nuevas,
+    con los emails reales y los valores del conector difuminados y **sin conectores de pago a la vista**.
