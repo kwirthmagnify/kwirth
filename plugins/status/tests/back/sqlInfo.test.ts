@@ -15,7 +15,8 @@ const socketFalso = (enviado: IEnviado) => ({
     send: (raw: string) => { enviado.mensajes.push(JSON.parse(raw)) }
 }) as unknown as WebSocket
 
-const configFalsa = (instance: string) => ({ instance }) as never
+// Una clave con scope 'cluster', que es el mínimo que el canal exige para servir nada.
+const configFalsa = (instance: string) => ({ instance, accessKey: 'k1|permanent|cluster::::' }) as never
 
 const inventarioDe = async (clusterInfo: unknown) => {
     const enviado: IEnviado = { mensajes: [] }

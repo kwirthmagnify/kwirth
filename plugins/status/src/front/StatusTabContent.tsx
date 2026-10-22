@@ -274,10 +274,19 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
     )
 
     /*
-        The two empty states are different and have to be told apart: not started, what is missing is an
+        The three empty states are different and have to be told apart: not started, what is missing is an
         action by the user; started and with no snapshot, what is missing is for it to arrive — and there
         is nothing to do but wait a second.
+
+        🔴 And the third: something went wrong and SAID so. Without it, a refusal left the tab repeating
+        "the inventory should appear in a moment" for ever, while the reason sat in `data.signals`,
+        which is only painted further down — in the block that needs an inventory to be drawn at all.
+        An error that arrives before the first snapshot was an error nobody could read.
     */
+    if (data.signals.length > 0 && !inventory) {
+        return <EmptyState title='Kwirth Status could not start'
+            detail={data.signals[data.signals.length - 1]} />
+    }
     if (!data.started) {
         return <EmptyState title='Kwirth Status not started'
             detail='Start the channel (tab settings ⚙ → Start) to see what this Kwirth has inside.' />

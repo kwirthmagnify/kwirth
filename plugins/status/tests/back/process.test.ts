@@ -13,7 +13,8 @@ interface ISent {
 }
 
 const fakeSocket = (sent: ISent) => ({ send: (raw: string) => { sent.messages.push(JSON.parse(raw)) } }) as unknown as WebSocket
-const config = (instance: string) => ({ instance }) as never
+// A key with the 'cluster' scope, which is the minimum the channel requires to serve anything.
+const config = (instance: string) => ({ instance, accessKey: 'k1|permanent|cluster::::' }) as never
 const channel = () => new StatusChannel({ name: 'c1', providers: [] } as never, {} as never)
 
 test('🔴 the sampler is OFF until a tab opens, and OFF again when the last one goes', async () => {

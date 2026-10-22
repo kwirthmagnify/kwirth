@@ -92,18 +92,39 @@ contrato. Solo **cinco** la comprueban en su back:
 | | canales |
 |---|---|
 | ✅ **con puerta propia** | `agora` (`hasScopeLevelInResources`), `magnify` (`MagnifyAuth`, importado por el back), `excubitor` (`keyAllows`), `trivy`, `fileman` |
-| ⬜ **declaran escalera y no la aplican** | `censor`, `iter`, `mirc`, `montag`, `nettools`, `news`, `pinocchio`, `provider-debug`, `sender-debug`, `situs`, `spectrum`, `topology`, `status` |
+| ⬜ **declaran escalera y no la aplican** | `censor`, `iter`, `mirc`, `montag`, `nettools`, `news`, `pinocchio`, `provider-debug`, `sender-debug`, `situs`, `spectrum`, `topology` |
+| ✅ cerrados desde el inventario | `status` (`0.8.0`, 2026-10-22 — ver abajo) |
 
 De los trece, los que enseñan datos del cluster son los que corren prisa: **`montag`** y **`censor`**
 (log, filtrado o censurado, pero log), **`pinocchio`** (eventos + LLM), **`topology`** y **`nettools`**
 (forma y red del cluster). Los demás (`mirc`, `news`, `situs`, `spectrum`, los dos `*-debug`) exponen lo
 suyo, no el cluster.
 
-🔴 **`status` es caso aparte y peor**: comprueba `admin`… **en el front**
-([`front/StatusLog.ts:85`](../../plugins/status/src/front/StatusLog.ts#L85)) y en su back no hay nada. Una
-puerta en el front no es una puerta: el WebSocket se abre contra el back. Y lo que enseña es el estado
-interno de Kwirth (DCEs cargados, rutas, tamaños). Además es **autónomo**, así que entra por la primera
-rama, que tampoco valida.
+### ✅ `status` — cerrado el 2026-10-22 (`plugin/status@0.8.0`)
+
+El primero de los trece, y de camino **dos correcciones a este mismo inventario**, las dos mías:
+
+- **No es autónomo**: es `cluster: true`. Lo leí mal de un comentario que hablaba de las `sources`
+  (`EClusterType.NONE`, o sea que funciona sin Kubernetes), no del campo `cluster`.
+- **Su log NO estaba desprotegido.** Dije que la puerta estaba en el front y es falso: la sirve el core,
+  `/managekwirth/log` y `/previouslog` exigen `hasScope(req,'admin')` y responden **403**. El `isAdmin`
+  de `front/StatusLog.ts` es **UX** —no pedir lo que va a ser rechazado—, que es justo lo que A13 pide.
+
+**El agujero real era el inventario**, no el log: enumera todas las extensiones montadas con su estado,
+las rutas HTTP publicadas y el pool SQL — el mapa de la instalación — y lo veía cualquiera que estuviese
+logado. El canal ya decía en el comentario de `getChannelScopeLevel` que su mínimo es `cluster`; ahora lo
+**comprueba** (`keyAllows` con su propia escalera), con 6 tests.
+
+🔴 **Y el QA manual encontró dos fallos encadenados que el harness no ve** (y el segundo no era del
+cambio): el rechazo se mandaba como `START`+`RESPONSE`, y el front marca `started` con esa pareja **sin
+mirar el nivel**, dejando la pestaña en *"the channel is running; the inventory should appear in a
+moment"* para siempre; y el motivo, aunque llegaba a `data.signals`, **solo se pintaba dentro del render
+que necesita inventario**, así que cualquier error anterior al primer snapshot era invisible por
+construcción. Los dos arreglados.
+
+⚠️ **Queda vivo, y es del core**: `addObject` devuelve `false` al denegar y **el core lo descarta** (uno
+de los cinco sitios donde no mira el retorno). El usuario ve el error, pero la instancia se queda
+registrada y el websocket abierto.
 
 ⚠️ **Lo que hoy no existe y haría falta si algún día se quisiera genérico**: el canal no tiene forma de
 declarar su **mínimo**. `BackChannelData` tiene `cluster`, `resourced`, `routable`… pero ningún

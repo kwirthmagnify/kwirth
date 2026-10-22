@@ -1,4 +1,5 @@
-import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel } from '@kwirthmagnify/kwirth-common-back'
+import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel, keyAllows } from '@kwirthmagnify/kwirth-common-back'
+import { accessKeyDeserialize } from '@kwirthmagnify/kwirth-common'
 import { ERouteOwnerKind, IChannelInstances, IDceAccess, IDceMeta, IPluginAccess, IPluginStatus, IPublishedRoute, IRouteAccess } from '@kwirthmagnify/kwirth-common'
 import { EComponentHealth, EComponentKind, EStatusPayload, IStatusComponent, IStatusDce, IStatusDceConsumer, IStatusEdge, IStatusInventory, IStatusMessageResponse, IStatusSqlInfo, IStatusSqlPool } from '../common/StatusTypes'
 import { ProcessProbe } from './ProcessProbe'
@@ -250,7 +251,32 @@ class StatusChannel implements IChannel {
 
     websocketRequest(_newWebSocket: WebSocket, _instanceId: string, _instanceConfig: IInstanceConfig): void {}
 
+    /*
+        🔴 LA PUERTA DEL CANAL. El comentario de `getChannelScopeLevel` dice desde el principio que el
+        mínimo para ver el inventario es 'cluster'… y nadie lo comprobaba: el core entrega este canal a
+        cualquiera que esté logado, porque es `cluster: true` y su rama de arranque no mira la clave
+        (A12 de auth-hardening). La autorización es cosa del canal, no del core — el core autentica y
+        entrega la capacidad técnica; qué se sirve con ella es negocio, y el negocio lo sabe el canal.
+
+        Lo que se protege es real: el inventario enumera TODAS las extensiones montadas con su estado,
+        las rutas HTTP publicadas y el estado del pool SQL. Es el mapa de la instalación.
+
+        El log del core, que es lo más sensible que enseña la pestaña, ya estaba protegido y no por aquí:
+        lo sirve `/managekwirth/log` del core, que exige 'admin' y responde 403. El `isAdmin` del front
+        (`StatusLog.ts`) es UX —no pedir lo que va a ser rechazado—, no una puerta.
+    */
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, _ns: string, _pod: string, _container: string): Promise<boolean> => {
+        if (!this.hasClusterScope(instanceConfig.accessKey)) {
+            /*  🔴 UNSOLICITED, no RESPONSE de START. El front marca `started` en cuanto ve un
+                START+RESPONSE, SIN mirar el nivel, así que denegar con esa pareja dejaba la pestaña
+                diciendo "the channel is running; the inventory should appear in a moment" — para
+                siempre, y el motivo escrito en `data.signals` no llegaba a pintarse nunca porque ese
+                bloque solo se dibuja cuando ya hay inventario. Lo vio el QA del 2026-10-22. */
+            this.sendSignalMessage(webSocket, EInstanceMessageAction.START, EInstanceMessageFlow.UNSOLICITED, ESignalMessageLevel.ERROR,
+                instanceConfig.instance, "Status shows every extension mounted in this Kwirth: it needs the 'cluster' scope — ask an administrator")
+            return false
+        }
+
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
             socket = { ws: webSocket, lastRefresh: Date.now(), instanceIds: [] }
@@ -260,6 +286,24 @@ class StatusChannel implements IChannel {
         this.watchProcess()
         await this.sendInventory(socket, instanceConfig.instance)
         return true
+    }
+
+    /*
+        ¿La clave alcanza 'cluster' en la escalera de ESTE canal?
+
+        Envuelto en try/catch y con la comprobación de que la clave existe, porque un canal no debe
+        apoyarse en que el core le mande siempre algo deserializable: hoy el core rechaza el START sin
+        accessKey antes de llegar aquí, pero eso es una garantía de OTRO componente. Sin esto, una clave
+        ausente o mal formada no denegaba — reventaba.
+    */
+    private hasClusterScope = (accessKey: string | undefined): boolean => {
+        if (!accessKey) return false
+        try {
+            return keyAllows(accessKeyDeserialize(accessKey), 'cluster', this.getChannelScopeLevel)
+        }
+        catch {
+            return false
+        }
     }
 
     /** The event-loop sampler runs while at least one status tab is open, and only then. */

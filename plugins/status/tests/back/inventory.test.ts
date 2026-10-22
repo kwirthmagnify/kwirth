@@ -23,7 +23,16 @@ const socketFalso = (enviado: IEnviado) => ({
     send: (raw: string) => { enviado.mensajes.push(JSON.parse(raw)) }
 }) as unknown as WebSocket
 
-const configFalsa = (instance: string) => ({ instance }) as never
+/*
+    Una clave con scope 'cluster', que es el mínimo que el canal exige para enseñar el inventario.
+    Formato de accessKey: 'id|type|resources' — y el recurso es 'scope:namespace:group:pod:container'.
+
+    Antes esto no llevaba clave: `addObject` no miraba ninguna y el canal se servía a cualquiera que
+    estuviese logado. Que estos tests se cayeran al poner la puerta es la prueba de que la puerta corta.
+*/
+const CLAVE_CLUSTER = 'k1|permanent|cluster::::'
+
+const configFalsa = (instance: string, accessKey: string = CLAVE_CLUSTER) => ({ instance, accessKey }) as never
 
 /** Starts an instance against the given clusterInfo and returns the last inventory that was sent. */
 const inventarioDe = async (clusterInfo: unknown) => {
