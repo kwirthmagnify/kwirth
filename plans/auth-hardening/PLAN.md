@@ -92,8 +92,9 @@ contrato. Solo **cinco** la comprueban en su back:
 | | canales |
 |---|---|
 | ✅ **con puerta propia** | `agora` (`hasScopeLevelInResources`), `magnify` (`MagnifyAuth`, importado por el back), `excubitor` (`keyAllows`), `trivy`, `fileman` |
-| ⬜ **declaran escalera y no la aplican** | `censor`, `iter`, `mirc`, `montag`, `nettools`, `news`, `pinocchio`, `provider-debug`, `sender-debug`, `situs`, `spectrum`, `topology` |
-| ✅ cerrados desde el inventario | `status` (`0.8.0`, 2026-10-22 — ver abajo) |
+| ⬜ **declaran escalera y no la aplican** | `censor`, `iter`, `montag`, `situs`, `spectrum`, `topology` |
+| ✅ cerrados desde el inventario | `status` (`0.8.0`), `nettools` (`0.3.0`), `pinocchio` (`0.3.0`), `provider-debug` (`0.2.0`), `sender-debug` (`0.2.0`) — todos el 2026-10-22 |
+| ⬜ **a propósito sin puerta** | `mirc` (es un chat entre usuarios: no expone nada del cluster, así que el mínimo correcto es estar logado) · `news` (su escalera devuelve `0` para todo: no distingue nada, y no toca el cluster) |
 
 De los trece, los que enseñan datos del cluster son los que corren prisa: **`montag`** y **`censor`**
 (log, filtrado o censurado, pero log), **`pinocchio`** (eventos + LLM), **`topology`** y **`nettools`**
@@ -125,6 +126,28 @@ construcción. Los dos arreglados.
 ⚠️ **Queda vivo, y es del core**: `addObject` devuelve `false` al denegar y **el core lo descarta** (uno
 de los cinco sitios donde no mira el retorno). El usuario ve el error, pero la instancia se queda
 registrada y el websocket abierto.
+
+### ✅ Los cuatro siguientes — 2026-10-22
+
+`nettools@0.3.0` (resuelve DNS y prueba TCP **desde dentro del cluster**: la herramienta con la que se
+mapea una red), `pinocchio@0.3.0` (eventos del cluster hacia un LLM: nombres de workloads y errores
+reales entran en el prompt), `provider-debug@0.2.0` (la tripa de los providers montados) y
+`sender-debug@0.2.0`.
+
+**Dos cosas aprendidas que no eran mecánicas:**
+
+🔴 **El front puede tragarse la denegación**, y pasó en dos de cinco. `pinocchio` sólo entendía
+`START`+`RESPONSE` en su `case SIGNAL` y cualquier otra señal se perdía: habría rechazado **en
+silencio**. Mismo patrón que `status` el mismo día. Un canal que rechaza sin explicarse es peor que uno
+abierto, porque nadie sabe a quién pedir permiso. Corregido en los dos.
+
+🔴 **`mirc` salió del lote.** Se le llegó a poner la puerta y se revirtió: es un chat entre usuarios de
+Kwirth, no expone nada del cluster, y exigirle `cluster` sólo quitaba acceso sin ganar seguridad. Es
+exactamente el caso que A12 describe — si un canal no protege nada, el mínimo es estar logado.
+
+⚠️ **`sender-debug` no observa: actúa.** Dispara envíos reales por los senders configurados (correo,
+Teams, Datadog). Se queda en `cluster` por ser el mínimo acordado para el grupo, pero es el primer
+candidato a `admin` si se quiere más estricto.
 
 ⚠️ **Lo que hoy no existe y haría falta si algún día se quisiera genérico**: el canal no tiene forma de
 declarar su **mínimo**. `BackChannelData` tiene `cluster`, `resourced`, `routable`… pero ningún

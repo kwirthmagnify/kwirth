@@ -1,5 +1,5 @@
 import { IChannelInstances, IExtensionImportResult, IInstanceConfig, ISignalMessage, IInstanceMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel } from '@kwirthmagnify/kwirth-common'
-import { IBackChannelObject, IChannel } from '@kwirthmagnify/kwirth-common-back'
+import { IBackChannelObject, IChannel, keyAllows } from '@kwirthmagnify/kwirth-common-back'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IConfigTriggerVersion, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, kindsAvailable, IMessage } from './PinocchioConfig'
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, PROVIDERS_AVAILABLE } from '@kwirthmagnify/kwirth-common-ai'
 import { buildModel, loadModels, IToolContext, buildAgentTools, listToolsets, resolveTools } from '@kwirthmagnify/kwirth-common-ai/back'
@@ -791,7 +791,39 @@ export class PinocchioChannel implements IChannel {
         }
     }
 
+    /*
+        ¿La clave alcanza 'cluster' en la escalera de ESTE canal? Con try/catch y comprobando que la
+        clave existe: un canal no debe apoyarse en que el core le mande siempre algo deserializable.
+    */
+    private hasClusterScope = (accessKey: string | undefined): boolean => {
+        if (!accessKey) return false
+        try {
+            return keyAllows(accessKeyDeserialize(accessKey), 'cluster', this.getChannelScopeLevel)
+        }
+        catch {
+            return false
+        }
+    }
+
+    /*
+        🔴 LA PUERTA DEL CANAL (A12 de auth-hardening). Pinocchio lee los eventos del cluster y se los
+        da a un LLM: lo que entra en el prompt son nombres de workloads, mensajes de error y estado
+        real de la instalación. El core lo entregaba a cualquiera que estuviese logado, porque es
+        `cluster: true` y esa rama de arranque no mira la clave.
+
+        La autorización es del canal, no del core: el core autentica y entrega la capacidad técnica, y
+        qué se sirve con ella es negocio del canal.
+
+        Se deniega con UNSOLICITED y no con START+RESPONSE, porque el front marca `started` con esa
+        pareja sin mirar el nivel y la pestaña se daría por arrancada.
+    */
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, podNamespace: string, podName: string, containerName: string): Promise<boolean> => {
+        if (!this.hasClusterScope(instanceConfig.accessKey)) {
+            this.sendSignalMessage(webSocket, EInstanceMessageAction.START, EInstanceMessageFlow.UNSOLICITED, ESignalMessageLevel.ERROR,
+                instanceConfig.instance, "Pinocchio reads cluster events and feeds them to an LLM: it needs the 'cluster' scope — ask an administrator")
+            return false
+        }
+
         this.backChannelObject.logInfo?.(`[pinocchio] start instance ${instanceConfig.instance} ${podNamespace}/${podName}/${containerName} (view: ${instanceConfig.view})`)
 
         let socket = this.connections.find(s => s.webSocket === webSocket)

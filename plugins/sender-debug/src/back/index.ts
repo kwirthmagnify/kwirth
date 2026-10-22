@@ -1,4 +1,4 @@
-import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel, ISenderMessage, ISenderResult } from '@kwirthmagnify/kwirth-common-back'
+import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel, ISenderMessage, ISenderResult, keyAllows } from '@kwirthmagnify/kwirth-common-back'
 import { IChannelInstances } from '@kwirthmagnify/kwirth-common'
 import { ESenderDebugCommand, ESenderDebugKind, ESenderDebugPayload, ISenderDebugCommandMessage, ISenderDebugMessageResponse, ISenderDebugResult, ISenderDebugSendRequest, ISenderDebugSenderInfo } from '../common/SenderDebugTypes'
 
@@ -115,7 +115,39 @@ class SenderDebugChannel implements IChannel {
     websocketRequest(_newWebSocket: WebSocket, _instanceId: string, _instanceConfig: IInstanceConfig): void {}
 
     // ---- registration: cluster channels arrive here through addObject('*all') ----
+    /*
+        ¿La clave alcanza 'cluster' en la escalera de ESTE canal? Con try/catch y comprobando que la
+        clave existe: un canal no debe apoyarse en que el core le mande siempre algo deserializable.
+    */
+    private hasClusterScope = (accessKey: string | undefined): boolean => {
+        if (!accessKey) return false
+        try {
+            return keyAllows(accessKeyDeserialize(accessKey), 'cluster', this.getChannelScopeLevel)
+        }
+        catch {
+            return false
+        }
+    }
+
+    /*
+        🔴 LA PUERTA DEL CANAL (A12 de auth-hardening), y aquí no es solo mirar: este canal **dispara
+        envíos de verdad** por los senders configurados — un correo, un Teams, un Datadog salen de
+        verdad. El core lo entregaba a cualquiera que estuviese logado, porque es `cluster: true` y esa
+        rama de arranque no mira la clave.
+
+        ⚠️ 'cluster' es el mínimo acordado para los canales de este grupo; si se quiere más estricto,
+        este es el primer candidato a 'admin', precisamente porque actúa en vez de observar.
+
+        Se deniega con UNSOLICITED y no con START+RESPONSE, porque el front marca `started` con esa
+        pareja sin mirar el nivel y la pestaña se daría por arrancada.
+    */
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, _ns: string, _pod: string, _container: string): Promise<boolean> => {
+        if (!this.hasClusterScope(instanceConfig.accessKey)) {
+            this.sendSignalMessage(webSocket, EInstanceMessageAction.START, EInstanceMessageFlow.UNSOLICITED, ESignalMessageLevel.ERROR,
+                instanceConfig.instance, "Sender Debug fires real deliveries through the configured senders: it needs the 'cluster' scope — ask an administrator")
+            return false
+        }
+
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
             const len = this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] })

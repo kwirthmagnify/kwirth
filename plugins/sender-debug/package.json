@@ -2,7 +2,7 @@
   "id": "sender-debug",
   "displayName": "Sender Debug",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Sender debugging channel for Kwirth - picks a sender configuration, sends a hand-written message and shows what the sender actually answered",
   "icon": "Send",
   "type": "module",

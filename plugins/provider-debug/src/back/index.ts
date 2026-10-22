@@ -1,4 +1,4 @@
-import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel, IProvider, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
+import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel, IProvider, IProviderSubscriber, keyAllows } from '@kwirthmagnify/kwirth-common-back'
 import { IChannelInstances } from '@kwirthmagnify/kwirth-common'
 import { EProviderDebugPayload, IProviderDebugInstanceConfig, IProviderDebugMessageResponse, IProviderDebugProviderInfo, IProviderDebugSubscriptionHelp } from '../common/ProviderDebugTypes'
 
@@ -125,7 +125,36 @@ class ProviderDebugChannel implements IChannel {
     websocketRequest(_newWebSocket: WebSocket, _instanceId: string, _instanceConfig: IInstanceConfig): void {}
 
     // ---- registration: cluster channels arrive here through addObject('*all') ----
+    /*
+        ¿La clave alcanza 'cluster' en la escalera de ESTE canal? Con try/catch y comprobando que la
+        clave existe: un canal no debe apoyarse en que el core le mande siempre algo deserializable.
+    */
+    private hasClusterScope = (accessKey: string | undefined): boolean => {
+        if (!accessKey) return false
+        try {
+            return keyAllows(accessKeyDeserialize(accessKey), 'cluster', this.getChannelScopeLevel)
+        }
+        catch {
+            return false
+        }
+    }
+
+    /*
+        🔴 LA PUERTA DEL CANAL (A12 de auth-hardening). Lo que enseña es la tripa de los providers
+        montados —sus suscripciones, lo que entregan y a quién— y el core lo entregaba a cualquiera que
+        estuviese logado: es `cluster: true`, y esa rama de arranque no mira la clave. La autorización es
+        del canal, no del core: es capa de negocio.
+
+        Se deniega con UNSOLICITED y no con START+RESPONSE, porque el front marca `started` con esa
+        pareja sin mirar el nivel y la pestaña se daría por arrancada.
+    */
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig, _ns: string, _pod: string, _container: string): Promise<boolean> => {
+        if (!this.hasClusterScope(instanceConfig.accessKey)) {
+            this.sendSignalMessage(webSocket, EInstanceMessageAction.START, EInstanceMessageFlow.UNSOLICITED, ESignalMessageLevel.ERROR,
+                instanceConfig.instance, "Provider Debug shows the internals of every provider mounted: it needs the 'cluster' scope — ask an administrator")
+            return false
+        }
+
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
             const len = this.webSockets.push({ ws: webSocket, lastRefresh: Date.now(), instances: [] })

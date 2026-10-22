@@ -1,5 +1,6 @@
 import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel, getDce } from '@kwirthmagnify/kwirth-common-back'
-import { IChannelInstances } from '@kwirthmagnify/kwirth-common'
+import { IChannelInstances, accessKeyDeserialize } from '@kwirthmagnify/kwirth-common'
+import { keyAllows } from '@kwirthmagnify/kwirth-common-back'
 import { ENetToolsCommand, INetToolsMessageResponse, INetToolsReading, INetToolsRequest } from '../common/NetToolsMessages'
 import { INetTools } from '../common/NetToolsContract'
 
@@ -121,7 +122,42 @@ class NetToolsChannel implements IChannel {
         ws.send(JSON.stringify({ msgtype: 'signalmessage', ...msg }))
     }
 
+    /*
+        ¿La clave alcanza 'cluster' en la escalera de ESTE canal?
+
+        Con try/catch y comprobando que la clave existe: un canal no debe apoyarse en que el core le
+        mande siempre algo deserializable. Hoy el core rechaza el START sin accessKey antes de llegar
+        aquí, pero esa es una garantía de OTRO componente.
+    */
+    private hasClusterScope = (accessKey: string | undefined): boolean => {
+        if (!accessKey) return false
+        try {
+            return keyAllows(accessKeyDeserialize(accessKey), 'cluster', this.getChannelScopeLevel)
+        }
+        catch {
+            return false
+        }
+    }
+
+    /*
+        🔴 LA PUERTA DEL CANAL (A12 de auth-hardening). Nettools resuelve DNS y prueba alcance TCP
+        **desde dentro del cluster**: es exactamente la herramienta con la que se mapea una red desde
+        fuera. Lo entregaba el core a cualquiera que estuviese logado, porque es `cluster: true` y esa
+        rama de arranque no mira la clave.
+
+        La autorización es del canal, no del core: el core autentica y entrega la capacidad técnica, y
+        qué se hace con ella es negocio del canal.
+
+        Se deniega con UNSOLICITED y no con START+RESPONSE: el front marca `started` con esa pareja sin
+        mirar el nivel, y la pestaña se quedaría dándose por arrancada.
+    */
     addObject = async (webSocket: WebSocket, instanceConfig: IInstanceConfig): Promise<boolean> => {
+        if (!this.hasClusterScope(instanceConfig.accessKey)) {
+            this.sendSignalMessage(webSocket, EInstanceMessageAction.START, EInstanceMessageFlow.UNSOLICITED, ESignalMessageLevel.ERROR,
+                instanceConfig.instance, "Net Tools resolves DNS and probes TCP from inside the cluster: it needs the 'cluster' scope — ask an administrator")
+            return false
+        }
+
         let socket = this.webSockets.find(s => s.ws === webSocket)
         if (!socket) {
             const len = this.webSockets.push({ ws: webSocket, instances: [] })

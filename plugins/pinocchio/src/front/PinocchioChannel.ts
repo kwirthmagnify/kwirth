@@ -1,7 +1,7 @@
 import { FC } from 'react'
 import { EPinocchioCommand, IConfigProvider, IPinocchioConfig, IPinocchioMessage, IPinocchioMessageResponse, PinocchioConfig, PinocchioInstanceConfig } from './PinocchioConfig'
 import { PinocchioSetup, PinocchioIcon } from './PinocchioSetup'
-import { EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EInstanceConfigScope, ISignalMessage, ENotifyLevel, IChannelRequirements, IChannelMessageAction, EChannelRefreshAction } from '@kwirthmagnify/kwirth-common'
+import { EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, EInstanceConfigScope, ISignalMessage, ESignalMessageLevel, ENotifyLevel, IChannelRequirements, IChannelMessageAction, EChannelRefreshAction } from '@kwirthmagnify/kwirth-common'
 import { PinocchioData, IPinocchioData } from './PinocchioData'
 import { PinocchioTabContent } from './PinocchioTabContent'
 import { IChannel, IChannelObject, IContentProps, ISetupProps } from '@kwirthmagnify/kwirth-common-front'
@@ -52,6 +52,18 @@ export class PinocchioChannel implements IChannel {
                 }
             case EInstanceMessageType.SIGNAL:
                 let signalMessage = JSON.parse(wsEvent.data) as ISignalMessage
+                /*
+                    🔴 Un error del back se ESCRIBE en la conversación, que es donde mira el usuario.
+                    Antes esta rama solo entendía START+RESPONSE y cualquier otra señal se perdía en
+                    silencio: al ponerle puerta al canal (A12), una denegación dejaba la pestaña sin
+                    decir absolutamente nada. Un canal que rechaza sin explicarse es peor que uno
+                    abierto, porque nadie sabe a quién pedirle permiso.
+                */
+                if (signalMessage.level === ESignalMessageLevel.ERROR) {
+                    const data = channelObject.data as IPinocchioData
+                    data?.content?.push({ timestamp: Date.now(), text: signalMessage.text ?? 'Unknown error' })
+                    return { action: EChannelRefreshAction.REFRESH }
+                }
                 if (signalMessage.flow === EInstanceMessageFlow.RESPONSE && signalMessage.action === EInstanceMessageAction.START) {
                     channelObject.instanceId = signalMessage.instance
 
