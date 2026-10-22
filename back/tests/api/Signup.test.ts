@@ -71,6 +71,7 @@ const encodeUser = (u: Partial<IUser>) => Buffer.from(JSON.stringify({ name: 'x'
 interface IServerOptions {
     signup?: IIdpSignupPolicy
     seed?: (secrets: ISecrets) => Promise<void>
+    notifySignup?: IAuthContext['notifySignup']
 }
 
 async function startServer(options: IServerOptions = {}) {
@@ -89,7 +90,7 @@ async function startServer(options: IServerOptions = {}) {
         ],
         masterKey: 'x', isDesktop: true, refreshKeys: async () => {}
     }
-    const ctx: IAuthContext = { secrets, configMaps: memConfigMaps(), apiKeyApi }
+    const ctx: IAuthContext = { secrets, configMaps: memConfigMaps(), apiKeyApi, notifySignup: options.notifySignup }
     const authApi = new AuthApi(() => idpManager, () => ctx, '', 'kwirth')
     const signupApi = new SignupApi(secrets, apiKeyApi, () => new Set(['', 'admin', 'cluster', 'view']))
 
@@ -405,4 +406,49 @@ test('una peticion rechazada no se puede reenviar con un codigo viejo', async ()
         assert.equal((await res.json()).result, ESsoResult.REJECTED)
     }
     finally { await srv.stop() }
+})
+
+// ---- the notice by sender (S4) ----
+
+test('S4: una peticion guardada se avisa UNA vez, con la peticion y la etiqueta del IdP', async () => {
+    const calls: { id: string, idpLabel: string }[] = []
+    const srv = await startServer({ signup: OPEN, notifySignup: async (request, idpLabel) => { calls.push({ id: request.id, idpLabel }) } })
+    try {
+        await requestAccess(srv.base, 'carol@example.com')
+        await new Promise(r => setTimeout(r, 50))   // it is fired after answering, without waiting
+        assert.deepEqual(calls, [{ id: 'carol@example.com', idpLabel: 'Login with Google' }])
+    }
+    finally { await srv.stop() }
+})
+
+test('S4: lo que no llega a guardarse no se avisa (rechazo por tope, codigo gastado)', async () => {
+    const calls: string[] = []
+    const seed = async (secrets: ISecrets) => {
+        for (let i = 0; i < SIGNUP_PENDING_CAP - 1; i++) await SignupStore.save(secrets, pendingRequest(`p${i}@example.com`))
+    }
+    const srv = await startServer({ signup: OPEN, seed, notifySignup: async (request) => { calls.push(request.id) } })
+    try {
+        const c1 = (await loginAs(srv.base, 'carol@example.com')).get('signup')
+        const c2 = (await loginAs(srv.base, 'dave@example.com')).get('signup')
+        assert.equal((await postJson(srv.base, '/core/auth/signup', { code: c1, name: 'Carol' })).status, 200)
+        assert.equal((await postJson(srv.base, '/core/auth/signup', { code: c2, name: 'Dave' })).status, 409)
+        assert.equal((await postJson(srv.base, '/core/auth/signup', { code: c1, name: 'Carol' })).status, 404)
+        await new Promise(r => setTimeout(r, 50))
+        assert.deepEqual(calls, ['carol@example.com'])
+    }
+    finally { await srv.stop() }
+})
+
+test('🔴 S4: si el aviso falla, la peticion queda hecha y el proceso sigue en pie', async () => {
+    const srv = await startServer({ signup: OPEN, notifySignup: async () => { throw new Error('webhook down') } })
+    const escaped: unknown[] = []
+    const onReject = (reason: unknown) => escaped.push(reason)
+    process.on('unhandledRejection', onReject)
+    try {
+        await requestAccess(srv.base, 'carol@example.com')
+        await new Promise(r => setTimeout(r, 50))
+        assert.equal((await SignupStore.get(srv.secrets, 'carol@example.com'))?.status, ESignupStatus.PENDING)
+        assert.deepEqual(escaped, [], 'a failed notice must not escape as an unhandledRejection (fatal here)')
+    }
+    finally { process.off('unhandledRejection', onReject); await srv.stop() }
 })

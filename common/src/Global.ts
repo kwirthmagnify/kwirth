@@ -78,6 +78,13 @@ interface IKwirthSettings {
     */
     previousLogSenderLines?: number
     /*
+        Where a new signup request is announced (plan: plans/signup, S4): the same flat (senderId,
+        configName) pair as the previous log's. The front end already tells administrators on login; this
+        reaches the ones who are not logging in. Empty = nobody is told by a sender.
+    */
+    signupSenderId?: string
+    signupSenderConfigName?: string
+    /*
         How talkative the core's own log is, per component. Until this existed, the enabled components
         were a constant in the module: 'auth' and 'stor' were off and there was no way of turning them on
         without recompiling, and there was no level filter at all.

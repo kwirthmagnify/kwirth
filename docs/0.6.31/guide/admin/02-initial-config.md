@@ -49,6 +49,19 @@ Managing these settings requires the **`admin`** scope; without it the dialog wi
 
 > The interval can also be set at deploy time (Helm `metricsinterval` / `--metricsinterval`). Precedence is: what you save in this dialog wins; otherwise the deploy-time value; otherwise 15 seconds. So the Helm value acts as the starting point until somebody changes it here.
 
+### Notifications
+
+The **Notifications** tab of the same dialog decides what kwirth **tells somebody through a sender** — Slack, Teams, email or any other [sender](../extensions/senders/index) you have installed and configured. Each notice is a **sender** and then one of **its** configurations; the second picker only lists the configurations of the sender chosen, and choosing *(none)* means nobody is told that way.
+
+![The Notifications tab of the kwirth settings dialog](../../_media/guide/admin-kwirth-settings-notifications.png)
+
+| Notice | When it is sent | What it carries |
+|---|---|---|
+| **Previous container log** | When kwirth starts and finds that its previous container left a log behind — a restart, clean or not. Without a sender it is only shouted into the core log, which nobody reads at four in the morning. | Why the previous container ended, how many restarts, and the last **N** lines of its log (**Lines to send**, 200 by default). How many lines are *kept* is set in the **General** tab and read once at startup. Explained in full in [Deployment](01-deployment). |
+| **Access requests (signup)** | Each time somebody asks for access through an Identity Provider that allows [signup](07-idp-integration#signup-access-requests). Administrators are already told when they log in; this reaches the ones who are not logging in. | Who asked (name and email), through which IdP, why — if they said — and where to review it. Approving is done in kwirth, never from the message. |
+
+A notice that cannot be delivered (a sender that is down, a webhook that refuses it) is written to kwirth's log and **changes nothing else**: the restart is still recorded, the access request is still waiting for you.
+
 ### How much kwirth writes to its log
 
 The **Log** tab of the same dialog decides how talkative kwirth's own log is. It does not change *what* kwirth does, only what it tells you about it.

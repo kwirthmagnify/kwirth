@@ -24,6 +24,7 @@ import { userStoreName } from './tools/UserStoreName'
 import { wsUpgradeAllowed } from './tools/WsPathGuard'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { buildPreviousContainerMessage, logPreviousContainerBanner, readPreviousContainerLog } from './tools/PreviousContainerLog'
+import { buildSignupMessage, signupSenderOf } from './tools/auth/SignupNotice'
 import { createUsageService } from './tools/AiUsage'
 import { setUsageService, setAiLogger } from '@kwirthmagnify/kwirth-common-ai/back'
 import { failureOrigin } from './tools/FailureOrigin'
@@ -59,7 +60,7 @@ import { DockerConfigMaps } from './tools/DockerConfigMaps'
 import { NodeConfigMaps } from './tools/NodeConfigMaps'
 import { NodeSecrets } from './tools/NodeSecrets'
 
-import { IUserInfo, IKwirthSettings, EExecutionEnvironment, EExtensionType, ERouteOwnerKind, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
+import { IUserInfo, IKwirthSettings, EExecutionEnvironment, EExtensionType, ERouteOwnerKind, IExtensionRequirement, ISignupRequest } from '@kwirthmagnify/kwirth-common'
 import { EStoreKind, IEnvironmentCapabilities, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType, servesCoreLogFromMemory } from './tools/ExecutionEnvironment'
 import { resolveInstallationIdentity, defaultProbes } from './tools/InstallationIdentity'
 
@@ -3695,7 +3696,25 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
         () => idpManager,
         () => {
             const activeRI = runningInstances.find(r => r.active)
-            return (activeRI && activeRI.apiKeyApi) ? { secrets: activeRI.secrets, configMaps: activeRI.configMaps, apiKeyApi: activeRI.apiKeyApi } : undefined
+            if (!activeRI || !activeRI.apiKeyApi) return undefined
+            return {
+                secrets: activeRI.secrets, configMaps: activeRI.configMaps, apiKeyApi: activeRI.apiKeyApi,
+                /*
+                    A new signup request goes to the sender chosen in Kwirth's settings (Notifications),
+                    if any. SenderManager.send() SWALLOWS failures — it logs and returns undefined, the
+                    same as a delivery — so the outcome is said here, like the previous container log's.
+                */
+                notifySignup: async (request: ISignupRequest, idpLabel: string) => {
+                    const target = signupSenderOf(await SettingsApi.read(activeRI.configMaps))
+                    if (!target) return
+                    if (!senderManager) {
+                        logError(ELogComponent.AUTH, `Signup request NOT notified: sender '${target.senderId}::${target.configName}' is configured but the sender manager is not available`)
+                        return
+                    }
+                    await senderManager.send(target.senderId, target.configName, buildSignupMessage(request, idpLabel))
+                    logInfo(ELogComponent.AUTH, `Signup request from ${request.id} notified to '${target.senderId}::${target.configName}'`)
+                }
+            }
         },
         envRootPath,
         envAuth

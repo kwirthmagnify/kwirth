@@ -1,6 +1,6 @@
 # PLAN — Signup (auto-registro vía IdP)
 
-> **Estado:** vivo · 2026-10-22 · ✅ S0, S1, S2 y S3 entregados · siguiente: S4 (y, al cerrarlo, la cascada de common)
+> **Estado:** vivo · 2026-10-22 · ✅ S0–S4 entregados · queda la **cascada de common** a las extensiones
 >
 > Producto y decisiones (D1–D9) en [PRD.md](PRD.md); este plan no las repite.
 
@@ -38,7 +38,7 @@
 | ✅ **S1** | Tipos (§2) publicados (`common`, `common-back`); `ESsoResult` sustituye los strings en back y front sin cambio de comportamiento; `SignupStore` sobre `kwirth-signups`; lock único en `IdentityService` (D6) usado por `UserApi`, `LoginApi`, `AuthApi` y `SignupStore` | harness del store + regresión `AuthApi.test.ts` | — |
 | ✅ **S2** | Back: rama signup en el callback (dominio, `pending`/`rejected`, tope D9) → `?signup=<code>`; `POST /core/auth/signup`; API admin `GET /user/signups`, `POST …/:id/approve` (crea usuario con `idp`, borra petición), `POST …/:id/reject`, `DELETE …/:id` | harness: criterios de aceptación 1–7 del PRD | S1 |
 | ✅ **S3** | Front: sección *Signup* en `IdpConfigDialog`; diálogo "Request access" tras `?signup`; mensajes de `ESsoResult`; *Pending requests* en *User security* (approve con editor de recursos, reject, delete) con contador; toast al admin tras login | e2e Playwright + QA manual | S2 |
-| **S4** | Aviso por sender: `signupSenderId`/`signupSenderConfigName` en settings | harness + QA | S2 |
+| ✅ **S4** | Aviso por sender: `signupSenderId`/`signupSenderConfigName` en settings | harness + QA | S2 |
 
 Cada stream cierra su CL9.
 
@@ -93,3 +93,15 @@ Cada stream cierra su CL9.
     del formulario —de paso, *Login button label* y *Enabled (show on login screen)* ya no se llamaban así—),
     `05-api-management` (filtros). Capturas por código (`capture-signup.spec.ts`): 4 rehechas y 2 nuevas,
     con los emails reales y los valores del conector difuminados y **sin conectores de pago a la vista**.
+- 2026-10-22 — ✅ **S4 cerrado.** Decidido por el usuario: el sender se configura en una **pestaña nueva
+  *Notifications*** de *Kwirth settings*, adonde se mueve también el del log previo (su campo de líneas pasa
+  a llamarse *Lines to send*). `IKwirthSettings.signupSenderId/ConfigName` en **`common@0.5.76`**;
+  `SignupNotice.ts` construye el mensaje y resuelve el par (medio par = nadie); `IAuthContext.notifySignup`
+  se llama **tras responder y sin esperar**, y un fallo solo se loguea (test de que no escapa como
+  `unhandledRejection`, que aquí es fatal). La pestaña se compactó para que los dos avisos quepan **sin
+  scroll** (fijado por e2e). Harness 832 (+6), e2e `signup-sender` + `previous-log-sender`/`dialog-escape`
+  adaptados; QA manual 9/9 validado. Guía: `02` (*Notifications*), `01-deployment`, enlaces desde `03`/`07`.
+  ⚠️ Tras reiniciar el portátil el entorno e2e iba muy lento (Chromium sin arrancar en 180 s, clics de menú
+  perdidos): rojos que cambiaban de sitio en cada corrida y nunca en S4; relanzados, en verde.
+  **Queda la cascada** de `common` (0.5.74 → 0.5.76) y `common-back` (0.6.10) a las extensiones, aplazada
+  hasta aquí por decisión del usuario.

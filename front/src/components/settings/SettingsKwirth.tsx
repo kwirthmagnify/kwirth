@@ -37,6 +37,7 @@ const LOG_LEVEL_OPTIONS: { value: ELogLevel, label: string }[] = [
 // A semantic enum as the tab's id (the rule: never numbers)
 enum ESettingsKwirthTab {
     GENERAL = 'general',
+    NOTIFICATIONS = 'notifications',
     LOG = 'log',
     MARKETPLACES = 'marketplaces',
     REGISTRIES = 'registries'
@@ -111,6 +112,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const [previousLogSenderId, setPreviousLogSenderId] = useState<string>('')
     const [previousLogSenderConfigName, setPreviousLogSenderConfigName] = useState<string>('')
     const [previousLogSenderLines, setPreviousLogSenderLines] = useState<number>(0)
+    // where a new signup request is announced (plans/signup, S4): the same two pickers
+    const [signupSenderId, setSignupSenderId] = useState<string>('')
+    const [signupSenderConfigName, setSignupSenderConfigName] = useState<string>('')
     const [senderEntries, setSenderEntries] = useState<ISenderEntry[]>([])
     /*
         How talkative the core's log is, per component.
@@ -146,6 +150,8 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 setPreviousLogSenderLines(settings.previousLogSenderLines ?? 0)
                 setPreviousLogSenderId(settings.previousLogSenderId ?? '')
                 setPreviousLogSenderConfigName(settings.previousLogSenderConfigName ?? '')
+                setSignupSenderId(settings.signupSenderId ?? '')
+                setSignupSenderConfigName(settings.signupSenderConfigName ?? '')
                 setMarketplaces((settings.marketplaces ?? []).map(m => ({ ...m })))
                 setRegistries((settings.packageRegistries ?? []).map(r => ({ ...r })))
                 /*
@@ -317,10 +323,13 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             }))
             // a sender without a config delivers nowhere, so it is stored as nobody rather than half set
             const senderChosen = previousLogSenderId !== '' && previousLogSenderConfigName !== ''
+            const signupSenderChosen = signupSenderId !== '' && signupSenderConfigName !== ''
             const payload = JSON.stringify({ metricsInterval, previousLogLines, marketplaces: cleaned, packageRegistries: cleanedRegistries,
                 previousLogSenderId: senderChosen ? previousLogSenderId : '',
                 previousLogSenderConfigName: senderChosen ? previousLogSenderConfigName : '',
                 previousLogSenderLines,
+                signupSenderId: signupSenderChosen ? signupSenderId : '',
+                signupSenderConfigName: signupSenderChosen ? signupSenderConfigName : '',
                 log: { levels: logLevels, ansi: logAnsi, bufferLines: logBufferLines } })
             const response = await fetch(`${props.clusterUrl}/core/settings`, addPutAuthorization(props.accessString, payload))
             if (!response.ok) {
@@ -514,6 +523,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             <DialogContent sx={{ height: 460, overflowY: 'auto' }}>
                 <Tabs value={tab} onChange={(_e, v) => setTab(v as ESettingsKwirthTab)}>
                     <Tab label='General' value={ESettingsKwirthTab.GENERAL} />
+                    <Tab label='Notifications' value={ESettingsKwirthTab.NOTIFICATIONS} />
                     <Tab label='Log' value={ESettingsKwirthTab.LOG} />
                     <Tab label='Marketplaces' value={ESettingsKwirthTab.MARKETPLACES} />
                     <Tab label='Package registries' value={ESettingsKwirthTab.REGISTRIES} />
@@ -526,12 +536,22 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         {/* The previous container's log is read ONCE, at startup: changing this has no
                             effect until the core starts again. */}
                         <TextField value={previousLogLines} onChange={(e) => setPreviousLogLines(+e.target.value)} variant='standard' label='Previous container log lines to keep (on startup)' type='number' sx={{ width: '40%' }} disabled={loading || error!==''} helperText='Read once when kwirth starts, so a change applies from the next restart' />
-                        <Typography variant='body2' sx={{ mt: 1 }}>When kwirth starts and finds that its previous container left a log behind, it always shouts it into the core log. It can also <b>send it</b>, which is the only half that reaches somebody who is not watching a terminal.</Typography>
+                    </Stack>
+                </Box>
+
+                {/* What Kwirth tells somebody through a sender. Each notice is a sender and one of ITS
+                    configs: the same two pickers used wherever a sender is chosen. */}
+                <Box hidden={tab !== ESettingsKwirthTab.NOTIFICATIONS}>
+                    <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
+                        {/* Each notice is one title, one line and ONE row of pickers: the tab has the dialog's
+                            fixed height, and the second notice must fit without a scrollbar. */}
+                        <Typography variant='subtitle2'>Previous container log</Typography>
+                        <Typography variant='body2'>Sent when kwirth starts and finds that its previous container left a log behind; without a sender it only goes to the core log.</Typography>
                         <Stack direction='row' spacing={2} alignItems='flex-end'>
                             {/* Sender first, then one of ITS configs: the same two pickers used wherever
                                 a sender is chosen. 'shrink' keeps the label above the value — without it
                                 displayEmpty paints the chosen text on top of the label. */}
-                            <FormControl variant='standard' sx={{ flex: 1 }} disabled={loading || error!==''}>
+                            <FormControl variant='standard' sx={{ flex: 2 }} disabled={loading || error!==''}>
                                 <InputLabel id='previous-log-sender-label' shrink>Sender for the previous container log</InputLabel>
                                 <Select labelId='previous-log-sender-label' displayEmpty value={previousLogSenderId}
                                     onChange={(e) => { setPreviousLogSenderId(e.target.value); setPreviousLogSenderConfigName('') }}>
@@ -539,7 +559,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                                     { Array.from(new Set(senderEntries.map(e => e.senderId))).map(sid => <MenuItem key={sid} value={sid}>{sid}</MenuItem>) }
                                 </Select>
                             </FormControl>
-                            <FormControl variant='standard' sx={{ flex: 1 }} disabled={loading || error!=='' || previousLogSenderId===''}>
+                            <FormControl variant='standard' sx={{ flex: 2 }} disabled={loading || error!=='' || previousLogSenderId===''}>
                                 <InputLabel id='previous-log-sender-config-label' shrink>Config</InputLabel>
                                 <Select labelId='previous-log-sender-config-label' displayEmpty value={previousLogSenderConfigName}
                                     onChange={(e) => setPreviousLogSenderConfigName(e.target.value)}>
@@ -547,8 +567,33 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                                     { senderEntries.filter(e => e.senderId === previousLogSenderId).map(e => <MenuItem key={e.configName} value={e.configName}>{e.configName}</MenuItem>) }
                                 </Select>
                             </FormControl>
+                            {/* the last N of the lines kept (General tab); 200 by default, because a thousand
+                                lines is rejected by a webhook and read by nobody */}
+                            <TextField value={previousLogSenderLines} onChange={(e) => setPreviousLogSenderLines(+e.target.value)} variant='standard' label='Lines to send' type='number' sx={{ flex: 1 }} disabled={loading || error!=='' || previousLogSenderId==='' || previousLogSenderConfigName===''} />
                         </Stack>
-                        <TextField value={previousLogSenderLines} onChange={(e) => setPreviousLogSenderLines(+e.target.value)} variant='standard' label='Lines to include in that message' type='number' sx={{ width: '40%' }} disabled={loading || error!=='' || previousLogSenderId==='' || previousLogSenderConfigName===''} helperText='The last N of the lines read above. 200 by default: a thousand lines is rejected by a webhook and read by nobody' />
+
+                        <Typography variant='subtitle2' sx={{ pt: 2 }}>Access requests (signup)</Typography>
+                        <Typography variant='body2'>Sent for each new access request through an identity provider; administrators are also told when they log in.</Typography>
+                        <Stack direction='row' spacing={2} alignItems='flex-end'>
+                            <FormControl variant='standard' sx={{ flex: 2 }} disabled={loading || error!==''}>
+                                <InputLabel id='signup-sender-label' shrink>Sender for access requests</InputLabel>
+                                <Select labelId='signup-sender-label' displayEmpty value={signupSenderId}
+                                    onChange={(e) => { setSignupSenderId(e.target.value); setSignupSenderConfigName('') }}>
+                                    <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none — only the notice on login)</Typography></MenuItem>
+                                    { Array.from(new Set(senderEntries.map(e => e.senderId))).map(sid => <MenuItem key={sid} value={sid}>{sid}</MenuItem>) }
+                                </Select>
+                            </FormControl>
+                            <FormControl variant='standard' sx={{ flex: 2 }} disabled={loading || error!=='' || signupSenderId===''}>
+                                <InputLabel id='signup-sender-config-label' shrink>Config</InputLabel>
+                                <Select labelId='signup-sender-config-label' displayEmpty value={signupSenderConfigName}
+                                    onChange={(e) => setSignupSenderConfigName(e.target.value)}>
+                                    <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
+                                    { senderEntries.filter(e => e.senderId === signupSenderId).map(e => <MenuItem key={e.configName} value={e.configName}>{e.configName}</MenuItem>) }
+                                </Select>
+                            </FormControl>
+                            {/* an empty third column, so both rows line their pickers up */}
+                            <Box sx={{ flex: 1 }} />
+                        </Stack>
                     </Stack>
                 </Box>
 

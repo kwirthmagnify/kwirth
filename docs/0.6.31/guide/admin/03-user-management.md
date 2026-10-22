@@ -127,7 +127,7 @@ If you turned **signup** on for an Identity Provider (see [Signup](07-idp-integr
 
 A request **is not a user**: it lives apart from the users, and the person **cannot get into Kwirth in any way** while it is pending — not through the IdP, and not with a password. The header says how many are **pending**, and each request carries a chip with its state, **pending** or **rejected**.
 
-When you log in as an administrator and there are pending requests, Kwirth tells you so — *"1 access request is waiting for approval…"* — on **every** login while they wait. The notice also stays in the **notifications bell** in the top bar.
+When you log in as an administrator and there are pending requests, Kwirth tells you so — *"1 access request is waiting for approval…"* — on **every** login while they wait. The notice also stays in the **notifications bell** in the top bar. To hear about each new request **without logging in** — in Slack, Teams, by email… — choose a sender in [kwirth settings → Notifications](02-initial-config#notifications).
 
 Click a request to review it. The editor shows the person's **email** (it will be their Id), the **name** they gave and the **IdP** they came through — all three fixed, because they are the request's and not yours to change here. The small box at the foot of the left column shows **when** they asked and **why**, if they wrote it.
 

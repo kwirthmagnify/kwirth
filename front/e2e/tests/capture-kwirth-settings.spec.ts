@@ -31,6 +31,15 @@ test('capture kwirth-settings (dark)', async ({ page }) => {
         whoever writes beneath it. The general shot does not show it — it opens on General — and this is
         the part of the dialog the guide explains at length.
     */
+    /*
+        The Notifications tab (signup S4): the senders that tell somebody — the previous container log's,
+        moved here from General, and the access requests'. Only the chosen values show, with the lists
+        closed, so nothing of what else this machine has installed is in the picture.
+    */
+    await dialog.getByRole('tab', { name: 'Notifications' }).click()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: `${MEDIA}/admin-kwirth-settings-notifications.png` })
+
     await dialog.getByRole('tab', { name: 'Log' }).click()
     await page.waitForTimeout(500)
     await page.screenshot({ path: `${MEDIA}/admin-kwirth-settings-log.png` })

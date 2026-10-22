@@ -16,6 +16,8 @@ interface IAuthContext {
     secrets: ISecrets
     configMaps: IConfigMaps
     apiKeyApi: ApiKeyApi
+    // tells administrators about a new signup request (S4); the core decides how (a sender, or nobody)
+    notifySignup?: (request: ISignupRequest, idpLabel: string) => Promise<void>
 }
 
 interface IStateEntry {
@@ -342,6 +344,13 @@ export class AuthApi {
                 await SignupStore.save(ctx.secrets, request)
                 logInfo(ELogComponent.AUTH, `Signup request from ${entry.email} via '${entry.idp}'`)
                 res.status(200).json({})
+                /*
+                    After answering, and without waiting: the request IS made whether or not the notice
+                    gets through, and the person asking has nothing to wait for. A failure is logged by
+                    whoever sends, never thrown back here.
+                */
+                if (ctx.notifySignup) ctx.notifySignup(request, inst.label || inst.id).catch(err =>
+                    logError(ELogComponent.AUTH, `Could not notify the signup request from ${entry.email}: ${err}`))
             }), res, ELogComponent.AUTH)
         })
     }

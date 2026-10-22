@@ -35,6 +35,8 @@ test('Escape on an open dropdown closes the list, not the dialog; a second Escap
     const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth settings' })
     await expect(dialog.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: 10000 })
 
+    // the senders live in their own tab since signup S4
+    await dialog.getByRole('tab', { name: 'Notifications' }).click()
     await dialog.getByRole('combobox', { name: 'Sender for the previous container log' }).click()
     const listbox = page.locator('[role="listbox"]')
     await expect(listbox).toBeVisible()

@@ -125,7 +125,7 @@ If they close the dialog with **CANCEL**, nothing is sent: the next time they si
 
 ### What you do
 
-The requests appear in **☰ → User security**, under the users, and Kwirth tells administrators on login that some are waiting. Approving, rejecting and deleting them is explained in [User management → Access requests](03-user-management#access-requests-signup).
+The requests appear in **☰ → User security**, under the users, and Kwirth tells administrators on login that some are waiting — and, if you choose a sender in [kwirth settings → Notifications](02-initial-config#notifications), each new request is also sent there as it arrives. Approving, rejecting and deleting them is explained in [User management → Access requests](03-user-management#access-requests-signup).
 
 ### Rules worth knowing
 
