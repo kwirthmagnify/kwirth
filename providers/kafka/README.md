@@ -8,6 +8,7 @@ subscribes saying which brokers to reach, which topics to read and what to call 
 connects, consumes and dispatches. The logic lives in whatever subscribes.
 
 Part of [Kwirth](https://kwirthmagnify.dev) — real-time Kubernetes observability.
+Source: **https://github.com/kwirthmagnify/kwirth**
 
 ## Install
 

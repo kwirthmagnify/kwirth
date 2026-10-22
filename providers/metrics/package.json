@@ -2,7 +2,7 @@
     "id": "metrics",
     "name": "@kwirthmagnify/kwirth-provider-metrics",
     "publisher": "@kwirthmagnify",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "displayName": "Metrics",
     "description": "Metrics provider for Kwirth - reads kubelet/cAdvisor metrics from every node, no Prometheus needed",
     "website": "https://kwirthmagnify.dev",
@@ -13,7 +13,7 @@
         "test": "node tests/run.mjs"
     },
     "dependencies": {
-        "@kwirthmagnify/kwirth-common-back": "^0.6.1",
+        "@kwirthmagnify/kwirth-common-back": "^0.6.10",
         "express": "^4.19.2"
     },
     "devDependencies": {

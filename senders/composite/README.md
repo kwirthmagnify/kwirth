@@ -2,6 +2,17 @@
 
 Sender que define un flujo de enrutamiento completo como un árbol inline en un único config. Combina la lógica de `tee` (fan-out) y `regex` (enrutamiento condicional) sin necesidad de registrar configs intermedias por separado. Las hojas del árbol son referencias (`ref`) a senders reales ya registrados.
 
+Part of [Kwirth](https://kwirthmagnify.dev) — real-time Kubernetes observability.
+
+## Installing it in Kwirth
+
+**☰ → Manage extensions → Senders**, find **Composite Sender** in the marketplace and install it. Then add
+one or more named configs from its gear; any feature that sends notifications can pick them. The senders
+its `ref` nodes point to must be installed and configured too.
+
+- Website: **https://kwirthmagnify.dev**
+- Source: **https://github.com/kwirthmagnify/kwirth**
+
 ## Cuándo usarlo
 
 - Definir pipelines completos en un único lugar, sin tener que crear configs de tee y regex por separado.

@@ -4,9 +4,29 @@
     "id": "sample",
     "name": "@kwirthmagnify/kwirth-dce-sample",
     "displayName": "Sample DCE",
+    "version": "0.1.1",
+    "description": "A reference dynamic core extension: one shared counter, so two consumers can prove they hold the same instance",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-sample/-/kwirth-dce-sample-0.1.1.tgz",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "dce",
+    "id": "sample",
+    "name": "@kwirthmagnify/kwirth-dce-sample",
+    "displayName": "Sample DCE",
     "version": "0.1.0",
     "description": "A reference dynamic core extension: one shared counter, so two consumers can prove they hold the same instance",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-sample/-/kwirth-dce-sample-0.1.0.tgz",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "dce",
+    "id": "nettools",
+    "name": "@kwirthmagnify/kwirth-dce-nettools",
+    "displayName": "Net Tools",
+    "version": "0.2.2",
+    "description": "Network primitives shared by Kwirth extensions: TCP reachability and DNS resolution in the back end, and the icon and a shared latency chart in the front end. No binary is spawned",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-nettools/-/kwirth-dce-nettools-0.2.2.tgz",
     "website": "https://kwirthmagnify.dev"
   },
   {
@@ -24,6 +44,16 @@
     "id": "three",
     "name": "@kwirthmagnify/kwirth-dce-three",
     "displayName": "Three.js",
+    "version": "0.1.1",
+    "description": "Shared three.js 3D library for Kwirth extensions: consumers get the THREE namespace via getDce(), without each bundling its own copy",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-three/-/kwirth-dce-three-0.1.1.tgz",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "dce",
+    "id": "three",
+    "name": "@kwirthmagnify/kwirth-dce-three",
+    "displayName": "Three.js",
     "version": "0.1.0",
     "description": "Shared three.js 3D library for Kwirth extensions: consumers get the THREE namespace via getDce(), without each bundling its own copy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-three/-/kwirth-dce-three-0.1.0.tgz",
@@ -34,9 +64,29 @@
     "id": "xyflow",
     "name": "@kwirthmagnify/kwirth-dce-xyflow",
     "displayName": "XYFlow",
+    "version": "0.1.1",
+    "description": "Shared React Flow (@xyflow/react) and ELK (elkjs) graph libraries for Kwirth extensions: consumers get both via getDce(), without each bundling its own copy",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-xyflow/-/kwirth-dce-xyflow-0.1.1.tgz",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "dce",
+    "id": "xyflow",
+    "name": "@kwirthmagnify/kwirth-dce-xyflow",
+    "displayName": "XYFlow",
     "version": "0.1.0",
     "description": "Shared React Flow (@xyflow/react) and ELK (elkjs) graph libraries for Kwirth extensions: consumers get both via getDce(), without each bundling its own copy",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-xyflow/-/kwirth-dce-xyflow-0.1.0.tgz",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "dce",
+    "id": "file-manager",
+    "name": "@kwirthmagnify/kwirth-dce-file-manager",
+    "displayName": "File Manager",
+    "version": "0.1.1",
+    "description": "Shared @jfvilas/react-file-manager for Kwirth extensions: consumers get the component and its stylesheet via getDce(), without the core carrying it",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-file-manager/-/kwirth-dce-file-manager-0.1.1.tgz",
     "website": "https://kwirthmagnify.dev"
   },
   {

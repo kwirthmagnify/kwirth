@@ -12,6 +12,17 @@ appliances ──udp/tcp──▶ syslog provider ──▶ subscribers (channel
                               └──────────▶ relay targets (unchanged bytes)
 ```
 
+Part of [Kwirth](https://kwirthmagnify.dev) — real-time Kubernetes observability.
+Source: **https://github.com/kwirthmagnify/kwirth**
+
+## Install
+
+From the Kwirth extension manager (marketplace), or directly from its tarball:
+
+```
+https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-<version>.tgz
+```
+
 ## Restart the core after installing it
 
 This provider **declares `requiresRestart`** (since `0.1.27`) and Kwirth prompts you accordingly.

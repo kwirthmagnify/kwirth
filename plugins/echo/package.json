@@ -2,7 +2,7 @@
   "id": "echo",
   "displayName": "Echo",
   "publisher": "@kwirthmagnify",
-  "version": "0.2.28",
+  "version": "0.2.29",
   "description": "Echo channel plugin for Kwirth - sends periodic test messages from watched resources",
   "icon": "Science",
   "type": "module",
@@ -11,9 +11,9 @@
     "watch": "node watch.mjs"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common": "^0.5.68",
-    "@kwirthmagnify/kwirth-common-back": "^0.6.4",
-    "@kwirthmagnify/kwirth-common-front": "^0.5.66"
+    "@kwirthmagnify/kwirth-common": "^0.5.76",
+    "@kwirthmagnify/kwirth-common-back": "^0.6.10",
+    "@kwirthmagnify/kwirth-common-front": "^0.5.67"
   },
   "devDependencies": {
     "@mui/icons-material": "7.1.2",

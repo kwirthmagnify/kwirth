@@ -2,6 +2,15 @@
 
 Rate limit filter sender for Kwirth. Used as an intermediate node in composite pipelines to control the delivery rate of messages.
 
+> **Kwirth** is an open-source Kubernetes observability and operations tool: logs, metrics, events and more,
+> in real time, extended with plugins like this one. Senders are how Kwirth delivers notifications.
+> Website: **https://kwirthmagnify.dev** · Source: **https://github.com/kwirthmagnify/kwirth**
+
+## Installing it
+
+From Kwirth: **☰ → Manage extensions → Senders**, find **Rate Limit Sender** in the marketplace and install it.
+Then create one or more named configurations for it and use them as nodes in a composite sender pipeline.
+
 ## How it works
 
 Messages arriving at the ratelimit node are counted within a fixed time window. While the count is below the configured limit, messages are forwarded immediately to the next node. Once the limit is exceeded, messages are queued and delivered at the start of the next window.

@@ -2,6 +2,15 @@
 
 Sender que escribe los mensajes en un fichero de log en disco. Soporta rotación automática por número de líneas: cuando el fichero supera el límite configurado, se renombra con timestamp y se empieza uno nuevo.
 
+> **Kwirth** is an open-source Kubernetes observability and operations tool: logs, metrics, events and more,
+> in real time, extended with plugins like this one. Senders are how Kwirth delivers notifications.
+> Website: **https://kwirthmagnify.dev** · Source: **https://github.com/kwirthmagnify/kwirth**
+
+## Installing it
+
+From Kwirth: **☰ → Manage extensions → Senders**, find **File Sender** in the marketplace and install it.
+Then create one or more named configurations for it, and pick them wherever Kwirth asks for a sender.
+
 ## Cuándo usarlo
 
 - Persistir alertas en disco para auditoría o revisión posterior.

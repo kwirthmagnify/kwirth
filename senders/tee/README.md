@@ -2,6 +2,19 @@
 
 Sender intermedio que recibe un mensaje y lo reenvía en paralelo a múltiples senders de destino configurados, sin hacer ningún envío final él mismo. Funciona como el comando Unix `tee`: lo que entra, sale por todos los canales a la vez.
 
+Part of [Kwirth](https://kwirthmagnify.dev) — real-time Kubernetes observability
+([source](https://github.com/kwirthmagnify/kwirth)).
+
+## Install
+
+From the Kwirth extension manager, or directly:
+
+```
+https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-tee/-/kwirth-sender-tee-<version>.tgz
+```
+
+It needs no core restart.
+
 ## Cuándo usarlo
 
 - Enviar la misma alerta simultáneamente a consola y a fichero.

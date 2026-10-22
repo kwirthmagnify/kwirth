@@ -2,6 +2,19 @@
 
 Routes or drops messages based on **time-of-day windows** and optional **day-of-week** filters. Rules are evaluated in order — first match wins. If no rule matches, the `defaultAction` applies.
 
+Part of [Kwirth](https://kwirthmagnify.dev) — real-time Kubernetes observability
+([source](https://github.com/kwirthmagnify/kwirth)).
+
+## Install
+
+From the Kwirth extension manager, or directly:
+
+```
+https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-timed/-/kwirth-sender-timed-<version>.tgz
+```
+
+It needs no core restart.
+
 ## Use cases
 
 - Only forward alerts to on-call during business hours

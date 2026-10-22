@@ -181,3 +181,11 @@ Installable from the Kwirth marketplace like any other provider. It declares no
 ```
 @kwirthmagnify/kwirth-provider-otel
 ```
+
+## About Kwirth
+
+[Kwirth](https://kwirthmagnify.dev) is an open-source Kubernetes observability and operations tool:
+logs, metrics, events and more, in real time, extended with plugins and providers like this one.
+
+- Website: **https://kwirthmagnify.dev**
+- Source: **https://github.com/kwirthmagnify/kwirth**

@@ -2,6 +2,15 @@
 
 Sender que envía mensajes por email usando un servidor SMTP estándar vía [Nodemailer](https://nodemailer.com). Soporta TLS, STARTTLS y texto plano, con o sin autenticación.
 
+> **Kwirth** is an open-source Kubernetes observability and operations tool: logs, metrics, events and more,
+> in real time, extended with plugins like this one. Senders are how Kwirth delivers notifications.
+> Website: **https://kwirthmagnify.dev** · Source: **https://github.com/kwirthmagnify/kwirth**
+
+## Installing it
+
+From Kwirth: **☰ → Manage extensions → Senders**, find **Email Sender (SMTP)** in the marketplace and install it.
+Then create one or more named configurations for it, and pick them wherever Kwirth asks for a sender.
+
 ## Cuándo usarlo
 
 - Entornos corporativos con servidor SMTP interno.

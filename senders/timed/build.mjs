@@ -84,4 +84,8 @@ const distMeta = { type: 'commonjs', extensionType: 'sender',
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
+// The package page on npm is this README: publishing without it leaves a page that says nothing.
+fs.copyFileSync('README.md', path.join('dist', 'README.md'))
+console.log('Copied README.md to dist/')
+
 console.log("Done. Run 'npm publish' from your 'dist' folder to publish to npmjs.")

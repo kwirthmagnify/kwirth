@@ -2,7 +2,7 @@
   "id": "github-cloud",
   "name": "@kwirthmagnify/kwirth-idp-github-cloud",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "displayName": "GitHub Cloud",
   "description": "GitHub.com (SaaS, OAuth2) identity provider connector for Kwirth",
   "type": "module",
@@ -14,7 +14,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-back": "^0.6.5"
+    "@kwirthmagnify/kwirth-common-back": "^0.6.10"
   },
   "devDependencies": {
     "@types/node": "^20.12.13",

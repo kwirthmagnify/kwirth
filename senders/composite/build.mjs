@@ -84,4 +84,14 @@ const distMeta = { type: 'commonjs', extensionType: 'sender',
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
+// The publish runs from dist/, so the README has to be THERE or the package goes out without it:
+// npm only picks up the one sitting next to the package.json it publishes.
+if (fs.existsSync('README.md')) {
+    fs.copyFileSync('README.md', path.join('dist', 'README.md'))
+    console.log('Copied README.md to dist/')
+}
+else {
+    console.warn('WARNING: no README.md — the published package would have none')
+}
+
 console.log("Done. Run 'npm publish' from your 'dist' folder to publish to npmjs.")

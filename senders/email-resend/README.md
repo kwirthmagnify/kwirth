@@ -2,6 +2,15 @@
 
 Sender que envía mensajes por email usando la API de [Resend](https://resend.com). El cuerpo del email se formatea como HTML `<pre>` con etiqueta de nivel. No requiere servidor SMTP propio.
 
+> **Kwirth** is an open-source Kubernetes observability and operations tool: logs, metrics, events and more,
+> in real time, extended with plugins like this one. Senders are how Kwirth delivers notifications.
+> Website: **https://kwirthmagnify.dev** · Source: **https://github.com/kwirthmagnify/kwirth**
+
+## Installing it
+
+From Kwirth: **☰ → Manage extensions → Senders**, find **Email Sender (Resend)** in the marketplace and install it.
+Then create one or more named configurations for it, and pick them wherever Kwirth asks for a sender.
+
 ## Cuándo usarlo
 
 - Notificaciones críticas a equipos de operaciones o desarrollo.

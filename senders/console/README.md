@@ -2,6 +2,16 @@
 
 Sender que escribe los mensajes directamente en la salida estándar del proceso Node.js. Colorea las líneas según el nivel del mensaje usando códigos ANSI y permite configurar prefijo, timestamps y etiquetas de nivel por config.
 
+Part of [Kwirth](https://kwirthmagnify.dev) — real-time Kubernetes observability.
+
+## Installing it in Kwirth
+
+**☰ → Manage extensions → Senders**, find **Console Sender** in the marketplace and install it. Then add
+one or more named configs from its gear; any feature that sends notifications can pick them.
+
+- Website: **https://kwirthmagnify.dev**
+- Source: **https://github.com/kwirthmagnify/kwirth**
+
 ## Cuándo usarlo
 
 - Desarrollo local: ver alertas en el terminal donde corre Kwirth.
