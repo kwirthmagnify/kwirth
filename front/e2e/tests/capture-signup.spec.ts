@@ -4,7 +4,7 @@ import { ESignupStatus, ISignupInfo, ISignupRequest } from '@kwirthmagnify/kwirt
 import { login, dismissOpenDialogs, openMenu, clickExtensionMenuItem, GUIDE_MEDIA } from './helpers'
 
 /*
-    Screenshots for the admin guide after signup (plan: plans/signup/PLAN.md, S3):
+    Screenshots for the admin guide after signup (plan: plans/completed/signup/PLAN.md, S3):
       · 03-user-management: admin-user-security, admin-user-idp, admin-signup-request (new)
       · 05-api-management:  admin-api-security
       · 07-idp-integration: admin-idp-settings, admin-signup-dialog (new)

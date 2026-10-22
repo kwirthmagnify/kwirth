@@ -29,7 +29,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
     const [enabledChannels, setEnabledChannels] = useState<string>('')
     const [idps, setIdps] = useState<{id:string, label:string}[]>([])
     const [scopeCatalog, setScopeCatalog] = useState<IExtensionScope[]>([])
-    // signup requests (plan: plans/signup). While one is selected the editor is reviewing it, not a user:
+    // signup requests (plan: plans/completed/signup). While one is selected the editor is reviewing it, not a user:
     // the id, name and IdP are the request's and what is edited is what the new user will get.
     const [signups, setSignups] = useState<ISignupRequest[]>([])
     const [selectedSignup, setSelectedSignup] = useState<ISignupRequest|undefined>(undefined)

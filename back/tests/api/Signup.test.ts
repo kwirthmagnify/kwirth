@@ -13,7 +13,7 @@ import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { accessKeySerialize, ESignupStatus, ESsoResult, IIdpSignupPolicy, ISignupInfo, ISignupRequest, IUser } from '@kwirthmagnify/kwirth-common'
 
 /*
-    Signup end to end in the back end (plan: plans/signup, S2): the IdP callback, the two public endpoints
+    Signup end to end in the back end (plan: plans/completed/signup, S2): the IdP callback, the two public endpoints
     the signup dialog talks to, and the admin's SignupApi. They are mounted as index.ts mounts them, over ONE
     in-memory store holding 'kwirth-users', 'kwirth-idps' and 'kwirth-signups', so approving really writes a
     user the next login reads.

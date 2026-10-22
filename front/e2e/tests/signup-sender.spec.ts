@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test'
 import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Where a new access request is announced (plan: plans/signup/PLAN.md, S4): Kwirth settings →
+    Where a new access request is announced (plan: plans/completed/signup/PLAN.md, S4): Kwirth settings →
     Notifications, a sender and one of ITS configs, next to the previous container log's.
 
     What a browser can check is the configuration: the config picker follows the chosen sender, and the

@@ -4,7 +4,7 @@ import { ESsoResult, ISignupInfo, ISignupReply, ISignupSubmit } from '@kwirthmag
 import { addPostAuthorization } from '../../tools/AuthorizationManagement'
 
 /*
-    Asking for access (plan: plans/signup, S3). The IdP callback lands here with `?signup=<code>` when the
+    Asking for access (plan: plans/completed/signup, S3). The IdP callback lands here with `?signup=<code>` when the
     person is not a Kwirth user and the IdP lets them ask. The code stands for the identity the IdP
     verified: the email is shown, never typed, and the back end takes it from the code, not from here.
 

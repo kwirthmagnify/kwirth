@@ -8,7 +8,7 @@ const SIGNUPS_SECRET = 'kwirth-signups'
 const SIGNUP_PENDING_CAP = 50
 
 /*
-    The signup requests (plan: plans/signup, D1). They live in their OWN Secret and not in 'kwirth-users'
+    The signup requests (plan: plans/completed/signup, D1). They live in their OWN Secret and not in 'kwirth-users'
     on purpose: a request is not a user, so nothing that reads users — the password login, the IdP
     callback, getUsers, the pickers — can ever hand it an AccessKey, without each of them having to know
     there is such a thing as a pending user.

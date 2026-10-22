@@ -120,7 +120,7 @@ test.describe('gestor generico de extensiones: idp', () => {
         await expect(cfg.getByText('Enabled', { exact: true })).toBeVisible()
 
         /*
-            Signup (plan: plans/signup, S3): the core's own section, the same in every connector. The
+            Signup (plan: plans/completed/signup, S3): the core's own section, the same in every connector. The
             domains only make sense with signup on, and an empty list WARNS, because with a public IdP it
             means anybody in the world can ask. Toggled and left with Cancel: nothing is saved.
         */

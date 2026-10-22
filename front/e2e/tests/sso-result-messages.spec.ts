@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { assertFrontCompiles } from './helpers'
 
 /*
-    What the login screen says for each outcome of an IdP callback (plan: plans/signup/PLAN.md, S1).
+    What the login screen says for each outcome of an IdP callback (plan: plans/completed/signup/PLAN.md, S1).
 
     The back end hands the outcome over as `?ssoerror=<value>`, and the values used to be plain strings on
     both sides. They are ESsoResult now, and the front end maps them with a Record over the enum. What is

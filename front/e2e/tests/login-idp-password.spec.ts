@@ -2,7 +2,7 @@ import { test, expect, APIRequestContext } from '@playwright/test'
 import { createHash } from 'crypto'
 
 /*
-    🔴 A user bound to an IdP cannot log in with a password (plan: plans/signup/PLAN.md, S0).
+    🔴 A user bound to an IdP cannot log in with a password (plan: plans/completed/signup/PLAN.md, S0).
 
     The drawer creates an IdP user with password '' and UserApi stores bcrypt(''), so before the gate a
     POST /login with that email and '' handed out an AccessKey without going through the IdP. This runs

@@ -1,7 +1,7 @@
 import { IKwirthSettings, ISenderMessage, ISignupRequest } from '@kwirthmagnify/kwirth-common'
 
 /*
-    Telling administrators that somebody asked for access (plan: plans/signup, S4). The front end already
+    Telling administrators that somebody asked for access (plan: plans/completed/signup, S4). The front end already
     tells them on login; this is for the ones who are not logging in — a request nobody looks at is a
     person locked out.
 

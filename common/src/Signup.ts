@@ -1,5 +1,5 @@
 /*
-    Self-registration through an IdP (plan: plans/signup). Somebody the IdP has verified but who is not a
+    Self-registration through an IdP (plan: plans/completed/signup). Somebody the IdP has verified but who is not a
     Kwirth user may ASK for access, if the admin allowed it on that IdP. The request is not a user: it lives
     apart from them ('kwirth-signups'), so it can never get an AccessKey, until an admin approves it — and
     approving turns it into a user and removes the request.

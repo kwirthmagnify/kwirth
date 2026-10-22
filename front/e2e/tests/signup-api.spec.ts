@@ -3,7 +3,7 @@ import { createHash } from 'crypto'
 import { ISignupRequest } from '@kwirthmagnify/kwirth-common'
 
 /*
-    Signup through the REAL dev core (plan: plans/signup/PLAN.md, S2). The whole flow, callback included,
+    Signup through the REAL dev core (plan: plans/completed/signup/PLAN.md, S2). The whole flow, callback included,
     is pinned in the back end's harness (tests/api/Signup.test.ts) with a fake IdP; a real IdP round trip
     cannot be automated here. What this checks is what only the running core can tell: that the routes are
     mounted where the front end will call them, that the admin API is behind the admin scope, and that the

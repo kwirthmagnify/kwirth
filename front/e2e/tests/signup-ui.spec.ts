@@ -5,7 +5,7 @@ import { ESignupStatus, ISignupRequest } from '@kwirthmagnify/kwirth-common'
 import { login, dismissOpenDialogs, openMenu, assertFrontCompiles } from './helpers'
 
 /*
-    Signup from the admin's side, in the real front end (plan: plans/signup/PLAN.md, S3).
+    Signup from the admin's side, in the real front end (plan: plans/completed/signup/PLAN.md, S3).
 
     A request can only be born from a real IdP round trip, which cannot be automated, so the test SEEDS two
     into the dev core's 'kwirth-signups' Secret with kubectl — exactly what the back end would have written

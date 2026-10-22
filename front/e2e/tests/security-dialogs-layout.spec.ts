@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test'
 import { login, dismissOpenDialogs, openMenu } from './helpers'
 
 /*
-    The two security dialogs, User security and API Security (plan: plans/signup/PLAN.md, S3, where both
+    The two security dialogs, User security and API Security (plan: plans/completed/signup/PLAN.md, S3, where both
     were reworked). The rule they follow: the dialog takes the size of its CONTENT, and the content has a
     fixed shape. Two things broke it and the user saw both:
 

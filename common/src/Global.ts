@@ -78,7 +78,7 @@ interface IKwirthSettings {
     */
     previousLogSenderLines?: number
     /*
-        Where a new signup request is announced (plan: plans/signup, S4): the same flat (senderId,
+        Where a new signup request is announced (plan: plans/completed/signup, S4): the same flat (senderId,
         configName) pair as the previous log's. The front end already tells administrators on login; this
         reaches the ones who are not logging in. Empty = nobody is told by a sender.
     */

@@ -4,7 +4,7 @@ import { ESignupStatus, ISignupRequest } from '@kwirthmagnify/kwirth-common'
 import { buildSignupMessage, signupSenderOf } from '../../../src/tools/auth/SignupNotice'
 
 /*
-    The notice of a new signup request (plan: plans/signup, S4): what it says, and when nobody is told.
+    The notice of a new signup request (plan: plans/completed/signup, S4): what it says, and when nobody is told.
 */
 
 const request = (over: Partial<ISignupRequest> = {}): ISignupRequest => ({

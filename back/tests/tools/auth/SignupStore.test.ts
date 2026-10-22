@@ -6,7 +6,7 @@ import { IdentityService } from '../../../src/tools/auth/IdentityService'
 import { ISecrets } from '../../../src/tools/ISecrets'
 
 /*
-    The signup requests' store (plan: plans/signup, S1). What it defends: that they live in their OWN
+    The signup requests' store (plan: plans/completed/signup, S1). What it defends: that they live in their OWN
     Secret and never in 'kwirth-users' (D1), that an email can be a key, and that what does not look like a
     request is not trusted.
 */

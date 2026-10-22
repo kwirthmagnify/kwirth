@@ -1,7 +1,9 @@
 # PLAN — Signup (auto-registro vía IdP)
 
-> **Estado:** vivo · 2026-10-22 · ✅ S0–S4 entregados y ✅ cascada hecha · solo quedan dos restos de la cascada que
-> no son de este plan: **excubitor** (lo publica el usuario en otra sesión) y **providers/azure** (WIP sin commitear)
+> **Estado:** ✅ **cerrado** · 2026-10-22 · S0–S4 entregados y cascada hecha. El usuario lo da por cerrado con dos
+> restos de la cascada que llevan sus dueños fuera de este plan: **excubitor** (plugin + docs 0.2.65 publicados, falta
+> su entrada en el manifest privado y su pack) y **providers/azure** (WIP sin commitear). Tampoco se relanzaron harness
+> ni e2e del core tras subir `common-front` 0.5.67 / `common-ai` 0.5.74 (solo typecheck): decisión del usuario.
 >
 > Producto y decisiones (D1–D9) en [PRD.md](PRD.md); este plan no las repite.
 

@@ -112,7 +112,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const [previousLogSenderId, setPreviousLogSenderId] = useState<string>('')
     const [previousLogSenderConfigName, setPreviousLogSenderConfigName] = useState<string>('')
     const [previousLogSenderLines, setPreviousLogSenderLines] = useState<number>(0)
-    // where a new signup request is announced (plans/signup, S4): the same two pickers
+    // where a new signup request is announced (plans/completed/signup, S4): the same two pickers
     const [signupSenderId, setSignupSenderId] = useState<string>('')
     const [signupSenderConfigName, setSignupSenderConfigName] = useState<string>('')
     const [senderEntries, setSenderEntries] = useState<ISenderEntry[]>([])

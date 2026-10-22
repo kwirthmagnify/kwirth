@@ -10,7 +10,7 @@ import { guard } from '../tools/RequestGuard'
 import { ELogComponent, logInfo } from '../tools/Logging'
 
 /*
-    The admin's side of signup (plan: plans/signup, S2): see the requests, approve, reject, delete.
+    The admin's side of signup (plan: plans/completed/signup, S2): see the requests, approve, reject, delete.
     Admin-only, like UserApi. It is not under /user because '/user/:user' would take '/user/signups' for a
     user called 'signups'.
 
