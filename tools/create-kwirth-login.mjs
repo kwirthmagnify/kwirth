@@ -2,7 +2,7 @@
 import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
-import { artifactName } from './artifact-name.mjs'
+import { artifactName, requirePublisher } from './artifact-name.mjs'
 
 /*
     Scaffold of a LOGIN extension.
@@ -59,6 +59,7 @@ const description = flag('description') ?? await ask('Description', `${displayNa
 
     The same shape the plugin, provider, dce and aitoolset scaffolders already use.
 */
+requirePublisher(flag('publisher'), interactive)
 const publisher   = flag('publisher') ?? await ask('Publisher name (e.g. @my-scope)', '@my-scope')
 const title       = flag('title') ?? await ask('Title shown on the page', displayName)
 const website     = flag('website') ?? await ask('Website URL (optional)', '')

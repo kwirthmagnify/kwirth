@@ -2,7 +2,7 @@
 import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
-import { artifactName } from './artifact-name.mjs'
+import { artifactName, requirePublisher } from './artifact-name.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -48,6 +48,7 @@ const description = flag('description') ?? await ask('Description', `${displayNa
     '@kwirthmagnify/kwirth-common-*' further down are DEPENDENCIES on Kwirth's own libraries, which is a
     different thing and stays as it is.
 */
+requirePublisher(flag('publisher'), interactive)
 const publisher   = flag('publisher') ?? await ask('Publisher name (e.g. @my-scope)', '@my-scope')
 const website     = flag('website') ?? await ask('Website URL (optional)', '')
 if (rl) rl.close()

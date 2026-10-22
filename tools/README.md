@@ -10,8 +10,22 @@ repeated scaffold want— and write a folder that already builds:
 
 ```bash
 node tools/create-kwirth-plugin.mjs                     # interactive
-node tools/create-kwirth-login.mjs --id my-login --name "My Login"
+node tools/create-kwirth-login.mjs --id my-login --publisher @my-scope --name "My Login"
 ```
+
+🔴 **With `--id` (non-interactive), `--publisher` is REQUIRED** and the script refuses to run without it.
+It is the field everything hangs off — the package name `@<scope>/kwirth-<type>-<id>`, the tarball
+`<scope>-kwirth-<type>-<id>-<version>.tgz` and which registry the artifact goes to — so it is never
+guessed. It used to fall back to `@my-scope` and produce a whole artifact under a made-up scope without
+saying a word.
+
+> ⚠️ **In PowerShell, quote the scope**: `--publisher '@my-scope'`. An argument starting with `@` is read
+> as splatting of a variable that does not exist and is **dropped silently**, so the script only sees a
+> bare `--publisher`. That is how the fallback got noticed.
+
+The `kwirth-` in the middle is deliberate and stays: the scope says WHOSE a package is, not which product
+it belongs to. The marketplace is open, so a third party publishes from their own scope next to whatever
+else they publish — and `@scope/plugin-<id>` is Backstage's own convention.
 
 | Script | Creates | Notes |
 |---|---|---|

@@ -89,7 +89,7 @@ Where a consumer can carry on without the DCE — drawing an icon, say — use `
 
 **recharts is not bundled**: the core publishes it in `window.__kwirth__` along with React and MUI, so this package's `front.js` maps it and weighs about 12 KB.
 
-⚠️ **Do not bundle the DCE's package.** Map it to the registry in the consumer's `build.mjs` (`node tools/create-kwirth-plugin.mjs --dce nettools` leaves that mapping written). A bundled copy builds its own object, and the one instance the type guarantees quietly becomes two.
+⚠️ **Do not bundle the DCE's package.** Map it to the registry in the consumer's `build.mjs` (`node tools/create-kwirth-plugin.mjs --id my-plugin --publisher @my-scope --dce @kwirthmagnify/nettools` leaves that mapping written). A bundled copy builds its own object, and the one instance the type guarantees quietly becomes two.
 
 ⚠️ The mapping replaces the whole module with the **instance**, so anything the contract exports that is not part of it — an **enum** such as `EDnsRecordType` — does not survive it. A consumer that needs one declares it locally, as `plugins/nettools` does, and asks the registry only for the object.
 

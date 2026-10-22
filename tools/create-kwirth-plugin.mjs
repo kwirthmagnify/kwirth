@@ -2,7 +2,7 @@
 import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
-import { artifactName } from './artifact-name.mjs'
+import { artifactName, requirePublisher } from './artifact-name.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -51,6 +51,7 @@ const name        = flag('name') ?? await ask('Display name', id.split('-').map(
     announced itself as ours — and the dist name is what the marketplace and the installer go by.
     The '@kwirthmagnify/kwirth-common-*' names further down are DEPENDENCIES on Kwirth's own libraries,
     which is a different thing and stays fixed. */
+requirePublisher(flag('publisher'), interactive)
 const publisher   = flag('publisher') ?? await ask('Publisher name (e.g. @my-scope)', '@my-scope')
 const description = flag('description') ?? await ask('Description', `${name} channel plugin for Kwirth`)
 const icon        = flag('icon') ?? await ask('MUI icon name', 'Extension')

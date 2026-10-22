@@ -136,7 +136,7 @@ const nettools = getDce<INetTools>('nettools')
 const postgres = await nettools.ping('kwirth-postgres', { port: 5432, count: 3 })
 ```
 
-⚠️ **Do not bundle the package.** Map it against the registry in your `build.mjs` — `node tools/create-kwirth-plugin.mjs --id my-plugin --dce nettools:0.1.0` leaves that mapping written.
+⚠️ **Do not bundle the package.** Map it against the registry in your `build.mjs` — `node tools/create-kwirth-plugin.mjs --id my-plugin --publisher @my-scope --dce @kwirthmagnify/nettools:0.1.0` leaves that mapping written.
 
 ⚠️ And know what the mapping does: it replaces the whole module with the **instance**. Anything the contract exports that is not part of that instance — an **enum** such as `EDnsRecordType` — does not survive it. A consumer that needs one declares it locally and asks the registry only for the object, which is what `plugins/nettools` does.
 

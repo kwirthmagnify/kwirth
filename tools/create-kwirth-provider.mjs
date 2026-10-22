@@ -2,7 +2,7 @@
 import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
-import { artifactName } from './artifact-name.mjs'
+import { artifactName, requirePublisher } from './artifact-name.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -52,6 +52,7 @@ if (interactive) {
 const id          = flag('id') ?? await ask('Provider ID (kebab-case, e.g. my-provider)')
 const defaultName = id.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join(' ') + ' Provider'
 const name        = flag('name') ?? await ask('Display name', defaultName)
+requirePublisher(flag('publisher'), interactive)
 const publisher   = flag('publisher') ?? await ask('Publisher scope (e.g. @my-scope)', '@my-scope')
 const description = flag('description') ?? await ask('Description', `${name} for Kwirth`)
 const website     = flag('website') ?? await ask('Website URL (optional)', '')

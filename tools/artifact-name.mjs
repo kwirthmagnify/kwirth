@@ -35,6 +35,30 @@ export const scopeOf = (publisher) => {
     return publisher.slice(1)
 }
 
+/*  🔴 En modo NO interactivo (con --id) el publisher es OBLIGATORIO: sin él se usaba el default
+    '@my-scope' y salía un artefacto entero con un scope inventado, sin una palabra. El publisher decide
+    el nombre npm, el del tarball y a qué registro va el paquete; decidirlo en silencio es exactamente lo
+    que este trabajo vino a quitar.
+
+    ⚠️ Y pasa de verdad, no en teoría: **PowerShell se come un argumento que empiece por '@'**. Lo trata
+    como splatting de una variable (`@jfvilas` → `$jfvilas`, que no existe) y lo descarta ENTERO, así que
+    `--publisher @jfvilas` llega como un `--publisher` suelto. Hay que escribirlo entre comillas. */
+export const requirePublisher = (flagValue, interactive) => {
+    if (interactive || flagValue) return
+    console.error([
+        "Error: --publisher is required when --id is given (non-interactive mode).",
+        "",
+        "  If you did pass it: in PowerShell an argument starting with '@' is swallowed as splatting,",
+        "  so '--publisher @acme' arrives as a bare '--publisher'. Quote it:",
+        "",
+        "      --publisher '@acme'",
+        "",
+        "  It is not optional on purpose: the publisher decides the package name, the tarball name and",
+        "  which registry the artifact goes to.",
+    ].join('\n'))
+    process.exit(1)
+}
+
 /** El nombre del paquete npm: '@iriaoperae/kwirth-plugin-excubitor'. */
 export const artifactName = (publisher, type, id) => `@${scopeOf(publisher)}/kwirth-${type}-${id}`
 

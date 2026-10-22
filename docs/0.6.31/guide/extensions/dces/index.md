@@ -115,7 +115,21 @@ node tools/create-kwirth-dce.mjs --id my-icons --name "My Icons" --publisher @my
 And a plugin that consumes it, with the dependency and the build mapping already in place:
 
 ```
-node tools/create-kwirth-plugin.mjs --id my-plugin --dce my-icons:1.0.0
+node tools/create-kwirth-plugin.mjs --id my-plugin --publisher @my-scope --dce my-icons:1.0.0
+```
+
+`--publisher` is **required** whenever you pass `--id`: it decides the package name
+(`@my-scope/kwirth-plugin-my-plugin`), the tarball name and which registry the artifact ends up in, so
+it is never guessed for you.
+
+> ⚠️ **In PowerShell, quote it**: `--publisher '@my-scope'`. An argument starting with `@` is treated as
+> splatting and is **silently dropped**, so the scaffolder would see a bare `--publisher`.
+
+A DCE from another scope is named in full, which is the normal case — a paid plugin consuming a public
+DCE:
+
+```
+node tools/create-kwirth-plugin.mjs --id my-plugin --publisher @my-scope --dce @kwirthmagnify/xyflow:0.1.0
 ```
 
 That leaves you `dces/my-icons/` with the contract, a back-end factory, a front-end registration, the build with the right globals, a harness and a README. The back end looks like this:
