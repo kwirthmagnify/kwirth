@@ -6,12 +6,17 @@ mantiene abierto son **dos**: **A10** (la
 dimensión `groups` filtra el menú y no la puerta) y **A12** (el core no exige scope al arrancar un canal
 de cluster o autónomo — **decidido el 19: no lo va a exigir**; la puerta es del canal).
 
-**A12, al día (2026-10-22)**: el contrato está escrito (`37264467`) y el **inventario hecho** (sección
-propia más abajo). De 18 canales, **5 tienen puerta** y **13 declaran escalera y no la aplican**; `status`
-tiene la suya **en el front**, que no es una puerta. 🔴 **Y la decisión quedó ratificada**: se propuso que
-el core aplicara la escalera del canal y se rechazó — *la autorización es capa de negocio y la implementa
-el canal; el core solo autentica*. Lo que queda, por tanto, **no es trabajo del core**: es una entrada por
-canal, y cada uno la hace en su propio cierre.
+**A12, al día (2026-10-22)**: contrato escrito (`37264467`), **inventario hecho** y **ocho canales
+cerrados** el mismo día — `status`, `nettools`, `pinocchio`, `provider-debug`, `sender-debug` (públicos) y
+`iter`, `situs`, `spectrum` (de pago, al Nexus). De los 18, ahora **13 tienen puerta**.
+
+🔴 **La decisión quedó ratificada**: se propuso que el core aplicara la escalera del canal y se rechazó —
+*la autorización es capa de negocio y la implementa el canal; el core sólo autentica*.
+
+**Quedan tres**, y ninguno es mecánico: `censor`, `montag` y `topology` tienen escalones propios
+(`filter`, `view`) por debajo de `cluster`, así que **su mínimo es decisión de producto**. Y dos se
+quedan **a propósito sin puerta**: `mirc` (un chat: no expone nada del cluster) y `news` (su escalera
+devuelve `0` para todo).
 
 **A13 cerrado el 20**: el helper bajó a `common` (`0.5.72`), con `scopeLevelOf` añadido y un **fail-open**
 corregido de camino. ⛔ Las copias de `agora` y `excubitor` **no se tocan desde aquí**: son artefactos de
@@ -92,8 +97,8 @@ contrato. Solo **cinco** la comprueban en su back:
 | | canales |
 |---|---|
 | ✅ **con puerta propia** | `agora` (`hasScopeLevelInResources`), `magnify` (`MagnifyAuth`, importado por el back), `excubitor` (`keyAllows`), `trivy`, `fileman` |
-| ⬜ **declaran escalera y no la aplican** | `censor`, `iter`, `montag`, `situs`, `spectrum`, `topology` |
-| ✅ cerrados desde el inventario | `status` (`0.8.0`), `nettools` (`0.3.0`), `pinocchio` (`0.3.0`), `provider-debug` (`0.2.0`), `sender-debug` (`0.2.0`) — todos el 2026-10-22 |
+| ⬜ **declaran escalera y no la aplican** | `censor`, `montag`, `topology` — los tres con escalones propios (`filter`, `view`) por debajo de `cluster`, así que **su mínimo es decisión de producto**, no mecánica |
+| ✅ cerrados desde el inventario | **públicos**: `status` (`0.8.0`), `nettools` (`0.3.0`), `pinocchio` (`0.3.0`), `provider-debug` (`0.2.0`), `sender-debug` (`0.2.0`) · **de pago**: `iter` (`0.3.0`), `situs` (`0.12.0`), `spectrum` (`0.8.0`) — los ocho el 2026-10-22 |
 | ⬜ **a propósito sin puerta** | `mirc` (es un chat entre usuarios: no expone nada del cluster, así que el mínimo correcto es estar logado) · `news` (su escalera devuelve `0` para todo: no distingue nada, y no toca el cluster) |
 
 De los trece, los que enseñan datos del cluster son los que corren prisa: **`montag`** y **`censor`**
@@ -147,7 +152,29 @@ exactamente el caso que A12 describe — si un canal no protege nada, el mínimo
 
 ⚠️ **`sender-debug` no observa: actúa.** Dispara envíos reales por los senders configurados (correo,
 Teams, Datadog). Se queda en `cluster` por ser el mínimo acordado para el grupo, pero es el primer
-candidato a `admin` si se quiere más estricto.
+candidato a `admin` si se quiere más estricto. **Confirmado el 22: se queda así.**
+
+### ✅ Los tres de pago — 2026-10-22 (sin QA manual, por decisión del usuario)
+
+`iter@0.3.0`, `situs@0.12.0` y `spectrum@0.8.0`, publicados al **Nexus** y con entrada en el manifiesto
+**privado**.
+
+🔴 **`spectrum` enseñó hasta dónde llega el patrón del front.** Parece un emulador —y lo es—, pero su
+modo tiempo real **recibe las métricas de todo el cluster** y las mete en la RAM de la máquina para que
+las pinte el BASIC. Y no tenía **ningún** camino para avisar: su back no mandaba una sola señal y su
+front descartaba todo lo que no fuera `SIGNAL`+`RESPONSE`, cuando una denegación llega como
+`UNSOLICITED`. Habría rechazado **dos veces en silencio**. Hubo que abrir el camino en el back, enseñar
+al front a leerlo, y separar `startError` de `realtimeError` (aquel es un fallo *dentro* de una máquina
+que sí arrancó).
+
+**Recuento del patrón**: de los ocho canales, **cuatro** se tragaban el error en el front (`status`,
+`pinocchio`, `iter`, `spectrum`), **tres** ya lo pintaban (`nettools`, `provider-debug`, `sender-debug`)
+y **uno** estaba completo de antemano (`situs`, con `applySignal` → `globalError`). Tragárselo es el
+comportamiento por defecto, no la excepción: **quien ponga una puerta nueva, que mire el front primero**.
+
+**Y los tests existentes se caen al poner la puerta**, que es justo lo que uno quiere ver: 6 en `status`,
+6 en `situs` y 6 en `spectrum` llamaban a `addObject` con `accessKey: ''` o sin clave. Los de
+`provider-debug` y `sender-debug` no se cayeron porque sus helpers ya usaban `cluster::::`.
 
 ⚠️ **Lo que hoy no existe y haría falta si algún día se quisiera genérico**: el canal no tiene forma de
 declarar su **mínimo**. `BackChannelData` tiene `cluster`, `resourced`, `routable`… pero ningún
