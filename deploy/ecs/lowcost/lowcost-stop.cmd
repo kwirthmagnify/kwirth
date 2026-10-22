@@ -23,7 +23,7 @@ set OUT=%TEMP%\kwirth-lowcost-%RANDOM%.txt
 rem Every parameter of the template except Paused, kept as it is. A parameter left out of an update-stack goes
 rem back to its DEFAULT, so this list has to follow the template's: add here any parameter added there.
 set KEEP=
-for %%P in (ImageTag WithDemo UseSpot TaskCpu TaskMemory ScanRunnerImage CloudFrontPrefixListId VpcCidr AlbIdleTimeout DbInstanceClass DbAllocatedStorage DbEngineVersion DbStopSchedule DbStopTimezone) do set KEEP=!KEEP! ParameterKey=%%P,UsePreviousValue=true
+for %%P in (ImageTag WithDemo TaskCpu TaskMemory ScanRunnerImage CloudFrontPrefixListId VpcCidr AlbIdleTimeout DbInstanceClass DbAllocatedStorage DbEngineVersion DbStopSchedule DbStopTimezone) do set KEEP=!KEEP! ParameterKey=%%P,UsePreviousValue=true
 
 echo Pausing stack '%STACK%' (%REGION%)...
 aws cloudformation update-stack --stack-name %STACK% --use-previous-template --capabilities CAPABILITY_NAMED_IAM %AWSARGS% --parameters ParameterKey=Paused,ParameterValue=true %KEEP% > "%OUT%" 2>&1

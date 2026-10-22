@@ -77,7 +77,7 @@ echo The database is available.
 rem Every parameter of the template except Paused, kept as it is. See lowcost-stop.cmd: this list has to
 rem follow the template's.
 set KEEP=
-for %%P in (ImageTag WithDemo UseSpot TaskCpu TaskMemory ScanRunnerImage CloudFrontPrefixListId VpcCidr AlbIdleTimeout DbInstanceClass DbAllocatedStorage DbEngineVersion DbStopSchedule DbStopTimezone) do set KEEP=!KEEP! ParameterKey=%%P,UsePreviousValue=true
+for %%P in (ImageTag WithDemo TaskCpu TaskMemory ScanRunnerImage CloudFrontPrefixListId VpcCidr AlbIdleTimeout DbInstanceClass DbAllocatedStorage DbEngineVersion DbStopSchedule DbStopTimezone) do set KEEP=!KEEP! ParameterKey=%%P,UsePreviousValue=true
 
 echo Resuming stack '%STACK%' (%REGION%)...
 aws cloudformation update-stack --stack-name %STACK% --use-previous-template --capabilities CAPABILITY_NAMED_IAM %AWSARGS% --parameters ParameterKey=Paused,ParameterValue=false %KEEP% > "%OUT%" 2>&1

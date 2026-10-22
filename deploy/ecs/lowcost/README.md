@@ -15,7 +15,7 @@ the generated `MASTERKEY`), with what costs money for nothing taken out.
 | what | full-sql | lowcost |
 |---|---|---|
 | Internet access for the task | NAT gateway (~37 USD/month) | public IP on the task (~4 USD/month); its security group still only lets the load balancer in |
-| Task | Fargate | **Fargate Spot** (~70% less). AWS may reclaim it; the service starts another and you see a reconnect |
+| Task | Fargate | Fargate. **Not Spot**: AWS reclaims Spot capacity at any moment, and when none is left the service can stay without a task for hours while the stack reports healthy. The demo nginx does run on Spot — if it goes, it comes back |
 | URL | `http://…elb.amazonaws.com`, open to anyone | **`https://…cloudfront.net`**, AWS's certificate, no domain to buy. The load balancer only accepts CloudFront |
 | Pausing | not possible | `Paused=true` removes the load balancer and the service, keeps everything else |
 | Database | runs until you stop it | **stopped every week**, the night from Sunday to Monday, by a schedule (`DbStopSchedule`) |
@@ -23,17 +23,17 @@ the generated `MASTERKEY`), with what costs money for nothing taken out.
 
 ## What it costs
 
-Roughly, in eu-west-1, list prices for a whole month (the Spot discount moves):
+Roughly, in eu-west-1, list prices for a whole month:
 
 | | USD/month |
 |---|---|
-| Kwirth on Spot, 1 vCPU / 2 GB | ~11 |
+| Kwirth on Fargate, 1 vCPU / 2 GB | ~45 |
 | Load balancer, and its two public IPs | ~20 + ~7 |
 | RDS `db.t4g.micro` + 20 GB | ~16 |
 | Public IP of the task | ~4 |
 | Secrets, logs | ~2 |
 | CloudFront, the database stop schedule, EFS | ~0 |
-| **Running** | **~59** |
+| **Running** | **~94** |
 | + scan runner (the task becomes 2 vCPU / 4 GB) | +~11 |
 | + demo workloads | +~6 |
 | **Paused**, with the database stopped | **~4** |

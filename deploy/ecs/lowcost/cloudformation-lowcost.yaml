@@ -34,13 +34,6 @@ Parameters:
       just by existing — and keeps the VPC, EFS, the RDS, the secrets and the CloudFront distribution, so
       nothing is lost and the URL does not change. Stop the RDS by hand too (CloudFormation cannot). 'false'
       brings them back.
-  UseSpot:
-    Type: String
-    Default: 'true'
-    AllowedValues: ['true', 'false']
-    Description: >-
-      Run the task on Fargate Spot, about 70% cheaper. AWS may reclaim it with two minutes' notice; the
-      service starts a new one by itself and the data is on EFS, so what you see is a reconnect.
   TaskCpu:
     Type: String
     Default: '1024'
@@ -114,7 +107,6 @@ Parameters:
 
 Conditions:
   Running: !Equals [!Ref Paused, 'false']
-  OnSpot: !Equals [!Ref UseSpot, 'true']
   WithScanRunner: !Not [!Equals [!Ref ScanRunnerImage, '']]
   DemoEnabled: !Equals [!Ref WithDemo, 'true']
   DemoRunning: !And [!Condition Running, !Condition DemoEnabled]
@@ -699,8 +691,11 @@ Resources:
       Cluster: !Ref EcsCluster
       TaskDefinition: !Ref TaskDefinition
       DesiredCount: 1
+      # On purpose NOT Fargate Spot: Spot can be reclaimed at any moment with two minutes' notice, and
+      # when no Spot capacity is left the service can stay without a task for hours while the stack
+      # reports healthy. Kwirth is the one workload here that has to stay up.
       CapacityProviderStrategy:
-        - CapacityProvider: !If [OnSpot, FARGATE_SPOT, FARGATE]
+        - CapacityProvider: FARGATE
           Weight: 1
       DeploymentConfiguration:
         MinimumHealthyPercent: 0
@@ -778,8 +773,9 @@ Resources:
       Cluster: !Ref EcsCluster
       TaskDefinition: !Ref DemoTaskDefinition
       DesiredCount: 1
+      # Spot is fine here: nginx is disposable, and a reclaimed task is replaced by the service.
       CapacityProviderStrategy:
-        - CapacityProvider: !If [OnSpot, FARGATE_SPOT, FARGATE]
+        - CapacityProvider: FARGATE_SPOT
           Weight: 1
       DeploymentConfiguration:
         MinimumHealthyPercent: 0
