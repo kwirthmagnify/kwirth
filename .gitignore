@@ -65,6 +65,7 @@ kwirth-bundled.json
 /plugins/rallyx/
 /plugins/galaga/
 /plugins/webamp/
+/plugins/vllm/
 /providers/sugarless/
 /iria/
 /providers/service-flow/

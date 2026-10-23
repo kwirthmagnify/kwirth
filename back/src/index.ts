@@ -1757,6 +1757,15 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                         if (!activeRI.kwirthData.channels.some(c => c.id === id))
                             activeRI.kwirthData.channels.push({ ...channelInstance.getChannelData(), mode: EChannelMode.LOCAL })
                         const channelData = channelInstance.getChannelData()
+                        /*
+                            ⚠️ The endpoint paths below embed activeRI.id, which is a NEW uuid on every
+                            boot (see createRunningInstance). They are fine for one-shot, in-boot
+                            consumers, but NEVER for anything a user or an external client persists —
+                            a baseUrl pasted into a config would die with the next restart. For a
+                            STABLE channel URL, a channel declares providesRouter + routerAlias and
+                            gets mounted at ${envRootPath}/channel/<alias> instead (montag is the
+                            reference: its agents connect to a fixed endpoint that way).
+                        */
                         for (const endpoint of channelData.endpoints) {
                             const router = express.Router()
                             router.route('*')
