@@ -1746,7 +1746,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                         const hotWired = await wireProviderConsumers(hotCreated,
                             (provId, err) => providerLogger(provId).error(`Failed while wiring up to the providers it consumes: ${err}`))
                         if (hotWired > 0) logInfo(ELogComponent.CORE, `Wired ${hotWired} provider(s) that consume other providers (plugin '${id}')`)
-                        channelInstance.startChannel()
+                        // Mismo motivo que en startRunningInstance: sin el .catch, un canal que falle al
+                        // arrancar deja un unhandledRejection que se lleva el proceso por delante.
+                        channelInstance.startChannel()?.catch((err: unknown) =>
+                            logError(ELogComponent.CORE, `Channel '${id}' failed to start after a hot install — it stays down, kwirth keeps running: ${err instanceof Error ? err.message : String(err)}`))
                         if ((channelInstance as any).providesRouter && (channelInstance as any).router) {
                             const alias = (channelInstance as any).routerAlias
                             const mountPath = alias ? `${envRootPath}/channel/${alias}` : `${envRootPath}/${activeRI.id}/channel/${id}`
@@ -2109,7 +2112,22 @@ const startRunningInstance = async (ri:IRunningInstance, expressApp:Application)
         const channelsToStart = [...ri.channels.values()]
         logInfo(ELogComponent.CORE, `Starting ${channelsToStart.length} channel(s): ${channelsToStart.map(c => c.getChannelData().id).join(', ')}`)
         for (let channel of channelsToStart) {
-            channel.startChannel()
+            /*
+                🔴 El .catch NO es decorativo: `startChannel()` no se espera —arrancar un canal no debe
+                bloquear a los demás— y el try/catch de esta función NO atrapa el rechazo de una promesa
+                que nadie espera. Sin esto, un canal que falle al arrancar deja un unhandledRejection
+                que, con --unhandled-rejections=strict, MATA EL PROCESO con todos los demás canales y
+                todos sus usuarios dentro.
+
+                Pasó el 2026-10-25: con Postgres todavía arrancando, el `startChannel` de vllm —que
+                provisiona su base— rechazó, y el core se cayó. En el log no aparecía ni el nombre del
+                canal: la traza era de knex y tarn, así que `failureOrigin` tampoco podía atribuirlo a
+                una extensión y el core lo trató como fallo propio. Ahora el canal se queda sin
+                arrancar, se dice CUÁL y por qué, y Kwirth sigue en pie.
+            */
+            const channelId = channel.getChannelData().id
+            channel.startChannel()?.catch((err: unknown) =>
+                logError(ELogComponent.CORE, `Channel '${channelId}' failed to start — it stays down, kwirth keeps running: ${err instanceof Error ? err.message : String(err)}`))
         }
     }
     catch (err) {
@@ -3523,6 +3541,18 @@ logInfo(ELogComponent.CORE, 'Kwirth running environment:')
 logInfo(ELogComponent.CORE, runningEnv)
 logInfo(ELogComponent.CORE, `Kwirth Auth: ${envAuth}`)
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+
+/*
+    The AI SDK's warnings (an unsupported setting, a parameter the provider ignores…) go to Kwirth's
+    log, not to the console: on the console they are outside the log level, the colouring and the
+    buffer the settings govern, so whoever reads the logs where the rest of them are never sees them.
+    Anything that reaches a model — the core itself, a plugin like vllm — logs through here.
+*/
+;(globalThis as { AI_SDK_LOG_WARNINGS?: unknown }).AI_SDK_LOG_WARNINGS = (options: { warnings: { message?: string, type?: string }[], provider?: string, model?: string }) => {
+    for (const warning of options.warnings ?? []) {
+        logWarning(ELogComponent.CORE, `AI SDK (${options.provider ?? '?'}/${options.model ?? '?'}): ${warning.message ?? warning.type ?? JSON.stringify(warning)}`)
+    }
+}
 
 showLogo()
 startNodeTasks()
