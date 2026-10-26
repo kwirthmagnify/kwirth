@@ -10,7 +10,8 @@ interface ILogChannel {
 }
 // Aliased on purpose: the generateText this module EXPORTS is the wrapped one, and nothing below should
 // be able to reach the raw SDK call by accident — that is exactly how a call would escape the counters.
-import { LanguageModel, tool, Tool, ToolSet, generateText as sdkGenerateText, Output } from 'ai'
+// streamText is aliased for the same reason: what leaves here is the counted one.
+import { LanguageModel, tool, Tool, ToolSet, generateText as sdkGenerateText, streamText as sdkStreamText, Output } from 'ai'
 import { z } from 'zod'
 import { AsyncLocalStorage } from 'async_hooks'
 import { createHash } from 'crypto'
@@ -247,29 +248,36 @@ const costOf = (origin: IModelOrigin, tokensIn: number, tokensOut: number): numb
     offline, and sends something outward on every run. The same seam is what a wrapper around another SDK
     entry point (streamText) would use.
 */
-export const runWithUsageGuard = async (options: { model?: unknown }, call: () => Promise<{ usage?: { inputTokens?: number, outputTokens?: number } }>) => {
+/*
+    🔴 The bookkeeping must never be what breaks the feature.
+
+    Both halves of this used to be plain `await`s on a database, sitting in the critical path of every
+    AI call. When that database has a bad moment the cost is not a missing counter: it is the whole
+    call. Measured on 2026-10-14 — `core-ai-usage: Connection Error: Connection ended unexpectedly` one
+    second in, and then **exactly 120 seconds** until the caller's own timeout gave up. The AI never
+    got a chance; the two minutes were spent waiting on an accounting read that was never going to
+    answer, and the user saw a ticket open with no resolution guidance for no reason at all.
+
+    So: the read is BOUNDED and FAILS OPEN, and the write does not block the answer.
+
+    Failing open is a deliberate trade and it is the uncomfortable one: for the span of a sick usage
+    database, the ceilings are not enforced. The alternative is worse — an accounting hiccup leaving
+    every channel in Kwirth without AI. It is said loudly in the log so it cannot pass unnoticed, and
+    the limits apply again the moment the database answers.
+*/
+const READ_TIMEOUT_MS = 5000
+
+/*
+    The READ half of the counting: checks the ceilings BEFORE the call. Extracted from runWithUsageGuard
+    when streamText needed the same check without the same shape — a stream's caller needs the result
+    object immediately, so the guard cannot wrap the whole call (see the streamText wrapper below).
+    Bounded and fail-open; throws UsageLimitError when a ceiling is passed.
+*/
+const usageGuardCheck = async (options: { model?: unknown }): Promise<void> => {
     const service = usageService
     const origin = options.model && typeof options.model === 'object' ? modelOrigin.get(options.model) : undefined
-    if (!service || !origin) return await call()
+    if (!service || !origin) return
 
-    /*
-        🔴 The bookkeeping must never be what breaks the feature.
-
-        Both halves of this used to be plain `await`s on a database, sitting in the critical path of every
-        AI call. When that database has a bad moment the cost is not a missing counter: it is the whole
-        call. Measured on 2026-10-14 — `core-ai-usage: Connection Error: Connection ended unexpectedly` one
-        second in, and then **exactly 120 seconds** until the caller's own timeout gave up. The AI never
-        got a chance; the two minutes were spent waiting on an accounting read that was never going to
-        answer, and the user saw a ticket open with no resolution guidance for no reason at all.
-
-        So: the read is BOUNDED and FAILS OPEN, and the write does not block the answer.
-
-        Failing open is a deliberate trade and it is the uncomfortable one: for the span of a sick usage
-        database, the ceilings are not enforced. The alternative is worse — an accounting hiccup leaving
-        every channel in Kwirth without AI. It is said loudly in the log so it cannot pass unnoticed, and
-        the limits apply again the moment the database answers.
-    */
-    const READ_TIMEOUT_MS = 5000
     let read: { daily: IUsageAmounts, monthly: IUsageAmounts } | undefined
     const readStarted = Date.now()
     try {
@@ -296,6 +304,30 @@ export const runWithUsageGuard = async (options: { model?: unknown }, call: () =
             throw new UsageLimitError(exceeded)
         }
     }
+}
+
+/*
+    The WRITE half: what a call spent, recorded without blocking the answer. Sin `await`: la respuesta
+    ya está. Esperar al apunte solo añade el tiempo de la base a lo que el usuario percibe, y si la base
+    está mal, lo añade entero. Lo que se pierde al fallar es un contador; lo que se perdía antes era la
+    llamada.
+*/
+const usageRecord = (options: { model?: unknown }, result: { usage?: { inputTokens?: number, outputTokens?: number } }): void => {
+    const service = usageService
+    const origin = options.model && typeof options.model === 'object' ? modelOrigin.get(options.model) : undefined
+    if (!service || !origin) return
+    const tokensIn = result.usage?.inputTokens ?? 0
+    const tokensOut = result.usage?.outputTokens ?? 0
+    void service.add(EUsageScope.LLM_KEY, origin.subject, {
+        tokensIn,
+        tokensOut,
+        calls: 1,
+        cost: costOf(origin, tokensIn, tokensOut)
+    }).catch(err => logUsage(`AI usage: could not record ${tokensIn + tokensOut} token(s) of a call that DID happen (${err}) — the counters are now short`))
+}
+
+export const runWithUsageGuard = async (options: { model?: unknown }, call: () => Promise<{ usage?: { inputTokens?: number, outputTokens?: number } }>) => {
+    await usageGuardCheck(options)
 
     /*  🔴 En `finally`, no después del `await`. La primera versión medía solo el camino feliz, que es
         justo el que no hacía falta medir: cuando una llamada se aborta por tiempo —el caso que se estaba
@@ -311,20 +343,10 @@ export const runWithUsageGuard = async (options: { model?: unknown }, call: () =
     }
     finally {
         const callMs = Date.now() - callStarted
-        if (callMs > 30_000 || !ok) logUsage(`AI usage: the model ${ok ? 'took' : 'FAILED after'} ${Math.round(callMs / 1000)} s (counters read in ${readMs} ms)`)
+        if (callMs > 30_000 || !ok) logUsage(`AI usage: the model ${ok ? 'took' : 'FAILED after'} ${Math.round(callMs / 1000)} s`)
     }
 
-    const tokensIn = result.usage?.inputTokens ?? 0
-    const tokensOut = result.usage?.outputTokens ?? 0
-    /*  Sin `await`: la respuesta ya está. Esperar al apunte solo añade el tiempo de la base a lo que el
-        usuario percibe, y si la base está mal, lo añade entero. Lo que se pierde al fallar es un contador;
-        lo que se perdía antes era la llamada. */
-    void service.add(EUsageScope.LLM_KEY, origin.subject, {
-        tokensIn,
-        tokensOut,
-        calls: 1,
-        cost: costOf(origin, tokensIn, tokensOut)
-    }).catch(err => logUsage(`AI usage: could not record ${tokensIn + tokensOut} token(s) of a call that DID happen (${err}) — the counters are now short`))
+    usageRecord(options, result)
     return result
 }
 
@@ -529,6 +551,25 @@ const inferZod = (value: unknown): z.ZodTypeAny => {
 */
 export const generateText = ((options: Parameters<typeof sdkGenerateText>[0]) =>
     runWithUsageGuard(options, () => sdkGenerateText(options))) as typeof sdkGenerateText
+
+/*
+    🔴 streamText goes through the same counters as generateText, split in two because of the shape of a
+    stream: the ceilings are checked BEFORE the stream starts, and the usage is recorded when the stream
+    ends (the SDK reports it with the last chunk). The whole call cannot go through runWithUsageGuard —
+    the guard's promise resolves when the call finishes, but the caller needs the result object
+    IMMEDIATELY to consume textStream; awaiting the guard would deliver it only after the stream is over.
+    A failed stream records nothing, exactly like a failed generateText. First consumer: the vllm channel,
+    which re-streams what the model it routed to produces.
+*/
+export const streamText = (async (options: Parameters<typeof sdkStreamText>[0]) => {
+    await usageGuardCheck(options)
+    const result = sdkStreamText(options)
+    // usage is a PromiseLike in the SDK: Promise.resolve gives it the .catch the record path needs.
+    void Promise.resolve(result.usage)
+        .then(usage => usageRecord(options, { usage }))
+        .catch(() => { /* a failed stream has no usage to record */ })
+    return result
+}) as unknown as typeof sdkStreamText
 
 export { Output, stepCountIs, tool } from 'ai'
 export type { LanguageModel, ToolSet } from 'ai'

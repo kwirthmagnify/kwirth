@@ -16,7 +16,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import back from '../dist/back.js'
 
-const { buildModel, generateText, runWithUsageGuard, setUsageService, UsageLimitError, EUsageScope } = back
+const { buildModel, generateText, streamText, runWithUsageGuard, setUsageService, UsageLimitError, EUsageScope } = back
 
 /*
     The accounting half is exercised through runWithUsageGuard with a fake call. Letting it fall through
@@ -261,4 +261,78 @@ test('recording the usage does NOT delay the answer', async () => {
     await runWithUsageGuard({ model }, answering(1, 1))
     assert.ok(Date.now() - started < 2000, 'la respuesta no espera al apunte')
     assert.equal(addStarted, true, 'pero el apunte SÍ se intenta')
+})
+
+/*
+    streamText (added for the vllm channel): same counters as generateText, split around the stream
+    because the caller needs the result object immediately. What has to be pinned:
+
+      · the result comes back BEFORE the stream is consumed — awaiting the guard's shape here would
+        deliver it only after the stream is over, which is not streaming any more;
+      · the usage is recorded when the stream ENDS (the SDK reports it with the finish part);
+      · a ceiling cuts BEFORE the stream starts, like generateText's.
+
+    The model is real (buildModel, so it has an origin) but its doStream is replaced by a fake: the
+    full SDK stream machinery runs offline, with no outbound traffic.
+*/
+const fakeDoStream = (inputTokens, outputTokens) => async () => ({
+    stream: new ReadableStream({
+        start(controller) {
+            controller.enqueue({ type: 'stream-start', warnings: [] })
+            controller.enqueue({ type: 'text-start', id: 't' })
+            controller.enqueue({ type: 'text-delta', id: 't', delta: 'hello' })
+            controller.enqueue({ type: 'text-end', id: 't' })
+            controller.enqueue({ type: 'finish', usage: { inputTokens: { total: inputTokens }, outputTokens: { total: outputTokens } }, finishReason: 'stop' })
+            controller.close()
+        }
+    })
+})
+
+const waitFor = async (cond, label) => {
+    for (let i = 0; i < 100; i++) {
+        if (cond()) return
+        await new Promise(r => setTimeout(r, 10))
+    }
+    assert.fail(`${label}: no ocurrió en 1 s`)
+}
+
+test('streamText hands the result back immediately, before the stream is consumed', async () => {
+    const { service } = fakeService()
+    setUsageService(service)
+    const model = buildModel(llm(), providerWith(undefined))
+    model.doStream = fakeDoStream(10, 5)
+
+    const result = streamText({ model, prompt: 'x' })
+    assert.ok(result && typeof result.then === 'function', 'es una promesa del objeto resultado, no del stream consumido')
+    const r = await result
+    assert.ok(r.textStream, 'el objeto resultado llega con su textStream intacto')
+
+    let text = ''
+    for await (const delta of r.textStream) text += delta
+    assert.equal(text, 'hello', 'el stream pasa tal cual')
+})
+
+test('streamText records the usage when the stream ends, not before', async () => {
+    const { service, added } = fakeService()
+    setUsageService(service)
+    const model = buildModel(llm(), providerWith(undefined))
+    model.doStream = fakeDoStream(10, 5)
+
+    const r = await streamText({ model, prompt: 'x' })
+    assert.equal(added.length, 0, 'nada se apunta antes de que el stream termine')
+    for await (const _delta of r.textStream) { /* consumir */ }
+    await waitFor(() => added.length === 1, 'el apunte tras el finish')
+    assert.equal(added[0].amounts.tokensIn, 10)
+    assert.equal(added[0].amounts.tokensOut, 5)
+    assert.equal(added[0].amounts.calls, 1)
+})
+
+test('a ceiling on CALLS cuts a stream before it starts', async () => {
+    const { service, cuts } = fakeService({ ...ZERO, calls: 10 })
+    setUsageService(service)
+    const model = buildModel(llm(), providerWith({ calls: { enabled: true, daily: 10 } }))
+    model.doStream = fakeDoStream(1, 1)
+
+    await assert.rejects(() => streamText({ model, prompt: 'x' }), UsageLimitError)
+    assert.equal(cuts.length, 1, 'the cut is announced so the core can log it')
 })
