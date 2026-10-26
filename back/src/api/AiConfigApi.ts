@@ -5,6 +5,7 @@ import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 import { EUsageScope, getUsageService, loadModels, usageSubjectForKey } from '@kwirthmagnify/kwirth-common-ai/back'
+import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
 
 export class AiConfigApi {
     public router = express.Router()
@@ -53,7 +54,14 @@ export class AiConfigApi {
         this.router.post('/loadmodels', authMiddleware, async (req: Request, res: Response) => {
             try {
                 const provider: ILlmProvider = req.body
-                await loadModels([provider], { logInfo: console.log, logWarning: console.warn, logError: console.error })
+                // The core's logger, not the console: these lines say why a provider came back with no
+                // models, and on the console they are outside the log level, the colouring and the buffer
+                // the settings control — so nobody sees them where the rest of the logs are read.
+                await loadModels([provider], {
+                    logInfo: (msg: string) => logInfo(ELogComponent.CORE, msg),
+                    logWarning: (msg: string) => logWarning(ELogComponent.CORE, msg),
+                    logError: (msg: string) => logError(ELogComponent.CORE, msg)
+                })
                 res.status(200).json(provider.models ?? [])
             }
             catch (err) {

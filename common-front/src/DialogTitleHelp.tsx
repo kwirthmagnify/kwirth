@@ -35,7 +35,9 @@ const DialogTitleHelp: React.FC<IDialogTitleHelpProps> = ({ section, docsUrl, ch
     return (
         <DialogTitle {...rest} id={titleId} ref={ref}
             sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, ...sx }}>
-            <Box component='span'>{children}</Box>
+            {/* the children box is flex too: dialogs hang chips off the title (e.g. 'unsaved changes')
+                and they need their gap — the outer flex alone leaves them glued to the title text */}
+            <Box component='span' sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>{children}</Box>
             <HelpButton section={section} docsUrl={docsUrl} />
         </DialogTitle>
     )

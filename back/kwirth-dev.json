@@ -41,6 +41,7 @@
     "docs": {
         "excubitor": "../plugins/excubitor/docs/",
         "cloud-config": "../providers/cloud-config/docs/",
-        "agora": "../plugins/agora/docs/"
+        "agora": "../plugins/agora/docs/",
+        "vllm": "../plugins/vllm/docs/"
     }
 }
