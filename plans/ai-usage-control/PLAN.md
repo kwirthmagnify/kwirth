@@ -104,6 +104,15 @@ modelo se mide contra lo que han gastado **todos** los modelos que comparten esa
 cortar un modelo antes de que se agote el presupuesto común, pero no es un presupuesto suyo — y se dice en
 el propio diálogo, no en la guía.
 
+🔴 **Publicar `common-ai` NO obliga a republicar los plugins.** El `build.mjs` de los ocho la externaliza a
+los globales que sirve el core (`window.__kwirth__.kwirthCommonAiFront` y
+`global.__kwirth_back__.kwirthCommonAi`), así que el bundle **no la contiene**: comprobado en censor, tras
+instalar 0.5.76 y rebuildear, `dist/front.js` y `dist/back.js` salen con el **mismo md5**. Quien entrega
+estos cambios es el **core**. Subir la dependencia en cada plugin sí tiene función —el `tsc --noEmit` del
+build valida los tipos nuevos, que es donde se habría visto si los costes ahora opcionales rompían a
+alguien—, pero se queda en el fuente y viaja en el siguiente release de cada uno. Lo que **sí** obligará a
+republicarlos es S2, porque ahí cambia el código de cada plugin.
+
 ## Lo que NO entra en ninguno de los dos
 
 - **Tarifas que Kwirth conozca.** Los precios los pone el administrador (en el provider, en el modelo, o
