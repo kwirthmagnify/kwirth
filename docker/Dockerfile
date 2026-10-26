@@ -11,7 +11,7 @@
 # COPY's layer. The core's guide (kwirth.tgz, ~22 MB) ended up THREE times in the image: inside ./dist,
 # in the ./bundle that was then deleted, and in /usr/kwirth/bundled, which is the only one that is used.
 # 44 MB of the 81 the image put on in 0.5.166.
-FROM node:24-alpine3.24 AS staging
+FROM node:24.22.1-alpine3.24 AS staging
 
 WORKDIR /staging
 
