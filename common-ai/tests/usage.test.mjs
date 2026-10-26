@@ -336,3 +336,78 @@ test('a ceiling on CALLS cuts a stream before it starts', async () => {
     await assert.rejects(() => streamText({ model, prompt: 'x' }), UsageLimitError)
     assert.equal(cuts.length, 1, 'the cut is announced so the core can log it')
 })
+
+/*
+    ── The model-first fallback ──────────────────────────────────────────────────────────────────────
+    Spec change of 2026-10-26: prices and limits are editable on EVERY model, borrowed key or not, with
+    the provider's as the default. The reason is one the previous rule could not express: within one
+    provider —and on one key— each model costs a different amount, so the price was never a property of
+    the key.
+
+    What is pinned down here is the fallback itself, in the three ways it can go wrong silently:
+      · a 0 is a STATED price (free, self-hosted) and must not fall through to the provider's;
+      · an emptied limits object must inherit again, not turn into 'no limit';
+      · and the borrowed key no longer decides who the limits belong to.
+*/
+test('a model with no price of its own is charged at the provider price', async () => {
+    const { service, added } = fakeService()
+    setUsageService(service)
+    const providers = [{ name: 'p', type: 'openai', key: 'KEY-SECRET', models: [], inputCostPerMillion: 1000, outputCostPerMillion: 2000 }]
+    const model = buildModel(llm({ inputCostPerMillion: undefined, outputCostPerMillion: undefined }), providers)
+
+    await runWithUsageGuard({ model }, answering(1_000_000, 1_000_000))
+    assert.equal(added[0].amounts.cost, 3000, 'it must cost what the provider charges, not 0')
+})
+
+test('a price of 0 on the model is a STATED price and does not inherit the provider one', async () => {
+    const { service, added } = fakeService()
+    setUsageService(service)
+    const providers = [{ name: 'p', type: 'openai', key: 'KEY-SECRET', models: [], inputCostPerMillion: 1000, outputCostPerMillion: 2000 }]
+    const model = buildModel(llm({ inputCostPerMillion: 0, outputCostPerMillion: 0 }), providers)
+
+    await runWithUsageGuard({ model }, answering(1_000_000, 1_000_000))
+    assert.equal(added[0].amounts.cost, 0, 'a free model stays free: 0 is not "unset"')
+})
+
+test("the model's own price wins over the provider's", async () => {
+    const { service, added } = fakeService()
+    setUsageService(service)
+    const providers = [{ name: 'p', type: 'openai', key: 'KEY-SECRET', models: [], inputCostPerMillion: 1, outputCostPerMillion: 1 }]
+    const model = buildModel(llm({ inputCostPerMillion: 1000, outputCostPerMillion: 2000 }), providers)
+
+    await runWithUsageGuard({ model }, answering(1_000_000, 1_000_000))
+    assert.equal(added[0].amounts.cost, 3000)
+})
+
+test('a model on a BORROWED key can now have its own ceiling, and it cuts', async () => {
+    const { service, cuts } = fakeService({ ...ZERO, calls: 7 })
+    setUsageService(service)
+    const providers = providerWith({ calls: { enabled: true, daily: 100 } })
+    const model = buildModel(llm({ useProviderKey: true, limits: { calls: { enabled: true, daily: 5 } } }), providers)
+
+    await assert.rejects(() => generateText({ model, prompt: 'x' }), UsageLimitError)
+    assert.equal(cuts[0].limit, 5, "the model's ceiling applies, not the provider's 100")
+})
+
+test('a model that states no limits inherits the provider ones, borrowed key or not', async () => {
+    const { service, cuts } = fakeService({ ...ZERO, calls: 10 })
+    setUsageService(service)
+    const providers = providerWith({ calls: { enabled: true, daily: 10 } })
+    const model = buildModel(llm({ useProviderKey: false, key: 'OWN-KEY', limits: undefined }), providers)
+
+    await assert.rejects(() => generateText({ model, prompt: 'x' }), UsageLimitError)
+    assert.equal(cuts[0].limit, 10, "an own key no longer means 'no provider limits'")
+})
+
+/*  The emptied-out object is what the dialog leaves behind when the admin clears the fields: it exists,
+    it just states nothing. Treating it as 'own limits' would turn a cleared form into no limit at all —
+    the opposite of what clearing a field asks for. */
+test('an EMPTIED limits object inherits, instead of silently meaning unlimited', async () => {
+    const { service, cuts } = fakeService({ ...ZERO, calls: 10 })
+    setUsageService(service)
+    const providers = providerWith({ calls: { enabled: true, daily: 10 } })
+    const model = buildModel(llm({ limits: { calls: { enabled: true } } }), providers)
+
+    await assert.rejects(() => generateText({ model, prompt: 'x' }), UsageLimitError)
+    assert.equal(cuts[0].limit, 10, 'emptied means inherit, not unlimited')
+})

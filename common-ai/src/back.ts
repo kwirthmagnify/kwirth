@@ -179,6 +179,47 @@ const keyFingerprint = (key: string): string => createHash('sha256').update(key)
 */
 export const usageSubjectForKey = (key: string): string => keyFingerprint(key)
 
+/* The four units as they are keyed inside IUsageLimits. Typed off the interface, so adding a fifth unit
+   breaks the build here instead of quietly leaving it out of the checks below. */
+const UNIT_KEYS: (keyof IUsageLimits)[] = ['tokensIn', 'tokensOut', 'calls', 'cost']
+
+/*
+    Does this set of limits say anything at all? An IUsageLimits that exists but has no window with a
+    number is the SAME as not having one, and the difference matters because that is exactly what the
+    dialog leaves behind when an admin empties the fields: the object survives, emptied.
+
+    Without this check an emptied model would stop inheriting the provider's limits —silently going from
+    limited to unlimited— which is the opposite of what clearing a field asks for.
+*/
+const statesSomething = (limits: IUsageLimits | undefined): boolean =>
+    !!limits && UNIT_KEYS.some(k => {
+        const w = limits[k]
+        return !!w && (w.daily !== undefined || w.monthly !== undefined)
+    })
+
+/*
+    Which limits govern a model: ITS OWN if it states any, otherwise the provider's. Model first and the
+    provider as a default, and the borrowed key no longer decides — a cheap model and an expensive one on
+    the same key are not the same budget.
+
+    ⚠️ What it does NOT do is split the counter. Spending is counted per KEY (EUsageScope.LLM_KEY), so on
+    a borrowed key the ceiling set here is measured against what EVERY model sharing that key spent. It is
+    still worth setting —it is the only way to cut a model short before the shared budget runs out— but it
+    is not a per-model budget, and the dialog says so where the admin types it.
+*/
+export const effectiveLimits = (llm: ILlm, prov: ILlmProvider | undefined): IUsageLimits | undefined =>
+    statesSomething(llm.limits) ? llm.limits : prov?.limits
+
+/*
+    What a model costs, per million tokens: ITS OWN price if it has one, otherwise the provider's, and 0
+    if nobody said. Model first, because within one provider —and on one key— each model costs a different
+    amount, which is the whole reason the price could never be a property of the key.
+
+    `??` and not `||` on purpose: 0 is a stated price —a free or self-hosted model— and must NOT fall
+    through to the provider's.
+*/
+const priceOf = (own: number | undefined, fallback: number | undefined): number => own ?? fallback ?? 0
+
 /*
     Records what a model was built from, so generateText can count against it. Called by buildModel; a
     model built any other way simply has no origin and is not counted — never silently miscounted.
@@ -187,9 +228,9 @@ const rememberOrigin = (model: LanguageModel | null, llm: ILlm, prov: ILlmProvid
     if (model && typeof model === 'object') {
         modelOrigin.set(model, {
             subject: keyFingerprint(key),
-            limits: llm.useProviderKey ? prov?.limits : llm.limits,
-            inputCostPerMillion: llm.inputCostPerMillion ?? 0,
-            outputCostPerMillion: llm.outputCostPerMillion ?? 0
+            limits: effectiveLimits(llm, prov),
+            inputCostPerMillion: priceOf(llm.inputCostPerMillion, prov?.inputCostPerMillion),
+            outputCostPerMillion: priceOf(llm.outputCostPerMillion, prov?.outputCostPerMillion)
         })
     }
     return model

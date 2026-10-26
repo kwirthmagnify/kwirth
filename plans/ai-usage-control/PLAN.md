@@ -2,6 +2,10 @@
 
 > **Estado: S1 ENTREGADO el 2026-10-06**, QA validado (A y B). Queda **S2**, el tope por canal.
 > PRD: [PRD.md](PRD.md).
+>
+> **2026-10-26 — cambio de especificación sobre S1** (`kwirth-common-ai@0.5.76`), QA validado: los precios
+> y los límites se editan en **todos** los modelos, con los del provider como valor por defecto. Ver
+> [Cambio de especificación](#cambio-de-especificación-2026-10-26--precios-y-límites-por-modelo).
 
 ## Dos streams, cada uno un MVP
 
@@ -75,9 +79,35 @@ El eje por clave sí sigue aplicándose: S1 no depende de esto.
 
 ---
 
+## Cambio de especificación (2026-10-26) — precios y límites por modelo
+
+**No era un bug: la especificación estaba mal.** Los costes y los *Usage limits* solo se podían editar si
+el modelo tenía **key propia**, con el argumento de que el proveedor factura la clave. Cierto, pero de ahí
+no se sigue lo que estaba construido: dentro de **un mismo provider, y sobre una misma key**, cada modelo
+cuesta distinto, así que el precio nunca fue una propiedad de la credencial.
+
+Lo entregado:
+
+- `ILlmProvider` gana `inputCostPerMillion` / `outputCostPerMillion`: **precios por defecto** de sus
+  modelos, con su bloque *Default model costs* en el diálogo.
+- Los costes del modelo pasan a ser **opcionales de verdad** (antes se forzaban a `0`, así que ningún
+  default era alcanzable). Resolución **modelo → provider → 0**, con `??` y no `||`: un **0** escrito es un
+  precio **dicho** —gratis, self-hosted— y no cae al del provider. El campo vacío enseña en el placeholder
+  lo que va a heredar.
+- Los **límites se editan siempre**, con o sin key prestada, y vacíos heredan los del provider
+  (`effectiveLimits`). La clave es `statesSomething()`: un `IUsageLimits` **vaciado** por el formulario
+  sigue existiendo, y tomarlo por «límites propios» convertía un formulario borrado en *sin tope*.
+- 6 tests nuevos en `common-ai` (61 ✅) y 4 casos e2e en `ai-config-dialog-layout` (8 ✅).
+
+⚠️ **El contador sigue siendo de la KEY** (`EUsageScope.LLM_KEY`). Con key prestada, un techo puesto en el
+modelo se mide contra lo que han gastado **todos** los modelos que comparten esa key. Es la única forma de
+cortar un modelo antes de que se agote el presupuesto común, pero no es un presupuesto suyo — y se dice en
+el propio diálogo, no en la guía.
+
 ## Lo que NO entra en ninguno de los dos
 
-- **Coste en dinero.** Kwirth no conoce las tarifas y no va a mantener una tabla de precios.
+- **Tarifas que Kwirth conozca.** Los precios los pone el administrador (en el provider, en el modelo, o
+  en los dos); Kwirth no mantiene ninguna tabla de precios ni la consulta a nadie.
 - **Límites por usuario.** El consumidor sellado es `<tipo>:<id>`, no la persona.
 - **Topes de flota.** Son de cada Kwirth por diseño (ver el PRD): quien quiera un techo global lo pone en
   la cuota del proveedor del LLM.
@@ -85,6 +115,12 @@ El eje por clave sí sigue aplicándose: S1 no depende de esto.
 
 ## Backlog
 
+- **Un eje de gasto POR MODELO.** Desde el cambio del 2026-10-26 se puede poner un techo a un modelo que
+  usa la key del provider, pero el contador que lo mide es el de la **key**: el gasto de todos los modelos
+  que la comparten. Para que el techo signifique lo que parece prometer haría falta un `EUsageScope` nuevo
+  con subject `<provider>::<llmId>`, que es tabla, migración y una decisión sobre qué pasa cuando conviven
+  el tope de la key y el del modelo (lo coherente: corta el primero que se alcance, como ya hacen las
+  unidades entre sí). Mientras tanto, el diálogo lo dice.
 - 🔴 **Que el usuario se entere, en TODOS los canales.** El corte siempre ocurre y siempre queda en el log
   del core, pero lo que llega a la pantalla depende de cada canal: pinocchio, excubitor, montag, situs y
   censor tienen `catch` y lo muestran; **agora e iter no tenían ninguno**. Agora se arregló en S1 porque un

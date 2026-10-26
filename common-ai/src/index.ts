@@ -73,8 +73,23 @@ export interface ILlmProvider {
     /*
         Limits on THIS provider's key. They cover every LLM that borrows it (useProviderKey), because the
         key is what the provider bills: two LLM entries on the same key share one budget.
+
+        🔴 Since the prices moved here they are a DEFAULT, not a ceiling: a model that sets its own
+        limits uses those instead. See `effectiveLimits` in back.ts.
     */
     limits?: IUsageLimits
+    /*
+        Default prices for this provider's models, in currency per million tokens.
+
+        They are a FALLBACK, not the price: within one provider —and on one key— each model costs a
+        different amount, so what a model declares always wins. Here goes what is true for the provider
+        as a whole, so that adding a model does not mean looking its price up again.
+
+        Left empty, a model with no price of its own counts as 0: a cost ceiling cannot be enforced on
+        a price nobody has stated.
+    */
+    inputCostPerMillion?: number
+    outputCostPerMillion?: number
 }
 
 export interface ILlm {
@@ -84,12 +99,19 @@ export interface ILlm {
     temperature: number
     useProviderKey: boolean
     key: string
+    /*
+        This model's prices, per million tokens. UNDEFINED means "the provider's", which is why they are
+        optional and not zero: 0 is a stated price —free— and the two cannot be told apart otherwise.
+    */
     inputCostPerMillion?: number
     outputCostPerMillion?: number
     /*
-        Limits on THIS model's own key, and only meaningful when it has one (useProviderKey === false).
-        With a borrowed key the budget is the provider's, and setting it here would split in two a bill
-        that the provider keeps as one.
+        Limits for THIS model. Editable always, borrowed key or not: a cheap model and an expensive one
+        on the same key are not the same budget, which is what asking for one ceiling per key could not
+        express. Empty here means the provider's limits apply.
+
+        ⚠️ Spending is counted PER KEY (EUsageScope.LLM_KEY), so on a borrowed key a ceiling set here is
+        measured against what every model sharing that key has spent. The dialog says so.
     */
     limits?: IUsageLimits
     data?: unknown

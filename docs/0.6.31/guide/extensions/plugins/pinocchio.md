@@ -56,7 +56,9 @@ A provider has two separate fields, and the distinction matters:
 | **Name** | *Your* identifier for this particular provider instance — it's what you pick later when you define an LLM. You can register several instances of the same kind (`openai-prod`, `openai-lab`), each with its own key. |
 | **Type** | Which **SDK adapter** kwirth uses to talk to it: `google`, `openai`, `openrouter`, `mistral`, `groq`, `deepseek`, `anthropic` or `openai-compat`. |
 | **API Key / Token** | The credential. Stored in a Kubernetes **Secret**; use the **eye** to reveal it. |
-| **Base URL** | Only for **`openai-compat`** — the base URL of the OpenAI-compatible API (must end in `/v1`). |
+| **Base URL** | Only for **`openai-compat`** — the base URL of the OpenAI-compatible API (must end in `/v1`). The field is always on screen, and disabled for the other types. |
+| **Default model costs** | Input/output cost per million tokens **for this provider's models**, used by any model that declares no cost of its own. A default, not a price: each model can override it. |
+| **Usage limits** | Ceilings on **this key** — tokens in, tokens out, calls and cost, per day and per month. They apply to every model that borrows the key, and to those that set no limits of their own. |
 
 **`openai-compat`** is the escape hatch for anything that speaks the OpenAI API without being OpenAI: **Huawei MaaS**, **vLLM**, **LM Studio**, an internal gateway… Pick the type, fill in the **Base URL**, and it behaves like any other provider. The screenshot above shows exactly that: a provider named *HUAWEI*, of type *openai-compat*, pointing at a Huawei MaaS endpoint.
 
@@ -66,7 +68,23 @@ A provider has two separate fields, and the distinction matters:
 
 ![AI LLM configuration](../../../_media/guide/ai-llm-config.png)
 
-Each LLM entry has an **LLM ID** (the name you pick later in triggers and the Playground), a **Provider** (one of the ones you registered above, by its *Name*), a **Model ID** — free text, the provider's own model identifier, e.g. `gemini-2.5-flash` or `glm-5.2` — a **temperature**, and optional **input/output cost per million tokens** (used to compute the cost figures you saw in Censor's performance dashboard). By default it **uses the provider's API key**, or you can enter a **specific key** for that model. Manage entries with **New / Remove / Add** and **Import / Export**.
+Each LLM entry has an **LLM ID** (the name you pick later in triggers and the Playground), a **Provider** (one of the ones you registered above, by its *Name*), a **Model ID** — free text, the provider's own model identifier, e.g. `gemini-2.5-flash` or `glm-5.2` — a **temperature**, and its **input/output cost per million tokens** (used to compute the cost figures you saw in Censor's performance dashboard). By default it **uses the provider's API key**, or you can enter a **specific key** for that model. Manage entries with **New / Remove / Add** and **Import / Export**.
+
+**Costs are per model, always editable.** Within one provider — and on one key — each model costs a
+different amount, so the price belongs to the model and not to the credential. Leave a cost **empty** and
+the model is charged at its provider's **Default model costs**: the field shows what it is about to
+inherit as a placeholder (`1.5 (provider)`). A **0** you type is a *stated* price — free, or self-hosted —
+and does **not** fall back to the provider.
+
+**Usage limits** are set the same way, on the right-hand side of the dialog, and are also editable for
+every model regardless of whose key it uses. You can cap **tokens in**, **tokens out**, **calls** and
+**cost**, per **day** and per **month**; a call goes out only if **no** enabled ceiling has been reached,
+whichever it is. Left empty, the **provider's** limits apply.
+
+> ⚠️ **Spending is accounted per API key.** If a model borrows the provider's key, a ceiling you set on
+> that model is measured against what **every** model sharing that key has spent — that is what the
+> provider bills. It is still the way to stop one model before the shared budget is gone, but it is not a
+> private budget for it.
 
 > Because this config is shared, an LLM you define here (say `gemini-31-flash-lite`) is the same one Censor offers in its config — set your models up once.
 
