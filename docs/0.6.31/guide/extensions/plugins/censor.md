@@ -183,7 +183,7 @@ See the walkthrough (with screenshots) in **[Pinocchio → AI configuration](pin
 
 ### Import / Export
 
-The **Import/Export** button moves your **censor configs** as JSON — back them up, or promote a tuned filter set from a test cluster to production. *(AI providers/LLMs have their own import/export inside their dialogs, since they're shared.)*
+The **Import/Export** button moves your **censor configs** as JSON — back them up, or promote a tuned filter set from a test cluster to production. *(The AI providers and models are shared across plugins, so they do not travel here: they go in Kwirth's own bundle — see [Moving your AI configuration](pinocchio#moving-your-ai-configuration).)*
 
 ## Admin guide
 

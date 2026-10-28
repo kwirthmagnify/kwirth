@@ -14,24 +14,23 @@ import {
     That is why the "no deep imports" rule is only for PLUGINS — there it breaks @emotion, which loads a
     copy of its own — and common-front and common-ai are the documented exception.
 */
-import Download from '@mui/icons-material/Download'
-import Upload from '@mui/icons-material/Upload'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
-
-const downloadJson = async (data: unknown, filename: string) => {
-    const json = JSON.stringify(data, null, 2)
-    const tauri = (window as any).__TAURI__
-    if (tauri?.core?.invoke) {
-        await tauri.core.invoke('save_file_dialog', { filename, content: json })
-        return
-    }
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
-    URL.revokeObjectURL(url)
-}
 import { EUsageUnit, ILlm, ILlmModel, ILlmProvider, IUsageAmounts, IUsageLimits, IUsageTotals, IUsageWindows } from './index'
+
+/*
+    🔴 These dialogs HAVE NO Import/Export of their own, and that is deliberate — do not add them back.
+
+    Both lists travel in the core's configuration bundle, under `core/sharedAi` ('AI providers and
+    models'), which is reached from ☰ → Kwirth export / Kwirth import. It writes to the very same
+    configmap and secret these dialogs do, so a second door onto the same store could only diverge from
+    it — and it had: the local export emitted a hand-written subset of the provider, so the prices and
+    the limits added on 2026-10-26 were silently dropped, and the local import replaced the whole list
+    from an unvalidated file, with a `catch {}` that said nothing when the file was not one.
+
+    The bundle also honours the 'Include credentials' tick (see `redactSharedAi` in the core), which a
+    plain download of the list in clear could not.
+*/
 
 /*
     The height of the content of BOTH config dialogs, and the one number that keeps them still.
@@ -193,7 +192,6 @@ interface IAiConfigLlmProps {
 
 const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
     const [llms, setLlms] = useState<ILlm[]>(JSON.parse(JSON.stringify(props.llms)))
-    const importLlmRef = useRef<HTMLInputElement>(null)
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
     const [showPassword, setShowPassword] = useState(false)
     const [id, setId] = useState('')
@@ -385,15 +383,6 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                 </Box>
             </DialogContent>
             <DialogActions>
-                <input ref={importLlmRef} type='file' accept='.json' style={{ display: 'none' }} onChange={e => {
-                    const f = e.target.files?.[0]; if (!f) return
-                    const reader = new FileReader()
-                    reader.onload = ev => { try { setLlms(JSON.parse(ev.target!.result as string)) } catch {} }
-                    reader.readAsText(f)
-                    e.target.value = ''
-                }} />
-                <Button variant='outlined' startIcon={<Upload fontSize='small' />} onClick={() => importLlmRef.current?.click()}>Import</Button>
-                <Button variant='outlined' startIcon={<Download fontSize='small' />} onClick={() => downloadJson(llms, 'kwirth-llms.json')}>Export</Button>
                 <Box flex={1} />
                 <Button onClick={() => props.onClose(llms)} variant='contained'>OK</Button>
                 <Button onClick={() => props.onClose(undefined)} variant='outlined'>Cancel</Button>
@@ -416,7 +405,6 @@ interface IAiConfigProviderProps {
 
 const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProviderProps) => {
     const [providers, setProviders] = useState<ILlmProvider[]>(JSON.parse(JSON.stringify(props.providers)))
-    const importProvRef = useRef<HTMLInputElement>(null)
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
     const [showPassword, setShowPassword] = useState(false)
     const [loadingModels, setLoadingModels] = useState(false)
@@ -605,15 +593,6 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                 </Box>
             </DialogContent>
             <DialogActions sx={{ p: 2 }}>
-                <input ref={importProvRef} type='file' accept='.json' style={{ display: 'none' }} onChange={e => {
-                    const f = e.target.files?.[0]; if (!f) return
-                    const reader = new FileReader()
-                    reader.onload = ev => { try { setProviders(JSON.parse(ev.target!.result as string)) } catch {} }
-                    reader.readAsText(f)
-                    e.target.value = ''
-                }} />
-                <Button variant='outlined' startIcon={<Upload fontSize='small' />} onClick={() => importProvRef.current?.click()}>Import</Button>
-                <Button variant='outlined' startIcon={<Download fontSize='small' />} onClick={() => downloadJson(providers.map(p => ({ name: p.name, type: p.type ?? p.name, key: p.key, ...(p.endpoint ? { endpoint: p.endpoint } : {}) })), 'kwirth-providers.json')}>Export</Button>
                 <Box flex={1} />
                 <Button onClick={() => props.onClose(providers)} variant='contained'>Save</Button>
                 <Button onClick={() => props.onClose(undefined)} variant='outlined'>Cancel</Button>

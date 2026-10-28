@@ -139,13 +139,15 @@ With **SQL configured**, the counters are in the database and survive a restart.
 
 ### Taking the configuration to another kwirth
 
-**☰ → kwirth portability** exports this installation's configuration to a file, and applies one from another kwirth.
+**☰ → Kwirth export** takes this installation's configuration to a file, and **☰ → Kwirth import** applies one that comes from another kwirth.
 
 ![The kwirth portability dialog](../../_media/guide/admin-kwirth-portability.png)
 
 It carries kwirth's own settings — metrics interval, log levels, marketplaces and package registries — the shared AI providers and models, and **what each extension stores**: its rules, its connections, whatever it considers its own configuration. Kwirth does not look inside: each extension decides what of its own travels, which is why an extension that has not adopted that contract yet appears in the list with the reason instead of silently going missing.
 
-Credentials are **left out unless you tick them**. A file with tokens and passwords inside ends up in somebody's downloads folder, so by default the secret fields travel **empty** rather than omitted — the destination can then see which ones it has to fill in.
+Credentials are **left out unless you tick them**. A file with tokens and passwords inside ends up in somebody's downloads folder, so by default the secret fields travel **empty** rather than omitted — the destination can then see which ones it has to fill in. Note what that means for the AI entries, where the secret is the whole point of some of them: leaving the tick off never removes a provider or a model from the file, it only blanks its key. Everything else — the name, the type, the Base URL, the default costs, the usage limits — travels either way.
+
+This is the **only** way the AI providers and models move between installations: their dialogs have no import/export of their own, precisely so that there is a single door onto a single store.
 
 Importing shows you **what would happen to each entry before anything is applied**: what is going in, what is not installed here (kwirth installs nothing on import), and what cannot receive configuration. Nothing is written until you press Import.
 

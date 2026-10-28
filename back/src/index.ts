@@ -124,9 +124,10 @@ import { DocsManager } from './tools/DocsManager'
 import { DocsApi } from './api/DocsApi'
 import { PackManager } from './tools/PackManager'
 import { PackApi } from './api/PackApi'
-import { STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS } from '@kwirthmagnify/kwirth-common-ai'
+import { ILlm, ILlmProvider, STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS } from '@kwirthmagnify/kwirth-common-ai'
 import { ConfigBundleApi } from './api/ConfigBundleApi'
 import { ConfigBundleManager } from './tools/ConfigBundleManager'
+import { redactSharedAi } from './tools/SharedAiPortability'
 import { buildExtensionRefs } from './tools/ExtensionRefs'
 const fs = require('fs')
 
@@ -1910,17 +1911,17 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                         await settingsResult!.writeWithSecrets(data as IKwirthSettings)
                     },
                     // The common AI store: the models in a configmap and the providers in a secret,
-                    // exactly as AiConfigApi stores them. The providers carry keys, so they only come out
-                    // when credentials have been asked for.
+                    // exactly as AiConfigApi stores them. BOTH are always read — what credentials decide
+                    // is whether the keys come out filled or blank, never whether the entries travel.
+                    // See `redactSharedAi`.
                     readSharedAi: async (includeCredentials: boolean) => {
                         const llmsRaw = await ri.configMaps.read('kwirth-store-common-' + STORAGE_KEY_LLMS)
-                        const llms = llmsRaw ? JSON.parse(llmsRaw as string) : []
-                        if (!includeCredentials) return { llms }
+                        const llms: ILlm[] = llmsRaw ? JSON.parse(llmsRaw as string) : []
                         const provRaw = await ri.secrets.read('kwirth-store-common-' + STORAGE_KEY_PROVIDERS)
-                        const providers = provRaw && provRaw['data']
+                        const providers: ILlmProvider[] = provRaw && provRaw['data']
                             ? JSON.parse(Buffer.from(provRaw['data'], 'base64').toString('utf8'))
                             : []
-                        return { llms, providers }
+                        return redactSharedAi({ llms, providers }, includeCredentials)
                     },
                     writeSharedAi: async (data: unknown) => {
                         const { llms, providers } = (data ?? {}) as { llms?: unknown, providers?: unknown }

@@ -62,13 +62,13 @@ A provider has two separate fields, and the distinction matters:
 
 **`openai-compat`** is the escape hatch for anything that speaks the OpenAI API without being OpenAI: **Huawei MaaS**, **vLLM**, **LM Studio**, an internal gateway… Pick the type, fill in the **Base URL**, and it behaves like any other provider. The screenshot above shows exactly that: a provider named *HUAWEI*, of type *openai-compat*, pointing at a Huawei MaaS endpoint.
 
-**Load models** asks the provider for its catalogue and caches it against that provider (here, *4 models loaded*). It's optional — you can always type a model identifier by hand in the LLM dialog — but it's the quickest way to see what a key actually gives you access to. Use **Import / Export** to move providers as JSON (the export never includes the keys' surrounding config, just `name`, `type`, `key` and `endpoint`).
+**Load models** asks the provider for its catalogue and caches it against that provider (here, *4 models loaded*). It's optional — you can always type a model identifier by hand in the LLM dialog — but it's the quickest way to see what a key actually gives you access to. To move providers between installations, use [Kwirth export / Kwirth import](#moving-your-ai-configuration): this dialog has no import/export of its own.
 
 **Config → LLM** defines the **models** you'll actually select in triggers and the Playground:
 
 ![AI LLM configuration](../../../_media/guide/ai-llm-config.png)
 
-Each LLM entry has an **LLM ID** (the name you pick later in triggers and the Playground), a **Provider** (one of the ones you registered above, by its *Name*), a **Model ID** — free text, the provider's own model identifier, e.g. `gemini-2.5-flash` or `glm-5.2` — a **temperature**, and its **input/output cost per million tokens** (used to compute the cost figures you saw in Censor's performance dashboard). By default it **uses the provider's API key**, or you can enter a **specific key** for that model. Manage entries with **New / Remove / Add** and **Import / Export**.
+Each LLM entry has an **LLM ID** (the name you pick later in triggers and the Playground), a **Provider** (one of the ones you registered above, by its *Name*), a **Model ID** — free text, the provider's own model identifier, e.g. `gemini-2.5-flash` or `glm-5.2` — a **temperature**, and its **input/output cost per million tokens** (used to compute the cost figures you saw in Censor's performance dashboard). By default it **uses the provider's API key**, or you can enter a **specific key** for that model. Manage entries with **New / Remove / Add**.
 
 **Costs are per model, always editable.** Within one provider — and on one key — each model costs a
 different amount, so the price belongs to the model and not to the credential. Leave a cost **empty** and
@@ -87,6 +87,23 @@ whichever it is. Left empty, the **provider's** limits apply.
 > private budget for it.
 
 > Because this config is shared, an LLM you define here (say `gemini-31-flash-lite`) is the same one Censor offers in its config — set your models up once.
+
+### Moving your AI configuration
+
+Neither of these two dialogs has an Import/Export button, and that is on purpose: your providers and your
+models travel in **Kwirth's own configuration bundle**, together with the rest of the installation.
+
+Go to **☰ → Kwirth export**, and tick **AI providers and models** under *Kwirth* — it is already ticked by
+default. You get a single `kwirth-config.json` that the destination takes in through **☰ → Kwirth import**,
+where you choose again what gets applied. Having one door instead of two is what keeps the two from
+drifting apart: the old per-dialog export wrote its own reduced copy of a provider and, when costs and
+limits were added, it quietly stopped carrying them.
+
+> 🔑 **API keys only travel if you ask for them.** The export has an **Include credentials** tick, unticked
+> by default — a bundle tends to end up in somebody's downloads folder. Leave it off and everything still
+> travels (names, types, Base URLs, default costs, limits), but every key arrives **empty**, for you to
+> fill in at the destination. Tick it and the keys go in the file, in readable form: that is what you asked
+> for, so keep the file accordingly.
 
 ## The Playground
 
@@ -138,7 +155,7 @@ Use **New / Clone / Remove / Add** to manage triggers and their versions. The sa
 
 ## Configuration import / export
 
-Everything Pinocchio needs — **triggers**, their versions, and the list of **LLMs** — can be moved as JSON via **Config → Import / Export**. Use it to promote a tuned setup from a test cluster to production, to back up your triggers, or to share a rule set with a teammate. *(AI **providers** and **LLMs** have their own Import/Export inside their config dialogs, since they're shared across plugins.)*
+Everything Pinocchio needs — **triggers**, their versions, and the list of **LLMs** — can be moved as JSON via **Config → Import / Export**. Use it to promote a tuned setup from a test cluster to production, to back up your triggers, or to share a rule set with a teammate. *(The AI **providers** and **models** themselves are shared across plugins, so they do not travel here: they go in Kwirth's own bundle — see [Moving your AI configuration](#moving-your-ai-configuration).)*
 
 ## Admin guide
 

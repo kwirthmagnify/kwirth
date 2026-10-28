@@ -164,6 +164,30 @@ entren las demás.
   tablas de Agora —qué es configuración y qué son datos— y la obligación de ser idempotente.
 - Capturas de los dos diálogos.
 
+### S5 — La IA, puerta única  ✅ HECHO (2026-10-28)
+
+Los diálogos de **AI Providers** y **AI Models** tenían su propio Import/Export, de antes del bundle.
+Eran una **segunda puerta al mismo configmap y al mismo secret**, y ya habían divergido: el export local
+escribía una copia reducida del provider a mano (`name`, `type`, `key`, `endpoint`), así que los precios
+y los límites añadidos el 2026-10-26 dejaron de viajar sin que nadie se enterara; y el import sustituía
+la lista entera desde un fichero sin validar, con un `catch {}` que no decía nada cuando el fichero no
+era uno. Fuera los dos, en `kwirth-common-ai@0.5.77`, con un comentario en cabecera para que no vuelvan.
+
+Quitarlos obligó a cerrar antes lo que el bundle no cumplía **de su propia regla** (`ConfigBundle.ts`:
+un secreto viaja VACÍO, nunca omitido), porque sin eso el reemplazo sí perdía cosas:
+
+- `readSharedAi` **omitía los providers enteros** cuando no se pedían credenciales. No ocultaba las
+  keys: perdía nombres, tipos, endpoints, precios por defecto y límites — y en el destino
+  `writeSharedAi` ni tocaba el secret, porque no llegaba nada.
+- y entregaba los **modelos en crudo** del configmap, así que un modelo con key propia la sacaba en
+  claro en un fichero cuyo autor había dejado la casilla sin marcar a propósito.
+
+La redacción sale ahora a `back/src/tools/SharedAiPortability.ts` (`redactSharedAi`), función pura y por
+tanto testeable: la implementación vivía inline en `index.ts` y el harness solo tenía un doble. **9 tests
+nuevos** (841 en el core) y **4 casos e2e** en `kwirth-portability.spec.ts`.
+
+Con credenciales marcadas las keys viajan y no hay nada que defender: es exactamente lo que se ha pedido.
+
 ---
 
 ## Lo que cambió al construirlo
@@ -203,6 +227,10 @@ Anotado para que no se pierda, **sin compromiso de fecha**:
 - **Temas, homepages y logins**: su configuración la guarda el core (`kwirth-theme-assignments`, la
   config de un login) y hoy **no entra en el bundle**. Encajan en `CoreManagedConfig` igual que los
   demás; se dejaron fuera por acotar.
+- **Granularidad de `core/sharedAi`**: hoy es **una unidad**, así que no se puede llevar *solo* los
+  providers o *solo* los modelos. Partirlo en dos claves (`core/aiProviders`, `core/aiLlms`) toca
+  `ConfigBundle.ts` (la clave y `IConfigBundleCore`), `PortabilityShared.tsx`, los dos diálogos y
+  `ConfigBundleManager`. Anotado al quitar el Import/Export de los diálogos (S5); nadie lo ha pedido.
 - Importar desde una URL o una ruta, para usarlo desde un pipeline de despliegue.
 - Ampliar `IExtension` con lo que no sea portabilidad (identidad, salud, diagnóstico).
 - Captura del diálogo de **import** para la guía: la de export ya está.
