@@ -79,6 +79,7 @@ kwirth-bundled.json
 /providers/host-metrics/
 /senders/datadog/
 /common-cloud/
+/common-metrics/
 
 # DCEs de pago: COMODIN a proposito, igual que la familia SUSE. Los DCE publicos (nettools, three, xyflow,
 # file-manager, sample) estan listados uno a uno como EXCEPCION mas abajo, de modo que un DCE nuevo nace
