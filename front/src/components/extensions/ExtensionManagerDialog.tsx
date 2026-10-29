@@ -568,14 +568,24 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
 
     const installedActions = (entry: TInstalled): IExtensionAction[] => {
         const actions = [...(d.actions?.(entry, EManagerSection.INSTALLED) ?? [])]
-        if (d.renderConfigDialog) {
-            // Visible and disabled with the reason, never hidden: an extension with no configuration has
-            // to SAY it has none, not leave the gap where everybody else's gear would be.
+        /*
+            Visible and disabled with the reason, never hidden: an extension with no configuration has
+            to SAY it has none, not leave the gap where everybody else's gear would be.
+
+            🔴 Also when the family has NO dialog at all. The condition used to be `if
+            (d.renderConfigDialog)`, which contradicted the line above: a family without one lost its
+            gear entirely and left exactly the gap this is written to avoid. It showed up the day the
+            plugins' raw-JSON editor was removed — they kept `canConfigure`, with its reason, and the
+            gear vanished anyway.
+        */
+        if (d.renderConfigDialog || d.canConfigure) {
             const verdict = d.canConfigure?.(entry) ?? { allowed: true }
+            // Nothing to open is as good a reason to stay off as the extension refusing.
+            const allowed = verdict.allowed && Boolean(d.renderConfigDialog)
             actions.push({
                 icon: <Settings fontSize='small' />,
-                tooltip: verdict.allowed ? 'Configure' : (verdict.reason ?? 'No configuration available'),
-                disabled: !verdict.allowed,
+                tooltip: allowed ? 'Configure' : (verdict.reason ?? 'No configuration available'),
+                disabled: !allowed,
                 onClick: () => setConfiguring(entry)
             })
         }

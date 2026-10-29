@@ -105,7 +105,6 @@ const senderDescriptor: IExtensionManagerDescriptor<IInstalledSender, ISenderMan
             // general one. It is really checked, so publishing it links it by itself.
             preferredHelpSection: `guide/extensions/senders/${s.id}`,
             basePath: `/core/senders/${s.id}`,
-            exportName: `sender-${s.id}`,
             onClose
         })
 }

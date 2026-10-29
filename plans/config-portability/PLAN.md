@@ -253,6 +253,53 @@ tests que no llegaban a mirar lo que miden. Un login y dos exports en el `before
 ni un reintento. Queda apuntado en *Fuera de esta tanda* que hay ocho specs más del core con el mismo
 vicio.
 
+### S7 — Una sola puerta, y el import reemplaza  ✅ HECHO (2026-10-29)
+
+Salió de una pregunta del usuario sobre los Import/Export de los senders, y lo que apareció al mirar fue
+peor de lo que la pregunta sugería.
+
+🔴 **Había CUATRO puertas para sacar configuración a un fichero, y una filtraba contraseñas.** El Export
+del gestor de configuraciones (`ConfigListDialog`, que sirve a **senders y webhooks**) serializaba las
+configuraciones **tal cual**, sin casilla de credenciales y sin aviso de ninguna clase: exportar las de
+SMTP dejaba la contraseña del servidor de correo **en claro** en la carpeta de descargas. Cinco senders
+tienen campos `password`. Eliminado — por el bundle salen vacías, porque los trece declaran su esquema.
+
+Las otras tres:
+
+- **`ConfigJsonDialog`**, el editor de JSON crudo de los plugins. **Documentaba existir** para «llevar la
+  misma configuración de un Kwirth a otro sin volver a teclearla»: un sustituto del bundle escrito antes
+  de que el bundle existiera. Y **ningún plugin declara `configSchema`**, así que ni llegaba a abrirse.
+  Eliminado.
+- **El gear de plugins**, que lo abría: queda apagado con su motivo. El día que un plugin necesite
+  configuración de instalación la recupera por el mecanismo de las demás extensiones —esquema declarado
+  y formulario—, no con una caja propia.
+- **El Export de `http-pull-push`**: **se queda**. Tiene casilla *Include credentials* y avisa del texto
+  en claro, así que es duplicidad sin peligro. Anotado en *Fuera de esta tanda*.
+
+🔴 **Y el import REEMPLAZA en todas partes.** Había dos semánticas conviviendo: un sender sustituía su
+lista entera y un webhook añadía, así que el mismo fichero dejaba el sistema de dos formas distintas
+según la entrada. Decisión del usuario, literal: *«reemplazo siempre, en todas las extensiones, cero
+merges»*. Se alinearon el **webhook** y el **IdP** (que nunca borraba) en el core, y fuera de él
+**sugarless** (upsert por email), **excubitor** (landscapes y sites por nombre) e **iter** (solo copiaba
+las claves presentes, así que una clave portable ausente conservaba la del destino).
+
+**La única excepción, deliberada**: una clave que el fichero **no menciona** no se toca. Callar no es
+pedir que se borre, y borrar por omisión destruiría más de lo que se ha pedido. Dentro de lo que el
+fichero sí menciona, reemplazo total.
+
+⚠️ **El webhook pierde el token** de lo que se va, que es la URL por la que le llaman desde fuera y que
+no viaja en el fichero: hay que repegarla en quien llame. Lo planteé como objeción, el usuario reafirmó
+la decisión, y queda documentado en su guía — que además **decía que los webhooks no eran exportables**,
+lo cual dejó de ser cierto cuando se creó el bundle.
+
+**+4 tests** en el core (854) y **+3** en excubitor (1325). El reemplazo **no se prueba en e2e** a
+propósito: exigiría importar de verdad, y eso escribe sobre el Kwirth contra el que corre. Va en el
+harness, que es donde se puede borrar sin consecuencias.
+
+📌 Y un fallo del core que destapó un e2e: `ExtensionManagerDialog` **ocultaba** el gear cuando la
+familia no tiene diálogo, contradiciendo su propio comentario —*«visible and disabled with the reason,
+never hidden»*— y dejando justo el hueco que ese comentario existe para evitar.
+
 ---
 
 ## Lo que cambió al construirlo
@@ -306,6 +353,10 @@ Anotado para que no se pierda, **sin compromiso de fecha**:
 - Importar desde una URL o una ruta, para usarlo desde un pipeline de despliegue.
 - Ampliar `IExtension` con lo que no sea portabilidad (identidad, salud, diagnóstico).
 - Captura del diálogo de **import** para la guía: la de export ya está.
+- **La cuarta puerta: el Export de `http-pull-push`.** Es el único Import/Export propio que queda, y se
+  dejó porque **no es peligroso** —tiene casilla *Include credentials* y avisa de que el fichero sale en
+  claro— pero sigue siendo otro camino para lo mismo. Si el criterio es una puerta y punto, se va igual
+  que las otras tres; es OSS, así que es trabajo del core.
 - **Distinguir el motivo de un `PARTIAL`.** Hoy el aviso es uno solo —"no está arrancada aquí"— y los
   dos motivos no se arreglan igual: un canal **REMOTE** se hospeda en otro Kwirth y hay que exportarlo
   desde allí (accionable), mientras que un provider que nadie requiere simplemente no está. El core lo

@@ -10,7 +10,9 @@ import { ConfigFields } from './ConfigFields'
     ONE configuration, as a form, built from the extension's `configSchema`.
 
     It is one of the four ways an extension has of being configured, and the files are named after that
-    way: ConfigFormDialog (this one), ConfigListDialog (several, with names), ConfigJsonDialog (free JSON)
+    way: ConfigFormDialog (this one) and ConfigListDialog (several, with names). There was a third,
+    ConfigJsonDialog, a raw JSON box with its own export/import; it is gone — the bundle takes a
+    configuration from one Kwirth to another, and whoever needs a form declares a schema and uses this
     and ConfigFrontDialog (painted by the extension itself).
 
     It was copied across FIVE management dialogs (logins, senders, providers, webhooks and IdP) with the

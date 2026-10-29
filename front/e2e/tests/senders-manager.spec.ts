@@ -99,7 +99,7 @@ test.describe('gestor generico de extensiones: senders', () => {
         }
     })
 
-    test('la configuracion lista los destinos por nombre, y ofrece llevarselos', async () => {
+    test('la configuracion lista los destinos por nombre, y ya NO ofrece llevarselos', async () => {
         const conVarios = senders.find(s => !s.hasFront && s.configNames.length > 1) ?? senders.find(s => !s.hasFront && s.configNames.length > 0)
         test.skip(!conVarios, 'ningun sender del core con configuraciones')
 
@@ -112,9 +112,16 @@ test.describe('gestor generico de extensiones: senders', () => {
             await expect(cfg.getByText(nombre, { exact: true }).first(), `falta el destino '${nombre}'`).toBeVisible()
         }
 
-        // And they can be taken to another Kwirth. Export is NOT pressed: the file carries the credentials.
-        await expect(cfg.getByRole('button', { name: 'Export' })).toBeEnabled()
-        await expect(cfg.getByRole('button', { name: 'Import' })).toBeVisible()
+        /*
+            🔴 Y este diálogo ya NO lleva Export ni Import. Los tenía, y hacían dos cosas mal: el export
+            serializaba las configuraciones tal cual, así que las CONTRASEÑAS salían en claro a un
+            fichero sin casilla ni aviso; y el import fusionaba mientras el bundle reemplaza, así que el
+            mismo contenido dejaba el sistema de dos formas según por dónde entrara.
+
+            Las configuraciones de un sender viajan por ☰ Kwirth export, que las vacía por esquema.
+        */
+        await expect(cfg.getByRole('button', { name: 'Export' })).toHaveCount(0)
+        await expect(cfg.getByRole('button', { name: 'Import' })).toHaveCount(0)
         await cfg.getByRole('button', { name: 'Close' }).click()
     })
 

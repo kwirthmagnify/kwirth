@@ -66,31 +66,32 @@ test.describe('gestor generico de extensiones: plugins', () => {
         }
     })
 
-    test('🔴 la rueda dentada SOLO en los plugins que declaran configuracion', async () => {
+    test('🔴 la rueda dentada de los plugins, APAGADA y diciendo por que', async () => {
         /*
-            This was the reported symptom: the cog showed on all of them, including the ones that read no
-            installation configuration at all, and it opened a JSON editor that did nothing. Now the
-            plugin declares it (configSchema in its package.json) and the manager offers it only on those.
+            El sintoma original: la rueda salia en todos, incluidos los que no leen configuracion de
+            instalacion alguna, y abria un editor de JSON que no hacia nada. Primero se ato a que el
+            plugin lo declarara (`configSchema`), y despues se quito el editor entero — ver abajo.
         */
         /*
             ⚠️ The cog does NOT disappear: it stays visible and disabled with the reason, which is the
             project's UI rule. What is counted is how many are ALIVE.
         */
-        const configurables = delBack.filter(p => (p.configSchema?.length ?? 0) > 0)
+        /*
+            🔴 Y hoy NINGUNA está viva. La rueda abría `ConfigJsonDialog`, una caja de JSON en crudo con
+            su propio Export/Import, y ese diálogo se eliminó: existía —lo decía él mismo— para «llevar
+            la misma configuración de un Kwirth a otro sin volver a teclearla», que es exactamente lo
+            que hace ☰ Kwirth export. Ningún plugin declaraba `configSchema`, así que no llegaba a
+            abrirse nunca.
+
+            El día que un plugin necesite configuración de instalación, recupera la rueda por el
+            mecanismo que ya usan las demás extensiones —esquema declarado y formulario— y este test
+            tendrá que decir otra cosa. Mientras tanto, cero.
+        */
         const vivas = await dialog().locator('button[aria-label="Configure"]:not([disabled])').count()
-        expect(vivas, `hay ${vivas} ruedas vivas y solo ${configurables.length} plugins declaran configuracion`).toBe(configurables.length)
+        expect(vivas, 'un plugin tiene la rueda viva y ya no hay diálogo que abrir').toBe(0)
 
-        // And the dead one has to SAY why, rather than simply not responding.
-        if (configurables.length < delBack.length) {
-            await expect(dialog().locator('span[aria-label="This plugin takes no installation config"] button').first()).toBeDisabled()
-        }
-
-        // If any declares it, its own opens its editor.
-        if (configurables.length > 0) {
-            await dialog().locator('button[aria-label="Configure"]:not([disabled])').first().click()
-            await expect(page.locator('.MuiDialog-root')).toHaveCount(2, { timeout: 15000 })
-            await page.getByRole('button', { name: /cancel/i }).last().click()
-        }
+        // Y la apagada tiene que DECIR por qué, en vez de simplemente no responder.
+        await expect(dialog().locator('span[aria-label="This plugin takes no installation config"] button').first()).toBeDisabled()
     })
 
     test('el catalogo dice que necesita y que aprovecha cada plugin', async () => {

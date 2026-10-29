@@ -157,6 +157,18 @@ Importing shows you **what would happen to each entry before anything is applied
 
 > ⚠️ **What arrives is what gets stored, blanks included.** If you export without ticking credentials and then import that file, the secret fields arrive empty and are saved empty — the passwords, tokens and keys at the destination are replaced by nothing. It is deliberate: whoever imports credentials imports what the file carries, and the alternative ("an empty field means leave the old one alone") makes it impossible to ever clear one. When you are moving a configuration onto a kwirth that already has credentials in it, either tick the box when exporting or expect to fill them in again.
 
+### 🔴 Importing REPLACES
+
+The same rule holds for every entry in the file, and it is worth stating plainly because it is the one that surprises people: **what you end up with is exactly what the file carried**.
+
+An extension's sending configurations, a connector's identity instances, a plugin's rules — whatever the destination had and the file does not mention **is removed**. Importing is not "add these to what I have"; it is "leave this kwirth like the one the file came from".
+
+That is the point of the whole thing. An import that sometimes replaced and sometimes merged would force you to remember which extension does which, and nobody can; worse, two kwirths would never actually end up alike, because the destination would keep its own leftovers on top of whatever arrived.
+
+The preview is where you check this **before** anything is written. And there is one limit, on purpose: an entry the file does not mention **at all** is left alone. A bundle that says nothing about your senders is not a bundle that wants them gone — only what it does mention gets replaced.
+
+> If what you want is to add a configuration without touching the rest, do not use the bundle for it: open that extension's own dialog and add it there.
+
 Finally, the file declares the format it was written in, so a kwirth that is **older** than the one that produced it says it cannot read it and tells you to upgrade, instead of applying half a file it does not understand.
 
 ### The community marketplace, which you can remove

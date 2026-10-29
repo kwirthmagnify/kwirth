@@ -2,7 +2,6 @@ import React from 'react'
 import { Extension } from '../../icons'
 import { EExtensionType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionRequirement, IExtensionVerdict } from './extensionManagerModel'
-import { ConfigJsonDialog } from './ConfigJsonDialog'
 
 /*
     The `plugin` type's descriptor for the generic manager (plan: plans/completed/extension-managers-ui/PLAN.md).
@@ -92,18 +91,23 @@ const makePluginDescriptor = (deps: IPluginDescriptorDeps): IExtensionManagerDes
     toModel,
     canUninstall,
 
-    // The gear, alive only on the plugins that declare configuration. On the rest it stays disabled
-    // saying why: it used to come out active on all of them and opened an editor that did nothing.
-    canConfigure: p => (p.configSchema?.length ?? 0) > 0
-        ? { allowed: true }
-        : { allowed: false, reason: 'This plugin takes no installation config' },
-    renderConfigDialog: (p, onClose) => React.createElement(ConfigJsonDialog, {
-        title: `Configure ${p.displayName || p.id}`,
-        hint: 'Installation config (JSON) for this plugin — read by the plugin at runtime.',
-        endpoint: `/core/plugins/${p.id}/config`,
-        exportName: p.id,
-        onClose
-    }),
+    /*
+        The gear stays disabled, saying why.
+
+        It used to open `ConfigJsonDialog`, a raw JSON editor with its own Export and Import. That
+        dialog existed — it said so itself — so that "the same configuration is taken from one Kwirth to
+        another without typing it again", and ☰ Kwirth export does exactly that now: a plugin's
+        installation config travels in the bundle as `coreConfig`.
+
+        🔴 And nothing was lost by removing it: the gear only came alive for plugins declaring
+        `configSchema`, and NO plugin declares one, so it could not be opened at all.
+
+        The day a plugin does need installation configuration, it gets the gear back through the
+        MECHANISM THE OTHER EXTENSIONS ALREADY USE — a declared schema painted as a form by
+        `ConfigFormDialog`, the way logins, providers and IdP connectors do it — and not a raw JSON box
+        of its own. One way of configuring an extension, not one per family.
+    */
+    canConfigure: () => ({ allowed: false, reason: 'This plugin takes no installation config' }),
 
     // The channel is loaded and unloaded hot: without this the page would have to be reloaded to use a
     // freshly installed plugin.

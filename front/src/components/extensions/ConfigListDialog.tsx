@@ -55,8 +55,6 @@ interface IConfigListDialogProps {
     preferredHelpSection?: string
     /** THAT extension's back-end route, e.g. '/core/webhooks/jira'. */
     basePath: string
-    /** The file's name on export, without an extension. Without it neither export nor import is offered. */
-    exportName?: string
     onClose: () => void
     perConfigPanel?: React.ComponentType<IPerConfigPanelProps>
 }
@@ -85,16 +83,6 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     const [baseOpen, setBaseOpen] = useState(false)
     const [savingBase, setSavingBase] = useState(false)
     const [ayuda, setAyuda] = useState(props.helpSection)
-
-    // Export and import: which configurations go in, and whether the base goes too.
-    const [exportOpen, setExportOpen] = useState(false)
-    const [exportSel, setExportSel] = useState<Set<string>>(new Set())
-    const [exportBase, setExportBase] = useState(true)
-    const [importOpen, setImportOpen] = useState(false)
-    const [importData, setImportData] = useState<{ configs: TConfigValues[], base: TConfigValues }>({ configs: [], base: {} })
-    const [importSel, setImportSel] = useState<Set<string>>(new Set())
-    const [importBase, setImportBase] = useState(true)
-    const importFileRef = useRef<HTMLInputElement>(null)
 
     const reload = async () => {
         setLoading(true)
@@ -167,51 +155,18 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         return v !== undefined && v !== '' && v !== false
     })
 
-    // ── taking the configurations to another Kwirth ────────────────────────────
-    const exportar = () => {
-        const elegidas = configs.filter(c => exportSel.has(c.name))
-        const comunes = exportBase ? base : {}
-        const blob = new Blob([JSON.stringify({ ...comunes, configs: elegidas }, null, 2)], { type: 'application/json' })
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(blob)
-        a.download = `kwirth-${props.exportName}-configs.json`
-        a.click()
-        URL.revokeObjectURL(a.href)
-        setExportOpen(false)
-    }
-
-    const abrirImportacion = async (file: File) => {
-        try {
-            const { configs: leidas, ...comunes } = JSON.parse(await file.text())
-            const lista = Array.isArray(leidas) ? leidas as TConfigValues[] : []
-            setImportData({ configs: lista, base: comunes })
-            setImportSel(new Set(lista.map(c => c.name)))
-            setImportBase(Object.keys(comunes).length > 0)
-            setImportOpen(true)
-        }
-        catch (err) { setError(`Import failed: ${err}`) }
-        finally { if (importFileRef.current) importFileRef.current.value = '' }
-    }
-
     /*
-        Importing does NOT delete what is there: the chosen configurations are added to the existing
-        ones, and one with the same name is overwritten. Bringing in a file cannot take away
-        configurations that were not in it.
+        🔴 Aqui vivian `exportar`, `abrirImportacion` y `confirmarImportacion`, y se fueron en el mismo
+        cambio que los botones del pie (ver el comentario en DialogActions). Lo que importa recordar:
+
+        · el export serializaba las configuraciones TAL CUAL, asi que las contraseñas salian EN CLARO;
+        · el import FUSIONABA —añadia y sobrescribia por nombre, sin quitar nada— mientras que el
+          bundle de Kwirth reemplaza. El mismo contenido dejaba el sistema de dos formas distintas
+          segun por donde entrara.
+
+        Las configuraciones de senders y webhooks viajan ahora por ☰ Kwirth export, que las vacia por
+        `getConfigSchema()` salvo que se marquen las credenciales.
     */
-    const confirmarImportacion = async () => {
-        setImportOpen(false)
-        setError(undefined)
-        try {
-            const elegidas = importData.configs.filter(c => importSel.has(c.name))
-            const restantes = configs.filter(c => !elegidas.some(e => e.name === c.name))
-            const comunes = importBase ? { ...base, ...importData.base } : base
-            const res = await fetch(`${backendUrl}${props.basePath}/configs`, addPutAuthorization(accessString, JSON.stringify({ ...comunes, configs: [...restantes, ...elegidas] })))
-            if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
-            await reload()
-            setError(`Imported ${elegidas.length} config(s)`)
-        }
-        catch (err) { setError(`Import failed: ${err}`) }
-    }
 
     const editar = (cfg: TConfigValues) => {
         setEditingName(cfg.name)
@@ -457,20 +412,19 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
                     }
                 </Box>
             </DialogContent>
-            <DialogActions sx={{ justifyContent: props.exportName ? 'space-between' : 'flex-end', px: 2 }}>
-                {props.exportName && <Stack direction='row' spacing={1}>
-                    <input ref={importFileRef} type='file' accept='.json' style={{ display: 'none' }}
-                        onChange={e => { const f = e.target.files?.[0]; if (f) abrirImportacion(f) }} />
-                    <Tooltip title='Export configs to JSON'>
-                        <span>
-                            <Button size='small' startIcon={<Download />} disabled={configs.length === 0}
-                                onClick={() => { setExportSel(new Set(configs.map(c => c.name))); setExportOpen(true) }}>Export</Button>
-                        </span>
-                    </Tooltip>
-                    <Tooltip title='Import configs from JSON'>
-                        <Button size='small' startIcon={<Upload />} onClick={() => importFileRef.current?.click()}>Import</Button>
-                    </Tooltip>
-                </Stack>}
+            {/*
+                Aqui estaban Export e Import, y se fueron por dos razones.
+
+                🔴 La primera es que el Export escribia LAS CONTRASEÑAS EN CLARO. Serializaba las
+                configuraciones tal cual, sin casilla de credenciales y sin aviso de ninguna clase, asi
+                que exportar las de SMTP dejaba la contraseña del servidor de correo en un fichero en la
+                carpeta de descargas. El bundle las vacia por `getConfigSchema()` salvo que se marquen.
+
+                La segunda, que eran una SEGUNDA PUERTA al mismo almacen: ☰ Kwirth export ya se lleva
+                las configuraciones de senders y webhooks, y tener dos obligaba a investigar cual
+                exportaba que — ademas de discrepar, porque aquella fusionaba y el bundle reemplaza.
+            */}
+            <DialogActions sx={{ justifyContent: 'flex-end', px: 2 }}>
                 <Button onClick={props.onClose}>Close</Button>
             </DialogActions>
         </Dialog>
@@ -495,82 +449,6 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
             </Dialog>
         )}
 
-        {/* Que se lleva uno al exportar. La base va aparte a proposito: suele llevar credenciales. */}
-        {exportOpen && (
-            <Dialog open maxWidth='xs' fullWidth>
-                <DialogTitleHelp section={ayuda ?? 'guide/extensions/index'} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Export configs</DialogTitleHelp>
-                <DialogContent>
-                    <Stack spacing={0.5} sx={{ pt: 0.5 }}>
-                        <FormControlLabel label={<Typography variant='body2' fontWeight='bold'>Select all</Typography>}
-                            control={<Checkbox size='small'
-                                checked={exportSel.size === configs.length && configs.length > 0}
-                                indeterminate={exportSel.size > 0 && exportSel.size < configs.length}
-                                onChange={e => setExportSel(e.target.checked ? new Set(configs.map(c => c.name)) : new Set())} />} />
-                        <Divider />
-                        {configs.map(cfg => (
-                            <FormControlLabel key={cfg.name}
-                                label={<Box>
-                                    <Typography variant='body2'>{cfg.name}</Typography>
-                                    {cfg.description && <Typography variant='caption' color='text.secondary'>{cfg.description}</Typography>}
-                                </Box>}
-                                control={<Checkbox size='small' checked={exportSel.has(cfg.name)}
-                                    onChange={e => setExportSel(prev => {
-                                        const n = new Set(prev)
-                                        if (e.target.checked) n.add(cfg.name)
-                                        else n.delete(cfg.name)
-                                        return n
-                                    })} />} />
-                        ))}
-                        {Object.keys(base).length > 0 && <>
-                            <Divider />
-                            <FormControlLabel label={<Typography variant='body2' color='text.secondary'>Include base configuration</Typography>}
-                                control={<Checkbox size='small' checked={exportBase} onChange={e => setExportBase(e.target.checked)} />} />
-                        </>}
-                    </Stack>
-                </DialogContent>
-                <DialogActions>
-                    <Button variant='contained' disabled={exportSel.size === 0} onClick={exportar}>Export ({exportSel.size})</Button>
-                    <Button onClick={() => setExportOpen(false)}>Cancel</Button>
-                </DialogActions>
-            </Dialog>
-        )}
-
-        {/* Y que entra al importar. Lo que no se elige NO se toca: importar añade y sobreescribe por
-            nombre, nunca se lleva por delante configuraciones que no venian en el fichero. */}
-        {importOpen && (
-            <Dialog open maxWidth='xs' fullWidth>
-                <DialogTitleHelp section={ayuda ?? 'guide/extensions/index'} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Import configs</DialogTitleHelp>
-                <DialogContent>
-                    <Stack spacing={0.5} sx={{ pt: 0.5 }}>
-                        {importData.configs.length === 0
-                            ? <Typography variant='body2' color='text.secondary'>The file carries no configs.</Typography>
-                            : importData.configs.map(cfg => (
-                                <FormControlLabel key={cfg.name}
-                                    label={<Box>
-                                        <Typography variant='body2'>{cfg.name}</Typography>
-                                        {configs.some(c => c.name === cfg.name) && <Typography variant='caption' color='warning.main'>replaces an existing one</Typography>}
-                                    </Box>}
-                                    control={<Checkbox size='small' checked={importSel.has(cfg.name)}
-                                        onChange={e => setImportSel(prev => {
-                                            const n = new Set(prev)
-                                            if (e.target.checked) n.add(cfg.name)
-                                            else n.delete(cfg.name)
-                                            return n
-                                        })} />} />
-                            ))}
-                        {Object.keys(importData.base).length > 0 && <>
-                            <Divider />
-                            <FormControlLabel label={<Typography variant='body2' color='text.secondary'>Include base configuration</Typography>}
-                                control={<Checkbox size='small' checked={importBase} onChange={e => setImportBase(e.target.checked)} />} />
-                        </>}
-                    </Stack>
-                </DialogContent>
-                <DialogActions>
-                    <Button variant='contained' disabled={importSel.size === 0 && !importBase} onClick={confirmarImportacion}>Import</Button>
-                    <Button onClick={() => setImportOpen(false)}>Cancel</Button>
-                </DialogActions>
-            </Dialog>
-        )}
     </>)
 }
 

@@ -48,7 +48,20 @@ Concretely, a consumer's settings offer **two paired pickers**: the **webhook ty
 ## Notes
 
 - Webhooks are **backend-only** — there's no per-webhook channel tab; you configure them centrally and channels **subscribe** to them.
-- Unlike senders, a webhook config's URL/token is **per-instance and unguessable**, so webhook configs are **not** exportable/importable (exporting would leak the capability and importing couldn't recreate the URL already registered in the provider).
+
+## Moving them to another kwirth
+
+Through **☰ → Kwirth export**, the same door every extension uses. Each webhook is its own entry in the file.
+
+🔴 **The token does NOT travel, and that is deliberate.** It is a capability: whoever holds the URL can post to your kwirth. Writing it into a file that ends up in a downloads folder would hand that capability away, and recreating it at the destination would not help either — the URL already registered in GitLab or Jira is the one the *source* minted, not a copy.
+
+So what travels is the configuration: the name, the fields, and the shared secret or signing key **empty** unless you tick *Include credentials*.
+
+**What that means in practice:** after importing, the destination's webhooks have **new URLs**, and you have to copy them from the manager and repaste them into whoever calls you. Plan for it — nothing fails loudly, the calls from outside simply stop arriving.
+
+🔴 **Importing replaces the list.** What you end up with is exactly what the file carried: configurations the destination had and the file does not mention are removed, and their tokens die with them. It is the same rule for every extension in the bundle.
+
+> An older version of this page said webhook configurations were **not** exportable. They are, since the configuration bundle exists; what is not exportable is the token, which is a different thing and is why that line was written.
 
 ---
 

@@ -70,14 +70,25 @@ The **Card / List** toggle switches to one row per extension — the same inform
 ![Manage senders, list view](../../../_media/guide/manage-senders-list.png)
 
 
-1. Click a sender's **gear** to open its config manager. Each sender keeps a **list of named configs** — pick one to edit, **New** to add, **Clone** to copy, and **Export/Import** to move configs as JSON:
+1. Click a sender's **gear** to open its config manager. Each sender keeps a **list of named configs** — pick one to edit, **New** to add, **Clone** to copy:
 
 ![Configure a sender (SMTP)](../../../_media/guide/sender-config-smtp.png)
 
 2. Kwirth renders the config form from the **sender's own field schema**, so every field is typed (text / number / password / select) — no guesswork.
 3. Once saved, that `senderId::configName` pair is selectable anywhere a channel offers a **Sender config** picker.
 
-You can keep **many configs per sender** (above, `email-smtp` has `default` and `julio`) and reference whichever one you need per channel. The whole set can be moved between clusters with **Export all / Import all** at the bottom of the manager.
+You can keep **many configs per sender** (above, `email-smtp` has `default` and `julio`) and reference whichever one you need per channel.
+
+### Moving them to another kwirth
+
+Through **☰ → Kwirth export**, the same door every extension uses. Each sender is its own entry in the file, so you can take some and leave others, and what travels is the whole set: the named configurations **and** the base fields they share (the SMTP server, the default *from*).
+
+Two things worth knowing before you do it:
+
+- **The passwords travel empty** unless you tick *Include credentials* — empty, not missing, so the destination can see which ones it has to fill in. Kwirth knows which fields are secret because each sender declares it in its own field schema.
+- 🔴 **Importing replaces the list.** What you end up with is exactly what the file carried: configurations the destination had and the file does not mention **are removed**. It is the same rule for every extension in the bundle, and it is what makes two kwirths actually end up alike.
+
+> The config manager used to have its own **Export / Import** buttons. They are gone. They wrote the configurations out **as they were**, so the passwords ended up in clear text in a file in somebody's downloads folder, and they merged on the way in while the bundle replaces — the same file left the system in two different states depending on which button you pressed.
 
 ## Using senders from a channel
 

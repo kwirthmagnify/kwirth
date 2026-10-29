@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { senderConfigs, idpInstances, toolsetGrants, pluginInstallConfig } from '../../src/tools/CoreManagedConfig'
+import { senderConfigs, webhookConfigs, idpInstances, toolsetGrants, pluginInstallConfig } from '../../src/tools/CoreManagedConfig'
 import { SenderManager } from '../../src/tools/SenderManager'
+import { WebhookManager } from '../../src/tools/WebhookManager'
 import { IdpManager } from '../../src/tools/IdpManager'
 import { AiToolsetManager } from '../../src/tools/AiToolsetManager'
 import { PluginManager } from '../../src/tools/PluginManager'
@@ -78,6 +79,43 @@ test('y quien importe ese fichero se entera de que faltan', async () => {
     assert.ok(r.warnings[0].includes('does not declare which of its fields are secret'))
 })
 
+// ─── webhooks: the same, and they REPLACE ──────────────────────────────────────
+
+const webhookFalso = (configs: unknown[], escritas: unknown[]): WebhookManager => ({
+    getConfigs: () => configs,
+    getWebhook: () => ({ getConfigSchema: () => [{ name: 'name', label: 'Name' }, { name: 'token', label: 'Token', type: 'password' }] }),
+    setWebhookStoredConfig: (_id: string, stored: { configs: unknown[] }) => { escritas.push(...stored.configs); return true }
+} as unknown as WebhookManager)
+
+test('🔴 el import de un webhook REEMPLAZA la lista entera', async () => {
+    /*
+        Antes era un `addConfig` por cada entrante: las que ya habia y no venian se quedaban, asi que
+        importar nunca dejaba al destino igual que al origen. Ahora lo que queda es exactamente lo que
+        traia el fichero — la misma regla que el sender, y que todo lo demas.
+
+        ⚠️ Un webhook pierde ademas el TOKEN de lo que se va, que es la URL por la que le llaman desde
+        fuera: hay que repegarla en quien llame. Es la consecuencia de traerse otra configuracion.
+    */
+    const escritas: unknown[] = []
+    const e = webhookConfigs(webhookFalso([{ name: 'vieja' }], escritas), 'gitlab')
+
+    const r = await e.importConfig!({ configs: [{ name: 'nueva' }] })
+
+    assert.deepEqual(escritas, [{ name: 'nueva' }], 'no ha reemplazado: esperaba solo la del fichero')
+    assert.equal(r.applied, 1)
+})
+
+test('un webhook que no esta registrado aqui no aplica nada, y lo dice', async () => {
+    const e = webhookConfigs({ getConfigs: () => [], getWebhook: () => undefined,
+        setWebhookStoredConfig: () => false } as unknown as WebhookManager, 'fantasma')
+
+    const r = await e.importConfig!({ configs: [{ name: 'una' }] })
+
+    assert.equal(r.applied, 0)
+    assert.equal(r.skipped, 1)
+    assert.ok(r.warnings.some(w => w.includes('not registered')))
+})
+
 // ─── idp: instances per connector ──────────────────────────────────────────────
 
 const INSTANCIAS = {
@@ -85,13 +123,14 @@ const INSTANCIAS = {
     dos: { id: 'dos', connectorId: 'gitlab-cloud', label: 'GitLab', enabled: true, config: { clientId: 'y', clientSecret: 'otro' } }
 }
 
-const idpFalso = (guardadas: unknown[] = []): IdpManager => ({
+const idpFalso = (guardadas: unknown[] = [], borradas: string[] = []): IdpManager => ({
     exportConfig: async () => INSTANCIAS,
     getConnectorSchema: () => [
         { name: 'clientId', label: 'Client id' },
         { name: 'clientSecret', label: 'Client secret', type: 'password' }
     ],
-    saveInstance: async (i: unknown) => { guardadas.push(i) }
+    saveInstance: async (i: unknown) => { guardadas.push(i) },
+    deleteInstance: async (id: string) => { borradas.push(id) }
 } as unknown as IdpManager)
 
 test('un conector exporta SOLO sus instancias, no las de otro conector', async () => {
@@ -118,6 +157,35 @@ test('una instancia que no es de este conector se descarta al importar', async (
     assert.equal(r.skipped, 1)
     assert.equal(guardadas.length, 1)
     assert.ok(r.warnings[0].includes('does not belong'))
+})
+
+test('🔴 una instancia que esta aqui y NO viene en el fichero se BORRA', async () => {
+    /*
+        El import REEMPLAZA: lo que queda es exactamente lo que traia el fichero. Antes era un
+        `saveInstance` por cada entrante y nunca quitaba nada, asi que importar no podia dejar al
+        destino igual que al origen — se quedaba con lo suyo ADEMAS de lo importado.
+    */
+    const borradas: string[] = []
+    const e = idpInstances(idpFalso([], borradas), 'github-cloud')
+
+    // El fichero no trae 'uno', que es la unica instancia de este conector que hay aqui.
+    const r = await e.importConfig!({ instances: [] })
+
+    assert.deepEqual(borradas, ['uno'])
+    assert.equal(r.applied, 0)
+})
+
+test('🔴 y NO se tocan las instancias de OTROS conectores', async () => {
+    /*
+        El fichero habla de un conector, no de todos. Borrar lo que no menciona seria pasarse de lo que
+        se ha pedido: 'dos' es de gitlab-cloud y su entrada del bundle es otra.
+    */
+    const borradas: string[] = []
+    const e = idpInstances(idpFalso([], borradas), 'github-cloud')
+
+    await e.importConfig!({ instances: [] })
+
+    assert.equal(borradas.includes('dos'), false, 'ha borrado la instancia de otro conector')
 })
 
 // ─── toolsets: grants that reference plugins ───────────────────────────────────

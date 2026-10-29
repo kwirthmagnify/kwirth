@@ -137,13 +137,21 @@ export const webhookConfigs = (manager: WebhookManager, id: string): IExtension 
         const warnings: string[] = []
         const omitidas = (data as { omitted?: number })?.omitted
         if (omitidas) warnings.push(`${omitidas} configuration(s) were left out of the file because this webhook does not declare which of its fields are secret`)
-        let applied = 0
-        let skipped = 0
-        for (const config of entrantes as IWebhookConfig[]) {
-            if (manager.addConfig(id, config)) applied++
-            else skipped++
+        /*
+            🔴 REEMPLAZA, no añade. Lo que queda despues de importar es EXACTAMENTE lo que traia el
+            fichero: las configuraciones que el destino tuviera de mas desaparecen. Es la regla de todo
+            el bundle y no admite excepciones — un import que a veces sustituye y a veces fusiona
+            obliga a saberse de memoria cual hace cada extension, y nadie puede.
+
+            ⚠️ Un webhook pierde ademas el TOKEN de las configuraciones que se van, que es la URL por la
+            que le llaman desde fuera. Es la consecuencia de traerse otra configuracion: las que entran
+            nacen con tokens nuevos y hay que repegar las URL en GitLab, Jira o quien llame.
+        */
+        const configs = entrantes as IWebhookConfig[]
+        if (!manager.setWebhookStoredConfig(id, { configs })) {
+            return { applied: 0, skipped: configs.length, warnings: [...warnings, `webhook '${id}' is not registered here`] }
         }
-        return { applied, skipped, warnings }
+        return { applied: configs.length, skipped: 0, warnings }
     }
 })
 
@@ -181,12 +189,33 @@ export const idpInstances = (manager: IdpManager, connectorId: string): IExtensi
         }
         let applied = 0
         let skipped = 0
+        const validas: IIdpInstanceConfig[] = []
         for (const instancia of entrantes as IIdpInstanceConfig[]) {
             if (!instancia?.id || instancia.connectorId !== connectorId) {
                 skipped++
                 warnings.push(`an instance that does not belong to '${connectorId}' was discarded`)
                 continue
             }
+            validas.push(instancia)
+        }
+
+        /*
+            🔴 REEMPLAZA. Las instancias de ESTE conector que el destino tuviera y no vengan en el
+            fichero se borran: lo que queda es exactamente lo que traia. La regla es la del bundle
+            entero y no admite excepciones — un import que a veces sustituye y a veces fusiona obliga a
+            saberse de memoria cual hace cada extension, y nadie puede.
+
+            Solo las de este conector: el fichero no habla de los demas, y borrar lo que no menciona
+            seria pasarse de lo que se ha pedido.
+        */
+        const todas = await manager.exportConfig()
+        for (const existente of Object.values(todas)) {
+            if (existente.connectorId !== connectorId) continue
+            if (validas.some(i => i.id === existente.id)) continue
+            await manager.deleteInstance(existente.id)
+        }
+
+        for (const instancia of validas) {
             await manager.saveInstance(instancia)
             applied++
         }
