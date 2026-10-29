@@ -16,6 +16,12 @@ export interface ISelectableItem {
     detail: string
     /** The block it is grouped into. The core's own goes together; extensions, by type. */
     group: string
+    /*
+        The item travels, but something is missing from it. It is tickable like any other and its detail
+        is shown in warning colour, because the reason has to be read BEFORE exporting: afterwards there
+        is nothing in the file that says what was not asked for.
+    */
+    warn?: boolean
 }
 
 export const GROUP_GENERAL = 'Kwirth'
@@ -99,7 +105,7 @@ export const SelectionList = (props: {
                             onChange={e => onToggle(item.key, e.target.checked)} />
                         <Box>
                             <Typography variant='body2' color={off ? 'text.disabled' : 'text.primary'}>{item.label}</Typography>
-                            <Typography variant='caption' color='text.secondary'>{item.detail}</Typography>
+                            <Typography variant='caption' color={item.warn && !off ? 'warning.main' : 'text.secondary'}>{item.detail}</Typography>
                         </Box>
                     </Stack>
                 })}

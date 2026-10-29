@@ -36,6 +36,12 @@ A panel summarizing the selected cluster. Click the chevron on its right to expa
 
 ![Cluster details panel expanded](../../_media/guide/ui-home-cluster-details.png)
 
+Expanded, its header also shows **one icon per channel**, each drawn by the plugin that provides it, and
+greyed out for the channels that are not active on the selected cluster. They are only painted while the
+panel is open: collapsed, the header keeps the summary line and the gauges, which is what you read at a
+glance anyway. Asking every installed plugin for its icon is work, and the home screen is the first
+thing kwirth draws after logging in.
+
 It shows three blocks plus live gauges:
 
 - **Context** — the home cluster, the currently selected cluster, and the channels available on it.

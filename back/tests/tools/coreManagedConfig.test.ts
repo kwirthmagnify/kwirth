@@ -1,7 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { IExtension } from '@kwirthmagnify/kwirth-common-back'
-import { combine, senderConfigs, idpInstances, toolsetGrants, pluginInstallConfig } from '../../src/tools/CoreManagedConfig'
+import { senderConfigs, idpInstances, toolsetGrants, pluginInstallConfig } from '../../src/tools/CoreManagedConfig'
 import { SenderManager } from '../../src/tools/SenderManager'
 import { IdpManager } from '../../src/tools/IdpManager'
 import { AiToolsetManager } from '../../src/tools/AiToolsetManager'
@@ -18,48 +17,13 @@ import { PluginManager } from '../../src/tools/PluginManager'
 
 const opts = (includeCredentials: boolean) => ({ includeCredentials })
 
-// ─── combine ───────────────────────────────────────────────────────────────────
-
-const soloCore: IExtension = {
-    exportConfig: async () => ({ delCore: 1 }),
-    importConfig: async () => ({ applied: 1, skipped: 0, warnings: ['aviso del core'] })
-}
-
-const conPropio: IExtension = {
-    exportConfig: async () => ({ suyo: 2 }),
-    importConfig: async () => ({ applied: 3, skipped: 1, warnings: ['aviso propio'] })
-}
-
-test('sin nada propio, el interlocutor es el core tal cual', async () => {
-    const c = combine(soloCore, undefined)
-    assert.deepEqual(await c.exportConfig!(opts(false)), { delCore: 1 })
-})
-
-test('una extension que no implementa el contrato no envuelve nada', async () => {
-    // It is the majority case today: the extension exists but does not have the methods.
-    const c = combine(soloCore, { } as IExtension)
-    assert.deepEqual(await c.exportConfig!(opts(false)), { delCore: 1 })
-})
-
-test('con las dos fuentes, el contenido lleva las dos partes separadas', async () => {
-    const c = combine(soloCore, conPropio)
-    assert.deepEqual(await c.exportConfig!(opts(false)), { core: { delCore: 1 }, own: { suyo: 2 } })
-})
-
-test('al importar se suman los dos resultados, avisos incluidos', async () => {
-    const c = combine(soloCore, conPropio)
-    const r = await c.importConfig!({ core: {}, own: {} })
-    assert.equal(r.applied, 4)
-    assert.equal(r.skipped, 1)
-    assert.deepEqual(r.warnings, ['aviso del core', 'aviso propio'])
-})
-
-test('si el fichero no trae la parte propia, solo se aplica la del core', async () => {
-    // It happens with a bundle generated when the extension did not implement the contract yet.
-    const c = combine(soloCore, conPropio)
-    const r = await c.importConfig!({ core: {} })
-    assert.equal(r.applied, 1)
-})
+/*
+    There was a `combine()` here until 2026-10-29 that merged this file's interlocutor with the
+    extension's own into a single one. It no longer exists: the two parts travel in two fields of the
+    bundle and never meet. What used to be tested here —that both are asked, that one missing does not
+    cancel the other, that the warnings of both come out— is now where the joining happens, in
+    `configBundle.test.ts`.
+*/
 
 // ─── senders: emptying the secrets ─────────────────────────────────────────────
 

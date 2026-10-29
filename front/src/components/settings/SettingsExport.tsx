@@ -30,8 +30,13 @@ const SettingsExport: React.FC<ISettingsExportProps> = (props: ISettingsExportPr
     const [withCredentials, setWithCredentials] = useState(false)
     const { backendUrl } = useContext(SessionContext) as SessionContextType
 
+    // PARTIAL counts as exportable: what the core keeps about it does travel, and leaving it out would
+    // lose that too. What it does not do is travel silently — see the detail below.
+    const puedeViajar = (status: EBundleEntryStatus): boolean =>
+        status === EBundleEntryStatus.AVAILABLE || status === EBundleEntryStatus.PARTIAL
+
     const exportableKeys = (list: IExportableEntry[]): string[] =>
-        list.filter(e => e.status === EBundleEntryStatus.AVAILABLE).map(e => bundleEntryKey(e.type, e.id))
+        list.filter(e => puedeViajar(e.status)).map(e => bundleEntryKey(e.type, e.id))
 
     useEffect(() => {
         const load = async () => {
@@ -61,22 +66,39 @@ const SettingsExport: React.FC<ISettingsExportProps> = (props: ISettingsExportPr
         whoever looks at this has to see their plugin and why it is not going, rather than find a short
         list with no explanation. The ones that cannot come out without a tick box, with the reason.
     */
+    const detalle = (status: EBundleEntryStatus): string => {
+        switch (status) {
+            case EBundleEntryStatus.NOT_SUPPORTED: return 'this extension cannot export its configuration yet'
+            case EBundleEntryStatus.NOT_INSTANTIATED: return 'not running here, so there is nothing to ask'
+            /*
+                The one that matters. Its installation configuration is the core's and travels; whatever
+                the extension keeps on its own account cannot be asked for while it is not running, and
+                the file will not say that it is missing. So it is said here, before exporting.
+
+                🔴 AND NOTHING IS PROMISED THAT DOES NOT WORK. This said "open it and export again" until
+                it was checked: channels are instantiated when the back end STARTS —every installed
+                plugin is in `requiredChannels`— so opening its tab does nothing at all. What is left
+                with no instance is a channel hosted by another Kwirth and a provider that nobody
+                requires, and neither is fixed from here.
+            */
+            case EBundleEntryStatus.PARTIAL: return 'not started in this Kwirth: only its installation configuration will travel'
+            default: return ''
+        }
+    }
+
     const extensionItems = (): ISelectableItem[] => extensions.map(e => ({
         key: bundleEntryKey(e.type, e.id),
         group: groupOf(e.type),
         label: `${e.displayName} (${e.version ?? '—'})`,
-        detail: e.status === EBundleEntryStatus.AVAILABLE
-            ? ''
-            : e.status === EBundleEntryStatus.NOT_SUPPORTED
-                ? 'this extension cannot export its configuration yet'
-                : 'not running here, so there is nothing to ask'
+        detail: detalle(e.status),
+        warn: e.status === EBundleEntryStatus.PARTIAL
     }))
 
     const exportItems = (): ISelectableItem[] => [...coreItems, ...extensionItems()]
 
     const notExportable = (item: ISelectableItem): boolean => {
         const e = extensions.find(x => bundleEntryKey(x.type, x.id) === item.key)
-        return e !== undefined && e.status !== EBundleEntryStatus.AVAILABLE
+        return e !== undefined && !puedeViajar(e.status)
     }
 
     const toggle = (key: string, on: boolean) => setSelected(prev => {

@@ -3,6 +3,13 @@
 > **ESTADO — EN CURSO.** Cuelga de [PRD.md](PRD.md), que manda sobre el qué y el porqué; aquí está el
 > cómo y en qué orden. Abierto el 2026-09-21 sobre Kwirth 0.6.31.
 >
+> **Los seis streams están hechos** (S6 el 2026-10-29) y el mecanismo está terminado y probado de punta
+> a punta. Sigue abierto por dos cosas concretas, no por obra pendiente: las **capturas de la home**,
+> que hay que retomar y que destaparon un posible problema de catálogo comercial en una guía pública, y
+> la decisión sobre el **Import/Export propio de Excubitor**, que convive con el bundle con una regla
+> contraria sobre los secretos. Las dos están al final, en *Hallazgos laterales* y *Decisiones
+> pendientes*.
+>
 > **Alcance de esta tanda: el core, el front, y las extensiones open source que tenían configuración.**
 > Creció sobre la marcha (ver *Lo que cambió al construirlo*): empezó siendo solo el core con `censor`
 > de banco de pruebas.
@@ -60,7 +67,7 @@ Un JSON, legible y editable a mano. Nombre de trabajo: `kwirth-config.json`.
 ```
 {
   "kind": "kwirth-config-bundle",
-  "formatVersion": 1,
+  "formatVersion": 2,
   "meta": {
     "exportedAt": "2026-09-21T10:14:00.000Z",
     "kwirthVersion": "0.6.31",
@@ -77,15 +84,32 @@ Un JSON, legible y editable a mano. Nombre de trabajo: `kwirth-config.json`.
       "id": "excubitor",
       "version": "0.9.2",
       "marketplace": "IRIA private",
-      "config": { ... }          <- opaco para el core
+      "coreConfig": { ... },     <- lo que guarda el CORE sobre ella
+      "config":     { ... }      <- lo que guarda ELLA; los dos opacos
     }
   ]
 }
 ```
 
 `formatVersion` desde el primer día: el día que el envoltorio cambie, un Kwirth viejo tiene que poder
-decir "no sé leer esto" en vez de romperse a medias. `config` es **opaco**: el core lo transporta sin
-mirarlo.
+decir "no sé leer esto" en vez de romperse a medias. Los dos `config` son **opacos**: el core los
+transporta sin mirarlos.
+
+🔴 **El formato 2 (2026-10-29) separó las dos partes**, y no es cosmética. En el formato 1 ambas viajaban
+dentro de `config` y **en dos formas distintas** según si la extensión tenía algo propio: `{installConfig}`
+cuando no, y `{core, own}` cuando sí. Consecuencias, las tres reales:
+
+- La forma de una entrada dependía de **quién implementara qué**, así que al añadir `exportConfig` a una
+  extensión cambiaba el formato de su entrada sin que nada lo dijera.
+- Un fichero exportado **antes** de que las extensiones adoptaran el contrato se leía después como si su
+  única parte fuera de la extensión, y **la configuración de instalación se perdía en silencio**.
+- Y nadie leyendo el fichero podía saber **cuál de las dos partes faltaba**: una entrada con solo la del
+  core se ve igual venga de una extensión que no guarda nada propio o de una a la que no se pudo
+  preguntar.
+
+La conversión del formato 1 vive en `normalizeEntry` (`back/src/tools/ConfigBundleManager.ts`) y decide
+**por la versión declarada en el fichero, nunca por la forma del contenido**: un v2 cuya única parte es
+la propia es indistinguible de un v1 plano, y adivinar intercambiaría las dos en silencio.
 
 ## Streams
 
@@ -188,6 +212,47 @@ nuevos** (841 en el core) y **4 casos e2e** en `kwirth-portability.spec.ts`.
 
 Con credenciales marcadas las keys viajan y no hay nada que defender: es exactamente lo que se ha pedido.
 
+### S6 — Dos fuentes, dos campos  ✅ HECHO (2026-10-29)
+
+Salió de implementar `exportConfig` en los siete artefactos de pago y descubrir que **el e2e que los
+vigilaba estaba en verde sin comprobar nada**: `combine()` metía lo de la extensión dentro de `own`, el
+spec leía `entry.config.models`, y como todas sus aserciones eran `toBeUndefined()` sobre un objeto que
+no era el que llevaba los datos, pasaban con la configuración vacía. Iter y sugarless llevaban semanas
+diciendo que sí. Al mirar el campo correcto saltó además que el `dist` de iter era del **26 de octubre**
+y no implementaba `exportConfig` siquiera.
+
+Tres arreglos, en `kwirth-common@0.5.77`:
+
+1. **`coreConfig` y `config`, campos hermanos** (formato de bundle **2**). `combine()` eliminado, cada
+   interlocutor preguntado por separado y dentro de su propio `try` — si revienta la extensión, lo del
+   core sale igual, que antes se perdían los dos. `normalizeEntry` lee el formato 1 decidiendo por la
+   versión del fichero. El porqué, en *Formato del bundle*.
+2. **Estado `PARTIAL`.** Sin instancia viva el core devolvía igualmente su interlocutor: la extensión
+   entraba en el fichero, el diálogo la pintaba disponible y dentro iba solo la configuración de
+   instalación — en excubitor, sus ocho áreas. Se exporta igual, pero se dice, en ámbar, en los dos
+   diálogos. ⚠️ Solo se marca a quien **puede** tener instancia (canales y providers): un IdP o un
+   toolset guardan su configuración en el core por diseño, y pintarlos en ámbar para siempre enseñaría
+   a ignorar el aviso que sí importa.
+3. **Los textos del diálogo dejaron de mentir.** Decían *"ábrelo y vuelve a exportar"*, y abrir la
+   pestaña no hace nada: los canales se instancian **al arrancar el back** (`requiredChannels` incluye
+   todo plugin instalado). Lo que queda sin instancia es un canal hospedado por otro Kwirth y un
+   provider que nadie requiere, y ninguno se arregla desde ahí.
+
+**+14 tests** en `configBundle` (850 en el core) y **−5** de `combine`, retirados porque esa función ya
+no existe. En e2e, **+2 casos** en `kwirth-portability.spec.ts`.
+
+🔴 **Y el e2e se repartió.** El spec transversal que probaba los siete juntos vivía en `iria/`, fuera
+del ciclo de todos: portabilidad es del **core y es OSS**, así que el mecanismo —formato, dos campos,
+aviso de lo parcial— se fija en `front/e2e/tests/kwirth-portability.spec.ts`, en el repo público, y lo
+que mete cada artefacto en su parte se comprueba en **el repo de cada artefacto**, para que caiga en SU
+cierre. `iria/e2e/` borrada.
+
+🔴 **El spec del core hacía login en cada test**: diez arranques de la aplicación, 15,7 minutos por
+corrida, y la lentitud *era* el fallo — la mitad de los rojos eran `openMenu` agotando su timeout en
+tests que no llegaban a mirar lo que miden. Un login y dos exports en el `beforeAll`: **1,2 minutos** y
+ni un reintento. Queda apuntado en *Fuera de esta tanda* que hay ocho specs más del core con el mismo
+vicio.
+
 ---
 
 ## Lo que cambió al construirlo
@@ -200,10 +265,17 @@ instancias (la relación es 1 conector → N instancias, y la instancia apunta a
 ningún toolset conoce sus concesiones. Pedirles que lo exporten sería pedirles algo imposible.
 
 La salida **no fue un tipo nuevo en el bundle**, que es lo primero que propuse: el core **fabrica el
-`IExtension`** de cada entrada (`CoreManagedConfig.ts`) y `combine()` lo junta con lo que la extensión
-exporte de sí misma. `ConfigBundleManager` sigue llamando a los dos mismos métodos sin saber quién hay
-al otro lado, y el formato del fichero no cambia. Consecuencia: **casi toda extensión exporta algo desde
-el primer día**, y `IExtension` queda para las que además guardan cosas por su cuenta.
+`IExtension`** de cada entrada (`CoreManagedConfig.ts`). `ConfigBundleManager` llama a los dos mismos
+métodos sin saber quién hay al otro lado. Consecuencia: **casi toda extensión exporta algo desde el
+primer día**, y `IExtension` queda para las que además guardan cosas por su cuenta.
+
+> 🔴 **Corregido el 2026-10-29.** Las dos fuentes se juntaban en un solo interlocutor con un `combine()`,
+> y eso resultó ser el error: fusionarlas hacía que la forma de una entrada dependiera de quién
+> implementara qué, y perdía la configuración de instalación al leer ficheros anteriores al contrato
+> (ver *Formato del bundle*). `combine()` **ya no existe**: el core pregunta a los dos por separado y
+> cada respuesta va a su campo, `coreConfig` y `config`. La idea de fondo —el core fabrica un
+> interlocutor y el manager no sabe quién responde— se mantiene intacta; lo que se deshizo es mezclar
+> sus respuestas.
 
 **2. Los secretos se vacían por esquema.** Las configuraciones de un sender o un webhook pueden llevar
 una contraseña dentro, y el core no sabe cuál de sus campos lo es. Se lo dice la extensión en
@@ -234,6 +306,19 @@ Anotado para que no se pierda, **sin compromiso de fecha**:
 - Importar desde una URL o una ruta, para usarlo desde un pipeline de despliegue.
 - Ampliar `IExtension` con lo que no sea portabilidad (identidad, salud, diagnóstico).
 - Captura del diálogo de **import** para la guía: la de export ya está.
+- **Distinguir el motivo de un `PARTIAL`.** Hoy el aviso es uno solo —"no está arrancada aquí"— y los
+  dos motivos no se arreglan igual: un canal **REMOTE** se hospeda en otro Kwirth y hay que exportarlo
+  desde allí (accionable), mientras que un provider que nadie requiere simplemente no está. El core lo
+  sabe: `ri.remoteChannels` los tiene listados y `buildExtensionRefs` ya recibe `channels` del mismo
+  sitio. Cuesta pasar un campo más y partir el texto en dos.
+- **Ocho specs del core hacen varios `login()` sin compartir página** (`kwirth-log-settings` cinco,
+  `broken-extension` tres, y `help-popup`, `kwirth-settings`, `extension-catalogs`,
+  `previous-log-sender`, `sender-help` y dos de captura, dos cada uno). Son **76 logins en 57 specs**:
+  a ~40 s cada uno, del orden de 50 minutos de la suite completa gastados solo en arrancar la
+  aplicación. El arreglo es el mismo `beforeAll` que bajó `kwirth-portability` de 15,7 min a 1,2.
+  ⚠️ **`help-popup` es uno de ellos**, y es justo el que el histórico de métricas tiene anotado desde
+  hace semanas como flaky por *"contaminación entre tests"*: puede que no sea contaminación de estado
+  sino esto mismo. Merece comprobarse al arreglarlo.
 
 ### Hallazgos laterales, anotados y no tocados
 
@@ -241,11 +326,32 @@ Anotado para que no se pierda, **sin compromiso de fecha**:
   conectores. La sección `idpConfigs` de `kwirth-dev.json` no se siembra nunca. Es anterior a esto.
 - **`POST /core/idps` devolvió 404** al intentar crear una instancia por API; no se investigó dónde se
   monta realmente ese router.
+- 🔴 **Excubitor tiene su propio Import/Export, con la regla CONTRARIA.** Su diálogo
+  (`⋮` → Import / Export) dice, y así está documentado en su guía, que *una credencial importada sin
+  contraseña conserva la que ya había*. El bundle hace lo opuesto a propósito: **se persiste lo que
+  llega**, blanco incluido, porque con el merge una credencial no podría borrarse nunca. Son **dos
+  puertas al mismo almacén con criterios opuestos** — exactamente el problema que S5 resolvió con los
+  diálogos de IA. No son redundantes del todo (el de Excubitor lleva además lo *per-cluster* y permite
+  elegir reglas sueltas), así que no basta con quitar uno. Documentada la diferencia en su guía
+  (`08-import-export.md`), **decisión pendiente**.
+- **Las capturas de la home quedaron por retomar** tras pintar los iconos de channel solo con el panel
+  desplegado: `home.png` y `ui-home-cluster-details.png`. Ninguna tiene spec de captura, se hicieron a
+  mano. ⚠️ Y al ir a automatizarlo apareció algo que no es de este stream: el panel desplegado **lista
+  los channels instalados por su nombre**, y en el entorno de desarrollo están los de pago.
+  `capture-managers` desactiva los marketplaces privados justo para no publicar el catálogo comercial
+  en una guía pública; esa captura no pasa por nada equivalente, así que la imagen actual podría tener
+  ya el problema.
 
 ## Decisiones pendientes
 
-- **¿Qué forma tiene el resumen de `importConfig`?** Es lo único del contenido que el core enseña.
-  Propuesta para S1: `{ applied: number, skipped: number, warnings: string[] }` — suficiente para un
-  informe honesto sin que el core interprete nada.
+- ~~**¿Qué forma tiene el resumen de `importConfig`?**~~ **RESUELTA en S1**:
+  `{ applied: number, skipped: number, warnings: string[] }`, suficiente para un informe honesto sin
+  que el core interprete nada. Desde S6 los dos interlocutores de una entrada se suman en un único
+  resumen, avisos incluidos.
+- 🔴 **¿Se quita el Import/Export propio de Excubitor?** Son dos puertas al mismo almacén con criterios
+  opuestos sobre los secretos (ver *Hallazgos laterales*). No se pueden fusionar sin más: el de
+  Excubitor lleva además lo *per-cluster* y deja elegir reglas y políticas sueltas, que el bundle no
+  hace. Las opciones son alinear la semántica de secretos, dejarlo como está documentando la diferencia
+  —que es lo que hay hoy— o ampliar el bundle para absorberlo.
 - **¿El bundle se firma o se versiona por su contenido?** Hoy no; se anota por si el fichero acaba
   viajando entre organizaciones.

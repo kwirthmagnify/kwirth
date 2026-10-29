@@ -145,11 +145,19 @@ With **SQL configured**, the counters are in the database and survive a restart.
 
 It carries kwirth's own settings — metrics interval, log levels, marketplaces and package registries — the shared AI providers and models, and **what each extension stores**: its rules, its connections, whatever it considers its own configuration. Kwirth does not look inside: each extension decides what of its own travels, which is why an extension that has not adopted that contract yet appears in the list with the reason instead of silently going missing.
 
+An extension's entry actually has **two halves**, and it is worth knowing which is which. One is what *kwirth* keeps about it — the configuration you edit from its **Configure** cog, a sender's sending configurations, an identity connector's instances — and the other is what the *extension* keeps on its own account, in its own store. Most of the first half travels from the day an extension is installed, without its author having done anything; the second only travels if the extension implements it.
+
+That split is why some entries appear in **amber**, saying that only their installation configuration will travel. It means kwirth has the first half and could not ask for the second, because that extension is not running in this installation — a channel hosted by a *different* kwirth, or a provider that nothing is using here. The entry is still exported, because leaving it out would lose the half kwirth does have, but the file will not say what is missing from it. So the warning is shown **before** you export, not after.
+
 Credentials are **left out unless you tick them**. A file with tokens and passwords inside ends up in somebody's downloads folder, so by default the secret fields travel **empty** rather than omitted — the destination can then see which ones it has to fill in. Note what that means for the AI entries, where the secret is the whole point of some of them: leaving the tick off never removes a provider or a model from the file, it only blanks its key. Everything else — the name, the type, the Base URL, the default costs, the usage limits — travels either way.
 
 This is the **only** way the AI providers and models move between installations: their dialogs have no import/export of their own, precisely so that there is a single door onto a single store.
 
 Importing shows you **what would happen to each entry before anything is applied**: what is going in, what is not installed here (kwirth installs nothing on import), and what cannot receive configuration. Nothing is written until you press Import.
+
+> ⚠️ **What arrives is what gets stored, blanks included.** If you export without ticking credentials and then import that file, the secret fields arrive empty and are saved empty — the passwords, tokens and keys at the destination are replaced by nothing. It is deliberate: whoever imports credentials imports what the file carries, and the alternative ("an empty field means leave the old one alone") makes it impossible to ever clear one. When you are moving a configuration onto a kwirth that already has credentials in it, either tick the box when exporting or expect to fill them in again.
+
+Finally, the file declares the format it was written in, so a kwirth that is **older** than the one that produced it says it cannot read it and tells you to upgrade, instead of applying half a file it does not understand.
 
 ### The community marketplace, which you can remove
 

@@ -17,37 +17,21 @@ import { IdpManager } from './IdpManager'
     its grants. Asking them to export that would be asking for something they cannot do.
 
     So whoever can, exports it. And no separate mechanism is needed for it: the core manufactures an
-    `IExtension` per entry here and puts it where the instance would go. `ConfigBundleManager` goes on
-    calling `exportConfig`/`importConfig` without finding out who is on the other side — the extension,
-    the core, or both combined.
+    `IExtension` per entry here and hands it to `ConfigBundleManager` as the entry's `coreInstance`,
+    beside the extension's own `instance`. The manager asks both and writes each answer to its own field
+    of the bundle (`coreConfig` and `config`) without finding out who is on the other side.
+
+    🔴 THE TWO PARTS ARE NEVER MERGED INTO ONE. They were until 2026-10-29, through a `combine()` that
+    returned `{ core, own }` when the extension had something of its own and the core's part bare when it
+    did not — so an entry's shape depended on who implemented what, and a file written before the
+    extensions adopted the contract was read back as if its only part were theirs, losing the
+    installation configuration without a word. Two sources, two fields.
 
     The practical consequence: nearly every extension has something to export from day one, without its
     author lifting a finger. `IExtension` is left for those that also store things on their own account.
 
     Ver `plans/config-portability/PRD.md`.
 */
-
-/** Joins what the core knows and what the extension knows into a single interlocutor. */
-export const combine = (core: IExtension, own: IExtension | undefined): IExtension => {
-    if (!own?.exportConfig && !own?.importConfig) return core
-    return {
-        exportConfig: async (options) => ({
-            core: await core.exportConfig!(options),
-            own: own.exportConfig ? await own.exportConfig(options) : undefined
-        }),
-        importConfig: async (data) => {
-            const partes = (data ?? {}) as { core?: unknown, own?: unknown }
-            const r1 = await core.importConfig!(partes.core)
-            if (!own.importConfig || partes.own === undefined) return r1
-            const r2 = await own.importConfig(partes.own)
-            return {
-                applied: r1.applied + r2.applied,
-                skipped: r1.skipped + r2.skipped,
-                warnings: [...r1.warnings, ...r2.warnings]
-            }
-        }
-    }
-}
 
 const nada = (): IExtensionImportResult => ({ applied: 0, skipped: 0, warnings: [] })
 

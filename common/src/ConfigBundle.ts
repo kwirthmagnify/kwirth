@@ -43,6 +43,15 @@ export interface IExtensionImportResult {
 export enum EBundleEntryStatus {
     /** It can be exported / it is going to be applied. */
     AVAILABLE = 'available',
+    /*
+        Only the part the CORE keeps about it travels (its installation configuration, its sending
+        configurations…), because there is no live instance to ask for the extension's own.
+
+        It is exported and imported all the same — leaving it out would lose what the core does have —
+        but it is said out loud, because the alternative is the worst possible outcome: a file that looks
+        complete and is not. Whoever sees this opens the extension and exports again.
+    */
+    PARTIAL = 'partial',
     /** The extension is there, but does not implement the method: `IExtension` is optional. */
     NOT_SUPPORTED = 'not-supported',
     /*
@@ -67,10 +76,23 @@ export interface IConfigBundleEntry {
     /** Where it came from at the source, for the same reason. */
     marketplace?: string
     /*
-        OPAQUE to the core: the extension's `exportConfig` produces it and its `importConfig` eats it.
-        Hence the `unknown`: it is not type sloppiness, it is that typing it would be a lie.
+        TWO SOURCES, TWO FIELDS. Not all of an extension's configuration is stored by the extension: a
+        sender does not know what its sending configurations are, an IdP connector cannot enumerate its
+        instances, and no toolset knows its grants — the core stores all of that, and the extension never
+        even sees it. So whoever can, exports it.
+
+        `coreConfig` is what the CORE keeps about the extension, and `config` what the EXTENSION keeps on
+        its own account. They are kept apart, and not merged into one object, because they are two
+        different interlocutors and each may be missing on its own: a toolset has no `config` ever, and a
+        plugin whose channel is not instantiated has no `config` right now. Merging them would mean that
+        the shape of an entry changed depending on who implemented what, and nobody reading the file
+        could tell which part was missing.
+
+        Both are OPAQUE to the core: `exportConfig` produces them and `importConfig` eats them. Hence the
+        `unknown`: it is not type sloppiness, it is that typing it would be a lie.
     */
-    config: unknown
+    coreConfig?: unknown
+    config?: unknown
 }
 
 /** What the core contributes on its own. None of this belongs to an extension. */
@@ -95,8 +117,13 @@ export const CONFIG_BUNDLE_KIND = 'kwirth-config-bundle'
 /*
     The WRAPPER's version, not the content's. It exists from day one so that an old Kwirth can say "I
     cannot read this" instead of breaking halfway through a format it does not know.
+
+    Version 2 (2026-10-29) splits an entry into `coreConfig` + `config`. Until then both parts travelled
+    inside `config`, and in two different shapes depending on whether the extension had anything of its
+    own — which is exactly what version 2 is for. Reading version 1 is still supported: see
+    `normalizeEntry` in the back end, which is where that conversion lives.
 */
-export const CONFIG_BUNDLE_FORMAT_VERSION = 1
+export const CONFIG_BUNDLE_FORMAT_VERSION = 2
 
 export interface IConfigBundle {
     kind: typeof CONFIG_BUNDLE_KIND

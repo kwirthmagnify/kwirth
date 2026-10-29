@@ -9,7 +9,7 @@ import { WebhookManager } from './WebhookManager'
 import { AiToolsetManager } from './AiToolsetManager'
 import { DceManager } from './DceManager'
 import { IdpManager } from './IdpManager'
-import { combine, pluginInstallConfig, providerInstallConfig, senderConfigs, webhookConfigs, idpInstances, toolsetGrants } from './CoreManagedConfig'
+import { pluginInstallConfig, providerInstallConfig, senderConfigs, webhookConfigs, idpInstances, toolsetGrants } from './CoreManagedConfig'
 
 /*
     Who is installed, and who gets asked for their configuration.
@@ -22,9 +22,11 @@ import { combine, pluginInstallConfig, providerInstallConfig, senderConfigs, web
       · EVERYTHING INSTALLED IS LISTED, whether it can export or not. Leaving out what cannot export would
         be the comfortable thing, and it would be lying by silence — whoever looks at the dialog has to
         see that their extension is there and why it is not going in.
-      · THE CORE MANUFACTURES THE INTERLOCUTOR. `combine()` joins what the core stores about an extension
-        with what the extension exports of itself, and returns a single `IExtension`. That is why nearly
-        every extension has something to export from day one, without its author doing anything.
+      · THE CORE MANUFACTURES AN INTERLOCUTOR OF ITS OWN. What the core stores about an extension
+        (`CoreManagedConfig`) goes in as `coreInstance`, and what the extension stores on its own account
+        as `instance`. They are two, and they stay two all the way into the file: that is why nearly
+        every extension has something to export from day one without its author doing anything, and why
+        a reader of the bundle can tell which of the two parts is missing.
 */
 
 /** The minimum needed from any extension's metadata. */
@@ -59,27 +61,35 @@ export interface IExtensionRefSources {
 export const buildExtensionRefs = async (src: IExtensionRefSources): Promise<IExtensionRef[]> => {
     const refs: IExtensionRef[] = []
 
-    const añadir = (type: EExtensionType, meta: IMetaLike, instance?: IExtensionRef['instance']): void => {
+    const añadir = (
+        type: EExtensionType,
+        meta: IMetaLike,
+        coreInstance?: IExtensionRef['coreInstance'],
+        instance?: IExtensionRef['instance'],
+        instantiable = false
+    ): void => {
         refs.push({
             type,
             id: meta.id,
             displayName: nombre(meta),
             version: meta.version,
             marketplace: meta.marketplaceLabel,
-            instance
+            coreInstance,
+            instance,
+            instantiable
         })
     }
 
     // Plugins: the core stores their installation configuration; the rest is their channel's, when it is alive.
     for (const meta of await src.pluginManager.listInstalled()) {
         añadir(EExtensionType.PLUGIN, meta as IMetaLike,
-            combine(pluginInstallConfig(src.pluginManager, meta.id), src.channels.get(meta.id)))
+            pluginInstallConfig(src.pluginManager, meta.id), src.channels.get(meta.id), true)
     }
 
     // Providers: the same, with their instance when some channel required it.
     for (const meta of await src.providerManager.listInstalled()) {
         añadir(EExtensionType.PROVIDER, meta as IMetaLike,
-            combine(providerInstallConfig(src.providerManager, meta.id), src.providers.find(p => p.id === meta.id)))
+            providerInstallConfig(src.providerManager, meta.id), src.providers.find(p => p.id === meta.id), true)
     }
 
     /*
@@ -90,11 +100,11 @@ export const buildExtensionRefs = async (src: IExtensionRefSources): Promise<IEx
     */
     for (const meta of await src.senderManager.listInstalled()) {
         añadir(EExtensionType.SENDER, meta as IMetaLike,
-            combine(senderConfigs(src.senderManager, meta.id), src.senderManager.getSender(meta.id)))
+            senderConfigs(src.senderManager, meta.id), src.senderManager.getSender(meta.id), true)
     }
     for (const meta of await src.webhookManager.listInstalled()) {
         añadir(EExtensionType.WEBHOOK, meta as IMetaLike,
-            combine(webhookConfigs(src.webhookManager, meta.id), src.webhookManager.getWebhook(meta.id)))
+            webhookConfigs(src.webhookManager, meta.id), src.webhookManager.getWebhook(meta.id), true)
     }
 
     /*
@@ -108,6 +118,8 @@ export const buildExtensionRefs = async (src: IExtensionRefSources): Promise<IEx
     for (const info of src.idpManager.listConnectors()) {
         añadir(EExtensionType.IDP, { id: info.id, displayName: info.label, version: info.version, marketplaceLabel: info.marketplaceLabel },
             idpInstances(src.idpManager, info.id))
+        // No `instantiable`: a connector having no live instance takes nothing away, because its
+        // instances are the core's to begin with.
     }
 
     // Toolsets: what travels is their grants. There is no object to ask here either: they are back end only.

@@ -305,51 +305,61 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
         }
         return <Stack flexDirection={'row'} fontSize={12} alignItems={'center'}>{content}</Stack>
     }
-    
+
+    /*
+        One icon per front channel, each painted by its own plugin.
+
+        🔴 ONLY WHEN THE CARD IS EXPANDED, and that is the whole point of it being a function. The card
+        starts collapsed, so painting this row on the header's collapsed branch meant asking EVERY
+        installed plugin for its icon on the very first render of the homepage — the slowest moment
+        there is, with the clusters and the channels still coming in. Collapsed it is not worth it: it is
+        a row of small icons that nobody is reading yet.
+    */
+    const channelIcons = () =>
+        props.clusters && props.cluster && frontChannels.split(',').map((c, ci) => {
+            const channelClass = props.frontChannels.get(c.trim())
+            if (channelClass) {
+                const icon = getChannelIconSafe(channelClass)
+                const isChannelActive = props.clusters.find(c => c.name === props.cluster!.name)!.kwirthData!.channels.some((ch: any) => ch.id === c.trim())
+                const colorToken = isChannelActive ? 'text.primary' : 'text.disabled';
+                let newElement = React.cloneElement(icon, { fontSize: 'small', sx:{ color:colorToken } })
+                /*
+                    The Box is not decoration: Tooltip hands a ref to its child, and these channel icons
+                    are plain function components that cannot hold one -- which filled the console with
+                    "Function components cannot be given refs". Same fix already used above for the
+                    channel and view icons. No width here on purpose: iconSlotSx would force 24px on
+                    icons that render at 'small', changing the spacing of this row.
+                */
+                return <Tooltip key={ci} title={c.trim()}><Box sx={{ display:'flex', alignItems:'center' }}>{newElement}</Box></Tooltip>
+            }
+            /*
+                null, not <></>: a short fragment CANNOT take a key, so returning one here put a keyless
+                child in the list and React complained about it on every render ("Each child in a list
+                should have a unique key prop" pointing at Homepage). null is dropped from the list
+                altogether, which is what this branch means anyway — the channel is not installed, so
+                there is no icon.
+            */
+            return null
+        })
+
+
     return (
         <Stack sx={{ display:'flex', flexDirection:'column', m:3}} spacing={2}>
             <Card sx={{width:'100%', alignSelf:'center', transition: 'all 0.3s ease'}}>
                 <CardHeader sx={{borderBottom:(cardExpanded?1:0), borderColor:'divider'}}
                     title={<Fade key={cardExpanded ? 'expanded' : 'collapsed'} in={true} timeout={350}>
                         <Box>
-                        {cardExpanded && <Typography variant="h6">Cluster details</Typography>}
+                        {cardExpanded && <Stack direction={'row'} alignItems={'center'}>
+                            <Typography variant="h6">Cluster details</Typography>
+                            <Typography flexGrow={1}></Typography>
+                            <Stack sx={{ml:'32px'}} direction={'row'} alignItems={'center'}>
+                                {channelIcons()}
+                            </Stack>
+                        </Stack>}
                         {!cardExpanded && <Stack direction={'row'}>
                             <Typography><b>Cluster: </b>{props.cluster?.clusterInfo?.name}</Typography>
                             {hasCluster && <Typography sx={{ml:'32px'}}><b>Nodes: </b>{props.cluster?.clusterInfo?.nodes?.length}</Typography>}
                             {hasCluster && <Typography sx={{ml:'32px'}}><b>Resources: </b>{props.cluster?.clusterInfo?.vcpu} vCPU / {((props.cluster?.clusterInfo?.memory||0)/1024/1024/1024).toFixed(2)} GB</Typography>}
-
-                            <Typography flexGrow={1}></Typography>
-
-                            <Stack sx={{ml:'32px'}} direction={'row'} alignItems={'center'}>
-                                {
-                                    props.clusters && props.cluster && frontChannels.split(',').map ((c,ci) => {
-                                        const channelClass = props.frontChannels.get(c.trim())
-                                        if (channelClass) {
-                                            const icon = getChannelIconSafe(channelClass)
-                                            const isChannelActive = props.clusters.find(c => c.name === props.cluster!.name)!.kwirthData!.channels.some((ch: any) => ch.id === c.trim())
-                                            const colorToken = isChannelActive ? 'text.primary' : 'text.disabled';
-                                            let newElement = React.cloneElement(icon, { fontSize: 'small', sx:{ color:colorToken } })
-                                            /*
-                                                The Box is not decoration: Tooltip hands a ref to its child, and these
-                                                channel icons are plain function components that cannot hold one --
-                                                which filled the console with "Function components cannot be given
-                                                refs". Same fix already used above for the channel and view icons.
-                                                No width here on purpose: iconSlotSx would force 24px on icons that
-                                                render at 'small', changing the spacing of this row.
-                                            */
-                                            return <Tooltip key={ci} title={c.trim()}><Box sx={{ display:'flex', alignItems:'center' }}>{newElement}</Box></Tooltip>
-                                        }
-                                        /*
-                                            null, not <></>: a short fragment CANNOT take a key, so returning one here
-                                            put a keyless child in the list and React complained about it on every
-                                            render ("Each child in a list should have a unique key prop" pointing at
-                                            Homepage). null is dropped from the list altogether, which is what this
-                                            branch means anyway — the channel is not installed, so there is no icon.
-                                        */
-                                        return null
-                                    })
-                                }
-                            </Stack>
 
                             <Typography flexGrow={1}></Typography>
 

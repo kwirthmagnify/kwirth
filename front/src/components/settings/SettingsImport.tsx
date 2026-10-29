@@ -22,6 +22,16 @@ interface ISettingsImportProps {
     accessString: string
 }
 
+/*
+    Which entries of the file can be applied here. A different version is applied anyway —it warns, it
+    transforms nothing— and so is a PARTIAL one: what the core keeps about the extension has somewhere to
+    go even while the extension itself is not running, and skipping the entry would lose that too.
+*/
+const sePuedeAplicar = (status: EBundleEntryStatus): boolean =>
+    status === EBundleEntryStatus.AVAILABLE ||
+    status === EBundleEntryStatus.VERSION_DIFFERS ||
+    status === EBundleEntryStatus.PARTIAL
+
 const SettingsImport: React.FC<ISettingsImportProps> = (props: ISettingsImportProps) => {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -61,8 +71,7 @@ const SettingsImport: React.FC<ISettingsImportProps> = (props: ISettingsImportPr
             setSelected(new Set([
                 ...(bundle.core.settings !== undefined ? [CORE_SETTINGS_KEY] : []),
                 ...(bundle.core.sharedAi !== undefined ? [CORE_SHARED_AI_KEY] : []),
-                ...preview.filter(p => p.status === EBundleEntryStatus.AVAILABLE || p.status === EBundleEntryStatus.VERSION_DIFFERS)
-                    .map(p => bundleEntryKey(p.type, p.id))
+                ...preview.filter(p => sePuedeAplicar(p.status)).map(p => bundleEntryKey(p.type, p.id))
             ]))
         }
         catch {
@@ -73,6 +82,22 @@ const SettingsImport: React.FC<ISettingsImportProps> = (props: ISettingsImportPr
         }
     }
 
+    const detalle = (p: IImportPreviewEntry): string => {
+        switch (p.status) {
+            case EBundleEntryStatus.NOT_INSTALLED: return 'not installed here — Kwirth installs nothing on import'
+            case EBundleEntryStatus.VERSION_DIFFERS: return `the version here is ${p.installedVersion ?? 'another one'}: it will be applied anyway`
+            case EBundleEntryStatus.NOT_INSTANTIATED: return 'not running here, so there is nobody to hand it to'
+            /*
+                The file carries configuration of the extension's own and it is not running here to
+                receive it. What the core keeps about it IS applied, so the entry is applied — and the
+                rest is said now, because the final report cannot show what nobody was asked for.
+            */
+            case EBundleEntryStatus.PARTIAL: return 'not started in this Kwirth: only its installation configuration will be applied'
+            case EBundleEntryStatus.NOT_SUPPORTED: return 'this extension cannot receive configuration yet'
+            default: return ''
+        }
+    }
+
     const importItems = (): ISelectableItem[] => [
         ...(importBundle?.core.settings !== undefined ? [coreItems[0]] : []),
         ...(importBundle?.core.sharedAi !== undefined ? [coreItems[1]] : []),
@@ -80,19 +105,14 @@ const SettingsImport: React.FC<ISettingsImportProps> = (props: ISettingsImportPr
             key: bundleEntryKey(p.type, p.id),
             group: groupOf(p.type),
             label: `${p.displayName} (${p.version ?? '—'})`,
-            detail: p.status === EBundleEntryStatus.AVAILABLE
-                ? ''
-                : p.status === EBundleEntryStatus.NOT_INSTALLED
-                    ? 'not installed here — Kwirth installs nothing on import'
-                    : p.status === EBundleEntryStatus.VERSION_DIFFERS
-                        ? `the version here is ${p.installedVersion ?? 'another one'}: it will be applied anyway`
-                        : 'this extension cannot receive configuration yet'
+            detail: detalle(p),
+            warn: p.status === EBundleEntryStatus.PARTIAL
         }))
     ]
 
     const notApplicable = (item: ISelectableItem): boolean => {
         const p = importPreview.find(e => bundleEntryKey(e.type, e.id) === item.key)
-        return p !== undefined && p.status !== EBundleEntryStatus.AVAILABLE && p.status !== EBundleEntryStatus.VERSION_DIFFERS
+        return p !== undefined && !sePuedeAplicar(p.status)
     }
 
     const toggle = (key: string, on: boolean) => setSelected(prev => {
