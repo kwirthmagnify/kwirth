@@ -21,14 +21,22 @@
 
 ## Pendiente sobre la propia suite
 
-- **`help-popup` falla en la corrida completa y pasa en solitario.** Contaminación entre tests: algún spec
-  anterior deja estado en la aplicación (el DOM de Kwirth es compartido entre pestañas y diálogos). No es
-  un fallo del producto, pero enmascara los de verdad — un rojo que aparece según el orden no sirve de
-  señal. Hace falta que cada spec deje la aplicación como la encontró.
+- ~~**`help-popup` falla en la corrida completa y pasa en solitario.**~~ 🔴 **Atribuido a la causa
+  equivocada durante semanas.** Se dio por contaminación entre tests —estado que deja un spec anterior—
+  y lo que había era que **`login()` esperaba un rato FIJO**: un `waitForTimeout(1500)` tras pulsar OK.
+  Cuando el front tardaba más de segundo y medio, y en desarrollo tarda a menudo, todo lo que venía
+  detrás encontraba la aplicación a medias; el error aparecía mucho más adelante, al pulsar el menú, y
+  se leía como *«el menú no responde»*. En una corrida completa el front va más cargado, así que fallaba
+  ahí y no en solitario — de donde salió la teoría de la contaminación.
+  **Corregido el 2026-10-29**: `login()` espera a que la barra superior exista y a `networkidle`, y
+  `openMenu`/`clickMenuItem`/`clickExtensionMenuItem` esperan a que el elemento esté visible y
+  habilitado con un minuto de margen. ⚠️ **No está confirmado en una corrida completa**: se verificó con
+  `help-popup` + 2 specs, no con los 62. Queda por comprobar si los dos de abajo eran lo mismo.
 - **`webhookManager` › *tokens + configs survive a restart* falla A VECES en la corrida completa y pasa
-  siempre en solitario** (visto el 2026-09-17, 4 pasadas sueltas en verde). Mismo patrón que el de
-  `help-popup`: estado que deja otro test antes. Un rojo que aparece según el orden no sirve de señal,
-  y este vigila que la persistencia de webhooks sobreviva a un reinicio — no es un test menor.
+  siempre en solitario** (visto el 2026-09-17, 4 pasadas sueltas en verde). Se anotó como «mismo patrón
+  que `help-popup`: estado que deja otro test antes», y ahora que `help-popup` resultó ser **otra cosa**
+  (ver arriba) esa atribución queda en el aire. ⚠️ Este es del **harness del back**, no del e2e, así que
+  el arreglo del login no le aplica: hay que mirarlo por su cuenta en vez de heredarle una explicación.
 - **`webhookReceiver` › *valid callback: verify passes, parse yields event…* falla A VECES en la corrida
   completa del back** (visto el 2026-10-08, 2 veces de 6 corridas; las otras 4 en verde). Cae en el
   `setup`, no en la aserción: `Invalid webhook bundle: missing package.json or back.js`, o sea que el tgz
