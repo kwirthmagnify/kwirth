@@ -101,9 +101,24 @@ async function pick(page: Page, combo: ReturnType<typeof senderCombo>, option: s
     }).toPass({ timeout: 45000 })
 }
 
-test('the previous log sender: the config picker only offers the configs of the chosen sender', async ({ page }) => {
+/*
+    🔴 UN LOGIN PARA EL FICHERO. Habia uno por test y cada uno es un arranque completo de la
+    aplicacion. No hay nada que una pagina compartida pueda arrastrar: el fichero es NO destructivo —lo
+    que hubiera configurado se lee primero y se restaura al final— y cada test abre los ajustes y los
+    cierra.
+*/
+test.describe.serial('previous log sender', () => {
+let page: Page
+
+test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage()
     await login(page)
     await dismissOpenDialogs(page)
+})
+
+test.afterAll(async () => { await page?.close() })
+
+test('the previous log sender: the config picker only offers the configs of the chosen sender', async () => {
     await openSettings(page)
 
     const senders = (await optionsOf(page, senderCombo(page))).filter(o => o !== NONE_SENDER)
@@ -139,8 +154,7 @@ test('the previous log sender: the config picker only offers the configs of the 
     }
 })
 
-test('the previous log sender: the pair and the line cap survive saving and reopening', async ({ page }) => {
-    await login(page)
+test('the previous log sender: the pair and the line cap survive saving and reopening', async () => {
     await dismissOpenDialogs(page)
     await openSettings(page)
 
@@ -183,4 +197,5 @@ test('the previous log sender: the pair and the line cap survive saving and reop
         }
         await saveSettings(page)
     }
+})
 })

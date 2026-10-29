@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 // Regression for the manager dialogs' migration: each one used to download its manifest from GitHub on
@@ -23,18 +23,45 @@ const CASES: { menu: string; dialog: RegExp }[] = [
     { menu: 'AI toolsets', dialog: /Manage AI toolsets/i }
 ]
 
-test('los manager dialogs siguen listando catalogo tras pasar por el back', async ({ page }) => {
+/*
+    🔴 UN LOGIN PARA EL FICHERO. Habia uno por test y cada uno es un arranque completo de la
+    aplicacion, con el agravante de que este fichero abre SEIS dialogos de catalogo que tardan lo suyo.
+    Es NO destructivo: solo abre y cierra, sin instalar ni desinstalar nada.
+
+    ⚠️ El espia de peticiones a GitHub se registra AQUI, antes del login, y no dentro del segundo test:
+    si se pusiera despues ya no veria las peticiones del arranque, que son justo las que importan. De
+    paso, ahora vigila tambien lo que pase durante el primero.
+*/
+test.describe.serial('extension catalogs', () => {
+let page: Page
+const manifestCalls: string[] = []
+
+test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage()
+    page.on('request', req => {
+        if (req.url().includes('raw.githubusercontent.com')) manifestCalls.push(req.url())
+    })
+    await login(page)
+    await dismissOpenDialogs(page)
+})
+
+test.afterAll(async () => { await page?.close() })
+
+test('los manager dialogs siguen listando catalogo tras pasar por el back', async () => {
     // if a dialog failed to resolve, the back end would return [] and the dialog would come out empty in
     // silence, so a load error not appearing is watched for as well
     const failures: string[] = []
 
-    await login(page)
-    await dismissOpenDialogs(page)
-
     for (const c of CASES) {
         await clickExtensionMenuItem(page, c.menu)
         const dialog = page.getByRole('dialog').filter({ hasText: c.dialog })
-        await dialog.waitFor({ timeout: 10000 })
+        /*
+            60 s, no 10. Es el MISMO motivo que el comentario de abajo da para el espera del boton:
+            abrir uno de estos dialogos no es pintar lo instalado, es resolver antes los manifests
+            remotos. Con diez quedaba un flaky que no decia nada del producto — solo que la maquina
+            estaba cargada — y que ademas aparecia en el primero de los seis, el que mas espera.
+        */
+        await dialog.waitFor({ timeout: 60000 })
 
         // The catalogue takes a while: the dialog does not only draw what is installed, it also resolves
         // the remote manifests (public + private) before it has cards to show. 15s was enough on an idle
@@ -62,13 +89,7 @@ test('los manager dialogs siguen listando catalogo tras pasar por el back', asyn
     expect(failures, `dialogos con problemas: ${failures.join(' | ')}`).toEqual([])
 })
 
-test('el catalogo que llega al front viene resuelto por el back, no de GitHub', async ({ page }) => {
-    const manifestCalls: string[] = []
-    page.on('request', req => {
-        if (req.url().includes('raw.githubusercontent.com')) manifestCalls.push(req.url())
-    })
-
-    await login(page)
+test('el catalogo que llega al front viene resuelto por el back, no de GitHub', async () => {
     await dismissOpenDialogs(page)
     await clickExtensionMenuItem(page, 'Plugins')
     await page.getByRole('dialog').filter({ hasText: /Manage (channel )?plugins/i }).waitFor({ timeout: 10000 })
@@ -76,4 +97,5 @@ test('el catalogo que llega al front viene resuelto por el back, no de GitHub', 
     await dismissOpenDialogs(page)
 
     expect(manifestCalls, 'el front ya no debe bajar manifests de GitHub por su cuenta').toEqual([])
+})
 })

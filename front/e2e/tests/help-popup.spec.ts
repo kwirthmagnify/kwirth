@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
 import { login, clickMenuItem, clickExtensionMenuItem, dismissOpenDialogs, configureCogOf } from './helpers'
 
 // Verifies that every core dialog carrying a HelpButton invokes window.open (a popup) with the right
@@ -18,11 +18,30 @@ interface ICase {
     section: string
 }
 
-test('help button: dialogs del menú principal invocan window.open en su sección de la guía', async ({ page }) => {
-    await login(page)
+/*
+    🔴 UN LOGIN PARA EL FICHERO. Habia uno por test y cada uno es un arranque completo de la
+    aplicacion: ~1,6 min cada uno. Los dos tests son independientes aunque compartan pagina — cada uno
+    reinstala su stub de `window.open` y vacia `__helpOpens` antes de empezar — y lo unico que habia que
+    mover es el `about:blank`, que libera el WebSocket y ahora va al cierre del fichero en vez de al
+    final de cada test.
+*/
+test.describe.serial('help button', () => {
+let page: Page
 
+test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage()
+    await login(page)
     // Close any dialog auto-opened at login (an admin profile's auto-start channel, for instance)
     await dismissOpenDialogs(page)
+})
+
+test.afterAll(async () => {
+    // Navigate to blank to release the WebSocket before the teardown (it stops Playwright hanging on the SPA)
+    await page?.goto('about:blank')
+    await page?.close()
+})
+
+test('help button: dialogs del menú principal invocan window.open en su sección de la guía', async () => {
 
     await page.evaluate(() => {
         ;(window as unknown as { __helpOpens: IHelpOpen[] }).__helpOpens = []
@@ -70,14 +89,11 @@ test('help button: dialogs del menú principal invocan window.open en su secció
         await page.waitForTimeout(400)
     }
 
-    // Navigate to blank to release the WebSocket before the teardown (it stops Playwright hanging on the SPA)
-    await page.goto('about:blank')
 })
 
 // The manager had help, but the dialog where the extension is really configured — which is where the
 // doubt arises — did not. It is checked on senders, which is where it was spotted.
-test('help button: el dialogo de configuracion de un sender tambien lleva ayuda', async ({ page }) => {
-    await login(page)
+test('help button: el dialogo de configuracion de un sender tambien lleva ayuda', async () => {
     await dismissOpenDialogs(page)
 
     await page.evaluate(() => {
@@ -120,6 +136,5 @@ test('help button: el dialogo de configuracion de un sender tambien lleva ayuda'
     expect(last.url).toContain('guide/extensions/senders/')
     expect(last.url).toContain('/#/')
     expect(last.target).toBe('kwirth-guide')
-
-    await page.goto('about:blank')
+})
 })

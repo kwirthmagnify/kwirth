@@ -11,6 +11,11 @@ import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
 
     NON destructive: every test leaves through Cancel, so nothing is saved. The last one checks precisely
     that — that having touched the levels and cancelled did not change what is stored.
+
+    🔴 ONE LOGIN FOR THE WHOLE FILE, in the beforeAll. There were five, one per test, and each one is a
+    full start of the application: 45 s a test, 3,5 min a run, for five checks that take seconds once the
+    dialog is open. Nothing here writes —every test cancels— so there is nothing a shared page could
+    carry from one to the next; what each one does is open the Log tab and close it again.
 */
 
 const INTERVAL_LABEL = 'Cluster metrics read interval (seconds)'
@@ -32,9 +37,18 @@ const openLogTab = async (page: Page) => {
     return dialog
 }
 
-test('la pestaña ofrece los SEIS componentes que publica el back', async ({ page }) => {
+test.describe.serial('Kwirth settings · Log', () => {
+let page: Page
+
+test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage()
     await login(page)
     await dismissOpenDialogs(page)
+})
+
+test.afterAll(async () => { await page?.close() })
+
+test('la pestaña ofrece los SEIS componentes que publica el back', async () => {
     const dialog = await openLogTab(page)
 
     // By its tag, which is what the log prints and what travels in the settings. Two of them — auth and
@@ -47,13 +61,11 @@ test('la pestaña ofrece los SEIS componentes que publica el back', async ({ pag
     await dismissOpenDialogs(page)
 })
 
-test('🔴 se abre con lo que RIGE, no en blanco', async ({ page }) => {
+test('🔴 se abre con lo que RIGE, no en blanco', async () => {
     /*
         With nothing configured, what is stored is undefined: were the dialog to show that, it would open
         blank while the core writes under its defaults — one thing on screen and another in the log.
     */
-    await login(page)
-    await dismissOpenDialogs(page)
     const dialog = await openLogTab(page)
 
     const selects = logSelects(dialog)
@@ -65,10 +77,8 @@ test('🔴 se abre con lo que RIGE, no en blanco', async ({ page }) => {
     await dismissOpenDialogs(page)
 })
 
-test('dice que un error nunca se silencia', async ({ page }) => {
+test('dice que un error nunca se silencia', async () => {
     // It is the rule that makes the filter safe to use, and it is stated rather than left to be found out.
-    await login(page)
-    await dismissOpenDialogs(page)
     const dialog = await openLogTab(page)
 
     await expect(dialog.getByText(/Errors are always written/)).toBeVisible()
@@ -77,13 +87,11 @@ test('dice que un error nunca se silencia', async ({ page }) => {
     await dismissOpenDialogs(page)
 })
 
-test('Reset to defaults solo está en la pestaña del log', async ({ page }) => {
+test('Reset to defaults solo está en la pestaña del log', async () => {
     /*
         On the other tabs 'defaults' would mean emptying the marketplaces and the package registries —
         configuration somebody composed by hand — so the button is not even offered there.
     */
-    await login(page)
-    await dismissOpenDialogs(page)
     const dialog = await openLogTab(page)
 
     await expect(dialog.getByRole('button', { name: 'Reset to defaults' })).toBeVisible()
@@ -99,9 +107,7 @@ test('Reset to defaults solo está en la pestaña del log', async ({ page }) => 
     await dismissOpenDialogs(page)
 })
 
-test('cambiar un nivel y cancelar NO guarda nada', async ({ page }) => {
-    await login(page)
-    await dismissOpenDialogs(page)
+test('cambiar un nivel y cancelar NO guarda nada', async () => {
     let dialog = await openLogTab(page)
 
     // The core's select is the first one of the tab: it is its first row.
@@ -119,4 +125,5 @@ test('cambiar un nivel y cancelar NO guarda nada', async ({ page }) => {
 
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await dismissOpenDialogs(page)
+})
 })

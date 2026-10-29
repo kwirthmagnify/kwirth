@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
 import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
 
 // Verifies that "Kwirth Settings" really persists: what is saved is still there on reopening the dialog,
@@ -23,9 +23,24 @@ async function saveSettings(page: import('@playwright/test').Page) {
     await page.locator('[role="dialog"]').waitFor({ state: 'hidden', timeout: 5000 })
 }
 
-test('Kwirth settings: el intervalo de metricas se persiste y sobrevive a reabrir el dialogo', async ({ page }) => {
+/*
+    🔴 UN LOGIN PARA EL FICHERO. Habia uno por test, y cada uno es un arranque completo de la
+    aplicacion: ~45 s cada uno para comprobaciones que duran segundos con el dialogo ya abierto. Nada
+    aqui deja estado —el valor se restaura al final— asi que no hay nada que una pagina compartida
+    pueda arrastrar de un test al siguiente.
+*/
+test.describe.serial('Kwirth settings', () => {
+let page: Page
+
+test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage()
     await login(page)
     await dismissOpenDialogs(page)
+})
+
+test.afterAll(async () => { await page?.close() })
+
+test('Kwirth settings: el intervalo de metricas se persiste y sobrevive a reabrir el dialogo', async () => {
 
     // snapshot of the current value, to restore it at the end
     let field = await openSettings(page)
@@ -57,8 +72,7 @@ test('Kwirth settings: el intervalo de metricas se persiste y sobrevive a reabri
     await dismissOpenDialogs(page)
 })
 
-test('Kwirth settings: no deja guardar un intervalo no positivo', async ({ page }) => {
-    await login(page)
+test('Kwirth settings: no deja guardar un intervalo no positivo', async () => {
     await dismissOpenDialogs(page)
 
     const field = await openSettings(page)
@@ -72,4 +86,5 @@ test('Kwirth settings: no deja guardar un intervalo no positivo', async ({ page 
     const reopened = await openSettings(page)
     expect(await reopened.inputValue()).toBe(original)
     await dismissOpenDialogs(page)
+})
 })

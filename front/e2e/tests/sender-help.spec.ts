@@ -43,21 +43,36 @@ async function helpUrlFor(page: Page, senderName: RegExp): Promise<string> {
     return await lastOpen(page)
 }
 
-test('la ayuda de un sender lleva a SU pagina de referencia', async ({ page }) => {
+/*
+    🔴 UN LOGIN PARA EL FICHERO. Habia uno por test y cada uno es un arranque completo de la
+    aplicacion, para dos comprobaciones que duran segundos. Los dos tests son independientes aunque
+    compartan pagina —cada uno reinstala su captura de `window.open`— y el `about:blank`, que libera el
+    WebSocket, pasa al cierre del fichero.
+*/
+test.describe.serial('sender help', () => {
+let page: Page
+
+test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage()
     await login(page)
     await dismissOpenDialogs(page)
+})
+
+test.afterAll(async () => {
+    await page?.goto('about:blank')
+    await page?.close()
+})
+
+test('la ayuda de un sender lleva a SU pagina de referencia', async () => {
     await captureOpens(page)
 
     // 'console' has a page of its own: guide/extensions/senders/console
     const consoleUrl = await helpUrlFor(page, /^Console Sender/)
     expect(consoleUrl, 'debe abrir la referencia del propio sender').toContain('guide/extensions/senders/console')
     expect(consoleUrl, 'y no la general').not.toContain('senders/index')
-
-    await page.goto('about:blank')
 })
 
-test('la ayuda de un sender sin pagina propia cae a la general', async ({ page }) => {
-    await login(page)
+test('la ayuda de un sender sin pagina propia cae a la general', async () => {
     await dismissOpenDialogs(page)
     await captureOpens(page)
 
@@ -73,6 +88,5 @@ test('la ayuda de un sender sin pagina propia cae a la general', async ({ page }
     // it falls back to the general page, never to a 404
     const jiraUrl = await helpUrlFor(page, /^Jira Sender/)
     expect(jiraUrl, 'sin pagina propia se cae a la general').toContain('guide/extensions/senders/index')
-
-    await page.goto('about:blank')
+})
 })
