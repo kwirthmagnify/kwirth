@@ -53,7 +53,7 @@ edited on the right.
 - **Update** — or **Add** for a new one — saves **that** connection and applies it immediately. **Cancel**
   discards what you were editing, not the rest.
 - The **🗑️** on each row deletes that connection on the spot.
-- **Export** / **Import** move connections as JSON, which is how you carry a set-up between clusters.
+- To carry a set-up between clusters, use **☰ → Kwirth export** — see [below](#moving-the-connections-to-another-kwirth).
 - **Close** leaves the dialog. There is no global save: every action has already been applied.
 
 ## Test — before saving anything
@@ -109,16 +109,25 @@ reading, and it stops a forgotten connection from burning the quota of a paid AP
 header values go to a **Secret**. You do not have to do anything for this — it is how the provider stores
 its own configuration.
 
-## Exporting and importing
+## Moving the connections to another kwirth
 
-**Export** asks you which connections to take and whether to **include credentials**, which is off by
-default. Left off, the file carries urls, intervals, headers and the auth *mode*, but the password, token or
-header value come out empty and whoever imports it has to type them — so a file that ends up in a ticket or
-a chat is not a leak. Turned on, the file contains those secrets in clear text and becomes a secret itself;
-the dialog says so.
+Through **☰ → Kwirth export**, the same door every extension uses. This provider is its own entry in the
+file, so you can take it and leave the rest.
 
-**Import** lets you pick what to bring in from the file, and flags with **replaces** any connection whose
-name already exists, so you can see what you are about to overwrite before confirming.
+With *Include credentials* unticked — the default — the file carries urls, intervals, headers and the
+auth *mode*, while the password, token or header value come out **empty**: a file that ends up in a
+ticket or a chat is not a leak, and whoever imports it types them again. Tick it and those secrets are
+in the file in clear text, and the file becomes a secret itself.
+
+🔴 **Importing replaces.** What you end up with is exactly what the file carried: connections the
+destination had and the file does not mention **are removed**. It is the same rule for every extension
+in the bundle.
+
+> This dialog used to have its own **Export** and **Import** buttons. They are gone — not because they
+> were unsafe (they asked about credentials and warned about clear text) but because they were a second
+> door onto the same store, and you had to find out which of the two did what. Worse, the two did not
+> agree: that import *merged* — it put the file's connections on top of the existing ones without
+> removing any — while the bundle replaces.
 
 ## Security notes
 

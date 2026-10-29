@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
     Alert, Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
     DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputLabel, MenuItem,
     Select, Stack, Switch, TextField, Tooltip, Typography
 } from '@mui/material'
-import { Add, ContentCopy, Delete, Download, Upload } from '@mui/icons-material'
+import { Add, ContentCopy, Delete } from '@mui/icons-material'
 import {
     EAuthType, EEmitMode, EHttpMethod, EResponseType, IHttpPullConfig, IHttpPullTestResult, newHttpPullConfig
 } from '../common/HttpPullPush'
@@ -18,37 +18,17 @@ interface IHttpPullPushConfigDialogProps {
     accessString: string
 }
 
-// Format of the export/import file. 'version' allows it to evolve without breaking older files.
-interface IConfigExportFile {
-    provider: string
-    version: number
-    credentialsIncluded: boolean
-    configs: IHttpPullConfig[]
-}
-
 // The provider owns its configuration: this dialog talks to ITS router, mounted by the core behind
 // accessKey validation, and not to the core's generic config endpoint.
 const CONFIG_URL = (backendUrl: string) => `${backendUrl}/core/providerconfig/http-pull-push/configs`
 const TEST_URL = (backendUrl: string) => `${backendUrl}/core/providerconfig/http-pull-push/test`
 
-const EXPORT_VERSION = 1
 const METHODS_WITH_BODY = [EHttpMethod.POST, EHttpMethod.PUT, EHttpMethod.PATCH]
 
 const authHeaders = (accessString: string) => ({
     Authorization: accessString ? `Bearer ${accessString}` : '',
     'Content-Type': 'application/json',
     'X-Kwirth-App': 'true'
-})
-
-// Strips a connection of its secret fields, so it can be exported without credentials.
-const stripCredentials = (config: IHttpPullConfig): IHttpPullConfig => ({
-    ...config,
-    auth: {
-        ...config.auth,
-        password: undefined,
-        token: undefined,
-        headerValue: undefined
-    }
 })
 
 const HttpPullPushConfigDialog: React.FC<IHttpPullPushConfigDialogProps> = ({ onClose, backendUrl, accessString }) => {
@@ -67,14 +47,6 @@ const HttpPullPushConfigDialog: React.FC<IHttpPullPushConfigDialogProps> = ({ on
     // Connection test, executed on the back end
     const [testing, setTesting] = useState(false)
     const [testResult, setTestResult] = useState<IHttpPullTestResult | undefined>()
-
-    // Export / import
-    const [exportOpen, setExportOpen] = useState(false)
-    const [exportSelected, setExportSelected] = useState<Set<string>>(new Set())
-    const [exportWithCredentials, setExportWithCredentials] = useState(false)
-    const [importData, setImportData] = useState<IConfigExportFile | undefined>()
-    const [importSelected, setImportSelected] = useState<Set<string>>(new Set())
-    const importFileRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         fetch(CONFIG_URL(backendUrl), { headers: { Authorization: accessString ? `Bearer ${accessString}` : '', 'X-Kwirth-App': 'true' } })
@@ -199,56 +171,22 @@ const HttpPullPushConfigDialog: React.FC<IHttpPullPushConfigDialogProps> = ({ on
         }
     }
 
-    const doExport = () => {
-        const chosen = configs.filter(c => exportSelected.has(c.name))
-        const payload: IConfigExportFile = {
-            provider: 'http-pull-push',
-            version: EXPORT_VERSION,
-            credentialsIncluded: exportWithCredentials,
-            configs: exportWithCredentials ? chosen : chosen.map(stripCredentials)
-        }
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = 'http-pull-push-connections.json'
-        link.click()
-        URL.revokeObjectURL(url)
-        setExportOpen(false)
-    }
+    /*
+        🔴 Aqui vivian `doExport`, `openImport` y `doImport`, y se fueron con los botones del pie (ver
+        el comentario en DialogActions). Lo que importa recordar de ellos:
 
-    const openImport = (file: File) => {
-        const reader = new FileReader()
-        reader.onload = () => {
-            try {
-                const parsed = JSON.parse(String(reader.result)) as IConfigExportFile
-                if (!Array.isArray(parsed?.configs)) throw new Error('no connections in the file')
-                if (parsed.provider && parsed.provider !== 'http-pull-push') throw new Error(`the file belongs to provider '${parsed.provider}'`)
-                setImportData(parsed)
-                setImportSelected(new Set(parsed.configs.map(c => c.name)))
-            }
-            catch (err) {
-                setError(`Invalid import file: ${err}`)
-            }
-        }
-        reader.readAsText(file)
-        if (importFileRef.current) importFileRef.current.value = ''
-    }
+        · `doImport` FUSIONABA — partia de las conexiones de aqui y encima ponia las del fichero por
+          nombre, asi que importar no podia QUITAR ninguna. El bundle REEMPLAZA: lo que queda es
+          exactamente lo que traia el fichero.
+        · `doExport` estaba BIEN hecho —casilla de credenciales y aviso de texto en claro— y aun asi
+          sobraba: era una segunda puerta al mismo almacen, y lo que se arregla aqui no es un peligro
+          sino que hubiera dos sitios donde mirar.
 
-    // Importing replaces connections whose name already exists and adds the new ones.
-    const doImport = async () => {
-        if (!importData) return
-        const chosen = importData.configs.filter(c => importSelected.has(c.name))
-        const byName = new Map(configs.map(c => [c.name, c]))
-        for (const config of chosen) byName.set(config.name, { ...newHttpPullConfig(config.name), ...config })
-        if (await persist([...byName.values()])) setImportData(undefined)
-    }
+        Las conexiones viajan en ☰ Kwirth export, como las de cualquier otra extension.
+    */
 
     const showBody = METHODS_WITH_BODY.includes(form.method)
     const isHttps = (form.url ?? '').toLowerCase().startsWith('https://')
-    const importReplacing = importData
-        ? importData.configs.filter(c => importSelected.has(c.name) && configs.some(existing => existing.name === c.name)).length
-        : 0
 
     return <>
         <Dialog open maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '1000px', height: '700px' } }}>
@@ -477,119 +415,21 @@ const HttpPullPushConfigDialog: React.FC<IHttpPullPushConfigDialogProps> = ({ on
                 }
             </DialogContent>
 
-            <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
-                <Stack direction='row' spacing={1}>
-                    <input ref={importFileRef} type='file' accept='.json' style={{ display: 'none' }}
-                        onChange={e => { const f = e.target.files?.[0]; if (f) openImport(f) }} />
-                    <Tooltip title='Export connections to JSON'>
-                        <span>
-                            <Button size='small' startIcon={<Download />} disabled={configs.length === 0}
-                                onClick={() => { setExportSelected(new Set(configs.map(c => c.name))); setExportWithCredentials(false); setExportOpen(true) }}>
-                                Export
-                            </Button>
-                        </span>
-                    </Tooltip>
-                    <Tooltip title='Import connections from JSON'>
-                        <Button size='small' startIcon={<Upload />} onClick={() => importFileRef.current?.click()}>Import</Button>
-                    </Tooltip>
-                </Stack>
+            {/*
+                Aqui estaban Export e Import. Se fueron porque las conexiones de este provider viajan en
+                ☰ Kwirth export, la puerta de TODAS las extensiones, y tener dos obligaba a investigar
+                cual exportaba que.
+
+                🔴 Y porque el import de aqui FUSIONABA —reemplazaba las conexiones cuyo nombre ya
+                existia y añadia las nuevas, sin quitar nada— mientras que el bundle REEMPLAZA: lo que
+                queda tras importar es exactamente lo que traia el fichero. El mismo contenido dejaba el
+                sistema en dos estados distintos segun por donde entrara, y nada lo advertia.
+            */}
+            <DialogActions sx={{ justifyContent: 'flex-end', px: 2 }}>
                 <Button onClick={onClose} disabled={saving}>Close</Button>
             </DialogActions>
         </Dialog>
 
-        {/* Export — seleccion de conexiones y decision sobre las credenciales */}
-        <Dialog open={exportOpen} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '480px' } }}>
-            <DialogTitle>Export connections</DialogTitle>
-            <DialogContent sx={{ pt: '16px !important' }}>
-                <Stack spacing={1}>
-                    <FormControlLabel
-                        label='Select all'
-                        control={<Checkbox
-                            checked={exportSelected.size === configs.length && configs.length > 0}
-                            indeterminate={exportSelected.size > 0 && exportSelected.size < configs.length}
-                            onChange={(_e, checked) => setExportSelected(checked ? new Set(configs.map(c => c.name)) : new Set())} />} />
-                    <Box sx={{ maxHeight: 220, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }}>
-                        {configs.map(config => (
-                            <FormControlLabel key={config.name} label={config.name} sx={{ display: 'block' }}
-                                control={<Checkbox checked={exportSelected.has(config.name)}
-                                    onChange={(_e, checked) => setExportSelected(prev => {
-                                        const next = new Set(prev)
-                                        if (checked) next.add(config.name)
-                                        else next.delete(config.name)
-                                        return next
-                                    })} />} />
-                        ))}
-                    </Box>
-                    <FormControlLabel
-                        label='Include credentials'
-                        control={<Checkbox checked={exportWithCredentials} onChange={(_e, checked) => setExportWithCredentials(checked)} />} />
-                    {exportWithCredentials
-                        ? <Alert severity='warning'>
-                            Passwords, tokens and header values will be written to the file in clear text. Treat it as a secret.
-                          </Alert>
-                        : <Alert severity='info'>
-                            Credentials are left empty. Whoever imports the file will have to type them again.
-                          </Alert>
-                    }
-                </Stack>
-            </DialogContent>
-            <DialogActions>
-                <Button variant='contained' disabled={exportSelected.size === 0} onClick={doExport}>Export</Button>
-                <Button onClick={() => setExportOpen(false)}>Cancel</Button>
-            </DialogActions>
-        </Dialog>
-
-        {/* Import — seleccion de lo que trae el fichero */}
-        <Dialog open={importData !== undefined} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '480px' } }}>
-            <DialogTitle>Import connections</DialogTitle>
-            <DialogContent sx={{ pt: '16px !important' }}>
-                <Stack spacing={1}>
-                    {importData?.configs.length === 0
-                        ? <Typography variant='body2' color='text.secondary'>The file has no connections.</Typography>
-                        : <>
-                            <FormControlLabel
-                                label='Select all'
-                                control={<Checkbox
-                                    checked={importSelected.size === (importData?.configs.length ?? 0) && (importData?.configs.length ?? 0) > 0}
-                                    indeterminate={importSelected.size > 0 && importSelected.size < (importData?.configs.length ?? 0)}
-                                    onChange={(_e, checked) => setImportSelected(checked ? new Set(importData?.configs.map(c => c.name) ?? []) : new Set())} />} />
-                            <Box sx={{ maxHeight: 220, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }}>
-                                {importData?.configs.map(config => (
-                                    <FormControlLabel key={config.name} sx={{ display: 'block' }}
-                                        label={<>
-                                            {config.name}
-                                            {configs.some(c => c.name === config.name) &&
-                                                <Chip size='small' label='replaces' color='warning' variant='outlined' sx={{ ml: 1 }} />}
-                                        </>}
-                                        control={<Checkbox checked={importSelected.has(config.name)}
-                                            onChange={(_e, checked) => setImportSelected(prev => {
-                                                const next = new Set(prev)
-                                                if (checked) next.add(config.name)
-                                                else next.delete(config.name)
-                                                return next
-                                            })} />} />
-                                ))}
-                            </Box>
-                            {importReplacing > 0 &&
-                                <Alert severity='warning'>
-                                    {importReplacing} existing connection(s) will be replaced.
-                                </Alert>
-                            }
-                            {importData?.credentialsIncluded === false &&
-                                <Alert severity='info'>
-                                    The file carries no credentials: you will have to type them after importing.
-                                </Alert>
-                            }
-                        </>
-                    }
-                    {errors.length > 0 && <Alert severity='warning'>{errors.map((e, i) => <div key={i}>{e}</div>)}</Alert>}
-                </Stack>
-            </DialogContent>
-            <DialogActions>
-                <Button variant='contained' disabled={importSelected.size === 0 || saving} onClick={doImport}>Import</Button>
-                <Button onClick={() => { setImportData(undefined); setErrors([]) }}>Cancel</Button>
-            </DialogActions>
-        </Dialog>
     </>
 }
 

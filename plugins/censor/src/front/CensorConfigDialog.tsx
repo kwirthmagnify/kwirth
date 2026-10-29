@@ -4,7 +4,6 @@ import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, D
 import { IChannelObject } from '@kwirthmagnify/kwirth-common-front'
 import { ICensorData } from './CensorData'
 import { ECensorCommand, ICensorInstanceConfig, ICensorBusinessSource, ICensorLogstreamSource } from './CensorConfig'
-import { CensorImportExport } from './CensorImportExport'
 import { MsgBoxButtons, MsgBoxYesNo } from './utils'
 
 interface ICensorConfigDialogProps {
@@ -36,7 +35,6 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
     const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
     const [configTab, setConfigTab] = useState<ECensorConfigTab>(ECensorConfigTab.General)
     const [msgBox, setMsgBox] = useState(<></>)
-    const [showImportExport, setShowImportExport] = useState(false)
     const [senderEntries, setSenderEntries] = useState<Array<{ senderId: string; configName: string }>>([])
 
     // Form fields for the config being edited in the right panel
@@ -187,20 +185,15 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
         onClose()
     }
 
-    const importExportClose = (imported?: ICensorInstanceConfig[]) => {
-        setShowImportExport(false)
-        if (imported) {
-            setLocalConfigs(prev => {
-                let next = [...prev]
-                for (const cfg of imported) {
-                    const idx = next.findIndex(c => c.name === cfg.name && c.version === cfg.version)
-                    if (idx >= 0) next[idx] = cfg
-                    else next = [...next, cfg]
-                }
-                return next
-            })
-        }
-    }
+    /*
+        🔴 Aqui vivia `importExportClose`, que FUSIONABA: recorria lo que traia el fichero y hacia
+        upsert por nombre+version sobre lo que ya habia, asi que importar no podia QUITAR ninguna
+        configuracion. El bundle de Kwirth REEMPLAZA — lo que queda tras importar es exactamente lo que
+        traia el fichero — y tener las dos cosas significaba que el mismo contenido dejaba el sistema en
+        dos estados distintos segun por donde entrara.
+
+        Las configuraciones de censor viajan en ☰ Kwirth export, como las de cualquier otra extension.
+    */
 
     return <>
         <Dialog open={true} PaperProps={{ sx: { width: '92vw', maxWidth: '1200px', height: '82vh' } }}>
@@ -434,16 +427,12 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button variant='outlined' size='small' onClick={() => setShowImportExport(true)}>Import/Export</Button>
                 <Box sx={{ flex: 1 }} />
                 <Button onClick={handleOk} variant='contained' disabled={!llmId || !!exampleJsonError}>OK</Button>
                 <Button variant='outlined' onClick={onClose}>Cancel</Button>
             </DialogActions>
         </Dialog>
 
-        {showImportExport && (
-            <CensorImportExport configs={localConfigs} onClose={importExportClose} />
-        )}
         {msgBox}
     </>
 }

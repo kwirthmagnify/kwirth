@@ -183,7 +183,11 @@ See the walkthrough (with screenshots) in **[Pinocchio → AI configuration](pin
 
 ### Import / Export
 
-The **Import/Export** button moves your **censor configs** as JSON — back them up, or promote a tuned filter set from a test cluster to production. *(The AI providers and models are shared across plugins, so they do not travel here: they go in Kwirth's own bundle — see [Moving your AI configuration](pinocchio#moving-your-ai-configuration).)*
+To promote a tuned filter set from a test cluster to production, use **☰ → Kwirth export**, the same door every extension uses: censor is its own entry in the file, next to the AI providers and models it relies on.
+
+🔴 **Importing replaces.** What you end up with is exactly what the file carried: configs the destination had and the file does not mention **are removed**.
+
+> This dialog used to have its own **Import/Export** button. It is gone — it was a second door onto the same store, and it *merged*: it put the file's configs on top of the existing ones, matching by name and version, without removing any. The bundle replaces, so the same content left the system in two different states depending on which button you pressed.
 
 ## Admin guide
 
@@ -196,7 +200,7 @@ The **Import/Export** button moves your **censor configs** as JSON — back them
 
 - Only the lines the regexes **don't** already match are sent to the LLM, so cost **drops over time** as the filter set matures — the Performance tab shows this directly.
 - Treat flagged **Issues** as real findings: a detected secret is a leaked secret. Rotate it and add a filter.
-- Configs are **portable** — use **Import/Export** to move a tuned filter set between clusters.
+- Configs are **portable** — they travel in **☰ → Kwirth export**, and importing **replaces** what is at the destination.
 
 ---
 

@@ -44,7 +44,8 @@ configs at once, each with its own runners.
 **Auto start what's ON** starts the analysis of every active config as soon as the channel starts, so a
 restored workspace comes back analyzing instead of waiting for a click.
 
-Configs travel: **Import/Export** moves them as JSON between clusters.
+Configs travel in **☰ → Kwirth export**, the bundle every extension uses. Importing **replaces**: what
+is left is exactly what the file carried.
 
 The user guide, with screenshots, lives in the Kwirth documentation:
 **https://kwirthmagnify.dev** → Guide → Extensions → Plugins → Censor.

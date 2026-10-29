@@ -201,16 +201,16 @@ test.describe('http-pull-push provider', () => {
             const afterDelete = JSON.parse((await api(page, session, 'GET')).text)
             expect(afterDelete.some((c: any) => c.name === `${PREFIX}dup-src-copy`)).toBe(false)
 
-            // ── the export offers a decision about the credentials ─────────
-            await dialog.getByRole('button', { name: 'Export', exact: true }).click()
-            const exportDialog = page.getByRole('dialog').filter({ hasText: /^Export connections/ })
-            await expect(exportDialog).toBeVisible()
-            const includeCreds = exportDialog.getByLabel('Include credentials')
-            await expect(includeCreds, 'credentials must be OUT by default').not.toBeChecked()
-            await expect(exportDialog.getByText(/Credentials are left empty/i)).toBeVisible()
-            await includeCreds.check()
-            await expect(exportDialog.getByText(/clear text/i), 'turning it on must warn').toBeVisible()
-            await exportDialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+            /*
+                🔴 Y este diálogo ya NO lleva Export ni Import. Los tenía, y bien hechos —casilla de
+                credenciales y aviso de texto en claro—, pero eran una SEGUNDA PUERTA al mismo almacén:
+                las conexiones viajan en ☰ Kwirth export, como las de cualquier otra extensión.
+
+                Lo que de verdad discrepaba era el import: el de aquí FUSIONABA —ponía las del fichero
+                encima de las de aquí, por nombre, sin quitar ninguna— y el bundle REEMPLAZA.
+            */
+            await expect(dialog.getByRole('button', { name: 'Export', exact: true })).toHaveCount(0)
+            await expect(dialog.getByRole('button', { name: 'Import', exact: true })).toHaveCount(0)
 
             await dialog.getByRole('button', { name: 'Close', exact: true }).click()
         }
