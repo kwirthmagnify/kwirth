@@ -1,0 +1,108 @@
+name: Release
+
+# Core tags are bare X.Y.Z; the extension tags (plugin/x@1.2.3, sender/...) never match this pattern.
+on:
+  push:
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            bundles: deb,appimage
+          - os: windows-latest
+            bundles: msi,nsis
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Dependencias de Tauri
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev patchelf libfuse2
+
+      # Same files version/update-version.cmd writes, but with the tag's version instead of bumping level.
+      - name: Fijar versión
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          [[ "$GITHUB_REF_TYPE" == tag ]] || VERSION="$(sed -n 's/.*KWIRTH_VERSION="\([^"]*\)".*/\1/p' version/version.cmd | tr -d '\r')"
+          echo "export const VERSION:string=\"$VERSION\"; " > version/version.ts
+          echo "set KWIRTH_VERSION=\"$VERSION\" " > version/version.cmd
+          cp version/version.ts back/src/version.ts
+          cp version/version.ts front/src/version.ts
+
+      # CI=false: react-scripts turns lint warnings into errors when CI is set.
+      - name: Construir front
+        working-directory: front
+        env:
+          CI: "false"
+        run: |
+          npm ci
+          npm run build
+
+      - name: Construir back
+        working-directory: back
+        run: |
+          npm ci
+          mkdir -p dist/front bundle/front
+          cp -r ../front/build/. dist/front/
+          cp -r ../front/build/. bundle/front/
+          npm run build
+
+      - name: Construir paquetes
+        working-directory: deploy/tauri
+        env:
+          TAURI_BUNDLES: ${{ matrix.bundles }}
+        run: bash tauri-build.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ runner.os }}
+          if-no-files-found: error
+          path: |
+            deploy/tauri/src-tauri/target/release/bundle/deb/*.deb
+            deploy/tauri/src-tauri/target/release/bundle/appimage/*.AppImage
+            deploy/tauri/src-tauri/target/release/bundle/msi/*.msi
+            deploy/tauri/src-tauri/target/release/bundle/nsis/*.exe
+
+  release:
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: packages
+          merge-multiple: true
+
+      - name: Publicar release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # upload-artifact keeps the deb/, appimage/... subfolders
+          mapfile -t FILES < <(find packages -type f)
+          ls -l "${FILES[@]}"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${FILES[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${FILES[@]}" --title "$GITHUB_REF_NAME" --generate-notes
+          fi
