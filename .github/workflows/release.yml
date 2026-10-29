@@ -50,18 +50,19 @@ jobs:
           cp version/version.ts front/src/version.ts
 
       # CI=false: react-scripts turns lint warnings into errors when CI is set.
+      # npm install, not ci: the lock files are not always in sync, same as the local build scripts.
       - name: Construir front
         working-directory: front
         env:
           CI: "false"
         run: |
-          npm ci
+          npm install
           npm run build
 
       - name: Construir back
         working-directory: back
         run: |
-          npm ci
+          npm install
           mkdir -p dist/front bundle/front
           cp -r ../front/build/. dist/front/
           cp -r ../front/build/. bundle/front/
