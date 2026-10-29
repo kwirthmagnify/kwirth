@@ -1,4 +1,4 @@
-import { Locator, Page } from '@playwright/test'
+import { expect, Locator, Page } from '@playwright/test'
 import { readdirSync } from 'fs'
 import path from 'path'
 
@@ -25,7 +25,20 @@ export async function login(page: Page, user = USER, pass = PASS): Promise<void>
     await page.getByLabel('User').fill(user)
     await page.getByLabel('Password').fill(pass)
     await page.getByRole('button', { name: 'OK' }).click()
-    await page.waitForTimeout(1500)
+    /*
+        🔴 Se espera a que la aplicación ESTÉ, no un rato fijo.
+
+        Aquí había un `waitForTimeout(1500)`, y esa era la causa de la mitad de los rojos intermitentes
+        de la suite: si el front tardaba más de segundo y medio —y en desarrollo tarda a menudo— todo lo
+        que venía detrás encontraba la aplicación a medias. El error aparecía mucho más adelante, al
+        pulsar el menú, y se leía como «el menú no responde» en vez de «aún no había terminado de
+        cargar»; se parcheó spec a spec durante un tiempo antes de mirar aquí.
+
+        La barra superior es la señal: cuando su primer botón existe, la aplicación ha pintado. Y
+        después `networkidle`, porque pintar no es haber terminado de pedir cosas.
+    */
+    await page.locator('header button').first().waitFor({ state: 'visible', timeout: 60_000 })
+    await page.waitForLoadState('networkidle').catch(() => { /* alguna petición de fondo nunca calla */ })
 }
 
 /** Closes any open dialog (from auto-start or other causes). */
@@ -47,7 +60,21 @@ export async function dismissOpenDialogs(page: Page): Promise<void> {
 /** Opens the hamburger drawer using a CSS locator (it is not blocked by the backdrop's aria-hidden). */
 export async function openMenu(page: Page): Promise<void> {
     // First AppBar button (the hamburger) — a CSS locator avoids the aria-hidden problem with MUI Dialog
-    await page.locator('header button').first().click({ force: true })
+    const hamburguesa = page.locator('header button').first()
+    /*
+        🔴 Se espera a que la barra ESTÉ, con un minuto de margen, antes de pulsar nada.
+
+        El `actionTimeout` de la config son 15 s y al front de desarrollo no siempre le llegan: después
+        de un login tarda en quedarse quieto, y el click se daba contra una página que aún estaba
+        navegando. El error que salía era «locator.click: Timeout exceeded» sobre `header button`, que
+        se lee como un problema del menú y es simplemente que la aplicación no estaba lista.
+
+        Era la causa de la mitad de los rojos intermitentes de la suite, y se estaba parcheando spec a
+        spec. Vive aquí porque el problema no es de ninguno en particular: es de todos los que abren el
+        menú, que son casi todos.
+    */
+    await hamburguesa.waitFor({ state: 'visible', timeout: 60_000 })
+    await hamburguesa.click({ force: true, timeout: 60_000 })
     await page.waitForTimeout(300)
 }
 
@@ -55,7 +82,15 @@ export async function openMenu(page: Page): Promise<void> {
 export async function clickMenuItem(page: Page, label: string): Promise<void> {
     await dismissOpenDialogs(page)
     await openMenu(page)
-    await page.getByRole('menuitem', { name: label, exact: true }).click()
+    /*
+        Y se espera a que la entrada esté HABILITADA. Kwirth deja algunas apagadas hasta que tiene con
+        qué (el export, sin nada que exportar), así que un click a secas la encuentra con `aria-disabled`
+        y agota el timeout diciendo que no pudo pulsarla — que parece un problema del menú y es que la
+        aplicación todavía no estaba lista.
+    */
+    const entrada = page.getByRole('menuitem', { name: label, exact: true })
+    await expect(entrada).toBeEnabled({ timeout: 60_000 })
+    await entrada.click({ timeout: 60_000 })
     await page.waitForTimeout(400)
 }
 
@@ -63,9 +98,13 @@ export async function clickMenuItem(page: Page, label: string): Promise<void> {
 export async function clickExtensionMenuItem(page: Page, label: string): Promise<void> {
     await dismissOpenDialogs(page)
     await openMenu(page)
-    await page.getByRole('menuitem', { name: /Manage extensions/i }).click()
+    // Mismo margen que en `clickMenuItem`, y por lo mismo: el front de desarrollo tarda más que el
+    // `actionTimeout` de la config en quedarse quieto, y el click muere donde no se está midiendo nada.
+    await page.getByRole('menuitem', { name: /Manage extensions/i }).click({ timeout: 60_000 })
     await page.waitForTimeout(200)
-    await page.getByRole('menuitem', { name: label, exact: true }).click()
+    const entrada = page.getByRole('menuitem', { name: label, exact: true })
+    await expect(entrada).toBeEnabled({ timeout: 60_000 })
+    await entrada.click({ timeout: 60_000 })
     await page.waitForTimeout(400)
 }
 
