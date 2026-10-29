@@ -231,6 +231,25 @@ const kwirthGlobalsPlugin = {
             '@mui/icons-material': 'window.__kwirth__.MUI.icons',
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
+            /*
+                🔴 Everything the core publishes on window.__kwirth__ goes HERE, used or not: a
+                package that is NOT on this map gets BUNDLED. vllm shipped a 1 MB front.js without
+                noticing, because importing recharts dragged in d3 and 382 lodash modules; with it
+                mapped, the same bundle is 59 KB. If you use another library from the runtime barrel
+                (codemirror, the file manager…), add it here too.
+            */
+            'recharts': 'window.__kwirth__.recharts',
+            'react-dom': 'window.__kwirth__.ReactDOM',
+            '@kwirthmagnify/kwirth-common-ai/front': 'window.__kwirth__.kwirthCommonAiFront',
+            '@codemirror/view': 'window.__kwirth__.codeMirrorView',
+            '@codemirror/state': 'window.__kwirth__.codeMirrorState',
+            '@codemirror/commands': 'window.__kwirth__.codeMirrorCommands',
+            '@codemirror/search': 'window.__kwirth__.codeMirrorSearch',
+            '@codemirror/language': 'window.__kwirth__.codeMirrorLanguage',
+            '@codemirror/lang-yaml': 'window.__kwirth__.codeMirrorLangYaml',
+            '@codemirror/theme-one-dark': 'window.__kwirth__.codeMirrorThemeOneDark',
+            '@uiw/react-codemirror': 'window.__kwirth__.uiwReactCodeMirror',
+            '@jfvilas/react-file-manager': 'window.__kwirth__.jfvilasReactFileManager',
         }
         for (const pkg of Object.keys(globals)) {
             build.onResolve({ filter: new RegExp(\`^\${pkg.replace(/[.*+?^\$\{\}()|[\\\\]\\\\]/g, '\\\\$&')}$\`) }, () => ({ path: pkg, namespace: 'kwirth-globals' }))
@@ -343,6 +362,25 @@ const kwirthGlobalsPlugin = {
             '@mui/icons-material': 'window.__kwirth__.MUI.icons',
             '@kwirthmagnify/kwirth-common': 'window.__kwirth__.kwirthCommon',
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
+            /*
+                🔴 Everything the core publishes on window.__kwirth__ goes HERE, used or not: a
+                package that is NOT on this map gets BUNDLED. vllm shipped a 1 MB front.js without
+                noticing, because importing recharts dragged in d3 and 382 lodash modules; with it
+                mapped, the same bundle is 59 KB. If you use another library from the runtime barrel
+                (codemirror, the file manager…), add it here too.
+            */
+            'recharts': 'window.__kwirth__.recharts',
+            'react-dom': 'window.__kwirth__.ReactDOM',
+            '@kwirthmagnify/kwirth-common-ai/front': 'window.__kwirth__.kwirthCommonAiFront',
+            '@codemirror/view': 'window.__kwirth__.codeMirrorView',
+            '@codemirror/state': 'window.__kwirth__.codeMirrorState',
+            '@codemirror/commands': 'window.__kwirth__.codeMirrorCommands',
+            '@codemirror/search': 'window.__kwirth__.codeMirrorSearch',
+            '@codemirror/language': 'window.__kwirth__.codeMirrorLanguage',
+            '@codemirror/lang-yaml': 'window.__kwirth__.codeMirrorLangYaml',
+            '@codemirror/theme-one-dark': 'window.__kwirth__.codeMirrorThemeOneDark',
+            '@uiw/react-codemirror': 'window.__kwirth__.uiwReactCodeMirror',
+            '@jfvilas/react-file-manager': 'window.__kwirth__.jfvilasReactFileManager',
         }
         for (const pkg of Object.keys(globals)) {
             build.onResolve({ filter: new RegExp(\`^\${pkg.replace(/[.*+?^\$\{\}()|[\\\\]\\\\]/g, '\\\\$&')}$\`) }, () => ({ path: pkg, namespace: 'kwirth-globals' }))
