@@ -7,7 +7,12 @@
         "fileman": "../plugins/fileman/dist",
         "magnify": "../plugins/magnify/dist",
         "trivy": "../plugins/trivy/dist",
-        "vllm": "../plugins/vllm/dist"
+        "vllm": "../plugins/vllm/dist",
+        "situs": "../plugins/situs/dist",
+        "censor": "../plugins/censor/dist",
+        "pinocchio": "../plugins/pinocchio/dist",
+        "nettools": "../plugins/nettools/dist",
+        "provider-debug": "../plugins/provider-debug/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",
@@ -17,31 +22,42 @@
         "cloud-config": "../providers/cloud-config/dist",
         "metrics": "../providers/metrics/dist",
         "events": "../providers/events/dist",
-        "trivy": "../providers/trivy/dist"
+        "trivy": "../providers/trivy/dist",
+        "service-flow": "../providers/service-flow/dist",
+        "sugarless": "../providers/sugarless/dist",
+        "business": "../providers/business/dist"
     },
     "senders": {
         "datadog": "../senders/datadog/dist",
         "gitlab-issues": "../senders/gitlab-issues/dist"
     },
     "webhooks": {
-        "gitlab-issues": "../webhooks/gitlab-issues/dist"
+        "gitlab-issues": "../webhooks/gitlab-issues/dist",
+        "jira": "../webhooks/jira/dist"
     },
-    "logins": {},
+    "logins": {
+        "magnify": "../logins/magnify/dist",
+        "anonymous": "../logins/anonymous/dist"
+    },
     "homepages": {},
     "themes": {},
     "senderConfigs": {},
     "idps": {},
     "aitoolsets": {
-        "suse-fleet": "../aitoolsets/suse-fleet/dist"
+        "suse-fleet": "../aitoolsets/suse-fleet/dist",
+        "source-repos": "../aitoolsets/source-repos/dist"
     },
     "dces": {
         "file-manager": "../dces/file-manager/dist",
-        "aws-auth": "../dces/aws-auth/dist"
+        "aws-auth": "../dces/aws-auth/dist",
+        "sample": "../dces/sample/dist",
+        "nettools": "../dces/nettools/dist"
     },
     "docs": {
         "excubitor": "../plugins/excubitor/docs/",
         "cloud-config": "../providers/cloud-config/docs/",
         "agora": "../plugins/agora/docs/",
-        "vllm": "../plugins/vllm/docs/"
+        "vllm": "../plugins/vllm/docs/",
+        "pinocchio": "../plugins/pinocchio/docs/"
     }
 }

@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickMenuItem, dismissOpenDialogs, CARGA } from './helpers'
 
 /*
     The Log tab of Kwirth settings.
@@ -32,7 +32,8 @@ const logSelects = (dialog: ReturnType<Page['getByRole']>) => dialog.locator('[r
 const openLogTab = async (page: Page) => {
     await clickMenuItem(page, 'Kwirth settings')
     const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth settings' })
-    await expect(dialog.getByLabel(INTERVAL_LABEL)).toBeEnabled({ timeout: 10000 })
+    // El campo se habilita cuando el dialogo ha terminado de traer sus datos: espera de carga, no de UI.
+    await expect(dialog.getByLabel(INTERVAL_LABEL)).toBeEnabled({ timeout: CARGA })
     await dialog.getByRole('tab', { name: 'Log' }).click()
     return dialog
 }

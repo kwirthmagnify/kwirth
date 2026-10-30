@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickMenuItem, dismissOpenDialogs, CARGA } from './helpers'
 
 /*
     Where a new access request is announced (plan: plans/completed/signup/PLAN.md, S4): Kwirth settings →
@@ -30,7 +30,7 @@ const configCombo = (page: Page) => page.locator('.MuiFormControl-root')
 
 async function openSettings(page: Page) {
     await clickMenuItem(page, 'Kwirth settings')
-    await expect(page.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: 30000 })
+    await expect(page.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: CARGA })
     await page.getByRole('dialog').getByRole('tab', { name: 'Notifications' }).click()
     await expect(senderCombo(page)).toBeVisible()
 }

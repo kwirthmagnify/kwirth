@@ -5,6 +5,20 @@ import path from 'path'
 export const USER = process.env.KWIRTH_E2E_USER ?? 'admin'
 export const PASS = process.env.KWIRTH_E2E_PASS ?? ''
 
+/*
+    🔴 Lo que se espera a que algo CARGUE, en un solo sitio.
+
+    No es el tiempo de la comprobacion: es el que tarda el dev en tener los datos. Un dialogo de Kwirth
+    settings trae sus ajustes antes de habilitar sus campos, y uno de catalogo resuelve los manifests
+    remotos antes de tener tarjetas que pintar. Diez segundos bastaban en una maquina ociosa y se
+    quedaban cortos en una cargada, y cada vez que se instala una extension mas el arranque crece un
+    poco: los rojos que salian de ahi no decian nada del producto.
+
+    Estaba copiado por media suite con tres valores distintos. Aqui hay uno, y asi la proxima vez que el
+    dev se haga mas lento se toca en un sitio y no en once.
+*/
+export const CARGA = 60_000
+
 // CRA's dev server covers the page with an iframe when compilation fails. That iframe means exactly
 // that: **the front end does not compile**. It is not a leftover that can be brushed aside — remove it
 // and the tests carry on against a bundle that is not the one meant to be tested, and may end up green.
@@ -22,6 +36,14 @@ export async function assertFrontCompiles(page: Page): Promise<void> {
 export async function login(page: Page, user = USER, pass = PASS): Promise<void> {
     await page.goto('/')
     await assertFrontCompiles(page)
+    /*
+        🔴 La OTRA mitad de la misma espera. Abajo se espera a que la aplicación esté; aquí se espera a
+        que el diálogo de login esté, que es lo primero que hay que aguardar y se quedaba con los 15 s
+        del `actionTimeout`. El bundle del dev tarda en arrancar lo que tarda, y crece con cada extensión
+        instalada: el `fill` reventaba antes de que el campo existiera y el rojo salía en el `beforeAll`,
+        llevándose por delante el fichero entero.
+    */
+    await page.getByLabel('User').waitFor({ state: 'visible', timeout: 60_000 })
     await page.getByLabel('User').fill(user)
     await page.getByLabel('Password').fill(pass)
     await page.getByRole('button', { name: 'OK' }).click()
@@ -124,9 +146,16 @@ export const configureCogOf = (manager: Locator, name: string | RegExp): Locator
 // The ADD dialog mounts its selects in order, and the LAST one is always the channel's (its position
 // depends on the chosen view), hence pickLastCombo.
 export async function pickCombo(page: Page, idx: number, option: string): Promise<void> {
-    await page.getByRole('combobox').nth(idx).click()
-    await page.getByRole('listbox').waitFor({ state: 'visible', timeout: 5000 })
-    await page.getByRole('option', { name: option, exact: true }).click()
+    await page.getByRole('combobox').nth(idx).click({ timeout: CARGA })
+    await page.getByRole('listbox').waitFor({ state: 'visible', timeout: CARGA })
+    /*
+        ⚠️ Con su propio plazo, y generoso. Elegir en un combo del dialogo de ADD no es pulsar: cada
+        eleccion repinta los que vienen detras —el cluster rehace las vistas, la vista rehace los
+        canales— y MUI anima ese repintado, asi que Playwright ve la opcion «not stable» y reintenta. Con
+        mas canales instalados la lista es mas larga y el repintado mas caro: los 15 s por defecto se
+        agotaban reintentando algo que, un segundo despues, funciona.
+    */
+    await page.getByRole('option', { name: option, exact: true }).click({ timeout: CARGA })
     await page.waitForTimeout(400)
 }
 

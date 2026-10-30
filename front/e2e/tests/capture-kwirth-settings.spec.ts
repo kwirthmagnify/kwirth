@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from './helpers'
+import { login, clickMenuItem, dismissOpenDialogs, GUIDE_MEDIA, CARGA } from './helpers'
 
 // Screenshot of the guide's image for "Kwirth settings" (docs/_media/guide). Dark theme.
 // Ejecutar a mano: playwright test capture-kwirth-settings.spec.ts
@@ -20,7 +20,7 @@ test('capture kwirth-settings (dark)', async ({ page }) => {
     await dialog.waitFor()
 
     // wait until the dialog has finished reading the settings: otherwise the spinner is captured
-    await expect(dialog.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: 10000 })
+    await expect(dialog.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: CARGA })
 
     /*
         A snackbar from a cluster that is down —'Cluster security-nopro not enabled'— slides in over the

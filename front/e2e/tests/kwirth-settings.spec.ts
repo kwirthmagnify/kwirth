@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickMenuItem, dismissOpenDialogs, CARGA } from './helpers'
 
 // Verifies that "Kwirth Settings" really persists: what is saved is still there on reopening the dialog,
 // which is exactly what did NOT happen before (the value lived only in the provider's memory).
@@ -12,7 +12,7 @@ const INTERVAL_LABEL = 'Cluster metrics read interval (seconds)'
 async function openSettings(page: import('@playwright/test').Page) {
     await clickMenuItem(page, 'Kwirth settings')
     const field = page.getByLabel(INTERVAL_LABEL)
-    await expect(field).toBeEnabled({ timeout: 10000 })
+    await expect(field).toBeEnabled({ timeout: CARGA })
     return field
 }
 

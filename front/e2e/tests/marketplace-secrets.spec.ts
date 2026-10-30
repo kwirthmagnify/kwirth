@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickMenuItem, dismissOpenDialogs, CARGA } from './helpers'
 
 // Verifies the agreed UX for a marketplace's secret field: the stored value COMES BACK to the form
 // already filled in and masked, and the eye reveals it. Before, the back end only said whether it
@@ -73,7 +73,7 @@ const fingerprint = (m: Record<string, any>) =>
 
 async function openMarketplaces(page: Page) {
     await clickMenuItem(page, 'Kwirth settings')
-    await expect(dlg(page).getByLabel('Cluster metrics read interval (seconds)', { exact: true })).toBeEnabled({ timeout: 10000 })
+    await expect(dlg(page).getByLabel('Cluster metrics read interval (seconds)', { exact: true })).toBeEnabled({ timeout: CARGA })
     await page.getByRole('tab', { name: 'Marketplaces' }).click()
 }
 

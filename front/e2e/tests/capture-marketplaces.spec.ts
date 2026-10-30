@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs, GUIDE_MEDIA } from './helpers'
+import { login, clickMenuItem, dismissOpenDialogs, GUIDE_MEDIA, CARGA } from './helpers'
 
 // Screenshot of the guide's image for the "Marketplaces" tab (docs/_media/guide). Dark theme.
 // Ejecutar a mano: playwright test capture-marketplaces.spec.ts
@@ -57,7 +57,7 @@ test('capture marketplaces (dark, redactado)', async ({ page }) => {
     await dialog.waitFor()
 
     // wait until it has finished reading the settings: otherwise the spinner is captured
-    await expect(dlg(page).getByLabel('Cluster metrics read interval (seconds)', { exact: true })).toBeEnabled({ timeout: 10000 })
+    await expect(dlg(page).getByLabel('Cluster metrics read interval (seconds)', { exact: true })).toBeEnabled({ timeout: CARGA })
     await page.getByRole('tab', { name: 'Marketplaces' }).click()
     await page.waitForTimeout(800)
 

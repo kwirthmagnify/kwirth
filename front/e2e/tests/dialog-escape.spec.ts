@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, clickMenuItem, clickExtensionMenuItem, dismissOpenDialogs, configureCogOf } from './helpers'
+import { login, clickMenuItem, clickExtensionMenuItem, dismissOpenDialogs, configureCogOf, CARGA } from './helpers'
 
 /*
     Escape closes a core dialog, and ONLY the thing on top (tools/useKeyboard.ts → useEscapeToClose).
@@ -20,7 +20,7 @@ test('🔴 a dialog just opened from the menu closes with Escape, without clicki
 
     await clickMenuItem(page, 'Kwirth settings')
     const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth settings' })
-    await expect(dialog.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: 10000 })
+    await expect(dialog.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: CARGA })
 
     // nothing clicked: the focus is wherever the menu left it
     await page.keyboard.press('Escape')
@@ -33,7 +33,7 @@ test('Escape on an open dropdown closes the list, not the dialog; a second Escap
 
     await clickMenuItem(page, 'Kwirth settings')
     const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth settings' })
-    await expect(dialog.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: 10000 })
+    await expect(dialog.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: CARGA })
 
     // the senders live in their own tab since signup S4
     await dialog.getByRole('tab', { name: 'Notifications' }).click()
@@ -60,7 +60,8 @@ test('an Escape on the upper of two stacked dialogs never closes the one underne
 
     await clickExtensionMenuItem(page, 'Senders')
     const manager = page.getByRole('dialog').filter({ hasText: 'Manage senders' })
-    await manager.waitFor()
+    // Un gestor de extensiones no pinta en cuanto se pulsa: resuelve antes los manifests remotos.
+    await manager.waitFor({ timeout: CARGA })
     const cog = configureCogOf(manager, /^Console Sender/)
     test.skip(await cog.count() === 0, 'console sender is not installed')
     await cog.click()

@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickMenuItem, dismissOpenDialogs, CARGA } from './helpers'
 
 /*
     Where the previous container's log is SENT when the core finds one at startup, configured in
@@ -26,7 +26,7 @@ const NONE_CONFIG = '(none)'
 /** Opens the dialog, waits for it to finish loading (its fields enable when it is done) and goes to Notifications. */
 async function openSettings(page: Page) {
     await clickMenuItem(page, 'Kwirth settings')
-    await expect(page.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: 30000 })
+    await expect(page.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: CARGA })
     await gotoTab(page, 'Notifications')
 }
 

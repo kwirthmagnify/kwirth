@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickExtensionMenuItem, dismissOpenDialogs, CARGA } from './helpers'
 
 /*
     The http-pull-push provider: it validates end to end the "a provider owns its configuration" model
@@ -57,7 +57,7 @@ const api = async (page: Page, session: ISession, method: string, body?: unknown
 
 const openProviderManager = async (page: Page) => {
     await clickExtensionMenuItem(page, 'Providers')
-    await page.getByRole('dialog').filter({ hasText: /Manage providers/i }).waitFor({ timeout: 10000 })
+    await page.getByRole('dialog').filter({ hasText: /Manage providers/i }).waitFor({ timeout: CARGA })
 }
 
 test.describe('http-pull-push provider', () => {

@@ -24,7 +24,10 @@ import { login, dismissOpenDialogs } from './helpers'
 const abrirDetalles = async (page: Page) => {
     await login(page)
     await dismissOpenDialogs(page)
-    await page.locator('button[aria-label="expandir/colapsar"]').first().click()
+    // Con margen: el chevron de la card existe en cuanto pinta la home, pero en una corrida completa la
+    // maquina va cargada y los 15 s del `actionTimeout` se quedan cortos. El rojo salia aqui, al abrir,
+    // y no en lo que el test mide.
+    await page.locator('button[aria-label="expandir/colapsar"]').first().click({ timeout: 60000 })
     // The guard that makes the negative assertions meaningful: the panel really is open.
     await expect(page.getByText('Cluster details')).toBeVisible()
     await expect(page.getByText('Cluster Info')).toBeVisible()

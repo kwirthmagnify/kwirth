@@ -34,10 +34,16 @@ interface IField {
 
 test.describe.configure({ mode: 'serial' })
 
+/*
+    ⚠️ La espera se arma DESPUES del login, no antes: la peticion la dispara el dialogo de providers, y
+    un `waitForResponse` registrado antes empieza a contar sus 20 s mientras arranca la aplicacion. Con
+    la maquina cargada el arranque se los comia enteros y el rojo salia aqui, sin que el producto tuviera
+    nada que ver.
+*/
 test('el provider que sabe probarse se anuncia con hasTest', async ({ page }) => {
-    const respuesta = page.waitForResponse(r => r.url().includes('/core/providers') && r.request().method() === 'GET', { timeout: 20000 })
     await login(page)
     await dismissOpenDialogs(page)
+    const respuesta = page.waitForResponse(r => r.url().includes('/core/providers') && r.request().method() === 'GET', { timeout: 20000 })
     await clickExtensionMenuItem(page, 'Providers')
 
     const lista = await (await respuesta).json() as IProviderEntry[]
@@ -50,9 +56,9 @@ test('el provider que sabe probarse se anuncia con hasTest', async ({ page }) =>
 })
 
 test('su formulario saca el boton TEST, y un multiselect con checkbox', async ({ page }) => {
-    const listado = page.waitForResponse(r => r.url().includes('/core/providers') && r.request().method() === 'GET', { timeout: 20000 })
     await login(page)
     await dismissOpenDialogs(page)
+    const listado = page.waitForResponse(r => r.url().includes('/core/providers') && r.request().method() === 'GET', { timeout: 20000 })
     await clickExtensionMenuItem(page, 'Providers')
 
     const lista = await (await listado).json() as IProviderEntry[]

@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs } from './helpers'
+import { login, clickMenuItem, dismissOpenDialogs, CARGA } from './helpers'
 
 // Where packages are DOWNLOADED from is not where the manifest lives. The public marketplace already
 // proves it: manifests on GitHub, tarballs on npmjs. That is why package registries are a separate list,
@@ -27,7 +27,7 @@ const rowOf = (page: Page, url: string) => page.locator('div.MuiBox-root')
 
 const openRegistriesTab = async (page: Page) => {
     await clickMenuItem(page, 'Kwirth settings')
-    await expect(page.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: 10000 })
+    await expect(page.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: CARGA })
     await page.getByRole('tab', { name: 'Package registries' }).click()
     await expect(page.getByRole('button', { name: 'Add registry' })).toBeVisible()
 }

@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
 import { readFileSync } from 'fs'
-import { login, clickMenuItem, dismissOpenDialogs, openMenu } from './helpers'
+import { login, clickMenuItem, dismissOpenDialogs, openMenu, CARGA } from './helpers'
 
 /*
     Kwirth portability: the configuration bundle, from its own dialog.
@@ -266,7 +266,7 @@ test.describe.serial('Kwirth portability', () => {
         */
         await clickMenuItem(page, 'Kwirth settings')
         const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth settings' })
-        await expect(dialog.getByLabel(INTERVAL_LABEL)).toBeEnabled({ timeout: 10000 })
+        await expect(dialog.getByLabel(INTERVAL_LABEL)).toBeEnabled({ timeout: CARGA })
 
         await expect(dialog.getByRole('button', { name: 'Export' })).toHaveCount(0)
         await expect(dialog.getByRole('button', { name: 'Import' })).toHaveCount(0)
