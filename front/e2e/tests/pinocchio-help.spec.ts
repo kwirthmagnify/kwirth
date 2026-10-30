@@ -1,8 +1,9 @@
 // Every Pinocchio dialog with a guide section must carry its help button (?), and that button must open
 // THE SECTION THAT CORRESPONDS TO IT in the plugin's guide (project rule: a dialog with help → a
 // HelpButton to its section). The test does not only check that the button exists: it checks the URL it opens.
-import { test, expect, Page } from '@playwright/test'
-import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
 
 const DOCS = '/core/docs/plugin/pinocchio'
 
@@ -14,9 +15,8 @@ test.describe('pinocchio: botones de ayuda de los dialogos', () => {
     // relative path will not do: the e2e's baseURL is the front's dev server, not kwirth's back end.
     let docsBase = ''
 
-    test.beforeAll(async ({ browser }) => {
-        page = await browser.newPage()
-        await login(page)
+    test.beforeAll(async ({ kwirth }) => {
+        page = kwirth
         await dismissOpenDialogs(page)
         await page.getByRole('button', { name: 'ADD', exact: true }).click({ force: true })
         await page.waitForTimeout(800)
@@ -30,7 +30,8 @@ test.describe('pinocchio: botones de ayuda de los dialogos', () => {
         await page.waitForTimeout(4000)
     })
 
-    test.afterAll(async () => { await page?.close() })
+    // La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
+    test.afterAll(async () => { await dismissOpenDialogs(page).catch(() => {}) })
 
     // The HelpButton opens a popup with window.open: we intercept the URL without letting it open.
     const urlOpenedBy = async (help: ReturnType<Page['locator']>): Promise<string> => {

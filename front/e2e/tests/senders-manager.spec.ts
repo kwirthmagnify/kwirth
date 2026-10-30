@@ -1,5 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
     Migration of the `sender` manager to the generic dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
@@ -37,9 +38,8 @@ test.describe('gestor generico de extensiones: senders', () => {
     let page: Page
     let senders: ISenderRef[] = []
 
-    test.beforeAll(async ({ browser }) => {
-        page = await browser.newPage()
-        await login(page)
+    test.beforeAll(async ({ kwirth }) => {
+        page = kwirth
         await dismissOpenDialogs(page)
         // The endpoint is authenticated: the response the dialog itself asks for on opening is listened to.
         const respuesta = page.waitForResponse(r => r.url().endsWith('/core/senders'), { timeout: 60000 })
@@ -48,9 +48,9 @@ test.describe('gestor generico de extensiones: senders', () => {
         senders = await (await respuesta).json()
     })
 
+    // La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
     test.afterAll(async () => {
         await dismissOpenDialogs(page).catch(() => {})
-        await page.close()
     })
 
     const dialog = () => page.getByRole('dialog').filter({ hasText: DIALOG })

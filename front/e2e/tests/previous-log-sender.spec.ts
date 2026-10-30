@@ -1,5 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs, CARGA } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { clickMenuItem, dismissOpenDialogs, CARGA } from './helpers'
 
 /*
     Where the previous container's log is SENT when the core finds one at startup, configured in
@@ -110,13 +111,13 @@ async function pick(page: Page, combo: ReturnType<typeof senderCombo>, option: s
 test.describe.serial('previous log sender', () => {
 let page: Page
 
-test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage()
-    await login(page)
+test.beforeAll(async ({ kwirth }) => {
+    page = kwirth
     await dismissOpenDialogs(page)
 })
 
-test.afterAll(async () => { await page?.close() })
+// La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
+test.afterAll(async () => { await dismissOpenDialogs(page).catch(() => {}) })
 
 test('the previous log sender: the config picker only offers the configs of the chosen sender', async () => {
     await openSettings(page)

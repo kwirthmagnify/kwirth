@@ -1,5 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
     Migration of the `idp` manager to the generic dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
@@ -36,9 +37,8 @@ test.describe('gestor generico de extensiones: idp', () => {
     let page: Page
     let conectores: IConnector[] = []
 
-    test.beforeAll(async ({ browser }) => {
-        page = await browser.newPage()
-        await login(page)
+    test.beforeAll(async ({ kwirth }) => {
+        page = kwirth
         await dismissOpenDialogs(page)
         /*
             The endpoint is authenticated and the session does not live in localStorage, so the response
@@ -55,9 +55,9 @@ test.describe('gestor generico de extensiones: idp', () => {
         conectores = await (await respConectores).json()
     })
 
+    // La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
     test.afterAll(async () => {
         await dismissOpenDialogs(page).catch(() => {})
-        await page.close()
     })
 
     const dialog = () => page.getByRole('dialog').filter({ hasText: DIALOG })

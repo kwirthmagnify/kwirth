@@ -1,5 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, clickMenuItem, clickExtensionMenuItem, dismissOpenDialogs, configureCogOf } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { clickMenuItem, clickExtensionMenuItem, dismissOpenDialogs, configureCogOf } from './helpers'
 
 // Verifies that every core dialog carrying a HelpButton invokes window.open (a popup) with the right
 // deep link to its section of the guide. window.open is intercepted so the test does not depend on the
@@ -19,26 +20,21 @@ interface ICase {
 }
 
 /*
-    🔴 UN LOGIN PARA EL FICHERO. Habia uno por test y cada uno es un arranque completo de la
-    aplicacion: ~1,6 min cada uno. Los dos tests son independientes aunque compartan pagina — cada uno
-    reinstala su stub de `window.open` y vacia `__helpOpens` antes de empezar — y lo unico que habia que
-    mover es el `about:blank`, que libera el WebSocket y ahora va al cierre del fichero en vez de al
-    final de cada test.
+    🔴 LA SESION DE LA CORRIDA, no una del fichero. Hubo un login por test, luego uno por fichero, y
+    ahora ninguno: la pagina llega arrancada del fixture `kwirth` y la comparten todos los specs que
+    pueden. Los dos tests siguen siendo independientes aunque compartan pagina — cada uno reinstala su
+    stub de `window.open` y vacia `__helpOpens` antes de empezar.
+
+    ⚠️ Lo que SI hubo que quitar es el `about:blank` del cierre: liberaba el WebSocket cuando la pagina
+    era de este fichero, y ahora dejaria sin aplicacion a todos los que vengan detras.
 */
 test.describe.serial('help button', () => {
 let page: Page
 
-test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage()
-    await login(page)
+test.beforeAll(async ({ kwirth }) => {
+    page = kwirth
     // Close any dialog auto-opened at login (an admin profile's auto-start channel, for instance)
     await dismissOpenDialogs(page)
-})
-
-test.afterAll(async () => {
-    // Navigate to blank to release the WebSocket before the teardown (it stops Playwright hanging on the SPA)
-    await page?.goto('about:blank')
-    await page?.close()
 })
 
 test('help button: dialogs del menú principal invocan window.open en su sección de la guía', async () => {

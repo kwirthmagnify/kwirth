@@ -1,5 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
     Migration of the `login` and `docs` managers to the generic dialog
@@ -27,9 +28,8 @@ test.describe.configure({ mode: 'serial' })
 test.describe('gestores migrados al generico: logins y docs', () => {
     let page: Page
 
-    test.beforeAll(async ({ browser }) => {
-        page = await browser.newPage()
-        await login(page)
+    test.beforeAll(async ({ kwirth }) => {
+        page = kwirth
         await dismissOpenDialogs(page)
     })
 
@@ -47,9 +47,9 @@ test.describe('gestores migrados al generico: logins y docs', () => {
         await dismissOpenDialogs(page).catch(() => {})
     })
 
+    // La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
     test.afterAll(async () => {
         await dismissOpenDialogs(page).catch(() => {})
-        await page.close()
     })
 
     const abrir = async (menu: string, titulo: RegExp) => {

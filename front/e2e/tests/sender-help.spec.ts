@@ -1,5 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs, configureCogOf } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { clickExtensionMenuItem, dismissOpenDialogs, configureCogOf } from './helpers'
 
 // The help on a sender's configuration dialog leads to THAT SENDER's reference page, which is the one
 // explaining its fields. Those without one — a paid sender, or a freshly published one — fall back to
@@ -52,15 +53,18 @@ async function helpUrlFor(page: Page, senderName: RegExp): Promise<string> {
 test.describe.serial('sender help', () => {
 let page: Page
 
-test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage()
-    await login(page)
+test.beforeAll(async ({ kwirth }) => {
+    page = kwirth
     await dismissOpenDialogs(page)
 })
 
+/*
+    La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra. ⚠️ Y SIN el
+    `about:blank`, que liberaba el WebSocket cuando la pagina era suya y ahora dejaria sin aplicacion a
+    todos los ficheros que vengan detras.
+*/
 test.afterAll(async () => {
-    await page?.goto('about:blank')
-    await page?.close()
+    await dismissOpenDialogs(page).catch(() => {})
 })
 
 test('la ayuda de un sender lleva a SU pagina de referencia', async () => {

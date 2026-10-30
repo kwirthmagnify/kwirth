@@ -5,6 +5,11 @@
 // The case that prompted the test: pinocchio sent its own hardcoded list of provider types, with neither
 // 'openai-compat' nor 'anthropic'. An openai-compat provider created from Kwirth showed up WITHOUT a type
 // inside the channel, and there was no way to create a new one from there.
+/*
+    ⚠️ NO hereda la sesion del fixture `kwirth`: registra su escucha del WEBSOCKET antes de entrar, y en
+    una pagina ya arrancada ese websocket lleva abierto desde el primer fichero de la corrida. Abre la
+    suya, como los demas que espian el arranque.
+*/
 import { test, expect, Page } from '@playwright/test'
 import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
 

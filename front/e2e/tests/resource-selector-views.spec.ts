@@ -9,8 +9,9 @@
     It is NON-DESTRUCTIVE on purpose: it only opens the ADD dialog, walks the View dropdown and cancels
     it. It creates not a single tab, so it does not touch the user's workspace.
 */
-import { test, expect, Page } from '@playwright/test'
-import { login, dismissOpenDialogs, assertFrontCompiles, pickCombo } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { dismissOpenDialogs, assertFrontCompiles, pickCombo } from './helpers'
 
 // The bottleneck is reloading the SPA, not Playwright: a single session for the whole file.
 test.describe.configure({ mode: 'serial' })
@@ -46,16 +47,15 @@ const isComboDisabled = async (page: Page, index: number): Promise<boolean> => {
 
 let page: Page
 
-test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage()
-    await login(page)
+test.beforeAll(async ({ kwirth }) => {
+    page = kwirth
     await assertFrontCompiles(page)
 })
 
 test.afterAll(async () => {
-    // The dialog is cancelled: this file must leave nothing created.
+    // The dialog is cancelled: this file must leave nothing created. La pagina es de la CORRIDA, asi
+    // que se deja limpia y no se cierra.
     await dismissOpenDialogs(page).catch(() => {})
-    await page.close()
 })
 
 test('the View dropdown offers the five resource views plus none', async () => {

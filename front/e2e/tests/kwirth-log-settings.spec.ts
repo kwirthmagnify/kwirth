@@ -1,5 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs, CARGA } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { clickMenuItem, dismissOpenDialogs, CARGA } from './helpers'
 
 /*
     The Log tab of Kwirth settings.
@@ -41,13 +42,13 @@ const openLogTab = async (page: Page) => {
 test.describe.serial('Kwirth settings · Log', () => {
 let page: Page
 
-test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage()
-    await login(page)
+test.beforeAll(async ({ kwirth }) => {
+    page = kwirth
     await dismissOpenDialogs(page)
 })
 
-test.afterAll(async () => { await page?.close() })
+// La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
+test.afterAll(async () => { await dismissOpenDialogs(page).catch(() => {}) })
 
 test('la pestaña ofrece los SEIS componentes que publica el back', async () => {
     const dialog = await openLogTab(page)

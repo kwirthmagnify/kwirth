@@ -1,5 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
     Migration of the `plugin` manager to the generic dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
@@ -38,9 +39,8 @@ test.describe('gestor generico de extensiones: plugins', () => {
     let page: Page
     let delBack: IPluginRef[] = []
 
-    test.beforeAll(async ({ browser }) => {
-        page = await browser.newPage()
-        await login(page)
+    test.beforeAll(async ({ kwirth }) => {
+        page = kwirth
         await dismissOpenDialogs(page)
         delBack = await page.evaluate(async () => {
             const base = window.location.origin.replace(':3000', ':3883')
@@ -50,9 +50,9 @@ test.describe('gestor generico de extensiones: plugins', () => {
         await page.getByRole('dialog').filter({ hasText: DIALOG }).waitFor({ timeout: 40000 })
     })
 
+    // La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
     test.afterAll(async () => {
         await dismissOpenDialogs(page).catch(() => {})
-        await page.close()
     })
 
     const dialog = () => page.getByRole('dialog').filter({ hasText: DIALOG })

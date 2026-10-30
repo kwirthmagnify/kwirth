@@ -9,8 +9,9 @@
 //
 // NON-DESTRUCTIVE: it opens the dialog, reads the field and cancels. It saves NO IdP configuration —
 // touching that is touching the way people get in.
-import { test, expect, Page } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 const DIALOG = /Identity providers/i
 /*
@@ -37,9 +38,8 @@ test.describe('IdP: la Redirect URI se sugiere y se puede fijar', () => {
     // :3000 and the back on :3883, so the page's own URL is NOT the base the redirect is built from.
     let backendBase = ''
 
-    test.beforeAll(async ({ browser }) => {
-        page = await browser.newPage()
-        await login(page)
+    test.beforeAll(async ({ kwirth }) => {
+        page = kwirth
         await dismissOpenDialogs(page)
         const resp = page.waitForResponse(r => r.request().method() === 'GET' && new URL(r.url()).pathname.endsWith('/core/idps'), { timeout: 60000 })
         await clickExtensionMenuItem(page, 'Identity providers')
@@ -49,9 +49,9 @@ test.describe('IdP: la Redirect URI se sugiere y se puede fijar', () => {
         backendBase = r.url().slice(0, r.url().indexOf('/core/idps'))
     })
 
+    // La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
     test.afterAll(async () => {
         await dismissOpenDialogs(page).catch(() => {})
-        await page?.close()
     })
 
     const dialog = () => page.getByRole('dialog').filter({ hasText: DIALOG })

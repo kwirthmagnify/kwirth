@@ -1,5 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, clickMenuItem, dismissOpenDialogs, CARGA } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { clickMenuItem, dismissOpenDialogs, CARGA } from './helpers'
 
 // Verifies that "Kwirth Settings" really persists: what is saved is still there on reopening the dialog,
 // which is exactly what did NOT happen before (the value lived only in the provider's memory).
@@ -32,13 +33,13 @@ async function saveSettings(page: import('@playwright/test').Page) {
 test.describe.serial('Kwirth settings', () => {
 let page: Page
 
-test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage()
-    await login(page)
+test.beforeAll(async ({ kwirth }) => {
+    page = kwirth
     await dismissOpenDialogs(page)
 })
 
-test.afterAll(async () => { await page?.close() })
+// La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
+test.afterAll(async () => { await dismissOpenDialogs(page).catch(() => {}) })
 
 test('Kwirth settings: el intervalo de metricas se persiste y sobrevive a reabrir el dialogo', async () => {
 

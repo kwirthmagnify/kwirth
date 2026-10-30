@@ -1,5 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
     Migration of the `pack` manager to the generic dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
@@ -31,17 +32,16 @@ const MIEMBROS = new RegExp(`^Includes: (\\d+ )?${TIPOS}s?(, (\\d+ )?${TIPOS}s?)
 test.describe('gestor generico de extensiones: packs', () => {
     let page: Page
 
-    test.beforeAll(async ({ browser }) => {
-        page = await browser.newPage()
-        await login(page)
+    test.beforeAll(async ({ kwirth }) => {
+        page = kwirth
         await dismissOpenDialogs(page)
         await clickExtensionMenuItem(page, 'Packs')
         await page.getByRole('dialog').filter({ hasText: DIALOG }).waitFor({ timeout: 40000 })
     })
 
+    // La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
     test.afterAll(async () => {
         await dismissOpenDialogs(page).catch(() => {})
-        await page.close()
     })
 
     const dialog = () => page.getByRole('dialog').filter({ hasText: DIALOG })
