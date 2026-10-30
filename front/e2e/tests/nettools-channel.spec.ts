@@ -1,5 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, dismissOpenDialogs, pickCombo } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { dismissOpenDialogs, pickCombo } from './helpers'
 
 /*
     The `nettools` channel: the plugin that consumes the DCE of the same name (plan: plans/completed/nettools/PLAN.md, S2).
@@ -24,14 +25,14 @@ test.describe.configure({ mode: 'serial' })
 test.describe('nettools: the channel that consumes the DCE', () => {
     let page: Page
 
-    test.beforeAll(async ({ browser }) => {
-        page = await browser.newPage()
-        await login(page)
+    test.beforeAll(async ({ kwirth }) => {
+        page = kwirth
         await dismissOpenDialogs(page)
     })
 
+    // La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
     test.afterAll(async () => {
-        await page?.close()
+        await dismissOpenDialogs(page).catch(() => {})
     })
 
     /** The newest answer: the list is newest first. */
@@ -57,9 +58,16 @@ test.describe('nettools: the channel that consumes the DCE', () => {
         */
         await page.getByRole('combobox').first().click()
         await page.getByRole('listbox').waitFor({ state: 'visible', timeout: 5000 })
-        const clusters = await page.getByRole('option').allInnerTexts()
+        /*
+            🔴 Only the ones that can be PICKED. A cluster that is configured but that Kwirth cannot
+            reach —the ECS test stack, which gets stopped and deleted without ceremony— is still drawn in
+            the list, with `aria-disabled`. Clicking it burns the whole timeout retrying against
+            something that is never going to enable, and it could not offer the channel anyway: being
+            reachable is the first thing the loop is looking for.
+        */
+        const clusters = await page.locator('[role="option"]:not([aria-disabled="true"])').allInnerTexts()
         await page.keyboard.press('Escape')
-        expect(clusters.length, 'no clusters at all in the selector').toBeGreaterThan(0)
+        expect(clusters.length, 'no reachable cluster in the selector').toBeGreaterThan(0)
 
         let chosen: string | undefined
         for (const cluster of clusters.map(name => name.trim()).filter(Boolean)) {

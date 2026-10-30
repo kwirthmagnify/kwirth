@@ -1,5 +1,5 @@
 import { test, expect, Page, APIRequestContext } from '@playwright/test'
-import { login, dismissOpenDialogs, pickCombo, pickLastCombo } from './helpers'
+import { login, dismissOpenDialogs, pickCombo, pickLastCombo, CARGA } from './helpers'
 
 /*
     Pinocchio stops taking the 43 tools compiled inside `common-ai` and resolves them against the
@@ -74,6 +74,17 @@ const escribirGrant = async (api: APIRequestContext, acc: IBackAccess, toolsetId
     expect(res.ok(), `no se pudo conceder '${toolsetId}' (${res.status()}): ¿el usuario del e2e es admin?`).toBeTruthy()
 }
 
+/*
+    🔴 Los NOMBRES de las tools ofrecidas, no el texto corrido de la lista.
+
+    Cada opción del desplegable es el nombre seguido de su descripción, y las descripciones se citan unas
+    a otras: `get_rollout_history` acaba diciendo «use get_workload_config_refs for that». Buscando un
+    nombre en el texto entero se encontraba dentro de la explicación de otra, y el test denunciaba como
+    ofrecida una tool que no lo estaba. El nombre es lo que va delante del todo.
+*/
+const nombresDe = (opciones: string[]): Set<string> =>
+    new Set(opciones.map(o => o.trim().match(/^[a-z0-9_]+/)?.[0] ?? ''))
+
 test.describe('pinocchio: las tools salen del registro de toolsets', () => {
     let page: Page
     let herramientas: string[] = []
@@ -116,17 +127,37 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
         // Config → Triggers, which is where the tool selector lives
         await page.getByRole('button', { name: 'Config', exact: true }).click()
         await page.getByRole('menuitem', { name: /trigger/i }).click()
-        await page.waitForTimeout(1500)
 
-        // ⚠️ The selector is only enabled with a trigger AND a version chosen: without that it is greyed
-        // out and draws nothing, which is what misled the first time. The FIRST of each list is clicked so
-        // as not to depend on what the triggers of whoever runs the test are called: they are their data.
+        /*
+            🔴 Waited for, not slept through. There was a fixed 1.5 s here, and when the dialog took
+            longer the test carried on against a page that had none: it died fifteen seconds later on
+            `.MuiListItemButton-root`, with an error that said the list of triggers was empty when what
+            was missing was the dialog itself. A wait that states what it is waiting for is also the one
+            that names the failure.
+        */
         const dialog = page.getByRole('dialog').first()
+        await dialog.waitFor({ state: 'visible', timeout: CARGA })
+
+        /*
+            🔴 The trigger is made BY THE TEST. Triggers are channel configuration, and a channel that
+            has just been added has none: the file took for granted that whoever ran it already had
+            theirs, so what it really measured was the environment — and the day the dev configuration
+            was reset it went red without a word about the product.
+
+            An id is typed and the + BUTTON is pressed, which is what a person does. The field also
+            offers Enter, and that is what was tried first: the id got written and the list stayed empty,
+            so the key never reached `onTriggerAdd`. It all lives in the dialog's state until Save, and
+            this file leaves through Cancel, so nothing is written. Choosing the trigger is enough: the
+            tool selector hangs on `selectedTriggerIndex`, not on a version.
+        */
         const item = dialog.locator('.MuiListItemButton-root')
+        if (await item.count() === 0) {
+            await dialog.getByPlaceholder('Trigger id').first().fill('e2e-toolsets')
+            // The first + of the dialog is the triggers one: the versions panel comes after it in the DOM.
+            await dialog.locator('button:has([data-testid="AddIcon"])').first().click()
+        }
+        await expect(item.first(), 'el diálogo de triggers no ofrece ningún trigger, ni siquiera tras crear uno').toBeVisible({ timeout: CARGA })
         await item.first().click({ force: true })
-        await page.waitForTimeout(800)
-        // The version list appears on choosing a trigger: the second block of items is the first version
-        await item.nth(1).click({ force: true })
         await page.waitForTimeout(800)
 
         rotulo = (await dialog.locator('.MuiFormControl-root').filter({ hasText: 'Tools' }).locator('.MuiSelect-select').first().textContent().catch(() => '')) ?? ''
@@ -159,10 +190,10 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
     })
 
     test('las tools que ofrece son las de los toolsets CONCEDIDOS', async () => {
-        const texto = herramientas.join(' ')
+        const ofrecidas = nombresDe(herramientas)
         // From k8s-describe and k8s-observability, the two the test grants itself
-        expect(texto, 'falta describe_pod (k8s-describe)').toContain('describe_pod')
-        expect(texto, 'falta get_pod_logs (k8s-observability)').toContain('get_pod_logs')
+        expect(ofrecidas.has('describe_pod'), 'falta describe_pod (k8s-describe)').toBe(true)
+        expect(ofrecidas.has('get_pod_logs'), 'falta get_pod_logs (k8s-observability)').toBe(true)
     })
 
     /*
@@ -186,10 +217,10 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
         const sinConceder = catalogo.filter(t => !(concedidosAhora[t.id] ?? []).includes(PINOCCHIO))
         test.skip(sinConceder.length === 0, 'todos los toolsets instalados estan concedidos a pinocchio: no hay nada fuera de alcance que comprobar')
 
-        const texto = herramientas.join(' ')
+        const ofrecidas = nombresDe(herramientas)
         for (const t of sinConceder) {
             for (const tool of t.tools ?? []) {
-                expect(texto, `'${tool.name}' no deberia estar: el toolset '${t.id}' no esta concedido a ${PINOCCHIO}`).not.toContain(tool.name)
+                expect(ofrecidas.has(tool.name), `'${tool.name}' no deberia estar: el toolset '${t.id}' no esta concedido a ${PINOCCHIO}`).toBe(false)
             }
         }
     })
