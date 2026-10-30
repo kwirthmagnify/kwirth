@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, assertFrontCompiles, pickCombo, pickLastCombo, dismissOpenDialogs } from './helpers'
+import { login, assertFrontCompiles, pickCombo, pickLastCombo, dismissOpenDialogs, CARGA } from './helpers'
 
 /*
     A broken extension must NOT bring Kwirth down.
@@ -51,18 +51,29 @@ test('una extension con el icono de canal roto no deja la aplicacion en blanco',
     await romperIconoDeCanal(page)
     await login(page)
     await assertFrontCompiles(page)
-    await page.waitForTimeout(3000)
 
     // what matters: the application IS STILL THERE. With the fault, the body was left empty.
+    await expect(page.locator('body'), 'la pagina se ha quedado en blanco').toContainText('Kwirth', { timeout: CARGA })
     const texto = await page.locator('body').innerText()
     expect(texto.length, 'la pagina se ha quedado en blanco').toBeGreaterThan(20)
-    expect(texto).toContain('Kwirth')
 
     // and it says WHICH extension it is, which is what was missing in order to fix it
     const roto = await page.evaluate(() => (window as unknown as { __rotoId__?: string }).__rotoId__)
     if (roto) {
-        expect(avisos.some(a => a.includes(roto) && a.includes('icon')),
-            `ningun aviso menciona '${roto}'; avisos vistos: ${avisos.slice(0, 5).join(' | ')}`).toBe(true)
+        /*
+            🔴 Se ESPERA al aviso, no se mira una vez pasados tres segundos.
+
+            El aviso lo emite el core cuando intenta PINTAR el icono, y eso ocurre cuando al selector de
+            canales le toca dibujar ese canal — después del login, y cuando el front haya terminado de
+            traer lo suyo. Con un `waitForTimeout(3000)` fijo, el día que tardaba más la lista de avisos
+            se leía antes de tiempo y el fallo decía «ningún aviso menciona 'echo'» enseñando los de
+            React Router, que es exactamente lo que se ve cuando todavía no ha pasado nada. Era el flaky
+            de este fichero: pasaba en el reintento sin que nada cambiara.
+        */
+        await expect(async () => {
+            expect(avisos.some(a => a.includes(roto) && a.includes('icon')),
+                `ningun aviso menciona '${roto}'; avisos vistos: ${avisos.slice(0, 5).join(' | ')}`).toBe(true)
+        }).toPass({ timeout: CARGA })
     }
 })
 

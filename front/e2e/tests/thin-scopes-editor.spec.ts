@@ -7,7 +7,7 @@
 // NON-DESTRUCTIVE: it opens User security, composes a scope in the editor and closes WITHOUT saving the
 // user. No user, key or permission is written.
 import { test, expect, Page } from '@playwright/test'
-import { login, dismissOpenDialogs, openMenu, assertFrontCompiles } from './helpers'
+import { login, dismissOpenDialogs, openMenu, assertFrontCompiles, CARGA } from './helpers'
 
 const LIMIT = '/tmp'
 
@@ -24,9 +24,18 @@ const openSecurityEditor = async (page: Page) => {
         makes other manager specs flaky in this environment. Forcing skips the hit-target re-check, which
         is what never settles.
     */
-    await page.getByRole('menuitem', { name: 'User security', exact: true }).click({ force: true })
+    /*
+        🔴 Y se ESPERA a que la entrada exista, con el plazo de CARGA. El `force` resuelve el click que
+        no aterriza; no resuelve que el menú todavía no se haya desplegado, que es lo otro que pasa en
+        este entorno. El fallo decía «waiting for getByRole('menuitem', …)» a los 15 s del
+        `actionTimeout` —ni siquiera llegaba a intentar el click— y era el flaky de este fichero. Es el
+        mismo margen que `clickExtensionMenuItem` lleva en helpers por lo mismo.
+    */
+    const entrada = page.getByRole('menuitem', { name: 'User security', exact: true })
+    await expect(entrada).toBeEnabled({ timeout: CARGA })
+    await entrada.click({ force: true, timeout: CARGA })
     await page.waitForTimeout(600)
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 20000 })
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: CARGA })
 }
 
 /*

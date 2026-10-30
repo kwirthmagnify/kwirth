@@ -43,10 +43,19 @@ export async function login(page: Page, user = USER, pass = PASS): Promise<void>
         instalada: el `fill` reventaba antes de que el campo existiera y el rojo salía en el `beforeAll`,
         llevándose por delante el fichero entero.
     */
-    await page.getByLabel('User').waitFor({ state: 'visible', timeout: 60_000 })
-    await page.getByLabel('User').fill(user)
-    await page.getByLabel('Password').fill(pass)
-    await page.getByRole('button', { name: 'OK' }).click()
+    await page.getByLabel('User').waitFor({ state: 'visible', timeout: CARGA })
+    /*
+        🔴 Y el plazo va también en el RELLENO, no solo en la espera previa.
+
+        Que el campo se haya hecho visible no garantiza que siga ahí un instante después: el diálogo de
+        login se repinta cuando el front termina de traer lo suyo, y entre el `waitFor` y el `fill`
+        cabía ese repintado. El `fill` se quedaba con los 15 s del `actionTimeout`, que en una máquina
+        cargada no bastan para que el campo vuelva, y el error era un `locator.fill: Timeout 15000ms`
+        esperando un campo que el renglón de arriba acababa de ver — `cluster-flavour` moría así.
+    */
+    await page.getByLabel('User').fill(user, { timeout: CARGA })
+    await page.getByLabel('Password').fill(pass, { timeout: CARGA })
+    await page.getByRole('button', { name: 'OK' }).click({ timeout: CARGA })
     /*
         🔴 Se espera a que la aplicación ESTÉ, no un rato fijo.
 

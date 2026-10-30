@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test'
 import { test, expect } from './fixtures'
-import { dismissOpenDialogs, pickCombo } from './helpers'
+import { dismissOpenDialogs, pickCombo, CARGA } from './helpers'
 
 /*
     The `nettools` channel: the plugin that consumes the DCE of the same name (plan: plans/completed/nettools/PLAN.md, S2).
@@ -76,8 +76,16 @@ test.describe('nettools: the channel that consumes the DCE', () => {
             await pickCombo(page, 1, 'cluster')
             await page.waitForTimeout(600)
             const combos = await page.getByRole('combobox').count()
-            await page.getByRole('combobox').nth(combos - 1).click()
-            await page.getByRole('listbox').waitFor({ state: 'visible', timeout: 5000 })
+            /*
+                🔴 Con el plazo de CARGA, por lo mismo que lo lleva `pickCombo`. Este es el combo de los
+                canales, el ÚLTIMO, y es el que más repinta: elegir cluster rehace las vistas y elegir
+                vista rehace los canales, con su animación. Playwright ve el elemento «not stable» y
+                reintenta; con más canales instalados la lista es más larga y el repintado más caro, así
+                que los 15 s del `actionTimeout` se agotaban reintentando algo que un segundo después
+                funciona. Era el flaky de este fichero.
+            */
+            await page.getByRole('combobox').nth(combos - 1).click({ timeout: CARGA })
+            await page.getByRole('listbox').waitFor({ state: 'visible', timeout: CARGA })
             const option = page.getByRole('option', { name: CHANNEL, exact: true })
             if (await option.count() > 0) { await option.click(); chosen = cluster; break }
             await page.keyboard.press('Escape')
@@ -200,9 +208,15 @@ test.describe('nettools: the channel that consumes the DCE', () => {
             Number(await dialog().locator('text=lookups').locator('xpath=following-sibling::*[1]').innerText())
         const before = await countOf()
 
+        /*
+            🔴 Con el plazo de CARGA. Este CLOSE se pulsa con el diálogo dibujando su gráfico, y
+            Playwright lo ve «visible, enabled and stable», hace el scroll y se queda en «performing
+            click action» hasta agotar los 15 s del `actionTimeout`. Misma firma que el Close del
+            diálogo de export en `kwirth-portability`: no es el locator, es que el hilo está ocupado.
+        */
         // The dialog stays up; the question is asked behind it, from the tab.
-        await dialog().getByRole('button', { name: 'CLOSE', exact: true }).click()
-        await expect(dialog()).toBeHidden()
+        await dialog().getByRole('button', { name: 'CLOSE', exact: true }).click({ timeout: CARGA })
+        await expect(dialog()).toBeHidden({ timeout: CARGA })
         await type('Host or IP', 'example.com')
         await ask('Resolve')
         await page.getByRole('button', { name: 'Latency', exact: true }).click()
@@ -219,7 +233,7 @@ test.describe('nettools: the channel that consumes the DCE', () => {
         // Nothing to clear any more, so the button says so rather than staying live.
         await expect(dialog().getByRole('button', { name: 'CLEAR', exact: true })).toBeDisabled()
 
-        await dialog().getByRole('button', { name: 'CLOSE', exact: true }).click()
-        await expect(dialog()).toBeHidden()
+        await dialog().getByRole('button', { name: 'CLOSE', exact: true }).click({ timeout: CARGA })
+        await expect(dialog()).toBeHidden({ timeout: CARGA })
     })
 })

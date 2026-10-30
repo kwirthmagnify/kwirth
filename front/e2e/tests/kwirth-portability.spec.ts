@@ -59,7 +59,7 @@ const openExport = async (page: Page) => {
     await expect(dialog).toBeVisible()
     // wait until it has read what can be exported: otherwise the spinner is what gets clicked. The list comes
     // in collapsed blocks (Kwirth, Plugins, Providers…), and the 'Kwirth' block only shows once it has loaded
-    await expect(dialog.getByRole('checkbox', { name: 'Kwirth', exact: true })).toBeVisible({ timeout: 15000 })
+    await expect(dialog.getByRole('checkbox', { name: 'Kwirth', exact: true })).toBeVisible({ timeout: CARGA })
     return dialog
 }
 
@@ -67,9 +67,16 @@ const openExport = async (page: Page) => {
     The dialog's own Close, in its actions. After exporting, the result Alert brings an X that is ALSO
     named 'Close', so a page-wide lookup finds two and strict mode waits for ever.
 */
+/*
+    🔴 Con el plazo de CARGA, y aquí el motivo es concreto: este Close se pulsa JUSTO DESPUÉS de haber
+    generado el bundle, con el hilo ocupado serializando la descarga. El botón está visible, habilitado
+    y quieto —el log de Playwright lo dice— y aun así el click no llega a completarse dentro de los 15 s
+    del `actionTimeout`. Como esto vive en el `beforeAll`, el fallo se llevaba por delante el fichero
+    entero: un rojo y nueve `did not run`.
+*/
 const closeExport = async (page: Page) => {
     await page.getByRole('dialog').filter({ hasText: 'Kwirth export' })
-        .locator('.MuiDialogActions-root').getByRole('button', { name: 'Close', exact: true }).click()
+        .locator('.MuiDialogActions-root').getByRole('button', { name: 'Close', exact: true }).click({ timeout: CARGA })
 }
 
 const exportBundle = async (page: Page, withCredentials: boolean): Promise<IBundle> => {
