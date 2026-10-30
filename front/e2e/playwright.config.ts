@@ -43,6 +43,27 @@ export default defineConfig({
         trace: 'off',
         video: 'off',
         ignoreHTTPSErrors: true,
-        actionTimeout: 15_000
+        /*
+            🔴 30 s, no 15. Y el motivo no es «por si acaso»: es lo que dicen dos corridas completas
+            seguidas.
+
+            Entre las dos salieron SIETE flaky distintos, en siete ficheros distintos, y los siete con
+            la misma firma — `Timeout 15000ms exceeded`, el plazo de abajo — pasando luego en el
+            reintento sin que nada cambiara. Unos esperando a que un menuitem exista, otros a un click
+            que Playwright ve «visible, enabled and stable» y que no completa porque el hilo está
+            ocupado pintando lo que se acaba de pedir.
+
+            Se estaba parcheando fichero a fichero, y eso es perseguir la cola: cada corrida saca uno
+            nuevo en otro sitio, porque el límite no es de ningún spec, es de este número. El front de
+            desarrollo tarda lo que tarda, y crece con cada extensión instalada.
+
+            Sube a 30 s, que es el margen que esos reintentos demuestran suficiente. No tapa nada: el
+            `timeout` del test siguen siendo 180 s, así que un fallo de verdad sigue saliendo rojo — lo
+            único que cambia es que tarda hasta medio minuto en decirlo en vez de quince segundos.
+
+            Las esperas de CARGA (60 s, en helpers) son otra cosa y siguen donde están: aquello es «lo
+            que tarda el dev en TENER los datos», no en reaccionar a un click.
+        */
+        actionTimeout: 30_000
     }
 })
