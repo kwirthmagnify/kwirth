@@ -57,6 +57,10 @@ if [ "$UNAME" = "Darwin" ]; then
         PKG_TARGET="node24-macos-x64"
         TRIPLE="x86_64-apple-darwin"
     fi
+elif [[ "$UNAME" == MINGW* || "$UNAME" == MSYS* ]]; then
+    # Git Bash (the Windows CI runner): pkg and tauri both expect the .exe suffix on the sidecar
+    PKG_TARGET="node24-win-x64"
+    TRIPLE="x86_64-pc-windows-msvc.exe"
 else
     PKG_TARGET="node24-linux-x64"
     TRIPLE="x86_64-unknown-linux-gnu"
@@ -87,18 +91,22 @@ done
 
 # Only this build's packages: the bundle folders kept every previous one (a 0.5.134 .deb from May among
 # them), and the .cmd moves the FIRST it finds to releases.
-rm -rf "$CARGO_TARGET_DIR"/release/bundle/deb "$CARGO_TARGET_DIR"/release/bundle/appimage
-rm -rf src-tauri/target/release/bundle/deb src-tauri/target/release/bundle/appimage
+BUNDLE_DIRS="deb appimage msi nsis"
+for d in $BUNDLE_DIRS; do
+    rm -rf "$CARGO_TARGET_DIR/release/bundle/$d" "src-tauri/target/release/bundle/$d"
+done
 
 # Add tauri tool cache to PATH so linuxdeploy can find its plugins
 export PATH="$HOME/.cache/tauri:$PATH"
 
-npx @tauri-apps/cli build --config "{\"productName\":\"kwirth-magnify-${VER}-t\"}"
+# TAURI_BUNDLES narrows the formats (CI passes 'deb,appimage' or 'msi,nsis'); empty builds every target
+# in tauri.conf.json.
+npx @tauri-apps/cli build --config "{\"productName\":\"kwirth-magnify-${VER}-t\"}" ${TAURI_BUNDLES:+--bundles "$TAURI_BUNDLES"}
 
 echo "[tauri-build] Copying bundles back to project path..."
-mkdir -p src-tauri/target/release/bundle/appimage
-mkdir -p src-tauri/target/release/bundle/deb
-cp "$CARGO_TARGET_DIR"/release/bundle/appimage/*.AppImage src-tauri/target/release/bundle/appimage/ 2>/dev/null || true
-cp "$CARGO_TARGET_DIR"/release/bundle/deb/*.deb          src-tauri/target/release/bundle/deb/      2>/dev/null || true
+for d in $BUNDLE_DIRS; do
+    mkdir -p "src-tauri/target/release/bundle/$d"
+    cp "$CARGO_TARGET_DIR/release/bundle/$d"/*.{deb,AppImage,msi,exe} "src-tauri/target/release/bundle/$d/" 2>/dev/null || true
+done
 
 echo "[tauri-build] Done! Check src-tauri/target/release/bundle/"
