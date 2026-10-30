@@ -22,8 +22,21 @@ interface IBundle {
     formatVersion: number
     meta: { exportedAt: string; kwirthVersion: string; includesCredentials: boolean }
     core: { settings?: unknown; sharedAi?: unknown }
-    extensions: { type: string; id: string; version?: string; config: unknown }[]
+    /*
+        Dos campos HERMANOS, no uno dentro de otro: `coreConfig` es lo que el core guarda SOBRE la
+        extension (su instalacion), y `config` lo que la extension guarda de si misma. En el formato 1
+        viajaban los dos dentro de `config`, y con dos formas distintas segun quien implementara que;
+        separarlos es justo lo que subio el formato a 2.
+    */
+    extensions: { type: string; id: string; version?: string; coreConfig?: unknown; config?: unknown }[]
 }
+
+/*
+    El formato que produce ESTE core. Va como literal a proposito: el e2e es un proyecto aislado, sin las
+    dependencias del core, y lo que vale aqui es comprobar el numero que el back escribe de verdad. Si el
+    contrato sube a 3, este test tiene que saltar — para eso esta.
+*/
+const FORMATO = 2
 
 const CENSOR = 'plugin/censor'
 
@@ -75,8 +88,10 @@ test.describe('portabilidad de configuracion', () => {
 
         // Everything installed is listed, whether it implements the contract or not: whoever looks at the
         // dialog has to see their plugin and why it does not go in, not find a short list with no explanation.
+        // 'partial' entro con el formato 2: el core tiene algo guardado de la extension pero no hay
+        // instancia viva a la que preguntar por su parte, asi que se exporta la mitad que si se tiene.
         for (const e of entradas) {
-            expect(['available', 'not-supported', 'not-instantiated']).toContain(e.status)
+            expect(['available', 'not-supported', 'not-instantiated', 'partial']).toContain(e.status)
         }
     })
 
@@ -93,7 +108,7 @@ test.describe('portabilidad de configuracion', () => {
 
         const b = r.body as IBundle
         expect(b.kind).toBe('kwirth-config-bundle')
-        expect(b.formatVersion).toBe(1)
+        expect(b.formatVersion).toBe(FORMATO)
         expect(b.meta.includesCredentials).toBe(false)
         expect(b.meta.kwirthVersion).toMatch(/^\d+\.\d+\.\d+/)
         expect(new Date(b.meta.exportedAt).getTime()).toBeGreaterThan(0)
@@ -151,7 +166,13 @@ test.describe('portabilidad de configuracion', () => {
         expect(informe.entries[0].error, 'censor deberia aceptar lo que el mismo exporto').toBeUndefined()
         expect(informe.entries[0].status).toBe('available')
 
+        /*
+            Las DOS mitades, no solo la propia: comparar unicamente `config` dejaba fuera lo que el core
+            guarda de la extension, que es exactamente lo que el formato 1 perdia en silencio al leer un
+            fichero anterior al contrato. Si una de las dos no vuelve igual, el round-trip no es tal.
+        */
         const despues = (await api(page, s, `/core/config-bundle/export?include=${CENSOR}`)).body as IBundle
         expect(despues.extensions[0].config).toEqual(antes.extensions[0].config)
+        expect(despues.extensions[0].coreConfig).toEqual(antes.extensions[0].coreConfig)
     })
 })
