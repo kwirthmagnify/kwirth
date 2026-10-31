@@ -1,10 +1,10 @@
 ﻿import React, { useState } from 'react'
-import { FilterList } from '@mui/icons-material'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
 import { CensorConfig, ICensorConfig } from './CensorConfig'
+import { CensorStruckText } from './icons'
 
-const CensorIcon = <FilterList />
+const CensorIcon = <CensorStruckText />
 
 const CensorSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     const initial: ICensorConfig = props.setupConfig?.channelConfig ?? new CensorConfig()
