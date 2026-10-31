@@ -13,7 +13,8 @@
         "pinocchio": "../plugins/pinocchio/dist",
         "nettools": "../plugins/nettools/dist",
         "provider-debug": "../plugins/provider-debug/dist",
-        "chapete": "../../../jfvilas/kwirth/plugins/chapete/dist"
+        "chapete": "../../../jfvilas/kwirth/plugins/chapete/dist",
+        "mirc": "../plugins/mirc/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",
