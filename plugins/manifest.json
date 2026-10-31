@@ -164,6 +164,28 @@
   {
     "extensionType": "plugin",
     "id": "censor",
+    "version": "0.2.57",
+    "name": "Censor",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.57.tgz",
+    "description": "Censor channel plugin for Kwirth - LLM-based log noise filtering",
+    "icon": "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-linecap='round'><path d='M9.1 5h5.8M3 9.5h3.6M3 14h4M17 14h4M9.5 18.5h4.5' stroke-width='1.5'/><path d='M5 4l14 16M19 4L5 20' stroke-width='2.4'/></svg>",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      },
+      {
+        "extensionType": "provider",
+        "id": "events",
+        "minVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "censor",
     "version": "0.2.56",
     "name": "Censor",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.56.tgz",
@@ -996,6 +1018,15 @@
         "minVersion": "0.1.10"
       }
     ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "mirc",
+    "version": "0.1.17",
+    "name": "mIRC",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-mirc/-/kwirth-plugin-mirc-0.1.17.tgz",
+    "description": "mIRC channel plugin for Kwirth - cross-cluster direct messaging between connected users, with offline mailbox and WhatsApp-style delivery checks",
+    "icon": "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M3 3.6C5.6 2.4 8 3 8.8 5.2C9.2 6.4 9 7.4 9.2 8.2L8.9 9.2L11.6 12.4L9.4 12.9L9.9 13.9L9.2 14.4L9.9 15.1L9.4 15.7L10.3 16.8L8 17.6C7.4 17.9 7.2 18.8 7.2 21'/><path d='M15.4 11.8Q16.7 14 15.4 16.2M17.8 10.2Q19.7 14 17.8 17.8M20.2 8.6Q22.7 14 20.2 19.4' stroke-width='1.6'/><circle cx='7.2' cy='9.2' r='0.85' fill='currentColor' stroke='none'/></svg>"
   },
   {
     "extensionType": "plugin",
