@@ -17,7 +17,7 @@
         "suse-fleet": "../providers/suse-fleet/dist",
         "fluentbit": "../providers/fluentbit/dist",
         "aws": "../providers/aws/dist",
-        "host-metrics": "../providers/host-metrics/dist",
+        "agent-metrics": "../providers/agent-metrics/dist",
         "cloud-config": "../providers/cloud-config/dist",
         "metrics": "../providers/metrics/dist",
         "events": "../providers/events/dist",

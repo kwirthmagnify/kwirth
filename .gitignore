@@ -80,7 +80,7 @@ kwirth-bundled.json
 /providers/cloud-config/
 /providers/v16/
 /providers/object-mapper/
-/providers/host-metrics/
+/providers/agent-metrics/
 /senders/datadog/
 /common-cloud/
 /common-metrics/
