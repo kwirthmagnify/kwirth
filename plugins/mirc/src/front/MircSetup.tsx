@@ -1,11 +1,11 @@
 ﻿import React, { useState } from 'react'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material'
 import { ISetupProps } from '@kwirthmagnify/kwirth-common-front'
-import { Forum } from '@mui/icons-material'
 import { MircConfig, MircInstanceConfig } from './MircConfig'
 import { IMircInstanceConfig } from './MircTypes'
+import { MircTalkingHead } from './icons'
 
-export const MircIcon = <Forum />
+export const MircIcon = <MircTalkingHead />
 
 const NICK_KEY = 'kwirth.mirc.nick'
 

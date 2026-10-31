@@ -46,7 +46,13 @@ export const MircTabContent: React.FC<IContentProps> = (props: IContentProps) =>
     }, [lastIncomingMsgId])
 
     if (!client || !data.started) {
-        return <Box sx={{ p: 2 }}><Typography color='text.secondary'>mIRC not started. Set a nick and start the channel.</Typography></Box>
+        // Vertically-centered empty state, the same as the other channels' (Agora, Situs): containerRef-measured height
+        return (
+            <Box ref={containerRef} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', height: `calc(100vh - ${containerTop}px - 8px)`, px: 4 }}>
+                <Typography variant='h6' color='text.secondary' sx={{ mb: 1 }}>mIRC not started</Typography>
+                <Typography variant='body2' color='text.secondary' sx={{ maxWidth: 480 }}>Start the channel (tab settings ⚙ → Start) and choose your nick to start chatting.</Typography>
+            </Box>
+        )
     }
 
     const roster = client.getRoster()
