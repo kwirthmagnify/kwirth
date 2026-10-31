@@ -9,12 +9,9 @@
         "trivy": "../plugins/trivy/dist",
         "vllm": "../plugins/vllm/dist",
         "situs": "../plugins/situs/dist",
-        "censor": "../plugins/censor/dist",
         "pinocchio": "../plugins/pinocchio/dist",
         "nettools": "../plugins/nettools/dist",
-        "provider-debug": "../plugins/provider-debug/dist",
-        "chapete": "../../../jfvilas/kwirth/plugins/chapete/dist",
-        "mirc": "../plugins/mirc/dist"
+        "provider-debug": "../plugins/provider-debug/dist"
     },
     "providers": {
         "suse-fleet": "../providers/suse-fleet/dist",
