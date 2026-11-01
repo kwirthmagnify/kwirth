@@ -4,26 +4,17 @@
         "agora": "../plugins/agora/dist",
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
-        "fileman": "../plugins/fileman/dist",
-        "magnify": "../plugins/magnify/dist",
-        "trivy": "../plugins/trivy/dist",
         "vllm": "../plugins/vllm/dist",
-        "situs": "../plugins/situs/dist",
-        "pinocchio": "../plugins/pinocchio/dist",
-        "nettools": "../plugins/nettools/dist",
         "provider-debug": "../plugins/provider-debug/dist"
     },
     "providers": {
-        "suse-fleet": "../providers/suse-fleet/dist",
+        "events": "../providers/events/dist",
+        "syslog": "../providers/syslog/dist",
         "fluentbit": "../providers/fluentbit/dist",
         "aws": "../providers/aws/dist",
         "agent-metrics": "../providers/agent-metrics/dist",
         "cloud-config": "../providers/cloud-config/dist",
-        "metrics": "../providers/metrics/dist",
-        "events": "../providers/events/dist",
-        "trivy": "../providers/trivy/dist",
         "service-flow": "../providers/service-flow/dist",
-        "sugarless": "../providers/sugarless/dist",
         "business": "../providers/business/dist"
     },
     "senders": {
@@ -35,28 +26,20 @@
         "jira": "../webhooks/jira/dist"
     },
     "logins": {
-        "magnify": "../logins/magnify/dist",
-        "anonymous": "../logins/anonymous/dist"
     },
     "homepages": {},
     "themes": {},
     "senderConfigs": {},
     "idps": {},
     "aitoolsets": {
-        "suse-fleet": "../aitoolsets/suse-fleet/dist",
-        "source-repos": "../aitoolsets/source-repos/dist"
     },
     "dces": {
         "file-manager": "../dces/file-manager/dist",
-        "aws-auth": "../dces/aws-auth/dist",
-        "sample": "../dces/sample/dist",
-        "nettools": "../dces/nettools/dist"
+        "aws-auth": "../dces/aws-auth/dist"
     },
     "docs": {
         "excubitor": "../plugins/excubitor/docs/",
-        "cloud-config": "../providers/cloud-config/docs/",
         "agora": "../plugins/agora/docs/",
-        "vllm": "../plugins/vllm/docs/",
-        "pinocchio": "../plugins/pinocchio/docs/"
+        "vllm": "../plugins/vllm/docs/"
     }
 }
