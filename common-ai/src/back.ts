@@ -626,8 +626,9 @@ export const zodFromExample = (example: Record<string, unknown>): z.ZodObject<Re
 
 // ── TOOL SYSTEM ──────────────────────────────────────────────────────────────
 
-// Git host credentials for source investigation (get_source_file). The consumer provisions these (Agora keeps
-// them in its own per-channel config); consumers that leave sourceRepos empty can only reach public repos.
+// Git host credentials for source investigation (the source-repos toolset: read, compare, tree, search, history).
+// The consumer provisions these (Agora keeps them in its own per-channel config). There are no anonymous calls:
+// a repo is reachable only if some credential here matches its host, whether the repo is public or not.
 export interface ISourceRepoCred {
     host: string                       // e.g. 'github.com', 'gitlab.com', 'gitlab.mycompany.com'
     type: 'github' | 'gitlab'
@@ -641,7 +642,7 @@ export interface IToolContext {
     clusterInfo: any
     clusterMetrics: any[]
     clusterEvents?: any[]   // recent k8s events buffer ({type, obj}), optional for backward compat
-    sourceRepos?: ISourceRepoCred[]   // git credentials for get_source_file (optional; Agora provisions them)
+    sourceRepos?: ISourceRepoCred[]   // git credentials for the source-repos toolset (optional; Agora provisions them)
     trace: (toolName: string, args: Record<string, unknown>) => void
 }
 
