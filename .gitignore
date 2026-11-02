@@ -83,6 +83,7 @@ kwirth-bundled.json
 /providers/object-mapper/
 /providers/agent-metrics/
 /senders/datadog/
+/senders/graylog/
 /common-cloud/
 /common-metrics/
 
@@ -112,6 +113,8 @@ kwirth-bundled.json
 /senders/gitlab-issues/
 /webhooks/jira/
 /webhooks/gitlab-issues/
+/senders/otrs/
+/webhooks/otrs/
 /idps/entraid/
 /themes/santander/
 /logins/santander/
