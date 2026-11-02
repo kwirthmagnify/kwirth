@@ -5,7 +5,8 @@
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
         "vllm": "../plugins/vllm/dist",
-        "provider-debug": "../plugins/provider-debug/dist"
+        "provider-debug": "../plugins/provider-debug/dist",
+        "specula": "../plugins/specula/dist"
     },
     "providers": {
         "events": "../providers/events/dist",
