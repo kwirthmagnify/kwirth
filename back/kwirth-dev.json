@@ -41,6 +41,7 @@
     "docs": {
         "excubitor": "../plugins/excubitor/docs/",
         "agora": "../plugins/agora/docs/",
+        "specula": "../plugins/specula/docs/",
         "vllm": "../plugins/vllm/docs/"
     }
 }
