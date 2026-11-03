@@ -104,6 +104,50 @@ Channels that can emit output expose a **Sender config** selector in their setup
 - **Secrets:** SMTP passwords, Resend API keys and Teams webhook URLs are stored as sender config — treat them as credentials.
 - **Testing:** use the **console** sender (no config) or **Echo + a sender** to validate delivery before wiring it into alerts.
 
+## Writing your own
+
+Scaffold one from the repo root:
+
+```
+node tools/create-kwirth-sender.mjs --id my-sender --name "My Sender" --publisher '@my-scope'
+```
+
+With no options it asks everything. With `--id`, `--publisher` is **required**: it decides the package name
+(`@my-scope/kwirth-sender-my-sender`) and which registry the sender ends up in, so it is never guessed.
+
+> ⚠️ **In PowerShell, quote it**: `--publisher '@my-scope'`. An argument starting with `@` is treated as
+> splatting and is **silently dropped**.
+
+What comes out is complete from the first minute: it **builds with a typecheck**, its **tests pass**, and it
+carries a README ready for npm. What depends on the destination goes by flag:
+
+| Flag | What you get |
+|---|---|
+| `--kind filter` | A **pipeline** node, like [regex](regex): it does not deliver, it decides whether the message goes on. |
+| `--batch` | **Delivering in batches** (see above), with the mapping kept apart from the network: each message becomes the destination's event carrying its origin as fields — leaving out what is not known — lines written in the same millisecond keep their order, and the batch is split by the destination's limits (entries **and** bytes) **before** it goes out. |
+| `--http` | The transport to an HTTP API: an *Endpoint* and a *Token* field, a timeout, and errors that say what to check (`answered 401 (missing or wrong token)`). And a **local double** of the API, used by the tests and served by `npm run double`, because no test should deliver to anyone's real destination. |
+| `--private` | Nothing changes in the code: it only lists, at the end, what to do by hand to keep the sender out of public repositories. |
+
+A log destination is typically `--batch --http`. Then:
+
+```
+cd senders/my-sender
+npm install
+npm test               # passes as generated
+npm run build          # typecheck, bundle, dist/package.json and the README
+```
+
+While developing, point kwirth at your build like any other extension, and **restart the back** after a
+change — the core loads `back.js` once:
+
+```json
+"senders": { "my-sender": "../senders/my-sender/dist" }
+```
+
+⚠️ With `--batch`, the limits in `src/back/map.ts` are **placeholders**: take the real ones from the
+destination's documentation before writing the transport, not from memory. Finding them out through a
+`413` means the request has already been paid for.
+
 ## Notes
 
 - Senders are **backend-only** — there's no per-sender channel tab; you configure them centrally and reference them from channels/providers.

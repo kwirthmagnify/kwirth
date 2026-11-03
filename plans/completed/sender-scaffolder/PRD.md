@@ -70,7 +70,7 @@ Lo que hoy se copia a mano de un sender a otro, y lo que se ha perdido por el ca
 | RF9 | `docs/qa/test-metrics-history.md` con su cabecera y la tabla vacía, en el formato que lee `tools/gen-coverage-chart.mjs` |
 | RF10 | `README.md` con qué es, tabla de configuración, cómo se instala en Kwirth y enlace a `https://kwirthmagnify.dev` y al repo |
 | RF11 | `package.json` con `build`, `test`, `watch`, `requiresRestart: false`, `requiresExtension: []` y `kwirth-common-back` en la **última** versión publicada |
-| RF12 | Con un `publisher` distinto de los públicos, **imprime** al final los pasos que el scaffolder no hace (anti-fuga, dev, registro privado) |
+| RF12 | Con `--private`, **imprime** al final los pasos que el scaffolder no hace (anti-fuga, repo propio, registro y manifest privados). Es un flag explícito y no se deduce del `publisher`: un tercero puede tener su propio registro privado, y una lista de scopes "públicos" escrita en el script sería otro literal que envejece |
 
 ## 6. Decisiones cerradas
 

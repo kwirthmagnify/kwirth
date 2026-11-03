@@ -36,6 +36,17 @@ else they publish — and `@scope/plugin-<id>` is Backstage's own convention.
 | `create-kwirth-login.mjs` | `logins/<id>/` | a branded login page — **no TypeScript**, just `login.json` and its images |
 | `create-kwirth-aitoolset.mjs` | `aitoolsets/<id>/` | a package of tools a model can call — back only, no UI at all |
 | `create-kwirth-dce.mjs` | `dces/<id>/` | a dynamic core extension: objects the core instantiates once and other extensions consume by id — back, front or both |
+| `create-kwirth-sender.mjs` | `senders/<id>/` | a way out of Kwirth — back only; output or filter, optionally with batches and an HTTP transport |
+
+The sender one comes out **complete**: build with typecheck, a watch that writes the same `dist/package.json`
+as the build (both import `dist-meta.mjs`, so they cannot drift), a harness that passes as generated —
+coverage included, mapped back to `src/` — the metrics history the CL9 close fills in, and a README ready
+for npm. What is optional goes by flag: `--kind filter` for a node that decides whether a message goes on,
+`--batch` for `sendBatch` with a network-free `map.ts` (event mapping, ties in the same millisecond, split
+by entries AND bytes), and `--http` for the transport — timeout, status codes turned into hints, and a local
+**double** of the API that both the tests and `npm run double` serve, because no test may deliver to a real
+destination. `--private` changes nothing in the code: it only lists what has to be done by hand to keep the
+artifact out of public repositories, which the scaffold never touches itself.
 
 The plugin one takes `--dce <id[:version],…>` for a plugin that CONSUMES a DCE. It is not a convenience:
 it leaves the dependency declared (`requiresExtension`) **and** the package mapped against the registry in
