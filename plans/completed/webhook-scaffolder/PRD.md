@@ -1,6 +1,6 @@
 # Scaffolder de webhooks — PRD
 
-> Estado: **VIVO** (2026-11-02), validado (D1–D5). Documento de **producto**: qué problema resuelve y por qué así.
+> Estado: **CERRADO** (2026-11-03). Validado (D1–D5) y entregado. Documento de **producto**: qué problema resuelve y por qué así.
 > El desglose en streams va al [PLAN](./PLAN.md). Hermano de [sender-scaffolder](../sender-scaffolder/PRD.md):
 > mismas reglas, y donde no se diga otra cosa, mismas decisiones.
 > Si algo de aquí contradice lo que ves en el producto, gana el producto.
@@ -54,7 +54,7 @@ nada a mano; y el webhook `otrs` nace de él sin copiar un solo fichero de otro 
 | RF | qué |
 |---|---|
 | RF1 | Pregunta (o toma de flags) `id`, `name`, `publisher`, `description`, `website` |
-| RF2 | `src/back/index.ts` declara `implements IWebhook`, con `getConfigSchema` (solo `name`), `getNodeMeta`, y un `parse()` de ejemplo que entiende `tests/fixtures/sample.json` |
+| RF2 | `src/back/index.ts` declara `implements IWebhook`, con `getConfigSchema` (solo `name`), `getNodeMeta` (icono `Link`, del conjunto curado), y un `parse()` de ejemplo que entiende `tests/fixtures/sample.json` |
 | RF3 | `verify()` generado **cerrado**: devuelve `false`, con un comentario que explica que hay que implementarlo y por qué arranca cerrado |
 | RF4 | `build.mjs`: typecheck con `tsc --noEmit` antes del bundle, `dist/package.json` con `extensionType: 'webhook'`, copia del README a `dist/` y aviso si falta |
 | RF5 | `watch.mjs` escribe **exactamente el mismo** `dist/package.json` que el build: los dos importan la misma función de `dist-meta.mjs` |

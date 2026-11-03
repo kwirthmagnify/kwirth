@@ -45,6 +45,53 @@ Concretely, a consumer's settings offer **two paired pickers**: the **webhook ty
 - **Exposure:** the receiver is a single public endpoint on the kwirth server; the token in the URL + the webhook's own verification are what protect it. Serve kwirth over **HTTPS** and keep the URLs secret.
 - **Secrets:** the shared secret / signing key a webhook expects is stored as webhook config — treat it as a credential (it's a masked field).
 
+## Writing your own
+
+Scaffold one from the repo root:
+
+```
+node tools/create-kwirth-webhook.mjs --id my-webhook --name "My Webhook" --publisher '@my-scope'
+```
+
+With no options it asks everything. With `--id`, `--publisher` is **required**: it decides the package name
+(`@my-scope/kwirth-webhook-my-webhook`) and which registry the webhook ends up in, so it is never guessed.
+
+> ⚠️ **In PowerShell, quote it**: `--publisher '@my-scope'`. An argument starting with `@` is treated as
+> splatting and is **silently dropped**.
+
+What comes out **builds with a typecheck**, its **tests pass**, and it carries a README ready for npm. Then:
+
+```
+cd webhooks/my-webhook
+npm install
+npm test               # passes as generated
+npm run build          # typecheck, bundle, dist/package.json and the README
+```
+
+🔴 **The authentication is yours to write, and until you do the webhook rejects everything.** How a call is
+proven genuine depends on the system that makes it — a secret in a header, an HMAC of the body, Basic
+auth — so the scaffold does not guess: `verify()` comes out returning `false`, and kwirth answers **401** to
+every call. That is on purpose. A skeleton that let everything through would accept anyone's calls the
+moment it is installed, and nothing would show it; a closed one fails at the first test. When you write it,
+compare with `crypto.timingSafeEqual`, accept a header that arrives as a list, and reject when the
+configured secret is empty. One of the generated tests checks the closed state: it **will break** when you
+write the authentication, and you replace it with your own (the right credential, a wrong one, none).
+
+`parse()` comes with a made-up example payload in `tests/fixtures/sample.json`, so that its test exists
+from the first minute. Replace both with a **real** payload, captured from the real system. And if the
+webhook pairs with a sender — one creates the ticket, the other hears about it — the event's `externalId`
+has to be **exactly** the id the sender returned: if it is not, the calls answer 200 and update nothing.
+
+While developing, point kwirth at your build like any other extension, and **restart the back** after a
+change — the core loads `back.js` once:
+
+```json
+"webhooks": { "my-webhook": "../webhooks/my-webhook/dist" }
+```
+
+`--private` changes nothing in the code: it only lists, at the end, what to do by hand to keep the webhook
+out of public repositories.
+
 ## Notes
 
 - Webhooks are **backend-only** — there's no per-webhook channel tab; you configure them centrally and channels **subscribe** to them.
