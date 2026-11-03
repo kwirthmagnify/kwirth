@@ -3,9 +3,9 @@ import { Box, Chip, Stack, Typography, useTheme } from '@mui/material'
 import { ReactFlow, Background, Controls, Node, Edge, MarkerType, Position } from '@xyflow/react'
 import { getDce, hasDce } from '@kwirthmagnify/kwirth-common-front'
 import type { IXyflow } from '@kwirthmagnify/kwirth-dce-xyflow'
-import { EComponentHealth, EComponentKind, EGraphLayer, IStatusInventory } from '../common/StatusTypes'
+import { EComponentHealth, EComponentKind, IStatusInventory } from '../common/StatusTypes'
 import { countUnbrokeredConsumers } from './StatusData'
-import { CHANNEL_NODE_PREFIX, channelsOf, consumerNodeId, elkGraphOf, layerOf } from './StatusGraph'
+import { CHANNEL_NODE_PREFIX, channelsOf, consumerNodeId, depthOf, elkGraphOf, producerNodeId } from './StatusGraph'
 
 /*
     The map of who produces and who consumes.
@@ -44,19 +44,16 @@ interface IPosicion {
  * diagram still says who consumes whom; a blank screen does not.
  */
 const colocar = async (nodos: Node[], aristas: Edge[]): Promise<Record<string, IPosicion>> => {
-    const destinos = new Set(aristas.map(a => a.target))
-    // Fallback rows follow the same layers as elk: top, providers that consume providers, channels.
+    // Fallback rows follow the same layers as elk: one row per depth (see depthOf).
     const filas = (): Record<string, IPosicion> => {
+        const depth = depthOf(nodos.map(n => n.id), aristas)
         const pos: Record<string, IPosicion> = {}
-        const fila = (n: Node): number => {
-            switch (layerOf(n.id, destinos)) {
-                case EGraphLayer.FIRST: return 0
-                case EGraphLayer.LAST: return 2
-                default: return 1
-            }
-        }
-        for (const f of [0, 1, 2]) {
-            nodos.filter(n => fila(n) === f).forEach((n, i) => { pos[n.id] = { x: i * 260, y: f * 220 } })
+        const enFila = new Map<number, number>()
+        for (const n of nodos) {
+            const f = depth.get(n.id) ?? 0
+            const i = enFila.get(f) ?? 0
+            enFila.set(f, i + 1)
+            pos[n.id] = { x: i * 260, y: f * 220 }
         }
         return pos
     }
@@ -131,17 +128,24 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
     const colores = {
         fondoNodo: theme.palette.background.paper,
         fondoCanal: theme.palette.mode === 'dark' ? '#12233a' : '#e8f0fb',
+        // A plugin that PUBLISHES (a pluvider): its own tint, so it does not read as one more channel.
+        fondoPluvider: theme.palette.mode === 'dark' ? '#2a1f3d' : '#f1e8fb',
         texto: theme.palette.text.primary,
         bordeCanal: theme.palette.primary.main
     }
 
     const { nodos, aristas, canalesSueltos } = React.useMemo(() => {
-        const productores = inventory.components.filter(c => c.kind === EComponentKind.PROVIDER || c.kind === EComponentKind.PLUVIDER)
-        const idsProductores = new Set(productores.map(p => p.id))
+        // Providers have their own node. A pluvider does NOT: it is drawn on its plugin's node (see StatusGraph).
+        const productores = inventory.components.filter(c => c.kind === EComponentKind.PROVIDER)
+        const pluviders = new Map(inventory.components
+            .filter(c => c.kind === EComponentKind.PLUVIDER)
+            .map(c => [producerNodeId(c.id), c]))
 
-        // Channels do not appear in the inventory: they are derived from the edges, where they do appear.
+        // Channels do not appear in the inventory: they are derived from the edges, where they do appear,
+        // plus every pluvider — a plugin that publishes is drawn even when it consumes nothing.
         // A consumer that is a provider is not a channel: its line ends on the provider's own node.
-        const canales = channelsOf(inventory.edges)
+        const canales = channelsOf(inventory.edges, [...inventory.components.filter(c => c.kind === EComponentKind.PLUVIDER).map(c => c.id)])
+        const dibujados = new Set([...productores.map(p => p.id), ...canales.map(id => `${CHANNEL_NODE_PREFIX}${id}`)])
 
         /*
             The selected node's neighbourhood: the node itself and everything it touches, both ways.
@@ -159,7 +163,7 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
         if (seleccionado) {
             vecinos.add(seleccionado)
             for (const e of inventory.edges) {
-                const origen = e.providerId
+                const origen = producerNodeId(e.providerId)
                 const destino = consumerNodeId(e.consumerId)
                 if (origen === seleccionado) vecinos.add(destino)
                 if (destino === seleccionado) vecinos.add(origen)
@@ -194,29 +198,40 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
                     boxShadow: seleccionado === p.id ? `0 0 10px ${COLOR[p.health]}` : undefined
                 }
             })),
-            ...canales.map(id => ({
-                id: `channel:${id}`,
-                position: { x: 0, y: 0 },
-                data: { label: id, esProductor: false },
-                sourcePosition: Position.Bottom,
-                targetPosition: Position.Top,
-                style: {
-                    background: colores.fondoCanal,
-                    color: colores.texto,
-                    border: `${seleccionado === `channel:${id}` ? 3 : 2}px solid ${colores.bordeCanal}`,
-                    borderRadius: 8,
-                    width: 230,
-                    fontSize: 12,
-                    padding: 8,
-                    opacity: apagado(`channel:${id}`),
-                    boxShadow: seleccionado === `channel:${id}` ? `0 0 10px ${colores.bordeCanal}` : undefined
+            ...canales.map(id => {
+                const nodeId = `${CHANNEL_NODE_PREFIX}${id}`
+                /*
+                    A plugin that publishes gets the pluvider tint, and its border tells how what it publishes
+                    is doing — the same health colours as a provider's. A plugin that only consumes keeps the
+                    channel's look.
+                */
+                const pluvider = pluviders.get(nodeId)
+                const borde = pluvider ? COLOR[pluvider.health] : colores.bordeCanal
+                return {
+                    id: nodeId,
+                    position: { x: 0, y: 0 },
+                    data: { label: id, esProductor: Boolean(pluvider) },
+                    sourcePosition: Position.Bottom,
+                    targetPosition: Position.Top,
+                    style: {
+                        background: pluvider ? colores.fondoPluvider : colores.fondoCanal,
+                        color: colores.texto,
+                        border: `${seleccionado === nodeId ? 3 : 2}px solid ${borde}`,
+                        borderRadius: 8,
+                        width: 230,
+                        fontSize: 12,
+                        padding: 8,
+                        opacity: apagado(nodeId),
+                        boxShadow: seleccionado === nodeId ? `0 0 10px ${borde}` : undefined
+                    }
                 }
-            }))
+            })
         ]
 
         const aristas: Edge[] = inventory.edges.map(e => ({
             id: `${e.providerId}->${e.consumerId}`,
-            source: e.providerId,
+            // A pluvider's line leaves its plugin's node: there is no separate producer node for it.
+            source: producerNodeId(e.providerId),
             target: consumerNodeId(e.consumerId),
             /*
                 A moving line reads as "something is going through here right now", so it only moves when
@@ -224,7 +239,7 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
                 subscription exists. How it slows down with auto-refresh is in the ReactFlow's container.
             */
             ...(() => {
-                const tocaAlSeleccionado = Boolean(seleccionado) && (e.providerId === seleccionado || consumerNodeId(e.consumerId) === seleccionado)
+                const tocaAlSeleccionado = Boolean(seleccionado) && (producerNodeId(e.providerId) === seleccionado || consumerNodeId(e.consumerId) === seleccionado)
                 /*
                     Alive = its producer's counter CHANGED between the previous refresh and this one. All
                     of its outgoing edges are animated.
@@ -258,8 +273,8 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
                 }
             })()
         }))
-            // Both ends must be drawn: a channel node always is, a provider consumer only if it is installed.
-            .filter(e => idsProductores.has(e.source) && (e.target.startsWith(CHANNEL_NODE_PREFIX) || idsProductores.has(e.target)))
+            // Both ends must be drawn: a plugin's node always is, a provider only if it is installed.
+            .filter(e => dibujados.has(e.source) && dibujados.has(e.target))
 
         // Edges whose producer is no longer in the inventory: discarded, but counted so it can be said.
         const canalesSueltos = inventory.edges.length - aristas.length

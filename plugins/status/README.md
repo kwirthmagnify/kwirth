@@ -20,7 +20,7 @@ Eleven tabs, and it opens on the first:
 |---|---|
 | **Home** | one card per tab with its figures; click a card to open its tab. The **Plugins & extensions** card unifies both (it opens Plugins; an "extensions" chip opens Extensions) |
 | **Providers** | each producer of data — providers and pluviders — with its state and why, consumers and deliveries |
-| **Graph** | who consumes whom |
+| **Graph** | who consumes whom: one box per provider and per plugin (a plugin that publishes, in purple), each row one level deeper in the chain of dependencies |
 | **Performance** | the Kwirth process: memory, CPU, event-loop delay and uptime, with charts of the session |
 | **Plugins** | every installed plugin: running, remote, not started or failed, and how many instances and connections its channel reports (a dash when it does not report — never a zero) |
 | **Extensions** | senders and webhooks, with their state |

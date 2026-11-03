@@ -304,14 +304,6 @@ export enum EStatusTab {
 /** The core's prefix for a consumer that is a provider (back/src/providers/Consumer.ts). */
 export const PROVIDER_CONSUMER_PREFIX = 'provider:'
 
-/**
- * A layer the graph pins a node to. The values are elk's own ('elk.layered.layering.layerConstraint'),
- * so they go straight into the layout options.
- */
-export enum EGraphLayer {
-    FIRST = 'FIRST',
-    LAST = 'LAST'
-}
 
 /** What a data message of this channel carries. Today there is only one; the diagram and counters will come. */
 export enum EStatusPayload {

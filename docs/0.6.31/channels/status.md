@@ -129,25 +129,34 @@ The **Graph** tab is a **map of who feeds whom**.
 
 ![statusgraph](../_media/ch-images/status-graph.png ':class=imageclass80')
 
-It reads top to bottom: **producers on top** — providers and pluviders — and **the channels that consume
-them underneath**. A line from one to the other means that channel is subscribed to that provider.
+It reads top to bottom: **producers on top** and **whoever consumes them underneath**. A line from one to
+the other means the lower one is subscribed to the upper one.
+
+There is **one box per thing that exists**: one per provider and one per plugin. A plugin that also
+**publishes** what it knows (a *pluvider*, like Agora) is not drawn twice: its own box is where the lines
+of whoever subscribes to it **leave from**, and where the lines of what it consumes **arrive**. That box is
+**tinted purple**, so a plugin that publishes is told apart from one that only consumes at a glance; its
+border carries the health of what it publishes, as a provider's does.
 
 The graph is drawn with React Flow and laid out with ELK, both from the [XYFlow DCE](/0.6.31/guide/extensions/dces/xyflow). Status declares it in its `requiresExtension`, so Status cannot be installed without the DCE, and the DCE cannot be removed while Status is installed.
 
-### When a provider consumes another provider
+### The rows grow downwards
 
-A provider can subscribe to another provider — for example, one that enriches or aggregates what another
-one produces. Then the graph has **more than two rows**, and every line still goes **down**:
+Each box sits **one row below the deepest thing it consumes**, so the graph grows down as far as the chain
+of dependencies goes, and every line goes **down**:
 
-  - **Top row**: the producers that consume nothing.
-  - **Middle rows**: a provider that consumes another one sits **below the one it reads**. If it reads a
-    provider that itself reads another, it goes one row further down, as deep as the chain needs.
-  - **Bottom row**: the channels, always together, whatever they consume.
+  - **Top row**: everything that consumes nothing — the providers, and any plugin that publishes without
+    reading anybody.
+  - **Next row**: whoever consumes something on the top row — a channel reading a provider, a provider
+    reading another provider, a plugin subscribed to a pluvider.
+  - **And so on**: whoever consumes *that* one goes one row further down, as deep as the chain needs.
 
-So with providers **A** and **B**, a provider **C** subscribed to **B**, and a channel reading all three, you
-see A and B side by side on top, C underneath B, and the channel at the bottom with a line from each of
-them. The line from B to C ends on C's own box — a provider that consumes is the same box as the provider
-that produces, not a copy of it.
+So with a provider **events**, a plugin **Agora** reading it and publishing, a plugin **Specula** subscribed
+to Agora, and a channel **magnify** reading events: events on top; Agora and magnify side by side on the
+second row — both read events; Specula on the third, below the Agora it reads. A channel does not sink to
+the bottom just for being a channel: it sits right below what it reads. The line from one box to another
+always ends on that box itself — a provider or a plugin that consumes is the same box as the one that
+produces, never a copy of it.
 
 **Click a node** and everything it touches stays lit while the rest dims: its own lines thicken and glow,
 and so do the components on the other end. Click the background to clear it. On a Kwirth with a handful of

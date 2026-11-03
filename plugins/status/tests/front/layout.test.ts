@@ -1,6 +1,6 @@
-// The layer rules run through the REAL elk (the same version the core serves), with the graph the plugin
-// builds (elkGraphOf). layerOf being right is not enough: what matters is where elk puts the nodes, and
-// that no line goes back up.
+// The layer rule runs through the REAL elk (the same version the core serves), with the graph the plugin
+// builds (elkGraphOf). depthOf being right is not enough: what matters is where elk puts the nodes — one
+// layer per depth, growing downwards — and that no line goes back up.
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -41,6 +41,26 @@ test('every line goes down, whatever the chain', async () => {
 test('a lonely producer stays with the top layer, not with the channels', async () => {
     const y = await layout(['a', 'b', 'plugin:montag', PLUGIN], [line('a', 'b'), line('b', PLUGIN)])
     assert.equal(y.get('plugin:montag'), y.get('a'))
+})
+
+test('🔴 a pluvider chain: each consumer one layer below what it reads, NOT all channels at the bottom', async () => {
+    // events -> agora (publishes) -> specula (publishes) -> x; magnify reads events directly.
+    const AGORA = `${CHANNEL_NODE_PREFIX}agora`
+    const SPECULA = `${CHANNEL_NODE_PREFIX}specula`
+    const X = `${CHANNEL_NODE_PREFIX}x`
+    const MAGNIFY = `${CHANNEL_NODE_PREFIX}magnify`
+    const y = await layout(['events', AGORA, SPECULA, X, MAGNIFY], [
+        line('events', AGORA),
+        line(AGORA, SPECULA),
+        line(SPECULA, X),
+        line('events', MAGNIFY)
+    ])
+    assert.ok(y.get('events')! < y.get(AGORA)!, 'agora below events')
+    assert.ok(y.get(AGORA)! < y.get(SPECULA)!, 'specula below agora')
+    assert.ok(y.get(SPECULA)! < y.get(X)!, 'x below specula')
+    // The rule that changed: a channel that only reads events sits on the layer right below it, level
+    // with agora — not pinned to the bottom with x.
+    assert.equal(y.get(MAGNIFY), y.get(AGORA), 'magnify is one layer below events, level with agora')
 })
 
 test('a separate pair does not sink the rest: its channel is in the channels layer', async () => {
