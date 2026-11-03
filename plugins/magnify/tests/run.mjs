@@ -36,12 +36,19 @@ await esbuild.build({
         '@kwirthmagnify/kwirth-common-ai/back',
         '@kwirthmagnify/kwirth-common-front'
     ],
+    // COVERAGE=1 → no tree-shaking: a function no test imports must stay in the bundle to count as uncovered
+    treeShaking: !process.env.COVERAGE,
     loader: { '.ts': 'ts', '.tsx': 'tsx' },
 })
 
 // 4) Run the bundles with the native runner (each file in its own process)
 const bundled = readdirSync(OUT_DIR, { recursive: true }).map(String)
     .filter(f => f.endsWith('.mjs')).map(f => path.join(OUT_DIR, f))
-const covArgs = process.env.COVERAGE ? ['--experimental-test-coverage', '--test-coverage-exclude=**/node_modules/**', '--test-coverage-exclude=**/tests/**'] : []
-try { execFileSync('node', ['--test', ...covArgs, ...bundled], { stdio: 'inherit' }) }
+/*
+    COVERAGE=1 → c8 measures, mapped back to src/ through the inline sourcemaps, and merges what every test
+    process covered. Node's own coverage cannot do it: without --enable-source-maps it measures the BUNDLE
+    (tests included), and with it the line figure depends on how the module range happens to map.
+*/
+const c8 = ['node_modules/c8/bin/c8.js', '--reporter=text', '--exclude-after-remap', '--exclude=tests/**', '--exclude=**/node_modules/**', `--temp-directory=${OUT_DIR}/c8`, process.execPath]
+try { execFileSync(process.execPath, [...(process.env.COVERAGE ? c8 : []), '--test', ...bundled], { stdio: 'inherit' }) }
 catch { process.exit(1) }

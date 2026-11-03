@@ -62,9 +62,16 @@ una extensión).
 
 ## Backlog del tema
 
-- 🔴 **Los runners existentes no pasan `--enable-source-maps`** (`senders/datadog`, `senders/file`,
-  `senders/gitlab-issues`, `plugins/montag`, y probablemente todos los que salieron del mismo patrón): sus
-  cifras de cobertura en los históricos miden el **bundle** —tests incluidos— y no `src/`. Hay que
-  comprobarlo en cada uno y, si se confirma, anotarlo en su histórico al corregirlo: la cifra cambiará.
+- ✅ **Resuelto el 2026-11-03, y no como se apuntaba aquí.** Los runners sin `--enable-source-maps` medían
+  el **bundle** (tests incluidos), confirmado: el 91,29 % del histórico de `datadog` es exactamente esa
+  medida. Pero el flag **tampoco** arreglaba nada: con sourcemaps, la cifra de LÍNEAS de Node depende de si
+  el rango del módulo cae en cada fichero fuente — en el repo marcaba los comentarios como no cubiertos
+  (common-cloud 35 %) y en un laboratorio con los MISMOS ficheros lo daba todo por cubierto (100 %). Se
+  aisló con ficheros controlados antes de concluirlo. El arreglo es **c8** (v8-to-istanbul), devDependency
+  que no viaja en ningún paquete, con `--exclude-after-remap` y **sin tree-shaking** en la corrida de
+  cobertura (si no, una función que ningún test importa desaparece del bundle y no cuenta). Aplicado a los
+  **38 runners** del repo y de los de pago, y a las plantillas de este scaffolder y de
+  `create-kwirth-webhook.mjs`. Fuera queda `specula`, cuyo `run.mjs` llevaba trabajo en curso.
+  Las cifras de cobertura de TODOS los históricos cambian desde aquí: no es regresión, es la medida.
 - Senders existentes sin `tests/` ni `docs/qa/` (nueve de doce). No se migran desde este plan.
 - Corregir el `watch.mjs` de `datadog` en su próximo bump.

@@ -122,6 +122,7 @@ write('package.json', `{
     },
     "devDependencies": {
         "@types/node": "^20.12.13",
+        "c8": "^12.0.0",
         "esbuild": "^0.27.7",
         "typescript": "^5.4.0"
     },
@@ -429,6 +430,8 @@ try {
         sourcemap: process.env.COVERAGE ? 'inline' : false,
         // kwirth packages resolve at runtime from node_modules, as they do inside the core
         external: ['@kwirthmagnify/kwirth-common', '@kwirthmagnify/kwirth-common-back'],
+        // COVERAGE=1 → no tree-shaking: a function no test imports must stay in the bundle to count as uncovered
+        treeShaking: !process.env.COVERAGE,
         loader: { '.ts': 'ts' },
     })
 }
@@ -442,10 +445,14 @@ const bundled = readdirSync(OUT_DIR, { recursive: true }).map(String)
     .filter(f => f.endsWith('.test.mjs') || path.basename(f).startsWith('.coverage-all.generated'))
     .map(f => path.join(OUT_DIR, f))
 if (bundled.length === 0) { console.error('No test bundles were produced'); process.exit(1) }
-// --enable-source-maps is what maps the report back to src/: without it the report measures the bundle
-const coverageArgs = process.env.COVERAGE ? ['--enable-source-maps', '--experimental-test-coverage', '--test-coverage-exclude=**/node_modules/**', '--test-coverage-exclude=**/tests/**'] : []
+/*
+    COVERAGE=1 → c8 measures, mapped back to src/ through the inline sourcemaps. Node's own coverage cannot:
+    without --enable-source-maps it measures the BUNDLE (tests included), and with it the line figure depends
+    on how the module range happens to map — comments uncovered in one file, everything covered in another.
+*/
+const coverageArgs = process.env.COVERAGE ? ['node_modules/c8/bin/c8.js', '--reporter=text', '--exclude-after-remap', '--exclude=tests/**', '--exclude=**/node_modules/**', \`--temp-directory=\${OUT_DIR}/c8\`, process.execPath] : []
 try {
-    execFileSync(process.execPath, ['--test', ...coverageArgs, ...bundled], { stdio: 'inherit' })
+    execFileSync(process.execPath, [...coverageArgs, '--test', ...bundled], { stdio: 'inherit' })
 }
 catch {
     process.exit(1)

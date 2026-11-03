@@ -38,17 +38,22 @@ await esbuild.build({
     outExtension: { '.js': '.mjs' },
     sourcemap: process.env.COVERAGE ? 'inline' : false,
     external: ['express', '@kwirthmagnify/kwirth-common-back', '@kwirthmagnify/kwirth-common'],
+    // COVERAGE=1 → no tree-shaking: a function no test imports must stay in the bundle to count as uncovered
+    treeShaking: !process.env.COVERAGE,
     loader: { '.ts': 'ts' },
 })
 
 const bundled = readdirSync(OUT_DIR, { recursive: true }).map(String).filter(f => f.endsWith('.mjs')).map(f => path.join(OUT_DIR, f))
 
+// COVERAGE=1 → c8 measures, mapped back to src/ through the inline sourcemaps. Node's own coverage cannot:
+// without --enable-source-maps it measures the BUNDLE (tests included), and with it the line figure depends
+// on how the module range happens to map — comments uncovered in one file, everything covered in another.
 const covArgs = process.env.COVERAGE
-    ? ['--experimental-test-coverage', '--test-coverage-exclude=**/node_modules/**', '--test-coverage-exclude=**/tests/**']
+    ? ['node_modules/c8/bin/c8.js', '--reporter=text', '--exclude-after-remap', '--exclude=tests/**', '--exclude=**/node_modules/**', `--temp-directory=${OUT_DIR}/c8`, process.execPath]
     : []
 
 try {
-    execFileSync('node', ['--test', ...covArgs, ...bundled], { stdio: 'inherit' })
+    execFileSync(process.execPath, [...covArgs, '--test', ...bundled], { stdio: 'inherit' })
 }
 catch {
     process.exit(1)

@@ -55,6 +55,7 @@
     "@types/node-fetch": "^2.6.11",
     "@types/tar": "^6.1.13",
     "@types/ws": "^8.5.10",
+    "c8": "^12.0.0",
     "cross-env": "^10.1.0",
     "docsify": "^4.13.1",
     "docsify-copy-code": "^3.0.0",

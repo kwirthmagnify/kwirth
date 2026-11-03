@@ -45,17 +45,18 @@ await esbuild.build({
     sourcemap: process.env.COVERAGE ? 'inline' : false,   // COVERAGE=1 → sourcemaps to map coverage back to src/
     // express is a real dependency (in Kwirth it comes from the core); the kwirth packages are only types here
     external: ['express', '@kwirthmagnify/kwirth-common', '@kwirthmagnify/kwirth-common-back'],
+    // COVERAGE=1 → no tree-shaking: a function no test imports must stay in the bundle to count as uncovered
+    treeShaking: !process.env.COVERAGE,
     loader: { '.ts': 'ts' },
 })
 
 // 4) Run the bundles with the native runner (each file in its own process)
 const bundled = readdirSync(OUT_DIR, { recursive: true }).map(String)
     .filter(f => f.endsWith('.mjs')).map(f => path.join(OUT_DIR, f))
-// COVERAGE=1 → node:test coverage, with the sourcemaps needed to map it back to src/
-// (the same pattern as montag and agora). Without the variable, the runner behaves exactly as before.
-// --enable-source-maps is what attributes the bundle's lines to src/ (and kwirth-common-front, bundled
-// for the front tests, to node_modules, which is excluded); without it the whole bundle counts as one file.
-const covArgs = process.env.COVERAGE ? ['--enable-source-maps', '--experimental-test-coverage', '--test-coverage-exclude=**/node_modules/**', '--test-coverage-exclude=**/tests/**'] : []
-try { execFileSync('node', ['--test', ...covArgs, ...bundled], { stdio: 'inherit' }) }
+// COVERAGE=1 → c8 measures, mapped back to src/ through the inline sourcemaps. Node's own coverage cannot:
+// without --enable-source-maps it measures the BUNDLE (tests included), and with it the line figure depends
+// on how the module range happens to map — comments uncovered in one file, everything covered in another.
+const covArgs = process.env.COVERAGE ? ['node_modules/c8/bin/c8.js', '--reporter=text', '--exclude-after-remap', '--exclude=tests/**', '--exclude=**/node_modules/**', `--temp-directory=${OUT_DIR}/c8`, process.execPath] : []
+try { execFileSync(process.execPath, [...covArgs, '--test', ...bundled], { stdio: 'inherit' }) }
 catch { if (process.env.COVERAGE) rmSync(ALL_ENTRY, { force: true }); process.exit(1) }
 finally { if (process.env.COVERAGE) rmSync(ALL_ENTRY, { force: true }) }
