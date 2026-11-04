@@ -6,7 +6,8 @@
         "montag": "../plugins/montag/dist",
         "vllm": "../plugins/vllm/dist",
         "provider-debug": "../plugins/provider-debug/dist",
-        "specula": "../plugins/specula/dist"
+        "specula": "../plugins/specula/dist",
+        "incipit": "../plugins/incipit/dist"
     },
     "providers": {
         "events": "../providers/events/dist",
