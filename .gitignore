@@ -116,6 +116,7 @@ kwirth-bundled.json
 /webhooks/gitlab-issues/
 /senders/otrs/
 /webhooks/otrs/
+/senders/smsapi/
 /idps/entraid/
 /themes/santander/
 /logins/santander/

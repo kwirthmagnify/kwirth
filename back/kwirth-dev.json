@@ -21,7 +21,8 @@
     },
     "senders": {
         "datadog": "../senders/datadog/dist",
-        "gitlab-issues": "../senders/gitlab-issues/dist"
+        "gitlab-issues": "../senders/gitlab-issues/dist",
+        "smsapi": "../senders/smsapi/dist"
     },
     "webhooks": {
         "gitlab-issues": "../webhooks/gitlab-issues/dist",
