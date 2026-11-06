@@ -24,7 +24,8 @@ has no runtime dependencies on Node or on the browser, so the same types are use
   stable id extensions persist and federate by, also when there is no Kubernetes.
 - **Contracts the core lends to channels** — sender and webhook access, the published HTTP routes
   (`IRouteAccess`, `ERouteOwnerKind`), the installed DCEs (`IDceAccess`, `IDceMeta`, registry entries) and
-  the installed plugins' status (`IPluginAccess`, `IPluginStatus`, `EPluginState`, `IChannelInstances`).
+  the installed plugins' status (`IPluginAccess`, `IPluginStatus`, `EPluginState`, `IChannelInstances`),
+  and the installed extensions of any type with their version (`IExtensionAccess`, `IInstalledExtension`).
 
 ## Who uses it
 

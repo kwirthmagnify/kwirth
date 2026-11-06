@@ -1,7 +1,9 @@
 import React from 'react'
 import { Chip, Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material'
-import { IStatusDce, IStatusDcePart } from '../common/StatusTypes'
-import { filterDces, formatBytes, frontPartOf, partLabel, readFrontRegistry, sortDces, summarizeDces } from './StatusDces'
+import { EDceColumn, EStatusTable, IStatusDce, IStatusDcePart } from '../common/StatusTypes'
+import { dceBytes, filterDces, formatBytes, frontPartOf, partLabel, readFrontRegistry, sortDces, summarizeDces } from './StatusDces'
+import { ISortableProps, TSortValue, sortRows } from './StatusSort'
+import { SortableCell } from './StatusSortableCell'
 
 /*
     The DCE tab: every installed DCE, whether each of its halves loaded, where it came from and who
@@ -9,7 +11,7 @@ import { filterDces, formatBytes, frontPartOf, partLabel, readFrontRegistry, sor
     this browser that loaded it.
 */
 
-interface IDceTabProps {
+interface IDceTabProps extends ISortableProps {
     dces: IStatusDce[] | undefined
     filter: string
 }
@@ -58,7 +60,7 @@ const PartCell: React.FC<IPartCellProps> = ({ has, part, side }) => {
     )
 }
 
-export const StatusDceTab: React.FC<IDceTabProps> = ({ dces, filter }) => {
+export const StatusDceTab: React.FC<IDceTabProps> = ({ dces, filter, sorts, onSort }) => {
     if (!dces) {
         return (
             <Typography variant='body2' color='text.secondary' sx={{ p: 4, textAlign: 'center' }}>
@@ -75,7 +77,23 @@ export const StatusDceTab: React.FC<IDceTabProps> = ({ dces, filter }) => {
     }
     const registry = readFrontRegistry()
     const s = summarizeDces(dces, registry)
-    const shown = sortDces(filterDces(dces, filter), registry)
+    /*
+        How each column sorts. Inside the component because the Front state is read from this page's
+        registry. A half the DCE does not have (a dash) is undefined, so it goes last.
+    */
+    const valueOf: Record<EDceColumn, (d: IStatusDce) => TSortValue> = {
+        [EDceColumn.DCE]: d => d.name,
+        [EDceColumn.VERSION]: d => d.version,
+        [EDceColumn.BACK]: d => d.hasBack ? partLabel(true, d.back).label : undefined,
+        [EDceColumn.FRONT]: d => d.hasFront ? partLabel(true, frontPartOf(d, registry)).label : undefined,
+        [EDceColumn.SIZE]: d => dceBytes(d),
+        [EDceColumn.SOURCE]: d => d.source,
+        [EDceColumn.CONSUMERS]: d => d.consumers.length
+    }
+    const sort = sorts[EStatusTable.DCE]
+    const shown = sortRows(sortDces(filterDces(dces, filter), registry), sort, (d, column) => valueOf[column as EDceColumn](d))
+    const cabecera = (column: EDceColumn, label: string) =>
+        <SortableCell label={label} column={column} sort={sort} onSort={col => onSort(EStatusTable.DCE, col)} />
     return (
         <Stack spacing={1} sx={{ pb: 2 }}>
             <Stack direction='row' spacing={0.75} useFlexGap flexWrap='wrap' alignItems='center'>
@@ -102,13 +120,13 @@ export const StatusDceTab: React.FC<IDceTabProps> = ({ dces, filter }) => {
                 </colgroup>
                 <TableHead>
                     <TableRow>
-                        <TableCell>DCE</TableCell>
-                        <TableCell>Version</TableCell>
-                        <TableCell>Back</TableCell>
-                        <TableCell>Front</TableCell>
-                        <TableCell>Size</TableCell>
-                        <TableCell>Source</TableCell>
-                        <TableCell>Consumed by</TableCell>
+                        {cabecera(EDceColumn.DCE, 'DCE')}
+                        {cabecera(EDceColumn.VERSION, 'Version')}
+                        {cabecera(EDceColumn.BACK, 'Back')}
+                        {cabecera(EDceColumn.FRONT, 'Front')}
+                        {cabecera(EDceColumn.SIZE, 'Size')}
+                        {cabecera(EDceColumn.SOURCE, 'Source')}
+                        {cabecera(EDceColumn.CONSUMERS, 'Consumed by')}
                     </TableRow>
                 </TableHead>
                 <TableBody>

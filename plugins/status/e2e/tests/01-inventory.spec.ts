@@ -147,9 +147,59 @@ test('🔴 a box is a door: clicking it opens its tab', async () => {
 })
 
 test('la tabla trae la columna QUE justifica la pantalla', async () => {
-    for (const columna of ['Kind', 'Name', 'State', 'Why']) {
+    for (const columna of ['Kind', 'Name', 'Version', 'State', 'Source', 'Why']) {
         await expect(page.getByRole('columnheader', { name: columna, exact: true })).toBeVisible()
     }
+})
+
+test('🔴 every installed provider shows a REAL version; only what nobody lists gets a dash', async () => {
+    const versiones = await page.locator('table tbody tr td[aria-label="Version"]').allInnerTexts()
+    expect(versiones.length).toBeGreaterThan(0)
+    for (const v of versiones) expect(v.trim(), 'a version cell').toMatch(/^(\d+\.\d+\.\d+[\w.-]*|—)$/)
+    // A Kwirth with providers installed has at least one that says its version.
+    expect(versiones.some(v => /^\d/.test(v.trim())), 'no provider says its version').toBe(true)
+})
+
+// The cells of one column, by its header's position: so a test does not depend on the column order.
+const columna = async (header: string): Promise<string[]> => {
+    const i = (await page.locator('table thead th').allInnerTexts()).map(t => t.trim()).indexOf(header)
+    expect(i, `no column '${header}'`).toBeGreaterThanOrEqual(0)
+    return page.locator('table tbody tr').evaluateAll((rows, n) => rows.map(r => (r.querySelectorAll('td')[n]?.textContent ?? '').trim()), i)
+}
+const ordenada = (xs: string[], desc = false): boolean => {
+    const s = [...xs].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+    return JSON.stringify(desc ? s.reverse() : s) === JSON.stringify(xs)
+}
+
+// The header cell, and the label inside it that sorts: a click on the cell's empty space does nothing,
+// as for a person — what is pressed is the name with its arrow.
+const cabeceraDe = (name: string) => page.getByRole('columnheader', { name, exact: true })
+const ordenarPor = (name: string) => cabeceraDe(name).locator('.MuiTableSortLabel-root').click()
+
+test('🔴 a header sorts its column: ascending, descending, then back to the table\'s own order', async () => {
+    const propio = await columna('Name')
+    await ordenarPor('Name')
+    await expect(cabeceraDe('Name')).toHaveAttribute('aria-sort', 'ascending')
+    expect(ordenada(await columna('Name')), 'not ascending').toBe(true)
+    await ordenarPor('Name')
+    await expect(cabeceraDe('Name')).toHaveAttribute('aria-sort', 'descending')
+    expect(ordenada(await columna('Name'), true), 'not descending').toBe(true)
+    await ordenarPor('Name')
+    await expect(cabeceraDe('Name')).not.toHaveAttribute('aria-sort', /ascending|descending/)
+    expect(await columna('Name'), 'the third click did not restore the table\'s own order').toEqual(propio)
+})
+
+test('🔴 the sort survives a tab switch, and a dash stays last', async () => {
+    await ordenarPor('Version')
+    await page.getByRole('tab', { name: 'Home', exact: true }).click()
+    await page.getByRole('tab', { name: 'Providers', exact: true }).click()
+    await expect(cabeceraDe('Version')).toHaveAttribute('aria-sort', 'ascending')
+    const vs = await columna('Version')
+    const primerGuion = vs.indexOf('—')
+    if (primerGuion >= 0) expect(vs.slice(primerGuion).every(v => v === '—'), 'a dash before a version').toBe(true)
+    // Back to the table's own order for the cases below.
+    await ordenarPor('Version')
+    await ordenarPor('Version')
 })
 
 test('🔴 the Providers tab lists ONLY providers and pluviders', async () => {
@@ -174,7 +224,8 @@ test('la columna de consumidores distingue "ninguno" de "no lo dice"', async () 
     let conNumero = 0
     let sinDato = 0
     for (let i = 0; i < n; i++) {
-        const consumidores = (await filas.nth(i).locator('td').nth(3).innerText()).trim()
+        // Consumers: after Kind, Name, Version and State.
+        const consumidores = (await filas.nth(i).locator('td').nth(4).innerText()).trim()
         if (consumidores === '—') sinDato++
         else if (/^[0-9]+$/.test(consumidores)) conNumero++
         else throw new Error(`la columna de consumidores dice '${consumidores}', que no es ni un numero ni un guion`)
@@ -247,7 +298,8 @@ test('la columna de entregas distingue un numero de "no lo dice"', async () => {
     const n = await filas.count()
     let conNumero = 0
     for (let i = 0; i < n; i++) {
-        const txt = (await filas.nth(i).locator('td').nth(4).innerText()).trim().split('\n')[0]
+        // Delivered: after Kind, Name, Version, State and Consumers.
+        const txt = (await filas.nth(i).locator('td').nth(5).innerText()).trim().split('\n')[0]
         if (txt === '—') continue
         expect(txt.replace(/[.,]/g, ''), `entregas raras: '${txt}'`).toMatch(/^[0-9]+$/)
         conNumero++
@@ -501,13 +553,35 @@ test('🔴 the Extensions tab lists senders and webhooks, without producer colum
     // Consumers and deliveries are about producing data: they would be a column of dashes here.
     await expect(page.getByRole('columnheader', { name: 'Consumers', exact: true })).toHaveCount(0)
     await expect(page.getByRole('columnheader', { name: 'Why', exact: true })).toBeVisible()
+    // Every extension table carries the version.
+    for (const v of await page.locator('table tbody tr td[aria-label="Version"]').allInnerTexts()) {
+        expect(v.trim(), 'a sender/webhook version').toMatch(/^(\d+\.\d+\.\d+[\w.-]*|—)$/)
+    }
+})
+
+test('🔴 every table of the channel can be sorted by every column', async () => {
+    const tablas: string[] = ['Providers', 'Extensions', 'Plugins', 'Routes', 'DCE', 'SQL']
+    for (const nombre of tablas) {
+        await page.getByRole('tab', { name: nombre, exact: true }).click()
+        await page.waitForTimeout(300)
+        const total = await page.locator('table thead th').count()
+        const ordenables = await page.locator('table thead th .MuiTableSortLabel-root').count()
+        expect(ordenables, `${nombre}: ${total - ordenables} column(s) cannot be sorted`).toBe(total)
+    }
+    await page.getByRole('tab', { name: 'Providers', exact: true }).click()
 })
 
 test('🔴 no se filtra ninguna URL de webhook: llevan el token dentro', async () => {
-    // On the Extensions tab, which is where webhooks are now.
+    // On the Extensions tab, which is where webhooks are; opened here, not assumed from the case before.
+    await page.getByRole('tab', { name: 'Extensions', exact: true }).click()
     const texto = await page.locator('table').innerText()
     expect(texto).not.toMatch(/token=/i)
-    expect(texto).not.toMatch(/https?:\/\//i)
+    /*
+        The receiving URL of a webhook carries its token: none may show. Any URL may not be banned any more —
+        the Source column shows where an extension was installed from, a package registry URL, as Plugins
+        and DCE always did.
+    */
+    expect(texto).not.toMatch(/\/webhook\//i)
     await page.getByRole('tab', { name: 'Providers', exact: true }).click()
 })
 

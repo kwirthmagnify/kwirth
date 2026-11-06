@@ -53,6 +53,12 @@ back to it.
 A tab whose data the core does not give — an older core, for instance — says so in words, instead of showing
 an empty table that could be read as *"there is nothing"*.
 
+**Every table sorts by any column.** Click a column's name: once sorts it ascending, again descending, and a
+third time goes back to the table's own order — the one that puts what needs attention first. Numbers sort as
+numbers and versions as you read them (0.10.0 after 0.9.0); a **—** (*"not reported"*) always goes last,
+whichever the direction, so it never hides the rows that do say something. *State* sorts by urgency, failures
+first. Each table keeps its sort while you move between tabs.
+
 ### Home
 
 Where the channel opens: **one card per tab**, three per row, all the same size and filling the screen. Each
@@ -71,17 +77,21 @@ how many do not report, and shows a red **failed** chip when a plugin could not 
 
 ### The Providers table
 
-The table on the **Providers** tab has six columns (the **Extensions** tab has the same ones without
+The table on the **Providers** tab has eight columns (the **Extensions** tab has the same ones without
 **Consumers** and **Delivered**, which are about producing data):
 
 | Column | What it tells you |
 |---|---|
 | **Kind** | Provider or Pluvider (Sender or Webhook on the Extensions tab) |
 | **Name** | the component id, as the rest of Kwirth names it |
+| **Version** | the version installed; a pluvider shows its plugin's. **—** when nobody lists it — a provider built into the core, or a core too old to say |
 | **State** | see the table below |
 | **Consumers** | how many things are consuming it — or **—** when the component does not say |
 | **Delivered** | how much it has handed to its consumers since it started, and the rate since your previous snapshot |
+| **Source** | where it was installed from: a marketplace URL, `dev`, `bundled`, `local` |
 | **Why** | the reason, when there is one worth giving |
+
+Every table that lists extensions — Providers, Extensions, Plugins and DCE — shows the **version**.
 
 ### States
 

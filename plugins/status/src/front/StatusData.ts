@@ -1,6 +1,7 @@
 import { EStatusTab, IStatusComponent, IStatusCoreLog, IStatusInventory } from '../common/StatusTypes'
 import { IProcessPoint } from './StatusPerformance'
 import { IPreviousLogRead } from './StatusLog'
+import { ISortState } from './StatusSort'
 
 /*
     The tab's state: the latest snapshot and the previous one, and nothing else.
@@ -18,6 +19,11 @@ export interface IStatusData {
     view: EStatusTab
     /** What was typed into the filter, for the same reason. */
     filter: string
+    /**
+     * How each table is sorted, by table (an id per table: the SQL tab has two). Kept here for the same
+     * reason as the filter; a table with no entry keeps its own order.
+     */
+    sort: Record<string, ISortState>
     /**
      * How many SECONDS between asking for a new snapshot. 0 = manual only, and it is the default.
      *
@@ -77,6 +83,7 @@ export class StatusData implements IStatusData {
     // box leads to each tab.
     view: EStatusTab = EStatusTab.HOME
     filter = ''
+    sort: Record<string, ISortState> = {}
     autoRefresh = 0
     inventory?: IStatusInventory
     previous?: IStatusInventory

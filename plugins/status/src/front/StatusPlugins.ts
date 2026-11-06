@@ -30,7 +30,8 @@ const ORDER: Record<EPluginState, number> = {
     [EPluginState.REMOTE]: 3,
     [EPluginState.RUNNING]: 4
 }
-const orderOf = (state: EPluginState): number => ORDER[state] ?? 2
+/** How urgent a state is (0 = look first): the table's own order, and its State column when sorted. */
+export const orderOf = (state: EPluginState): number => ORDER[state] ?? 2
 
 export const sortPlugins = (plugins: IPluginStatus[]): IPluginStatus[] =>
     [...plugins].sort((a, b) => {

@@ -1,6 +1,6 @@
 import { AdmissionregistrationV1Api, ApiextensionsV1Api, ApisApi, AppsV1Api, AutoscalingV2Api, BatchV1Api, CoordinationV1Api, CoreV1Api, CustomObjectsApi, Exec, KubeConfig, KubernetesObjectApi, Log, NetworkingV1Api, NodeV1Api, PolicyV1Api, RbacAuthorizationV1Api, SchedulingV1Api, StorageV1Api, V1Node, VersionApi } from '@kubernetes/client-node'
 import { quantityToScalar } from '@kubernetes/client-node/dist/util.js'
-import { EClusterType, EClusterFlavour, ERancherRole, IDceAccess, IInstanceConfig, IPluginAccess, IRouteAccess, ISenderAccess, IWebhookAccess } from '@kwirthmagnify/kwirth-common'
+import { EClusterType, EClusterFlavour, ERancherRole, IDceAccess, IExtensionAccess, IInstanceConfig, IPluginAccess, IRouteAccess, ISenderAccess, IWebhookAccess } from '@kwirthmagnify/kwirth-common'
 import { IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
@@ -145,6 +145,8 @@ export class ClusterInfo {
     public dces?: IDceAccess
     /** The installed plugins, their state and what their channels have running, read-only (Status). */
     public plugins?: IPluginAccess
+    /** The installed extensions of any type, with their version and source, read-only (Status). */
+    public extensions?: IExtensionAccess
     /*
         Who consumes whom, recorded here because here is where it is known.
 

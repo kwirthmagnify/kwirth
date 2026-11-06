@@ -38,6 +38,7 @@ import { AiToolsetManager } from './tools/AiToolsetManager'
 import { AiToolsetApi } from './api/AiToolsetApi'
 import { DceManager } from './tools/DceManager'
 import { buildPluginStatuses } from './tools/PluginStatus'
+import { buildExtensionAccess } from './tools/ExtensionAccess'
 import { DceApi } from './api/DceApi'
 import { findConsumers, IRequirer, setInstalledExtensionsSource, emptyInstalledIndex, normalizeRequires } from './tools/ExtensionDeps'
 import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, ESignalMessageReason, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
@@ -2702,6 +2703,21 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         runningInstance.clusterInfo.senders = senderManager
         runningInstance.clusterInfo.routes = routeRegistry
         runningInstance.clusterInfo.dces = dceManager
+        // Every type's installed list, read from its manager when asked (some do not exist yet here).
+        runningInstance.clusterInfo.extensions = buildExtensionAccess(() => ({
+            [EExtensionType.PLUGIN]: pluginManager && (() => pluginManager!.listInstalled()),
+            [EExtensionType.PROVIDER]: providerManager && (() => providerManager!.listInstalled()),
+            [EExtensionType.SENDER]: senderManager && (() => senderManager!.listInstalled()),
+            [EExtensionType.WEBHOOK]: webhookManager && (() => webhookManager!.listInstalled()),
+            [EExtensionType.THEME]: themeManager && (() => themeManager!.listInstalled()),
+            [EExtensionType.HOMEPAGE]: homepageManager && (() => homepageManager!.listInstalled()),
+            [EExtensionType.LOGIN]: loginManager && (() => loginManager!.listInstalled()),
+            [EExtensionType.PACK]: packManager && (() => packManager!.listInstalled()),
+            [EExtensionType.DOCS]: docsManager && (() => docsManager!.listInstalled()),
+            [EExtensionType.AITOOLSET]: aiToolsetManager && (() => aiToolsetManager!.listInstalled()),
+            [EExtensionType.DCE]: dceManager && (() => dceManager!.listInstalled()),
+            [EExtensionType.IDP]: idpManager && (() => idpManager!.listInstalledMeta())
+        }))
         /*
             Read at the moment of asking, not copied: plugins are installed, reloaded and removed hot.
 

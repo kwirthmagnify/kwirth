@@ -55,6 +55,19 @@ test('captura del inventario', async ({ browser }) => {
         // The mouse off the refresh button, or its tooltip ends up in the guide's image.
         await page.mouse.move(700, 1150)
         await page.waitForTimeout(600)
+        /*
+            The guide is public, and a paid extension's Source is the URL of a private package registry: it is
+            covered in EVERY image, since Providers, Extensions, Plugins and DCE all have a Source column.
+            Generic on purpose — any URL that is not the public npm registry — so this spec, which is public
+            too, names no private host.
+        */
+        await page.locator('table tbody td p, table tbody td').evaluateAll(cells => {
+            for (const c of cells) {
+                if (c.children.length > 0) continue
+                const t = (c.textContent ?? '').trim()
+                if (/^https?:\/\//.test(t) && !t.startsWith('https://registry.npmjs.org/')) c.textContent = 'private registry'
+            }
+        })
         mark(`screenshot ${name}: start`)
         await page.screenshot({ path: path.join(MEDIA, `${CHANNEL}-${name}.png`) })
         mark(`screenshot ${name}: written`)
@@ -80,17 +93,6 @@ test('captura del inventario', async ({ browser }) => {
     // Plugins: every installed plugin, its state and what its channel has open.
     await page.getByRole('tab', { name: 'Plugins', exact: true }).click()
     await page.waitForTimeout(800)
-    /*
-        The guide is public, and a paid plugin's Source is the URL of a private package registry: it is
-        covered in the image. Generic on purpose — any URL that is not the public npm registry — so this
-        spec, which is public too, names no private host.
-    */
-    await page.locator('table tbody tr td:last-child p').evaluateAll(cells => {
-        for (const c of cells) {
-            const t = c.textContent ?? ''
-            if (/^https?:\/\//.test(t) && !t.startsWith('https://registry.npmjs.org/')) c.textContent = 'private registry'
-        }
-    })
     await shot('plugins')
 
     // Performance, with enough snapshots for every chart to draw a line.

@@ -279,6 +279,77 @@ export interface IStatusEdge {
 }
 
 /**
+ * The direction a table column is sorted in. Here and NOT in kwirth-common: a plugin's front takes
+ * kwirth-common from the core's front at runtime, so an enum new there is undefined on any core built
+ * before it — and the sortable header crashed the whole tab on one. Only this plugin uses it.
+ */
+export enum ESortDirection {
+    ASC = 'asc',
+    DESC = 'desc'
+}
+
+/** Every table of the channel, so each keeps its own sort (the SQL tab has two). */
+export enum EStatusTable {
+    PROVIDERS = 'providers',
+    EXTENSIONS = 'extensions',
+    PLUGINS = 'plugins',
+    ROUTES = 'routes',
+    DCE = 'dce',
+    SQL_POOLS = 'sql-pools',
+    SQL_DATABASES = 'sql-databases'
+}
+
+/** The columns of the Providers and Extensions tables (one table component serves both). */
+export enum EComponentColumn {
+    KIND = 'kind',
+    NAME = 'name',
+    VERSION = 'version',
+    STATE = 'state',
+    CONSUMERS = 'consumers',
+    DELIVERED = 'delivered',
+    SOURCE = 'source',
+    WHY = 'why'
+}
+
+export enum EPluginColumn {
+    PLUGIN = 'plugin',
+    VERSION = 'version',
+    STATE = 'state',
+    INSTANCES = 'instances',
+    CONNECTIONS = 'connections',
+    SOURCE = 'source'
+}
+
+export enum ERouteColumn {
+    PATH = 'path',
+    METHODS = 'methods',
+    OWNER = 'owner'
+}
+
+export enum ESqlPoolColumn {
+    CONSUMER = 'consumer',
+    DATABASE = 'database',
+    USED = 'used',
+    FREE = 'free',
+    MAX = 'max'
+}
+
+export enum ESqlDatabaseColumn {
+    DATABASE = 'database',
+    KIND = 'kind'
+}
+
+export enum EDceColumn {
+    DCE = 'dce',
+    VERSION = 'version',
+    BACK = 'back',
+    FRONT = 'front',
+    SIZE = 'size',
+    SOURCE = 'source',
+    CONSUMERS = 'consumers'
+}
+
+/**
  * The tabs of the channel. String values with a meaning, set explicitly on each Tab: adding, removing or
  * reordering a tab must not shift the others.
  */

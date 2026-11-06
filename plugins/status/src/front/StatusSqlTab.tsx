@@ -1,6 +1,8 @@
 import React from 'react'
 import { Chip, Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material'
-import { IStatusSqlInfo } from '../common/StatusTypes'
+import { ESqlDatabaseColumn, ESqlPoolColumn, EStatusTable, IStatusSqlInfo, IStatusSqlPool } from '../common/StatusTypes'
+import { ISortableProps, TSortValue, sortRows } from './StatusSort'
+import { SortableCell } from './StatusSortableCell'
 
 /*
     The SQL tab: the core's relational storage — PostgreSQL via knex. The connection config (from the same
@@ -9,9 +11,25 @@ import { IStatusSqlInfo } from '../common/StatusTypes'
     observability view, not a config dialog.
 */
 
-interface ISqlTabProps {
+interface ISqlTabProps extends ISortableProps {
     sql: IStatusSqlInfo | undefined
     filter: string
+}
+
+/** What a database is, as the Kind column says it. */
+const databaseKind = (d: string): string => d.startsWith('kwirth_') ? 'kwirth consumer' : 'external'
+
+// How each column of the two tables sorts.
+const POOL_VALUE: Record<ESqlPoolColumn, (p: IStatusSqlPool) => TSortValue> = {
+    [ESqlPoolColumn.CONSUMER]: p => p.consumerId,
+    [ESqlPoolColumn.DATABASE]: p => p.dbName,
+    [ESqlPoolColumn.USED]: p => p.used,
+    [ESqlPoolColumn.FREE]: p => p.free,
+    [ESqlPoolColumn.MAX]: p => p.max
+}
+const DATABASE_VALUE: Record<ESqlDatabaseColumn, (d: string) => TSortValue> = {
+    [ESqlDatabaseColumn.DATABASE]: d => d,
+    [ESqlDatabaseColumn.KIND]: d => databaseKind(d)
 }
 
 /** One row of the server info block: a label and its value, monospaced for config. */
@@ -22,7 +40,7 @@ const InfoRow: React.FC<{ label: string, value: string | number }> = ({ label, v
     </Stack>
 )
 
-export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter }) => {
+export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter, sorts, onSort }) => {
     if (!sql) {
         return (
             <Typography variant='body2' color='text.secondary' sx={{ p: 4, textAlign: 'center' }}>
@@ -31,7 +49,15 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter }) => {
         )
     }
 
-    const shown = sql.databases.filter(d => d.toLowerCase().includes(filter.toLowerCase()))
+    const poolSort = sorts[EStatusTable.SQL_POOLS]
+    const dbSort = sorts[EStatusTable.SQL_DATABASES]
+    const pools = sortRows(sql.pools, poolSort, (p, column) => POOL_VALUE[column as ESqlPoolColumn](p))
+    const shown = sortRows(sql.databases.filter(d => d.toLowerCase().includes(filter.toLowerCase())), dbSort,
+        (d, column) => DATABASE_VALUE[column as ESqlDatabaseColumn](d))
+    const poolHeader = (column: ESqlPoolColumn, label: string, align?: 'right') =>
+        <SortableCell label={label} column={column} sort={poolSort} onSort={col => onSort(EStatusTable.SQL_POOLS, col)} align={align} />
+    const dbHeader = (column: ESqlDatabaseColumn, label: string) =>
+        <SortableCell label={label} column={column} sort={dbSort} onSort={col => onSort(EStatusTable.SQL_DATABASES, col)} />
 
     return (
         <Stack spacing={2} sx={{ pb: 2 }}>
@@ -77,15 +103,15 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter }) => {
                     </colgroup>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Consumer</TableCell>
-                            <TableCell>Database</TableCell>
-                            <TableCell align='right'>Used</TableCell>
-                            <TableCell align='right'>Free</TableCell>
-                            <TableCell align='right'>Max</TableCell>
+                            {poolHeader(ESqlPoolColumn.CONSUMER, 'Consumer')}
+                            {poolHeader(ESqlPoolColumn.DATABASE, 'Database')}
+                            {poolHeader(ESqlPoolColumn.USED, 'Used', 'right')}
+                            {poolHeader(ESqlPoolColumn.FREE, 'Free', 'right')}
+                            {poolHeader(ESqlPoolColumn.MAX, 'Max', 'right')}
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {sql.pools.map(p => {
+                        {pools.map(p => {
                             const saturated = p.used >= p.max
                             return (
                                 <TableRow key={p.consumerId} aria-label={`Pool ${p.consumerId}`}>
@@ -120,8 +146,8 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter }) => {
                         </colgroup>
                         <TableHead>
                             <TableRow>
-                                <TableCell>Database</TableCell>
-                                <TableCell>Kind</TableCell>
+                                {dbHeader(ESqlDatabaseColumn.DATABASE, 'Database')}
+                                {dbHeader(ESqlDatabaseColumn.KIND, 'Kind')}
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -130,7 +156,7 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter }) => {
                                     <TableCell sx={{ fontFamily: 'monospace' }}>{d}</TableCell>
                                     <TableCell>
                                         <Typography variant='caption' color='text.secondary'>
-                                            {d.startsWith('kwirth_') ? 'kwirth consumer' : 'external'}
+                                            {databaseKind(d)}
                                         </Typography>
                                     </TableCell>
                                 </TableRow>

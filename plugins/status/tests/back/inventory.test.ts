@@ -541,3 +541,39 @@ test('🔴 the DCE code sizes travel from the core as they are, and only when th
     assert.equal('backBytes' in inv.dces![1], false)
     assert.equal('frontBytes' in inv.dces![1], false)
 })
+
+// ── versions (every extension table carries one) ───────────────────────────────
+
+test('🔴 providers, senders and webhooks get their version and source from the core; a pluvider its plugin\'s', async () => {
+    const lists: Record<string, { id: string, version: string, installedFrom?: string }[]> = {
+        provider: [{ id: 'aws', version: '0.3.1', installedFrom: 'dev' }],
+        sender: [{ id: 'file', version: '0.2.0' }],
+        webhook: [{ id: 'gitlab-issues', version: '0.1.4', installedFrom: 'https://x/y.tgz' }]
+    }
+    const inv = await inventarioDe({
+        providers: [{ id: 'aws', started: true }, { id: 'builtin', started: true }],
+        pluviders: new Map([['plugin:agora', {}]]),
+        senders: { listSenders: () => [{ id: 'file', configNames: ['a'] }] },
+        webhooks: { listWebhooks: () => [{ id: 'gitlab-issues', configNames: ['a'] }] },
+        extensions: { listInstalled: async (type: string) => lists[type] ?? [] },
+        plugins: { listPlugins: async () => [{ id: 'agora', name: 'Agora', version: '2.1.0', source: 'dev', requiresRestart: false, state: 'running' }] }
+    })
+    const c = (id: string) => inv.components.find(x => x.id === id)!
+    assert.deepEqual([c('aws').version, c('aws').installedFrom], ['0.3.1', 'dev'])
+    assert.deepEqual([c('file').version, 'installedFrom' in c('file')], ['0.2.0', false])
+    assert.deepEqual([c('gitlab-issues').version, c('gitlab-issues').installedFrom], ['0.1.4', 'https://x/y.tgz'])
+    assert.deepEqual([c('plugin:agora').version, c('plugin:agora').installedFrom], ['2.1.0', 'dev'])
+    // Nobody lists it (built into the core): no version, never a made-up one.
+    assert.equal('version' in c('builtin'), false)
+})
+
+test('a core without the extensions access, or failing at it, leaves the versions out and the rest intact', async () => {
+    const sinAcceso = await inventarioDe({ providers: [{ id: 'aws', started: true }] })
+    assert.equal('version' in sinAcceso.components[0], false)
+    const falla = await inventarioDe({
+        providers: [{ id: 'aws', started: true }],
+        extensions: { listInstalled: async () => { throw new Error('boom') } }
+    })
+    assert.equal(falla.components.length, 1)
+    assert.equal('version' in falla.components[0], false)
+})

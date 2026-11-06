@@ -1,14 +1,17 @@
 import React from 'react'
 import { Chip, Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material'
 import { IPublishedRoute } from '@kwirthmagnify/kwirth-common'
-import { OWNER_LABEL, collisions, countByOwner, filterLines, toLines } from './StatusRoutes'
+import { ERouteColumn, EStatusTable } from '../common/StatusTypes'
+import { IRouteLine, OWNER_LABEL, collisions, countByOwner, filterLines, toLines } from './StatusRoutes'
+import { ISortableProps, TSortValue, sortRows } from './StatusSort'
+import { SortableCell } from './StatusSortableCell'
 
 /*
     The Routes tab: every HTTP route this Kwirth has published, who published it, with which method. The
     list comes from the core's route registry, which records what is mounted — patterns, never values.
 */
 
-interface IRoutesTabProps {
+interface IRoutesTabProps extends ISortableProps {
     routes: IPublishedRoute[] | undefined
     filter: string
 }
@@ -25,7 +28,14 @@ const METHOD_COLOR: Record<string, TChipColor> = {
     ALL: 'default'
 }
 
-export const StatusRoutesTab: React.FC<IRoutesTabProps> = ({ routes, filter }) => {
+// How each column sorts: methods by how many and then which, the owner by its label and id.
+const VALUE_OF: Record<ERouteColumn, (l: IRouteLine) => TSortValue> = {
+    [ERouteColumn.PATH]: l => l.path,
+    [ERouteColumn.METHODS]: l => l.methods.join(' '),
+    [ERouteColumn.OWNER]: l => `${OWNER_LABEL[l.ownerKind]} ${l.ownerId}`
+}
+
+export const StatusRoutesTab: React.FC<IRoutesTabProps> = ({ routes, filter, sorts, onSort }) => {
     if (!routes) {
         return (
             <Typography variant='body2' color='text.secondary' sx={{ p: 4, textAlign: 'center' }}>
@@ -35,7 +45,10 @@ export const StatusRoutesTab: React.FC<IRoutesTabProps> = ({ routes, filter }) =
     }
     const clashes = collisions(routes)
     const lines = toLines(routes)
-    const shown = filterLines(lines, filter)
+    const sort = sorts[EStatusTable.ROUTES]
+    const shown = sortRows(filterLines(lines, filter), sort, (l, column) => VALUE_OF[column as ERouteColumn](l))
+    const cabecera = (column: ERouteColumn, label: string) =>
+        <SortableCell label={label} column={column} sort={sort} onSort={col => onSort(EStatusTable.ROUTES, col)} />
     return (
         <Stack spacing={1} sx={{ pb: 2 }}>
             <Stack direction='row' spacing={0.75} useFlexGap flexWrap='wrap' alignItems='center'>
@@ -59,9 +72,9 @@ export const StatusRoutesTab: React.FC<IRoutesTabProps> = ({ routes, filter }) =
                 </colgroup>
                 <TableHead>
                     <TableRow>
-                        <TableCell>Path</TableCell>
-                        <TableCell>Methods</TableCell>
-                        <TableCell>Published by</TableCell>
+                        {cabecera(ERouteColumn.PATH, 'Path')}
+                        {cabecera(ERouteColumn.METHODS, 'Methods')}
+                        {cabecera(ERouteColumn.OWNER, 'Published by')}
                     </TableRow>
                 </TableHead>
                 <TableBody>

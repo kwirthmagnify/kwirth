@@ -1,7 +1,10 @@
 import React from 'react'
 import { Chip, Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material'
 import { IPluginStatus } from '@kwirthmagnify/kwirth-common'
-import { filterPlugins, pluginStateLabel, sortPlugins, summarizePlugins } from './StatusPlugins'
+import { EPluginColumn, EStatusTable } from '../common/StatusTypes'
+import { filterPlugins, orderOf, pluginStateLabel, sortPlugins, summarizePlugins } from './StatusPlugins'
+import { ISortableProps, TSortValue, sortRows } from './StatusSort'
+import { SortableCell } from './StatusSortableCell'
 
 /*
     The Plugins tab: every installed plugin, whether its channel runs in this Kwirth, and what it has open
@@ -9,7 +12,7 @@ import { filterPlugins, pluginStateLabel, sortPlugins, summarizePlugins } from '
     channel, when it gives them.
 */
 
-interface IPluginsTabProps {
+interface IPluginsTabProps extends ISortableProps {
     plugins: IPluginStatus[] | undefined
     filter: string
 }
@@ -30,7 +33,17 @@ const CountCell: React.FC<ICountCellProps> = ({ value, label }) => (
     </TableCell>
 )
 
-export const StatusPluginsTab: React.FC<IPluginsTabProps> = ({ plugins, filter }) => {
+// How each column sorts; a figure that is not reported is undefined, and goes last.
+const VALUE_OF: Record<EPluginColumn, (p: IPluginStatus) => TSortValue> = {
+    [EPluginColumn.PLUGIN]: p => p.name,
+    [EPluginColumn.VERSION]: p => p.version,
+    [EPluginColumn.STATE]: p => orderOf(p.state),
+    [EPluginColumn.INSTANCES]: p => p.instances?.instances,
+    [EPluginColumn.CONNECTIONS]: p => p.instances?.connections,
+    [EPluginColumn.SOURCE]: p => p.source
+}
+
+export const StatusPluginsTab: React.FC<IPluginsTabProps> = ({ plugins, filter, sorts, onSort }) => {
     if (!plugins) {
         return (
             <Typography variant='body2' color='text.secondary' sx={{ p: 4, textAlign: 'center' }}>
@@ -46,7 +59,10 @@ export const StatusPluginsTab: React.FC<IPluginsTabProps> = ({ plugins, filter }
         )
     }
     const s = summarizePlugins(plugins)
-    const shown = sortPlugins(filterPlugins(plugins, filter))
+    const sort = sorts[EStatusTable.PLUGINS]
+    const shown = sortRows(sortPlugins(filterPlugins(plugins, filter)), sort, (p, column) => VALUE_OF[column as EPluginColumn](p))
+    const cabecera = (column: EPluginColumn, label: string, align?: 'right') =>
+        <SortableCell label={label} column={column} sort={sort} onSort={col => onSort(EStatusTable.PLUGINS, col)} align={align} />
     return (
         <Stack spacing={1} sx={{ pb: 2 }}>
             <Stack direction='row' spacing={0.75} useFlexGap flexWrap='wrap' alignItems='center'>
@@ -67,18 +83,19 @@ export const StatusPluginsTab: React.FC<IPluginsTabProps> = ({ plugins, filter }
                     <col style={{ width: '22%' }} />
                     <col style={{ width: 90 }} />
                     <col style={{ width: 180 }} />
-                    <col style={{ width: 100 }} />
+                    {/* Room for each header's name AND its sort arrow. */}
                     <col style={{ width: 120 }} />
+                    <col style={{ width: 140 }} />
                     <col />
                 </colgroup>
                 <TableHead>
                     <TableRow>
-                        <TableCell>Plugin</TableCell>
-                        <TableCell>Version</TableCell>
-                        <TableCell>State</TableCell>
-                        <TableCell align='right'>Instances</TableCell>
-                        <TableCell align='right'>Connections</TableCell>
-                        <TableCell>Source</TableCell>
+                        {cabecera(EPluginColumn.PLUGIN, 'Plugin')}
+                        {cabecera(EPluginColumn.VERSION, 'Version')}
+                        {cabecera(EPluginColumn.STATE, 'State')}
+                        {cabecera(EPluginColumn.INSTANCES, 'Instances', 'right')}
+                        {cabecera(EPluginColumn.CONNECTIONS, 'Connections', 'right')}
+                        {cabecera(EPluginColumn.SOURCE, 'Source')}
                     </TableRow>
                 </TableHead>
                 <TableBody>

@@ -14,16 +14,16 @@ rarely looks like the problem. This channel puts that state on a screen — for 
 
 ## What it shows
 
-Eleven tabs, and it opens on the first:
+Eleven tabs, and it opens on the first. Every table sorts by any of its columns — click a column's name:
 
 | Tab | What it answers |
 |---|---|
 | **Home** | one card per tab with its figures; click a card to open its tab. The **Plugins & extensions** card unifies both (it opens Plugins; an "extensions" chip opens Extensions) |
-| **Providers** | each producer of data — providers and pluviders — with its state and why, consumers and deliveries |
+| **Providers** | each producer of data — providers and pluviders — with its version, source, state and why, consumers and deliveries |
 | **Graph** | who consumes whom: one box per provider and per plugin (a plugin that publishes, in purple), each row one level deeper in the chain of dependencies |
 | **Performance** | the Kwirth process: memory, CPU, event-loop delay and uptime, with charts of the session |
 | **Plugins** | every installed plugin: running, remote, not started or failed, and how many instances and connections its channel reports (a dash when it does not report — never a zero) |
-| **Extensions** | senders and webhooks, with their state |
+| **Extensions** | senders and webhooks, with their version, source and state |
 | **Routes** | every HTTP route published — core API, providers, plugins, webhooks — with its methods, and collisions marked |
 | **DCE** | every installed DCE: version, source, whether its back and front loaded (with the error), the size of its back.js and front.js, and who consumes it |
 | **Log** | the core's own log, opened at its newest lines and filtered by the Filter box (admin only) |

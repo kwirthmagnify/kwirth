@@ -3,7 +3,9 @@ import { Box, Chip, IconButton, MenuItem, Select, Stack, Tab, Table, TableBody, 
 import { Refresh } from '@kwirthmagnify/kwirth-common-front/icons'
 import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
-import { EComponentHealth, EComponentKind, EStatusCommand, EStatusTab, IStatusComponent } from '../common/StatusTypes'
+import { EComponentColumn, EComponentHealth, EComponentKind, EStatusCommand, EStatusTab, EStatusTable, IStatusComponent } from '../common/StatusTypes'
+import { TSortValue, nextSort, sortRows } from './StatusSort'
+import { SortableCell } from './StatusSortableCell'
 import { IStatusData } from './StatusData'
 import { StatusDiagram } from './StatusDiagram'
 import { StatusPerformanceTab } from './StatusPerformanceTab'
@@ -79,6 +81,13 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
     const repintar = () => forzarRender(n => n + 1)
     const filter = data.filter
     const setFilter = (v: string) => { data.filter = v; repintar() }
+    // A click on a column header: ascending, descending, then the table's own order (see nextSort).
+    const ordenar = (table: EStatusTable, column: string) => {
+        const next = nextSort(data.sort[table], column)
+        if (next) data.sort[table] = next
+        else delete data.sort[table]
+        repintar()
+    }
     /*
         The height of the scrolling area is computed, not inherited.
 
@@ -229,7 +238,11 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
         return (
             <TableRow key={`${c.kind}-${c.id}`}>
                 <TableCell sx={{ whiteSpace: 'nowrap' }}>{KIND_LABEL[c.kind]}</TableCell>
-                <TableCell><Typography variant='body2' sx={{ fontWeight: 500 }}>{c.displayName}</Typography></TableCell>
+                <TableCell><Typography variant='body2' sx={{ fontWeight: 500, overflowWrap: 'anywhere' }}>{c.displayName}</Typography></TableCell>
+                {/* A dash when the core does not say (an older core, or a provider built into it). */}
+                <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: 'monospace' }} aria-label='Version'>
+                    {c.version ?? <Typography variant='body2' component='span' color='text.disabled'>—</Typography>}
+                </TableCell>
                 <TableCell><Chip size='small' label={estado.label} color={estado.color} variant={c.health === EComponentHealth.ACTIVE ? 'outlined' : 'filled'} /></TableCell>
                 {/*
                     A dash when it is unknown, never a 0: a zero would say "nobody consumes it", and whoever
@@ -251,27 +264,66 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                         return <Typography variant='caption' color='text.secondary' display='block'>{t < 1 && t > 0 ? t.toFixed(2) : Math.round(t)}/s</Typography>
                     })()}
                 </TableCell>}
+                <TableCell>
+                    <Typography variant='body2' color='text.secondary' sx={{ fontFamily: 'monospace', overflowWrap: 'anywhere' }}>{c.installedFrom ?? '—'}</Typography>
+                </TableCell>
                 {/* The why is the column that justifies the screen: without it this is one more list. */}
                 <TableCell><Typography variant='body2' color='text.secondary'>{c.reason ?? ''}</Typography></TableCell>
             </TableRow>
         )
     }
 
-    const tabla = (filas: IStatusComponent[], producer: boolean) => (
-        <Table size='small' stickyHeader>
-            <TableHead>
-                <TableRow>
-                    <TableCell>Kind</TableCell>
-                    <TableCell>Name</TableCell>
-                    <TableCell>State</TableCell>
-                    {producer && <TableCell align='right'>Consumers</TableCell>}
-                    {producer && <TableCell align='right'>Delivered</TableCell>}
-                    <TableCell>Why</TableCell>
-                </TableRow>
-            </TableHead>
-            <TableBody>{filas.map(c => fila(c, producer))}</TableBody>
-        </Table>
-    )
+    // How each column sorts. A Record: a column added to the enum and forgotten here does not compile.
+    const valorDe: Record<EComponentColumn, (c: IStatusComponent) => TSortValue> = {
+        [EComponentColumn.KIND]: c => KIND_LABEL[c.kind],
+        [EComponentColumn.NAME]: c => c.displayName,
+        [EComponentColumn.VERSION]: c => c.version,
+        // By how urgent it is, the same order as the table's own: failures first.
+        [EComponentColumn.STATE]: c => HEALTH_ORDER[c.health],
+        [EComponentColumn.CONSUMERS]: c => c.subscribers,
+        [EComponentColumn.DELIVERED]: c => c.events,
+        [EComponentColumn.SOURCE]: c => c.installedFrom,
+        [EComponentColumn.WHY]: c => c.reason
+    }
+
+    const tabla = (tableId: EStatusTable, filas: IStatusComponent[], producer: boolean) => {
+        const sort = data.sort[tableId]
+        const ordenadas = sortRows(filas, sort, (c, column) => valorDe[column as EComponentColumn](c))
+        const cabecera = (column: EComponentColumn, label: string, align?: 'right') =>
+            <SortableCell label={label} column={column} sort={sort} onSort={col => ordenar(tableId, col)} align={align} />
+        return (
+            /*
+                Fixed widths, like every table here: with the automatic layout each letter typed in the
+                filter resized the columns to the rows left on screen.
+            */
+            <Table size='small' stickyHeader sx={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                    <col style={{ width: 100 }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: 90 }} />
+                    <col style={{ width: 140 }} />
+                    {/* Room for the header's name AND its sort arrow: at 110 px "Consumers" was cut. */}
+                    {producer && <col style={{ width: 130 }} />}
+                    {producer && <col style={{ width: 120 }} />}
+                    <col style={{ width: '16%' }} />
+                    <col />
+                </colgroup>
+                <TableHead>
+                    <TableRow>
+                        {cabecera(EComponentColumn.KIND, 'Kind')}
+                        {cabecera(EComponentColumn.NAME, 'Name')}
+                        {cabecera(EComponentColumn.VERSION, 'Version')}
+                        {cabecera(EComponentColumn.STATE, 'State')}
+                        {producer && cabecera(EComponentColumn.CONSUMERS, 'Consumers', 'right')}
+                        {producer && cabecera(EComponentColumn.DELIVERED, 'Delivered', 'right')}
+                        {cabecera(EComponentColumn.SOURCE, 'Source')}
+                        {cabecera(EComponentColumn.WHY, 'Why')}
+                    </TableRow>
+                </TableHead>
+                <TableBody>{ordenadas.map(c => fila(c, producer))}</TableBody>
+            </Table>
+        )
+    }
 
     /*
         The three empty states are different and have to be told apart: not started, what is missing is an
@@ -358,15 +410,15 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
             <Box ref={boxRef} aria-label='Tab content' sx={{ display: 'flex', flexDirection: 'column', overflowY: SELF_SCROLLING.has(vista) ? 'hidden' : 'auto', overflowX: 'hidden', scrollbarGutter: FILTERABLE.has(vista) && !SELF_SCROLLING.has(vista) ? 'stable' : 'auto', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
                 {vista === EStatusTab.HOME && <StatusHomeTab inventory={inventory} series={data.series} autoRefresh={data.autoRefresh} onOpen={setVista} admin={admin} previousLog={data.previousLog} />}
                 {vista === EStatusTab.GRAPH && <StatusDiagram inventory={inventory} active={activos} autoRefresh={data.autoRefresh} />}
-                {vista === EStatusTab.PROVIDERS && tabla(filasDe(EStatusTab.PROVIDERS), true)}
-                {vista === EStatusTab.EXTENSIONS && tabla(filasDe(EStatusTab.EXTENSIONS), false)}
-                {vista === EStatusTab.ROUTES && <StatusRoutesTab routes={inventory.routes} filter={filter} />}
-                {vista === EStatusTab.DCE && <StatusDceTab dces={inventory.dces} filter={filter} />}
+                {vista === EStatusTab.PROVIDERS && tabla(EStatusTable.PROVIDERS, filasDe(EStatusTab.PROVIDERS), true)}
+                {vista === EStatusTab.EXTENSIONS && tabla(EStatusTable.EXTENSIONS, filasDe(EStatusTab.EXTENSIONS), false)}
+                {vista === EStatusTab.ROUTES && <StatusRoutesTab routes={inventory.routes} filter={filter} sorts={data.sort} onSort={ordenar} />}
+                {vista === EStatusTab.DCE && <StatusDceTab dces={inventory.dces} filter={filter} sorts={data.sort} onSort={ordenar} />}
                 {vista === EStatusTab.LOG && <StatusCoreLogTab admin={admin} log={data.coreLog} filter={filter} />}
                 {vista === EStatusTab.PREVIOUS_LOG && <StatusPreviousLogTab admin={admin} read={data.previousLog} filter={filter} />}
                 {vista === EStatusTab.PERFORMANCE && <StatusPerformanceTab inventory={inventory} series={data.series} />}
-                {vista === EStatusTab.PLUGINS && <StatusPluginsTab plugins={inventory.plugins} filter={filter} />}
-                {vista === EStatusTab.SQL && <StatusSqlTab sql={inventory.sql} filter={filter} />}
+                {vista === EStatusTab.PLUGINS && <StatusPluginsTab plugins={inventory.plugins} filter={filter} sorts={data.sort} onSort={ordenar} />}
+                {vista === EStatusTab.SQL && <StatusSqlTab sql={inventory.sql} filter={filter} sorts={data.sort} onSort={ordenar} />}
             </Box>
 
             {data.signals.length > 0 && (

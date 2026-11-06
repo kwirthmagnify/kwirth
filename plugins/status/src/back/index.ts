@@ -1,6 +1,6 @@
 import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel, keyAllows } from '@kwirthmagnify/kwirth-common-back'
 import { accessKeyDeserialize } from '@kwirthmagnify/kwirth-common'
-import { ERouteOwnerKind, IChannelInstances, IDceAccess, IDceMeta, IPluginAccess, IPluginStatus, IPublishedRoute, IRouteAccess } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, ERouteOwnerKind, IChannelInstances, IDceAccess, IDceMeta, IExtensionAccess, IInstalledExtension, IPluginAccess, IPluginStatus, IPublishedRoute, IRouteAccess } from '@kwirthmagnify/kwirth-common'
 import { EComponentHealth, EComponentKind, EStatusPayload, IStatusComponent, IStatusDce, IStatusDceConsumer, IStatusEdge, IStatusInventory, IStatusMessageResponse, IStatusSqlInfo, IStatusSqlPool } from '../common/StatusTypes'
 import { ProcessProbe } from './ProcessProbe'
 
@@ -92,6 +92,8 @@ interface IClusterInfoView {
     dces?: IDceAccess
     /** The core's installed plugins. Optional for the same reason. */
     plugins?: IPluginAccess
+    /** The installed extensions of any type, with version and source. Optional for the same reason. */
+    extensions?: IExtensionAccess
 }
 
 const ROUTE_OWNERS: ReadonlySet<string> = new Set(Object.values(ERouteOwnerKind))
@@ -161,6 +163,33 @@ export const toStatusDces = async (access: IDceAccess | undefined): Promise<ISta
     and the DCEs. The core already guards each plugin's own figures; what is guarded here is the listing
     as a whole, so a core that fails at it leaves the rest of the snapshot intact.
 */
+/** The core's installed list of one type, by id; empty when the core does not lend it or it fails. */
+export const installedOf = async (access: IExtensionAccess | undefined, type: EExtensionType): Promise<Map<string, IInstalledExtension>> => {
+    if (!access) return new Map()
+    try {
+        return new Map((await access.listInstalled(type)).map(e => [e.id, e]))
+    }
+    catch (err) {
+        console.error(`[status] the core's list of installed '${type}' failed: ${err}`)
+        return new Map()
+    }
+}
+
+/** How the core names a pluvider: its plugin's id behind this prefix. */
+const PLUVIDER_ID_PREFIX = 'plugin:'
+
+/*
+    Stamps each component with its version and where it came from. A pluvider's are its PLUGIN's: it is
+    the plugin that is installed. A component nobody lists (a core older than ClusterInfo.extensions, or a
+    provider built into the core) is left without them — the table says "—", never a made-up version.
+*/
+export const stampVersions = (components: IStatusComponent[], byKind: Partial<Record<EComponentKind, Map<string, IInstalledExtension>>>): IStatusComponent[] =>
+    components.map(c => {
+        const id = c.kind === EComponentKind.PLUVIDER && c.id.startsWith(PLUVIDER_ID_PREFIX) ? c.id.slice(PLUVIDER_ID_PREFIX.length) : c.id
+        const e = byKind[c.kind]?.get(id)
+        return e ? { ...c, version: e.version, ...(e.installedFrom ? { installedFrom: e.installedFrom } : {}) } : c
+    })
+
 export const toStatusPlugins = async (access: IPluginAccess | undefined): Promise<IPluginStatus[] | undefined> => {
     if (!access) return undefined
     try {
@@ -555,10 +584,20 @@ class StatusChannel implements IChannel {
         const coreLogLines = coreLogProvider?.getLogLines?.()
         const sql = await this.buildSqlInfo()
 
+        // Every extension's version, from the core; a pluvider's from its plugin, already in hand.
+        const pluginVersions = new Map((plugins ?? []).map((p): [string, IInstalledExtension] =>
+            [p.id, { id: p.id, version: p.version, ...(p.source ? { installedFrom: p.source } : {}) }]))
+        const versioned = stampVersions(components, {
+            [EComponentKind.PROVIDER]: await installedOf(this.clusterInfo.extensions, EExtensionType.PROVIDER),
+            [EComponentKind.SENDER]: await installedOf(this.clusterInfo.extensions, EExtensionType.SENDER),
+            [EComponentKind.WEBHOOK]: await installedOf(this.clusterInfo.extensions, EExtensionType.WEBHOOK),
+            [EComponentKind.PLUVIDER]: pluginVersions
+        })
+
         return {
             cluster: this.clusterInfo.name ?? '',
             takenAt: Date.now(),
-            components,
+            components: versioned,
             edges,
             process: this.probe.sample(),
             ...(routes ? { routes } : {}),
