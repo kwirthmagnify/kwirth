@@ -129,6 +129,7 @@ import { ILlm, ILlmProvider, STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS } from '@kw
 import { ConfigBundleApi } from './api/ConfigBundleApi'
 import { ConfigBundleManager } from './tools/ConfigBundleManager'
 import { redactSharedAi } from './tools/SharedAiPortability'
+import { usersSecretNamespaces, resolveUsersNamespace, USERS_SECRET_NAMES } from './tools/UsersSecret'
 import { buildExtensionRefs } from './tools/ExtensionRefs'
 const fs = require('fs')
 
@@ -256,6 +257,18 @@ if (rootPath && !rootPath.startsWith('/')) rootPath = '/'+ rootPath
 const envRootPath = rootPath || ''
 const envCommand = process.env.COMMAND
 const envContext = process.env.CONTEXT || undefined
+/*
+    The namespace to adopt when Kwirth runs OUTSIDE the cluster with Kubernetes forced (FORCE=k8s), which
+    in practice means the development back end. There it cannot know which namespace is its own —it is
+    not a pod— and it works it out from the users Secret; with two Kwirths installed in the same cluster
+    that search cannot decide, and rather than taking over somebody else's store it refuses to start.
+    This names the one wanted and settles it.
+
+    ⚠️ It is NOT read inside the cluster: there the pod knows its own namespace and that is the one that
+    rules. Letting a variable override it would be a way of pointing a production Kwirth at another
+    installation's store by editing a manifest.
+*/
+const envNamespace = process.env.KWIRTH_NAMESPACE || undefined
 const envAuth = process.env.AUTH || 'kwirth'  // kwirth | kubeconfig | b2c | entraid | cognito | keycloak | ...
 // No default: a hardcoded, public master key (the old 'Kwirth4Ever') let anyone forge an admin bearer
 // key offline. When it is unset the core generates one and persists it in the store (resolveMasterKey).
@@ -364,17 +377,56 @@ const getKubernetesKwirthData = async (context:string|undefined):Promise<KwirthD
             const pods = await coreApi.listPodForAllNamespaces()
             const pod = pods.items.find(p => p.metadata?.name === podName)  
             if (pod && pod.metadata?.namespace) {
+                // Inside the cluster the pod's own namespace rules, and KWIRTH_NAMESPACE is not read. It
+                // is said out loud rather than ignored in silence: setting it here and seeing nothing
+                // happen looks like the variable not working.
+                if (envNamespace) logWarning(ELogComponent.CORE, `KWIRTH_NAMESPACE ('${envNamespace}') is IGNORED while running as a pod: the namespace of this pod ('${pod.metadata.namespace}') is the one that rules`)
                 let depName = (await AuthorizationManagement.getPodControllerName(appsApi, pod, true)) || ''
                 return { clusterName: 'inCluster', namespace: pod.metadata.namespace, deployment:depName, inCluster:true, isDesktop:false, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, executionEnvironment: EExecutionEnvironment.KUBERNETES, metricsInterval:15, channels: [] }
             }
             else {
                 // kwirth is supposed to be running outside of cluster, so we look for kwirth users config in order to detect namespace
                 let allSecrets = (await coreApi.listSecretForAllNamespaces()).items
-                let usersSecret = allSecrets.find(s => s.metadata?.name === 'kwirth-users')
-                if (!usersSecret) usersSecret = allSecrets.find(s => s.metadata?.name === 'kwirth.users')
-                if (usersSecret) {
+                /*
+                    🔴 MORE THAN ONE ANSWER IS A STOP, NOT A PICK.
+
+                    Running outside the cluster there is no namespace of our own to read —this process is
+                    not a pod— so the users Secret is what names it. With a single Kwirth installed in the
+                    cluster that is unambiguous. With two, taking 'the first one found' silently adopts
+                    somebody else's store: their users, their settings, their extensions. And the symptom
+                    does not point here at all — it shows up as the OTHER Kwirth no longer recognising its
+                    own admin, because this one is now writing over its Secret.
+
+                    So when several answer, it says which ones and refuses to start. Guessing is what
+                    caused the damage; the fix belongs to whoever launches this — either by pointing it
+                    at a cluster with a single installation, or by naming the one wanted in
+                    KWIRTH_NAMESPACE, which wins over the search.
+                */
+                const candidates = resolveUsersNamespace(envNamespace, allSecrets)
+
+                if (envNamespace) {
+                    /*
+                        What was taken, and whether anything was there. The variable is deliberately not
+                        checked against the cluster —it exists precisely for when the search cannot
+                        decide— so a typo would otherwise show up much later as an empty store and a
+                        freshly seeded admin. This turns that into one line at startup.
+                    */
+                    const holdsSecret = usersSecretNamespaces(allSecrets).includes(envNamespace.trim())
+                    logInfo(ELogComponent.CORE, `Using namespace '${envNamespace.trim()}' from KWIRTH_NAMESPACE`)
+                    if (!holdsSecret) logWarning(ELogComponent.CORE, `There is no users secret in '${envNamespace.trim()}': if this is not a first start, check the name — an admin will be seeded there`)
+                }
+
+                if (candidates.length > 1) {
+                    const namespaces = [...candidates].sort().join(', ')
+                    logError(ELogComponent.CORE, `Found ${candidates.length} users secrets (${USERS_SECRET_NAMES.join(' / ')}) in this cluster, in namespaces: ${namespaces}`)
+                    logError(ELogComponent.CORE, 'Running outside the cluster, that secret is what tells Kwirth which namespace is its own, and there is more than one candidate')
+                    logError(ELogComponent.CORE, 'Refusing to start: set KWIRTH_NAMESPACE to the one wanted, or point this Kwirth at a cluster with a single installation. Picking one would take over another installation store')
+                    process.exit(1)
+                }
+
+                if (candidates.length === 1) {
                     // this namespace will be used to access secrets and configmaps
-                    return { clusterName: 'inCluster', namespace:usersSecret.metadata?.namespace!, deployment:'', inCluster:false, isDesktop:runningEnv.isDesktop, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, executionEnvironment: EExecutionEnvironment.KUBERNETES, metricsInterval:15, channels: [] }
+                    return { clusterName: 'inCluster', namespace:candidates[0], deployment:'', inCluster:false, isDesktop:runningEnv.isDesktop, version:VERSION, lastVersion: VERSION, clusterType: EClusterType.KUBERNETES, executionEnvironment: EExecutionEnvironment.KUBERNETES, metricsInterval:15, channels: [] }
                 }
                 else {
                     // kwirth is running outside, but wants to use kubernetes secrets for storing creds, and they don't exsit

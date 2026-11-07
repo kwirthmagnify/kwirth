@@ -1,1 +1,1 @@
-const VERSION="0.6.97"; module.exports = { VERSION }; 
+const VERSION="0.6.99"; module.exports = { VERSION }; 

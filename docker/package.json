@@ -27,7 +27,7 @@
   "dependencies": {
     "@jfvilas/parse-listing": "^1.0.1",
     "@kubernetes/client-node": "^1.4.0",
-    "@kwirthmagnify/kwirth-common": "^0.5.76",
+    "@kwirthmagnify/kwirth-common": "^0.5.78",
     "@kwirthmagnify/kwirth-common-ai": "^0.5.77",
     "@kwirthmagnify/kwirth-common-back": "^0.6.10",
     "@kwirthmagnify/kwirth-common-sql": "^0.3.10",
@@ -55,6 +55,7 @@
     "@types/node-fetch": "^2.6.11",
     "@types/tar": "^6.1.13",
     "@types/ws": "^8.5.10",
+    "c8": "^12.0.0",
     "cross-env": "^10.1.0",
     "docsify": "^4.13.1",
     "docsify-copy-code": "^3.0.0",
