@@ -9,7 +9,7 @@
 
 import knexFactory from 'knex'
 import type { Knex } from 'knex'
-import { ISqlServer, IPoolInfo } from './index'
+import { ISqlServer, IPoolInfo, ISqlConnectionCounts, ISqlDatabaseStats, ISqlServerStats, ISqlTableStats } from './index'
 
 // Re-exported so extensions do not bundle the driver.
 export { default as knex } from 'knex'
@@ -563,6 +563,7 @@ const provisionNow = async (consumerId: string, pool?: IPoolOptions): Promise<Kn
     await createDb(name)
     const opts: IPoolOptions = { ...POOL_DEFAULT, ...(pool ?? {}) }
     const k = knexForDb(name, opts, consumerId)
+    trackPeak(consumerId, k)
     await k.raw('select 1')          // validates the connection
     // Lo que dejó la ejecución anterior se recoge AQUÍ, con la base ya accesible y antes de empezar a
     // trabajar: es el único momento en que se sabe a ciencia cierta que aquel proceso ya no existe.
@@ -593,11 +594,12 @@ export const ensureSchemaOnce = (db: Knex, schemaId: string, fn: (db: Knex) => P
 export const closeDb = async (consumerId?: string): Promise<void> => {
     if (consumerId) {
         const k = pools.get(consumerId)
-        if (k) { await k.destroy(); pools.delete(consumerId); configuredMax.delete(consumerId) }
+        if (k) { await k.destroy(); pools.delete(consumerId); configuredMax.delete(consumerId); peaks.delete(consumerId) }
         return
     }
     for (const [, k] of pools) await k.destroy()
     pools.clear()
+    peaks.clear()
     if (adminPool) { await adminPool.destroy(); adminPool = undefined }
     schemaReady.clear()
     configuredMax.clear()
@@ -611,16 +613,203 @@ export const closeDb = async (consumerId?: string): Promise<void> => {
 export const listPools = (): IPoolInfo[] => {
     const result: IPoolInfo[] = []
     for (const [consumerId, k] of pools) {
-        // knex's pool is tarn: numUsed()/numFree() are the live counts. The shape is narrowed here rather
-        // than importing tarn's types, so this library does not drag them into its public surface.
-        const pool = (k.client as unknown as { pool?: { numUsed?: () => number, numFree?: () => number } }).pool
+        const pool = tarnOf(k)
+        const p = peaks.get(consumerId)
         result.push({
             consumerId,
             dbName: physicalDbName(consumerId),
             used: pool?.numUsed?.() ?? 0,
             free: pool?.numFree?.() ?? 0,
-            max: configuredMax.get(consumerId) ?? POOL_DEFAULT.max
+            max: configuredMax.get(consumerId) ?? POOL_DEFAULT.max,
+            peak: p?.peak ?? 0,
+            ...(p?.peakAt ? { peakAt: p.peakAt } : {}),
+            openedAt: p?.openedAt ?? new Date().toISOString()
         })
     }
     return result
+}
+
+// ── Peak of each pool ────────────────────────────────────────────────────────────────────────────────
+
+// knex's pool is tarn, narrowed to ITarnPool (above) so tarn's types stay out of this library's surface.
+const tarnOf = (k: Knex): ITarnPool | undefined => (k.client as unknown as { pool?: ITarnPool }).pool
+
+/** The most connections a pool has had in use at once, and when. */
+export interface IPoolPeak {
+    peak: number
+    peakAt?: string
+    openedAt: string
+}
+
+const peaks = new Map<string, IPoolPeak>()
+
+/** Notes a reading of "connections in use": it becomes the peak only if it beats the one there is. */
+export const notePeak = (p: IPoolPeak, used: number, now: Date): void => {
+    if (used > p.peak) {
+        p.peak = used
+        p.peakAt = now.toISOString()
+    }
+}
+
+/*
+    The peak is read where it happens: tarn says each time it lends a connection, and that is the only moment
+    "in use" can grow. Comparing a number per acquire costs nothing; sampling on a timer would miss a burst
+    that fits between two samples — precisely the one worth knowing about.
+*/
+const trackPeak = (consumerId: string, k: Knex): void => {
+    const p: IPoolPeak = { peak: 0, openedAt: new Date().toISOString() }
+    peaks.set(consumerId, p)
+    tarnOf(k)?.on?.('acquireSuccess', () => notePeak(p, tarnOf(k)?.numUsed?.() ?? 0, new Date()))
+}
+
+// ── Server statistics (Status's SQL tab) ─────────────────────────────────────────────────────────────
+
+/** How long a database's table list is kept: reading it means opening a connection to that database. */
+export const TABLES_TTL_MS = 60_000
+
+interface ICachedTables {
+    at: number
+    tables?: ISqlTableStats[]
+}
+
+const tablesCache = new Map<string, ICachedTables>()
+
+/** A cached table list still fresh at `now`, or undefined when it has to be read again. */
+export const freshTables = (cached: ICachedTables | undefined, now: number): ICachedTables | undefined =>
+    cached && now - cached.at < TABLES_TTL_MS ? cached : undefined
+
+/** pg_stat_activity's states, into the four the tab tells apart. */
+export const countConnections = (rows: { state: string | null, n: number | string }[]): ISqlConnectionCounts => {
+    const c: ISqlConnectionCounts = { active: 0, idle: 0, idleInTransaction: 0, other: 0 }
+    for (const r of rows) {
+        const n = Number(r.n)
+        switch (r.state) {
+            case 'active': c.active += n; break
+            case 'idle': c.idle += n; break
+            case 'idle in transaction':
+            case 'idle in transaction (aborted)': c.idleInTransaction += n; break
+            default: c.other += n
+        }
+    }
+    return c
+}
+
+/*
+    The tables of one database, largest first. Needs a connection TO that database — the maintenance one only
+    sees the server — so it opens a single-use one and closes it. A database it cannot enter (no CONNECT, say)
+    leaves its tables unknown, not empty.
+*/
+const readTables = async (dbName: string): Promise<ISqlTableStats[] | undefined> => {
+    const k = knexForDb(dbName, { min: 0, max: 1 }, 'stats')
+    try {
+        const r = await k.raw(`
+            select n.nspname as schema, c.relname as name, pg_total_relation_size(c.oid) as total,
+                   coalesce(s.n_live_tup, 0) as rows
+            from pg_class c
+            join pg_namespace n on n.oid = c.relnamespace
+            left join pg_stat_all_tables s on s.relid = c.oid
+            where c.relkind in ('r', 'p', 'm')
+              and n.nspname not in ('pg_catalog', 'information_schema')
+              and n.nspname not like 'pg_toast%'
+            order by 3 desc`)
+        return r.rows.map((x: { schema: string, name: string, total: string, rows: string }) =>
+            ({ schema: x.schema, name: x.name, totalBytes: Number(x.total), rows: Number(x.rows) }))
+    }
+    catch (err) {
+        log.warning(`stats: the tables of '${dbName}' could not be read — ${describeError(err)}`)
+        return undefined
+    }
+    finally {
+        try { await k.destroy() } catch { /* best-effort */ }
+    }
+}
+
+/**
+ * How many databases have their tables read at once. Each read opens a connection; all of them at once
+ * would be a burst of N connections against the very server this watches, one after another ~300 ms each.
+ */
+export const TABLES_CONCURRENCY = 4
+
+/** The background refresh of stale table lists, if one is running: never two at a time. */
+let refreshing: Promise<void> | undefined
+
+/** Reads the tables of these databases, TABLES_CONCURRENCY at a time, into the cache. */
+const readTablesOf = async (names: string[]): Promise<void> => {
+    const queue = [...names]
+    const worker = async () => {
+        for (let name = queue.shift(); name !== undefined; name = queue.shift()) {
+            tablesCache.set(name, { at: Date.now(), tables: await readTables(name) })
+        }
+    }
+    await Promise.all(Array.from({ length: Math.min(TABLES_CONCURRENCY, queue.length) }, worker))
+}
+
+/**
+ * The SQL server as a whole: version, start, connections, and per database its size, activity and tables.
+ * Read-only, through the maintenance connection. The table lists are kept TABLES_TTL_MS per database, and
+ * past that they are refreshed in the background while the previous ones are given.
+ */
+export const serverStats = async (): Promise<ISqlServerStats> => {
+    const head = await withAdmin('serverStats', async k => ({
+        version: (await k.raw('show server_version')).rows[0].server_version as string,
+        started: (await k.raw('select pg_postmaster_start_time() as t')).rows[0].t as Date,
+        max: Number((await k.raw('show max_connections')).rows[0].max_connections),
+        states: (await k.raw(`select state, count(*) as n from pg_stat_activity where backend_type = 'client backend' group by state`)).rows,
+        dbs: (await k.raw(`
+            select d.datname as name,
+                   case when has_database_privilege(d.oid, 'CONNECT') then pg_database_size(d.oid) else 0 end as size,
+                   coalesce(s.numbackends, 0) as connections,
+                   coalesce(s.xact_commit, 0) as commits, coalesce(s.xact_rollback, 0) as rollbacks,
+                   coalesce(s.blks_read, 0) as blocks_read, coalesce(s.blks_hit, 0) as blocks_hit,
+                   coalesce(s.tup_returned, 0) as rows_read,
+                   coalesce(s.tup_inserted, 0) + coalesce(s.tup_updated, 0) + coalesce(s.tup_deleted, 0) as rows_written,
+                   coalesce(s.deadlocks, 0) as deadlocks, coalesce(s.temp_bytes, 0) as temp_bytes,
+                   s.stats_reset as stats_reset
+            from pg_database d
+            left join pg_stat_database s on s.datid = d.oid
+            where not d.datistemplate
+            order by 1`)).rows
+    }))
+
+    const now = Date.now()
+    const rows = head.dbs as Record<string, string | number | Date | null>[]
+    const names = rows.map(d => String(d.name))
+    // A database never read is waited for — there is nothing to show of it. One read before but stale is
+    // shown as it was and refreshed behind: a snapshot never waits a whole round of connections again.
+    await readTablesOf(names.filter(n => !tablesCache.has(n)))
+    const stale = names.filter(n => !freshTables(tablesCache.get(n), now))
+    if (stale.length > 0 && !refreshing) {
+        refreshing = readTablesOf(stale).finally(() => { refreshing = undefined })
+    }
+
+    const databases: ISqlDatabaseStats[] = []
+    for (const d of rows) {
+        const name = String(d.name)
+        const cached = tablesCache.get(name)
+        databases.push({
+            name,
+            sizeBytes: Number(d.size),
+            connections: Number(d.connections),
+            commits: Number(d.commits),
+            rollbacks: Number(d.rollbacks),
+            blocksRead: Number(d.blocks_read),
+            blocksHit: Number(d.blocks_hit),
+            rowsRead: Number(d.rows_read),
+            rowsWritten: Number(d.rows_written),
+            deadlocks: Number(d.deadlocks),
+            tempBytes: Number(d.temp_bytes),
+            ...(d.stats_reset ? { statsResetAt: new Date(d.stats_reset as Date).toISOString() } : {}),
+            ...(cached?.tables ? { tables: cached.tables } : {})
+        })
+    }
+    // A database that no longer exists does not keep its tables in memory.
+    for (const name of [...tablesCache.keys()]) if (!databases.some(d => d.name === name)) tablesCache.delete(name)
+
+    return {
+        serverVersion: head.version,
+        startedAt: new Date(head.started).toISOString(),
+        maxConnections: head.max,
+        connections: countConnections(head.states),
+        databases
+    }
 }

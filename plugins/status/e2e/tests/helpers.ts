@@ -49,8 +49,16 @@ export async function settle(page: Page, timeout = 90000): Promise<void> {
 
 /** Cluster → View=cluster → leaves the channel combo open and returns the provider-debug option. */
 export async function openChannelPicker(page: Page): Promise<Locator> {
-    await page.getByRole('combobox').first().click()
-    await page.getByRole('option', { name: CLUSTER }).click()
+    /*
+        The first spec of a run meets the front cold: it can still be running the extensions' front.js after
+        settle() gave up, and a click then hangs past its 15 s. So the cluster list is opened until it opens.
+    */
+    const clusterOption = page.getByRole('option', { name: CLUSTER })
+    await expect(async () => {
+        if (!(await clusterOption.isVisible().catch(() => false))) await page.getByRole('combobox').first().click({ timeout: 10000 })
+        await expect(clusterOption).toBeVisible({ timeout: 2000 })
+    }).toPass({ timeout: 90000 })
+    await clusterOption.click()
     await page.waitForTimeout(800)
     await page.getByRole('combobox').nth(1).click()
     await page.getByRole('option', { name: 'cluster', exact: true }).click()

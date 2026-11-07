@@ -110,9 +110,12 @@ test('captura del inventario', async ({ browser }) => {
     await page.waitForTimeout(800)
     await shot('dce')
 
-    // SQL: the core's PostgreSQL/knex support — connection config and database list.
+    // SQL: the server, the pools with their peak, and one Kwirth database unfolded into its tables.
     await page.getByRole('tab', { name: 'SQL', exact: true }).click()
     await page.waitForTimeout(800)
+    const kwirthDb = page.locator('tr[aria-label^="Database kwirth_"]').first()
+    if (await kwirthDb.isVisible().catch(() => false)) await kwirthDb.click()
+    await page.waitForTimeout(500)
     await shot('sql')
 
     await page.goto('about:blank').catch(() => {})

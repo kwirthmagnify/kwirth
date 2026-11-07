@@ -5,6 +5,8 @@
     change in one would be discovered at runtime and not at compile time.
 */
 import { EDceState, IPluginStatus, IPublishedRoute } from '@kwirthmagnify/kwirth-common'
+// Types only (erased from the bundle): at runtime the data comes through the core's common-sql global.
+import type { IPoolInfo, ISqlServerStats } from '@kwirthmagnify/kwirth-common-sql'
 
 /** What kind of piece it is. It determines where it comes from in ClusterInfo and how it is drawn. */
 export enum EComponentKind {
@@ -155,17 +157,15 @@ export interface IStatusSqlInfo {
     pgVersion?: string
     /** When not reachable, a one-line description of what happened (common-sql's describeError). */
     error?: string
-    /** Per-pool runtime stats (connections in use / idle / max), one per consumer with an open pool. */
-    pools: IStatusSqlPool[]
-}
-
-/** Runtime stats of one consumer's connection pool. */
-export interface IStatusSqlPool {
-    consumerId: string
-    dbName: string
-    used: number
-    free: number
-    max: number
+    /** Per-pool runtime stats (in use / idle / max / peak), one per consumer with an open pool. */
+    pools: IPoolInfo[]
+    /**
+     * The server as a whole: version, start, connections, and per database its size, activity and tables.
+     * Absent with a core whose common-sql predates serverStats(), or when reading it failed (see statsError).
+     */
+    stats?: ISqlServerStats
+    /** Why the statistics could not be read, when the server is reachable but they are not (no permission…). */
+    statsError?: string
 }
 
 /** How one half (back or front) of a DCE is right now. */
@@ -296,7 +296,9 @@ export enum EStatusTable {
     ROUTES = 'routes',
     DCE = 'dce',
     SQL_POOLS = 'sql-pools',
-    SQL_DATABASES = 'sql-databases'
+    SQL_DATABASES = 'sql-databases',
+    /** The tables of an unfolded database: one sort shared by all of them. */
+    SQL_TABLES = 'sql-tables'
 }
 
 /** The columns of the Providers and Extensions tables (one table component serves both). */
@@ -331,12 +333,28 @@ export enum ESqlPoolColumn {
     DATABASE = 'database',
     USED = 'used',
     FREE = 'free',
-    MAX = 'max'
+    MAX = 'max',
+    PEAK = 'peak'
 }
 
 export enum ESqlDatabaseColumn {
     DATABASE = 'database',
-    KIND = 'kind'
+    KIND = 'kind',
+    SIZE = 'size',
+    TABLES_SIZE = 'tables-size',
+    CONNECTIONS = 'connections',
+    COMMITS = 'commits',
+    ROLLBACKS = 'rollbacks',
+    CACHE_HIT = 'cache-hit',
+    DEADLOCKS = 'deadlocks',
+    TEMP = 'temp'
+}
+
+/** The columns of one database's table list, inside the SQL tab. */
+export enum ESqlTableColumn {
+    TABLE = 'table',
+    SIZE = 'size',
+    ROWS = 'rows'
 }
 
 export enum EDceColumn {

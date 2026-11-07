@@ -14,7 +14,11 @@ schema.
 - `ensureDb(consumerId, pool?)` — provision the consumer's database and open its pool.
 - `getDb(consumerId)` — get the already-provisioned Knex instance (throws if `ensureDb` was not called).
 - `listDbs()` / `dbExists(name)` / `createDb(name)` / `dropDb(name)` — database management.
-- `listPools()` — runtime stats of every open connection pool (used by the Status plugin).
+- `listPools()` — runtime stats of every open connection pool: in use, idle, max, and the **peak** of
+  connections in use at once since the pool opened, with when it happened (used by the Status plugin).
+- `serverStats()` — the SQL server as a whole, read-only: version, start time, connections by state, and per
+  database its size, activity counters (commits, rollbacks, cache hits, rows, deadlocks, temp files) and
+  tables (cached 60 s, since reading them means connecting to each database).
 - `ensureSchemaOnce(db, schemaId, fn)` — idempotent schema creation, memoised by `schemaId`.
 - `closeDb(consumerId?)` — destroy pools.
 - `setSqlLogger(logger)` — send this library's output to the host's logger instead of the console.

@@ -28,7 +28,7 @@ Eleven tabs, and it opens on the first. Every table sorts by any of its columns 
 | **DCE** | every installed DCE: version, source, whether its back and front loaded (with the error), the size of its back.js and front.js, and who consumes it |
 | **Log** | the core's own log, opened at its newest lines and filtered by the Filter box (admin only) |
 | **Previous log** | the log of the previous container after a restart, and how it ended (admin only) |
-| **SQL** | the core's relational storage — PostgreSQL via knex: connection config (no password), driver versions, reachability, the list of databases and per-consumer connection pool stats (used / free / max) |
+| **SQL** | the core's relational storage — PostgreSQL via knex: connection config (no password), driver versions and reachability; the server's version, uptime and connections in use of its maximum; every extension's connection pool with its **peak** (used / free / max / peak); and every database with its size on disk, what its own tables take, connections, commits per second, rollbacks, cache hit, deadlocks and temp files — click one to see its tables |
 
 **The inventory** — every provider, pluvider, sender and webhook this Kwirth has mounted, each with its
 state **and the reason for it**:
@@ -73,7 +73,8 @@ https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-status/-/kwirth-plugin-s
 ```
 
 No configuration. The inventory is a privileged view: it needs **cluster** scope, and the two log tabs
-need **admin**. The Plugins, Routes and DCE tabs need a Kwirth core that lists its plugins, routes and DCEs; with an older one they say so.
+need **admin**. The Plugins, Routes and DCE tabs need a Kwirth core that lists its plugins, routes and DCEs; with an older one they say so. The SQL tab's server statistics and pool peaks need a core
+with `@kwirthmagnify/kwirth-common-sql` 0.3.12 or later; with an older one the tab shows the rest and says so.
 
 ## Development
 

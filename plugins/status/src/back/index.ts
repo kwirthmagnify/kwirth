@@ -1,7 +1,16 @@
 import { IInstanceConfig, ISignalMessage, AccessKey, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel, keyAllows } from '@kwirthmagnify/kwirth-common-back'
 import { accessKeyDeserialize } from '@kwirthmagnify/kwirth-common'
 import { EExtensionType, ERouteOwnerKind, IChannelInstances, IDceAccess, IDceMeta, IExtensionAccess, IInstalledExtension, IPluginAccess, IPluginStatus, IPublishedRoute, IRouteAccess } from '@kwirthmagnify/kwirth-common'
-import { EComponentHealth, EComponentKind, EStatusPayload, IStatusComponent, IStatusDce, IStatusDceConsumer, IStatusEdge, IStatusInventory, IStatusMessageResponse, IStatusSqlInfo, IStatusSqlPool } from '../common/StatusTypes'
+import { EComponentHealth, EComponentKind, EStatusPayload, IStatusComponent, IStatusDce, IStatusDceConsumer, IStatusEdge, IStatusInventory, IStatusMessageResponse, IStatusSqlInfo } from '../common/StatusTypes'
+import type { IPoolInfo, ISqlServerStats } from '@kwirthmagnify/kwirth-common-sql'
+
+/** What this plugin uses of the core's common-sql. serverStats is optional: older cores lack it. */
+interface ISqlLibView {
+    listDbs: () => Promise<string[]>
+    listPools: () => IPoolInfo[]
+    describeError: (err: unknown) => string
+    serverStats?: () => Promise<ISqlServerStats>
+}
 import { ProcessProbe } from './ProcessProbe'
 
 /*
@@ -617,7 +626,7 @@ class StatusChannel implements IChannel {
      * stays absent from the inventory — "unknown", not "no SQL". The password is never read or sent.
      */
     private buildSqlInfo = async (): Promise<IStatusSqlInfo | undefined> => {
-        const sqlLib = (global as { __kwirth_back__?: { kwirthCommonSql?: { listDbs: () => Promise<string[]>, listPools: () => IStatusSqlPool[], describeError: (err: unknown) => string } } }).__kwirth_back__?.kwirthCommonSql
+        const sqlLib = (global as { __kwirth_back__?: { kwirthCommonSql?: ISqlLibView } }).__kwirth_back__?.kwirthCommonSql
         if (!sqlLib) return undefined
 
         const client = process.env.KWIRTH_SQL_CLIENT || 'pg'
@@ -635,12 +644,27 @@ class StatusChannel implements IChannel {
         // Pool stats are always available (listPools is synchronous and reads the live pools Map); they do
         // not depend on the server being reachable. A pool that is open but whose connection is stale still
         // reports its used/free counts.
-        let pools: IStatusSqlPool[] = []
+        let pools: IPoolInfo[] = []
         try { pools = sqlLib.listPools() } catch { /* best-effort */ }
 
         try {
             const databases = await sqlLib.listDbs()
-            return { client, host, port, user, ssl, maintenanceDb, reachable: true, databases, pools, ...(knexVersion ? { knexVersion } : {}), ...(pgVersion ? { pgVersion } : {}) }
+            /*
+                The server statistics, only with a core whose common-sql has them (an older one has not:
+                the tab then says so). Their own failure — no permission on the statistics views, say — does
+                not turn a reachable server into an unreachable one: it travels apart, in statsError.
+            */
+            let stats: ISqlServerStats | undefined
+            let statsError: string | undefined
+            if (sqlLib.serverStats) {
+                try { stats = await sqlLib.serverStats() }
+                catch (err) { statsError = sqlLib.describeError(err) }
+            }
+            return {
+                client, host, port, user, ssl, maintenanceDb, reachable: true, databases, pools,
+                ...(knexVersion ? { knexVersion } : {}), ...(pgVersion ? { pgVersion } : {}),
+                ...(stats ? { stats } : {}), ...(statsError ? { statsError } : {})
+            }
         }
         catch (err) {
             return { client, host, port, user, ssl, maintenanceDb, reachable: false, databases: [], pools, ...(knexVersion ? { knexVersion } : {}), ...(pgVersion ? { pgVersion } : {}), error: sqlLib.describeError(err) }

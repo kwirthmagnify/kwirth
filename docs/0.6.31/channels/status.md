@@ -29,7 +29,7 @@ Select the cluster in the resource selector, add a **status** tab and start it. 
 
 ### The tabs
 
-The content is split into ten tabs, and it opens on **Home**:
+The content is split into eleven tabs, and it opens on **Home**:
 
 | Tab | What it answers |
 |---|---|
@@ -41,6 +41,7 @@ The content is split into ten tabs, and it opens on **Home**:
 | **Extensions** | the extensions that **do not produce** data — senders and webhooks today, the other kinds next |
 | **Routes** | every HTTP route this Kwirth has published, and who published it — see [Routes](#routes) |
 | **DCE** | the installed DCEs: whether each one loaded, where it came from and who consumes it — see [DCE](#dce) |
+| **SQL** | the PostgreSQL server Kwirth's extensions keep their data in: how full it is, how busy, and every database with its tables — see [SQL](#sql) |
 | **Log** | the core's own log, from the container running now — see [The core's log](#the-cores-log) |
 | **Previous log** | the log of the previous container, when Kwirth has restarted — see [The core's log](#the-cores-log) |
 
@@ -383,6 +384,92 @@ not a fault, but worth knowing before you keep it around.
 The filter matches the id, the name, the version or a consumer. With a core older than this list, the tab
 says the core does not list its DCEs, instead of an empty table that would read as *"no DCEs"*.
 
+## SQL
+
+Kwirth's extensions that keep data — Agora, Iter, Excubitor and the like — do not each bring a database: the
+core connects to **one PostgreSQL server** and gives every extension a database of its own there
+(`kwirth_<extension>`). This tab shows that server: how it is configured, how full it is, how busy, and what
+each database holds.
+
+![statussql](../_media/ch-images/status-sql.png ':class=imageclass80')
+
+The header says how much every database takes on disk, added up (*"1.2 GB on disk"*).
+
+### Server
+
+The connection the core uses — client, host, port, user, SSL and maintenance database (**never** the password)
+— and the versions of `knex` and `pg` it runs with. Underneath, from the server itself:
+
+| Field | What it says |
+|---|---|
+| **Version** | the PostgreSQL version the server reports |
+| **Uptime** | how long the server has been up (`2d 4h`, `3h 12m`) |
+| **Connections** | `N of M` — the client connections open now out of the server's `max_connections` — and how many of them are **active**, **idle** and **idle in transaction** |
+
+*Idle in transaction* is the one to watch: a connection that opened a transaction and is doing nothing holds its
+locks and its connection slot until someone ends it. A few, briefly, are normal; many, or for long, is an
+extension that forgot to commit.
+
+If the server cannot be reached, the tab says so with the reason — the address and the error, not a bare
+*"failed"* — and keeps showing the pools below, which do not need the server to answer.
+
+### Connection pools
+
+Each extension that has opened its database has a **pool** of connections in the core. One row per pool:
+
+| Column | What it says |
+|---|---|
+| **Consumer** | the extension the pool belongs to |
+| **Used** | connections lent out right now |
+| **Free** | connections open and waiting |
+| **Max** | the most the pool will ever open |
+| **Peak** | the most it has had in use at once since it opened |
+
+**Peak is the number to size a pool by.** *Used* is a single instant, and almost always low; the peak is what
+the extension actually needed at its busiest moment. Hover over it to see **when** it was reached and since
+when it counts — the pool opening, usually the last restart of Kwirth. A peak that reached **Max** turns orange:
+at that moment some request of that extension waited for a connection, and if it happens often its pool is
+too small.
+
+### Databases
+
+Every database on the server, the Kwirth ones and any other there may be:
+
+| Column | What it says |
+|---|---|
+| **Database** | its name |
+| **Kind** | **kwirth consumer** when it is an extension's (`kwirth_<id>`), **external** when it is not Kwirth's |
+| **Size** | what it takes **on disk**, as PostgreSQL measures it (`pg_database_size`) |
+| **Tables** | what **its own tables** take, added up — data, indexes and the overflow storage of long values |
+| **Conns** | connections open to it now |
+| **Commits** | transactions committed **per second**, since your previous snapshot |
+| **Rollbacks** | transactions undone, in total |
+| **Cache hit** | the share of reads served from memory instead of disk |
+| **Deadlocks** | how many deadlocks it has had — orange when there has been any |
+| **Temp files** | what its queries had to spill to disk because they did not fit in memory |
+
+**Size and Tables are not the same, on purpose.** *Size* counts everything the database takes on disk,
+including PostgreSQL's own catalog — some 7–8 MB that **every** database carries even empty. *Tables* counts
+only what was put in it. On a small database the two look very different; on a large one they converge. *Size*
+is what to look at for the disk; *Tables*, for how much data an extension really keeps.
+
+**Commits is a rate, not a total.** PostgreSQL counts transactions since its statistics were last reset, which
+is usually days ago: a total of millions says nothing about now. The tab takes the growth between two
+snapshots and divides it by the time between them, so the column needs **two** snapshots: on the first it
+shows **—**, and with auto-refresh on it shows a live rate. If the server restarted or its statistics were
+reset between the two, the counter goes backwards and the rate is **—** again, never a negative number.
+
+**Cache hit** should be above 99 % on a database that is used. A low one means its data does not fit in the
+server's memory and reads go to disk. On a database barely used the number means little: few reads, few hits.
+
+**Click a database to see its tables** — click again to fold it. Each one with its schema, its size (data,
+indexes and overflow included) and its approximate number of rows, largest first, sortable like any other
+table. Reading them means opening a connection **to** that database, so a database Kwirth has no permission
+to enter shows *"its tables could not be read"* instead of an empty list.
+
+The filter matches the name of a database. With a core that does not read the server's
+statistics yet, the server block, the peaks and the database columns say so instead of showing zeros.
+
 ## The core's log
 
 The **Log** tab shows the last **1000 lines** the container running now has written, with the colours Kwirth
@@ -415,6 +502,12 @@ chip when the last one crashed — the one case worth opening the tab for.
 ## Cost
 
 **Zero while the tab is closed.** There is no timer, no subscription and no background collection: with the channel closed this plugin does not run a single instruction. When you open it, it reads state that is already in memory and sends one snapshot. The only thing that runs over time, the event-loop sampler behind *Performance*, is switched on with the first open tab and off with the last one.
+
+The **SQL** tab is the one thing that asks someone else: every snapshot runs a handful of read-only queries
+against the PostgreSQL server's statistics views. The table lists cost more — one connection to each
+database — so they are kept for a minute: the first snapshot after Kwirth starts reads them (a few seconds,
+four databases at a time), and from then on each snapshot gives the last ones read and refreshes them in the
+background when they are older than a minute.
 
 That is a hard requirement, not an optimisation still pending. Kwirth sits in the path of your logs, and a tool that watches it must not slow it down.
 

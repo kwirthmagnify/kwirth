@@ -418,7 +418,8 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 {vista === EStatusTab.PREVIOUS_LOG && <StatusPreviousLogTab admin={admin} read={data.previousLog} filter={filter} />}
                 {vista === EStatusTab.PERFORMANCE && <StatusPerformanceTab inventory={inventory} series={data.series} />}
                 {vista === EStatusTab.PLUGINS && <StatusPluginsTab plugins={inventory.plugins} filter={filter} sorts={data.sort} onSort={ordenar} />}
-                {vista === EStatusTab.SQL && <StatusSqlTab sql={inventory.sql} filter={filter} sorts={data.sort} onSort={ordenar} />}
+                {vista === EStatusTab.SQL && <StatusSqlTab sql={inventory.sql} filter={filter} sorts={data.sort} onSort={ordenar}
+                    previous={data.previous?.sql?.stats} seconds={data.previous ? (inventory.takenAt - data.previous.takenAt) / 1000 : 0} />}
             </Box>
 
             {data.signals.length > 0 && (

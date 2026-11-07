@@ -1,5 +1,5 @@
-import { test, expect, Page } from '@playwright/test'
-import { login, openChannelPicker, openTabMenu, CHANNEL } from './helpers'
+import { Page } from '@playwright/test'
+import { test, expect } from './statusSession'
 
 /*
     Kwirth Status's inventory, end to end (S1).
@@ -16,31 +16,8 @@ test.use({ trace: 'off', screenshot: 'off', video: 'off' })
 
 let page: Page
 
-test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage()
-    await login(page)
-    const option = await openChannelPicker(page)
-    await expect(option).toBeVisible()
-    await expect(option).toHaveText(CHANNEL)
-    await option.click()
-    await page.getByRole('button', { name: 'ADD' }).click()
-    await page.waitForTimeout(1500)
-
-    /*
-        The channel declares setup:false and has no configuration to ask for, so the core starts it when
-        the tab is added: there is no 'Start' in the menu any more. It is checked all the same, so that
-        the e2e still holds should starting become manual again some day.
-    */
-    await openTabMenu(page)
-    const start = page.getByText('Start', { exact: true })
-    if (await start.isVisible().catch(() => false)) await start.click()
-    else await page.keyboard.press('Escape')
-    await page.waitForTimeout(2500)
-})
-
-test.afterAll(async () => {
-    await page?.goto('about:blank').catch(() => {})
-    await page?.context().close().catch(() => {})
+test.beforeAll(async ({ statusPage }) => {
+    page = statusPage   // NOT closed here: it is the session of the whole run (statusSession.ts)
 })
 
 test.afterEach(async ({}, testInfo) => {
@@ -564,7 +541,8 @@ test('🔴 every table of the channel can be sorted by every column', async () =
     for (const nombre of tablas) {
         await page.getByRole('tab', { name: nombre, exact: true }).click()
         await page.waitForTimeout(300)
-        const total = await page.locator('table thead th').count()
+        // Every column WITH A NAME: an empty header (the SQL databases' unfold chevron) has nothing to sort.
+        const total = (await page.locator('table thead th').allInnerTexts()).filter(t => t.trim() !== '').length
         const ordenables = await page.locator('table thead th .MuiTableSortLabel-root').count()
         expect(ordenables, `${nombre}: ${total - ordenables} column(s) cannot be sorted`).toBe(total)
     }

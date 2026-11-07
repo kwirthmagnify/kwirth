@@ -1,6 +1,6 @@
 import { test, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { configure, ensureDb, getDb, ensureSchemaOnce, createDb, dropDb, dbExists, listDbs, closeDb, physicalDbName } from '../../src/back'
+import { configure, ensureDb, getDb, ensureSchemaOnce, createDb, dropDb, dbExists, listDbs, listPools, serverStats, closeDb, physicalDbName } from '../../src/back'
 
 // Integration against the dev Postgres (port-forward svc/defender-postgres 5432).
 // It skips itself unless COMMON_SQL_PG=1, so `npm test` does not break without a cluster.
@@ -45,4 +45,31 @@ test('pg: createDb/dbExists/listDbs + ensureDb + schema + insert + tx (Defender-
     // createDb is idempotent (it does not fail when it already exists)
     await createDb(DBNAME)
     assert.equal(await dbExists(DBNAME), true)
+})
+
+test('🔴 pg: a pool remembers its peak, and serverStats() reads the server, the database and its tables', { skip: !RUN }, async () => {
+    configure(server)
+    const db = await ensureDb(CONSUMER)
+    await ensureSchemaOnce(db, `${CONSUMER}-stats`, async d => {
+        if (!(await d.schema.hasTable('kv'))) await d.schema.createTable('kv', x => { x.string('k'); x.integer('v') })
+    })
+    // Three connections in use at once: pg_sleep holds each one while the others are acquired.
+    await Promise.all([1, 2, 3].map(() => db.raw('select pg_sleep(0.3)')))
+    const pool = listPools().find(p => p.consumerId === CONSUMER)!
+    assert.ok(pool.peak >= 3, `peak ${pool.peak} after three at once`)
+    assert.ok(pool.peakAt && Date.parse(pool.peakAt) >= Date.parse(pool.openedAt), 'the peak is timed, after the pool opened')
+    // Once they are back, in use goes down; the peak does not.
+    assert.ok(pool.used < pool.peak)
+
+    const s = await serverStats()
+    assert.match(s.serverVersion, /^\d+/)
+    assert.ok(Date.parse(s.startedAt) < Date.now())
+    assert.ok(s.maxConnections > 0)
+    assert.ok(s.connections.active + s.connections.idle >= 1, 'this very test is connected')
+    const mine = s.databases.find(d => d.name === DBNAME)!
+    assert.ok(mine, 'its own database is listed')
+    assert.ok(mine.sizeBytes > 0)
+    assert.ok(mine.commits > 0, 'the inserts above committed')
+    const kv = mine.tables?.find(t => t.name === 'kv')
+    assert.ok(kv && kv.totalBytes > 0, 'its table, with a size')
 })
