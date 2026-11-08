@@ -42,7 +42,7 @@
         "@codemirror/view": "^6.0.0",
         "@kwirthmagnify/kwirth-common": "^0.5.76",
         "@kwirthmagnify/kwirth-common-back": "^0.6.10",
-        "@kwirthmagnify/kwirth-common-front": "^0.5.67",
+        "@kwirthmagnify/kwirth-common-front": "^0.5.70",
         "@uiw/react-codemirror": "^4.25.3",
         "clipboard-copy": "^4.0.1",
         "cron-parser": "^5.4.0",
