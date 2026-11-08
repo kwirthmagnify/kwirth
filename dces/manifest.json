@@ -24,6 +24,16 @@
     "id": "nettools",
     "name": "@kwirthmagnify/kwirth-dce-nettools",
     "displayName": "Net Tools",
+    "version": "0.2.3",
+    "description": "Network primitives shared by Kwirth extensions: TCP reachability and DNS resolution in the back end, and the icon and a shared latency chart in the front end. No binary is spawned",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-nettools/-/kwirth-dce-nettools-0.2.3.tgz",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "dce",
+    "id": "nettools",
+    "name": "@kwirthmagnify/kwirth-dce-nettools",
+    "displayName": "Net Tools",
     "version": "0.2.2",
     "description": "Network primitives shared by Kwirth extensions: TCP reachability and DNS resolution in the back end, and the icon and a shared latency chart in the front end. No binary is spawned",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-nettools/-/kwirth-dce-nettools-0.2.2.tgz",

@@ -3,7 +3,7 @@
   "name": "@kwirthmagnify/kwirth-homepage-depeche-mode",
   "displayName": "Depeche Mode",
   "publisher": "@kwirthmagnify",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Depeche Mode homepage — abyss black, blood red accents, bone text, condensed bold typography, ASCII metric bars and STRANGELOVE cluster launch.",
   "type": "module",
   "scripts": {
