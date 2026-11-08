@@ -705,6 +705,23 @@
   {
     "extensionType": "plugin",
     "id": "metrics",
+    "version": "0.1.3",
+    "name": "Metrics",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-metrics/-/kwirth-plugin-metrics-0.1.3.tgz",
+    "description": "Metrics channel plugin for Kwirth - real-time CPU, memory, network and disk charts",
+    "icon": "BarChart",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "metrics",
+        "minVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "metrics",
     "version": "0.1.2",
     "name": "Metrics",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-metrics/-/kwirth-plugin-metrics-0.1.2.tgz",

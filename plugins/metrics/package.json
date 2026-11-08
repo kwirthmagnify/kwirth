@@ -4,7 +4,7 @@
     "displayName": "Metrics",
     "extensionType": "plugin",
     "publisher": "@kwirthmagnify",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "Metrics channel plugin for Kwirth - real-time CPU, memory, network and disk charts",
     "icon": "BarChart",
     "website": "https://kwirthmagnify.dev",

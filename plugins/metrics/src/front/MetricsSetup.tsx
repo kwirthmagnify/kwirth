@@ -8,6 +8,16 @@ import { EMetricsConfigMode } from '../common/MetricsTypes'
 
 const MetricsIcon = <BarChart/>
 
+/*
+    The fixed size of the content: the dialog is as big as this, on any screen.
+    CONTENT_WIDTH holds four FIELD_WIDTH fields plus the 3 gaps (8px each) between them.
+*/
+const FIELD_WIDTH = 170
+const CONTENT_WIDTH = FIELD_WIDTH * 4 + 3 * 8
+const OPTIONS_WIDTH = 200
+const LIST_HEIGHT = 240
+const CHIPS_HEIGHT = 64
+
 const MetricsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
     let metricsInstanceConfig:MetricsInstanceConfig = props.setupConfig?.channelInstanceConfig || new MetricsInstanceConfig()
     let metricsConfig:MetricsConfig = props.setupConfig?.channelConfig || new MetricsConfig()
@@ -97,19 +107,23 @@ const MetricsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
 
     return (
         <>
-            <Dialog open={true} maxWidth={false} sx={{'& .MuiDialog-paper': { width: '50vw', maxWidth: '60vw', height:'60vh', maxHeight:'40vw' } }}>
+            {/* The content has a FIXED size and the dialog adapts to it. It used to be sized against the window
+                (vw/vh and percentages), so the content shrank or grew with the screen and the dialog scrolled
+                whenever it did not fit. What is variable (the metric list, the chosen chips) scrolls INSIDE its
+                own fixed box. */}
+            <Dialog open={true} maxWidth={false}>
                 <DialogTitleHelp section='guide/user/07-everyday-tasks?id=build-a-metrics-view' docsUrl={docsUrl(props.channelObject.clusterUrl, 'core', 'kwirth')}>Configure metrics for {props.channelObject?.view}</DialogTitleHelp>
                 <DialogContent >
-                    <Stack spacing={2} direction={'column'} sx={{ mt:'16px' }}>
+                    <Stack spacing={2} direction={'column'} sx={{ mt:'16px', width: CONTENT_WIDTH }}>
                         <Stack direction={'row'} spacing={1} >
-                            <FormControl sx={{width:'25%'}}>
+                            <FormControl sx={{width: FIELD_WIDTH}}>
                                 <InputLabel>Mode</InputLabel>
                                 <Select value={metricsMode} onChange={(e) => setMetricsMode(e.target.value as EMetricsConfigMode)} variant='standard' disabled>
                                     <MenuItem value={EMetricsConfigMode.SNAPSHOT}>Snapshot</MenuItem>
                                     <MenuItem value={EMetricsConfigMode.STREAM}>Stream</MenuItem>
                                 </Select>
                             </FormControl>
-                            <FormControl variant="standard" sx={{width:'25%'}}>
+                            <FormControl variant="standard" sx={{width: FIELD_WIDTH}}>
                                 <InputLabel>Depth</InputLabel>
                                 <Select value={metricsDepth} onChange={(e) => setMetricsDepth(+e.target.value)} variant='standard'>
                                     <MenuItem value={10}>10</MenuItem>
@@ -118,7 +132,7 @@ const MetricsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
                                     <MenuItem value={100}>100</MenuItem>
                                 </Select>
                             </FormControl>
-                            <FormControl variant="standard" sx={{width:'25%'}}>
+                            <FormControl variant="standard" sx={{width: FIELD_WIDTH}}>
                                 <InputLabel>Width</InputLabel>
                                 <Select value={metricsWidth} onChange={(e)=> setMetricsWidth(+e.target.value)} variant='standard'>
                                     <MenuItem value={1}>1</MenuItem>
@@ -129,14 +143,14 @@ const MetricsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
                                     <MenuItem value={6}>6</MenuItem>
                                 </Select>
                             </FormControl>
-                            <TextField value={metricsInterval} onChange={(e) => setMetricsInterval(+e.target.value)} sx={{width:'25%'}} variant='standard' label='Interval' type='number'></TextField>
+                            <TextField value={metricsInterval} onChange={(e) => setMetricsInterval(+e.target.value)} sx={{width: FIELD_WIDTH}} variant='standard' label='Interval' type='number'></TextField>
                         </Stack>
 
                         <TextField value={metricsFilter} onChange={(event) => setMetricsFilter(event.target.value)} sx={{width:'100%'}} variant='standard' label='Filter' autoFocus></TextField>
 
-                        <Stack direction={'row'} spacing={1} sx={{width:'100%', height:'22vh'}}>
-                            <Stack direction={'column'} sx={{width:'70%'}}>
-                                <List sx={{ width: '100%', overflowY: 'auto' }}>
+                        <Stack direction={'row'} spacing={1} sx={{width:'100%', height: LIST_HEIGHT}}>
+                            <Stack direction={'column'} sx={{flex: 1, minWidth: 0, height: '100%'}}>
+                                <List sx={{ width: '100%', height: '100%', overflowY: 'auto' }}>
                                     { allMetricsList && Array.from(allMetricsList.keys()).map((value, index) => {
                                         if (value.includes(metricsFilter) && (value.startsWith('container_') || value.startsWith('kwirth_'))) {
                                             return (
@@ -160,7 +174,7 @@ const MetricsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
                                 </List>
                             </Stack>
 
-                            <Stack direction={'column'} sx={{width:'30%'}} spacing={1}>
+                            <Stack direction={'column'} sx={{width: OPTIONS_WIDTH, flexShrink: 0}} spacing={1}>
                                 <FormControlLabel control={<Checkbox checked={assetAggregate} onChange={(e) => setAssetAggregate(e.target.checked)}/>} disabled={!multiAssets || assetMerge} label='Aggregate' />
                                 <FormControlLabel control={<Checkbox checked={assetMerge} onChange={(e) => setAssetMerge(e.target.checked)}/>} disabled={!multiAssets || assetAggregate} label='Merge' />
                                 <FormControlLabel control={<Checkbox checked={assetStack} onChange={(e) => setAssetStack(e.target.checked)}/>} disabled={!assetMerge || (assetMerge && !('area bar'.includes(chart)))} label='Stack' />
@@ -179,7 +193,8 @@ const MetricsSetup: React.FC<ISetupProps> = (props:ISetupProps) => {
                             </Stack>
                         </Stack>
 
-                        <Stack direction="row" spacing={1} sx={{width:'100%', flexWrap: 'wrap', maxWidth:'100%', height:'25%', overflowY:'auto'}} >
+                        {/* useFlexGap: with wrap, Stack's margin-based spacing indents every wrapped line. */}
+                        <Stack direction="row" spacing={1} useFlexGap sx={{width:'100%', flexWrap: 'wrap', alignContent: 'flex-start', height: CHIPS_HEIGHT, overflowY:'auto'}} >
                             { metricsNames.map((value,index) => <Chip key={index} label={value} onDelete={() => metricsDelete(value)} size="small"/> ) }
                         </Stack>
 
