@@ -228,7 +228,7 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
                         here is a permission nobody can audit without decoding it by hand. */}
                     <Select value={scopes} multiple onChange={onChangeScopes}
                         renderValue={(s) => { const v = s.map(describeScope).join(', '); return v.length > 60 ? v.substring(0, 60) + '…' : v }}
-                        MenuProps={{ autoFocus: false, PaperProps: { style: { maxHeight: 380 } } }}
+                        MenuProps={{ autoFocus: false, slotProps: { paper: { style: { maxHeight: 380 } } } }}
                         onClose={() => setScopeFilter('')}>
                         <ListSubheader sx={{ p: 0, bgcolor: 'background.paper' }}>
                             <TextField autoFocus fullWidth size='small' variant='standard' placeholder='Filter scopes…'
@@ -264,7 +264,9 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
                     </Select>
                 </FormControl>
                 { widenedByAWiderScope().map(e => (
-                    <Typography key={e.scope} variant='caption' color='warning.main'>
+                    <Typography key={e.scope} variant='caption' sx={{
+                        color: 'warning.main'
+                    }}>
                         ⚠️ <b>{e.label}</b> is granted in full as well, so the limit below it does nothing — resources are combined, and the wider form wins. Remove <b>{e.scope}</b> to make the limit apply.
                     </Typography>
                 ))}
@@ -275,7 +277,9 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
                     grants 'pre-produccion'. An administrator who did not know that has granted more
                     than they think, and nothing on this screen told them.
                 */}
-                <Typography variant='caption' color='text.secondary'>
+                <Typography variant='caption' sx={{
+                    color: 'text.secondary'
+                }}>
                     Namespaces, workloads, pods and containers below are <b>regular expressions</b>, separated by commas, and they match <b>anywhere in the name</b>: <code>kwirth</code> also matches <code>kwirth-system</code>. Write <code>^kwirth$</code> to mean that one and no other.
                 </Typography>
                 <TextField value={namespace} onChange={(e) => setNamespace(e.target.value)} variant='standard' label='Namespaces' placeholder='e.g. ^kwirth$, pre-.*'></TextField>
@@ -292,7 +296,9 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
 
                 <TextField value={pod} onChange={(e) => setPod(e.target.value)} variant='standard' label='Pods'/>
                 <TextField value={container} onChange={(e) => setContainer(e.target.value)} variant='standard' label='Containers'/>
-                <Stack direction={'row'} spacing={1} alignSelf={'end'}>
+                <Stack direction={'row'} spacing={1} sx={{
+                    alignSelf: 'end'
+                }}>
                     <Button onClick={newResource} size='small' variant='outlined'>New</Button>
                     <Button onClick={saveResource} size='small' variant='outlined' disabled={scopes.length===0}>Save</Button>
                     <Button onClick={removeResource} size='small' variant='outlined' disabled={scopes.length===0}>Remove</Button>
@@ -308,7 +314,7 @@ const ResourceEditor: React.FC<IResourceEditorProps> = (props:IResourceEditorPro
                     onClose={() => setNarrowing(undefined)} />
             )}
         </Stack>
-    )
+    );
 }
 
 export { ResourceEditor }

@@ -82,34 +82,48 @@ export const SelectionList = (props: {
         if (block) block.items.push(item)
         else blocks.push({ name: item.group, items: [item] })
     }
-    return <Stack spacing={1}>
-        { blocks.map(block => {
-            const tickable = block.items.filter(i => !(disabled?.(i) ?? false))
-            const allOn = tickable.length > 0 && tickable.every(i => selected.has(i.key))
-            const isExpanded = expanded.has(block.name)
-            return <Box key={block.name} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1 }}>
-                <Stack direction='row' alignItems='center'>
-                    <IconButton size='small' onClick={() => toggleExpand(block.name)}>
-                        {isExpanded ? <ExpandMore /> : <ChevronRight />}
-                    </IconButton>
-                    <FormControlLabel
-                        control={<Checkbox size='small' checked={allOn} disabled={tickable.length === 0}
-                            indeterminate={!allOn && tickable.some(i => selected.has(i.key))}
-                            onChange={e => tickable.forEach(i => onToggle(i.key, e.target.checked))} />}
-                        label={<Typography variant='body2'><b>{block.name}</b></Typography>} />
-                </Stack>
-                { isExpanded && block.items.map(item => {
-                    const off = disabled?.(item) ?? false
-                    return <Stack key={item.key} direction='row' alignItems='center' sx={{ pl: 3 }}>
-                        <Checkbox size='small' checked={selected.has(item.key)} disabled={off}
-                            onChange={e => onToggle(item.key, e.target.checked)} />
-                        <Box>
-                            <Typography variant='body2' color={off ? 'text.disabled' : 'text.primary'}>{item.label}</Typography>
-                            <Typography variant='caption' color={item.warn && !off ? 'warning.main' : 'text.secondary'}>{item.detail}</Typography>
-                        </Box>
-                    </Stack>
-                })}
-            </Box>
-        })}
-    </Stack>
+    return (
+        <Stack spacing={1}>
+            { blocks.map(block => {
+                const tickable = block.items.filter(i => !(disabled?.(i) ?? false))
+                const allOn = tickable.length > 0 && tickable.every(i => selected.has(i.key))
+                const isExpanded = expanded.has(block.name)
+                return (
+                    <Box key={block.name} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1 }}>
+                        <Stack direction='row' sx={{
+                            alignItems: 'center'
+                        }}>
+                            <IconButton size='small' onClick={() => toggleExpand(block.name)}>
+                                {isExpanded ? <ExpandMore /> : <ChevronRight />}
+                            </IconButton>
+                            <FormControlLabel
+                                control={<Checkbox size='small' checked={allOn} disabled={tickable.length === 0}
+                                    indeterminate={!allOn && tickable.some(i => selected.has(i.key))}
+                                    onChange={e => tickable.forEach(i => onToggle(i.key, e.target.checked))} />}
+                                label={<Typography variant='body2'><b>{block.name}</b></Typography>} />
+                        </Stack>
+                        { isExpanded && block.items.map(item => {
+                            const off = disabled?.(item) ?? false
+                            return (
+                                <Stack
+                                    key={item.key}
+                                    direction='row'
+                                    sx={{
+                                        alignItems: 'center',
+                                        pl: 3
+                                    }}>
+                                    <Checkbox size='small' checked={selected.has(item.key)} disabled={off}
+                                        onChange={e => onToggle(item.key, e.target.checked)} />
+                                    <Box>
+                                        <Typography variant='body2' color={off ? 'text.disabled' : 'text.primary'}>{item.label}</Typography>
+                                        <Typography variant='caption' color={item.warn && !off ? 'warning.main' : 'text.secondary'}>{item.detail}</Typography>
+                                    </Box>
+                                </Stack>
+                            );
+                        })}
+                    </Box>
+                );
+            })}
+        </Stack>
+    );
 }

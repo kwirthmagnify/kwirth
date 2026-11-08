@@ -108,89 +108,95 @@ const ManageApiSecurity: React.FC<IManageApiSecurityProps> = (props:IManageApiSe
         }
     }
 
-    return (<>
-        <Dialog open={true} ref={escapeRef} fullWidth maxWidth={false} PaperProps={{ sx: { maxWidth: '1280px', width: '100%' } }} disableEnforceFocus>
-            <DialogTitleHelp section='guide/admin/05-api-management?id=create-an-api-key' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>API Key management</DialogTitleHelp>
-            {/* The dialog takes the size of its content, and the content has a fixed shape: the editor on the
-                right sets the height and the key list on the left only stretches to it, scrolling inside
-                (flex-basis 0, so however many keys there are it never pushes the dialog taller). */}
-            <DialogContent sx={{ display: 'flex' }}>
-                <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', minWidth: 0 }}>
-                    {/* the filters in two rows: the text on top, the key types underneath */}
-                    <Stack sx={{ width: '100%', pr: 2 }}>
-                        <TextField value={filterText} onChange={(e) => setFilterText(e.target.value)} variant='standard' label='Filter' size='small' fullWidth />
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Checkbox checked={showPermanent} onChange={() => setShowPermanent(!showPermanent)} sx={{ pl: 0 }} /><Typography variant='body2'>Permanent</Typography>
-                            <Checkbox checked={showVolatile} onChange={() => setShowVolatile(!showVolatile)} sx={{ ml: 2 }} /><Typography variant='body2'>Volatile</Typography>
-                        </Box>
-                    </Stack>
-
-                    <Box sx={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto', pr: 2 }}>
-                        <List sx={{ width: '100%' }}>
-                                { keys?.filter(k =>
-                                    ((showPermanent && k.accessKey.type==='permanent') || (showVolatile && k.accessKey.type==='volatile')) &&
-                                    (filterText==='' || k.description.toLowerCase().includes(filterText.toLowerCase()) || k.accessKey.id.toLowerCase().includes(filterText.toLowerCase()))
-                                ).map( (k,index) =>
-                                    <ListItemButton key={index} selected={k.accessKey.id===selectedKey?.accessKey.id} onClick={() => onKeySelected(k.accessKey)}>
-                                        <Stack direction='column'>
-                                            <Typography variant='body2'>{k.accessKey.id}</Typography>
-                                            <Typography variant='caption' color='text.secondary'>{`${k.description}`}<b>{` (expires: ${new Date(k.expire).toDateString()})`}</b></Typography>
-                                        </Stack>
-                                    </ListItemButton>
-                                )}
-                            </List>
-                    </Box>
-                </Box>
-
-                <Box sx={{ flex: 3, display: 'flex', alignItems: 'start', pl: 4, minWidth: 0 }}>
-                    <Stack spacing={1} sx={{ width: '100%' }}>
-                        <TextField value={description} onChange={(e) => setDescrition(e.target.value)} variant='standard' label='Description' />
-                        <Stack direction='row' spacing={1}>
-                            <FormControl variant='standard' fullWidth>
-                                <InputLabel>Lease time (days)</InputLabel>
-                                <Select value={days} onChange={(e) => setDays(+e.target.value)}>
-                                    { [0,1,2,3,4,7,30,365,36524].map( (value) => {
-                                        return <MenuItem key={value} value={value} disabled={value===0}>{value}</MenuItem>
-                                    })}
-                                </Select>
-                            </FormControl>
-                            <FormControl variant='standard' fullWidth>
-                                <InputLabel>Key type</InputLabel>
-                                <Select labelId='keytype' value={keyType} onChange={(e) => setKeyType(e.target.value)} disabled={true}>
-                                    { ['volatile','permanent'].map( (value:string) => {
-                                        return <MenuItem key={value} value={value}>{value}</MenuItem>
-                                    })}
-                                </Select>
-                            </FormControl>
+    return (
+        <>
+            <Dialog open={true} ref={escapeRef} fullWidth maxWidth={false} disableEnforceFocus slotProps={{
+                paper: { sx: { maxWidth: '1280px', width: '100%' } }
+            }}>
+                <DialogTitleHelp section='guide/admin/05-api-management?id=create-an-api-key' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>API Key management</DialogTitleHelp>
+                {/* The dialog takes the size of its content, and the content has a fixed shape: the editor on the
+                    right sets the height and the key list on the left only stretches to it, scrolling inside
+                    (flex-basis 0, so however many keys there are it never pushes the dialog taller). */}
+                <DialogContent sx={{ display: 'flex' }}>
+                    <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', minWidth: 0 }}>
+                        {/* the filters in two rows: the text on top, the key types underneath */}
+                        <Stack sx={{ width: '100%', pr: 2 }}>
+                            <TextField value={filterText} onChange={(e) => setFilterText(e.target.value)} variant='standard' label='Filter' size='small' fullWidth />
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Checkbox checked={showPermanent} onChange={() => setShowPermanent(!showPermanent)} sx={{ pl: 0 }} /><Typography variant='body2'>Permanent</Typography>
+                                <Checkbox checked={showVolatile} onChange={() => setShowVolatile(!showVolatile)} sx={{ ml: 2 }} /><Typography variant='body2'>Volatile</Typography>
+                            </Box>
                         </Stack>
 
-                        <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)} scopeCatalog={scopeCatalog}/>
+                        <Box sx={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto', pr: 2 }}>
+                            <List sx={{ width: '100%' }}>
+                                    { keys?.filter(k =>
+                                        ((showPermanent && k.accessKey.type==='permanent') || (showVolatile && k.accessKey.type==='volatile')) &&
+                                        (filterText==='' || k.description.toLowerCase().includes(filterText.toLowerCase()) || k.accessKey.id.toLowerCase().includes(filterText.toLowerCase()))
+                                    ).map( (k,index) =>
+                                        <ListItemButton key={index} selected={k.accessKey.id===selectedKey?.accessKey.id} onClick={() => onKeySelected(k.accessKey)}>
+                                            <Stack direction='column'>
+                                                <Typography variant='body2'>{k.accessKey.id}</Typography>
+                                                <Typography variant='caption' sx={{
+                                                    color: 'text.secondary'
+                                                }}>{`${k.description}`}<b>{` (expires: ${new Date(k.expire).toDateString()})`}</b></Typography>
+                                            </Stack>
+                                        </ListItemButton>
+                                    )}
+                                </List>
+                        </Box>
+                    </Box>
+
+                    <Box sx={{ flex: 3, display: 'flex', alignItems: 'start', pl: 4, minWidth: 0 }}>
+                        <Stack spacing={1} sx={{ width: '100%' }}>
+                            <TextField value={description} onChange={(e) => setDescrition(e.target.value)} variant='standard' label='Description' />
+                            <Stack direction='row' spacing={1}>
+                                <FormControl variant='standard' fullWidth>
+                                    <InputLabel>Lease time (days)</InputLabel>
+                                    <Select value={days} onChange={(e) => setDays(+e.target.value)}>
+                                        { [0,1,2,3,4,7,30,365,36524].map( (value) => {
+                                            return <MenuItem key={value} value={value} disabled={value===0}>{value}</MenuItem>
+                                        })}
+                                    </Select>
+                                </FormControl>
+                                <FormControl variant='standard' fullWidth>
+                                    <InputLabel>Key type</InputLabel>
+                                    <Select labelId='keytype' value={keyType} onChange={(e) => setKeyType(e.target.value)} disabled={true}>
+                                        { ['volatile','permanent'].map( (value:string) => {
+                                            return <MenuItem key={value} value={value}>{value}</MenuItem>
+                                        })}
+                                    </Select>
+                                </FormControl>
+                            </Stack>
+
+                            <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)} scopeCatalog={scopeCatalog}/>
+                        </Stack>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Stack direction='row' spacing={1}>
+                        <Button variant='outlined' onClick={onClickNew}>New</Button>
+                        <Button variant='outlined' onClick={onClickSave} disabled={
+                            description==='' ||
+                            days===0 ||
+                            selectedKey?.accessKey.type==='volatile' ||
+                            (selectedKey?.accessKey && accessKeySerialize(selectedKey.accessKey) === accessString) ||
+                            allResources.length===0
+                            }>Save</Button>
+                        <Button variant='outlined' onClick={onClickCopy} disabled={ !selectedKey || selectedKey.accessKey.resources.length===0 }>Copy</Button>
+                        <Button variant='outlined' onClick={onClickDelete} disabled={
+                            selectedKey===undefined ||
+                            accessKeySerialize(selectedKey?.accessKey!)===accessString ||
+                            selectedKey.accessKey.type==='volatile'
+                            }>Delete</Button>
                     </Stack>
-                </Box>
-            </DialogContent>
-            <DialogActions>
-                <Stack direction='row' spacing={1}>
-                    <Button variant='outlined' onClick={onClickNew}>New</Button>
-                    <Button variant='outlined' onClick={onClickSave} disabled={
-                        description==='' ||
-                        days===0 ||
-                        selectedKey?.accessKey.type==='volatile' ||
-                        (selectedKey?.accessKey && accessKeySerialize(selectedKey.accessKey) === accessString) ||
-                        allResources.length===0
-                        }>Save</Button>
-                    <Button variant='outlined' onClick={onClickCopy} disabled={ !selectedKey || selectedKey.accessKey.resources.length===0 }>Copy</Button>
-                    <Button variant='outlined' onClick={onClickDelete} disabled={
-                        selectedKey===undefined ||
-                        accessKeySerialize(selectedKey?.accessKey!)===accessString ||
-                        selectedKey.accessKey.type==='volatile'
-                        }>Delete</Button>
-                </Stack>
-                <Typography sx={{ flexGrow: 1 }} />
-                <Button variant='outlined' onClick={() => props.onClose()}>Close</Button>
-            </DialogActions>
-        </Dialog>
-        {msgBox}
-    </>)
+                    <Typography sx={{ flexGrow: 1 }} />
+                    <Button variant='outlined' onClick={() => props.onClose()}>Close</Button>
+                </DialogActions>
+            </Dialog>
+            {msgBox}
+        </>
+    );
 }
 
 export { ManageApiSecurity }

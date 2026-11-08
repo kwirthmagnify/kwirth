@@ -49,10 +49,20 @@ export const MircTabContent: React.FC<IContentProps> = (props: IContentProps) =>
         // Vertically-centered empty state, the same as the other channels' (Agora, Situs): containerRef-measured height
         return (
             <Box ref={containerRef} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', height: `calc(100vh - ${containerTop}px - 8px)`, px: 4 }}>
-                <Typography variant='h6' color='text.secondary' sx={{ mb: 1 }}>mIRC not started</Typography>
-                <Typography variant='body2' color='text.secondary' sx={{ maxWidth: 480 }}>Start the channel (tab settings ⚙ → Start) and choose your nick to start chatting.</Typography>
+                <Typography
+                    variant='h6'
+                    sx={{
+                        color: 'text.secondary',
+                        mb: 1
+                    }}>mIRC not started</Typography>
+                <Typography
+                    variant='body2'
+                    sx={{
+                        color: 'text.secondary',
+                        maxWidth: 480
+                    }}>Start the channel (tab settings ⚙ → Start) and choose your nick to start chatting.</Typography>
             </Box>
-        )
+        );
     }
 
     const roster = client.getRoster()
@@ -78,7 +88,12 @@ export const MircTabContent: React.FC<IContentProps> = (props: IContentProps) =>
             <Box sx={{ width: 260, borderRight: 1, borderColor: 'divider', overflowY: 'auto' }}>
                 <Typography variant='subtitle2' sx={{ p: 1.5, pb: 0.5 }}>Users</Typography>
                 <List dense>
-                    {roster.length === 0 && <Typography variant='caption' color='text.secondary' sx={{ pl: 2 }}>No users yet</Typography>}
+                    {roster.length === 0 && <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            pl: 2
+                        }}>No users yet</Typography>}
                     {roster.map(u => {
                         const selected = u.nick === data.selectedPeer && u.cluster === data.selectedClusterName
                         return (
@@ -89,10 +104,12 @@ export const MircTabContent: React.FC<IContentProps> = (props: IContentProps) =>
                                 </Badge>
                                 <ListItemText sx={{ ml: 1.5 }}
                                     primary={u.nick}
-                                    secondaryTypographyProps={{ component: 'span' }}
-                                    secondary={<Chip label={u.cluster} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 16 }} />} />
+                                    secondary={<Chip label={u.cluster} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 16 }} />}
+                                    slotProps={{
+                                        secondary: { component: 'span' }
+                                    }} />
                             </ListItemButton>
-                        )
+                        );
                     })}
                 </List>
             </Box>
@@ -101,10 +118,20 @@ export const MircTabContent: React.FC<IContentProps> = (props: IContentProps) =>
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 {!data.selectedPeer
                     ? <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Typography color='text.secondary'>Pick someone to start chatting</Typography>
+                        <Typography sx={{
+                            color: 'text.secondary'
+                        }}>Pick someone to start chatting</Typography>
                     </Box>
                     : <>
-                        <Stack direction='row' alignItems='center' spacing={1} sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+                        <Stack
+                            direction='row'
+                            spacing={1}
+                            sx={{
+                                alignItems: 'center',
+                                p: 1.5,
+                                borderBottom: 1,
+                                borderColor: 'divider'
+                            }}>
                             <Typography variant='subtitle1'>{data.selectedPeer}</Typography>
                             <Chip label={data.selectedClusterName} size='small' variant='outlined' sx={{ fontSize: '0.6rem', height: 16 }} />
                             <Box sx={{ flex: 1 }} />
@@ -120,7 +147,14 @@ export const MircTabContent: React.FC<IContentProps> = (props: IContentProps) =>
                                 <Box key={m.msgId} sx={{ alignSelf: m.mine ? 'flex-end' : 'flex-start', maxWidth: '70%' }}>
                                     <Box sx={{ px: 1.25, py: 0.75, borderRadius: 2, bgcolor: m.mine ? 'primary.main' : 'action.hover', color: m.mine ? 'primary.contrastText' : 'text.primary' }}>
                                         <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{m.body}</Typography>
-                                        <Stack direction='row' alignItems='center' justifyContent='flex-end' sx={{ mt: 0.25, opacity: 0.85 }}>
+                                        <Stack
+                                            direction='row'
+                                            sx={{
+                                                alignItems: 'center',
+                                                justifyContent: 'flex-end',
+                                                mt: 0.25,
+                                                opacity: 0.85
+                                            }}>
                                             <Typography variant='caption' sx={{ fontSize: '0.65rem' }}>{fmtTime(m.ts)}</Typography>
                                             <Ticks m={m} />
                                         </Stack>
@@ -131,16 +165,24 @@ export const MircTabContent: React.FC<IContentProps> = (props: IContentProps) =>
                         </Box>
 
                         <Divider />
-                        <Stack direction='row' spacing={1} alignItems='center' sx={{ p: 1 }}>
+                        <Stack
+                            direction='row'
+                            spacing={1}
+                            sx={{
+                                alignItems: 'center',
+                                p: 1
+                            }}>
                             <TextField fullWidth size='small' placeholder='Type a message' value={draft}
-                                inputProps={{ autoComplete: 'off' }}
                                 onChange={(e) => setDraft(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendDraft() } }} />
+                                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendDraft() } }}
+                                slotProps={{
+                                    htmlInput: { autoComplete: 'off' }
+                                }} />
                             <IconButton color='primary' onClick={sendDraft} disabled={!draft.trim()}><Send /></IconButton>
                         </Stack>
                     </>
                 }
             </Box>
         </Box>
-    )
+    );
 }

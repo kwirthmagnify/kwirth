@@ -14,7 +14,9 @@ const TrivyTabContentAssetVulns: React.FC<ITrivyTabContentAssetVulnsProps> = (pr
     return (
         <Accordion sx={{ m: 0.1 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Stack direction='row' alignItems='center'>
+                <Stack direction='row' sx={{
+                    alignItems: 'center'
+                }}>
                     <Typography sx={{ width: '120px' }} variant='body2'>{vuln.severity}</Typography>
                     <Typography variant='body2'>{title}</Typography>
                 </Stack>
@@ -27,7 +29,7 @@ const TrivyTabContentAssetVulns: React.FC<ITrivyTabContentAssetVulnsProps> = (pr
                 <Typography variant='body2'><b>Fixed: </b>{vuln.fixedVersion || 'n/a'}</Typography>
             </AccordionDetails>
         </Accordion>
-    )
+    );
 }
 
 export { TrivyTabContentAssetVulns }

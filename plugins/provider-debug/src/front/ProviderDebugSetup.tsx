@@ -123,9 +123,11 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
                 return (
                     <FormControlLabel key={field.name}
                         control={<Checkbox checked={current === true} onChange={(e) => setField(field.name, e.target.checked ? true : undefined)} />}
-                        label={<Stack direction='column'><Typography variant='body2'>{label}</Typography><Typography variant='caption' color='text.secondary'>{field.description}</Typography></Stack>}
+                        label={<Stack direction='column'><Typography variant='body2'>{label}</Typography><Typography variant='caption' sx={{
+                            color: 'text.secondary'
+                        }}>{field.description}</Typography></Stack>}
                     />
-                )
+                );
             case 'number':
                 return <TextField key={field.name} value={current ?? ''} onChange={(e) => setField(field.name, e.target.value === '' ? undefined : Number(e.target.value))} type='number' variant='standard' label={label} helperText={field.description} fullWidth />
             case 'string[]':
@@ -136,15 +138,28 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
     }
 
     const renderHelp = () => {
-        if (!providerId) return <Typography variant='caption' color='text.secondary'>Pick a provider to see how to subscribe to it.</Typography>
+        if (!providerId) return (
+            <Typography variant='caption' sx={{
+                color: 'text.secondary'
+            }}>Pick a provider to see how to subscribe to it.</Typography>
+        );
         if (!help) {
             return (
-                <Typography variant='caption' color='text.secondary'>
+                <Typography variant='caption' sx={{
+                    color: 'text.secondary'
+                }}>
                     {`'${providerId}' does not publish subscription help (getSubscriptionHelp is optional). Check its README for the payload it expects.`}
                 </Typography>
-            )
+            );
         }
-        return <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'pre-wrap' }}>{help.usage}</Typography>
+        return (
+            <Typography
+                variant='caption'
+                sx={{
+                    color: 'text.secondary',
+                    whiteSpace: 'pre-wrap'
+                }}>{help.usage}</Typography>
+        );
     }
 
     const ok = () => {
@@ -176,14 +191,20 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <Stack direction='column' spacing={2} sx={{ m: 1, flex: 1, minHeight: 0 }}>
                     <Stack direction='column' spacing={0.5} sx={{ flexShrink: 0 }}>
-                        <Typography variant='caption' color='text.secondary'>Provider</Typography>
+                        <Typography variant='caption' sx={{
+                            color: 'text.secondary'
+                        }}>Provider</Typography>
                         {/* Elegir otro productor vuelve a Overview: lo que se estuviera mirando (unos campos,
                             un JSON) era de OTRO, y lo primero con el nuevo es leer qué entrega. */}
                         <Select value={providerId} onChange={(e) => { setProviderId(e.target.value); setTab(ESetupTab.OVERVIEW) }} displayEmpty size='small' variant='standard' inputProps={{ 'aria-label': 'Provider' }}>
-                            <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none — just list the running providers)</Typography></MenuItem>
+                            <MenuItem value=''><Typography variant='body2' sx={{
+                                color: 'text.secondary'
+                            }}>(none — just list the running providers)</Typography></MenuItem>
                             {options().map(o => (
                                 <MenuItem key={o.id} value={o.id}>
-                                    <Stack direction='row' spacing={1} alignItems='center'>
+                                    <Stack direction='row' spacing={1} sx={{
+                                        alignItems: 'center'
+                                    }}>
                                         <Typography variant='body2'>{o.id}</Typography>
                                         {/* Un pluvider viene de un plugin, no es una extension aparte: se marca para que
                                             se vea de donde sale, y se acompaña de lo que dice producir. */}
@@ -191,7 +212,9 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
                                             <Chip label='plugin' size='small' variant='outlined' color='info' sx={{ fontSize: '0.65rem', height: 18 }} />
                                         }
                                         {o.description &&
-                                            <Typography variant='caption' color='text.secondary' noWrap>{o.description}</Typography>
+                                            <Typography variant='caption' noWrap sx={{
+                                                color: 'text.secondary'
+                                            }}>{o.description}</Typography>
                                         }
                                         {o.state === EProviderDebugProviderState.NOT_RUNNING &&
                                             <Chip label='not running' size='small' variant='outlined' color='warning' sx={{ fontSize: '0.65rem', height: 18 }} />
@@ -200,7 +223,9 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
                                 </MenuItem>
                             ))}
                         </Select>
-                        <Typography variant='caption' color='text.secondary'>
+                        <Typography variant='caption' sx={{
+                            color: 'text.secondary'
+                        }}>
                             {/* Las dos clases de productor no arrancan por el mismo motivo, y decir solo lo
                                 del provider deja pensando que a un pluvider hay que requerirlo desde algun sitio. */}
                             {catalogueLoaded
@@ -222,13 +247,26 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
                     {/* El 'mt' separa del bloque de arriba: el titulo del cuadro flota SOBRE el borde
                         (top negativo), asi que sin ese margen queda pegado al texto anterior. */}
                     <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, pt: 2, mt: 1.5, position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant='caption' color='text.secondary'
-                            sx={{ position: 'absolute', top: -9, left: 10, px: 0.5, bgcolor: 'background.paper' }}>
+                        <Typography
+                            variant='caption'
+                            sx={{
+                                color: 'text.secondary',
+                                position: 'absolute',
+                                top: -9,
+                                left: 10,
+                                px: 0.5,
+                                bgcolor: 'background.paper'
+                            }}>
                             {providerId ? `Subscription — declared by '${providerId}'` : 'Subscription'}
                         </Typography>
 
                         <Stack direction='column' spacing={1} sx={{ flex: 1, minHeight: 0 }}>
-                            <Stack direction='row' alignItems='center' justifyContent='space-between'>
+                            <Stack
+                                direction='row'
+                                sx={{
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between'
+                                }}>
                                 {/* Sin productor elegido no hay nada que describir ni payload que escribir:
                                     las tres quedan deshabilitadas y la vista se queda en Overview, que es
                                     la que dice que hay que elegir uno. */}
@@ -246,7 +284,9 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
                                 <Stack direction='column' spacing={1} sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                                     {renderHelp()}
                                     {providerId && fields.length === 0 &&
-                                        <Typography variant='caption' color='text.secondary'>
+                                        <Typography variant='caption' sx={{
+                                            color: 'text.secondary'
+                                        }}>
                                             {`'${providerId}' does not describe its payload field by field, so there is no form to fill — write the JSON yourself.`}
                                         </Typography>
                                     }
@@ -276,5 +316,5 @@ export const ProviderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) =>
                 <Button variant='outlined' onClick={cancel}>CANCEL</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }

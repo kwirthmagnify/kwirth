@@ -18,7 +18,7 @@
     "express": "^4.19.2"
   },
   "devDependencies": {
-    "@mui/material": "^7.1.2",
+    "@mui/material": "^9.5.0",
     "@types/express": "^4.17.21",
     "@types/node": "^20.12.13",
     "@types/react": "^18.0.0",

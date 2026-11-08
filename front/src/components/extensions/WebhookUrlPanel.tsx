@@ -59,30 +59,45 @@ const WebhookUrlPanel: React.FC<IPerConfigPanelProps> = ({ basePath, configName 
         })
     }
 
-    return (<>
-        <Divider />
-        <Typography variant='caption' color='text.secondary' fontWeight='bold'>Webhook URL</Typography>
-        <Typography variant='caption' color='text.disabled'>Paste this URL into the provider (e.g. Jira Automation → Send web request). Keep it secret — it authenticates the caller.</Typography>
-        <TextField size='small' fullWidth value={completa}
-            slotProps={{ input: {
-                readOnly: true,
-                endAdornment: (
-                    <InputAdornment position='end'>
-                        <Tooltip title={copied ? 'Copied!' : 'Copy'}>
-                            <IconButton size='small' edge='end' aria-label='Copy webhook URL' onClick={copiar}>
-                                {copied ? <CheckCircle fontSize='small' color='success' /> : <ContentCopy fontSize='small' />}
-                            </IconButton>
-                        </Tooltip>
-                    </InputAdornment>
-                )
-            } }} />
-        <Stack direction='row' justifyContent='flex-end' alignItems='center' spacing={1}>
-            {error && <Typography variant='caption' color='error' sx={{ flex: 1 }}>{error}</Typography>}
-            <Button size='small' startIcon={rotating ? <CircularProgress size={14} /> : <Refresh fontSize='small' />} disabled={rotating} onClick={regenerar}>
-                Regenerate
-            </Button>
-        </Stack>
-    </>)
+    return (
+        <>
+            <Divider />
+            <Typography
+                variant='caption'
+                sx={{
+                    color: 'text.secondary',
+                    fontWeight: 'bold'
+                }}>Webhook URL</Typography>
+            <Typography variant='caption' sx={{
+                color: 'text.disabled'
+            }}>Paste this URL into the provider (e.g. Jira Automation → Send web request). Keep it secret — it authenticates the caller.</Typography>
+            <TextField size='small' fullWidth value={completa}
+                slotProps={{ input: {
+                    readOnly: true,
+                    endAdornment: (
+                        <InputAdornment position='end'>
+                            <Tooltip title={copied ? 'Copied!' : 'Copy'}>
+                                <IconButton size='small' edge='end' aria-label='Copy webhook URL' onClick={copiar}>
+                                    {copied ? <CheckCircle fontSize='small' color='success' /> : <ContentCopy fontSize='small' />}
+                                </IconButton>
+                            </Tooltip>
+                        </InputAdornment>
+                    )
+                } }} />
+            <Stack
+                direction='row'
+                spacing={1}
+                sx={{
+                    justifyContent: 'flex-end',
+                    alignItems: 'center'
+                }}>
+                {error && <Typography variant='caption' color='error' sx={{ flex: 1 }}>{error}</Typography>}
+                <Button size='small' startIcon={rotating ? <CircularProgress size={14} /> : <Refresh fontSize='small' />} disabled={rotating} onClick={regenerar}>
+                    Regenerate
+                </Button>
+            </Stack>
+        </>
+    );
 }
 
 export { WebhookUrlPanel }

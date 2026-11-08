@@ -19,8 +19,8 @@
   "devDependencies": {
     "@kwirthmagnify/kwirth-common-sql": "^0.3.12",
     "@kwirthmagnify/kwirth-dce-xyflow": "^0.1.0",
-    "@mui/icons-material": "7.1.2",
-    "@mui/material": "7.1.2",
+    "@mui/icons-material": "9.5.0",
+    "@mui/material": "9.5.0",
     "@types/node": "^20.12.13",
     "@types/react": "^18.3.0",
     "@xyflow/react": "^12.11.6",

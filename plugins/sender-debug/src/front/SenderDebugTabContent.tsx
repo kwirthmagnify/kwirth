@@ -178,7 +178,17 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
         const count = result?.count ?? entry.request?.count ?? 1
         return (
             <Paper key={index} variant='outlined' sx={{ mb: 0.5 }}>
-                <Stack direction='row' spacing={1.5} alignItems='center' sx={{ minWidth: 0, px: 1, py: 0.5, cursor: 'pointer' }} onClick={() => toggle(entry)}>
+                <Stack
+                    direction='row'
+                    spacing={1.5}
+                    onClick={() => toggle(entry)}
+                    sx={{
+                        alignItems: 'center',
+                        minWidth: 0,
+                        px: 1,
+                        py: 0.5,
+                        cursor: 'pointer'
+                    }}>
                     <IconButton size='small' aria-label={open ? 'Collapse send' : 'Expand send'} onClick={(e) => { e.stopPropagation(); toggle(entry) }}>
                         {open ? <ExpandLess fontSize='small' /> : <ExpandMore fontSize='small' />}
                     </IconButton>
@@ -186,28 +196,45 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                     {!result && <Schedule fontSize='small' color='disabled' />}
                     {result?.ok === true && <Check fontSize='small' color='success' />}
                     {result?.ok === false && <ErrorIcon fontSize='small' color='error' />}
-                    <Typography variant='caption' color='text.secondary' sx={{ fontFamily: 'monospace' }}>{new Date(result?.ts ?? Date.now()).toISOString()}</Typography>
+                    <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            fontFamily: 'monospace'
+                        }}>{new Date(result?.ts ?? Date.now()).toISOString()}</Typography>
                     <Chip label={`${senderId} / ${configName}`} size='small' variant='outlined' sx={{ fontSize: '0.65rem', height: 18 }} />
                     {batch &&
                         <Chip label={result?.emulated ? `batch ${count} (emulated)` : `batch ${count}`} size='small' variant='outlined' color={result?.emulated ? 'warning' : 'info'} sx={{ fontSize: '0.65rem', height: 18 }} />
                     }
-                    <Typography variant='caption' color='text.secondary' noWrap sx={{ flex: 1 }}>{summaryOf(entry)}</Typography>
-                    <Typography variant='caption' color='text.secondary'>{result ? `${result.elapsed} ms` : ''}</Typography>
+                    <Typography
+                        variant='caption'
+                        noWrap
+                        sx={{
+                            color: 'text.secondary',
+                            flex: 1
+                        }}>{summaryOf(entry)}</Typography>
+                    <Typography variant='caption' sx={{
+                        color: 'text.secondary'
+                    }}>{result ? `${result.elapsed} ms` : ''}</Typography>
                 </Stack>
                 {open &&
                     <Box sx={{ px: 2, pb: 1 }}>
-                        <Typography variant='caption' color='text.secondary'>Sent</Typography>
+                        <Typography variant='caption' sx={{
+                            color: 'text.secondary'
+                        }}>Sent</Typography>
                         <Box component='pre' sx={{ m: 0, mb: 1, fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                             {entry.request ? JSON.stringify(entry.request.message, null, 2) : 'Not available: this answer arrived without its request.'}
                         </Box>
-                        <Typography variant='caption' color='text.secondary'>Answered</Typography>
+                        <Typography variant='caption' sx={{
+                            color: 'text.secondary'
+                        }}>Answered</Typography>
                         <Box component='pre' sx={{ m: 0, fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                             {answerOf(entry)}
                         </Box>
                     </Box>
                 }
             </Paper>
-        )
+        );
     }
 
     /*
@@ -217,23 +244,53 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
     */
     if (!data.started) {
         return (
-            <Stack ref={boxRef} alignItems='center' justifyContent='center' spacing={1} sx={{ flex: 1, width: '100%', minHeight: `calc(100vh - ${boxTop}px - 8px)`, px: 4, textAlign: 'center' }}>
-                <Typography variant='h6' color='text.secondary'>Sender Debug not started</Typography>
-                <Typography variant='body2' color='text.secondary' sx={{ maxWidth: 480 }}>Start the channel (tab settings ⚙ → Start) to pick a sender, compose a message and see what the sender answers.</Typography>
+            <Stack
+                ref={boxRef}
+                spacing={1}
+                sx={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: 1,
+                    width: '100%',
+                    minHeight: `calc(100vh - ${boxTop}px - 8px)`,
+                    px: 4,
+                    textAlign: 'center'
+                }}>
+                <Typography variant='h6' sx={{
+                    color: 'text.secondary'
+                }}>Sender Debug not started</Typography>
+                <Typography
+                    variant='body2'
+                    sx={{
+                        color: 'text.secondary',
+                        maxWidth: 480
+                    }}>Start the channel (tab settings ⚙ → Start) to pick a sender, compose a message and see what the sender answers.</Typography>
             </Stack>
-        )
+        );
     }
 
     return (
         <Card sx={{ flex: 1, width: '98%', alignSelf: 'center', m: 1 }}>
             <CardHeader title={
-                <Stack direction='row' alignItems='center' spacing={2} sx={{ width: '100%' }}>
+                <Stack
+                    direction='row'
+                    spacing={2}
+                    sx={{
+                        alignItems: 'center',
+                        width: '100%'
+                    }}>
                     <Typography><b>Senders:</b> {data.senders.length}</Typography>
                     <Typography><b>Sends:</b> {data.history.length}</Typography>
                     {inFlight() > 0 &&
                         <Chip label={`${inFlight()} in flight`} size='small' color='info' variant='outlined' />
                     }
-                    <Stack direction='row' alignItems='center' spacing={0.5} sx={{ ml: 'auto' }}>
+                    <Stack
+                        direction='row'
+                        spacing={0.5}
+                        sx={{
+                            alignItems: 'center',
+                            ml: 'auto'
+                        }}>
                         <Tooltip title='Reload the sender catalogue'>
                             <IconButton size='small' aria-label='Reload senders' onClick={() => sendCommand(ESenderDebugCommand.LIST)}><Refresh fontSize='small' /></IconButton>
                         </Tooltip>
@@ -247,14 +304,22 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
             } />
             <CardContent>
                 <Stack direction='column' spacing={1.5}>
-                    <Stack direction='row' spacing={2} alignItems='flex-end'>
+                    <Stack direction='row' spacing={2} sx={{
+                        alignItems: 'flex-end'
+                    }}>
                         <Stack direction='column' spacing={0.5} sx={{ minWidth: 260 }}>
-                            <Typography variant='caption' color='text.secondary'>Sender</Typography>
+                            <Typography variant='caption' sx={{
+                                color: 'text.secondary'
+                            }}>Sender</Typography>
                             <Select value={form.senderId} onChange={(e) => setSender(e.target.value)} displayEmpty size='small' variant='standard' inputProps={{ 'aria-label': 'Sender' }}>
-                                <MenuItem value=''><Typography variant='body2' color='text.secondary'>(pick a sender)</Typography></MenuItem>
+                                <MenuItem value=''><Typography variant='body2' sx={{
+                                    color: 'text.secondary'
+                                }}>(pick a sender)</Typography></MenuItem>
                                 {data.senders.map(s => (
                                     <MenuItem key={s.id} value={s.id}>
-                                        <Stack direction='row' spacing={1} alignItems='center'>
+                                        <Stack direction='row' spacing={1} sx={{
+                                            alignItems: 'center'
+                                        }}>
                                             <Typography variant='body2'>{senderLabel(s.id)}</Typography>
                                             {s.kind === ESenderDebugKind.FILTER &&
                                                 <Chip label='filter' size='small' variant='outlined' color='warning' sx={{ fontSize: '0.65rem', height: 18 }} />
@@ -271,22 +336,36 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                             </Select>
                         </Stack>
                         <Stack direction='column' spacing={0.5} sx={{ minWidth: 220 }}>
-                            <Typography variant='caption' color='text.secondary'>Configuration</Typography>
+                            <Typography variant='caption' sx={{
+                                color: 'text.secondary'
+                            }}>Configuration</Typography>
                             {/* siempre presente y deshabilitada mientras no haya sender: nunca en condicional */}
                             <Select value={form.configName} onChange={(e) => { form.configName = e.target.value; refresh() }} displayEmpty size='small' variant='standard' disabled={!selected || configNames.length === 0} inputProps={{ 'aria-label': 'Configuration' }}>
-                                <MenuItem value=''><Typography variant='body2' color='text.secondary'>(pick a configuration)</Typography></MenuItem>
+                                <MenuItem value=''><Typography variant='body2' sx={{
+                                    color: 'text.secondary'
+                                }}>(pick a configuration)</Typography></MenuItem>
                                 {configNames.map(name => <MenuItem key={name} value={name}>{name}</MenuItem>)}
                             </Select>
                         </Stack>
-                        <Stack direction='row' spacing={1} alignItems='center' sx={{ pb: 0.5 }}>
+                        <Stack
+                            direction='row'
+                            spacing={1}
+                            sx={{
+                                alignItems: 'center',
+                                pb: 0.5
+                            }}>
                             {selected?.supportsBatch &&
                                 <Chip label='sendBatch' size='small' variant='outlined' color='info' />
                             }
                             {selected && !selected.instantiated &&
-                                <Typography variant='caption' color='text.secondary'>Not started yet — the first send starts it, same as any plugin would.</Typography>
+                                <Typography variant='caption' sx={{
+                                    color: 'text.secondary'
+                                }}>Not started yet — the first send starts it, same as any plugin would.</Typography>
                             }
                             {selected && selected.kind === ESenderDebugKind.FILTER &&
-                                <Typography variant='caption' color='warning.main'>This is a filter: it does not deliver anywhere, it chains.</Typography>
+                                <Typography variant='caption' sx={{
+                                    color: 'warning.main'
+                                }}>This is a filter: it does not deliver anywhere, it chains.</Typography>
                             }
                         </Stack>
                     </Stack>
@@ -298,7 +377,9 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                         envuelto en su FormControl por lo mismo — suelto no tiene label ni sitio para la
                         ayuda, y su subrayado cae por su cuenta.
                     */}
-                    <Stack direction='row' spacing={2} alignItems='flex-start'>
+                    <Stack direction='row' spacing={2} sx={{
+                        alignItems: 'flex-start'
+                    }}>
                         <TextField value={form.subject} onChange={(e) => { form.subject = e.target.value; refresh() }} variant='standard' label='Subject'
                             slotProps={{ inputLabel: { shrink: true } }} helperText=' ' sx={{ flex: 1 }} />
                         <FormControl variant='standard' sx={{ minWidth: 120 }}>
@@ -320,26 +401,41 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                     <TextField value={form.metadata} onChange={(e) => { form.metadata = e.target.value; refresh() }} variant='standard' label='Metadata (JSON)' placeholder='{}' multiline minRows={1} maxRows={5}
                         error={invalidMetadata()} helperText={invalidMetadata() ? 'Not a valid JSON object' : 'Free JSON object, empty means none'} fullWidth />
 
-                    <Stack direction='row' spacing={2} alignItems='center'>
+                    <Stack direction='row' spacing={2} sx={{
+                        alignItems: 'center'
+                    }}>
                         <FormControlLabel
-                            control={<Checkbox checked={form.batch} onChange={(e) => { form.batch = e.target.checked; refresh() }} inputProps={{ 'aria-label': 'Batch' }} />}
+                            control={<Checkbox checked={form.batch} onChange={(e) => { form.batch = e.target.checked; refresh() }} slotProps={{
+                                input: { 'aria-label': 'Batch' }
+                            }} />}
                             label={<Typography variant='body2'>Batch (sendBatch)</Typography>}
                         />
                         {/* siempre visible y deshabilitado fuera del lote: nunca render condicional */}
                         <TextField value={form.count} onChange={(e) => { form.count = +e.target.value; refresh() }} type='number' variant='standard' label='Messages' disabled={!form.batch}
                             error={invalidCount()} helperText={invalidCount() ? '1 to 100' : ' '} sx={{ width: 110 }} />
-                        <Typography variant='caption' color='warning.main' sx={{ flex: 1 }}>
+                        <Typography
+                            variant='caption'
+                            sx={{
+                                color: 'warning.main',
+                                flex: 1
+                            }}>
                             This sends for real: a mail leaves, a ticket is created, a chat room gets a message.
                         </Typography>
                         <Button variant='contained' startIcon={<Send />} onClick={send} disabled={!canSend()}>SEND</Button>
                     </Stack>
 
-                    {data.signals.map((s, index) => <Typography key={index} variant='caption' color='text.secondary'>*** {s} ***</Typography>)}
+                    {data.signals.map((s, index) => <Typography key={index} variant='caption' sx={{
+                        color: 'text.secondary'
+                    }}>*** {s} ***</Typography>)}
 
                     {data.senders.length === 0 &&
-                        <Stack direction='row' spacing={1} alignItems='center'>
+                        <Stack direction='row' spacing={1} sx={{
+                            alignItems: 'center'
+                        }}>
                             <Close fontSize='small' color='disabled' />
-                            <Typography variant='body2' color='text.secondary'>No senders installed on this Kwirth. Install one from the sender manager, give it a configuration, and reload the catalogue.</Typography>
+                            <Typography variant='body2' sx={{
+                                color: 'text.secondary'
+                            }}>No senders installed on this Kwirth. Install one from the sender manager, give it a configuration, and reload the catalogue.</Typography>
                         </Stack>
                     }
                 </Stack>
@@ -351,5 +447,5 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                 </Box>
             </CardContent>
         </Card>
-    )
+    );
 }

@@ -27,10 +27,18 @@ export const EchoTabContent: React.FC<IContentProps> = (props: IContentProps) =>
             {echoData.started &&
                 <Card sx={{ flex: 1, width: '98%', alignSelf: 'center', m: 1 }}>
                     <CardHeader title={
-                        <Stack direction='row' alignItems='center'>
-                            <Typography mr={4}><b>Lines:</b> {echoData.lines.length} / {echoConfig.maxLines}</Typography>
-                            <Typography mr={4}><b>Interval:</b> {echoInstanceConfig.interval}</Typography>
-                            <Typography mr={4}><Info fontSize='small' sx={{ mb: 0.25 }} /><b>&nbsp;Status:</b> {echoData.paused ? 'paused' : echoData.started ? 'started' : 'stopped'}</Typography>
+                        <Stack direction='row' sx={{
+                            alignItems: 'center'
+                        }}>
+                            <Typography sx={{
+                                mr: 4
+                            }}><b>Lines:</b> {echoData.lines.length} / {echoConfig.maxLines}</Typography>
+                            <Typography sx={{
+                                mr: 4
+                            }}><b>Interval:</b> {echoInstanceConfig.interval}</Typography>
+                            <Typography sx={{
+                                mr: 4
+                            }}><Info fontSize='small' sx={{ mb: 0.25 }} /><b>&nbsp;Status:</b> {echoData.paused ? 'paused' : echoData.started ? 'started' : 'stopped'}</Typography>
                         </Stack>
                     } />
                     <CardContent>
@@ -43,5 +51,5 @@ export const EchoTabContent: React.FC<IContentProps> = (props: IContentProps) =>
                 </Card>
             }
         </>
-    )
+    );
 }

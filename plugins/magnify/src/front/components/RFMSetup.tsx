@@ -134,196 +134,318 @@ const rfmSetup = (
     const showOverview = () => {
         if (!magnifyData.clusterInfo) return <></>
         
-        return <Box sx={{bgcolor: 'background.default'}} width={'100%'} height={'100%'}>
-            <Card sx={{m:2, display: 'flex', flexDirection: 'column', height: 'calc(100% - 55px)'}}>
-                <CardContent sx={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', p: 2}}>
-                    <Stack direction={'row'} justifyContent={'space-between'} width={'100%'} px={1}>
-                        <Typography variant='body2'><b>Cluster:</b> {channelObject.clusterInfo?.name}</Typography>
-                        <Typography variant='body2'><b>Version:</b> {magnifyData.clusterInfo.major}.{magnifyData.clusterInfo.minor}&nbsp;&nbsp;({magnifyData.clusterInfo.gitVersion})</Typography>
-                        <Typography variant='body2'><b>Platform:</b> {magnifyData.clusterInfo.platform}</Typography>
-                        <Typography variant='body2'><b>Nodes:</b> {magnifyData.files.filter(f => f.class==='Node').length}</Typography>
-                    </Stack>
+        return (
+            <Box
+                sx={{
+                    width: '100%',
+                    height: '100%',
+                    bgcolor: 'background.default'
+                }}>
+                <Card sx={{m:2, display: 'flex', flexDirection: 'column', height: 'calc(100% - 55px)'}}>
+                    <CardContent sx={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', p: 2}}>
+                        <Stack
+                            direction={'row'}
+                            sx={{
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                px: 1
+                            }}>
+                            <Typography variant='body2'><b>Cluster:</b> {channelObject.clusterInfo?.name}</Typography>
+                            <Typography variant='body2'><b>Version:</b> {magnifyData.clusterInfo.major}.{magnifyData.clusterInfo.minor}&nbsp;&nbsp;({magnifyData.clusterInfo.gitVersion})</Typography>
+                            <Typography variant='body2'><b>Platform:</b> {magnifyData.clusterInfo.platform}</Typography>
+                            <Typography variant='body2'><b>Nodes:</b> {magnifyData.files.filter(f => f.class==='Node').length}</Typography>
+                        </Stack>
 
-                    <Divider sx={{mt:1, mb:1}}/>
+                        <Divider sx={{mt:1, mb:1}}/>
 
-                    <ClusterMetrics channelObject={channelObject}/>
-                    
-                    <Divider sx={{mt:1, mb:1}}/>
+                        <ClusterMetrics channelObject={channelObject}/>
+                        
+                        <Divider sx={{mt:1, mb:1}}/>
 
-                    <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ summary: true}}/>
+                        <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ summary: true}}/>
 
-                    <Divider sx={{mt:1, mb:1}}/>
+                        <Divider sx={{mt:1, mb:1}}/>
 
-                    <Box sx={{ flex:1, overflowY: 'auto', ml:1, mr:1 }}>
+                        <Box sx={{ flex:1, overflowY: 'auto', ml:1, mr:1 }}>
 
-                        {/* The recent events come from the 'events' provider, an installable extension: without it the list
-                            would just be empty, with no explanation */}
-                        {magnifyData.eventsProviderMissing &&
-                            <Alert severity='info' sx={{ my: 1 }}>
-                                The events provider is not installed in this cluster, so there are no cluster events to show. Install it from ☰ → Manage extensions → Providers.
-                            </Alert>
-                        }
-                        <Stack direction={'column'}>
-                            {
-                                magnifyData.clusterEvents?.map( (e,index) => {
-                                    let severity= e.type? e.type[0]:''
-                                    let color='--mui-palette-text-primary'
-                                    if (severity==='W') color='orange'
-                                    if (severity==='E') color='red'
-                                    return <Stack key={index} direction={'row'}>
-                                        <Typography variant='body2' sx={{width:'5%', color}}>{severity}</Typography>
-                                        <Typography variant='body2' sx={{width:'25%', color}}>{e.eventTime||e.lastTimestamp||e.firstTimestamp}</Typography>
-                                        <Typography variant='body2' sx={{width:'70%', color}}>{e.message}</Typography>
-                                    </Stack>
-                                })
+                            {/* The recent events come from the 'events' provider, an installable extension: without it the list
+                                would just be empty, with no explanation */}
+                            {magnifyData.eventsProviderMissing &&
+                                <Alert severity='info' sx={{ my: 1 }}>
+                                    The events provider is not installed in this cluster, so there are no cluster events to show. Install it from ☰ → Manage extensions → Providers.
+                                </Alert>
                             }
-                        </Stack>
-                        <Stack direction={'row'}>
-                            <Typography flexGrow={1}/>
-                            <Button onClick={getMoreEvents}>More Events</Button>
-                        </Stack>
-                    </Box>
+                            <Stack direction={'column'}>
+                                {
+                                    magnifyData.clusterEvents?.map( (e,index) => {
+                                        let severity= e.type? e.type[0]:''
+                                        let color='--mui-palette-text-primary'
+                                        if (severity==='W') color='orange'
+                                        if (severity==='E') color='red'
+                                        return <Stack key={index} direction={'row'}>
+                                            <Typography variant='body2' sx={{width:'5%', color}}>{severity}</Typography>
+                                            <Typography variant='body2' sx={{width:'25%', color}}>{e.eventTime||e.lastTimestamp||e.firstTimestamp}</Typography>
+                                            <Typography variant='body2' sx={{width:'70%', color}}>{e.message}</Typography>
+                                        </Stack>
+                                    })
+                                }
+                            </Stack>
+                            <Stack direction={'row'}>
+                                <Typography sx={{
+                                    flexGrow: 1
+                                }}/>
+                                <Button onClick={getMoreEvents}>More Events</Button>
+                            </Stack>
+                        </Box>
 
-                </CardContent>
-            </Card>
-        </Box>
+                    </CardContent>
+                </Card>
+            </Box>
+        );
     }
 
     const showBackground = (f:IFileObject) => {
         let id = f.path.replaceAll('/','')
         const SectionImage = SECTION_IMAGES[id]
         // text.secondary: the grey of the old images, in either theme; the background is handed to the drawing
-        return <Box width={'100%'} height={'100%'} sx={{ bgcolor: 'background.default', color: 'text.secondary', '--magnify-section-bg': (theme: Theme) => theme.palette.background.default }} display={'flex'} justifyContent={'center'} alignItems={'center'}>
-                { SectionImage && <SectionImage /> }
-        </Box>
+        return (
+            <Box
+                sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    bgcolor: 'background.default',
+                    color: 'text.secondary',
+                    '--magnify-section-bg': (theme: Theme) => theme.palette.background.default
+                }}>
+                    { SectionImage && <SectionImage /> }
+            </Box>
+        );
     }
     
     const showClusterOverview = () => {
-        return <Box width={'100%'} height={'100%'} display={'flex'} flexDirection={'column'} gap={2} p={2} sx={{bgcolor: 'background.default', borderBottomRightRadius:'8px', overflowY: 'auto'}}> 
-            <Card sx={{m:1, flexShrink: 0}}>
-                <CardHeader title='Status'/>
-                <CardContent>
-                    <Typography variant='body2'>Total CPU: {magnifyData.files.filter(f => f.class==='Node').reduce ((ac,v) => ac + +v.data.origin.status.capacity.cpu,0)}</Typography>
-                    <Typography variant='body2'>Total Memory: {convertBytesToSize (magnifyData.files.filter(f => f.class==='Node').reduce ((ac,v) => ac + convertSizeToBytes(v.data.origin.status.capacity.memory),0))}</Typography>
-                    <Typography mt={1}/>
-                    <Typography variant='body2'>Actual pods: {magnifyData.files.filter(f => f.class==='Pod').length}</Typography>
-                    <Typography variant='body2'>Max pods: {magnifyData.files.filter(f => f.class==='Node').reduce ((ac,v) => ac + +v.data.origin.status.capacity.pods,0)}</Typography>
-                </CardContent>
-            </Card>
-            <Card sx={{m:1, flexShrink: 0}}>
-                <CardHeader title='Validations'/>
-                <CardContent>
-                    <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ node:true }}/>
-                </CardContent>
-            </Card>
-        </Box>
+        return (
+            <Box
+                sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    p: 2,
+                    bgcolor: 'background.default',
+                    borderBottomRightRadius:'8px',
+                    overflowY: 'auto'
+                }}> 
+                <Card sx={{m:1, flexShrink: 0}}>
+                    <CardHeader title='Status'/>
+                    <CardContent>
+                        <Typography variant='body2'>Total CPU: {magnifyData.files.filter(f => f.class==='Node').reduce ((ac,v) => ac + +v.data.origin.status.capacity.cpu,0)}</Typography>
+                        <Typography variant='body2'>Total Memory: {convertBytesToSize (magnifyData.files.filter(f => f.class==='Node').reduce ((ac,v) => ac + convertSizeToBytes(v.data.origin.status.capacity.memory),0))}</Typography>
+                        <Typography sx={{
+                            mt: 1
+                        }}/>
+                        <Typography variant='body2'>Actual pods: {magnifyData.files.filter(f => f.class==='Pod').length}</Typography>
+                        <Typography variant='body2'>Max pods: {magnifyData.files.filter(f => f.class==='Node').reduce ((ac,v) => ac + +v.data.origin.status.capacity.pods,0)}</Typography>
+                    </CardContent>
+                </Card>
+                <Card sx={{m:1, flexShrink: 0}}>
+                    <CardHeader title='Validations'/>
+                    <CardContent>
+                        <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ node:true }}/>
+                    </CardContent>
+                </Card>
+            </Box>
+        );
     }
 
     const showWorkloadOverview = () => {
-        return <Box width={'100%'} height={'100%'} display={'flex'} flexDirection={'column'} gap={2} p={2} sx={{bgcolor: 'background.default', borderBottomRightRadius:'8px', overflowY: 'auto'}}> 
-            <Card sx={{m:1, flexShrink: 0}}>
-                <CardHeader title='Status'/>
-                <CardContent>
-                    <Typography variant='body2'>Pods: {magnifyData.files.filter(f => f.class==='Pod').length}</Typography>
-                    <Typography mt={1}/>
-                    <Typography variant='body2'>Deployments: {magnifyData.files.filter(f => f.class==='Deployment').length}</Typography>
-                    <Typography variant='body2'>Daemon sets: {magnifyData.files.filter(f => f.class==='DaemonSet').length}</Typography>
-                    <Typography variant='body2'>Replica sets: {magnifyData.files.filter(f => f.class==='ReplicaSet').length}</Typography>
-                    <Typography variant='body2'>Replication Controllers: {magnifyData.files.filter(f => f.class==='ReplicationController').length}</Typography>
-                    <Typography variant='body2'>Stateful sets: {magnifyData.files.filter(f => f.class==='StatefulSet').length}</Typography>
-                    <Typography mt={1}/>
-                    <Typography variant='body2'>Jobs: {magnifyData.files.filter(f => f.class==='Job').length}</Typography>
-                    <Typography variant='body2'>Cron jobs: {magnifyData.files.filter(f => f.class==='CronJob').length}</Typography>
-                </CardContent>
-            </Card>
-            <Card sx={{m:1, flexShrink: 0}}>
-                <CardHeader title='Validations'/>
-                <CardContent>
-                    <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ replicaSet: true, daemonSet:true, deployment:true, statefulSet:true, job:true }}/>
-                </CardContent>
-            </Card>
-        </Box>
+        return (
+            <Box
+                sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    p: 2,
+                    bgcolor: 'background.default',
+                    borderBottomRightRadius:'8px',
+                    overflowY: 'auto'
+                }}> 
+                <Card sx={{m:1, flexShrink: 0}}>
+                    <CardHeader title='Status'/>
+                    <CardContent>
+                        <Typography variant='body2'>Pods: {magnifyData.files.filter(f => f.class==='Pod').length}</Typography>
+                        <Typography sx={{
+                            mt: 1
+                        }}/>
+                        <Typography variant='body2'>Deployments: {magnifyData.files.filter(f => f.class==='Deployment').length}</Typography>
+                        <Typography variant='body2'>Daemon sets: {magnifyData.files.filter(f => f.class==='DaemonSet').length}</Typography>
+                        <Typography variant='body2'>Replica sets: {magnifyData.files.filter(f => f.class==='ReplicaSet').length}</Typography>
+                        <Typography variant='body2'>Replication Controllers: {magnifyData.files.filter(f => f.class==='ReplicationController').length}</Typography>
+                        <Typography variant='body2'>Stateful sets: {magnifyData.files.filter(f => f.class==='StatefulSet').length}</Typography>
+                        <Typography sx={{
+                            mt: 1
+                        }}/>
+                        <Typography variant='body2'>Jobs: {magnifyData.files.filter(f => f.class==='Job').length}</Typography>
+                        <Typography variant='body2'>Cron jobs: {magnifyData.files.filter(f => f.class==='CronJob').length}</Typography>
+                    </CardContent>
+                </Card>
+                <Card sx={{m:1, flexShrink: 0}}>
+                    <CardHeader title='Validations'/>
+                    <CardContent>
+                        <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ replicaSet: true, daemonSet:true, deployment:true, statefulSet:true, job:true }}/>
+                    </CardContent>
+                </Card>
+            </Box>
+        );
     }
 
     const showNetworkOverview = () => {
-        return <Box width={'100%'} height={'100%'} display={'flex'} flexDirection={'column'} gap={2} p={2} sx={{bgcolor: 'background.default', borderBottomRightRadius:'8px', overflowY: 'auto'}}> 
-            <Card sx={{m:1, flexShrink: 0}}>
-                <CardHeader title='Status'/>
-                <CardContent>
-                    <Typography variant='body2'>Services: {magnifyData.files.filter(f => f.class==='Service').length}</Typography>
-                    <Typography variant='body2'>Ingresses: {magnifyData.files.filter(f => f.class==='Ingress').length}</Typography>
-                    <Typography variant='body2'>Ingress classes: {magnifyData.files.filter(f => f.class==='IngressClass').length}</Typography>
-                </CardContent>
-            </Card>
-            <Card sx={{m:1, flexShrink: 0}}>
-                <CardHeader title='Validations'/>
-                <CardContent>
-                    <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ingress:true, service:true}}/>
-                </CardContent>
-            </Card>
-        </Box>
+        return (
+            <Box
+                sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    p: 2,
+                    bgcolor: 'background.default',
+                    borderBottomRightRadius:'8px',
+                    overflowY: 'auto'
+                }}> 
+                <Card sx={{m:1, flexShrink: 0}}>
+                    <CardHeader title='Status'/>
+                    <CardContent>
+                        <Typography variant='body2'>Services: {magnifyData.files.filter(f => f.class==='Service').length}</Typography>
+                        <Typography variant='body2'>Ingresses: {magnifyData.files.filter(f => f.class==='Ingress').length}</Typography>
+                        <Typography variant='body2'>Ingress classes: {magnifyData.files.filter(f => f.class==='IngressClass').length}</Typography>
+                    </CardContent>
+                </Card>
+                <Card sx={{m:1, flexShrink: 0}}>
+                    <CardHeader title='Validations'/>
+                    <CardContent>
+                        <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ingress:true, service:true}}/>
+                    </CardContent>
+                </Card>
+            </Box>
+        );
     }
 
     const showConfigOverview = () => {
-        return <Box width={'100%'} height={'100%'} display={'flex'} flexDirection={'column'} gap={2} p={2} sx={{bgcolor: 'background.default', borderBottomRightRadius:'8px', overflowY: 'auto'}}> 
-            <Card sx={{m:1, flexShrink: 0}}>
-                <CardHeader title='Status'/>
-                <CardContent>
-                    <Typography variant='body2'>ConfigMap: {magnifyData.files.filter(f => f.class==='ConfigMap').length}</Typography>
-                    <Typography variant='body2'>Secret: {magnifyData.files.filter(f => f.class==='Secret').length}</Typography>
-                </CardContent>
-            </Card>
-            <Card sx={{m:1, flexShrink: 0}}>
-                <CardHeader title='Validations'/>
-                <CardContent>
-                    <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{configMap:true, secret:true}}/>
-                </CardContent>
-            </Card>
-        </Box>
+        return (
+            <Box
+                sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    p: 2,
+                    bgcolor: 'background.default',
+                    borderBottomRightRadius:'8px',
+                    overflowY: 'auto'
+                }}> 
+                <Card sx={{m:1, flexShrink: 0}}>
+                    <CardHeader title='Status'/>
+                    <CardContent>
+                        <Typography variant='body2'>ConfigMap: {magnifyData.files.filter(f => f.class==='ConfigMap').length}</Typography>
+                        <Typography variant='body2'>Secret: {magnifyData.files.filter(f => f.class==='Secret').length}</Typography>
+                    </CardContent>
+                </Card>
+                <Card sx={{m:1, flexShrink: 0}}>
+                    <CardHeader title='Validations'/>
+                    <CardContent>
+                        <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{configMap:true, secret:true}}/>
+                    </CardContent>
+                </Card>
+            </Box>
+        );
     }
 
     const showAccessOverview = () => {
-        return <Box width={'100%'} height={'100%'} display={'flex'} flexDirection={'column'} gap={2} p={2} sx={{bgcolor: 'background.default', borderBottomRightRadius:'8px', overflowY: 'auto'}}> 
-            <Card sx={{m:1, flexShrink: 0}}>
-                <CardHeader title='Status'/>
-                <CardContent>
-                    <Typography variant='body2'>Total SA's: {magnifyData.files.filter(f => f.class==='ServiceAccount').length}</Typography>
-                    <Typography variant='body2'>Total Roles: {magnifyData.files.filter(f => f.class==='Role').length}</Typography>
-                    <Typography variant='body2'>Total Cluster Roles: {magnifyData.files.filter(f => f.class==='ClusterRole').length}</Typography>
-                </CardContent>
-            </Card>
-            <Card sx={{m:1, flexShrink: 0}}>
-                <CardHeader title='Validations'/>
-                <CardContent>
-                    <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ role: true, custerRole:true }}/>
-                </CardContent>
-            </Card>
-        </Box>
+        return (
+            <Box
+                sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    p: 2,
+                    bgcolor: 'background.default',
+                    borderBottomRightRadius:'8px',
+                    overflowY: 'auto'
+                }}> 
+                <Card sx={{m:1, flexShrink: 0}}>
+                    <CardHeader title='Status'/>
+                    <CardContent>
+                        <Typography variant='body2'>Total SA's: {magnifyData.files.filter(f => f.class==='ServiceAccount').length}</Typography>
+                        <Typography variant='body2'>Total Roles: {magnifyData.files.filter(f => f.class==='Role').length}</Typography>
+                        <Typography variant='body2'>Total Cluster Roles: {magnifyData.files.filter(f => f.class==='ClusterRole').length}</Typography>
+                    </CardContent>
+                </Card>
+                <Card sx={{m:1, flexShrink: 0}}>
+                    <CardHeader title='Validations'/>
+                    <CardContent>
+                        <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ role: true, custerRole:true }}/>
+                    </CardContent>
+                </Card>
+            </Box>
+        );
     }
 
     const showStorageOverview = () => {
-        return <Box width={'100%'} height={'100%'} display={'flex'} flexDirection={'column'} gap={2} p={2} sx={{bgcolor: 'background.default', borderBottomRightRadius:'8px', overflowY: 'auto'}}> 
-            <Card sx={{m:1, flexShrink: 0}}>
-                <CardHeader title='Status'/>
-                <CardContent>
-                    <Typography variant='body2'>Total PV's: {magnifyData.files.filter(f => f.class==='PersistentVolume').length}</Typography>
-                    <Typography variant='body2'>Total PVC's: {magnifyData.files.filter(f => f.class==='PersistentVolumeClaim').length}</Typography>
-                    <Typography variant='body2'>Total storage: {convertBytesToSize(magnifyData.files.filter(f => f.class==='PersistentVolumeClaim').reduce((ac, v) => ac+v.data.size, 0))}</Typography>
-                </CardContent>
-            </Card>
-            <Card sx={{m:1, flexShrink: 0}}>
-                <CardHeader title='Validations'/>
-                <CardContent>
-                    <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ volumeAttachment: true }}/>
-                </CardContent>
-            </Card>
-        </Box>
+        return (
+            <Box
+                sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    p: 2,
+                    bgcolor: 'background.default',
+                    borderBottomRightRadius:'8px',
+                    overflowY: 'auto'
+                }}> 
+                <Card sx={{m:1, flexShrink: 0}}>
+                    <CardHeader title='Status'/>
+                    <CardContent>
+                        <Typography variant='body2'>Total PV's: {magnifyData.files.filter(f => f.class==='PersistentVolume').length}</Typography>
+                        <Typography variant='body2'>Total PVC's: {magnifyData.files.filter(f => f.class==='PersistentVolumeClaim').length}</Typography>
+                        <Typography variant='body2'>Total storage: {convertBytesToSize(magnifyData.files.filter(f => f.class==='PersistentVolumeClaim').reduce((ac, v) => ac+v.data.size, 0))}</Typography>
+                    </CardContent>
+                </Card>
+                <Card sx={{m:1, flexShrink: 0}}>
+                    <CardHeader title='Validations'/>
+                    <CardContent>
+                        <Validations files={magnifyData.files} onLink={onLink} onNavigate={onNavigate} options={{ volumeAttachment: true }}/>
+                    </CardContent>
+                </Card>
+            </Box>
+        );
     }
 
     const showPreferences = () => {
-        return <Box sx={{bgcolor: 'background.default'}} width={'100%'} height={'100%'} display={'flex'} flexDirection={'column'} gap={2} p={2}> 
-            <UserPreferences preferences={magnifyData.userPreferences} files={magnifyData.files} onDataReload={onUserPreferencesReload} channelObject={channelObject}/>
-        </Box>
+        return (
+            <Box
+                sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    p: 2,
+                    bgcolor: 'background.default'
+                }}> 
+                <UserPreferences preferences={magnifyData.userPreferences} files={magnifyData.files} onDataReload={onUserPreferencesReload} channelObject={channelObject}/>
+            </Box>
+        );
     }
     
     const onUserPreferencesReload = () => {
@@ -402,7 +524,11 @@ const rfmSetup = (
                 let f = magnifyData.files.find(x => p===x.path)
                 if (!f || !f.data?.origin?.status) return <></>
                 let status = f.data.origin?.metadata?.deletionTimestamp? 'Terminating' : f.data.origin?.status.phase
-                return <Typography color={status==='Running'?'green':(status==='Terminating'?'blue':status==='Succeeded'?'gray':(status==='Pending'?'orange':'red'))} fontSize={12}>{status}</Typography>
+                return (
+                    <Typography color={status==='Running'?'green':(status==='Terminating'?'blue':status==='Succeeded'?'gray':(status==='Pending'?'orange':'red'))} sx={{
+                        fontSize: 12
+                    }}>{status}</Typography>
+                );
             }
 
             let spcClassPod = spaces.get('classPod')!
@@ -421,7 +547,9 @@ const rfmSetup = (
                 if (!f.data?.origin?.status?.conditions) return <></>
                 let result:JSX.Element[]=[]
                 for (let cond of f.data.origin.status.conditions) {
-                    if (cond.status==='True') result.push(<Typography key={cond.type} fontSize={12}>{cond.type}</Typography>)
+                    if (cond.status==='True') result.push(<Typography key={cond.type} sx={{
+                        fontSize: 12
+                    }}>{cond.type}</Typography>)
                 }
                 return <Stack direction={'column'}>
                     {result}
@@ -560,9 +688,15 @@ const rfmSetup = (
                     if (elements.length===0) return <></>
 
                     return (
-                        <Stack flexDirection={'row'}>
-                            <Typography width={'13%'} variant='body2'>{text}</Typography>
-                            <Stack flexDirection={'column'}>
+                        <Stack sx={{
+                            flexDirection: 'row'
+                        }}>
+                            <Typography variant='body2' sx={{
+                                width: '13%'
+                            }}>{text}</Typography>
+                            <Stack sx={{
+                                flexDirection: 'column'
+                            }}>
                                 {
                                     elements.map( (el, index) => {
                                         return <Typography variant='body2'><a key={index} href={`#`} onClick={() => onLink(kind, el.metadata.name, el.metadata.namespace)}>{el.metadata.name}</a></Typography>
@@ -570,7 +704,7 @@ const rfmSetup = (
                                 }
                             </Stack>
                         </Stack>
-                    )
+                    );
                 }
                 let item = objNamespace?.find(s => s.name==='content')?.items.find(item => item.name === 'content')
                 if (item) {
@@ -596,13 +730,17 @@ const rfmSetup = (
                 let f = magnifyData.files.find(x => p===x.path)
                 if (!f) return
                 if (!f.data?.origin?.spec?.selector) return <></>
-                return <Stack direction={'column'}>
-                    {
-                        Object.keys(f.data.origin.spec.selector).map( (key,index) =>
-                            <Typography key={index}fontSize={12}>{key}={f?.data.origin.spec.selector[key]}</Typography>
-                        )
-                    }
-                </Stack>
+                return (
+                    <Stack direction={'column'}>
+                        {
+                            Object.keys(f.data.origin.spec.selector).map( (key,index) =>
+                                <Typography key={index}sx={{
+                                    fontSize: 12
+                                }}>{key}={f?.data.origin.spec.selector[key]}</Typography>
+                            )
+                        }
+                    </Stack>
+                );
 
             }
 
@@ -628,14 +766,18 @@ const rfmSetup = (
                 if (!f) return
                 if (!f.data?.origin?.spec?.rules) return <></>
 
-                return <Stack direction={'column'}>
-                    {
-                        f.data.origin.spec.rules.map((rule:any,ruleIndex:number) =>
-                            rule.http.paths.map ( (path:any, pathIndex:number) =>
-                            <Typography key={ruleIndex+'-'+pathIndex} fontSize={12}>http://{rule.host}{path.path}&nbsp;&rarr;&nbsp;{path.backend.service.name}:{path.backend.service.port.number}</Typography>
-                        ))
-                    }
-                </Stack>
+                return (
+                    <Stack direction={'column'}>
+                        {
+                            f.data.origin.spec.rules.map((rule:any,ruleIndex:number) =>
+                                rule.http.paths.map ( (path:any, pathIndex:number) =>
+                                <Typography key={ruleIndex+'-'+pathIndex} sx={{
+                                    fontSize: 12
+                                }}>http://{rule.host}{path.path}&nbsp;&rarr;&nbsp;{path.backend.service.name}:{path.backend.service.port.number}</Typography>
+                            ))
+                        }
+                    </Stack>
+                );
 
             }
 
@@ -836,9 +978,15 @@ const rfmSetup = (
                     item.invoke = (rootObj, obj, onLink:(kind:string, name:string, namespace:string) => void) => {
                         let stgClasses = magnifyData.files.filter(f => f.path.startsWith('/storage/StorageClass/'))
                         return [
-                            <Stack flexDirection={'row'}>
-                                <Typography width={'13%'}>StgClass</Typography>
-                                <Stack flexDirection={'column'}>
+                            <Stack sx={{
+                                flexDirection: 'row'
+                            }}>
+                                <Typography sx={{
+                                    width: '13%'
+                                }}>StgClass</Typography>
+                                <Stack sx={{
+                                    flexDirection: 'column'
+                                }}>
                                     {
                                         stgClasses.map( (i, index) => {
                                             if (i.data.origin.provisioner === rootObj.metadata?.name)
@@ -847,7 +995,7 @@ const rfmSetup = (
                                     }
                                 </Stack>
                             </Stack>
-                        ]
+                        ];
                     }
                 }
             }

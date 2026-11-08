@@ -1,6 +1,6 @@
 import React from 'react'
 import { IconButton, Tooltip } from '@mui/material'
-import HelpOutline from '@mui/icons-material/HelpOutline'
+import HelpOutline from '@mui/icons-material/HelpOutlined'
 
 // A reusable help button for configuration dialogs: it opens the guide (docsify) in a NEW tab at a
 // specific section, deep-linked through hash routing (e.g. …/#/admin/06-sla-settings). `section` may

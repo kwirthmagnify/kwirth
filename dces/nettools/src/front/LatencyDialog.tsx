@@ -66,12 +66,17 @@ const SampleTooltip: React.FC<ITooltipProps> = ({ active, payload }) => {
     return (
         <Box sx={{ bgcolor: 'background.paper', border: `1px solid ${theme.palette.divider}`, borderRadius: 1, px: 1.5, py: 1 }}>
             <Typography variant='body2'>#{sample.seq} · {sample.name}</Typography>
-            <Typography variant='caption' color='text.secondary' display='block'>
+            <Typography
+                variant='caption'
+                sx={{
+                    color: 'text.secondary',
+                    display: 'block'
+                }}>
                 {sample.type} · {sample.records} record(s) · {timeOf(sample.at)}
             </Typography>
             <Typography variant='body2' sx={{ mt: 0.5, fontVariantNumeric: 'tabular-nums' }}>{sample.timeMs} ms</Typography>
         </Box>
-    )
+    );
 }
 
 interface IHeadlineProps {
@@ -81,7 +86,12 @@ interface IHeadlineProps {
 
 const Headline: React.FC<IHeadlineProps> = ({ label, value }) => (
     <Box>
-        <Typography variant='caption' color='text.secondary' display='block'>{label}</Typography>
+        <Typography
+            variant='caption'
+            sx={{
+                color: 'text.secondary',
+                display: 'block'
+            }}>{label}</Typography>
         <Typography variant='h6' sx={{ fontVariantNumeric: 'tabular-nums' }}>{value}</Typography>
     </Box>
 )
@@ -104,7 +114,9 @@ export const createLatencyDialog = (store: ISampleStore): React.FC<ILatencyDialo
         return (
             <Dialog open={open} onClose={onClose} fullWidth maxWidth='md'>
                 <DialogTitle>
-                    <Stack direction='row' alignItems='center' spacing={1}>
+                    <Stack direction='row' spacing={1} sx={{
+                        alignItems: 'center'
+                    }}>
                         <NetToolsIcon fontSize='small' />
                         <span>DNS round trips</span>
                     </Stack>
@@ -117,7 +129,9 @@ export const createLatencyDialog = (store: ISampleStore): React.FC<ILatencyDialo
                     the whole thing grew a scrollbar over a chart that fitted perfectly well.
                 */}
                 <DialogContent sx={{ overflow: 'hidden' }}>
-                    <Typography variant='caption' color='text.secondary'>
+                    <Typography variant='caption' sx={{
+                        color: 'text.secondary'
+                    }}>
                         Every lookup any consumer of the nettools DCE has made on this page, measured by the kwirth
                         process. The history is shared: what another tab resolves shows up here too.
                     </Typography>
@@ -131,9 +145,20 @@ export const createLatencyDialog = (store: ISampleStore): React.FC<ILatencyDialo
                     </Stack>
 
                     {samples.length === 0 &&
-                        <Stack alignItems='center' justifyContent='center' spacing={1} sx={{ height: 300, textAlign: 'center' }}>
-                            <Typography variant='h6' color='text.secondary'>No lookups yet</Typography>
-                            <Typography variant='body2' color='text.secondary'>
+                        <Stack
+                            spacing={1}
+                            sx={{
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                height: 300,
+                                textAlign: 'center'
+                            }}>
+                            <Typography variant='h6' sx={{
+                                color: 'text.secondary'
+                            }}>No lookups yet</Typography>
+                            <Typography variant='body2' sx={{
+                                color: 'text.secondary'
+                            }}>
                                 Resolve a name — here or in any other extension that uses this DCE — and it appears on the chart.
                             </Typography>
                         </Stack>}
@@ -171,7 +196,7 @@ export const createLatencyDialog = (store: ISampleStore): React.FC<ILatencyDialo
                     <Button variant='outlined' onClick={onClose}>CLOSE</Button>
                 </DialogActions>
             </Dialog>
-        )
+        );
     }
     return LatencyDialog
 }

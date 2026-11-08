@@ -174,8 +174,10 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
             MuiDialog: {
                 defaultProps: {
-                    TransitionProps: {
-                        onExit: () => { (document.activeElement as HTMLElement)?.blur() }
+                    slotProps: {
+                        transition: {
+                            onExit: () => { (document.activeElement as HTMLElement)?.blur() }
+                        }
                     }
                 },
                 styleOverrides: {
@@ -987,7 +989,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'))
     }
 
-    const onNotifySnackbarClose = (event?: React.SyntheticEvent | Event, reason?: SnackbarCloseReason) => {
+    const onNotifySnackbarClose = (event: React.SyntheticEvent | Event | null, reason?: SnackbarCloseReason) => {
         if (reason === 'clickaway') return
         setNotifySnackbarOpen(false)
     }
@@ -3055,25 +3057,42 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     <ResourceSelector clusters={clusters} backChannels={backChannels} onAdd={(res) => onResourceSelectorAdd(res, false, undefined)} onChangeCluster={onChangeCluster} sx={{ mt:1, ml:1 }} tabs={tabs.current} data-refresh={channelMessageAction} resourceSelected={resourceSelected} frontChannels={frontChannels} enabledChannels={user?.enabledChannels}/>
                 }
                 
-                <Stack direction={'column'} display={'flex'} flexDirection={'column'} sx={{minHeight:0, height:'100%', flexGrow:1}}>
+                <Stack
+                    direction={'column'}
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        minHeight:0,
+                        height:'100%',
+                        flexGrow:1
+                    }}>
                     { !fullscreenTab && 
-                        <Stack direction={'row'} alignItems={'end'} sx={{borderBottom: 1, borderColor: 'divider', mt:1}}>
+                        <Stack
+                            direction={'row'}
+                            sx={{
+                                alignItems: 'end',
+                                borderBottom: 1,
+                                borderColor: 'divider',
+                                mt:1
+                            }}>
                             <Tabs value={selectedTab.current? false : 0} sx={{minWidth:'100px', minHeight: '48px', height: '48px'}}>
                                 <Tab key={'0'} label={<Home/>} value={0} onClick={onSelectHome}/>
                             </Tabs>
                             { tabs.current.length>0 &&
-                                <Tabs value={selectedTab.current? tabs.current.indexOf(selectedTab.current) : false} onChange={onChangeTab} variant='scrollable' scrollButtons='auto' TabIndicatorProps={{ style: { display: 'none' } }} 
-                                    sx={{
-                                        ml: "-16px",
-                                        minHeight: '48px',
-                                        height: '48px',
-                                        '& .MuiTab-root': {
-                                            minHeight: '48px', height: '48px', paddingTop: 0, paddingBottom: 0, borderRadius: '8px 8px 0 0', backgroundColor: 'background.paper', textTransform: 'none', paddingLeft: '12px',
-                                        },
-                                        '& .MuiTab-root .MuiTouchRipple-root': {
-                                            borderTopLeftRadius: '8px',
-                                            borderTopRightRadius: '8px'
-                                        }
+                                <Tabs value={selectedTab.current? tabs.current.indexOf(selectedTab.current) : false} onChange={onChangeTab} variant='scrollable' scrollButtons='auto' sx={{
+                                    ml: "-16px",
+                                    minHeight: '48px',
+                                    height: '48px',
+                                    '& .MuiTab-root': {
+                                        minHeight: '48px', height: '48px', paddingTop: 0, paddingBottom: 0, borderRadius: '8px 8px 0 0', backgroundColor: 'background.paper', textTransform: 'none', paddingLeft: '12px',
+                                    },
+                                    '& .MuiTab-root .MuiTouchRipple-root': {
+                                        borderTopLeftRadius: '8px',
+                                        borderTopRightRadius: '8px'
+                                    }
+                                }} 
+                                    slotProps={{
+                                        indicator: { style: { display: 'none' } }
                                     }}
                                 >
                                     {   tabs.current.map((tab:ITabObject, index) => {
@@ -3248,7 +3267,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 { showAbout && <About onClose={() => setShowAbout(false)}/>}
             </SessionContext.Provider>
         </ThemeProvider>
-    )
+    );
 }
 
 export default App

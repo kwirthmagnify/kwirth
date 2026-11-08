@@ -66,12 +66,25 @@ const FormSimple: React.FC<IFormSimpleProps> = (props: IFormSimpleProps) => {
             anchorEl={props.anchorParent} 
             onClose={props.onClose}
         >
-            <Stack direction={'column'} width={'460px'} p={2} spacing={1.5}>
+            <Stack
+                direction={'column'}
+                spacing={1.5}
+                sx={{
+                    width: '460px',
+                    p: 2
+                }}>
                 {Object.keys(formData).map((key, index) => {
                     const value = formData[key]
 
                     return (
-                        <Stack key={index} direction={'row'} alignItems={'center'} justifyContent={'space-between'} spacing={2}>
+                        <Stack
+                            key={index}
+                            direction={'row'}
+                            spacing={2}
+                            sx={{
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                            }}>
                             <Typography variant='body2' sx={{ fontWeight: 'bold', textTransform: 'capitalize' }}>
                                 {key}:
                             </Typography>
@@ -122,44 +135,46 @@ const FormSimple: React.FC<IFormSimpleProps> = (props: IFormSimpleProps) => {
 
                             {/* Objeto con texto asíncrono -> Typography */}
                             {value && typeof value === 'object' && value.text && (
-                                <Typography variant='body2' color='text.secondary'>
+                                <Typography variant='body2' sx={{
+                                    color: 'text.secondary'
+                                }}>
                                     {asyncResults[key] !== undefined ? asyncResults[key] : '...'}
                                 </Typography>
                             )}
-                        {/* Array con available+value -> checklist con filtro */}
-                        {value && typeof value === 'object' && Array.isArray(value.available) && Array.isArray(value.value) && (
-                            <Stack spacing={0.5} sx={{ width: '100%', mt: 0.5 }}>
-                                {value.available.length > 8 && (
-                                    <TextField
-                                        size='small'
-                                        variant='outlined'
-                                        placeholder='Filter...'
-                                        value={filterTexts[key] ?? ''}
-                                        onChange={e => setFilterTexts(prev => ({ ...prev, [key]: e.target.value }))}
-                                        slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }}
-                                    />
-                                )}
-                                <List dense disablePadding sx={{ maxHeight: 200, overflowY: 'auto', width: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                                    {value.available
-                                        .filter((item: string) => !filterTexts[key] || item.toLowerCase().includes(filterTexts[key].toLowerCase()))
-                                        .map((item: string, i: number) => (
-                                        <ListItem key={i} disablePadding sx={{ px: 1 }}>
-                                            <FormControlLabel
-                                                control={<Checkbox size='small' checked={value.value.includes(item)} onChange={(e) => {
-                                                    const next = e.target.checked
-                                                        ? [...value.value, item]
-                                                        : value.value.filter((v: string) => v !== item)
-                                                    handleObjectValueChange(key, 'value', next)
-                                                }}/>}
-                                                label={<Typography variant='caption'>{item}</Typography>}
-                                            />
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            </Stack>
-                        )}
+                            {/* Array con available+value -> checklist con filtro */}
+                            {value && typeof value === 'object' && Array.isArray(value.available) && Array.isArray(value.value) && (
+                                <Stack spacing={0.5} sx={{ width: '100%', mt: 0.5 }}>
+                                    {value.available.length > 8 && (
+                                        <TextField
+                                            size='small'
+                                            variant='outlined'
+                                            placeholder='Filter...'
+                                            value={filterTexts[key] ?? ''}
+                                            onChange={e => setFilterTexts(prev => ({ ...prev, [key]: e.target.value }))}
+                                            slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }}
+                                        />
+                                    )}
+                                    <List dense disablePadding sx={{ maxHeight: 200, overflowY: 'auto', width: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                                        {value.available
+                                            .filter((item: string) => !filterTexts[key] || item.toLowerCase().includes(filterTexts[key].toLowerCase()))
+                                            .map((item: string, i: number) => (
+                                            <ListItem key={i} disablePadding sx={{ px: 1 }}>
+                                                <FormControlLabel
+                                                    control={<Checkbox size='small' checked={value.value.includes(item)} onChange={(e) => {
+                                                        const next = e.target.checked
+                                                            ? [...value.value, item]
+                                                            : value.value.filter((v: string) => v !== item)
+                                                        handleObjectValueChange(key, 'value', next)
+                                                    }}/>}
+                                                    label={<Typography variant='caption'>{item}</Typography>}
+                                                />
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                </Stack>
+                            )}
                         </Stack>
-                    )
+                    );
                 })}
             </Stack>
 
@@ -168,7 +183,7 @@ const FormSimple: React.FC<IFormSimpleProps> = (props: IFormSimpleProps) => {
                 <Button onClick={apply} variant='contained' color='primary'>Apply</Button>
             </DialogActions>
         </Menu>
-    )
+    );
 }
 
 export { FormSimple }

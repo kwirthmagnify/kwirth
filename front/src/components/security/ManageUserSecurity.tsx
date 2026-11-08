@@ -257,92 +257,104 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         }
     }
 
-    return (<>
-        <Dialog open={true} maxWidth={false} disableEnforceFocus PaperProps={{ sx: { width: 1080 } }}>
-            <DialogTitleHelp section='guide/admin/03-user-management?id=user-fields' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>User management</DialogTitleHelp>
-            <DialogContent>
-                <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
-                    {/* The dialog takes the size of its content, and the content has a fixed shape. The editor
-                        on the right sets the height; the left column only stretches to it: the list scrolls
-                        inside (flex-basis 0, so it never pushes) and the request's detail has a slot of its
-                        own at the foot, reserved even when empty. Selecting anything moves nothing. */}
-                    <Stack sx={{ mr: 3, width: '30vh', flexShrink: 0 }}>
-                    <List sx={{ flex: '1 1 0', overflowY: 'auto', minHeight: 0 }}>
-                        { users?.map(u =>
-                        <ListItemButton key={u} selected={u===selectedUser?.id} onClick={() => onClickUser(u)}>
-                            <ListItem>{u}</ListItem>
-                        </ListItemButton>
-                        )}
-                        { signups.length > 0 && <>
-                            <ListSubheader disableSticky data-testid='signup-requests-header'>
-                                Access requests ({signups.filter(r => r.status === ESignupStatus.PENDING).length} pending)
-                            </ListSubheader>
-                            { signups.map(r =>
-                            <ListItemButton key={`signup-${r.id}`} selected={r.id===selectedSignup?.id} onClick={() => onClickSignup(r)} data-testid={`signup-request-${r.id}`}>
-                                <ListItem sx={{ gap: 1 }}>
-                                    <Typography noWrap sx={{ flexGrow: 1, minWidth: 0 }}>{r.id}</Typography>
-                                    <Chip size='small' variant='outlined' label={r.status} color={r.status === ESignupStatus.PENDING ? 'warning' : 'default'} />
-                                </ListItem>
+    return (
+        <>
+            <Dialog open={true} maxWidth={false} disableEnforceFocus slotProps={{
+                paper: { sx: { width: 1080 } }
+            }}>
+                <DialogTitleHelp section='guide/admin/03-user-management?id=user-fields' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>User management</DialogTitleHelp>
+                <DialogContent>
+                    <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
+                        {/* The dialog takes the size of its content, and the content has a fixed shape. The editor
+                            on the right sets the height; the left column only stretches to it: the list scrolls
+                            inside (flex-basis 0, so it never pushes) and the request's detail has a slot of its
+                            own at the foot, reserved even when empty. Selecting anything moves nothing. */}
+                        <Stack sx={{ mr: 3, width: '30vh', flexShrink: 0 }}>
+                        <List sx={{ flex: '1 1 0', overflowY: 'auto', minHeight: 0 }}>
+                            { users?.map(u =>
+                            <ListItemButton key={u} selected={u===selectedUser?.id} onClick={() => onClickUser(u)}>
+                                <ListItem>{u}</ListItem>
                             </ListItemButton>
                             )}
-                        </>}
-                    </List>
-                    <Box sx={{ height: 110, mt: 1, flexShrink: 0, overflowY: 'auto' }}>
-                    { selectedSignup &&
-                        <Alert severity={selectedSignup.status === ESignupStatus.PENDING ? 'info' : 'warning'} variant='outlined' data-testid='signup-request-detail'
-                            sx={{ py: 0, px: 1, fontSize: '0.75rem', '& .MuiAlert-icon': { fontSize: 18, mr: 1 } }}>
-                            {selectedSignup.status === ESignupStatus.PENDING
-                                ? 'Access request: give it resources and approve it, or reject it.'
-                                : 'Rejected. Delete it to let them ask again, or approve it anyway.'}
-                            <br/>{`Requested ${new Date(selectedSignup.requestedAt).toLocaleString()}`}
-                            { selectedSignup.comment && <><br/><i>"{selectedSignup.comment}"</i></> }
-                        </Alert>
-                    }
-                    </Box>
-                    </Stack>
-
-                    <Stack spacing={1} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
-                        <Stack spacing={1} direction='row'>
-                            <TextField value={id} onChange={(e) => setId(e.target.value)} variant='standard' fullWidth label={idp!=='' ? 'Id (email)' : 'Id'} disabled={selectedSignup !== undefined} />
-                            <TextField value={name} onChange={(e) => setName(e.target.value)} variant='standard' fullWidth label='Name' disabled={selectedSignup !== undefined} />
-                            <TextField value={password} onChange={(e) => setPassword(e.target.value)} type='password' variant='standard' fullWidth label='Password' disabled={idp!==''} placeholder={selectedUser !== undefined ? 'Leave blank to keep current' : ''} />
-                            <FormControl variant='standard' fullWidth disabled={selectedSignup !== undefined}>
-                                <InputLabel>IdP</InputLabel>
-                                <Select value={idp} label='IdP' onChange={(e) => setIdp(e.target.value)}>
-                                    <MenuItem value=''>Local (user/password)</MenuItem>
-                                    { idps.map(i => <MenuItem key={i.id} value={i.id}>{i.label || i.id}</MenuItem>) }
-                                </Select>
-                            </FormControl>
-                        </Stack>
-                        <Stack direction='row' spacing={2} alignItems='center'>
-                            <TextField value={startChannel} onChange={(e) => setStartChannel(e.target.value)} variant='standard' label='Auto-start channel' placeholder='e.g. magnify' sx={{ width: '30%' }} />
-                            <TextField value={enabledChannels} onChange={(e) => setEnabledChannels(e.target.value)} variant='standard' label='Enabled channels' placeholder='e.g. magnify,ops (empty = all)' sx={{ width: '30%' }} />
-                            <FormControlLabel control={<Checkbox checked={exitFullScreen} onChange={(e) => setExitFullScreen(e.target.checked)} />} label='Can exit fullscreen' />
+                            { signups.length > 0 && <>
+                                <ListSubheader disableSticky data-testid='signup-requests-header'>
+                                    Access requests ({signups.filter(r => r.status === ESignupStatus.PENDING).length} pending)
+                                </ListSubheader>
+                                { signups.map(r =>
+                                <ListItemButton key={`signup-${r.id}`} selected={r.id===selectedSignup?.id} onClick={() => onClickSignup(r)} data-testid={`signup-request-${r.id}`}>
+                                    <ListItem sx={{ gap: 1 }}>
+                                        <Typography noWrap sx={{ flexGrow: 1, minWidth: 0 }}>{r.id}</Typography>
+                                        <Chip size='small' variant='outlined' label={r.status} color={r.status === ESignupStatus.PENDING ? 'warning' : 'default'} />
+                                    </ListItem>
+                                </ListItemButton>
+                                )}
+                            </>}
+                        </List>
+                        <Box sx={{ height: 110, mt: 1, flexShrink: 0, overflowY: 'auto' }}>
+                        { selectedSignup &&
+                            <Alert severity={selectedSignup.status === ESignupStatus.PENDING ? 'info' : 'warning'} variant='outlined' data-testid='signup-request-detail'
+                                sx={{ py: 0, px: 1, fontSize: '0.75rem', '& .MuiAlert-icon': { fontSize: 18, mr: 1 } }}>
+                                {selectedSignup.status === ESignupStatus.PENDING
+                                    ? 'Access request: give it resources and approve it, or reject it.'
+                                    : 'Rejected. Delete it to let them ask again, or approve it anyway.'}
+                                <br/>{`Requested ${new Date(selectedSignup.requestedAt).toLocaleString()}`}
+                                { selectedSignup.comment && <><br/><i>"{selectedSignup.comment}"</i></> }
+                            </Alert>
+                        }
+                        </Box>
                         </Stack>
 
-                        <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)} scopeCatalog={scopeCatalog}/>
+                        <Stack spacing={1} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
+                            <Stack spacing={1} direction='row'>
+                                <TextField value={id} onChange={(e) => setId(e.target.value)} variant='standard' fullWidth label={idp!=='' ? 'Id (email)' : 'Id'} disabled={selectedSignup !== undefined} />
+                                <TextField value={name} onChange={(e) => setName(e.target.value)} variant='standard' fullWidth label='Name' disabled={selectedSignup !== undefined} />
+                                <TextField value={password} onChange={(e) => setPassword(e.target.value)} type='password' variant='standard' fullWidth label='Password' disabled={idp!==''} placeholder={selectedUser !== undefined ? 'Leave blank to keep current' : ''} />
+                                <FormControl variant='standard' fullWidth disabled={selectedSignup !== undefined}>
+                                    <InputLabel>IdP</InputLabel>
+                                    <Select value={idp} label='IdP' onChange={(e) => setIdp(e.target.value)}>
+                                        <MenuItem value=''>Local (user/password)</MenuItem>
+                                        { idps.map(i => <MenuItem key={i.id} value={i.id}>{i.label || i.id}</MenuItem>) }
+                                    </Select>
+                                </FormControl>
+                            </Stack>
+                            <Stack direction='row' spacing={2} sx={{
+                                alignItems: 'center'
+                            }}>
+                                <TextField value={startChannel} onChange={(e) => setStartChannel(e.target.value)} variant='standard' label='Auto-start channel' placeholder='e.g. magnify' sx={{ width: '30%' }} />
+                                <TextField value={enabledChannels} onChange={(e) => setEnabledChannels(e.target.value)} variant='standard' label='Enabled channels' placeholder='e.g. magnify,ops (empty = all)' sx={{ width: '30%' }} />
+                                <FormControlLabel control={<Checkbox checked={exitFullScreen} onChange={(e) => setExitFullScreen(e.target.checked)} />} label='Can exit fullscreen' />
+                            </Stack>
+
+                            <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)} scopeCatalog={scopeCatalog}/>
+                        </Stack>
                     </Stack>
-                </Stack>
-            </DialogContent>
-            <DialogActions>
-                {/* Every button is always there, in the same place: what is selected only enables or
-                    disables them. The user ones act on a user; the request ones on an access request. */}
-                <Stack direction='row' spacing={1} alignItems='center' sx={{ '& .MuiButton-root': { whiteSpace: 'nowrap' } }}>
-                    <Button variant='outlined' size='small' onClick={onClickNew}>New</Button>
-                    <Button variant='outlined' size='small' onClick={onClickSave} disabled={selectedSignup !== undefined || id==='' || (idp==='' && password==='' && selectedUser===undefined)}>Save</Button>
-                    <Button variant='outlined' size='small' onClick={onClickCopyPassword} disabled={selectedSignup !== undefined || password===''}>Copy password</Button>
-                    <Button variant='outlined' size='small' onClick={onClickDelete} disabled={selectedUser === undefined || id==='admin'}>Delete</Button>
-                    <Divider orientation='vertical' flexItem />
-                    <Button variant='outlined' size='small' onClick={onClickApprove} disabled={selectedSignup === undefined || allResources.length === 0}>Approve</Button>
-                    <Button variant='outlined' size='small' onClick={onClickReject} disabled={selectedSignup?.status !== ESignupStatus.PENDING}>Reject</Button>
-                    <Button variant='outlined' size='small' onClick={onClickDeleteSignup} disabled={selectedSignup === undefined}>Delete request</Button>
-                </Stack>
-                <Typography sx={{ flexGrow: 1 }} />
-                <Button variant='outlined' size='small' onClick={() => props.onClose()}>Close</Button>
-            </DialogActions>
-        </Dialog>
-        {msgBox}
-    </>)
+                </DialogContent>
+                <DialogActions>
+                    {/* Every button is always there, in the same place: what is selected only enables or
+                        disables them. The user ones act on a user; the request ones on an access request. */}
+                    <Stack
+                        direction='row'
+                        spacing={1}
+                        sx={{
+                            alignItems: 'center',
+                            '& .MuiButton-root': { whiteSpace: 'nowrap' }
+                        }}>
+                        <Button variant='outlined' size='small' onClick={onClickNew}>New</Button>
+                        <Button variant='outlined' size='small' onClick={onClickSave} disabled={selectedSignup !== undefined || id==='' || (idp==='' && password==='' && selectedUser===undefined)}>Save</Button>
+                        <Button variant='outlined' size='small' onClick={onClickCopyPassword} disabled={selectedSignup !== undefined || password===''}>Copy password</Button>
+                        <Button variant='outlined' size='small' onClick={onClickDelete} disabled={selectedUser === undefined || id==='admin'}>Delete</Button>
+                        <Divider orientation='vertical' flexItem />
+                        <Button variant='outlined' size='small' onClick={onClickApprove} disabled={selectedSignup === undefined || allResources.length === 0}>Approve</Button>
+                        <Button variant='outlined' size='small' onClick={onClickReject} disabled={selectedSignup?.status !== ESignupStatus.PENDING}>Reject</Button>
+                        <Button variant='outlined' size='small' onClick={onClickDeleteSignup} disabled={selectedSignup === undefined}>Delete request</Button>
+                    </Stack>
+                    <Typography sx={{ flexGrow: 1 }} />
+                    <Button variant='outlined' size='small' onClick={() => props.onClose()}>Close</Button>
+                </DialogActions>
+            </Dialog>
+            {msgBox}
+        </>
+    );
 }
 
 export { ManageUserSecurity }

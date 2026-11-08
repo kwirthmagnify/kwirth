@@ -114,23 +114,36 @@ const ArtifactSearch: React.FC<IArtifactSearchProps> = (props:IArtifactSearchPro
     return (
         <ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
             <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move', py: 1 }} id='draggable-dialog-title'>
-                <Stack direction='row' alignItems='center'>
+                <Stack direction='row' sx={{
+                    alignItems: 'center'
+                }}>
                     <Search fontSize='small' sx={{ color: 'text.secondary', mr: 1 }} />
-                    <Typography variant='body2' fontWeight={500} flex={1}>Search — {artifactSearchData.scope===':cluster:'?'All cluster':'Namespace: '+artifactSearchData.scope}</Typography>
+                    <Typography
+                        variant='body2'
+                        sx={{
+                            fontWeight: 500,
+                            flex: 1
+                        }}>Search — {artifactSearchData.scope===':cluster:'?'All cluster':'Namespace: '+artifactSearchData.scope}</Typography>
                     <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={() => props.onClose(props.id)} onSnap={handleSnap} />
                 </Stack>
             </DialogTitle>
 
             <DialogContent>
-                <Stack direction={'row'} alignItems={'center'}>
+                <Stack direction={'row'} sx={{
+                    alignItems: 'center'
+                }}>
                     <TextField value={searchText} onChange={onSearchChange} variant='standard' label={'Search...'}></TextField>
                     <FormControlLabel control={<Checkbox/>} checked={includeStatus} onChange={onIncludeStatusChange} label='Include status'/>
                     <FormControlLabel control={<Checkbox/>} checked={matchCase} onChange={onMatchCaseChange} label='Match case'/>
                     <FormControlLabel control={<Checkbox/>} checked={merge} onChange={onMergeChange} label='Merge repeated results'/>
-                    <Typography flexGrow={1}></Typography>
+                    <Typography sx={{
+                        flexGrow: 1
+                    }}></Typography>
                     {searchText.trim()!=='' && (searchText.length>=3) && <Typography>Results: {artifactSearchData.selectedFiles.reduce( (acc,file) => acc + getResults(file.data?.origin, searchText, includeStatus, matchCase, merge).length, 0)}</Typography>}
                 </Stack>
-                <Stack direction={'column'} mt={1}>
+                <Stack direction={'column'} sx={{
+                    mt: 1
+                }}>
                     {
                         searchText.trim()!=='' && (searchText.length>=3) && artifactSearchData.selectedFiles.map((file) => {
                             let res = getResults(file.data?.origin, searchText, includeStatus, matchCase, merge)
@@ -141,20 +154,29 @@ const ArtifactSearch: React.FC<IArtifactSearchProps> = (props:IArtifactSearchPro
                                     link = <Typography variant='body2'><a href={`#`} onClick={() => artifactSearchData.onLink(file.data.origin.kind, file.data.origin.metadata.name, file.data.origin.metadata.namespace)}>{file.data.origin.metadata.name}</a></Typography>
                                 else
                                     link = <Typography variant='body2'><a href={`#`} onClick={() => artifactSearchData.onLink(file.data.origin.kind, file.data.origin.name, '')}>{file.data.origin.name}</a></Typography>
-                                return <Stack key={index} direction={'row'} sx={{mb:2, ml:1}} alignItems={'center'}>
-                                    {getIconFromKind(file.data?.origin?.kind, 32)}
-                                    <Stack direction={'column'} sx={{ml:2}}>
-                                        {link}
-                                        <Typography variant='body2'>{r}</Typography>
-                                        <Typography variant='body2'>{String(val).substring(0,80)}{String(val).length>80?'...':''}</Typography>
+                                return (
+                                    <Stack
+                                        key={index}
+                                        direction={'row'}
+                                        sx={{
+                                            alignItems: 'center',
+                                            mb:2,
+                                            ml:1
+                                        }}>
+                                        {getIconFromKind(file.data?.origin?.kind, 32)}
+                                        <Stack direction={'column'} sx={{ml:2}}>
+                                            {link}
+                                            <Typography variant='body2'>{r}</Typography>
+                                            <Typography variant='body2'>{String(val).substring(0,80)}{String(val).length>80?'...':''}</Typography>
+                                        </Stack>
                                     </Stack>
-                                </Stack>
-                            })
+                                );
+                            });
                         })
                     }
                 </Stack>
             </DialogContent>
         </ResizableDialog>
-    )
+    );
 }
 export { ArtifactSearch }

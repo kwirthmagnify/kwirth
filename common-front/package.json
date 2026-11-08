@@ -1,6 +1,6 @@
 {
   "name": "@kwirthmagnify/kwirth-common-front",
-  "version": "0.5.69",
+  "version": "0.5.70",
   "description": "Frontend channel interfaces for Kwirth plugins and channels",
   "scripts": {
     "build": "del .\\dist\\* /s /q && tsc"
@@ -23,17 +23,18 @@
     "remark-gfm": "^4.0.1"
   },
   "peerDependencies": {
-    "@mui/icons-material": ">=5.0.0",
-    "@mui/material": ">=5.0.0",
+    "@mui/icons-material": "^9.0.0",
+    "@mui/material": "^9.0.0",
     "react": ">=18.0.0"
   },
   "devDependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^7.3.11",
-    "@mui/material": "^7.3.11",
+    "@mui/icons-material": "^9.5.0",
+    "@mui/material": "^9.5.0",
     "@types/react": "^18.3.0",
     "react": "^18.3.0",
+    "react-dom": "^18.3.0",
     "typescript": "^5.8.3"
   },
   "exports": {

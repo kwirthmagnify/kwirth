@@ -49,14 +49,21 @@ export const TopologySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     )
 
     return (
-        <Dialog open={true} PaperProps={{ sx: { width: 680, height: 490 } }}>
+        <Dialog open={true} slotProps={{
+            paper: { sx: { width: 680, height: 490 } }
+        }}>
             <DialogTitle>Configure topology view</DialogTitle>
             <DialogContent sx={{ overflow: 'hidden', px: 3, pt: 1, display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ display: 'flex', flexDirection: 'row', flex: 1, gap: 2 }}>
 
                     {/* Left column: Resources */}
                     <Stack spacing={1} sx={{ pt: 1, pb: 2, flex: 1, alignSelf: 'flex-start' }}>
-                        <Typography variant='body2' color='text.secondary' sx={{ fontWeight: 500 }}>Resources</Typography>
+                        <Typography
+                            variant='body2'
+                            sx={{
+                                color: 'text.secondary',
+                                fontWeight: 500
+                            }}>Resources</Typography>
                         <FormGroup sx={{ flexDirection: 'row', pb: 1 }}>
                             <FormControlLabel control={<Checkbox size='small' checked={showIngresses}    onChange={e => setShowIngresses(e.target.checked)}    />} label='Ingresses'    sx={{ width: '50%' }} />
                             <FormControlLabel control={<Checkbox size='small' checked={showServices}     onChange={e => setShowServices(e.target.checked)}     />} label='Services'     sx={{ width: '50%' }} />
@@ -74,7 +81,12 @@ export const TopologySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
 
                     {/* Right column: Display options */}
                     <Stack spacing={2} sx={{ pt: 1, flex: 1, alignSelf: 'flex-start' }}>
-                        <Typography variant='body2' color='text.secondary' sx={{ fontWeight: 500 }}>Display options</Typography>
+                        <Typography
+                            variant='body2'
+                            sx={{
+                                color: 'text.secondary',
+                                fontWeight: 500
+                            }}>Display options</Typography>
                         <FormControlLabel
                             control={<Checkbox size='small' checked={showOnlyRunning} onChange={e => setShowOnlyRunning(e.target.checked)} />}
                             label='Only running'
@@ -111,5 +123,5 @@ export const TopologySetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                 </Box>
             </DialogActions>
         </Dialog>
-    )
+    );
 }

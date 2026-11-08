@@ -23,9 +23,24 @@ const StatusLight: React.FC<{ color: string; active?: boolean; label: string }> 
 
 const MetricBar: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => (
     <Box sx={{ minWidth: 72 }}>
-        <Stack direction='row' justifyContent='space-between' alignItems='center'>
-            <Typography variant='caption' color='text.secondary' sx={{ fontSize: '0.65rem' }}>{label}</Typography>
-            <Typography variant='caption' fontWeight='bold' sx={{ fontSize: '0.65rem' }}>{Math.round(value)}%</Typography>
+        <Stack
+            direction='row'
+            sx={{
+                justifyContent: 'space-between',
+                alignItems: 'center'
+            }}>
+            <Typography
+                variant='caption'
+                sx={{
+                    color: 'text.secondary',
+                    fontSize: '0.65rem'
+                }}>{label}</Typography>
+            <Typography
+                variant='caption'
+                sx={{
+                    fontWeight: 'bold',
+                    fontSize: '0.65rem'
+                }}>{Math.round(value)}%</Typography>
         </Stack>
         <LinearProgress variant='determinate' value={Math.min(Math.max(value, 0), 100)}
             sx={{ height: 4, borderRadius: 2, bgcolor: 'action.hover', '& .MuiLinearProgress-bar': { bgcolor: color, borderRadius: 2 } }} />
@@ -34,8 +49,18 @@ const MetricBar: React.FC<{ label: string; value: number; color: string }> = ({ 
 
 const MetricPlaceholder: React.FC<{ label: string }> = ({ label }) => (
     <Box sx={{ minWidth: 72 }}>
-        <Stack direction='row' justifyContent='space-between' alignItems='center'>
-            <Typography variant='caption' color='text.disabled' sx={{ fontSize: '0.65rem' }}>{label}</Typography>
+        <Stack
+            direction='row'
+            sx={{
+                justifyContent: 'space-between',
+                alignItems: 'center'
+            }}>
+            <Typography
+                variant='caption'
+                sx={{
+                    color: 'text.disabled',
+                    fontSize: '0.65rem'
+                }}>{label}</Typography>
             <Typography variant='caption' sx={{ fontSize: '0.65rem' }}>&nbsp;</Typography>
         </Stack>
         <Box sx={{ height: 4, borderRadius: 2, bgcolor: 'action.hover' }} />
@@ -101,21 +126,35 @@ const Clusterized: React.FC<IHomepageProps> = (props) => {
                 return (
                     <Card key={cluster.name} variant='outlined'>
                         <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                            <Stack direction='row' alignItems='center' spacing={2}>
+                            <Stack direction='row' spacing={2} sx={{
+                                alignItems: 'center'
+                            }}>
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
                                     <Typography variant='h6' sx={{ lineHeight: 1.3 }}>{cluster.name}</Typography>
-                                    <Typography variant='caption' color='text.secondary' sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                                    <Typography
+                                        variant='caption'
+                                        sx={{
+                                            color: 'text.secondary',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            display: 'block'
+                                        }}>
                                         {cluster.url}
                                     </Typography>
                                 </Box>
                                 {needsMetrics && (
-                                    <Stack direction='row' spacing={1.5} alignItems='center'>
+                                    <Stack direction='row' spacing={1.5} sx={{
+                                        alignItems: 'center'
+                                    }}>
                                         {showCpu && (m ? <MetricBar label='CPU' value={m.cpu} color='#2196f3' /> : <MetricPlaceholder label='CPU' />)}
                                         {showMem && (m ? <MetricBar label='MEM' value={m.memory} color='#9c27b0' /> : <MetricPlaceholder label='MEM' />)}
                                         {showPods && (m && m.maxPods > 0 ? <MetricBar label='Pods' value={(m.pods / m.maxPods) * 100} color='#ff9800' /> : <MetricPlaceholder label='Pods' />)}
                                     </Stack>
                                 )}
-                                <Stack direction='row' spacing={0.75} alignItems='center'>
+                                <Stack direction='row' spacing={0.75} sx={{
+                                    alignItems: 'center'
+                                }}>
                                     <StatusLight color='#4caf50' label='Healthy' />
                                     <StatusLight color='#ff9800' label='Warning' />
                                     <StatusLight color='#f44336' label='Critical' />
@@ -131,17 +170,22 @@ const Clusterized: React.FC<IHomepageProps> = (props) => {
                             </Stack>
                         </CardContent>
                     </Card>
-                )
+                );
             })}
             {props.clusters.length === 0 && (
-                <Typography variant='body2' color='text.secondary' sx={{ p: 2 }}>
+                <Typography
+                    variant='body2'
+                    sx={{
+                        color: 'text.secondary',
+                        p: 2
+                    }}>
                     No clusters defined. Add a cluster to get started.
                 </Typography>
             )}
             </Box>
             {showSetup && <ClusterizedSetup config={localConfig} onSave={saveConfig} onClose={() => setShowSetup(false)} />}
         </Box>
-    )
+    );
 }
 
 export { Clusterized }

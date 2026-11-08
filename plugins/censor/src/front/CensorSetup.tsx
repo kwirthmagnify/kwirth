@@ -23,19 +23,27 @@ const CensorSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
     }
 
     return (
-        <Dialog open={true} PaperProps={{ sx: { width: 360, height: 220 } }}>
+        <Dialog open={true} slotProps={{
+            paper: { sx: { width: 360, height: 220 } }
+        }}>
             <DialogTitle>Censor</DialogTitle>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1, overflow: 'hidden' }}>
-                <Typography variant='body2' color='text.secondary'>
+                <Typography variant='body2' sx={{
+                    color: 'text.secondary'
+                }}>
                     Configure visible line limits.
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <TextField size='small' label='LLM input lines' type='number' inputProps={{ min: 1 }} sx={{ flex: 1 }}
-                        value={maxLlmInputLines}
-                        onChange={e => setMaxLlmInputLines(posInt(e.target.value, 100))} />
-                    <TextField size='small' label='LLM output lines' type='number' inputProps={{ min: 1 }} sx={{ flex: 1 }}
-                        value={maxLlmOutputLines}
-                        onChange={e => setMaxLlmOutputLines(posInt(e.target.value, 100))} />
+                    <TextField size='small' label='LLM input lines' type='number' sx={{ flex: 1 }} value={maxLlmInputLines}
+                        onChange={e => setMaxLlmInputLines(posInt(e.target.value, 100))}
+                        slotProps={{
+                            htmlInput: { min: 1 }
+                        }} />
+                    <TextField size='small' label='LLM output lines' type='number' sx={{ flex: 1 }} value={maxLlmOutputLines}
+                        onChange={e => setMaxLlmOutputLines(posInt(e.target.value, 100))}
+                        slotProps={{
+                            htmlInput: { min: 1 }
+                        }} />
                 </Box>
             </DialogContent>
             <DialogActions>
@@ -43,7 +51,7 @@ const CensorSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                 <Button onClick={handleStart} variant='contained'>Start</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { CensorSetup, CensorIcon }

@@ -241,24 +241,61 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
                 {/* content area: fields then IdP — same order as Login.tsx */}
                 <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column' }}>
                     {!changingPassword && hasPassword && <>
-                        <TextField label={config.userLabel ?? 'User'} value={userName} onChange={e => setUserName(e.target.value)}
-                            variant='standard' size='small' autoFocus disabled={busy}
+                        <TextField
+                            label={config.userLabel ?? 'User'}
+                            value={userName}
+                            onChange={e => setUserName(e.target.value)}
+                            variant='standard'
+                            size='small'
+                            autoFocus
+                            disabled={busy}
                             onKeyDown={e => { if (e.key === 'Enter' && canSubmit) doLogin() }}
-                            InputLabelProps={{ style: { color: textColor } }} inputProps={{ style: { color: textColor } }} />
-                        <TextField label={config.passwordLabel ?? 'Password'} value={password} type='password' onChange={e => setPassword(e.target.value)}
-                            variant='standard' size='small' disabled={busy}
+                            slotProps={{
+                                htmlInput: { style: { color: textColor } },
+                                inputLabel: { style: { color: textColor } }
+                            }} />
+                        <TextField
+                            label={config.passwordLabel ?? 'Password'}
+                            value={password}
+                            type='password'
+                            onChange={e => setPassword(e.target.value)}
+                            variant='standard'
+                            size='small'
+                            disabled={busy}
                             onKeyDown={e => { if (e.key === 'Enter' && canSubmit) doLogin() }}
-                            InputLabelProps={{ style: { color: textColor } }} inputProps={{ style: { color: textColor } }} />
+                            slotProps={{
+                                htmlInput: { style: { color: textColor } },
+                                inputLabel: { style: { color: textColor } }
+                            }} />
                     </>}
 
                     {changingPassword && <>
                         <Typography variant='body2' sx={{ color: textColor }}>{config.changePasswordMessage ?? 'Your login has been successful, you can now change your password.'}</Typography>
-                        <TextField label={config.newPasswordLabel ?? 'New password'} value={newPassword1} type='password'
-                            onChange={e => setNewPassword1(e.target.value)} variant='standard' size='small' autoFocus disabled={busy}
-                            InputLabelProps={{ style: { color: textColor } }} inputProps={{ style: { color: textColor } }} />
-                        <TextField label={config.repeatPasswordLabel ?? 'Repeat new password'} value={newPassword2} type='password'
-                            onChange={e => setNewPassword2(e.target.value)} variant='standard' size='small' disabled={busy}
-                            InputLabelProps={{ style: { color: textColor } }} inputProps={{ style: { color: textColor } }} />
+                        <TextField
+                            label={config.newPasswordLabel ?? 'New password'}
+                            value={newPassword1}
+                            type='password'
+                            onChange={e => setNewPassword1(e.target.value)}
+                            variant='standard'
+                            size='small'
+                            autoFocus
+                            disabled={busy}
+                            slotProps={{
+                                htmlInput: { style: { color: textColor } },
+                                inputLabel: { style: { color: textColor } }
+                            }} />
+                        <TextField
+                            label={config.repeatPasswordLabel ?? 'Repeat new password'}
+                            value={newPassword2}
+                            type='password'
+                            onChange={e => setNewPassword2(e.target.value)}
+                            variant='standard'
+                            size='small'
+                            disabled={busy}
+                            slotProps={{
+                                htmlInput: { style: { color: textColor } },
+                                inputLabel: { style: { color: textColor } }
+                            }} />
                     </>}
 
                     {!changingPassword && redirectMethods.length > 0 && <>
@@ -275,7 +312,7 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
                                         caso de 1 IdP, arriba) se sustituye por '…' → "Log in with …" + el menú lista cada IdP. */}
                                     {(config.idpButton ?? 'Log in with {provider}').replace('{provider}', '…')}
                                 </Button>
-                                <Menu anchorEl={idpAnchor} open={Boolean(idpAnchor)} onClose={() => setIdpAnchor(null)} PaperProps={{ sx: { minWidth: idpAnchor?.offsetWidth } }}>
+                                <Menu anchorEl={idpAnchor} open={Boolean(idpAnchor)} onClose={() => setIdpAnchor(null)} slotProps={{ paper: { sx: { minWidth: idpAnchor?.offsetWidth } } }}>
                                     {redirectMethods.map(m => (
                                         <MenuItem key={m.id} disabled={busy} onClick={() => { setIdpAnchor(null); onClickIdp(m) }}>{m.label}</MenuItem>
                                     ))}
@@ -325,7 +362,7 @@ const LoginExtensionPage: React.FC<ILoginExtensionPageProps> = (props) => {
                 </Typography>
             }
         </Box>
-    )
+    );
 }
 
 export { LoginExtensionPage }

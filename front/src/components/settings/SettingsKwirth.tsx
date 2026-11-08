@@ -353,7 +353,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         const tokenAuth = m.manifestAuth !== undefined && m.manifestAuth.type !== EManifestAuthType.NONE
         return (
             <Box key={m.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
-                <Stack direction='row' spacing={1} alignItems='baseline'>
+                <Stack direction='row' spacing={1} sx={{
+                    alignItems: 'baseline'
+                }}>
                     <TextField value={m.label} onChange={e => patchRow(index, { label: e.target.value })} variant='standard' label='Name' sx={{ width: '18%' }} />
                     <TextField value={m.url} onChange={e => patchRow(index, { url: e.target.value })} variant='standard' label='Manifest URL' sx={{ flexGrow: 1 }} placeholder='https://…/manifest.json' />
                     <Button size='small' variant='outlined' onClick={() => testRow(index)} disabled={m.testing || !/^https?:\/\/.+/i.test(m.url)}>TEST</Button>
@@ -397,10 +399,16 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         <IconButton size='small' color='error' onClick={() => setMarketplaces(prev => prev.filter((_, i) => i !== index))}><Delete fontSize='small' /></IconButton>
                     </Tooltip>
                 </Stack>
-                { m.testing && <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}><CircularProgress size={14} /><Typography variant='caption'>Reading manifest…</Typography></Stack> }
+                { m.testing && <Stack
+                    direction='row'
+                    spacing={1}
+                    sx={{
+                        alignItems: 'center',
+                        mt: 1
+                    }}><CircularProgress size={14} /><Typography variant='caption'>Reading manifest…</Typography></Stack> }
                 { m.testResult && <Typography variant='caption' color={m.testResult.ok ? 'success.main' : 'error.main'}>{m.testResult.text}</Typography> }
             </Box>
-        )
+        );
     }
 
     const registryRow = (r: IPackageRegistryRow, index: number) => {
@@ -410,7 +418,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         const bearer = type === EPackageRegistryAuthType.BEARER
         return (
             <Box key={r.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
-                <Stack direction='row' spacing={1} alignItems='baseline'>
+                <Stack direction='row' spacing={1} sx={{
+                    alignItems: 'baseline'
+                }}>
                     <TextField value={r.label} onChange={e => patchRegistry(index, { label: e.target.value })} variant='standard' label='Name' sx={{ width: '18%' }} />
                     <TextField value={r.url} onChange={e => patchRegistry(index, { url: e.target.value })} variant='standard' label='Base URL' sx={{ flexGrow: 1 }} placeholder='https://…/repository/my-repo' />
                     <Button size='small' variant='outlined' onClick={() => testRegistry(index)} disabled={r.testing || !/^https?:\/\/.+/i.test(r.url)}>TEST</Button>
@@ -456,10 +466,16 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         <IconButton size='small' color='error' onClick={() => setRegistries(prev => prev.filter((_, i) => i !== index))}><Delete fontSize='small' /></IconButton>
                     </Tooltip>
                 </Stack>
-                { r.testing && <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 1 }}><CircularProgress size={14} /><Typography variant='caption'>Testing registry…</Typography></Stack> }
+                { r.testing && <Stack
+                    direction='row'
+                    spacing={1}
+                    sx={{
+                        alignItems: 'center',
+                        mt: 1
+                    }}><CircularProgress size={14} /><Typography variant='caption'>Testing registry…</Typography></Stack> }
                 { r.testResult && <Typography variant='caption' color={r.testResult.ok ? 'success.main' : 'error.main'}>{r.testResult.text}</Typography> }
             </Box>
-        )
+        );
     }
     /*
         The log, back to what Kwirth writes with nothing configured.
@@ -487,204 +503,248 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     */
     const levelRow = (key: string, label: string, description: string|undefined, nested: boolean, inheritsFrom?: string) => {
         const chosen = logLevels[key]
-        return <Stack key={key} direction='row' spacing={2} alignItems='center' sx={{ pl: nested ? 4 : 0 }}>
-            <Box sx={{ width: '55%' }}>
-                <Typography variant='body2' color={nested ? 'text.secondary' : 'text.primary'}>
-                    {label} { !nested && <Typography component='span' variant='body2' color='text.secondary'>[{key}]</Typography> }
-                </Typography>
-                { description && <Typography variant='caption' color='text.secondary'>{description}</Typography> }
-            </Box>
-            <FormControl variant='standard' sx={{ width: '30%' }} disabled={loading || error!==''}>
-                { !nested && <InputLabel>Level</InputLabel> }
-                <Select value={chosen ?? (nested ? '' : 'info')} displayEmpty={nested}
-                    onChange={(e) => setLogLevels(prev => {
-                        const next = { ...prev }
-                        // The empty option is 'inherit', which is not a level: hence reading it as a
-                        // plain string instead of as ELogLevel.
-                        const chosenValue = e.target.value as string
-                        // Choosing 'inherit' REMOVES the key rather than storing a value: an id with
-                        // nothing of its own has to follow its component when that one is changed later.
-                        if (chosenValue === '') delete next[key]
-                        else next[key] = chosenValue as ELogLevel
-                        return next
-                    })}>
-                    { nested && <MenuItem value=''>Same as {inheritsFrom}</MenuItem> }
-                    { LOG_LEVEL_OPTIONS.map(option =>
-                        <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
-                    )}
-                </Select>
-            </FormControl>
-        </Stack>
+        return (
+            <Stack
+                key={key}
+                direction='row'
+                spacing={2}
+                sx={{
+                    alignItems: 'center',
+                    pl: nested ? 4 : 0
+                }}>
+                <Box sx={{ width: '55%' }}>
+                    <Typography variant='body2' color={nested ? 'text.secondary' : 'text.primary'}>
+                        {label} { !nested && <Typography component='span' variant='body2' sx={{
+                        color: 'text.secondary'
+                    }}>[{key}]</Typography> }
+                    </Typography>
+                    { description && <Typography variant='caption' sx={{
+                        color: 'text.secondary'
+                    }}>{description}</Typography> }
+                </Box>
+                <FormControl variant='standard' sx={{ width: '30%' }} disabled={loading || error!==''}>
+                    { !nested && <InputLabel>Level</InputLabel> }
+                    <Select value={chosen ?? (nested ? '' : 'info')} displayEmpty={nested}
+                        onChange={(e) => setLogLevels(prev => {
+                            const next = { ...prev }
+                            // The empty option is 'inherit', which is not a level: hence reading it as a
+                            // plain string instead of as ELogLevel.
+                            const chosenValue = e.target.value as string
+                            // Choosing 'inherit' REMOVES the key rather than storing a value: an id with
+                            // nothing of its own has to follow its component when that one is changed later.
+                            if (chosenValue === '') delete next[key]
+                            else next[key] = chosenValue as ELogLevel
+                            return next
+                        })}>
+                        { nested && <MenuItem value=''>Same as {inheritsFrom}</MenuItem> }
+                        { LOG_LEVEL_OPTIONS.map(option =>
+                            <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                        )}
+                    </Select>
+                </FormControl>
+            </Stack>
+        );
     }
 
-    return (<>
-        <Dialog open={true} ref={escapeRef} fullWidth maxWidth='md' disableRestoreFocus={true}>
-            <DialogTitleHelp section='guide/admin/02-initial-config?id=kwirth-settings' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Kwirth settings</DialogTitleHelp>
-            <DialogContent sx={{ height: 460, overflowY: 'auto' }}>
-                <Tabs value={tab} onChange={(_e, v) => setTab(v as ESettingsKwirthTab)}>
-                    <Tab label='General' value={ESettingsKwirthTab.GENERAL} />
-                    <Tab label='Notifications' value={ESettingsKwirthTab.NOTIFICATIONS} />
-                    <Tab label='Log' value={ESettingsKwirthTab.LOG} />
-                    <Tab label='Marketplaces' value={ESettingsKwirthTab.MARKETPLACES} />
-                    <Tab label='Package registries' value={ESettingsKwirthTab.REGISTRIES} />
-                </Tabs>
+    return (
+        <>
+            <Dialog open={true} ref={escapeRef} fullWidth maxWidth='md' disableRestoreFocus={true}>
+                <DialogTitleHelp section='guide/admin/02-initial-config?id=kwirth-settings' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Kwirth settings</DialogTitleHelp>
+                <DialogContent sx={{ height: 460, overflowY: 'auto' }}>
+                    <Tabs value={tab} onChange={(_e, v) => setTab(v as ESettingsKwirthTab)}>
+                        <Tab label='General' value={ESettingsKwirthTab.GENERAL} />
+                        <Tab label='Notifications' value={ESettingsKwirthTab.NOTIFICATIONS} />
+                        <Tab label='Log' value={ESettingsKwirthTab.LOG} />
+                        <Tab label='Marketplaces' value={ESettingsKwirthTab.MARKETPLACES} />
+                        <Tab label='Package registries' value={ESettingsKwirthTab.REGISTRIES} />
+                    </Tabs>
 
-                <Box hidden={tab !== ESettingsKwirthTab.GENERAL}>
-                    <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
-                        <Typography variant='body2'>Configuration of Kwirth itself on cluster <b>{props.clusterName}</b>. These settings are stored by Kwirth and survive a restart.</Typography>
-                        <TextField value={metricsInterval} onChange={(e) => setMetricsInterval(+e.target.value)} variant='standard' label='Cluster metrics read interval (seconds)' type='number' sx={{ width: '40%' }} disabled={loading || error!==''} />
-                        {/* The previous container's log is read ONCE, at startup: changing this has no
-                            effect until the core starts again. */}
-                        <TextField value={previousLogLines} onChange={(e) => setPreviousLogLines(+e.target.value)} variant='standard' label='Previous container log lines to keep (on startup)' type='number' sx={{ width: '40%' }} disabled={loading || error!==''} helperText='Read once when kwirth starts, so a change applies from the next restart' />
-                    </Stack>
-                </Box>
-
-                {/* What Kwirth tells somebody through a sender. Each notice is a sender and one of ITS
-                    configs: the same two pickers used wherever a sender is chosen. */}
-                <Box hidden={tab !== ESettingsKwirthTab.NOTIFICATIONS}>
-                    <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
-                        {/* Each notice is one title, one line and ONE row of pickers: the tab has the dialog's
-                            fixed height, and the second notice must fit without a scrollbar. */}
-                        <Typography variant='subtitle2'>Previous container log</Typography>
-                        <Typography variant='body2'>Sent when kwirth starts and finds that its previous container left a log behind; without a sender it only goes to the core log.</Typography>
-                        <Stack direction='row' spacing={2} alignItems='flex-end'>
-                            {/* Sender first, then one of ITS configs: the same two pickers used wherever
-                                a sender is chosen. 'shrink' keeps the label above the value — without it
-                                displayEmpty paints the chosen text on top of the label. */}
-                            <FormControl variant='standard' sx={{ flex: 2 }} disabled={loading || error!==''}>
-                                <InputLabel id='previous-log-sender-label' shrink>Sender for the previous container log</InputLabel>
-                                <Select labelId='previous-log-sender-label' displayEmpty value={previousLogSenderId}
-                                    onChange={(e) => { setPreviousLogSenderId(e.target.value); setPreviousLogSenderConfigName('') }}>
-                                    <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none — only the core log)</Typography></MenuItem>
-                                    { Array.from(new Set(senderEntries.map(e => e.senderId))).map(sid => <MenuItem key={sid} value={sid}>{sid}</MenuItem>) }
-                                </Select>
-                            </FormControl>
-                            <FormControl variant='standard' sx={{ flex: 2 }} disabled={loading || error!=='' || previousLogSenderId===''}>
-                                <InputLabel id='previous-log-sender-config-label' shrink>Config</InputLabel>
-                                <Select labelId='previous-log-sender-config-label' displayEmpty value={previousLogSenderConfigName}
-                                    onChange={(e) => setPreviousLogSenderConfigName(e.target.value)}>
-                                    <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
-                                    { senderEntries.filter(e => e.senderId === previousLogSenderId).map(e => <MenuItem key={e.configName} value={e.configName}>{e.configName}</MenuItem>) }
-                                </Select>
-                            </FormControl>
-                            {/* the last N of the lines kept (General tab); 200 by default, because a thousand
-                                lines is rejected by a webhook and read by nobody */}
-                            <TextField value={previousLogSenderLines} onChange={(e) => setPreviousLogSenderLines(+e.target.value)} variant='standard' label='Lines to send' type='number' sx={{ flex: 1 }} disabled={loading || error!=='' || previousLogSenderId==='' || previousLogSenderConfigName===''} />
+                    <Box hidden={tab !== ESettingsKwirthTab.GENERAL}>
+                        <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
+                            <Typography variant='body2'>Configuration of Kwirth itself on cluster <b>{props.clusterName}</b>. These settings are stored by Kwirth and survive a restart.</Typography>
+                            <TextField value={metricsInterval} onChange={(e) => setMetricsInterval(+e.target.value)} variant='standard' label='Cluster metrics read interval (seconds)' type='number' sx={{ width: '40%' }} disabled={loading || error!==''} />
+                            {/* The previous container's log is read ONCE, at startup: changing this has no
+                                effect until the core starts again. */}
+                            <TextField value={previousLogLines} onChange={(e) => setPreviousLogLines(+e.target.value)} variant='standard' label='Previous container log lines to keep (on startup)' type='number' sx={{ width: '40%' }} disabled={loading || error!==''} helperText='Read once when kwirth starts, so a change applies from the next restart' />
                         </Stack>
+                    </Box>
 
-                        <Typography variant='subtitle2' sx={{ pt: 2 }}>Access requests (signup)</Typography>
-                        <Typography variant='body2'>Sent for each new access request through an identity provider; administrators are also told when they log in.</Typography>
-                        <Stack direction='row' spacing={2} alignItems='flex-end'>
-                            <FormControl variant='standard' sx={{ flex: 2 }} disabled={loading || error!==''}>
-                                <InputLabel id='signup-sender-label' shrink>Sender for access requests</InputLabel>
-                                <Select labelId='signup-sender-label' displayEmpty value={signupSenderId}
-                                    onChange={(e) => { setSignupSenderId(e.target.value); setSignupSenderConfigName('') }}>
-                                    <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none — only the notice on login)</Typography></MenuItem>
-                                    { Array.from(new Set(senderEntries.map(e => e.senderId))).map(sid => <MenuItem key={sid} value={sid}>{sid}</MenuItem>) }
-                                </Select>
-                            </FormControl>
-                            <FormControl variant='standard' sx={{ flex: 2 }} disabled={loading || error!=='' || signupSenderId===''}>
-                                <InputLabel id='signup-sender-config-label' shrink>Config</InputLabel>
-                                <Select labelId='signup-sender-config-label' displayEmpty value={signupSenderConfigName}
-                                    onChange={(e) => setSignupSenderConfigName(e.target.value)}>
-                                    <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
-                                    { senderEntries.filter(e => e.senderId === signupSenderId).map(e => <MenuItem key={e.configName} value={e.configName}>{e.configName}</MenuItem>) }
-                                </Select>
-                            </FormControl>
-                            {/* an empty third column, so both rows line their pickers up */}
-                            <Box sx={{ flex: 1 }} />
+                    {/* What Kwirth tells somebody through a sender. Each notice is a sender and one of ITS
+                        configs: the same two pickers used wherever a sender is chosen. */}
+                    <Box hidden={tab !== ESettingsKwirthTab.NOTIFICATIONS}>
+                        <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
+                            {/* Each notice is one title, one line and ONE row of pickers: the tab has the dialog's
+                                fixed height, and the second notice must fit without a scrollbar. */}
+                            <Typography variant='subtitle2'>Previous container log</Typography>
+                            <Typography variant='body2'>Sent when kwirth starts and finds that its previous container left a log behind; without a sender it only goes to the core log.</Typography>
+                            <Stack direction='row' spacing={2} sx={{
+                                alignItems: 'flex-end'
+                            }}>
+                                {/* Sender first, then one of ITS configs: the same two pickers used wherever
+                                    a sender is chosen. 'shrink' keeps the label above the value — without it
+                                    displayEmpty paints the chosen text on top of the label. */}
+                                <FormControl variant='standard' sx={{ flex: 2 }} disabled={loading || error!==''}>
+                                    <InputLabel id='previous-log-sender-label' shrink>Sender for the previous container log</InputLabel>
+                                    <Select labelId='previous-log-sender-label' displayEmpty value={previousLogSenderId}
+                                        onChange={(e) => { setPreviousLogSenderId(e.target.value); setPreviousLogSenderConfigName('') }}>
+                                        <MenuItem value=''><Typography variant='body2' sx={{
+                                            color: 'text.secondary'
+                                        }}>(none — only the core log)</Typography></MenuItem>
+                                        { Array.from(new Set(senderEntries.map(e => e.senderId))).map(sid => <MenuItem key={sid} value={sid}>{sid}</MenuItem>) }
+                                    </Select>
+                                </FormControl>
+                                <FormControl variant='standard' sx={{ flex: 2 }} disabled={loading || error!=='' || previousLogSenderId===''}>
+                                    <InputLabel id='previous-log-sender-config-label' shrink>Config</InputLabel>
+                                    <Select labelId='previous-log-sender-config-label' displayEmpty value={previousLogSenderConfigName}
+                                        onChange={(e) => setPreviousLogSenderConfigName(e.target.value)}>
+                                        <MenuItem value=''><Typography variant='body2' sx={{
+                                            color: 'text.secondary'
+                                        }}>(none)</Typography></MenuItem>
+                                        { senderEntries.filter(e => e.senderId === previousLogSenderId).map(e => <MenuItem key={e.configName} value={e.configName}>{e.configName}</MenuItem>) }
+                                    </Select>
+                                </FormControl>
+                                {/* the last N of the lines kept (General tab); 200 by default, because a thousand
+                                    lines is rejected by a webhook and read by nobody */}
+                                <TextField value={previousLogSenderLines} onChange={(e) => setPreviousLogSenderLines(+e.target.value)} variant='standard' label='Lines to send' type='number' sx={{ flex: 1 }} disabled={loading || error!=='' || previousLogSenderId==='' || previousLogSenderConfigName===''} />
+                            </Stack>
+
+                            <Typography variant='subtitle2' sx={{ pt: 2 }}>Access requests (signup)</Typography>
+                            <Typography variant='body2'>Sent for each new access request through an identity provider; administrators are also told when they log in.</Typography>
+                            <Stack direction='row' spacing={2} sx={{
+                                alignItems: 'flex-end'
+                            }}>
+                                <FormControl variant='standard' sx={{ flex: 2 }} disabled={loading || error!==''}>
+                                    <InputLabel id='signup-sender-label' shrink>Sender for access requests</InputLabel>
+                                    <Select labelId='signup-sender-label' displayEmpty value={signupSenderId}
+                                        onChange={(e) => { setSignupSenderId(e.target.value); setSignupSenderConfigName('') }}>
+                                        <MenuItem value=''><Typography variant='body2' sx={{
+                                            color: 'text.secondary'
+                                        }}>(none — only the notice on login)</Typography></MenuItem>
+                                        { Array.from(new Set(senderEntries.map(e => e.senderId))).map(sid => <MenuItem key={sid} value={sid}>{sid}</MenuItem>) }
+                                    </Select>
+                                </FormControl>
+                                <FormControl variant='standard' sx={{ flex: 2 }} disabled={loading || error!=='' || signupSenderId===''}>
+                                    <InputLabel id='signup-sender-config-label' shrink>Config</InputLabel>
+                                    <Select labelId='signup-sender-config-label' displayEmpty value={signupSenderConfigName}
+                                        onChange={(e) => setSignupSenderConfigName(e.target.value)}>
+                                        <MenuItem value=''><Typography variant='body2' sx={{
+                                            color: 'text.secondary'
+                                        }}>(none)</Typography></MenuItem>
+                                        { senderEntries.filter(e => e.senderId === signupSenderId).map(e => <MenuItem key={e.configName} value={e.configName}>{e.configName}</MenuItem>) }
+                                    </Select>
+                                </FormControl>
+                                {/* an empty third column, so both rows line their pickers up */}
+                                <Box sx={{ flex: 1 }} />
+                            </Stack>
                         </Stack>
-                    </Stack>
-                </Box>
+                    </Box>
 
-                <Box hidden={tab !== ESettingsKwirthTab.LOG}>
-                    <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
-                        <Typography variant='body2'>
-                            How talkative Kwirth's own log is. Each component writes from the level chosen here upwards, so
-                            turning one down lowers the noise without losing what matters. It applies <b>immediately</b>, with no
-                            restart — the log is precisely what you turn up while something is going wrong.
-                        </Typography>
-                        {/*
-                            Errors are the exception and it is said here rather than left to be discovered: a filter is for
-                            lowering noise, not for hiding a failure that nobody then finds out about.
-                        */}
-                        <Alert severity='info' sx={{ py: 0 }}>Errors are always written, whatever level a component is set to.</Alert>
-                        { logComponents.map(component => <React.Fragment key={component.id}>
-                            { levelRow(component.id, component.label, component.description, false) }
+                    <Box hidden={tab !== ESettingsKwirthTab.LOG}>
+                        <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
+                            <Typography variant='body2'>
+                                How talkative Kwirth's own log is. Each component writes from the level chosen here upwards, so
+                                turning one down lowers the noise without losing what matters. It applies <b>immediately</b>, with no
+                                restart — the log is precisely what you turn up while something is going wrong.
+                            </Typography>
                             {/*
-                                And under each component, whoever writes under it. An id inherits its
-                                component's level until it is given one of its own, so 'Same as…' is not a
-                                decoration: it is what keeps this from turning into a list of levels to
-                                maintain one by one.
+                                Errors are the exception and it is said here rather than left to be discovered: a filter is for
+                                lowering noise, not for hiding a failure that nobody then finds out about.
                             */}
-                            { (component.ids ?? []).map(id => levelRow(`${component.id}:${id}`, id, undefined, true, component.id)) }
-                        </React.Fragment>)}
-                        { logComponents.length === 0 && <Typography variant='body2' color='text.secondary'>Could not read the log components from Kwirth.</Typography> }
-                        <FormControlLabel control={<Checkbox checked={logAnsi} onChange={(e) => setLogAnsi(e.target.checked)} disabled={loading || error!==''} />}
-                            label={<Typography variant='body2'>Colour the output (ANSI)</Typography>} />
-                        <Typography variant='caption' color='text.secondary' sx={{ mt: -1 }}>
-                            Helpful on a terminal, in the way anywhere else: collected into a file or forwarded to a log service,
-                            the colour codes travel as rubbish in the middle of the message.
-                        </Typography>
-                        {/*
-                            The in-memory ring buffer for environments without Kubernetes (ECS, ACI, Cloud
-                            Run, bare OS). In a pod the kubelet keeps the container log; elsewhere this
-                            buffer takes its place and the Status plugin reads it over its WebSocket.
-                        */}
-                        <TextField value={logBufferLines} onChange={(e) => setLogBufferLines(+e.target.value)} variant='standard'
-                            label='In-memory log buffer lines' type='number' sx={{ width: '40%', mt: 2 }} disabled={loading || error!==''}
-                            helperText='Last N lines kept for the Status plugin Log tab when there is no Kubernetes API. 5000 by default' />
+                            <Alert severity='info' sx={{ py: 0 }}>Errors are always written, whatever level a component is set to.</Alert>
+                            { logComponents.map(component => <React.Fragment key={component.id}>
+                                { levelRow(component.id, component.label, component.description, false) }
+                                {/*
+                                    And under each component, whoever writes under it. An id inherits its
+                                    component's level until it is given one of its own, so 'Same as…' is not a
+                                    decoration: it is what keeps this from turning into a list of levels to
+                                    maintain one by one.
+                                */}
+                                { (component.ids ?? []).map(id => levelRow(`${component.id}:${id}`, id, undefined, true, component.id)) }
+                            </React.Fragment>)}
+                            { logComponents.length === 0 && <Typography variant='body2' sx={{
+                                color: 'text.secondary'
+                            }}>Could not read the log components from Kwirth.</Typography> }
+                            <FormControlLabel control={<Checkbox checked={logAnsi} onChange={(e) => setLogAnsi(e.target.checked)} disabled={loading || error!==''} />}
+                                label={<Typography variant='body2'>Colour the output (ANSI)</Typography>} />
+                            <Typography
+                                variant='caption'
+                                sx={{
+                                    color: 'text.secondary',
+                                    mt: -1
+                                }}>
+                                Helpful on a terminal, in the way anywhere else: collected into a file or forwarded to a log service,
+                                the colour codes travel as rubbish in the middle of the message.
+                            </Typography>
+                            {/*
+                                The in-memory ring buffer for environments without Kubernetes (ECS, ACI, Cloud
+                                Run, bare OS). In a pod the kubelet keeps the container log; elsewhere this
+                                buffer takes its place and the Status plugin reads it over its WebSocket.
+                            */}
+                            <TextField value={logBufferLines} onChange={(e) => setLogBufferLines(+e.target.value)} variant='standard'
+                                label='In-memory log buffer lines' type='number' sx={{ width: '40%', mt: 2 }} disabled={loading || error!==''}
+                                helperText='Last N lines kept for the Status plugin Log tab when there is no Kubernetes API. 5000 by default' />
+                        </Stack>
+                    </Box>
+
+                    <Box hidden={tab !== ESettingsKwirthTab.MARKETPLACES}>
+                        <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
+                            <Typography variant='body2'>
+                                Extra marketplaces to install extensions from, on top of the public Kwirth one. Each URL points at a
+                                single manifest, which may list extensions of several types. A marketplace listed here takes precedence
+                                over the public one, so it can publish its own <i>log</i> without clashing.
+                            </Typography>
+                            { marketplaces.map(marketplaceRow) }
+                            { marketplaces.length === 0 && <Typography variant='body2' sx={{
+                                color: 'text.secondary'
+                            }}>No extra marketplaces. Only the public Kwirth marketplace is used.</Typography> }
+                            <Box><Button startIcon={<Add />} onClick={addRow} disabled={loading || error!==''}>Add marketplace</Button></Box>
+                        </Stack>
+                    </Box>
+
+                    <Box hidden={tab !== ESettingsKwirthTab.REGISTRIES}>
+                        <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
+                            <Typography variant='body2'>
+                                Where packages are <b>downloaded</b> from, which is not where the manifests live: a marketplace only
+                                lists extensions, and each entry says which URL its tarball comes from. Kwirth picks the credentials
+                                by matching that URL against the <b>Base URL</b> below, treated as a prefix — so one registry can
+                                cover a whole server, or just one repository inside it. When several match, the longest one wins.
+                                Registries are only needed for private servers; public packages download anonymously.
+                            </Typography>
+                            { registries.map(registryRow) }
+                            { registries.length === 0 && <Typography variant='body2' sx={{
+                                color: 'text.secondary'
+                            }}>No package registries. Every package is downloaded anonymously.</Typography> }
+                            <Box><Button startIcon={<Add />} onClick={addRegistry} disabled={loading || error!==''}>Add registry</Button></Box>
+                        </Stack>
+                    </Box>
+
+                    { loading && <Stack
+                        direction='row'
+                        spacing={1}
+                        sx={{
+                            alignItems: 'center',
+                            mt: 2
+                        }}><CircularProgress size={16} /><Typography variant='body2'>Reading current settings…</Typography></Stack> }
+                    { error!=='' && <Alert severity='error' sx={{ mt: 2 }}>{error}</Alert> }
+                </DialogContent>
+                <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
+                    {/*
+                        Only on the log tab, and it says so. No confirmation is needed because nothing here is
+                        written until OK: Cancel undoes it.
+                    */}
+                    <Box>
+                        { tab === ESettingsKwirthTab.LOG &&
+                            <Button size='small' onClick={resetLog} disabled={loading || error!==''}>Reset to defaults</Button> }
+                    </Box>
+                    <Stack direction='row' spacing={1}>
+                        <Button variant='outlined' onClick={ok} disabled={loading || error!=='' || metricsInterval<=0 || !rowsValid()}>OK</Button>
+                        <Button variant='outlined' onClick={() => props.onClose(undefined)}>Cancel</Button>
                     </Stack>
-                </Box>
+                </DialogActions>
+            </Dialog>
 
-                <Box hidden={tab !== ESettingsKwirthTab.MARKETPLACES}>
-                    <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
-                        <Typography variant='body2'>
-                            Extra marketplaces to install extensions from, on top of the public Kwirth one. Each URL points at a
-                            single manifest, which may list extensions of several types. A marketplace listed here takes precedence
-                            over the public one, so it can publish its own <i>log</i> without clashing.
-                        </Typography>
-                        { marketplaces.map(marketplaceRow) }
-                        { marketplaces.length === 0 && <Typography variant='body2' color='text.secondary'>No extra marketplaces. Only the public Kwirth marketplace is used.</Typography> }
-                        <Box><Button startIcon={<Add />} onClick={addRow} disabled={loading || error!==''}>Add marketplace</Button></Box>
-                    </Stack>
-                </Box>
-
-                <Box hidden={tab !== ESettingsKwirthTab.REGISTRIES}>
-                    <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
-                        <Typography variant='body2'>
-                            Where packages are <b>downloaded</b> from, which is not where the manifests live: a marketplace only
-                            lists extensions, and each entry says which URL its tarball comes from. Kwirth picks the credentials
-                            by matching that URL against the <b>Base URL</b> below, treated as a prefix — so one registry can
-                            cover a whole server, or just one repository inside it. When several match, the longest one wins.
-                            Registries are only needed for private servers; public packages download anonymously.
-                        </Typography>
-                        { registries.map(registryRow) }
-                        { registries.length === 0 && <Typography variant='body2' color='text.secondary'>No package registries. Every package is downloaded anonymously.</Typography> }
-                        <Box><Button startIcon={<Add />} onClick={addRegistry} disabled={loading || error!==''}>Add registry</Button></Box>
-                    </Stack>
-                </Box>
-
-                { loading && <Stack direction='row' spacing={1} alignItems='center' sx={{ mt: 2 }}><CircularProgress size={16} /><Typography variant='body2'>Reading current settings…</Typography></Stack> }
-                { error!=='' && <Alert severity='error' sx={{ mt: 2 }}>{error}</Alert> }
-            </DialogContent>
-            <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
-                {/*
-                    Only on the log tab, and it says so. No confirmation is needed because nothing here is
-                    written until OK: Cancel undoes it.
-                */}
-                <Box>
-                    { tab === ESettingsKwirthTab.LOG &&
-                        <Button size='small' onClick={resetLog} disabled={loading || error!==''}>Reset to defaults</Button> }
-                </Box>
-                <Stack direction='row' spacing={1}>
-                    <Button variant='outlined' onClick={ok} disabled={loading || error!=='' || metricsInterval<=0 || !rowsValid()}>OK</Button>
-                    <Button variant='outlined' onClick={() => props.onClose(undefined)}>Cancel</Button>
-                </Stack>
-            </DialogActions>
-        </Dialog>
-
-    </>)
+        </>
+    );
 }
 
 export { SettingsKwirth }

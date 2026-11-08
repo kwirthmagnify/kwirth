@@ -48,8 +48,16 @@ interface IInfoRowProps {
 
 /** One row of the server info block: a label and its value, monospaced for config. */
 const InfoRow: React.FC<IInfoRowProps> = ({ label, value }) => (
-    <Stack direction='row' spacing={1} alignItems='baseline'>
-        <Typography variant='caption' color='text.secondary' sx={{ width: 130, flexShrink: 0 }}>{label}</Typography>
+    <Stack direction='row' spacing={1} sx={{
+        alignItems: 'baseline'
+    }}>
+        <Typography
+            variant='caption'
+            sx={{
+                color: 'text.secondary',
+                width: 130,
+                flexShrink: 0
+            }}>{label}</Typography>
         <Typography variant='body2' sx={{ fontFamily: 'monospace' }}>{value}</Typography>
     </Stack>
 )
@@ -62,7 +70,9 @@ interface INumberCellProps {
 /** A number cell; a dash when it is not known. */
 const NumberCell: React.FC<INumberCellProps> = ({ value, label }) => (
     <TableCell align='right' aria-label={label} sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-        {value === undefined ? <Typography variant='body2' component='span' color='text.disabled'>—</Typography> : value}
+        {value === undefined ? <Typography variant='body2' component='span' sx={{
+            color: 'text.disabled'
+        }}>—</Typography> : value}
     </TableCell>
 )
 
@@ -71,10 +81,15 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter, sorts, onSor
     const [abiertas, setAbiertas] = React.useState<Set<string>>(new Set())
     if (!sql) {
         return (
-            <Typography variant='body2' color='text.secondary' sx={{ p: 4, textAlign: 'center' }}>
-                This Kwirth's core does not expose SQL info yet. Update the core to see it here.
-            </Typography>
-        )
+            <Typography
+                variant='body2'
+                sx={{
+                    color: 'text.secondary',
+                    p: 4,
+                    textAlign: 'center'
+                }}>This Kwirth's core does not expose SQL info yet. Update the core to see it here.
+                            </Typography>
+        );
     }
 
     const stats = sql.stats
@@ -118,8 +133,17 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter, sorts, onSor
 
     return (
         <Stack spacing={2} sx={{ pb: 2 }}>
-            <Stack direction='row' spacing={0.75} useFlexGap flexWrap='wrap' alignItems='center'>
-                <Typography variant='caption' color='text.secondary'>
+            <Stack
+                direction='row'
+                spacing={0.75}
+                useFlexGap
+                sx={{
+                    flexWrap: 'wrap',
+                    alignItems: 'center'
+                }}>
+                <Typography variant='caption' sx={{
+                    color: 'text.secondary'
+                }}>
                     {sql.databases.length} database{sql.databases.length === 1 ? '' : 's'} · {sql.client} via knex{sql.knexVersion ? ` ${sql.knexVersion}` : ''}{sql.pgVersion ? ` · pg ${sql.pgVersion}` : ''}
                 </Typography>
                 {sql.reachable
@@ -165,7 +189,12 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter, sorts, onSor
             */}
             <Typography variant='subtitle2'>Connection pools</Typography>
             {sql.pools.length === 0
-                ? <Typography variant='body2' color='text.secondary' sx={{ px: 0.5 }}>
+                ? <Typography
+                variant='body2'
+                sx={{
+                    color: 'text.secondary',
+                    px: 0.5
+                }}>
                     No pool is open. A pool opens the first time an extension calls its store.
                 </Typography>
                 : <Table size='small' stickyHeader sx={{ tableLayout: 'fixed' }}>
@@ -208,7 +237,9 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter, sorts, onSor
                                     <TableCell align='right' sx={{ fontVariantNumeric: 'tabular-nums' }}>{p.max}</TableCell>
                                     <TableCell align='right' aria-label='Peak' sx={{ fontVariantNumeric: 'tabular-nums' }}>
                                         {peak === undefined
-                                            ? <Typography variant='body2' component='span' color='text.disabled'>—</Typography>
+                                            ? <Typography variant='body2' component='span' sx={{
+                                            color: 'text.disabled'
+                                        }}>—</Typography>
                                             : <Tooltip title={peakTip}>
                                                 {peak >= p.max
                                                     ? <Chip size='small' color='warning' label={peak} />
@@ -216,7 +247,7 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter, sorts, onSor
                                             </Tooltip>}
                                     </TableCell>
                                 </TableRow>
-                            )
+                            );
                         })}
                     </TableBody>
                 </Table>}
@@ -227,7 +258,12 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter, sorts, onSor
                     Could not list databases: {sql.error ?? 'unknown error'}
                 </Typography>
                 : shown.length === 0
-                    ? <Typography variant='body2' color='text.secondary' sx={{ px: 0.5 }}>
+                    ? <Typography
+                variant='body2'
+                sx={{
+                    color: 'text.secondary',
+                    px: 0.5
+                }}>
                         {sql.databases.length === 0 ? 'No database exists yet.' : 'No database matches the filter.'}
                     </Typography>
                     : <Table size='small' stickyHeader sx={{ tableLayout: 'fixed' }}>
@@ -275,7 +311,9 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter, sorts, onSor
                                             onClick={s ? () => plegar(name) : undefined} sx={{ cursor: s ? 'pointer' : 'default' }}>
                                             <TableCell sx={{ fontFamily: 'monospace', overflowWrap: 'anywhere' }}>{name}</TableCell>
                                             <TableCell>
-                                                <Typography variant='caption' color='text.secondary'>{databaseKind(name)}</Typography>
+                                                <Typography variant='caption' sx={{
+                                                    color: 'text.secondary'
+                                                }}>{databaseKind(name)}</Typography>
                                             </TableCell>
                                             <NumberCell label='Size' value={s ? formatBytes(s.sizeBytes) : undefined} />
                                             {/* Only its own tables: Size also counts the system catalog, some MB in any database. */}
@@ -287,7 +325,9 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter, sorts, onSor
                                             <NumberCell label='Cache hit' value={hit === undefined ? undefined : `${(hit * 100).toFixed(1)} %`} />
                                             <TableCell align='right' aria-label='Deadlocks' sx={{ fontVariantNumeric: 'tabular-nums' }}>
                                                 {s === undefined
-                                                    ? <Typography variant='body2' component='span' color='text.disabled'>—</Typography>
+                                                    ? <Typography variant='body2' component='span' sx={{
+                                                    color: 'text.disabled'
+                                                }}>—</Typography>
                                                     : s.deadlocks > 0 ? <Chip size='small' color='warning' label={s.deadlocks} /> : 0}
                                             </TableCell>
                                             <NumberCell label='Temp files' value={s ? formatBytes(s.tempBytes) : undefined} />
@@ -297,11 +337,15 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter, sorts, onSor
                                             <TableRow aria-label={`Tables of ${name}`}>
                                                 <TableCell colSpan={DB_COLUMNS} sx={{ py: 1, px: 4 }}>
                                                     {!tables
-                                                        ? <Typography variant='body2' color='text.secondary'>
+                                                        ? <Typography variant='body2' sx={{
+                                                        color: 'text.secondary'
+                                                    }}>
                                                             Its tables could not be read (Kwirth may have no permission to connect to this database).
                                                         </Typography>
                                                         : tables.length === 0
-                                                            ? <Typography variant='body2' color='text.secondary'>It has no tables.</Typography>
+                                                            ? <Typography variant='body2' sx={{
+                                                        color: 'text.secondary'
+                                                    }}>It has no tables.</Typography>
                                                             : <Box>
                                                                 <Table size='small' sx={{ tableLayout: 'fixed' }}>
                                                                     <colgroup>
@@ -320,7 +364,13 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter, sorts, onSor
                                                                         {sortRows(tables, tableSort, (t, column) => TABLE_VALUE[column as ESqlTableColumn](t)).map(t =>
                                                                             <TableRow key={`${t.schema}.${t.name}`} aria-label={`Table ${t.schema}.${t.name}`}>
                                                                                 <TableCell sx={{ fontFamily: 'monospace', overflowWrap: 'anywhere' }}>
-                                                                                    <Typography variant='body2' component='span' color='text.secondary' sx={{ fontFamily: 'monospace' }}>{t.schema}.</Typography>{t.name}
+                                                                                    <Typography
+                                                                                        variant='body2'
+                                                                                        component='span'
+                                                                                        sx={{
+                                                                                            color: 'text.secondary',
+                                                                                            fontFamily: 'monospace'
+                                                                                        }}>{t.schema}.</Typography>{t.name}
                                                                                 </TableCell>
                                                                                 <TableCell align='right' sx={{ fontVariantNumeric: 'tabular-nums' }}>{formatBytes(t.totalBytes)}</TableCell>
                                                                                 <TableCell align='right' sx={{ fontVariantNumeric: 'tabular-nums' }}>{t.rows.toLocaleString()}</TableCell>
@@ -331,10 +381,10 @@ export const StatusSqlTab: React.FC<ISqlTabProps> = ({ sql, filter, sorts, onSor
                                                 </TableCell>
                                             </TableRow>}
                                     </React.Fragment>
-                                )
+                                );
                             })}
                         </TableBody>
                     </Table>}
         </Stack>
-    )
+    );
 }

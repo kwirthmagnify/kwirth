@@ -15,7 +15,9 @@ const AviciiSetup: React.FC<IHomepageSetupProps> = ({ config, onSave, onClose })
     const labelSx = { fontFamily: AV_FONT, fontSize: '0.85rem', letterSpacing: '1px', color: AV_GOLD }
 
     return (
-        <Dialog open={true} PaperProps={{ sx: { bgcolor: '#0b0907', border: `1px solid ${AV_GOLD_DIM}`, borderTop: `2px solid ${AV_GOLD}`, color: AV_GOLD, minWidth: 360 } }}>
+        <Dialog open={true} slotProps={{
+            paper: { sx: { bgcolor: '#0b0907', border: `1px solid ${AV_GOLD_DIM}`, borderTop: `2px solid ${AV_GOLD}`, color: AV_GOLD, minWidth: 360 } }
+        }}>
             <DialogTitle sx={{ fontFamily: AV_FONT, fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: AV_GOLD, borderBottom: `1px solid ${AV_GOLD_DIM}`, pb: 1.5 }}>
                 ▲ Avicii Setup
             </DialogTitle>
@@ -43,7 +45,7 @@ const AviciiSetup: React.FC<IHomepageSetupProps> = ({ config, onSave, onClose })
                 <Button onClick={onClose} sx={{ color: AV_GOLD_DIM, fontFamily: AV_FONT, letterSpacing: '1px', borderRadius: 0 }}>CANCEL</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { AviciiSetup }

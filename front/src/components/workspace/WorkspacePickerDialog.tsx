@@ -30,7 +30,9 @@ const WorkspacePickerDialog: React.FC<IWorkspacePickerDialogProps> = ({ title, w
                 <Stack spacing={0.5}>
                     <FormControlLabel
                         control={<Checkbox checked={allChecked} indeterminate={selected.length > 0 && !allChecked} onChange={toggleAll} size='small' />}
-                        label={<Typography variant='body2' fontWeight={500}>Select all</Typography>}
+                        label={<Typography variant='body2' sx={{
+                            fontWeight: 500
+                        }}>Select all</Typography>}
                     />
                     <Divider />
                     {workspaceNames.map(name => (
@@ -49,7 +51,7 @@ const WorkspacePickerDialog: React.FC<IWorkspacePickerDialogProps> = ({ title, w
                 <Button variant='outlined' onClick={onCancel}>Cancel</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { WorkspacePickerDialog }

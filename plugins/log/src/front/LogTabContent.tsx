@@ -74,37 +74,49 @@ const LogTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         }
     }
 
-    return (<>
-        {logData.started &&
-            <Card sx={{ display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', mt: 1, minHeight: 0 }}>
-                <CardHeader title={
-                    <Stack direction='row' alignItems='center'>
-                        <Typography mr={4}><b>Lines:</b> {logData.messages.length}</Typography>
-                        <Typography mr={4}><Warning fontSize='small' sx={{ mb: 0.25, color: 'warning.main' }} /><b>&nbsp;Warning:</b> {logData.messages.filter(m => m.text.includes('WARNING')).length}</Typography>
-                        <Typography mr={4}><Error fontSize='small' sx={{ mb: 0.25, color: 'error.main' }} /><b>&nbsp;Error:</b> {logData.messages.filter(m => m.text.includes('ERROR')).length}</Typography>
-                        <Typography sx={{ flexGrow: 1 }} />
-                        <TextField value={filter} onChange={(e: any) => setFilter(e.target?.value)} disabled={!logData.started} size='small' variant='standard' placeholder='Filter...'
-                            InputProps={{
-                                endAdornment: <>
-                                    <InputAdornment position='start' onClick={() => logData.started && setFilterRegex(!filterRegex)} sx={{ m: 0 }}>
-                                        <Typography sx={filterRegex ? adornmentSelected : adornmentNotSelected}>.*</Typography>
-                                    </InputAdornment>
-                                    <InputAdornment position='start' onClick={() => logData.started && setFilterCasing(!filterCasing)} sx={{ m: 0, ml: 1 }}>
-                                        <Typography sx={filterCasing ? adornmentSelected : adornmentNotSelected}>Aa</Typography>
-                                    </InputAdornment>
-                                </>
-                            }}
-                        />
-                    </Stack>} />
-                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
-                    <Box ref={logBoxRef} sx={{ display: 'flex', flexDirection: 'column', width: '100%', overflowY: 'auto', flexGrow: 1, height: `calc(100vh - ${logBoxTop}px - 16px)` }} onScroll={handleScroll}>
-                        <pre style={{ fontSize: '0.75rem' }}>
-                            {logData.messages.map((message, index) => <div key={index}>{formatLogLine(message)}</div>)}
-                        </pre>
-                    </Box>
-                </CardContent>
-            </Card>}
-    </>)
+    return (
+        <>
+            {logData.started &&
+                <Card sx={{ display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', mt: 1, minHeight: 0 }}>
+                    <CardHeader title={
+                        <Stack direction='row' sx={{
+                            alignItems: 'center'
+                        }}>
+                            <Typography sx={{
+                                mr: 4
+                            }}><b>Lines:</b> {logData.messages.length}</Typography>
+                            <Typography sx={{
+                                mr: 4
+                            }}><Warning fontSize='small' sx={{ mb: 0.25, color: 'warning.main' }} /><b>&nbsp;Warning:</b> {logData.messages.filter(m => m.text.includes('WARNING')).length}</Typography>
+                            <Typography sx={{
+                                mr: 4
+                            }}><Error fontSize='small' sx={{ mb: 0.25, color: 'error.main' }} /><b>&nbsp;Error:</b> {logData.messages.filter(m => m.text.includes('ERROR')).length}</Typography>
+                            <Typography sx={{ flexGrow: 1 }} />
+                            <TextField value={filter} onChange={(e: any) => setFilter(e.target?.value)} disabled={!logData.started} size='small' variant='standard' placeholder='Filter...'
+                                slotProps={{
+                                    input: {
+                                        endAdornment: <>
+                                            <InputAdornment position='start' onClick={() => logData.started && setFilterRegex(!filterRegex)} sx={{ m: 0 }}>
+                                                <Typography sx={filterRegex ? adornmentSelected : adornmentNotSelected}>.*</Typography>
+                                            </InputAdornment>
+                                            <InputAdornment position='start' onClick={() => logData.started && setFilterCasing(!filterCasing)} sx={{ m: 0, ml: 1 }}>
+                                                <Typography sx={filterCasing ? adornmentSelected : adornmentNotSelected}>Aa</Typography>
+                                            </InputAdornment>
+                                        </>
+                                    }
+                                }}
+                            />
+                        </Stack>} />
+                    <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
+                        <Box ref={logBoxRef} sx={{ display: 'flex', flexDirection: 'column', width: '100%', overflowY: 'auto', flexGrow: 1, height: `calc(100vh - ${logBoxTop}px - 16px)` }} onScroll={handleScroll}>
+                            <pre style={{ fontSize: '0.75rem' }}>
+                                {logData.messages.map((message, index) => <div key={index}>{formatLogLine(message)}</div>)}
+                            </pre>
+                        </Box>
+                    </CardContent>
+                </Card>}
+        </>
+    );
 }
 
 export { LogTabContent }

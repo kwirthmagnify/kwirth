@@ -108,7 +108,12 @@ const RatelimitConfigDialog: React.FC<IProps> = ({ onClose, backendUrl, accessSt
 
                 {/* Left — config list */}
                 <Box sx={{ width: 190, display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
-                    <Typography variant='caption' color='text.secondary' fontWeight='bold'>Configs</Typography>
+                    <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            fontWeight: 'bold'
+                        }}>Configs</Typography>
                     <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
                         <List dense disablePadding>
                             {configs.map(cfg => (
@@ -121,8 +126,10 @@ const RatelimitConfigDialog: React.FC<IProps> = ({ onClose, backendUrl, accessSt
                                         <ListItemText
                                             primary={cfg.name}
                                             secondary={`${cfg.limit} / ${cfg.interval} ${cfg.unit}`}
-                                            primaryTypographyProps={{ variant: 'body2', noWrap: true }}
-                                            secondaryTypographyProps={{ variant: 'caption' }} />
+                                            slotProps={{
+                                                primary: { variant: 'body2', noWrap: true },
+                                                secondary: { variant: 'caption' }
+                                            }} />
                                     </ListItemButton>
                                 </ListItem>
                             ))}
@@ -138,7 +145,12 @@ const RatelimitConfigDialog: React.FC<IProps> = ({ onClose, backendUrl, accessSt
 
                 {/* Right — editor */}
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                    <Typography variant='caption' color='text.secondary' fontWeight='bold'>
+                    <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            fontWeight: 'bold'
+                        }}>
                         {isEditing ? `Editing: ${selectedName}` : 'New config'}
                     </Typography>
 
@@ -153,10 +165,14 @@ const RatelimitConfigDialog: React.FC<IProps> = ({ onClose, backendUrl, accessSt
                     <Stack direction='row' spacing={1}>
                         <TextField size='small' label='Max messages' type='number' value={edit.limit}
                             onChange={e => setEdit(p => ({ ...p, limit: Math.max(1, +e.target.value) }))}
-                            sx={{ flex: 1 }} inputProps={{ min: 1 }} />
+                            sx={{ flex: 1 }} slotProps={{
+                            htmlInput: { min: 1 }
+                        }} />
                         <TextField size='small' label='Per' type='number' value={edit.interval}
                             onChange={e => setEdit(p => ({ ...p, interval: Math.max(1, +e.target.value) }))}
-                            sx={{ flex: 1 }} inputProps={{ min: 1 }} />
+                            sx={{ flex: 1 }} slotProps={{
+                            htmlInput: { min: 1 }
+                        }} />
                         <FormControl size='small' sx={{ flex: 1 }}>
                             <InputLabel>Unit</InputLabel>
                             <Select label='Unit' value={edit.unit} onChange={e => setEdit(p => ({ ...p, unit: e.target.value as TUnit }))}>
@@ -167,13 +183,21 @@ const RatelimitConfigDialog: React.FC<IProps> = ({ onClose, backendUrl, accessSt
                         </FormControl>
                     </Stack>
 
-                    <Typography variant='caption' color='text.secondary'>
+                    <Typography variant='caption' sx={{
+                        color: 'text.secondary'
+                    }}>
                         Max {edit.limit} message{edit.limit !== 1 ? 's' : ''} per {edit.interval > 1 ? edit.interval + ' ' : ''}{UNIT_LABELS[edit.unit].toLowerCase().replace(/s$/, edit.interval > 1 ? 's' : '')}. Messages exceeding the limit are queued and delivered in the next window.
                     </Typography>
 
                     <Box sx={{ flex: 1 }} />
 
-                    <Stack direction='row' spacing={1} alignItems='center' justifyContent='flex-end'>
+                    <Stack
+                        direction='row'
+                        spacing={1}
+                        sx={{
+                            alignItems: 'center',
+                            justifyContent: 'flex-end'
+                        }}>
                         {error && <Typography variant='caption' color='error'>{error}</Typography>}
                         <Button size='small' variant='contained' disabled={saving || !edit.name.trim()} onClick={save}>
                             {saving ? <CircularProgress size={14} /> : isEditing ? 'Update' : 'Add'}
@@ -185,7 +209,7 @@ const RatelimitConfigDialog: React.FC<IProps> = ({ onClose, backendUrl, accessSt
                 <Button onClick={onClose}>Close</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export default RatelimitConfigDialog

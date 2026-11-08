@@ -161,58 +161,62 @@ const editorChanged = useRef<boolean>(false)
         }
     }
 
-    return (<>
-        <ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
-            <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
-                <Stack direction={'row'} alignItems={'center'}>
-                    <Typography sx={{flexGrow:1}}></Typography>
-                    <Typography>{contentEditData.allowEdit?<Edit />:<EditOff/>}&nbsp;{props.title}</Typography>
+    return (
+        <>
+            <ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
+                <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
+                    <Stack direction={'row'} sx={{
+                        alignItems: 'center'
+                    }}>
+                        <Typography sx={{flexGrow:1}}></Typography>
+                        <Typography>{contentEditData.allowEdit?<Edit />:<EditOff/>}&nbsp;{props.title}</Typography>
 
-                    <Typography sx={{flexGrow:1}}></Typography>
+                        <Typography sx={{flexGrow:1}}></Typography>
 
-                    <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={tryClose} onSnap={handleSnap} />
-                </Stack>
-            </DialogTitle>
+                        <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={tryClose} onSnap={handleSnap} />
+                    </Stack>
+                </DialogTitle>
 
-            <DialogContent>
-                <div ref={containerRef}
-                    style={{ height: '100%', width: '100%', paddingTop: '2px' }}
-                    onMouseDownCapture={(e) => {
-                        const target = e.target as HTMLElement;
-                        if (target.closest('.cm-foldGutter')) {
-                            if (editorViewRef.current) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                editorViewRef.current.focus();
-                                foldCode(editorViewRef.current);
+                <DialogContent>
+                    <div ref={containerRef}
+                        style={{ height: '100%', width: '100%', paddingTop: '2px' }}
+                        onMouseDownCapture={(e) => {
+                            const target = e.target as HTMLElement;
+                            if (target.closest('.cm-foldGutter')) {
+                                if (editorViewRef.current) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    editorViewRef.current.focus();
+                                    foldCode(editorViewRef.current);
+                                }
                             }
-                        }
-                    }}
-                    className="no-drag"
-                >
-                    <CodeMirror value={code}
-                        onChange={updateEditorValue}
-                        theme={editorTheme}
-                        onUpdate={(viewUpdate) => { if (viewUpdate.view) editorViewRef.current = viewUpdate.view }}
-                        extensions={[
-                            EditorState.readOnly.of(!contentEditData.allowEdit),
-                            yaml(),
-                            search({ top: true }),
-                            muiTheme,
-                            keymap.of([
-                                ...defaultKeymap,
-                                ...searchKeymap,
-                            ])
-                        ]}
-                    />
-                </div>
-            </DialogContent>
+                        }}
+                        className="no-drag"
+                    >
+                        <CodeMirror value={code}
+                            onChange={updateEditorValue}
+                            theme={editorTheme}
+                            onUpdate={(viewUpdate) => { if (viewUpdate.view) editorViewRef.current = viewUpdate.view }}
+                            extensions={[
+                                EditorState.readOnly.of(!contentEditData.allowEdit),
+                                yaml(),
+                                search({ top: true }),
+                                muiTheme,
+                                keymap.of([
+                                    ...defaultKeymap,
+                                    ...searchKeymap,
+                                ])
+                            ]}
+                        />
+                    </div>
+                </DialogContent>
 
-            <DialogActions sx={{ p: '4px 4px', pr:2 }}>
-                <Button onClick={() => contentEditData.onOk?.(code, contentEditData.source)} disabled={!editorChanged.current}>Ok</Button>
-            </DialogActions>
-        </ResizableDialog>
-        {msgBox}
-    </>)
+                <DialogActions sx={{ p: '4px 4px', pr:2 }}>
+                    <Button onClick={() => contentEditData.onOk?.(code, contentEditData.source)} disabled={!editorChanged.current}>Ok</Button>
+                </DialogActions>
+            </ResizableDialog>
+            {msgBox}
+        </>
+    );
 }
 export { ContentEdit }

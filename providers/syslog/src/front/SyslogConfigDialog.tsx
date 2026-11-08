@@ -72,7 +72,14 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
                     : <Stack spacing={2.5}>
 
                         {/* Port + Protocol + TCP Framing */}
-                        <Stack direction='row' spacing={2} alignItems='center' flexWrap='wrap' useFlexGap>
+                        <Stack
+                            direction='row'
+                            spacing={2}
+                            useFlexGap
+                            sx={{
+                                alignItems: 'center',
+                                flexWrap: 'wrap'
+                            }}>
                             <TextField size='small' label='Port' type='number' value={config.port}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfig(prev => ({ ...prev, port: parseInt(e.target.value, 10) || 514 }))}
                                 sx={{ width: 100 }} slotProps={{ htmlInput: { min: 1, max: 65535 } }} />
@@ -100,7 +107,9 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
                         </Stack>
 
                         {/* Limits */}
-                        <Stack direction='row' spacing={2} alignItems='center'>
+                        <Stack direction='row' spacing={2} sx={{
+                            alignItems: 'center'
+                        }}>
                             <TextField size='small' label='Max queued messages' type='number' value={config.maxMessages}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfig(prev => ({ ...prev, maxMessages: parseInt(e.target.value, 10) || 10000 }))}
                                 sx={{ width: 200 }} slotProps={{ htmlInput: { min: 1 } }} />
@@ -113,7 +122,13 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
 
                         {/* Relay targets */}
                         <Box>
-                            <Stack direction='row' alignItems='center' spacing={1} sx={{ mb: 1 }}>
+                            <Stack
+                                direction='row'
+                                spacing={1}
+                                sx={{
+                                    alignItems: 'center',
+                                    mb: 1
+                                }}>
                                 <Typography variant='subtitle2'>Relay targets</Typography>
                                 <Tooltip title='Add relay target'>
                                     <IconButton size='small' onClick={() => setAddingRelay(true)} disabled={addingRelay}>
@@ -123,13 +138,25 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
                             </Stack>
 
                             {config.relayTargets.length === 0 && !addingRelay &&
-                                <Typography variant='body2' color='text.secondary'>No relay targets configured.</Typography>
+                                <Typography variant='body2' sx={{
+                                    color: 'text.secondary'
+                                }}>No relay targets configured.</Typography>
                             }
 
                             <Stack spacing={0.5}>
                                 {config.relayTargets.map((t, i) => (
-                                    <Stack key={i} direction='row' alignItems='center' spacing={1}
-                                        sx={{ px: 1, py: 0.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                                    <Stack
+                                        key={i}
+                                        direction='row'
+                                        spacing={1}
+                                        sx={{
+                                            alignItems: 'center',
+                                            px: 1,
+                                            py: 0.5,
+                                            border: 1,
+                                            borderColor: 'divider',
+                                            borderRadius: 1
+                                        }}>
                                         <Chip label={t.protocol.toUpperCase()} size='small'
                                             color={t.protocol === 'udp' ? 'info' : 'secondary'} sx={{ width: 48, flexShrink: 0 }} />
                                         <Typography variant='body2' sx={{ flex: 1 }}>{t.host}:{t.port}</Typography>
@@ -142,8 +169,17 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
                                 ))}
 
                                 {addingRelay && (
-                                    <Stack direction='row' alignItems='center' spacing={1}
-                                        sx={{ px: 1, py: 1, border: 1, borderColor: 'primary.main', borderRadius: 1 }}>
+                                    <Stack
+                                        direction='row'
+                                        spacing={1}
+                                        sx={{
+                                            alignItems: 'center',
+                                            px: 1,
+                                            py: 1,
+                                            border: 1,
+                                            borderColor: 'primary.main',
+                                            borderRadius: 1
+                                        }}>
                                         <FormControl size='small' sx={{ width: 80, flexShrink: 0 }}>
                                             <Select value={newRelay.protocol}
                                                 onChange={e => setNewRelay(prev => ({ ...prev, protocol: e.target.value as 'udp' | 'tcp' }))}>
@@ -175,7 +211,7 @@ const SyslogConfigDialog: React.FC<ISyslogConfigDialogProps> = ({ onClose, backe
                 <Button onClick={onClose}>Cancel</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export default SyslogConfigDialog

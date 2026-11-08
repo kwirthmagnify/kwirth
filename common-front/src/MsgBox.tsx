@@ -3,7 +3,7 @@ import { Dispatch, SetStateAction } from 'react'
 import Info from '@mui/icons-material/Info'
 import Warning from '@mui/icons-material/Warning'
 import Error from '@mui/icons-material/Error'
-import HelpOutline from '@mui/icons-material/HelpOutline'
+import HelpOutline from '@mui/icons-material/HelpOutlined'
 import { Stack, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography, CircularProgress, Box } from '@mui/material'
 
 export enum MsgBoxButtons {
@@ -32,7 +32,9 @@ const MsgBoxShow = (title:string, message:string|JSX.Element, onClose:Dispatch<S
                 {title}
             </DialogTitle>
             <DialogContent >
-                <Stack direction='row' alignItems={'center'}>
+                <Stack direction='row' sx={{
+                    alignItems: 'center'
+                }}>
                     {icon}
                     <Box sx={{width:'12px'}}/>
                     { typeof(message)==='string' ?
@@ -49,7 +51,7 @@ const MsgBoxShow = (title:string, message:string|JSX.Element, onClose:Dispatch<S
                 { (buttons & MsgBoxButtons.Cancel)? <Button onClick={() => { onClose(<></>); if (onResult) onResult(MsgBoxButtons.Cancel)}}>cancel</Button>:<></>}
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 const MsgBoxWaitShow = (title:string, message:string|JSX.Element, onClose:Dispatch<SetStateAction<JSX.Element>>, buttons:MsgBoxButtons, icon:JSX.Element, onResult?:(a:MsgBoxButtons)=>void) => {
@@ -59,7 +61,13 @@ const MsgBoxWaitShow = (title:string, message:string|JSX.Element, onClose:Dispat
                 {title}
             </DialogTitle>
             <DialogContent >
-                <Stack direction={'row'} alignItems={'center'} alignContent={'center'} sx={{mx:2}}>
+                <Stack
+                    direction={'row'}
+                    sx={{
+                        alignItems: 'center',
+                        alignContent: 'center',
+                        mx:2
+                    }}>
                     <Box>
                         <CircularProgress size={50} />
                     </Box>
@@ -76,5 +84,5 @@ const MsgBoxWaitShow = (title:string, message:string|JSX.Element, onClose:Dispat
                 { (buttons & MsgBoxButtons.Cancel)? <Button onClick={() => { onClose(<></>); if (onResult) onResult(MsgBoxButtons.Cancel)}}>cancel</Button>:<></> }
             </DialogActions>
         </Dialog>
-    )
+    );
 }

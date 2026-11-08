@@ -139,7 +139,9 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
                     <FormControlLabel label='Enabled'
                         control={<Switch checked={instancia.enabled} onChange={e => setInstancia(prev => ({ ...prev, enabled: e.target.checked }))} />} />
                     {props.schema.length === 0
-                        ? <Typography variant='body2' color='text.secondary'>This connector has no configurable options.</Typography>
+                        ? <Typography variant='body2' sx={{
+                        color: 'text.secondary'
+                    }}>This connector has no configurable options.</Typography>
                         : <ConfigFields schema={props.schema} values={instancia.config} onChange={setCampo} onRevealSecret={revelarSecreto} />}
                     {/* Signup belongs to the core, not to the connector: the same two fields for every IdP. */}
                     <Typography variant='subtitle2' sx={{ pt: 1 }}>Signup</Typography>
@@ -158,7 +160,7 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
                 <Button onClick={props.onClose}>Cancel</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { IdpConfigDialog }

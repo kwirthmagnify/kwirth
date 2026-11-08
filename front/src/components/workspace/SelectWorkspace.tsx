@@ -32,7 +32,9 @@ const SelectWorkspace: React.FC<ISelectWorkspaceProps> = (props:ISelectWorkspace
                             <ListItem>
                                 <Stack direction={'column'}>
                                     <Typography>{v.name}</Typography>
-                                    <Typography color={'darkgray'} fontSize={12}>{v.description}</Typography>
+                                    <Typography color={'darkgray'} sx={{
+                                        fontSize: 12
+                                    }}>{v.description}</Typography>
                                 </Stack>
                             </ListItem>
                         </ListItemButton>)}
@@ -43,7 +45,7 @@ const SelectWorkspace: React.FC<ISelectWorkspaceProps> = (props:ISelectWorkspace
                 <Button variant='outlined' onClick={() => props.onSelect(props.action)}>{props.action === 'load'? 'CANCEL':'CLOSE'}</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { SelectWorkspace }

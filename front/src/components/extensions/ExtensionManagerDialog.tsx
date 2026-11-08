@@ -669,120 +669,136 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const shownInstalled = installed.filter(e => matches(e, installedFilter)).sort(byName)
     const shownKeys = Object.keys(grouped).filter(k => matches(grouped[k][0], availableFilter)).sort((a, b) => byName(grouped[a][0], grouped[b][0]))
 
-    return (<>
-        <Dialog open={true} ref={escapeRef} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
-            {d.helpSection
-                ? <DialogTitleHelp section={d.helpSection} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TypeIcon fontSize='small' />{d.title}</Box>
-                  </DialogTitleHelp>
-                : <DialogTitle><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TypeIcon fontSize='small' />{d.title}</Box></DialogTitle>
-            }
-            <DialogContent>
-                <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
+    return (
+        <>
+            <Dialog open={true} ref={escapeRef} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '72vw', maxWidth: '72vw', height: '80vh' } }}>
+                {d.helpSection
+                    ? <DialogTitleHelp section={d.helpSection} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TypeIcon fontSize='small' />{d.title}</Box>
+                      </DialogTitleHelp>
+                    : <DialogTitle><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TypeIcon fontSize='small' />{d.title}</Box></DialogTitle>
+                }
+                <DialogContent>
+                    <Stack direction='column' spacing={2} sx={{ mt: 1 }}>
 
-                    <Stack direction='row' alignItems='center' spacing={1}>
-                        <Typography variant='subtitle2'>Installed {d.noun.plural}</Typography>
-                        <TextField size='small' placeholder='Filter…' value={installedFilter} onChange={e => setInstalledFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
-                        <ViewToggle />
+                        <Stack direction='row' spacing={1} sx={{
+                            alignItems: 'center'
+                        }}>
+                            <Typography variant='subtitle2'>Installed {d.noun.plural}</Typography>
+                            <TextField size='small' placeholder='Filter…' value={installedFilter} onChange={e => setInstalledFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
+                            <ViewToggle />
+                        </Stack>
+
+                        {shownInstalled.length === 0
+                            ? <Typography variant='body2' sx={{
+                            color: 'text.secondary'
+                        }}>No {d.noun.plural} installed.</Typography>
+                            : viewMode === 'card'
+                                ? <Box sx={cardGridSx}>
+                                    {shownInstalled.map(entry => (
+                                        <ExtensionCard key={d.keyOf(entry)} model={d.toModel(entry)} fallbackIcon={<TypeIcon fontSize='small' />}
+                                            chips={originChips(entry)} statusChips={installedStatusChips(entry)} inlineControl={pluginControl(entry)}
+                                            actions={installedActions(entry)} />
+                                    ))}
+                                  </Box>
+                                : <Box sx={listGridSx}>
+                                    {shownInstalled.flatMap((entry, i, arr) => {
+                                        const key = d.keyOf(entry)
+                                        return [
+                                            ...extensionRowCells(key, { model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />, chips: originChips(entry), statusChips: installedStatusChips(entry), inlineControl: pluginControl(entry), actions: installedActions(entry) }),
+                                            ...(i < arr.length - 1 ? [separator(key)] : [])
+                                        ]
+                                    })}
+                                  </Box>
+                        }
+
+                        <Typography variant='subtitle2' sx={{ pt: 1 }}>Install {d.noun.singular}</Typography>
+                        <Stack direction='row' spacing={1} sx={{
+                            alignItems: 'center'
+                        }}>
+                            <TextField size='small' fullWidth placeholder='https://...' value={customUrl} onChange={e => setCustomUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') installFromUrl() }} />
+                            <Tooltip title='Install from URL'>
+                                <span>
+                                    <IconButton size='small' aria-label='Install from URL' color='primary' disabled={installingCustom || !customUrl.trim()} onClick={installFromUrl}>
+                                        {installingCustom ? <CircularProgress size={16} /> : <Download fontSize='small' />}
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                            <Divider orientation='vertical' flexItem />
+                            <input ref={fileInputRef} type='file' accept='.tgz,application/gzip' style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) installFromFile(f) }} />
+                            <Tooltip title='Install from local file'>
+                                <span>
+                                    <Button variant='outlined' size='small' startIcon={installingFile ? <CircularProgress size={14} /> : <FolderOpen fontSize='small' />} disabled={installingFile} onClick={() => fileInputRef.current?.click()} sx={{ whiteSpace: 'nowrap' }}>
+                                        {installingFile ? 'Installing…' : 'Browse…'}
+                                    </Button>
+                                </span>
+                            </Tooltip>
+                        </Stack>
+
+                        <Stack
+                            direction='row'
+                            spacing={1}
+                            sx={{
+                                alignItems: 'center',
+                                pt: 1
+                            }}>
+                            <Typography variant='subtitle2'>Available {d.noun.plural}</Typography>
+                            <TextField size='small' placeholder='Filter…' value={availableFilter} onChange={e => setAvailableFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
+                            <Tooltip title='Refresh catalog'>
+                                <span>
+                                    <IconButton size='small' aria-label='Refresh catalog' sx={{ width: 30, height: 30 }} onClick={() => fetchManifest(true)} disabled={loadingManifest}>
+                                        {loadingManifest ? <CircularProgress size={16} /> : <Refresh fontSize='small' />}
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                        </Stack>
+
+                        {shownKeys.length === 0 && !loadingManifest
+                            ? <Typography variant='body2' sx={{
+                            color: 'text.secondary'
+                        }}>No {d.noun.plural} available.</Typography>
+                            : viewMode === 'card'
+                                ? <Box sx={cardGridSx}>
+                                    {shownKeys.map(key => {
+                                        const entry = selectedEntry(key)
+                                        return (
+                                            <ExtensionCard key={key} model={d.toModel(entry)} fallbackIcon={<TypeIcon fontSize='small' />}
+                                                versions={grouped[key].map(e => e.version ?? '')}
+                                                onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [key]: v }))}
+                                                statusChips={availableStatusChips(key, entry)} actions={availableActions(key, entry)} />
+                                        )
+                                    })}
+                                  </Box>
+                                : <Box sx={listGridSx}>
+                                    {shownKeys.flatMap((key, i, arr) => {
+                                        const entry = selectedEntry(key)
+                                        return [
+                                            ...extensionRowCells(key, {
+                                                model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />,
+                                                versions: grouped[key].map(e => e.version ?? ''),
+                                                onVersionChange: v => setSelectedVersions(prev => ({ ...prev, [key]: v })),
+                                                statusChips: availableStatusChips(key, entry), actions: availableActions(key, entry)
+                                            }),
+                                            ...(i < arr.length - 1 ? [separator(key)] : [])
+                                        ]
+                                    })}
+                                  </Box>
+                        }
+
                     </Stack>
+                </DialogContent>
+                {error && <Box sx={{ px: 3, pb: 1 }}><Typography variant='caption' color='error'>{error}</Typography></Box>}
+                <DialogActions>
+                    <Button variant='outlined' onClick={props.onClose}>CLOSE</Button>
+                </DialogActions>
+            </Dialog>
 
-                    {shownInstalled.length === 0
-                        ? <Typography variant='body2' color='text.secondary'>No {d.noun.plural} installed.</Typography>
-                        : viewMode === 'card'
-                            ? <Box sx={cardGridSx}>
-                                {shownInstalled.map(entry => (
-                                    <ExtensionCard key={d.keyOf(entry)} model={d.toModel(entry)} fallbackIcon={<TypeIcon fontSize='small' />}
-                                        chips={originChips(entry)} statusChips={installedStatusChips(entry)} inlineControl={pluginControl(entry)}
-                                        actions={installedActions(entry)} />
-                                ))}
-                              </Box>
-                            : <Box sx={listGridSx}>
-                                {shownInstalled.flatMap((entry, i, arr) => {
-                                    const key = d.keyOf(entry)
-                                    return [
-                                        ...extensionRowCells(key, { model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />, chips: originChips(entry), statusChips: installedStatusChips(entry), inlineControl: pluginControl(entry), actions: installedActions(entry) }),
-                                        ...(i < arr.length - 1 ? [separator(key)] : [])
-                                    ]
-                                })}
-                              </Box>
-                    }
-
-                    <Typography variant='subtitle2' sx={{ pt: 1 }}>Install {d.noun.singular}</Typography>
-                    <Stack direction='row' spacing={1} alignItems='center'>
-                        <TextField size='small' fullWidth placeholder='https://...' value={customUrl} onChange={e => setCustomUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') installFromUrl() }} />
-                        <Tooltip title='Install from URL'>
-                            <span>
-                                <IconButton size='small' aria-label='Install from URL' color='primary' disabled={installingCustom || !customUrl.trim()} onClick={installFromUrl}>
-                                    {installingCustom ? <CircularProgress size={16} /> : <Download fontSize='small' />}
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                        <Divider orientation='vertical' flexItem />
-                        <input ref={fileInputRef} type='file' accept='.tgz,application/gzip' style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) installFromFile(f) }} />
-                        <Tooltip title='Install from local file'>
-                            <span>
-                                <Button variant='outlined' size='small' startIcon={installingFile ? <CircularProgress size={14} /> : <FolderOpen fontSize='small' />} disabled={installingFile} onClick={() => fileInputRef.current?.click()} sx={{ whiteSpace: 'nowrap' }}>
-                                    {installingFile ? 'Installing…' : 'Browse…'}
-                                </Button>
-                            </span>
-                        </Tooltip>
-                    </Stack>
-
-                    <Stack direction='row' alignItems='center' spacing={1} sx={{ pt: 1 }}>
-                        <Typography variant='subtitle2'>Available {d.noun.plural}</Typography>
-                        <TextField size='small' placeholder='Filter…' value={availableFilter} onChange={e => setAvailableFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
-                        <Tooltip title='Refresh catalog'>
-                            <span>
-                                <IconButton size='small' aria-label='Refresh catalog' sx={{ width: 30, height: 30 }} onClick={() => fetchManifest(true)} disabled={loadingManifest}>
-                                    {loadingManifest ? <CircularProgress size={16} /> : <Refresh fontSize='small' />}
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                    </Stack>
-
-                    {shownKeys.length === 0 && !loadingManifest
-                        ? <Typography variant='body2' color='text.secondary'>No {d.noun.plural} available.</Typography>
-                        : viewMode === 'card'
-                            ? <Box sx={cardGridSx}>
-                                {shownKeys.map(key => {
-                                    const entry = selectedEntry(key)
-                                    return (
-                                        <ExtensionCard key={key} model={d.toModel(entry)} fallbackIcon={<TypeIcon fontSize='small' />}
-                                            versions={grouped[key].map(e => e.version ?? '')}
-                                            onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [key]: v }))}
-                                            statusChips={availableStatusChips(key, entry)} actions={availableActions(key, entry)} />
-                                    )
-                                })}
-                              </Box>
-                            : <Box sx={listGridSx}>
-                                {shownKeys.flatMap((key, i, arr) => {
-                                    const entry = selectedEntry(key)
-                                    return [
-                                        ...extensionRowCells(key, {
-                                            model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />,
-                                            versions: grouped[key].map(e => e.version ?? ''),
-                                            onVersionChange: v => setSelectedVersions(prev => ({ ...prev, [key]: v })),
-                                            statusChips: availableStatusChips(key, entry), actions: availableActions(key, entry)
-                                        }),
-                                        ...(i < arr.length - 1 ? [separator(key)] : [])
-                                    ]
-                                })}
-                              </Box>
-                    }
-
-                </Stack>
-            </DialogContent>
-            {error && <Box sx={{ px: 3, pb: 1 }}><Typography variant='caption' color='error'>{error}</Typography></Box>}
-            <DialogActions>
-                <Button variant='outlined' onClick={props.onClose}>CLOSE</Button>
-            </DialogActions>
-        </Dialog>
-
-        {/* El diálogo de configuracion es del TIPO, no del generico: siete tipos lo resuelven de siete
-            maneras distintas (JSON libre, schema, CRUD con nombre, localStorage…). Va como hermano y no
-            anidado dentro del Dialog principal. */}
-        {configuring && d.renderConfigDialog?.(configuring, () => { setConfiguring(undefined); loadInstalled() })}
-    </>)
+            {/* El diálogo de configuracion es del TIPO, no del generico: siete tipos lo resuelven de siete
+                maneras distintas (JSON libre, schema, CRUD con nombre, localStorage…). Va como hermano y no
+                anidado dentro del Dialog principal. */}
+            {configuring && d.renderConfigDialog?.(configuring, () => { setConfiguring(undefined); loadInstalled() })}
+        </>
+    );
 }
 
 export { ExtensionManagerDialog }

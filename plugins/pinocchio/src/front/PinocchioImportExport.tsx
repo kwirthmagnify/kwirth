@@ -36,24 +36,38 @@ const CheckSection: React.FC<ICheckSectionProps> = ({ label, items, selected, on
 
     return (
         <Box sx={{ mb: 1 }}>
-            <Stack direction='row' alignItems='center'>
+            <Stack direction='row' sx={{
+                alignItems: 'center'
+            }}>
                 <Checkbox size='small' checked={allChecked} indeterminate={someChecked && !allChecked} onChange={toggleAll} disabled={items.length === 0} />
                 <Typography variant='subtitle2' sx={{ fontWeight: 'bold' }}>{label}</Typography>
             </Stack>
             <Box sx={{ pl: 3 }}>
                 {items.length === 0
-                    ? <Typography variant='body2' color='text.secondary' sx={{ ml: 1 }}>— none —</Typography>
+                    ? <Typography
+                    variant='body2'
+                    sx={{
+                        color: 'text.secondary',
+                        ml: 1
+                    }}>— none —</Typography>
                     : items.map(key => (
-                        <Stack key={key} direction='row' alignItems='center'>
+                        <Stack key={key} direction='row' sx={{
+                            alignItems: 'center'
+                        }}>
                             <Checkbox size='small' checked={selected.has(key)} onChange={() => toggleOne(key)} />
                             <Typography variant='body2'>{key}</Typography>
-                            {existsLabel?.(key) && <Typography variant='caption' color='warning.main' sx={{ ml: 1 }}>(overwrites existing)</Typography>}
+                            {existsLabel?.(key) && <Typography
+                                variant='caption'
+                                sx={{
+                                    color: 'warning.main',
+                                    ml: 1
+                                }}>(overwrites existing)</Typography>}
                         </Stack>
                     ))
                 }
             </Box>
         </Box>
-    )
+    );
 }
 
 const PinocchioImportExport: React.FC<IProps> = (props) => {
@@ -107,7 +121,9 @@ const PinocchioImportExport: React.FC<IProps> = (props) => {
     }
 
     return (
-        <Dialog open={true} PaperProps={{ sx: { width: '50vw', maxWidth: '560px' } }}>
+        <Dialog open={true} slotProps={{
+            paper: { sx: { width: '50vw', maxWidth: '560px' } }
+        }}>
             <DialogTitleHelp docsUrl={props.docsUrl} section='user/07-import-export'>Triggers — Import / Export</DialogTitleHelp>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 1 }}>
                 <Stack direction='row' spacing={1} sx={{ mb: 1 }}>
@@ -121,7 +137,9 @@ const PinocchioImportExport: React.FC<IProps> = (props) => {
                 </>}
 
                 {mode === 'import' && <>
-                    <Stack direction='row' alignItems='center' spacing={2}>
+                    <Stack direction='row' spacing={2} sx={{
+                        alignItems: 'center'
+                    }}>
                         <input ref={fileInputRef} type='file' accept='.json' style={{ display: 'none' }} onChange={handleFileChange} />
                         <Button variant='outlined' size='small' onClick={() => fileInputRef.current?.click()}>Upload JSON…</Button>
                         {importError && <Typography color='error' variant='body2'>{importError}</Typography>}
@@ -136,7 +154,7 @@ const PinocchioImportExport: React.FC<IProps> = (props) => {
                 <Button variant='outlined' onClick={() => props.onClose()}>Close</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { PinocchioImportExport }

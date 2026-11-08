@@ -39,12 +39,26 @@ const EmptyState: React.FC<IEmptyStateProps> = ({ title, detail }) => {
         if (ref.current) setTop(ref.current.getBoundingClientRect().top)
     })
     return (
-        <Stack ref={ref} alignItems='center' justifyContent='center' spacing={1}
-            sx={{ flex: 1, width: '100%', minHeight: `calc(100vh - ${top}px - 8px)`, px: 4, textAlign: 'center' }}>
-            <Typography variant='h6' color='text.secondary'>{title}</Typography>
-            <Typography variant='body2' color='text.secondary'>{detail}</Typography>
+        <Stack
+            ref={ref}
+            spacing={1}
+            sx={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: 1,
+                width: '100%',
+                minHeight: `calc(100vh - ${top}px - 8px)`,
+                px: 4,
+                textAlign: 'center'
+            }}>
+            <Typography variant='h6' sx={{
+                color: 'text.secondary'
+            }}>{title}</Typography>
+            <Typography variant='body2' sx={{
+                color: 'text.secondary'
+            }}>{detail}</Typography>
         </Stack>
-    )
+    );
 }
 
 /** The headline of one answer: what was asked, of what, and how it went. */
@@ -88,7 +102,13 @@ const Reading: React.FC<{ reading: INetToolsReading }> = ({ reading }) => {
     const painted = lines(reading)
     return (
         <Paper variant='outlined' sx={{ p: 1.5 }}>
-            <Stack direction='row' alignItems='center' spacing={1} sx={{ mb: 0.5 }}>
+            <Stack
+                direction='row'
+                spacing={1}
+                sx={{
+                    alignItems: 'center',
+                    mb: 0.5
+                }}>
                 <Typography variant='subtitle2' sx={{ flex: 1 }} aria-label='reading headline'>{headline(reading)}</Typography>
                 {reading.dceId && <Chip size='small' variant='outlined' label={`dce: ${reading.dceId}`} />}
             </Stack>
@@ -97,15 +117,23 @@ const Reading: React.FC<{ reading: INetToolsReading }> = ({ reading }) => {
             {reading.error && <Typography variant='body2' color='error' aria-label='reading error'>{reading.error}</Typography>}
 
             {!reading.error && <>
-                <Typography variant='caption' color='text.secondary' display='block' aria-label='reading summary'>{summary(reading)}</Typography>
+                <Typography
+                    variant='caption'
+                    aria-label='reading summary'
+                    sx={{
+                        color: 'text.secondary',
+                        display: 'block'
+                    }}>{summary(reading)}</Typography>
                 {failure && <Typography variant='body2' color='error' aria-label='reading failure'>{failure}</Typography>}
                 {!failure && painted.length === 0 &&
-                    <Typography variant='body2' color='text.secondary'>No records of this type. The name resolves — it just has none.</Typography>}
+                    <Typography variant='body2' sx={{
+                        color: 'text.secondary'
+                    }}>No records of this type. The name resolves — it just has none.</Typography>}
                 {painted.map((line, index) =>
                     <Typography key={index} variant='body2' sx={{ fontFamily: 'monospace' }} aria-label='reading line'>{line}</Typography>)}
             </>}
         </Paper>
-    )
+    );
 }
 
 export const NetToolsTabContent: React.FC<IContentProps> = (props) => {
@@ -154,13 +182,22 @@ export const NetToolsTabContent: React.FC<IContentProps> = (props) => {
         <Stack spacing={2} sx={{ p: 2 }}>
             <Box>
                 <Typography variant='subtitle2'>DNS and reachability, as Kwirth sees them</Typography>
-                <Typography variant='caption' color='text.secondary'>
+                <Typography variant='caption' sx={{
+                    color: 'text.secondary'
+                }}>
                     Everything here is answered by the Kwirth process, not by this browser: a name such as
                     kwirth-postgres.default.svc.cluster.local only means something from inside the cluster.
                 </Typography>
             </Box>
 
-            <Stack direction='row' spacing={1} useFlexGap flexWrap='wrap' alignItems='center'>
+            <Stack
+                direction='row'
+                spacing={1}
+                useFlexGap
+                sx={{
+                    flexWrap: 'wrap',
+                    alignItems: 'center'
+                }}>
                 <TextField size='small' label='Host or IP' value={data.target} sx={{ minWidth: 280 }}
                     onChange={event => { data.target = event.target.value; repaint() }} />
                 <TextField size='small' select label='Record' value={data.type} sx={{ minWidth: 110 }}
@@ -168,11 +205,15 @@ export const NetToolsTabContent: React.FC<IContentProps> = (props) => {
                     {RECORD_TYPES.map(type => <MenuItem key={type} value={type}>{type}</MenuItem>)}
                 </TextField>
                 <TextField size='small' type='number' label='Port' value={data.port} sx={{ width: 110 }}
-                    inputProps={{ min: 1, max: 65535 }}
-                    onChange={event => { data.port = Number(event.target.value); repaint() }} />
+                    onChange={event => { data.port = Number(event.target.value); repaint() }}
+                    slotProps={{
+                        htmlInput: { min: 1, max: 65535 }
+                    }} />
             </Stack>
 
-            <Stack direction='row' spacing={1} useFlexGap flexWrap='wrap'>
+            <Stack direction='row' spacing={1} useFlexGap sx={{
+                flexWrap: 'wrap'
+            }}>
                 <Button variant='contained' size='small' disabled={noTarget || data.waiting}
                     onClick={() => ask(ENetToolsCommand.RESOLVE)}>Resolve</Button>
                 <Button variant='outlined' size='small' disabled={noTarget || data.waiting}
@@ -187,7 +228,9 @@ export const NetToolsTabContent: React.FC<IContentProps> = (props) => {
             </Stack>
 
             {data.readings.length === 0 &&
-                <Typography variant='body2' color='text.secondary'>Nothing asked yet.</Typography>}
+                <Typography variant='body2' sx={{
+                    color: 'text.secondary'
+                }}>Nothing asked yet.</Typography>}
 
             <Stack spacing={1}>
                 {data.readings.map((reading, index) => <Reading key={index} reading={reading} />)}
@@ -195,9 +238,11 @@ export const NetToolsTabContent: React.FC<IContentProps> = (props) => {
 
             {data.signals.length > 0 &&
                 <Box>{data.signals.map((signal, index) =>
-                    <Typography key={index} variant='caption' color='error' display='block'>{signal}</Typography>)}</Box>}
+                    <Typography key={index} variant='caption' color='error' sx={{
+                        display: 'block'
+                    }}>{signal}</Typography>)}</Box>}
 
             {LatencyDialog && <LatencyDialog open={latencyOpen} onClose={() => setLatencyOpen(false)} />}
         </Stack>
-    )
+    );
 }

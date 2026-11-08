@@ -159,8 +159,8 @@ export class OpsChannel implements IChannel {
         return React.createElement(React.Fragment, null,
             React.createElement(Typography, { variant: 'subtitle1', sx: { fontWeight: 700, flexGrow: 1 } }, 'Ops'),
             React.createElement(Divider),
-            React.createElement(Typography, { fontSize: 12 }, 'You can use clipboard functions by pressing Ctrl+Shift+C for copying and Ctrl+Shift+V for pasting'),
-            React.createElement(Typography, { fontSize: 12 }, 'You can minimize this window and the connection will keep open, or you can close this window and the connection to the container will be closed.')
+            React.createElement(Typography, { sx: { fontSize: 12 } }, 'You can use clipboard functions by pressing Ctrl+Shift+C for copying and Ctrl+Shift+V for pasting'),
+            React.createElement(Typography, { sx: { fontSize: 12 } }, 'You can minimize this window and the connection will keep open, or you can close this window and the connection to the container will be closed.')
         )
     }
 }

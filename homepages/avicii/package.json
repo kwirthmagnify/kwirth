@@ -12,11 +12,12 @@
   },
   "devDependencies": {
     "@kwirthmagnify/kwirth-common-front": "^0.5.54",
-    "@mui/icons-material": "7.1.2",
-    "@mui/material": "7.1.2",
+    "@mui/icons-material": "9.5.0",
+    "@mui/material": "9.5.0",
     "@types/react": "^18.3.0",
     "esbuild": "^0.27.2",
     "react": "^18.3.0",
+    "react-dom": "^18.3.0",
     "typescript": "^5.4.0"
   },
   "requiresRestart": false,

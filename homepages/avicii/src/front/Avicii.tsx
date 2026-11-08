@@ -229,8 +229,18 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
             <Box sx={{ position: 'absolute', inset: 0, overflowY: 'auto' }}>
 
                 {/* ── Header ── */}
-                <Stack direction="row" alignItems="center" spacing={2.5}
-                    sx={{ pt: 2, pb: 1.5, pl: 3, pr: 1.5, borderBottom: `1px solid ${AV_GOLD_DIM}`, bgcolor: AV_BG }}>
+                <Stack
+                    direction="row"
+                    spacing={2.5}
+                    sx={{
+                        alignItems: "center",
+                        pt: 2,
+                        pb: 1.5,
+                        pl: 3,
+                        pr: 1.5,
+                        borderBottom: `1px solid ${AV_GOLD_DIM}`,
+                        bgcolor: AV_BG
+                    }}>
                     <AviciiLogo size={40} />
                     <AviciiWordmark />
                     <Box sx={{ flex: 1 }} />
@@ -267,7 +277,9 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
 
                                         {/* Name + URL */}
                                         <Stack direction="column" spacing={0.5}>
-                                            <Stack direction="row" alignItems="center" spacing={1}>
+                                            <Stack direction="row" spacing={1} sx={{
+                                                alignItems: "center"
+                                            }}>
                                                 <Typography sx={{
                                                     fontFamily: AV_FONT, fontWeight: 700, fontSize: '0.9rem',
                                                     letterSpacing: '3px', textTransform: 'uppercase', color: AV_TEXT,
@@ -301,9 +313,16 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
                                         )}
 
                                         {/* Channel icons + buttons */}
-                                        <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                        <Stack
+                                            direction="row"
+                                            sx={{
+                                                alignItems: "center",
+                                                justifyContent: "space-between"
+                                            }}>
                                             {showChannelIcons
-                                                ? <Stack direction="row" spacing={0.5} alignItems="center">
+                                                ? <Stack direction="row" spacing={0.5} sx={{
+                                                alignItems: "center"
+                                            }}>
                                                     {(cluster.kwirthData?.channels ?? []).map((ch: any) => {
                                                         const cls = props.frontChannels.get(ch.id)
                                                         if (!cls) return null
@@ -326,7 +345,7 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
                                     </Stack>
                                 </CardContent>
                             </Card>
-                        )
+                        );
                     })}
 
                     {props.clusters.length === 0 && (
@@ -338,5 +357,5 @@ export const Avicii: React.FC<IHomepageProps> = (props) => {
             </Box>
             {showSetup && <AviciiSetup config={localConfig} onSave={saveConfig} onClose={() => setShowSetup(false)} />}
         </Box>
-    )
+    );
 }

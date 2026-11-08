@@ -140,7 +140,12 @@ const RegexSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString
 
                 {/* Left — config list */}
                 <Box sx={{ width: 190, display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
-                    <Typography variant='caption' color='text.secondary' fontWeight='bold'>Configs</Typography>
+                    <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            fontWeight: 'bold'
+                        }}>Configs</Typography>
                     <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
                         <List dense disablePadding>
                             {configs.map(cfg => (
@@ -153,8 +158,10 @@ const RegexSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString
                                         <ListItemText
                                             primary={cfg.name}
                                             secondary={`${cfg.rules.length} rule${cfg.rules.length !== 1 ? 's' : ''}`}
-                                            primaryTypographyProps={{ variant: 'body2', noWrap: true }}
-                                            secondaryTypographyProps={{ variant: 'caption' }} />
+                                            slotProps={{
+                                                primary: { variant: 'body2', noWrap: true },
+                                                secondary: { variant: 'caption' }
+                                            }} />
                                     </ListItemButton>
                                 </ListItem>
                             ))}
@@ -170,10 +177,17 @@ const RegexSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString
 
                 {/* Right — editor */}
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0, overflow: 'hidden' }}>
-                    <Typography variant='caption' color='text.secondary' fontWeight='bold'>
+                    <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            fontWeight: 'bold'
+                        }}>
                         {isEditing ? `Editing: ${selectedName}` : 'New config'}
                     </Typography>
-                    <Stack direction='row' spacing={1} alignItems='center'>
+                    <Stack direction='row' spacing={1} sx={{
+                        alignItems: 'center'
+                    }}>
                         <TextField size='small' label='Name *' value={editName}
                             onChange={e => setEditName(e.target.value)} sx={{ flex: 1 }} />
                         <FormControl size='small' sx={{ minWidth: 110, flexShrink: 0 }}>
@@ -191,7 +205,13 @@ const RegexSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString
                     <Divider><Typography variant='caption'>Rules (evaluated in order — first match wins)</Typography></Divider>
                     <Box sx={{ flex: 1, overflowY: 'auto' }}>
                         {rules.length === 0 && (
-                            <Typography variant='caption' color='text.disabled' sx={{ p: 1, display: 'block' }}>No rules yet. Add one below.</Typography>
+                            <Typography
+                                variant='caption'
+                                sx={{
+                                    color: 'text.disabled',
+                                    p: 1,
+                                    display: 'block'
+                                }}>No rules yet. Add one below.</Typography>
                         )}
                         {rules.map((rule, i) => (
                             <Box key={i} sx={{ display: 'grid', gridTemplateColumns: '28px 1fr 85px 106px 96px 34px', gap: '6px', alignItems: 'center', px: 1, py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
@@ -207,7 +227,9 @@ const RegexSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString
                                 {/* col 2: pattern */}
                                 <TextField size='small' label='Pattern' value={rule.regex}
                                     onChange={e => updateRule(i, { regex: e.target.value })}
-                                    inputProps={{ style: { fontFamily: 'monospace', fontSize: 12 } }} />
+                                    slotProps={{
+                                        htmlInput: { style: { fontFamily: 'monospace', fontSize: 12 } }
+                                    }} />
                                 {/* col 3: flags */}
                                 <FormControl size='small'>
                                     <InputLabel>Flags</InputLabel>
@@ -221,7 +243,12 @@ const RegexSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString
                                             <MenuItem key={flag} value={flag} sx={{ py: 0.5, alignItems: 'flex-start' }}>
                                                 <Checkbox checked={flagsToArr(rule.flags ?? 'i').includes(flag)} size='small' sx={{ p: 0.25, mt: 0.25 }} />
                                                 <Box>
-                                                    <Typography variant='body2' fontWeight='bold' sx={{ lineHeight: 1.3 }}>{flag}</Typography>
+                                                    <Typography
+                                                        variant='body2'
+                                                        sx={{
+                                                            fontWeight: 'bold',
+                                                            lineHeight: 1.3
+                                                        }}>{flag}</Typography>
                                                     <Typography sx={{ fontSize: 9, lineHeight: 1.2, color: 'text.secondary', display: 'block' }}>{desc}</Typography>
                                                 </Box>
                                             </MenuItem>
@@ -254,7 +281,9 @@ const RegexSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString
 
                     {/* Add rule + Add/Update */}
                     <Divider />
-                    <Stack direction='row' spacing={1} alignItems='center'>
+                    <Stack direction='row' spacing={1} sx={{
+                        alignItems: 'center'
+                    }}>
                         <Box sx={{ flex: 1 }} />
                         {error && <Typography variant='caption' color='error' sx={{ maxWidth: 160, textAlign: 'right' }}>{error}</Typography>}
                         <Button size='small' startIcon={<Add />} onClick={() => setRules(prev => [...prev, empty()])}>
@@ -270,7 +299,7 @@ const RegexSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString
                 <Button onClick={onClose}>Close</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export default RegexSenderDialog

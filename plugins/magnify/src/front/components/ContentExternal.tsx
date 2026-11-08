@@ -486,33 +486,51 @@ const containerRef = useRef<HTMLDivElement>(null)
                 content = <>
                     <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Log</Typography>
                     <Divider/>
-                    <Typography fontSize={12}>You can configure log depth (number of lines) on the configuration menu.</Typography>
-                    <Typography fontSize={12}>Other configuration options, like Start Diagnostics, are not available to Magnify, but you can use them in log channel.</Typography>
+                    <Typography sx={{
+                        fontSize: 12
+                    }}>You can configure log depth (number of lines) on the configuration menu.</Typography>
+                    <Typography sx={{
+                        fontSize: 12
+                    }}>Other configuration options, like Start Diagnostics, are not available to Magnify, but you can use them in log channel.</Typography>
                 </>
                 break
             case 'metrics':
                 content = <>
                     <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Metrics</Typography>
                     <Divider/>
-                    <Typography fontSize={12}>You can change every individual chart type, but it won't be saved. Next time you'll need to reconfigure it again.</Typography>
-                    <Typography fontSize={12}>Data visualization refreshment depends on your Kwirth front configuration, your Magnify configuration.</Typography>
-                    <Typography fontSize={12}>On the other side, data freshness depends on Kwirth backend configuration. If you ser a visualization refresh lower than your data freshness, you'll get repeated values on different intervals.</Typography>
+                    <Typography sx={{
+                        fontSize: 12
+                    }}>You can change every individual chart type, but it won't be saved. Next time you'll need to reconfigure it again.</Typography>
+                    <Typography sx={{
+                        fontSize: 12
+                    }}>Data visualization refreshment depends on your Kwirth front configuration, your Magnify configuration.</Typography>
+                    <Typography sx={{
+                        fontSize: 12
+                    }}>On the other side, data freshness depends on Kwirth backend configuration. If you ser a visualization refresh lower than your data freshness, you'll get repeated values on different intervals.</Typography>
                 </>
                 break
             case 'ops':
                 content = <>
                     <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Ops</Typography>
                     <Divider/>
-                    <Typography fontSize={12}>You can use clipboard functions by pressing <b>Ctrl+Shift+C</b> for copying and <b>Ctrl+Shift+V</b> for pasting</Typography>
-                    <Typography fontSize={12}>You can minimize this window and the connection will keep open, or you can close this window and the connection to the container will be closed.</Typography>
+                    <Typography sx={{
+                        fontSize: 12
+                    }}>You can use clipboard functions by pressing <b>Ctrl+Shift+C</b> for copying and <b>Ctrl+Shift+V</b> for pasting</Typography>
+                    <Typography sx={{
+                        fontSize: 12
+                    }}>You can minimize this window and the connection will keep open, or you can close this window and the connection to the container will be closed.</Typography>
                 </>
                 break
             case 'fileman':
                 content = <>
                     <Typography variant='subtitle1' sx={{ fontWeight: 700, flexGrow: 1 }}>Fileman</Typography>
                     <Divider/>
-                    <Typography fontSize={12}>You can refresh filesystem data everytime you suspect what you are viewing is not acccurate. Just click on top-righ icon to refresh content.</Typography>
-                    <Typography fontSize={12}>Upload and Download capabilities depend on your kind of Kwirth deployment. These actions are not available for all architectures. They should be available, at least, on Kubernetes Deployment. Accessing them via Electron may not be working.</Typography>
+                    <Typography sx={{
+                        fontSize: 12
+                    }}>You can refresh filesystem data everytime you suspect what you are viewing is not acccurate. Just click on top-righ icon to refresh content.</Typography>
+                    <Typography sx={{
+                        fontSize: 12
+                    }}>Upload and Download capabilities depend on your kind of Kwirth deployment. These actions are not available for all architectures. They should be available, at least, on Kubernetes Deployment. Accessing them via Electron may not be working.</Typography>
                 </>
                 break
             case 'trivy':
@@ -662,44 +680,48 @@ const containerRef = useRef<HTMLDivElement>(null)
         }
     }
 
-    return (<>
-        <ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
-            <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
-                <Stack direction={'row'} alignItems={'center'}>
-                    <IconButton size="small" onClick={play} disabled={!contentExternalData.options.autostart || (contentExternalData.content?.externalChannelStarted && !contentExternalData.content?.externalChannelPaused)}>
-                        <PlayArrow fontSize="small"/>
-                    </IconButton>
-                    <IconButton size="small" onClick={pause} disabled={!contentExternalData.options.pauseable || !contentExternalData.content?.externalChannelStarted || contentExternalData.content?.externalChannelPaused}>
-                        <Pause fontSize="small"/>
-                    </IconButton>
-                    <IconButton size="small" onClick={stop} disabled={!contentExternalData.options.stoppable || !contentExternalData.content?.externalChannelStarted}>
-                        <Stop fontSize="small"/>
-                    </IconButton>
-                    <IconButton size="small" disabled={!contentExternalData.options.configurable} onClick={(event) => setAnchorConfig(event.target as HTMLElement)}>
-                        <Settings fontSize="small"/>
-                    </IconButton>
-                    <IconButton size="small" onClick={(event) => setAnchorHelp(event.currentTarget)}>
-                        <Info fontSize="small"/>
-                    </IconButton>
-                    
-                    <Typography sx={{flexGrow:1}}></Typography>
-                    <Typography>{getChannelIconOf(contentExternalData.content?.externalChannel)}&nbsp;{props.title}</Typography>
-                    <Typography sx={{flexGrow:1}}></Typography>
+    return (
+        <>
+            <ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
+                <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
+                    <Stack direction={'row'} sx={{
+                        alignItems: 'center'
+                    }}>
+                        <IconButton size="small" onClick={play} disabled={!contentExternalData.options.autostart || (contentExternalData.content?.externalChannelStarted && !contentExternalData.content?.externalChannelPaused)}>
+                            <PlayArrow fontSize="small"/>
+                        </IconButton>
+                        <IconButton size="small" onClick={pause} disabled={!contentExternalData.options.pauseable || !contentExternalData.content?.externalChannelStarted || contentExternalData.content?.externalChannelPaused}>
+                            <Pause fontSize="small"/>
+                        </IconButton>
+                        <IconButton size="small" onClick={stop} disabled={!contentExternalData.options.stoppable || !contentExternalData.content?.externalChannelStarted}>
+                            <Stop fontSize="small"/>
+                        </IconButton>
+                        <IconButton size="small" disabled={!contentExternalData.options.configurable} onClick={(event) => setAnchorConfig(event.target as HTMLElement)}>
+                            <Settings fontSize="small"/>
+                        </IconButton>
+                        <IconButton size="small" onClick={(event) => setAnchorHelp(event.currentTarget)}>
+                            <Info fontSize="small"/>
+                        </IconButton>
+                        
+                        <Typography sx={{flexGrow:1}}></Typography>
+                        <Typography>{getChannelIconOf(contentExternalData.content?.externalChannel)}&nbsp;{props.title}</Typography>
+                        <Typography sx={{flexGrow:1}}></Typography>
 
-                    <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={() => props.onClose(props.id)} onSnap={handleSnap} />
-                </Stack>
-            </DialogTitle>
+                        <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={() => props.onClose(props.id)} onSnap={handleSnap} />
+                    </Stack>
+                </DialogTitle>
 
 
-            <DialogContent sx={{ display: 'flex', flexDirection: 'column', p: 0, overflow: 'hidden', height: '100%', minHeight: 0, paddingBottom: 1}}>
-                {showContent()}
-            </DialogContent>
-        </ResizableDialog>        
-        { anchorHelp && showHelp() }
-        {/* { anchorConfig && <FormSimple anchorParent={anchorConfig} model={channelFormConfig} onApply={onConfigApply} onClose={() => setAnchorConfig(undefined)}/> } */}
-        { anchorConfig && <FormSimple anchorParent={anchorConfig} model={contentExternalData.formConfig} onApply={onConfigApply} onClose={() => setAnchorConfig(undefined)}/> }
-        { msgBox }
-    </>)
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', p: 0, overflow: 'hidden', height: '100%', minHeight: 0, paddingBottom: 1}}>
+                    {showContent()}
+                </DialogContent>
+            </ResizableDialog>
+            { anchorHelp && showHelp() }
+            {/* { anchorConfig && <FormSimple anchorParent={anchorConfig} model={channelFormConfig} onApply={onConfigApply} onClose={() => setAnchorConfig(undefined)}/> } */}
+            { anchorConfig && <FormSimple anchorParent={anchorConfig} model={contentExternalData.formConfig} onApply={onConfigApply} onClose={() => setAnchorConfig(undefined)}/> }
+            { msgBox }
+        </>
+    );
 }
 
 export const ANSI_MAP: Record<string, string> = {

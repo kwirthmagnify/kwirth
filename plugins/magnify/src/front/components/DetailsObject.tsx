@@ -107,7 +107,11 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
 
     const renderValue = (rootObj:any, srcobj:any, src:string, format:string, style:string[], level:number, content?:IDetailsItem[], invoke?:(ro:any, o:any, onLink:(kind:string, name:string, namespace:string) => void) => string[], itemx?:IDetailsItem) : JSX.Element => {
         let originalSrc = src
-        if (src.startsWith('$')) return <Typography fontWeight={style.includes('bold')?'700':''} variant='body2'>{src.substring(1)}</Typography>
+        if (src.startsWith('$')) return (
+            <Typography variant='body2' sx={{
+                fontWeight: style.includes('bold')?'700':''
+            }}>{src.substring(1)}</Typography>
+        );
         let addLink = false
         if (src.startsWith('#')) {
             src=src.substring(1)
@@ -239,7 +243,11 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                         }
                     }
                     if (valueStyle.length>0) {
-                        return <Typography component='div' color={valueStyle[0].split(':')[1]} fontWeight={fontWeightStyle} variant='body2'>{header}{jsxValue}</Typography>
+                        return (
+                            <Typography component='div' color={valueStyle[0].split(':')[1]} variant='body2' sx={{
+                                fontWeight: fontWeightStyle
+                            }}>{header}{jsxValue}</Typography>
+                        );
                     }
                     else if (style) {
                         let propertyStyle = style.filter(s => s.startsWith('property:'))
@@ -247,11 +255,19 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                             for (let ps of propertyStyle) {
                                 let propertyParts = ps.split(':')
                                 let propertyValue = _.get(obj,propertyParts[1])
-                                if (propertyValue === propertyParts[2]) return <Typography component='div' color={propertyParts[3]} fontWeight={fontWeightStyle} variant='body2'>{header}{jsxValue}</Typography>
+                                if (propertyValue === propertyParts[2]) return (
+                                    <Typography component='div' color={propertyParts[3]} variant='body2' sx={{
+                                        fontWeight: fontWeightStyle
+                                    }}>{header}{jsxValue}</Typography>
+                                );
                             }
                         }
                     }
-                    return <Typography component='div' fontWeight={fontWeightStyle} variant='body2'>{header}{jsxValue}</Typography>
+                    return (
+                        <Typography component='div' variant='body2' sx={{
+                            fontWeight: fontWeightStyle
+                        }}>{header}{jsxValue}</Typography>
+                    );
                 }
 
             case 'edit':
@@ -444,38 +460,54 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                 else {
                     if (content) {
                         // selected object properties
-                        return <>{content.map( (c:IDetailsItem, index:number) => {
-                            return <Stack key={index} direction={c.style && c.style.includes('column')?'column':'row'}>
-                                <Typography fontWeight={style && style.includes('keybold')?'700':''} variant='body2'>{c.text}:&nbsp;</Typography>
-                                {renderValues(rootObj, obj,c, level+1)}
-                            </Stack>
-                        })}</>
+                        return (
+                            <>{content.map( (c:IDetailsItem, index:number) => {
+                                return (
+                                    <Stack key={index} direction={c.style && c.style.includes('column')?'column':'row'}>
+                                        <Typography variant='body2' sx={{
+                                            fontWeight: style && style.includes('keybold')?'700':''
+                                        }}>{c.text}:&nbsp;</Typography>
+                                        {renderValues(rootObj, obj,c, level+1)}
+                                    </Stack>
+                                );
+                            })}</>
+                        );
                     }
                     else {
                         // all object properties
-                        return <>{Object.keys(_.get(obj,src)).map((key:string,index:number) => {
-                            if (style && style.includes('edit')) {
-                                return <Stack key={index} direction={'column'} sx={{mt:1}}>
-                                        <Stack direction={'row'}>
-                                            <Tooltip title={key} placement='top'>
-                                                <Typography fontWeight={style.includes('keybold')?'700':''} variant='body2'>{key}</Typography>
-                                            </Tooltip>
-                                            {style.includes('lockicon') && <Https fontSize={'small'} sx={{color:'error.main'}}/>}
+                        return (
+                            <>{Object.keys(_.get(obj,src)).map((key:string,index:number) => {
+                                if (style && style.includes('edit')) {
+                                    return (
+                                        <Stack key={index} direction={'column'} sx={{mt:1}}>
+                                                <Stack direction={'row'}>
+                                                    <Tooltip title={key} placement='top'>
+                                                        <Typography variant='body2' sx={{
+                                                            fontWeight: style.includes('keybold')?'700':''
+                                                        }}>{key}</Typography>
+                                                    </Tooltip>
+                                                    {style.includes('lockicon') && <Https fontSize={'small'} sx={{color:'error.main'}}/>}
+                                                </Stack>
+                                            {
+                                                renderValue(rootObj, obj, src+'.[\''+key+'\']', 'edit', style, level+1, [], undefined)
+                                            }                               
                                         </Stack>
-                                    {
-                                        renderValue(rootObj, obj, src+'.[\''+key+'\']', 'edit', style, level+1, [], undefined)
-                                    }                               
-                                </Stack>
-                            }
-                            else {
-                                return <Stack key={index} direction={'row'}>
-                                    <Typography fontWeight={style.includes('keybold')?'700':''} variant='body2'>{key}:&nbsp;</Typography>
-                                    {
-                                        renderValue(rootObj, obj, src+'.[\''+key+'\']', 'string', style, level+1, [], undefined)
-                                    }                               
-                                </Stack>
-                            }
-                        })}</>
+                                    );
+                                }
+                                else {
+                                    return (
+                                        <Stack key={index} direction={'row'}>
+                                            <Typography variant='body2' sx={{
+                                                fontWeight: style.includes('keybold')?'700':''
+                                            }}>{key}:&nbsp;</Typography>
+                                            {
+                                                renderValue(rootObj, obj, src+'.[\''+key+'\']', 'string', style, level+1, [], undefined)
+                                            }                               
+                                        </Stack>
+                                    );
+                                }
+                            })}</>
+                        );
                     }
                 }
 
@@ -516,22 +548,34 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
             if (!value || !max) return <></>
 
             let progreso=+value/+max*100
-            return <Stack direction={'row'} width={'100%'} alignItems={'center'}>
-                <LinearProgress variant="determinate" value={progreso > 100 ? 100 : progreso} sx={{width:'90%'}} />
-                    &nbsp;
-                <Typography variant='body2'>{value? value: 0}/{max? max:0}</Typography>
-            </Stack>
+            return (
+                <Stack
+                    direction={'row'}
+                    sx={{
+                        width: '100%',
+                        alignItems: 'center'
+                    }}>
+                    <LinearProgress variant="determinate" value={progreso > 100 ? 100 : progreso} sx={{width:'90%'}} />
+                        &nbsp;
+                    <Typography variant='body2'>{value? value: 0}/{max? max:0}</Typography>
+                </Stack>
+            );
         }
         else {
             return (
-                <Stack direction={item.style?.includes('column')?'column':'row'} width={'100%'} alignItems={item.style?.includes('row')?'center':''}>
+                <Stack
+                    direction={item.style?.includes('column')?'column':'row'}
+                    sx={{
+                        width: '100%',
+                        alignItems: item.style?.includes('row')?'center':''
+                    }}>
                     {item.source.map( (source,index) => {
                         return <React.Fragment key={index}>
                             {renderValue(rootObj, obj, source, item.format, item.style||[], level+1, item.items, item.invoke, item)}
                         </React.Fragment>
                     })}
                 </Stack>
-            )
+            );
         }
     }
 
@@ -543,14 +587,19 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
         if (item.source && firstSource==='@jsx[]') {
             if (item.invoke) {
                 return (
-                    <Stack direction={item.style && item.style.includes('column')?'column':'row'} alignItems="stretch" sx={{ width: '100%' }}>
+                    <Stack
+                        direction={item.style && item.style.includes('column')?'column':'row'}
+                        sx={{
+                            alignItems: "stretch",
+                            width: '100%'
+                        }}>
                         {(item.invoke(rootObj, obj, props.onLink) as JSX.Element[]).map((element,index) => 
                             <React.Fragment key={index}>
                                 {element}
                             </React.Fragment>
                         )}
                     </Stack>
-                )
+                );
             }
             else {
                 return <>Inexistent Invoke</>
@@ -562,10 +611,14 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
             expanderId++
 
             return (
-                <Stack direction={'row'} alignItems={'baseline'}>
+                <Stack direction={'row'} sx={{
+                    alignItems: 'baseline'
+                }}>
                     {item.text==='' && <>
                         {/* No label*/}
-                        <Typography component='div' width={'100%'} variant='body2'>
+                        <Typography component='div' variant='body2' sx={{
+                            width: '100%'
+                        }}>
                             {renderValues(rootObj, obj, item, level)}
                         </Typography>
                     </>}
@@ -574,7 +627,12 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                         {
                             numProps>1 && item.style && item.style.includes('collapse')?
                                     // render a label with collapse button
-                                    <Stack direction={'row'} width={`${width-2}%`} alignItems={'center'}>
+                                    <Stack
+                                        direction={'row'}
+                                        sx={{
+                                            width: `${width-2}%`,
+                                            alignItems: 'center'
+                                        }}>
                                         <Typography variant='body2'>{item.text}</Typography>
                                         <svg className={'svg-'+expander} width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"
                                             onClick={ () => {
@@ -595,7 +653,9 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                                     </Stack>
                                 :
                                     // render a simple label
-                                    <Typography width={`${width}%`} variant='body2'>{item.text}</Typography>
+                                    <Typography variant='body2' sx={{
+                                        width: `${width}%`
+                                    }}>{item.text}</Typography>
                         }
                         {
                             // render content
@@ -610,7 +670,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
                         }
                     </>}
                 </Stack>
-            )
+            );
         }
     }
 

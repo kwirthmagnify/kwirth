@@ -115,9 +115,16 @@ const LogSearchPanel: React.FC<ILogSearchPanelProps> = (props) => {
         <ResizableDialog ref={dialogRef} id={props.id} x={props.x} y={props.y} width={props.width} height={props.height}
             isMaximized={isMaximized} isActive={props.atFront} onFocus={props.onFocus} onWindowChange={props.onWindowChange}>
             <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move', py: 1 }} id='draggable-dialog-title'>
-                <Stack direction='row' alignItems='center'>
+                <Stack direction='row' sx={{
+                    alignItems: 'center'
+                }}>
                     <Search fontSize='small' sx={{ color: 'text.secondary', mr: 1 }} />
-                    <Typography variant='body2' fontWeight={500} flex={1}>Log Search — {props.data.scopeLabel}</Typography>
+                    <Typography
+                        variant='body2'
+                        sx={{
+                            fontWeight: 500,
+                            flex: 1
+                        }}>Log Search — {props.data.scopeLabel}</Typography>
                     <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized}
                         onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)}
                         onMaximize={handleIsMaximized} onClose={() => props.onClose(props.id)} onSnap={handleSnap} />
@@ -126,7 +133,9 @@ const LogSearchPanel: React.FC<ILogSearchPanelProps> = (props) => {
 
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', p: 1, gap: 1, overflow: 'hidden', height: '100%' }}>
                 {/* Search bar */}
-                <Stack direction='row' spacing={1} alignItems='center'>
+                <Stack direction='row' spacing={1} sx={{
+                    alignItems: 'center'
+                }}>
                     <TextField
                         size='small' fullWidth placeholder='Search in logs…'
                         value={query} onChange={e => setQuery(e.target.value)}
@@ -140,7 +149,9 @@ const LogSearchPanel: React.FC<ILogSearchPanelProps> = (props) => {
                         ) } }}
                     />
                 </Stack>
-                <Stack direction='row' spacing={1} alignItems='center'>
+                <Stack direction='row' spacing={1} sx={{
+                    alignItems: 'center'
+                }}>
                     <FormControlLabel control={<Checkbox size='small' checked={caseSensitive} onChange={e => setCaseSensitive(e.target.checked)} />} label={<Typography variant='caption'>Case</Typography>} sx={{ mr: 0 }} />
                     <FormControlLabel control={<Checkbox size='small' checked={useRegex} onChange={e => setUseRegex(e.target.checked)} />} label={<Typography variant='caption'>Regex</Typography>} sx={{ mr: 0 }} />
                     <TextField size='small' type='number' label='Lines' value={tailLines} onChange={e => setTailLines(Math.min(500, +e.target.value))}
@@ -152,11 +163,15 @@ const LogSearchPanel: React.FC<ILogSearchPanelProps> = (props) => {
                             </IconButton>
                         </span>
                     </Tooltip>
-                    {searching && <Typography variant='caption' color='text.secondary'>Searching…</Typography>}
+                    {searching && <Typography variant='caption' sx={{
+                        color: 'text.secondary'
+                    }}>Searching…</Typography>}
                     {magnifyData.logSearchDone && results.length > 0 && !searching &&
                         <Chip label={`${results.length} container${results.length > 1 ? 's' : ''} with matches`} size='small' color='primary' variant='outlined' />}
                     {magnifyData.logSearchDone && results.length === 0 && !searching && query &&
-                        <Typography variant='caption' color='text.secondary'>No matches found.</Typography>}
+                        <Typography variant='caption' sx={{
+                            color: 'text.secondary'
+                        }}>No matches found.</Typography>}
                 </Stack>
 
                 <Divider />
@@ -165,8 +180,20 @@ const LogSearchPanel: React.FC<ILogSearchPanelProps> = (props) => {
                 <Box sx={{ flex: 1, overflowY: 'auto' }}>
                     {results.map((r, ri) => (
                         <Box key={ri} sx={{ mb: 1.5 }}>
-                            <Stack direction='row' alignItems='center' spacing={0.5} sx={{ mb: 0.5 }}>
-                                <Typography variant='caption' fontWeight={600} sx={{ fontFamily: 'monospace', color: 'primary.main' }}>
+                            <Stack
+                                direction='row'
+                                spacing={0.5}
+                                sx={{
+                                    alignItems: 'center',
+                                    mb: 0.5
+                                }}>
+                                <Typography
+                                    variant='caption'
+                                    sx={{
+                                        fontWeight: 600,
+                                        fontFamily: 'monospace',
+                                        color: 'primary.main'
+                                    }}>
                                     {r.namespace}/{r.pod}
                                 </Typography>
                                 <Chip label={r.container} size='small' variant='outlined' sx={{ height: 16, fontSize: '9px', '& .MuiChip-label': { px: 0.5 } }} />
@@ -178,7 +205,20 @@ const LogSearchPanel: React.FC<ILogSearchPanelProps> = (props) => {
                                 </Tooltip>
                             </Stack>
                             {r.lines.map((line, li) => (
-                                <Typography key={li} variant='caption' display='block' sx={{ fontFamily: 'monospace', fontSize: '10px', pl: 1, color: 'text.secondary', wordBreak: 'break-all', borderLeft: '2px solid', borderColor: 'divider', mb: 0.25 }}>
+                                <Typography
+                                    key={li}
+                                    variant='caption'
+                                    sx={{
+                                        display: 'block',
+                                        fontFamily: 'monospace',
+                                        fontSize: '10px',
+                                        pl: 1,
+                                        color: 'text.secondary',
+                                        wordBreak: 'break-all',
+                                        borderLeft: '2px solid',
+                                        borderColor: 'divider',
+                                        mb: 0.25
+                                    }}>
                                     {line}
                                 </Typography>
                             ))}
@@ -187,7 +227,7 @@ const LogSearchPanel: React.FC<ILogSearchPanelProps> = (props) => {
                 </Box>
             </DialogContent>
         </ResizableDialog>
-    )
+    );
 }
 
 export { LogSearchPanel }

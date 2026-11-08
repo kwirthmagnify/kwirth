@@ -61,8 +61,8 @@
   },
   "devDependencies": {
     "@kwirthmagnify/kwirth-common": "^0.5.76",
-    "@mui/icons-material": "7.1.2",
-    "@mui/material": "7.1.2",
+    "@mui/icons-material": "9.5.0",
+    "@mui/material": "9.5.0",
     "@types/node": "^25.9.1",
     "@types/react": "^18.3.0",
     "typescript": "^5.4.0",

@@ -131,12 +131,14 @@ const MetricBar: React.FC<{ label: string; value: number }> = ({ label, value })
     const bar = '█'.repeat(filled) + '░'.repeat(cols - filled)
     const color = value > 90 ? '#ff3333' : value > 80 ? '#b36200' : MATRIX_GREEN
     return (
-        <Stack direction="row" alignItems="center" spacing={0}>
+        <Stack direction="row" spacing={0} sx={{
+            alignItems: "center"
+        }}>
             <Typography sx={{ fontFamily: 'monospace', fontSize: '0.65rem', color: MATRIX_DIM, width: 28, flexShrink: 0 }}>{label}</Typography>
             <Typography ref={barRef} sx={{ fontFamily: 'monospace', fontSize: '0.65rem', color, letterSpacing: '-0.5px', flex: 1, overflow: 'hidden', whiteSpace: 'nowrap' }}>{bar}</Typography>
             <Typography sx={{ fontFamily: 'monospace', fontSize: '0.65rem', color, flexShrink: 0, pl: 0.5, width: 32, textAlign: 'right' }}>{Math.round(value)}%</Typography>
         </Stack>
-    )
+    );
 }
 
 const MiniInfoCard: React.FC<{ label: string; value: string; stretch?: boolean }> = ({ label, value, stretch }) => (
@@ -239,7 +241,14 @@ function QuickColumn<T>({ label, items, getKey, getName, getSub, onLaunch, onDel
             {items.length === 0
                 ? <Typography sx={{ fontFamily: 'monospace', fontSize: '0.7rem', color: MATRIX_DIM, opacity: 0.5 }}>{'// empty'}</Typography>
                 : items.map(item => (
-                    <Stack key={getKey(item)} direction='row' alignItems='center' sx={{ minWidth: 0, gap: 0.5 }}>
+                    <Stack
+                        key={getKey(item)}
+                        direction='row'
+                        sx={{
+                            alignItems: 'center',
+                            minWidth: 0,
+                            gap: 0.5
+                        }}>
                         <Typography sx={{ fontFamily: 'monospace', fontSize: '0.75rem', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             <span style={{ color: MATRIX_GREEN }}>{getName(item)}</span>
                             {getSub(item) && <span style={{ color: MATRIX_DIM, paddingLeft: '20px' }}>{getSub(item)}</span>}
@@ -254,7 +263,7 @@ function QuickColumn<T>({ label, items, getKey, getName, getSub, onLaunch, onDel
                 ))
             }
         </Box>
-    )
+    );
 }
 
 const QuickAccessCard: React.FC<IHomepageProps> = (props) => {
@@ -270,7 +279,13 @@ const QuickAccessCard: React.FC<IHomepageProps> = (props) => {
     return (
         <Card variant='outlined' sx={{ ...matrixCardSx, gridColumn: '1 / -1', minHeight: 160 }}>
             <CardContent sx={{ py: 1.5, px: 2, height: '100%', boxSizing: 'border-box', '&:last-child': { pb: 1.5 } }}>
-                <Stack direction='row' spacing={2} alignItems='flex-start' sx={{ minWidth: 0 }}>
+                <Stack
+                    direction='row'
+                    spacing={2}
+                    sx={{
+                        alignItems: 'flex-start',
+                        minWidth: 0
+                    }}>
                     <QuickColumn<ITabSummary>
                         label='LAST TABS'
                         items={props.lastTabs}
@@ -313,7 +328,7 @@ const QuickAccessCard: React.FC<IHomepageProps> = (props) => {
                 </Stack>
             </CardContent>
         </Card>
-    )
+    );
 }
 
 const Matrix: React.FC<IHomepageProps> = (props) => {
@@ -437,102 +452,114 @@ const Matrix: React.FC<IHomepageProps> = (props) => {
                     const clusterHasMagnify = hasMagnify && clusterChannelIds.has('magnify')
                     const clusterHasTopology = hasTopology && clusterChannelIds.has('topology')
                     return (
-                    <Card key={cluster.name} variant="outlined" sx={{
-                        bgcolor: 'rgba(0,0,0,0.80)',
-                        border: `1px solid ${MATRIX_GREEN}`,
-                        boxShadow: `0 0 10px ${MATRIX_GLOW}, inset 0 0 10px rgba(0,255,65,0.05)`,
-                        color: MATRIX_GREEN,
-                        backdropFilter: 'blur(2px)',
-                        height: `${Math.floor((containerHeight - 24 * 2 - 24) / 2) - 4}px`,
-                        overflow: 'hidden',
-                    }}>
-                        <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'row', gap: 2, py: 2, '&:last-child': { pb: 2 } }}>
+                        <Card key={cluster.name} variant="outlined" sx={{
+                            bgcolor: 'rgba(0,0,0,0.80)',
+                            border: `1px solid ${MATRIX_GREEN}`,
+                            boxShadow: `0 0 10px ${MATRIX_GLOW}, inset 0 0 10px rgba(0,255,65,0.05)`,
+                            color: MATRIX_GREEN,
+                            backdropFilter: 'blur(2px)',
+                            height: `${Math.floor((containerHeight - 24 * 2 - 24) / 2) - 4}px`,
+                            overflow: 'hidden',
+                        }}>
+                            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'row', gap: 2, py: 2, '&:last-child': { pb: 2 } }}>
 
-                            {/* Left column */}
-                            <Stack direction="column" justifyContent="space-between" sx={{ flex: '0 0 40%', minWidth: 0 }}>
-                                {/* Rows 1-3 grouped at top */}
-                                <Stack direction="column" spacing={1}>
-                                    {/* Row 1: name + semaphore */}
-                                    <Stack direction="row" alignItems="center" spacing={1}>
-                                        <Typography variant="h6" sx={{
+                                {/* Left column */}
+                                <Stack
+                                    direction="column"
+                                    sx={{
+                                        justifyContent: "space-between",
+                                        flex: '0 0 40%',
+                                        minWidth: 0
+                                    }}>
+                                    {/* Rows 1-3 grouped at top */}
+                                    <Stack direction="column" spacing={1}>
+                                        {/* Row 1: name + semaphore */}
+                                        <Stack direction="row" spacing={1} sx={{
+                                            alignItems: "center"
+                                        }}>
+                                            <Typography variant="h6" sx={{
+                                                fontFamily: 'monospace',
+                                                color: MATRIX_GREEN,
+                                                lineHeight: 1.3,
+                                                textShadow: `0 0 8px ${MATRIX_GREEN}`,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                m: 0,
+                                            }}>
+                                                {cluster.name}
+                                            </Typography>
+                                            <StatusLight online={!!clusterMetrics[cluster.name]} events={clusterEvents[cluster.name]} animationDelay={`${(idx * 0.7) % 2.5}s`} />
+                                        </Stack>
+
+                                        {/* Row 2: url */}
+                                        <Typography variant="body2" sx={{
                                             fontFamily: 'monospace',
-                                            color: MATRIX_GREEN,
-                                            lineHeight: 1.3,
-                                            textShadow: `0 0 8px ${MATRIX_GREEN}`,
+                                            color: MATRIX_DIM,
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap',
-                                            m: 0,
                                         }}>
-                                            {cluster.name}
+                                            {cluster.url}
                                         </Typography>
-                                        <StatusLight online={!!clusterMetrics[cluster.name]} events={clusterEvents[cluster.name]} animationDelay={`${(idx * 0.7) % 2.5}s`} />
+
+                                        {/* Row 3: cpu/memory/pod bars */}
+                                        {clusterMetrics[cluster.name] && (
+                                            <Stack direction="column" spacing={0.25}>
+                                                <MetricBar label="CPU" value={clusterMetrics[cluster.name].cpu} />
+                                                <MetricBar label="MEM" value={clusterMetrics[cluster.name].memory} />
+                                                <MetricBar label="POD" value={clusterMetrics[cluster.name].maxPods > 0 ? (clusterMetrics[cluster.name].pods / clusterMetrics[cluster.name].maxPods) * 100 : 0} />
+                                            </Stack>
+                                        )}
                                     </Stack>
 
-                                    {/* Row 2: url */}
-                                    <Typography variant="body2" sx={{
-                                        fontFamily: 'monospace',
-                                        color: MATRIX_DIM,
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                    }}>
-                                        {cluster.url}
-                                    </Typography>
-
-                                    {/* Row 3: cpu/memory/pod bars */}
+                                    {/* Middle: minicards centered vertically between bars and icons */}
                                     {clusterMetrics[cluster.name] && (
-                                        <Stack direction="column" spacing={0.25}>
-                                            <MetricBar label="CPU" value={clusterMetrics[cluster.name].cpu} />
-                                            <MetricBar label="MEM" value={clusterMetrics[cluster.name].memory} />
-                                            <MetricBar label="POD" value={clusterMetrics[cluster.name].maxPods > 0 ? (clusterMetrics[cluster.name].pods / clusterMetrics[cluster.name].maxPods) * 100 : 0} />
+                                        <Stack direction="row" spacing={1.5} sx={{ justifyContent: 'center' }}>
+                                            <MiniInfoCard label="vCPUs" value={clusterMetrics[cluster.name].vcpus != null ? String(clusterMetrics[cluster.name].vcpus) : '--'} />
+                                            <MiniInfoCard label="RAM" value={clusterMetrics[cluster.name].totalMemoryBytes != null ? `${(clusterMetrics[cluster.name].totalMemoryBytes / 1073741824).toFixed(0)}G` : '--'} />
+                                            <MiniInfoCard label="Pods" value={clusterMetrics[cluster.name].pods ? String(clusterMetrics[cluster.name].pods) : '--'} />
+                                            <MiniInfoCard label="Nodes" value={cluster.clusterInfo?.nodes?.length != null ? String(cluster.clusterInfo.nodes.length) : '--'} />
                                         </Stack>
                                     )}
+
+                                    {/* Rows 4+5: channel icons + buttons pinned to bottom */}
+                                    <Stack direction="column" spacing={0.75}>
+                                        <Stack direction="row" spacing={0.5} sx={{
+                                            alignItems: "center"
+                                        }}>
+                                            {(cluster.kwirthData?.channels ?? []).map((ch: any) => {
+                                                const channelClass = props.frontChannels.get(ch.id)
+                                                if (!channelClass) return null
+                                                const icon = new channelClass().getChannelIcon()
+                                                return (
+                                                    <Tooltip key={ch.id} title={ch.id}>
+                                                        {React.cloneElement(icon, { fontSize: 'small', sx: { color: MATRIX_GREEN, opacity: 0.6 } })}
+                                                    </Tooltip>
+                                                )
+                                            })}
+                                        </Stack>
+                                        <Stack direction="row" spacing={1} sx={{
+                                            justifyContent: "flex-start"
+                                        }}>
+                                        <Button variant="outlined" size="small" disabled={!clusterHasTopology}
+                                            startIcon={topologyIcon} onClick={() => launchTopology(cluster.name)} sx={matrixButtonSx}>
+                                            Topology
+                                        </Button>
+                                        <Button variant="outlined" size="small" disabled={!clusterHasMagnify}
+                                            startIcon={magnifyIcon} onClick={() => launchMagnify(cluster.name)} sx={matrixButtonSx}>
+                                            Magnify
+                                        </Button>
+                                    </Stack>
+                                </Stack>
                                 </Stack>
 
-                                {/* Middle: minicards centered vertically between bars and icons */}
-                                {clusterMetrics[cluster.name] && (
-                                    <Stack direction="row" spacing={1.5} sx={{ justifyContent: 'center' }}>
-                                        <MiniInfoCard label="vCPUs" value={clusterMetrics[cluster.name].vcpus != null ? String(clusterMetrics[cluster.name].vcpus) : '--'} />
-                                        <MiniInfoCard label="RAM" value={clusterMetrics[cluster.name].totalMemoryBytes != null ? `${(clusterMetrics[cluster.name].totalMemoryBytes / 1073741824).toFixed(0)}G` : '--'} />
-                                        <MiniInfoCard label="Pods" value={clusterMetrics[cluster.name].pods ? String(clusterMetrics[cluster.name].pods) : '--'} />
-                                        <MiniInfoCard label="Nodes" value={cluster.clusterInfo?.nodes?.length != null ? String(cluster.clusterInfo.nodes.length) : '--'} />
-                                    </Stack>
-                                )}
+                                {/* Right column: event log */}
+                                <EventLog events={clusterEvents[cluster.name] ?? []} />
 
-                                {/* Rows 4+5: channel icons + buttons pinned to bottom */}
-                                <Stack direction="column" spacing={0.75}>
-                                    <Stack direction="row" spacing={0.5} alignItems="center">
-                                        {(cluster.kwirthData?.channels ?? []).map((ch: any) => {
-                                            const channelClass = props.frontChannels.get(ch.id)
-                                            if (!channelClass) return null
-                                            const icon = new channelClass().getChannelIcon()
-                                            return (
-                                                <Tooltip key={ch.id} title={ch.id}>
-                                                    {React.cloneElement(icon, { fontSize: 'small', sx: { color: MATRIX_GREEN, opacity: 0.6 } })}
-                                                </Tooltip>
-                                            )
-                                        })}
-                                    </Stack>
-                                    <Stack direction="row" spacing={1} justifyContent="flex-start">
-                                    <Button variant="outlined" size="small" disabled={!clusterHasTopology}
-                                        startIcon={topologyIcon} onClick={() => launchTopology(cluster.name)} sx={matrixButtonSx}>
-                                        Topology
-                                    </Button>
-                                    <Button variant="outlined" size="small" disabled={!clusterHasMagnify}
-                                        startIcon={magnifyIcon} onClick={() => launchMagnify(cluster.name)} sx={matrixButtonSx}>
-                                        Magnify
-                                    </Button>
-                                </Stack>
-                            </Stack>
-                            </Stack>
-
-                            {/* Right column: event log */}
-                            <EventLog events={clusterEvents[cluster.name] ?? []} />
-
-                        </CardContent>
-                    </Card>
-                    )
+                            </CardContent>
+                        </Card>
+                    );
                 })}
                 {props.clusters.length === 0 && (
                     <Typography sx={{ fontFamily: 'monospace', color: MATRIX_GREEN, p: 2, textShadow: `0 0 8px ${MATRIX_GREEN}` }}>
@@ -541,7 +568,7 @@ const Matrix: React.FC<IHomepageProps> = (props) => {
                 )}
             </Box>
         </Box>
-    )
+    );
 }
 
 export { Matrix }

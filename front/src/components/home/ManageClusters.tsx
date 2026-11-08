@@ -1,8 +1,8 @@
 import React, { useContext, useState } from 'react'
 import { useEscapeToClose } from '../../tools/useKeyboard'
 import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, List, ListItem, ListItemButton, Stack, TextField, Typography } from '@mui/material'
-import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline'
-import ErrorOutline from '@mui/icons-material/ErrorOutline'
+import CheckCircleOutline from '@mui/icons-material/CheckCircleOutlined'
+import ErrorOutline from '@mui/icons-material/ErrorOutlined'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { Cluster } from '../../model/Cluster'
@@ -138,134 +138,167 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         ch.metrics ? 'metrics' : null
     ].filter(Boolean) as string[]
 
-    return (<>
-        <Dialog open={true} ref={escapeRef} fullWidth maxWidth='md' disableEnforceFocus>
-            <DialogTitleHelp section='guide/admin/06-cluster-management?id=add-a-remote-cluster' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Manage clusters</DialogTitleHelp>
-            <DialogContent data-refresh={refresh}>
-                <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
-                    <List sx={{flexGrow:1, mr:2, width:'50vh' }}>
-                        { clusters?.map(c =>
-                            <ListItemButton key={c.url} selected={c===selectedCluster} onClick={() => onClusterSelected(c)}>
-                                <ListItem>
-                                  <Stack direction={'column'} sx={{width:'100%'}}>
-                                      <Stack direction={'row'} justifyContent={'space-between'} alignItems={'baseline'}>
-                                          <Typography>{c.name}</Typography>
-                                          {c.id && <Typography color='text.secondary' fontSize={10}>{c.id}</Typography>}
+    return (
+        <>
+            <Dialog open={true} ref={escapeRef} fullWidth maxWidth='md' disableEnforceFocus>
+                <DialogTitleHelp section='guide/admin/06-cluster-management?id=add-a-remote-cluster' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Manage clusters</DialogTitleHelp>
+                <DialogContent data-refresh={refresh}>
+                    <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
+                        <List sx={{flexGrow:1, mr:2, width:'50vh' }}>
+                            { clusters?.map(c =>
+                                <ListItemButton key={c.url} selected={c===selectedCluster} onClick={() => onClusterSelected(c)}>
+                                    <ListItem>
+                                      <Stack direction={'column'} sx={{width:'100%'}}>
+                                          <Stack
+                                              direction={'row'}
+                                              sx={{
+                                                  justifyContent: 'space-between',
+                                                  alignItems: 'baseline'
+                                              }}>
+                                              <Typography>{c.name}</Typography>
+                                              {c.id && <Typography
+                                                  sx={{
+                                                      color: 'text.secondary',
+                                                      fontSize: 10
+                                                  }}>{c.id}</Typography>}
+                                          </Stack>
+                                          {c.kwirthData?.clusterType && <Typography
+                                              sx={{
+                                                  color: 'text.secondary',
+                                                  fontSize: 12
+                                              }}>{c.kwirthData?.version}<b> ({c.kwirthData?.clusterType})</b></Typography>}
                                       </Stack>
-                                      {c.kwirthData?.clusterType && <Typography color='text.secondary' fontSize={12}>{c.kwirthData?.version}<b> ({c.kwirthData?.clusterType})</b></Typography>}
-                                  </Stack>
-                                </ListItem>
-                            </ListItemButton>
-                        )}
-                    </List>
-                    {
-                        <Stack sx={{width:'50vh'}} spacing={1}>
-                            <TextField value={name} onChange={(e) => setName(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='Name'></TextField>
-                            <TextField value={selectedCluster?.id || ''} disabled variant='standard' label='Id'></TextField>
-                            <TextField value={url} onChange={(e) => setUrl(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='URL'></TextField>
-                            <TextField value={accessKey} onChange={(e) => setAccessKey(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='API Key'></TextField>
-                        </Stack>
-                    }
-                </Stack>
-            </DialogContent>
-            <DialogActions>
-              <Stack direction='row' spacing={1}>
-                <Button variant='outlined' onClick={onClickNew}>NEW</Button>
-                <Button variant='outlined' onClick={onClickSave} disabled={selectedCluster?.home || name==='' || url==='' || accessKey==='' }>SAVE</Button>
-                <Button variant='outlined' onClick={onClickTest} disabled={!url || !url.toLocaleLowerCase().startsWith('http') || !accessKey}>TEST</Button>
-                <Button variant='outlined' onClick={onClickDelete} disabled={selectedCluster===undefined || selectedCluster?.home}>DELETE</Button>
-              </Stack>
-              <Typography sx={{flexGrow:1}}></Typography>
-              <Button variant='outlined' onClick={() => props.onClose(clusters)}>CLOSE</Button>
-            </DialogActions>
-        </Dialog>
-
-        {/*
-            Test result dialog. The icon sits on the first line, next to the success/error message;
-            the cluster data is a clean label/value list; the channels use MUI Chips that follow the
-            theme. Nothing here is hardcoded HTML — every colour comes from the palette.
-        */}
-        {testResult && (
-            <Dialog open={true} onClose={() => setTestResult(null)} fullWidth maxWidth='sm'>
-                <DialogTitle>Test cluster</DialogTitle>
-                <DialogContent>
-                    {testResult.success ? (
-                        <Stack spacing={2}>
-                            {/* Success header: icon and message on the same line */}
-                            <Stack direction='row' alignItems='center' spacing={1}>
-                                <CheckCircleOutline color='success' />
-                                <Typography color='success.main' fontWeight={600}>
-                                    Connection and API key successfully tested
-                                </Typography>
+                                    </ListItem>
+                                </ListItemButton>
+                            )}
+                        </List>
+                        {
+                            <Stack sx={{width:'50vh'}} spacing={1}>
+                                <TextField value={name} onChange={(e) => setName(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='Name'></TextField>
+                                <TextField value={selectedCluster?.id || ''} disabled variant='standard' label='Id'></TextField>
+                                <TextField value={url} onChange={(e) => setUrl(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='URL'></TextField>
+                                <TextField value={accessKey} onChange={(e) => setAccessKey(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='API Key'></TextField>
                             </Stack>
-
-                            <Divider />
-
-                            {/* Cluster data as label/value rows */}
-                            <Box>
-                                <Stack direction='row' spacing={2}>
-                                    <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Name</Typography>
-                                    <Typography>{testResult.data!.clusterName}</Typography>
-                                </Stack>
-                                <Stack direction='row' spacing={2}>
-                                    <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Id</Typography>
-                                    <Typography>{testResult.clusterId}</Typography>
-                                </Stack>
-                                <Stack direction='row' spacing={2}>
-                                    <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Workload</Typography>
-                                    <Typography>{testResult.data!.namespace}/{testResult.data!.deployment}</Typography>
-                                </Stack>
-                                <Stack direction='row' spacing={2}>
-                                    <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>inCluster</Typography>
-                                    <Typography>{String(testResult.data!.inCluster)}</Typography>
-                                </Stack>
-                                <Stack direction='row' spacing={2}>
-                                    <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Version</Typography>
-                                    <Typography>{testResult.data!.version}</Typography>
-                                </Stack>
-                                <Stack direction='row' spacing={2}>
-                                    <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Metrics interval</Typography>
-                                    <Typography>{testResult.data!.metricsInterval}</Typography>
-                                </Stack>
-                            </Box>
-
-                            <Divider />
-
-                            {/* Supported channels */}
-                            <Typography fontWeight={600}>Supported channels</Typography>
-                            <Stack spacing={1}>
-                                {testResult.data!.channels.map(ch => {
-                                    const caps = channelCaps(ch)
-                                    return (
-                                        <Stack direction='row' alignItems='center' spacing={1} key={ch.id}>
-                                            <Typography fontWeight={600}>{ch.id}</Typography>
-                                            {caps.map(cap => (
-                                                <Chip key={cap} label={cap} size='small' variant='outlined' />
-                                            ))}
-                                            <Typography variant='caption' color='text.secondary'>
-                                                [{ch.sources.join(', ')}]
-                                            </Typography>
-                                        </Stack>
-                                    )
-                                })}
-                            </Stack>
-                        </Stack>
-                    ) : (
-                        /* Error: icon and message on the same line */
-                        <Stack direction='row' alignItems='center' spacing={1}>
-                            <ErrorOutline color='error' />
-                            <Typography color='error.main'>{testResult.error}</Typography>
-                        </Stack>
-                    )}
+                        }
+                    </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button variant='outlined' onClick={() => setTestResult(null)}>ok</Button>
+                  <Stack direction='row' spacing={1}>
+                    <Button variant='outlined' onClick={onClickNew}>NEW</Button>
+                    <Button variant='outlined' onClick={onClickSave} disabled={selectedCluster?.home || name==='' || url==='' || accessKey==='' }>SAVE</Button>
+                    <Button variant='outlined' onClick={onClickTest} disabled={!url || !url.toLocaleLowerCase().startsWith('http') || !accessKey}>TEST</Button>
+                    <Button variant='outlined' onClick={onClickDelete} disabled={selectedCluster===undefined || selectedCluster?.home}>DELETE</Button>
+                  </Stack>
+                  <Typography sx={{flexGrow:1}}></Typography>
+                  <Button variant='outlined' onClick={() => props.onClose(clusters)}>CLOSE</Button>
                 </DialogActions>
             </Dialog>
-        )}
 
-        {msgBox}
-    </>)
+            {/*
+                Test result dialog. The icon sits on the first line, next to the success/error message;
+                the cluster data is a clean label/value list; the channels use MUI Chips that follow the
+                theme. Nothing here is hardcoded HTML — every colour comes from the palette.
+            */}
+            {testResult && (
+                <Dialog open={true} onClose={() => setTestResult(null)} fullWidth maxWidth='sm'>
+                    <DialogTitle>Test cluster</DialogTitle>
+                    <DialogContent>
+                        {testResult.success ? (
+                            <Stack spacing={2}>
+                                {/* Success header: icon and message on the same line */}
+                                <Stack direction='row' spacing={1} sx={{
+                                    alignItems: 'center'
+                                }}>
+                                    <CheckCircleOutline color='success' />
+                                    <Typography
+                                        sx={{
+                                            color: 'success.main',
+                                            fontWeight: 600
+                                        }}>
+                                        Connection and API key successfully tested
+                                    </Typography>
+                                </Stack>
+
+                                <Divider />
+
+                                {/* Cluster data as label/value rows */}
+                                <Box>
+                                    <Stack direction='row' spacing={2}>
+                                        <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Name</Typography>
+                                        <Typography>{testResult.data!.clusterName}</Typography>
+                                    </Stack>
+                                    <Stack direction='row' spacing={2}>
+                                        <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Id</Typography>
+                                        <Typography>{testResult.clusterId}</Typography>
+                                    </Stack>
+                                    <Stack direction='row' spacing={2}>
+                                        <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Workload</Typography>
+                                        <Typography>{testResult.data!.namespace}/{testResult.data!.deployment}</Typography>
+                                    </Stack>
+                                    <Stack direction='row' spacing={2}>
+                                        <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>inCluster</Typography>
+                                        <Typography>{String(testResult.data!.inCluster)}</Typography>
+                                    </Stack>
+                                    <Stack direction='row' spacing={2}>
+                                        <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Version</Typography>
+                                        <Typography>{testResult.data!.version}</Typography>
+                                    </Stack>
+                                    <Stack direction='row' spacing={2}>
+                                        <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Metrics interval</Typography>
+                                        <Typography>{testResult.data!.metricsInterval}</Typography>
+                                    </Stack>
+                                </Box>
+
+                                <Divider />
+
+                                {/* Supported channels */}
+                                <Typography sx={{
+                                    fontWeight: 600
+                                }}>Supported channels</Typography>
+                                <Stack spacing={1}>
+                                    {testResult.data!.channels.map(ch => {
+                                        const caps = channelCaps(ch)
+                                        return (
+                                            <Stack direction='row' spacing={1} key={ch.id} sx={{
+                                                alignItems: 'center'
+                                            }}>
+                                                <Typography sx={{
+                                                    fontWeight: 600
+                                                }}>{ch.id}</Typography>
+                                                {caps.map(cap => (
+                                                    <Chip key={cap} label={cap} size='small' variant='outlined' />
+                                                ))}
+                                                <Typography variant='caption' sx={{
+                                                    color: 'text.secondary'
+                                                }}>
+                                                    [{ch.sources.join(', ')}]
+                                                </Typography>
+                                            </Stack>
+                                        );
+                                    })}
+                                </Stack>
+                            </Stack>
+                        ) : (
+                            /* Error: icon and message on the same line */
+                            <Stack direction='row' spacing={1} sx={{
+                                alignItems: 'center'
+                            }}>
+                                <ErrorOutline color='error' />
+                                <Typography sx={{
+                                    color: 'error.main'
+                                }}>{testResult.error}</Typography>
+                            </Stack>
+                        )}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button variant='outlined' onClick={() => setTestResult(null)}>ok</Button>
+                    </DialogActions>
+                </Dialog>
+            )}
+
+            {msgBox}
+        </>
+    );
 }
 
 export { ManageClusters }

@@ -288,7 +288,9 @@ const showBadge = (issues:IIssue[], icon:JSX.Element, onNavigate:(dest:string)=>
     let warnings = issues.filter(i => i.level === ENotifyLevel.WARNING).length
     return (
         <Button onClick={() => onNavigate(dest)} sx={{backgroundColor:errors>0?'#ffaaaa':''}}>
-            <Stack direction={'column'} alignItems={'center'}>
+            <Stack direction={'column'} sx={{
+                alignItems: 'center'
+            }}>
                 {icon}
                 <Stack direction={'row'}>
                     <Typography variant='caption' color={errors>0?'red':'gray'}>{errors}&nbsp;&nbsp;</Typography>
@@ -296,12 +298,17 @@ const showBadge = (issues:IIssue[], icon:JSX.Element, onNavigate:(dest:string)=>
                 </Stack>
             </Stack>
         </Button>
-    )
+    );
 }
 
 const validateSummary = (files:IFileObject[], onNavigate: (dest:string) => void) => {
     return (
-        <Stack direction={'row'} flex={1} justifyContent={"space-between"}>
+        <Stack
+            direction={'row'}
+            sx={{
+                flex: 1,
+                justifyContent: "space-between"
+            }}>
             {showBadge(validateNode(files), getIconFromKind('Node', 50), onNavigate, '/cluster/Node')}
             {showBadge(validateConfigMap(files), getIconFromKind('ConfigMap', 50), onNavigate, '/config/ConfigMap')}
             {showBadge(validateSecret(files), getIconFromKind('Secret', 50), onNavigate, '/config/Secret')}
@@ -316,7 +323,7 @@ const validateSummary = (files:IFileObject[], onNavigate: (dest:string) => void)
             {showBadge(validateRole(files), getIconFromKind('Role', 50), onNavigate, '/access/Role')}
             {showBadge(validateClusterRole(files), getIconFromKind('ClusterRole', 50), onNavigate, '/access/ClusterRole')}
         </Stack>
-    )
+    );
 }
 
 interface IValidationsProps {

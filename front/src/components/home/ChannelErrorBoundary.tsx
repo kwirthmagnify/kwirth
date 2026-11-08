@@ -51,23 +51,40 @@ class ChannelErrorBoundary extends React.Component<IChannelErrorBoundaryProps, I
 
         return (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 240, p: 2 }}>
-                <Stack direction='column' alignItems='center' spacing={1} sx={{ maxWidth: 560, textAlign: 'center' }}>
+                <Stack
+                    direction='column'
+                    spacing={1}
+                    sx={{
+                        alignItems: 'center',
+                        maxWidth: 560,
+                        textAlign: 'center'
+                    }}>
                     <Warning sx={{ fontSize: 40, color: 'warning.main' }} />
                     <Typography variant='h6'>This channel stopped working</Typography>
-                    <Typography variant='body2' color='text.secondary'>
+                    <Typography variant='body2' sx={{
+                        color: 'text.secondary'
+                    }}>
                         The <b>{this.props.channelId ?? 'channel'}</b> extension failed while drawing its content. The rest of
                         Kwirth keeps working, so you can close this tab and carry on.
                     </Typography>
-                    <Typography variant='caption' color='text.disabled' sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
+                    <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.disabled',
+                            fontFamily: 'monospace',
+                            wordBreak: 'break-word'
+                        }}>
                         {this.state.error.message}
                     </Typography>
-                    <Typography variant='caption' color='text.secondary'>
+                    <Typography variant='caption' sx={{
+                        color: 'text.secondary'
+                    }}>
                         If it happens again, the extension is likely built for a different version of Kwirth and should be updated.
                     </Typography>
                     <Button size='small' variant='outlined' onClick={() => this.setState({ error: undefined })}>Try again</Button>
                 </Stack>
             </Box>
-        )
+        );
     }
 }
 

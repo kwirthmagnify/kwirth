@@ -57,7 +57,9 @@ const AddChildButtons: React.FC<{
     const tooltipTitle = node.type === 'fanout' ? 'Add target' : 'Set next'
 
     return (
-        <Stack direction='row' spacing={0.5} alignItems='center'>
+        <Stack direction='row' spacing={0.5} sx={{
+            alignItems: 'center'
+        }}>
             <Select size='small' value={childKind}
                 onChange={e => { setChildKind(e.target.value as ChildKind); setPickedConfig('') }}
                 sx={{ ...selectSx, minWidth: 100 }}
@@ -100,7 +102,7 @@ const AddChildButtons: React.FC<{
                 </span>
             </Tooltip>
         </Stack>
-    )
+    );
 }
 
 // ─── Recursive tree node ──────────────────────────────────────────────────────
@@ -163,7 +165,13 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
     return (
         <Box>
             {/* Node row */}
-            <Stack direction='row' alignItems='center' spacing={1} sx={{ mb: 0.5 }}>
+            <Stack
+                direction='row'
+                spacing={1}
+                sx={{
+                    alignItems: 'center',
+                    mb: 0.5
+                }}>
                 <NodeCard
                     node={node}
                     selected={selectedPath === path}
@@ -187,7 +195,13 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
                     {entries.map((entry, i) => (
                         <Box key={i} sx={{ my: 0.5 }}>
                             {entry.label && (
-                                <Typography variant='caption' color='text.secondary' sx={{ ml: 0.5, fontStyle: 'italic' }}>
+                                <Typography
+                                    variant='caption'
+                                    sx={{
+                                        color: 'text.secondary',
+                                        ml: 0.5,
+                                        fontStyle: 'italic'
+                                    }}>
                                     {entry.label}
                                 </Typography>
                             )}
@@ -209,7 +223,7 @@ const TreeNode: React.FC<ITreeNodeProps> = ({
                 </Box>
             )}
         </Box>
-    )
+    );
 }
 
 // ─── Canvas ───────────────────────────────────────────────────────────────────

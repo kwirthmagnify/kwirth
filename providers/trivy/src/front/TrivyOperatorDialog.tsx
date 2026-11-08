@@ -73,7 +73,9 @@ const TrivyOperatorDialog: React.FC<IProviderConfigDialogProps> = (props: IProvi
             <DialogTitle>Trivy Operator</DialogTitle>
             <DialogContent>
                 <Stack spacing={2} direction='column' sx={{ mt: 1 }}>
-                    <Typography variant='body2' color='text.secondary'>
+                    <Typography variant='body2' sx={{
+                        color: 'text.secondary'
+                    }}>
                         This provider reads the reports the <b>Trivy Operator</b> writes as CRDs in the cluster.
                         Without it there is nothing to read, and the Trivy channel shows an empty screen.
                     </Typography>
@@ -96,7 +98,9 @@ const TrivyOperatorDialog: React.FC<IProviderConfigDialogProps> = (props: IProvi
                         </Button>
                     </Stack>
 
-                    <Typography variant='caption' color='text.secondary'>
+                    <Typography variant='caption' sx={{
+                        color: 'text.secondary'
+                    }}>
                         Installing deploys the operator, its CRDs and its RBAC across the cluster; removing takes
                         them away, and the reports with them.
                     </Typography>
@@ -106,7 +110,7 @@ const TrivyOperatorDialog: React.FC<IProviderConfigDialogProps> = (props: IProvi
                 <Button variant='outlined' disabled={working} onClick={props.onClose}>CLOSE</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export default TrivyOperatorDialog

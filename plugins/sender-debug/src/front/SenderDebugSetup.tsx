@@ -44,12 +44,16 @@ export const SenderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
             <DialogTitle>Configure Sender Debug channel</DialogTitle>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <Stack direction='column' spacing={2} sx={{ m: 1, flex: 1, minHeight: 0 }}>
-                    <Typography variant='body2' color='text.secondary'>
+                    <Typography variant='body2' sx={{
+                        color: 'text.secondary'
+                    }}>
                         Pick the sender, its configuration and the message once the channel is started — everything is
                         in the tab itself, so you can send, look at the answer, fix it and send again without
                         restarting.
                     </Typography>
-                    <Typography variant='caption' color='warning.main'>
+                    <Typography variant='caption' sx={{
+                        color: 'warning.main'
+                    }}>
                         Sending from this channel is a REAL send: a mail leaves, a ticket is created, a chat room gets
                         a message. There is no dry run, because a dry run would not prove anything.
                     </Typography>
@@ -64,5 +68,5 @@ export const SenderDebugSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                 <Button variant='outlined' onClick={cancel}>CANCEL</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }

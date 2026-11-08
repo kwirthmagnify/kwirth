@@ -99,78 +99,82 @@ const ContentDetails: React.FC<IContentWindow> = (props:IContentWindow) => {
         setDataChanged(true)
     }
 
-	return (<>
-		<ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
-			<DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
-				<Stack direction='row' alignItems={'center'} spacing={1}>
-					<Typography variant="subtitle1" noWrap sx={{ fontWeight: 'bold', flexShrink: 0}}>
-						{`${contentDetailsData.source.data.origin.kind}:`}
-					</Typography>
-					<Typography variant='body2' noWrap>
-						{props.title}
-					</Typography>
-					<Tooltip title='Copy'>
-						<IconButton size='small' onClick={() => copy(props.title)}>
-							<ContentCopy fontSize='inherit' />
-						</IconButton>
-					</Tooltip>
-					
-					<Stack direction='row' spacing={0.5} className="no-drag">
-						{items.map((action, index) => (
-							action.name === 'divider' ? 
-								<Typography sx={{flexGrow: 1}}/>
-								:
-								<Tooltip key={index} title={action.text}>
-									<span>
-										<IconButton size="small" color='primary' disabled={!isEnabled(action)} onClick={(event) => actionClick(action.name!, event.currentTarget)}>
-											{action.icon}
-										</IconButton>
-									</span>
-								</Tooltip>
-						))}
-					</Stack>
+	return (
+        <>
+            <ResizableDialog ref={dialogRef} id={props.id} isMaximized={isMaximized} isActive={props.atFront} onFocus={onFocus} onWindowChange={props.onWindowChange} x={props.x} y={props.y} width={props.width} height={props.height}>
+                <DialogTitle sx={{ cursor: isMaximized ? 'default' : 'move',  py: 1 }} id='draggable-dialog-title'>
+                    <Stack direction='row' spacing={1} sx={{
+                        alignItems: 'center'
+                    }}>
+                        <Typography variant="subtitle1" noWrap sx={{ fontWeight: 'bold', flexShrink: 0}}>
+                            {`${contentDetailsData.source.data.origin.kind}:`}
+                        </Typography>
+                        <Typography variant='body2' noWrap>
+                            {props.title}
+                        </Typography>
+                        <Tooltip title='Copy'>
+                            <IconButton size='small' onClick={() => copy(props.title)}>
+                                <ContentCopy fontSize='inherit' />
+                            </IconButton>
+                        </Tooltip>
+                        
+                        <Stack direction='row' spacing={0.5} className="no-drag">
+                            {items.map((action, index) => (
+                                action.name === 'divider' ? 
+                                    <Typography sx={{flexGrow: 1}}/>
+                                    :
+                                    <Tooltip key={index} title={action.text}>
+                                        <span>
+                                            <IconButton size="small" color='primary' disabled={!isEnabled(action)} onClick={(event) => actionClick(action.name!, event.currentTarget)}>
+                                                {action.icon}
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+                            ))}
+                        </Stack>
 
-					<Typography sx={{ flexGrow: 1}}/>
+                        <Typography sx={{ flexGrow: 1}}/>
 
-					<WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={() => props.onClose(props.id)} onSnap={handleSnap} />
-				</Stack>
-			</DialogTitle>
+                        <WindowTitleButtons id={props.id} atTop={props.atTop} isMaximized={isMaximized} onMinimize={() => props.onMinimize(props.id)} onTop={() => props.onTop(props.id)} onMaximize={handleIsMaximized} onClose={() => props.onClose(props.id)} onSnap={handleSnap} />
+                    </Stack>
+                </DialogTitle>
 
-			<DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'column' }}>
-				<Box sx={{ p: 2, flexGrow: 1, overflow: 'auto' }}>
-					{
-						<DetailsObject 
-							object={contentDetailsData.source}
-							sections={contentDetailsData.sections} 
-							onChangeData={onChangeData}
-							onLink={onLink} 
-							onContainsEdit={setContainsEdit}
-						/>
-					}
-				</Box>
-			</DialogContent>
+                <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'column' }}>
+                    <Box sx={{ p: 2, flexGrow: 1, overflow: 'auto' }}>
+                        {
+                            <DetailsObject 
+                                object={contentDetailsData.source}
+                                sections={contentDetailsData.sections} 
+                                onChangeData={onChangeData}
+                                onLink={onLink} 
+                                onContainsEdit={setContainsEdit}
+                            />
+                        }
+                    </Box>
+                </DialogContent>
 
-			<DialogActions sx={{ p: 0.5, pr: 2 }}>
-				<Button onClick={() => props.data.onApply(contentDetailsData.path, newObject.current)} disabled={!containsEdit || !dataChanged} variant='contained' size='small'>
-					Apply
-				</Button>
-			</DialogActions>
-		</ResizableDialog>
+                <DialogActions sx={{ p: 0.5, pr: 2 }}>
+                    <Button onClick={() => props.data.onApply(contentDetailsData.path, newObject.current)} disabled={!containsEdit || !dataChanged} variant='contained' size='small'>
+                        Apply
+                    </Button>
+                </DialogActions>
+            </ResizableDialog>
 
-		{menuContainersAnchorParent && props.selectedFiles.length>0 && (
-			<MenuContainers 
-				channel={selectedAction}
-				file={props.selectedFiles[0]}
-				onClose={() => setMenuContainersAnchorParent(undefined)}
-				anchorParent={menuContainersAnchorParent}
-				onContainerSelected={(channel, file, container) => {
-					props.data.onAction(channel, file.path || '', container)
-					setMenuContainersAnchorParent(undefined)
-				}}
-				includeAllContainers={contentDetailsData.containerSelectionOptions.get(selectedAction)===2}
-			/>
-		)}
-	</>)
+            {menuContainersAnchorParent && props.selectedFiles.length>0 && (
+                <MenuContainers 
+                    channel={selectedAction}
+                    file={props.selectedFiles[0]}
+                    onClose={() => setMenuContainersAnchorParent(undefined)}
+                    anchorParent={menuContainersAnchorParent}
+                    onContainerSelected={(channel, file, container) => {
+                        props.data.onAction(channel, file.path || '', container)
+                        setMenuContainersAnchorParent(undefined)
+                    }}
+                    includeAllContainers={contentDetailsData.containerSelectionOptions.get(selectedAction)===2}
+                />
+            )}
+        </>
+    );
 
 }
 

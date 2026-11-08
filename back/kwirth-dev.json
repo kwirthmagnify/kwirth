@@ -7,7 +7,26 @@
         "vllm": "../plugins/vllm/dist",
         "provider-debug": "../plugins/provider-debug/dist",
         "specula": "../plugins/specula/dist",
-        "incipit": "../plugins/incipit/dist"
+        "incipit": "../plugins/incipit/dist",
+        "alert": "../plugins/alert/dist",
+        "censor": "../plugins/censor/dist",
+        "echo": "../plugins/echo/dist",
+        "galaga": "../plugins/galaga/dist",
+        "log": "../plugins/log/dist",
+        "magnify": "../plugins/magnify/dist",
+        "metrics": "../plugins/metrics/dist",
+        "mirc": "../plugins/mirc/dist",
+        "nettools": "../plugins/nettools/dist",
+        "news": "../plugins/news/dist",
+        "ops": "../plugins/ops/dist",
+        "pinocchio": "../plugins/pinocchio/dist",
+        "sender-debug": "../plugins/sender-debug/dist",
+        "situs": "../plugins/situs/dist",
+        "spectrum": "../plugins/spectrum/dist",
+        "status": "../plugins/status/dist",
+        "sugarless": "../plugins/sugarless/dist",
+        "topology": "../plugins/topology/dist",
+        "trivy": "../plugins/trivy/dist"
     },
     "providers": {
         "events": "../providers/events/dist",
@@ -17,27 +36,48 @@
         "agent-metrics": "../providers/agent-metrics/dist",
         "cloud-config": "../providers/cloud-config/dist",
         "service-flow": "../providers/service-flow/dist",
-        "business": "../providers/business/dist"
+        "business": "../providers/business/dist",
+        "http-pull-push": "../providers/http-pull-push/dist",
+        "sugarless": "../providers/sugarless/dist",
+        "trivy": "../providers/trivy/dist",
+        "metrics": "../providers/metrics/dist"
     },
     "senders": {
         "datadog": "../senders/datadog/dist",
-        "gitlab-issues": "../senders/gitlab-issues/dist"
+        "gitlab-issues": "../senders/gitlab-issues/dist",
+        "composite": "../senders/composite/dist",
+        "ratelimit": "../senders/ratelimit/dist",
+        "regex": "../senders/regex/dist",
+        "tee": "../senders/tee/dist",
+        "timed": "../senders/timed/dist"
     },
     "webhooks": {
         "gitlab-issues": "../webhooks/gitlab-issues/dist",
         "jira": "../webhooks/jira/dist"
     },
-    "logins": {
+    "logins": {},
+    "homepages": {
+        "avicii": "../homepages/avicii/dist",
+        "clusterized": "../homepages/clusterized/dist",
+        "depeche-mode": "../homepages/depeche-mode/dist",
+        "matrix": "../homepages/matrix/dist"
     },
-    "homepages": {},
     "themes": {},
     "senderConfigs": {},
     "idps": {},
     "aitoolsets": {
+        "k8s-inventory": "../aitoolsets/k8s-inventory/dist",
+        "k8s-describe": "../aitoolsets/k8s-describe/dist",
+        "k8s-observability": "../aitoolsets/k8s-observability/dist",
+        "k8s-metrics": "../aitoolsets/k8s-metrics/dist",
+        "k8s-secrets": "../aitoolsets/k8s-secrets/dist"
     },
     "dces": {
         "file-manager": "../dces/file-manager/dist",
-        "aws-auth": "../dces/aws-auth/dist"
+        "aws-auth": "../dces/aws-auth/dist",
+        "nettools": "../dces/nettools/dist",
+        "xyflow": "../dces/xyflow/dist",
+        "three": "../dces/three/dist"
     },
     "docs": {
         "excubitor": "../plugins/excubitor/docs/",

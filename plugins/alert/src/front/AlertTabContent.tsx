@@ -63,44 +63,58 @@ const AlertTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         return theme.palette.text.primary
     }
 
-    return (<>
-        {alertData.started &&
-            <Card sx={{ display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', mt: 1, minHeight: 0 }}>
-                <CardHeader title={
-                    <Stack direction='row' alignItems='center'>
-                        <Typography mr={4}><b>Alerts:</b> {alertData.firedAlerts.length}</Typography>
-                        <Typography mr={4}><Info fontSize='small' sx={{ mb: 0.25, color: 'info.main' }} /><b>&nbsp;Info:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.INFO).length}</Typography>
-                        <Typography mr={4}><Warning fontSize='small' sx={{ mb: 0.25, color: 'warning.main' }} /><b>&nbsp;Warning:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.WARNING).length}</Typography>
-                        <Typography mr={4}><Error fontSize='small' sx={{ mb: 0.25, color: 'error.main' }} /><b>&nbsp;Error:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.ERROR).length}</Typography>
-                        <Typography sx={{ flexGrow: 1 }} />
-                        <TextField value={filter} onChange={(e: any) => setFilter(e.target?.value)} disabled={!alertData.started} size='small' variant='standard' placeholder='Filter...'
-                            InputProps={{
-                                endAdornment: <>
-                                    <InputAdornment position='start' onClick={() => alertData.started && setFilterRegex(!filterRegex)} sx={{ m: 0 }}>
-                                        <Typography sx={filterRegex ? adornmentSelected : adornmentNotSelected}>.*</Typography>
-                                    </InputAdornment>
-                                    <InputAdornment position='start' onClick={() => alertData.started && setFilterCasing(!filterCasing)} sx={{ m: 0, ml: 1 }}>
-                                        <Typography sx={filterCasing ? adornmentSelected : adornmentNotSelected}>Aa</Typography>
-                                    </InputAdornment>
-                                </>
-                            }}
-                        />
-                    </Stack>} />
-                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
-                    <Box ref={alertBoxRef} sx={{ display: 'flex', flexDirection: 'column', width: '100%', overflowY: 'auto', flexGrow: 1, height: `calc(100vh - ${alertBoxTop}px - 16px)` }} onScroll={handleScroll}>
-                        <pre style={{ fontSize: '0.75rem' }}>
-                            {alertData.firedAlerts.filter(matchesFilter).map((alert, index) => (
-                                <div key={index} style={{ color: colorFor(alert.severity) }}>
-                                    {`${alert.namespace}/${alert.pod}/${alert.container} `}
-                                    <b>[{alert.severity}]</b>
-                                    {` ${alert.text}`}
-                                </div>
-                            ))}
-                        </pre>
-                    </Box>
-                </CardContent>
-            </Card>}
-    </>)
+    return (
+        <>
+            {alertData.started &&
+                <Card sx={{ display: 'flex', flexDirection: 'column', flex: 1, width: '98%', alignSelf: 'center', mt: 1, minHeight: 0 }}>
+                    <CardHeader title={
+                        <Stack direction='row' sx={{
+                            alignItems: 'center'
+                        }}>
+                            <Typography sx={{
+                                mr: 4
+                            }}><b>Alerts:</b> {alertData.firedAlerts.length}</Typography>
+                            <Typography sx={{
+                                mr: 4
+                            }}><Info fontSize='small' sx={{ mb: 0.25, color: 'info.main' }} /><b>&nbsp;Info:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.INFO).length}</Typography>
+                            <Typography sx={{
+                                mr: 4
+                            }}><Warning fontSize='small' sx={{ mb: 0.25, color: 'warning.main' }} /><b>&nbsp;Warning:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.WARNING).length}</Typography>
+                            <Typography sx={{
+                                mr: 4
+                            }}><Error fontSize='small' sx={{ mb: 0.25, color: 'error.main' }} /><b>&nbsp;Error:</b> {alertData.firedAlerts.filter(a => a.severity === EAlertSeverity.ERROR).length}</Typography>
+                            <Typography sx={{ flexGrow: 1 }} />
+                            <TextField value={filter} onChange={(e: any) => setFilter(e.target?.value)} disabled={!alertData.started} size='small' variant='standard' placeholder='Filter...'
+                                slotProps={{
+                                    input: {
+                                        endAdornment: <>
+                                            <InputAdornment position='start' onClick={() => alertData.started && setFilterRegex(!filterRegex)} sx={{ m: 0 }}>
+                                                <Typography sx={filterRegex ? adornmentSelected : adornmentNotSelected}>.*</Typography>
+                                            </InputAdornment>
+                                            <InputAdornment position='start' onClick={() => alertData.started && setFilterCasing(!filterCasing)} sx={{ m: 0, ml: 1 }}>
+                                                <Typography sx={filterCasing ? adornmentSelected : adornmentNotSelected}>Aa</Typography>
+                                            </InputAdornment>
+                                        </>
+                                    }
+                                }}
+                            />
+                        </Stack>} />
+                    <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0, '&:last-child': { pb: 0 } }}>
+                        <Box ref={alertBoxRef} sx={{ display: 'flex', flexDirection: 'column', width: '100%', overflowY: 'auto', flexGrow: 1, height: `calc(100vh - ${alertBoxTop}px - 16px)` }} onScroll={handleScroll}>
+                            <pre style={{ fontSize: '0.75rem' }}>
+                                {alertData.firedAlerts.filter(matchesFilter).map((alert, index) => (
+                                    <div key={index} style={{ color: colorFor(alert.severity) }}>
+                                        {`${alert.namespace}/${alert.pod}/${alert.container} `}
+                                        <b>[{alert.severity}]</b>
+                                        {` ${alert.text}`}
+                                    </div>
+                                ))}
+                            </pre>
+                        </Box>
+                    </CardContent>
+                </Card>}
+        </>
+    );
 }
 
 export { AlertTabContent }

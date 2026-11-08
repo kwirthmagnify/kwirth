@@ -75,12 +75,18 @@ const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 1, color: 'text.primary' }}>
             {trivyData.started && <>
                 <Card variant='outlined' sx={{ p: 1.5, mb: 2, backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#fafafa', borderColor: 'divider' }}>
-                    <Stack direction='row' spacing={2} alignItems='center'>
+                    <Stack direction='row' spacing={2} sx={{
+                        alignItems: 'center'
+                    }}>
                         <TextField size='small' placeholder='Search asset, ns...' variant='outlined' value={filterText} onChange={(e) => setFilterText(e.target.value)}
                             sx={{ width: '220px', '& .MuiInputBase-root': { height: '32px', fontSize: '0.8rem' } }}
-                            InputProps={{ startAdornment: <InputAdornment position='start'><SearchIcon sx={{ fontSize: '1.1rem', color: 'text.secondary' }} /></InputAdornment> }} />
+                            slotProps={{
+                                input: { startAdornment: <InputAdornment position='start'><SearchIcon sx={{ fontSize: '1.1rem', color: 'text.secondary' }} /></InputAdornment> }
+                            }} />
                         <Box sx={{ flex: 1 }} />
-                        <Stack direction='row' spacing={1} alignItems='center'>
+                        <Stack direction='row' spacing={1} sx={{
+                            alignItems: 'center'
+                        }}>
                             <Button size='small' variant='contained' disableElevation onClick={(event) => setAnchorMenu(event.currentTarget)} sx={{ textTransform: 'none', height: '30px' }}>Order</Button>
                             <ToggleButtonGroup size='small' exclusive value={showMode} onChange={(_, v) => { if (v) { setShowMode(v); trivyData.mode = v } }} sx={{ height: '30px' }}>
                                 <ToggleButton value='card' sx={{ textTransform: 'none', px: 1.5 }}>Card</ToggleButton>
@@ -131,7 +137,7 @@ const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
             {anchorMenu !== undefined && <MenuOrder anchorParent={anchorMenu} onClose={() => setAnchorMenu(undefined)} onReorder={onReorder} orderSource={orderSource} orderType={orderType} />}
             {msgBox}
         </Box>
-    )
+    );
 }
 
 export { TrivyTabContent }

@@ -42,7 +42,14 @@ const TruncatedText: React.FC<{
     }, [medir, text])
 
     const texto = (
-        <Typography ref={ref} variant={variant} color={color} fontWeight={fontWeight} display='block' sx={sx}>
+        <Typography
+            ref={ref}
+            variant={variant}
+            color={color}
+            sx={[{
+                fontWeight: fontWeight,
+                display: 'block'
+            }, ...(Array.isArray(sx) ? sx : [sx])]}>
             {text}
         </Typography>
     )

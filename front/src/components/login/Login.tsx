@@ -132,49 +132,57 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
 
     const okDisabled = (changingPassword && (newPassword1 !== newPassword2 || newPassword1 === '')) || user === '' || password === ''
 
-    return (<>
-        <Dialog open={true} disableRestoreFocus={true} fullWidth maxWidth={'xs'}
-            onKeyDown={e => { if (e.key === 'Enter' && !okDisabled && !redirecting) onClickOk() }}>
-            <DialogTitle>Enter credentials</DialogTitle>
-            <DialogContent>
-                <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column'}}>
-                    { !changingPassword && hasPassword && <>
-                        <TextField value={user} onChange={(ev) => setUser(ev.target.value)} disabled={redirecting} variant='standard'label='User' autoFocus></TextField>
-                        <TextField value={password} onChange={(ev) => setPassword(ev.target.value)} type='password' disabled={redirecting} variant='standard'label='Password'></TextField>
-                    </>}
-                    { changingPassword && <>
-                        <Typography>Your login has been succesful, you can now change your password.</Typography>
-                        <TextField value={newPassword1} onChange={(ev) => setNewPassword1(ev.target.value)} type='password' disabled={redirecting} variant='standard' label='New Password' autoFocus></TextField>
-                        <TextField value={newPassword2} onChange={(ev) => setNewPassword2(ev.target.value)} type='password' disabled={redirecting} variant='standard' label='Repeat New Password'></TextField>
-                    </>}
-                    { !changingPassword && redirectMethods.length > 0 && <>
-                        { hasPassword && <Typography variant='caption' sx={{ textAlign:'center', color:'text.secondary' }}>or</Typography> }
-                        { redirectMethods.length === 1
-                            ? <Button variant='outlined' disabled={redirecting} onClick={() => onClickIdp(redirectMethods[0])}>{redirectMethods[0].label}</Button>
-                            : <>
-                                <Button variant='outlined' fullWidth disabled={redirecting} endIcon={<ExpandMore/>} onClick={(e) => setIdpAnchor(e.currentTarget)} sx={{ justifyContent: 'space-between' }}>Log in with...</Button>
-                                <Menu anchorEl={idpAnchor} open={Boolean(idpAnchor)} onClose={() => setIdpAnchor(null)}
-                                    PaperProps={{ sx: { minWidth: idpAnchor?.offsetWidth } }}>
-                                    { redirectMethods.map(m => <MenuItem key={m.id} disabled={redirecting} onClick={() => { setIdpAnchor(null); onClickIdp(m) }}>{m.label}</MenuItem>) }
-                                </Menu>
-                            </>
+    return (
+        <>
+            <Dialog open={true} disableRestoreFocus={true} fullWidth maxWidth={'xs'}
+                onKeyDown={e => { if (e.key === 'Enter' && !okDisabled && !redirecting) onClickOk() }}>
+                <DialogTitle>Enter credentials</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column'}}>
+                        { !changingPassword && hasPassword && <>
+                            <TextField value={user} onChange={(ev) => setUser(ev.target.value)} disabled={redirecting} variant='standard'label='User' autoFocus></TextField>
+                            <TextField value={password} onChange={(ev) => setPassword(ev.target.value)} type='password' disabled={redirecting} variant='standard'label='Password'></TextField>
+                        </>}
+                        { changingPassword && <>
+                            <Typography>Your login has been succesful, you can now change your password.</Typography>
+                            <TextField value={newPassword1} onChange={(ev) => setNewPassword1(ev.target.value)} type='password' disabled={redirecting} variant='standard' label='New Password' autoFocus></TextField>
+                            <TextField value={newPassword2} onChange={(ev) => setNewPassword2(ev.target.value)} type='password' disabled={redirecting} variant='standard' label='Repeat New Password'></TextField>
+                        </>}
+                        { !changingPassword && redirectMethods.length > 0 && <>
+                            { hasPassword && <Typography variant='caption' sx={{ textAlign:'center', color:'text.secondary' }}>or</Typography> }
+                            { redirectMethods.length === 1
+                                ? <Button variant='outlined' disabled={redirecting} onClick={() => onClickIdp(redirectMethods[0])}>{redirectMethods[0].label}</Button>
+                                : <>
+                                    <Button variant='outlined' fullWidth disabled={redirecting} endIcon={<ExpandMore/>} onClick={(e) => setIdpAnchor(e.currentTarget)} sx={{ justifyContent: 'space-between' }}>Log in with...</Button>
+                                    <Menu anchorEl={idpAnchor} open={Boolean(idpAnchor)} onClose={() => setIdpAnchor(null)}
+                                        slotProps={{ paper: { sx: { minWidth: idpAnchor?.offsetWidth } } }}>
+                                        { redirectMethods.map(m => <MenuItem key={m.id} disabled={redirecting} onClick={() => { setIdpAnchor(null); onClickIdp(m) }}>{m.label}</MenuItem>) }
+                                    </Menu>
+                                </>
+                            }
+                        </>}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Stack
+                        direction='row'
+                        sx={{
+                            flex: 1,
+                            ml:2,
+                            mr:2
+                        }}>
+                        { hasPassword && <Button variant='outlined' onClick={onClickChangePassword} disabled={user === '' || password === '' || redirecting} sx={{display:changingPassword?'none':'block'}}>Change Password</Button> }
+                        <Typography sx={{ flexGrow:1}}></Typography>
+                        { hasPassword && <Button variant='outlined' onClick={onClickOk} disabled={okDisabled || redirecting}>OK</Button> }
+                        {
+                            changingPassword && <Button variant='outlined' onClick={onClickCancel}>Cancel</Button>
                         }
-                    </>}
-                </Stack>
-            </DialogContent>
-            <DialogActions>
-                <Stack direction='row' flex={1} sx={{ml:2, mr:2}}>
-                    { hasPassword && <Button variant='outlined' onClick={onClickChangePassword} disabled={user === '' || password === '' || redirecting} sx={{display:changingPassword?'none':'block'}}>Change Password</Button> }
-                    <Typography sx={{ flexGrow:1}}></Typography>
-                    { hasPassword && <Button variant='outlined' onClick={onClickOk} disabled={okDisabled || redirecting}>OK</Button> }
-                    {
-                        changingPassword && <Button variant='outlined' onClick={onClickCancel}>Cancel</Button>
-                    }
-                </Stack>
-            </DialogActions>
-        </Dialog>
-        {msgBox}
-    </>)
+                    </Stack>
+                </DialogActions>
+            </Dialog>
+            {msgBox}
+        </>
+    );
 }
 
 export { Login }

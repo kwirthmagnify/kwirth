@@ -221,262 +221,293 @@ const SenderDesignerDialog: React.FC<ISenderDesignerDialogProps> = ({ onClose, b
     const selectedNode = flow && selectedPath !== undefined ? nodeAtPath(flow, selectedPath) : undefined
     const showEditor = selectedPath !== undefined && !!selectedNode
 
-    return (<>
-        <Dialog
-            open={true}
-            maxWidth={false}
-            onKeyDown={e => { if (e.key === 'Escape' && !showEditor) onClose() }}
-            sx={{ '& .MuiDialog-paper': { width: '92vw', height: '88vh', maxWidth: '92vw', display: 'flex', flexDirection: 'column' } }}
-        >
-            <DialogTitle sx={{ pb: 1 }}>Sender Pipeline Designer</DialogTitle>
-            <Divider />
+    return (
+        <>
+            <Dialog
+                open={true}
+                maxWidth={false}
+                onKeyDown={e => { if (e.key === 'Escape' && !showEditor) onClose() }}
+                sx={{ '& .MuiDialog-paper': { width: '92vw', height: '88vh', maxWidth: '92vw', display: 'flex', flexDirection: 'column' } }}
+            >
+                <DialogTitle sx={{ pb: 1 }}>Sender Pipeline Designer</DialogTitle>
+                <Divider />
 
-            <DialogContent sx={{ flex: 1, p: 0, overflow: 'hidden', display: 'flex' }}>
-                {loading ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-                        <CircularProgress />
-                    </Box>
-                ) : (
-                    <>
-                        {/* ── Left panel: pipeline list ── */}
-                        <Box sx={{ width: 240, borderRight: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
-                            <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-                                <Typography variant='subtitle2' sx={{ mb: 1 }}>Pipelines</Typography>
-                                <Stack direction='row' spacing={0.5}>
-                                    <TextField
-                                        size='small' fullWidth placeholder='New pipeline name'
-                                        value={newName}
-                                        onChange={e => setNewName(e.target.value)}
-                                        onKeyDown={e => { if (e.key === 'Enter') createPipeline() }}
-                                    />
-                                    <Tooltip title='Create pipeline'>
-                                        <span>
-                                            <IconButton size='small' color='primary' disabled={!newName.trim()} onClick={createPipeline}>
-                                                <Add fontSize='small' />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                </Stack>
-                            </Box>
-                            <List dense sx={{ flex: 1, overflow: 'auto' }}>
-                                {Object.keys(pipelines).length === 0 && (
-                                    <ListItem>
-                                        <ListItemText primary={<Typography variant='caption' color='text.secondary'>No pipelines yet.</Typography>} />
-                                    </ListItem>
-                                )}
-                                {Object.keys(pipelines).map(name => (
-                                    <ListItem
-                                        key={name}
-                                        disablePadding
-                                        secondaryAction={
-                                            <Tooltip title='Delete pipeline'>
-                                                <IconButton size='small' edge='end' color='error' onClick={() => deletePipeline(name)}>
-                                                    <Delete fontSize='small' />
-                                                </IconButton>
-                                            </Tooltip>
-                                        }
-                                    >
-                                        <ListItemButton
-                                            selected={selectedName === name}
-                                            onClick={() => selectPipeline(name)}
-                                        >
-                                            <ListItemText
-                                                primary={selectedName === name ? editingName || name : name}
-                                                secondary={
-                                                    dirty && selectedName === name
-                                                        ? 'unsaved'
-                                                        : (pipelines[name]?.description || undefined)
-                                                }
-                                                secondaryTypographyProps={{
-                                                    sx: {
-                                                        color: dirty && selectedName === name ? 'warning.main' : 'text.disabled',
-                                                        lineHeight: 1.2,
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap',
-                                                        fontSize: 11,
-                                                    }
-                                                }}
-                                            />
-                                        </ListItemButton>
-                                    </ListItem>
-                                ))}
-                            </List>
+                <DialogContent sx={{ flex: 1, p: 0, overflow: 'hidden', display: 'flex' }}>
+                    {loading ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                            <CircularProgress />
                         </Box>
-
-                        {/* ── Center: canvas ── */}
-                        <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                            {selectedName && (
-                                <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
-                                    <Stack direction='row' spacing={1} alignItems='center'>
-                                        <Box sx={{ width: '25%', flexShrink: 0 }}>
-                                            <TextField
-                                                size='small' label='Name' fullWidth
-                                                disabled={!editMode}
-                                                value={editingName}
-                                                onChange={e => setEditingName(e.target.value)}
-                                                onBlur={applyRename}
-                                                onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } if (e.key === 'Escape') { setEditingName(selectedName); e.currentTarget.blur() } }}
-                                            />
-                                        </Box>
+                    ) : (
+                        <>
+                            {/* ── Left panel: pipeline list ── */}
+                            <Box sx={{ width: 240, borderRight: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
+                                <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                                    <Typography variant='subtitle2' sx={{ mb: 1 }}>Pipelines</Typography>
+                                    <Stack direction='row' spacing={0.5}>
                                         <TextField
-                                            size='small' label='Description' sx={{ flex: 1 }}
-                                            disabled={!editMode}
-                                            value={description}
-                                            onChange={e => { setDescription(e.target.value); setDirty(true) }}
-                                            placeholder={editMode ? 'Optional description' : ''}
+                                            size='small' fullWidth placeholder='New pipeline name'
+                                            value={newName}
+                                            onChange={e => setNewName(e.target.value)}
+                                            onKeyDown={e => { if (e.key === 'Enter') createPipeline() }}
                                         />
-                                        {error && <Typography variant='caption' color='error' sx={{ whiteSpace: 'nowrap' }}>{error}</Typography>}
-                                        <FormControlLabel
-                                            control={<Switch size='small' checked={editMode} onChange={e => setEditMode(e.target.checked)} />}
-                                            label={<Typography variant='caption'>{editMode ? 'Edit' : 'View'}</Typography>}
-                                            sx={{ whiteSpace: 'nowrap', m: 0 }}
-                                        />
-                                        <Button
-                                            variant='contained' size='small'
-                                            disabled={!editMode || !dirty || !flow || saving}
-                                            onClick={savePipeline}
-                                            startIcon={saving ? <CircularProgress size={14} /> : undefined}
-                                            sx={{ whiteSpace: 'nowrap' }}
-                                        >
-                                            {saving ? 'Saving…' : 'Save'}
-                                        </Button>
+                                        <Tooltip title='Create pipeline'>
+                                            <span>
+                                                <IconButton size='small' color='primary' disabled={!newName.trim()} onClick={createPipeline}>
+                                                    <Add fontSize='small' />
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
                                     </Stack>
                                 </Box>
-                            )}
-                            <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-                                {!selectedName && (
-                                    <Box sx={{ m: 'auto', textAlign: 'center', color: 'text.secondary' }}>
-                                        <Typography variant='body2'>Select or create a pipeline to start designing.</Typography>
-                                    </Box>
-                                )}
-                                {selectedName && !flow && editMode && (
-                                    <Box sx={{ m: 'auto', textAlign: 'center' }}>
-                                        <Typography variant='body2' sx={{ mb: 2 }}>Empty pipeline — choose a root node type:</Typography>
-                                        <Stack direction='row' spacing={2} justifyContent='center' flexWrap='wrap' useFlexGap>
-                                            {STATIC_ROOT_TYPES.map(rt => (
-                                                <Button
-                                                    key={rt.type}
-                                                    variant='outlined'
-                                                    startIcon={rt.icon}
-                                                    onClick={() => setRootNode(rt.type)}
-                                                    sx={{ flexDirection: 'column', minHeight: 80, width: 130, gap: 0.5, whiteSpace: 'normal' }}
-                                                >
-                                                    <span>{rt.label}</span>
-                                                    <Typography variant='caption' color='text.secondary' sx={{ textTransform: 'none', textAlign: 'center', fontSize: 10 }}>
-                                                        {rt.desc}
-                                                    </Typography>
-                                                </Button>
-                                            ))}
-                                            {filterSenders.map(fs => (
-                                                <Button
-                                                    key={fs.id}
-                                                    variant='outlined'
-                                                    startIcon={<FilterAlt />}
-                                                    onClick={() => setRootNode('filter', fs.id)}
-                                                    sx={{ flexDirection: 'column', minHeight: 80, width: 130, gap: 0.5, whiteSpace: 'normal' }}
-                                                >
-                                                    <span>{fs.displayName ?? fs.id}</span>
-                                                    <Typography variant='caption' color='text.secondary' sx={{ textTransform: 'none', textAlign: 'center', fontSize: 10 }}>
-                                                        Filter sender
-                                                    </Typography>
-                                                </Button>
-                                            ))}
+                                <List dense sx={{ flex: 1, overflow: 'auto' }}>
+                                    {Object.keys(pipelines).length === 0 && (
+                                        <ListItem>
+                                            <ListItemText primary={<Typography variant='caption' sx={{
+                                                color: 'text.secondary'
+                                            }}>No pipelines yet.</Typography>} />
+                                        </ListItem>
+                                    )}
+                                    {Object.keys(pipelines).map(name => (
+                                        <ListItem
+                                            key={name}
+                                            disablePadding
+                                            secondaryAction={
+                                                <Tooltip title='Delete pipeline'>
+                                                    <IconButton size='small' edge='end' color='error' onClick={() => deletePipeline(name)}>
+                                                        <Delete fontSize='small' />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            }
+                                        >
+                                            <ListItemButton
+                                                selected={selectedName === name}
+                                                onClick={() => selectPipeline(name)}
+                                            >
+                                                <ListItemText
+                                                    primary={selectedName === name ? editingName || name : name}
+                                                    secondary={
+                                                        dirty && selectedName === name
+                                                            ? 'unsaved'
+                                                            : (pipelines[name]?.description || undefined)
+                                                    }
+                                                    slotProps={{
+                                                        secondary: {
+                                                            sx: {
+                                                                color: dirty && selectedName === name ? 'warning.main' : 'text.disabled',
+                                                                lineHeight: 1.2,
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                                fontSize: 11,
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                            </ListItemButton>
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            </Box>
+
+                            {/* ── Center: canvas ── */}
+                            <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                {selectedName && (
+                                    <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
+                                        <Stack direction='row' spacing={1} sx={{
+                                            alignItems: 'center'
+                                        }}>
+                                            <Box sx={{ width: '25%', flexShrink: 0 }}>
+                                                <TextField
+                                                    size='small' label='Name' fullWidth
+                                                    disabled={!editMode}
+                                                    value={editingName}
+                                                    onChange={e => setEditingName(e.target.value)}
+                                                    onBlur={applyRename}
+                                                    onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } if (e.key === 'Escape') { setEditingName(selectedName); e.currentTarget.blur() } }}
+                                                />
+                                            </Box>
+                                            <TextField
+                                                size='small' label='Description' sx={{ flex: 1 }}
+                                                disabled={!editMode}
+                                                value={description}
+                                                onChange={e => { setDescription(e.target.value); setDirty(true) }}
+                                                placeholder={editMode ? 'Optional description' : ''}
+                                            />
+                                            {error && <Typography variant='caption' color='error' sx={{ whiteSpace: 'nowrap' }}>{error}</Typography>}
+                                            <FormControlLabel
+                                                control={<Switch size='small' checked={editMode} onChange={e => setEditMode(e.target.checked)} />}
+                                                label={<Typography variant='caption'>{editMode ? 'Edit' : 'View'}</Typography>}
+                                                sx={{ whiteSpace: 'nowrap', m: 0 }}
+                                            />
+                                            <Button
+                                                variant='contained' size='small'
+                                                disabled={!editMode || !dirty || !flow || saving}
+                                                onClick={savePipeline}
+                                                startIcon={saving ? <CircularProgress size={14} /> : undefined}
+                                                sx={{ whiteSpace: 'nowrap' }}
+                                            >
+                                                {saving ? 'Saving…' : 'Save'}
+                                            </Button>
                                         </Stack>
                                     </Box>
                                 )}
-                                {selectedName && !flow && !editMode && (
-                                    <Box sx={{ m: 'auto', color: 'text.disabled' }}>
-                                        <Typography variant='body2'>Empty pipeline — switch to Edit mode to start designing.</Typography>
-                                    </Box>
-                                )}
-                                {selectedName && flow && (
-                                    <PipelineCanvas
-                                        flow={flow}
-                                        selectedPath={selectedPath}
-                                        availableSenders={availableSenders}
-                                        configDescriptions={configDescriptions}
-                                        readonly={!editMode}
-                                        onFlowChange={handleFlowChange}
-                                        onClearFlow={() => { setFlow(undefined); setSelectedPath(undefined); setDirty(true) }}
-                                        onSelectPath={setSelectedPath}
-                                    />
-                                )}
-                            </Box>
-                        </Box>
-
-                        {/* ── Right: node editor ── */}
-                        {showEditor && flow && selectedNode && editMode && (
-                            <Box sx={{ width: 300, borderLeft: '1px solid', borderColor: 'divider', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                                <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <Typography variant='subtitle2'>Configure node</Typography>
-                                    <IconButton size='small' onClick={() => setSelectedPath(undefined)}>✕</IconButton>
+                                <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+                                    {!selectedName && (
+                                        <Box sx={{ m: 'auto', textAlign: 'center', color: 'text.secondary' }}>
+                                            <Typography variant='body2'>Select or create a pipeline to start designing.</Typography>
+                                        </Box>
+                                    )}
+                                    {selectedName && !flow && editMode && (
+                                        <Box sx={{ m: 'auto', textAlign: 'center' }}>
+                                            <Typography variant='body2' sx={{ mb: 2 }}>Empty pipeline — choose a root node type:</Typography>
+                                            <Stack
+                                                direction='row'
+                                                spacing={2}
+                                                useFlexGap
+                                                sx={{
+                                                    justifyContent: 'center',
+                                                    flexWrap: 'wrap'
+                                                }}>
+                                                {STATIC_ROOT_TYPES.map(rt => (
+                                                    <Button
+                                                        key={rt.type}
+                                                        variant='outlined'
+                                                        startIcon={rt.icon}
+                                                        onClick={() => setRootNode(rt.type)}
+                                                        sx={{ flexDirection: 'column', minHeight: 80, width: 130, gap: 0.5, whiteSpace: 'normal' }}
+                                                    >
+                                                        <span>{rt.label}</span>
+                                                        <Typography
+                                                            variant='caption'
+                                                            sx={{
+                                                                color: 'text.secondary',
+                                                                textTransform: 'none',
+                                                                textAlign: 'center',
+                                                                fontSize: 10
+                                                            }}>
+                                                            {rt.desc}
+                                                        </Typography>
+                                                    </Button>
+                                                ))}
+                                                {filterSenders.map(fs => (
+                                                    <Button
+                                                        key={fs.id}
+                                                        variant='outlined'
+                                                        startIcon={<FilterAlt />}
+                                                        onClick={() => setRootNode('filter', fs.id)}
+                                                        sx={{ flexDirection: 'column', minHeight: 80, width: 130, gap: 0.5, whiteSpace: 'normal' }}
+                                                    >
+                                                        <span>{fs.displayName ?? fs.id}</span>
+                                                        <Typography
+                                                            variant='caption'
+                                                            sx={{
+                                                                color: 'text.secondary',
+                                                                textTransform: 'none',
+                                                                textAlign: 'center',
+                                                                fontSize: 10
+                                                            }}>
+                                                            Filter sender
+                                                        </Typography>
+                                                    </Button>
+                                                ))}
+                                            </Stack>
+                                        </Box>
+                                    )}
+                                    {selectedName && !flow && !editMode && (
+                                        <Box sx={{ m: 'auto', color: 'text.disabled' }}>
+                                            <Typography variant='body2'>Empty pipeline — switch to Edit mode to start designing.</Typography>
+                                        </Box>
+                                    )}
+                                    {selectedName && flow && (
+                                        <PipelineCanvas
+                                            flow={flow}
+                                            selectedPath={selectedPath}
+                                            availableSenders={availableSenders}
+                                            configDescriptions={configDescriptions}
+                                            readonly={!editMode}
+                                            onFlowChange={handleFlowChange}
+                                            onClearFlow={() => { setFlow(undefined); setSelectedPath(undefined); setDirty(true) }}
+                                            onSelectPath={setSelectedPath}
+                                        />
+                                    )}
                                 </Box>
-                                <NodeEditor
-                                    node={selectedNode}
-                                    path={selectedPath!}
-                                    flow={flow}
-                                    availableSenders={availableSenders}
-                                    onFlowChange={handleFlowChange}
-                                />
                             </Box>
-                        )}
-                    </>
-                )}
-            </DialogContent>
 
-            <Divider />
-            <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
-                <Stack direction='row' spacing={1}>
-                    <input ref={importFileRef} type='file' accept='.json' style={{ display: 'none' }}
-                        onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f) }} />
-                    <Tooltip title='Export pipelines to JSON'>
-                        <span>
-                            <Button size='small' startIcon={<Download />} disabled={Object.keys(pipelines).length === 0}
-                                onClick={() => { setExportSelected(new Set(Object.keys(pipelines))); setExportDialogOpen(true) }}>
-                                Export
-                            </Button>
-                        </span>
-                    </Tooltip>
-                    <Tooltip title='Import pipelines from JSON'>
-                        <Button size='small' startIcon={<Upload />} onClick={() => importFileRef.current?.click()}>Import</Button>
-                    </Tooltip>
-                </Stack>
-                <Button onClick={onClose}>Close</Button>
-            </DialogActions>
-        </Dialog>
-
-        {exportDialogOpen && (
-            <Dialog open maxWidth='xs' fullWidth>
-                <DialogTitle>Export pipelines</DialogTitle>
-                <DialogContent>
-                    <Stack spacing={0.5} sx={{ pt: 0.5 }}>
-                        <FormControlLabel
-                            control={<Checkbox size='small'
-                                checked={exportSelected.size === Object.keys(pipelines).length && Object.keys(pipelines).length > 0}
-                                indeterminate={exportSelected.size > 0 && exportSelected.size < Object.keys(pipelines).length}
-                                onChange={e => setExportSelected(e.target.checked ? new Set(Object.keys(pipelines)) : new Set())} />}
-                            label={<Typography variant='body2' fontWeight='bold'>Select all</Typography>}
-                        />
-                        <Divider />
-                        {Object.keys(pipelines).map(name => (
-                            <FormControlLabel key={name}
-                                control={<Checkbox size='small' checked={exportSelected.has(name)}
-                                    onChange={e => setExportSelected(prev => { const n = new Set(prev); e.target.checked ? n.add(name) : n.delete(name); return n })} />}
-                                label={<Typography variant='body2'>{name}</Typography>}
-                            />
-                        ))}
-                    </Stack>
+                            {/* ── Right: node editor ── */}
+                            {showEditor && flow && selectedNode && editMode && (
+                                <Box sx={{ width: 300, borderLeft: '1px solid', borderColor: 'divider', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                    <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <Typography variant='subtitle2'>Configure node</Typography>
+                                        <IconButton size='small' onClick={() => setSelectedPath(undefined)}>✕</IconButton>
+                                    </Box>
+                                    <NodeEditor
+                                        node={selectedNode}
+                                        path={selectedPath!}
+                                        flow={flow}
+                                        availableSenders={availableSenders}
+                                        onFlowChange={handleFlowChange}
+                                    />
+                                </Box>
+                            )}
+                        </>
+                    )}
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setExportDialogOpen(false)}>Cancel</Button>
-                    <Button variant='contained' disabled={exportSelected.size === 0} onClick={handleExport}>
-                        Export ({exportSelected.size})
-                    </Button>
+
+                <Divider />
+                <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
+                    <Stack direction='row' spacing={1}>
+                        <input ref={importFileRef} type='file' accept='.json' style={{ display: 'none' }}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f) }} />
+                        <Tooltip title='Export pipelines to JSON'>
+                            <span>
+                                <Button size='small' startIcon={<Download />} disabled={Object.keys(pipelines).length === 0}
+                                    onClick={() => { setExportSelected(new Set(Object.keys(pipelines))); setExportDialogOpen(true) }}>
+                                    Export
+                                </Button>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title='Import pipelines from JSON'>
+                            <Button size='small' startIcon={<Upload />} onClick={() => importFileRef.current?.click()}>Import</Button>
+                        </Tooltip>
+                    </Stack>
+                    <Button onClick={onClose}>Close</Button>
                 </DialogActions>
             </Dialog>
-        )}
-    </>)
+
+            {exportDialogOpen && (
+                <Dialog open maxWidth='xs' fullWidth>
+                    <DialogTitle>Export pipelines</DialogTitle>
+                    <DialogContent>
+                        <Stack spacing={0.5} sx={{ pt: 0.5 }}>
+                            <FormControlLabel
+                                control={<Checkbox size='small'
+                                    checked={exportSelected.size === Object.keys(pipelines).length && Object.keys(pipelines).length > 0}
+                                    indeterminate={exportSelected.size > 0 && exportSelected.size < Object.keys(pipelines).length}
+                                    onChange={e => setExportSelected(e.target.checked ? new Set(Object.keys(pipelines)) : new Set())} />}
+                                label={<Typography variant='body2' sx={{
+                                    fontWeight: 'bold'
+                                }}>Select all</Typography>}
+                            />
+                            <Divider />
+                            {Object.keys(pipelines).map(name => (
+                                <FormControlLabel key={name}
+                                    control={<Checkbox size='small' checked={exportSelected.has(name)}
+                                        onChange={e => setExportSelected(prev => { const n = new Set(prev); e.target.checked ? n.add(name) : n.delete(name); return n })} />}
+                                    label={<Typography variant='body2'>{name}</Typography>}
+                                />
+                            ))}
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setExportDialogOpen(false)}>Cancel</Button>
+                        <Button variant='contained' disabled={exportSelected.size === 0} onClick={handleExport}>
+                            Export ({exportSelected.size})
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            )}
+        </>
+    );
 }
 
 export { SenderDesignerDialog }

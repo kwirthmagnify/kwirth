@@ -57,7 +57,12 @@ const LogSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
             <DialogTitle>Configure log stream</DialogTitle>
             <DialogContent sx={{ height: '400px', overflow: 'hidden' }}>
                 <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column', width: '50vh', pt: 1 }}>
-                    <Stack direction='row' alignItems='baseline' gap={2}>
+                    <Stack
+                        direction='row'
+                        sx={{
+                            alignItems: 'baseline',
+                            gap: 2
+                        }}>
                         <TextField value={maxMessages} onChange={(e: ChangeEvent<HTMLInputElement>) => setMaxMessages(+e.target.value)} variant='standard' label='Max messages' type='number' sx={{ width: '50%' }} />
                         <FormControlLabel control={<Checkbox checked={showNames} onChange={(e) => setShowNames(e.target.checked)} />} label='Show names' sx={{ width: '50%' }} />
                     </Stack>
@@ -82,11 +87,15 @@ const LogSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                     </div>
                     <div hidden={selectedTab !== 'log'}>
                         <Stack direction='column'>
-                            <Stack direction='row' alignItems='baseline'>
+                            <Stack direction='row' sx={{
+                                alignItems: 'baseline'
+                            }}>
                                 <Switch checked={fromNowOn} onChange={(e) => { setFromNowOn(e.target.checked); if (e.target.checked) setFromStart(false) }} />
                                 <Typography>Get messages from now on</Typography>
                             </Stack>
-                            <Stack direction='row' alignItems='baseline'>
+                            <Stack direction='row' sx={{
+                                alignItems: 'baseline'
+                            }}>
                                 <Switch checked={fromStart && !fromNowOn} onChange={(e) => { setFromStart(e.target.checked); if (e.target.checked) setFromNowOn(false) }} disabled={fromNowOn} />
                                 <Typography>Get messages from container start time</Typography>
                             </Stack>
@@ -101,15 +110,21 @@ const LogSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                                 slotProps={{ inputLabel: { shrink: true } }}
                             />
                         </Stack>
-                        <Stack direction='row' alignItems='baseline'>
+                        <Stack direction='row' sx={{
+                            alignItems: 'baseline'
+                        }}>
                             <Switch checked={previous} onChange={(e: ChangeEvent<HTMLInputElement>) => setPrevious(e.target.checked)} />
                             <Typography>Get messages of previous container</Typography>
                         </Stack>
-                        <Stack direction='row' alignItems='baseline'>
+                        <Stack direction='row' sx={{
+                            alignItems: 'baseline'
+                        }}>
                             <Switch checked={timestamp} onChange={(e: ChangeEvent<HTMLInputElement>) => setTimestamp(e.target.checked)} />
                             <Typography>Add timestamp to messages</Typography>
                         </Stack>
-                        <Stack direction='row' alignItems='baseline'>
+                        <Stack direction='row' sx={{
+                            alignItems: 'baseline'
+                        }}>
                             <Switch checked={follow} onChange={(e: ChangeEvent<HTMLInputElement>) => setFollow(e.target.checked)} />
                             <Typography>Follow new messages</Typography>
                         </Stack>
@@ -122,7 +137,7 @@ const LogSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                 <Button variant='outlined' onClick={cancel}>CANCEL</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { LogSetup, LogIcon }

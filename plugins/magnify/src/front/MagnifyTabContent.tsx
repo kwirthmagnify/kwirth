@@ -636,7 +636,12 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                     { isPod && <Box sx={{ mt: 1 }}>
                         <FormControlLabel label={<Typography variant='body2'>Force (do not wait for it to terminate)</Typography>}
                             control={<Checkbox size='small' onChange={(e) => { force.on = e.target.checked }} />} />
-                        <Typography variant='caption' color='warning.main' display='block'>
+                        <Typography
+                            variant='caption'
+                            sx={{
+                                color: 'warning.main',
+                                display: 'block'
+                            }}>
                             Forcing removes the pod from Kubernetes immediately. If its node is still alive the container may keep running. Use it for a node that is unreachable.
                         </Typography>
                     </Box> }
@@ -1500,10 +1505,20 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     if (!magnifyData.started)
         return (
             <Box ref={emptyRef} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', height: `calc(100vh - ${emptyTop}px - 8px)`, px: 4 }}>
-                <Typography variant='h6' color='text.secondary' sx={{ mb: 1 }}>Magnify not started</Typography>
-                <Typography variant='body2' color='text.secondary' sx={{ maxWidth: 480 }}>Start the channel (tab settings ⚙ → Start) to explore your cluster.</Typography>
+                <Typography
+                    variant='h6'
+                    sx={{
+                        color: 'text.secondary',
+                        mb: 1
+                    }}>Magnify not started</Typography>
+                <Typography
+                    variant='body2'
+                    sx={{
+                        color: 'text.secondary',
+                        maxWidth: 480
+                    }}>Start the channel (tab settings ⚙ → Start) to explore your cluster.</Typography>
             </Box>
-        )
+        );
 
     return <>
         <MagnifyAppBar channelObject={props.channelObject} />

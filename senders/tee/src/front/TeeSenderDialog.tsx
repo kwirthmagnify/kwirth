@@ -116,7 +116,12 @@ const TeeSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString }
 
                 {/* Left — config list */}
                 <Box sx={{ width: 190, display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
-                    <Typography variant='caption' color='text.secondary' fontWeight='bold'>Configs</Typography>
+                    <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            fontWeight: 'bold'
+                        }}>Configs</Typography>
                     <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
                         <List dense disablePadding>
                             {configs.map(cfg => (
@@ -129,8 +134,10 @@ const TeeSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString }
                                         <ListItemText
                                             primary={cfg.name}
                                             secondary={`${cfg.targets.length} target${cfg.targets.length !== 1 ? 's' : ''}`}
-                                            primaryTypographyProps={{ variant: 'body2', noWrap: true }}
-                                            secondaryTypographyProps={{ variant: 'caption' }} />
+                                            slotProps={{
+                                                primary: { variant: 'body2', noWrap: true },
+                                                secondary: { variant: 'caption' }
+                                            }} />
                                     </ListItemButton>
                                 </ListItem>
                             ))}
@@ -146,7 +153,12 @@ const TeeSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString }
 
                 {/* Right — editor */}
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0, pt: 1 }}>
-                    <Typography variant='caption' color='text.secondary' fontWeight='bold'>
+                    <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            fontWeight: 'bold'
+                        }}>
                         {selectedName ? `Editing: ${selectedName}` : 'New config'}
                     </Typography>
                     <TextField size='small' label='Name *' value={editName}
@@ -154,15 +166,35 @@ const TeeSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString }
                     <TextField size='small' label='Description' value={editDescription}
                         onChange={e => setEditDescription(e.target.value)} fullWidth multiline maxRows={2} />
 
-                    <Typography variant='caption' color='text.secondary' fontWeight='bold'>Targets</Typography>
+                    <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            fontWeight: 'bold'
+                        }}>Targets</Typography>
 
                     <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
                         {targets.length === 0
-                            ? <Typography variant='caption' color='text.disabled' sx={{ p: 1, display: 'block' }}>No targets yet.</Typography>
+                            ? <Typography
+                            variant='caption'
+                            sx={{
+                                color: 'text.disabled',
+                                p: 1,
+                                display: 'block'
+                            }}>No targets yet.</Typography>
                             : targets.map((t, i) => (
                                 <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
                                     <Typography variant='body2' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.senderId}</Typography>
-                                    <Typography variant='body2' color='text.secondary' sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.configName}</Typography>
+                                    <Typography
+                                        variant='body2'
+                                        sx={{
+                                            color: 'text.secondary',
+                                            flex: 1,
+                                            minWidth: 0,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}>{t.configName}</Typography>
                                     <IconButton size='small' color='error' onClick={() => setTargets(prev => prev.filter((_, idx) => idx !== i))}>
                                         <Delete sx={{ fontSize: 14 }} />
                                     </IconButton>
@@ -171,7 +203,9 @@ const TeeSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString }
                         }
                     </Box>
 
-                    <Stack direction='row' spacing={1} alignItems='center'>
+                    <Stack direction='row' spacing={1} sx={{
+                        alignItems: 'center'
+                    }}>
                         <FormControl size='small' sx={{ flex: 1 }}>
                             <InputLabel>Sender</InputLabel>
                             <Select label='Sender' value={newSenderId} onChange={e => { setNewSenderId(e.target.value); setNewConfigName('') }}>
@@ -193,7 +227,13 @@ const TeeSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString }
                         </Tooltip>
                     </Stack>
 
-                    <Stack direction='row' justifyContent='flex-end' alignItems='center' spacing={1}>
+                    <Stack
+                        direction='row'
+                        spacing={1}
+                        sx={{
+                            justifyContent: 'flex-end',
+                            alignItems: 'center'
+                        }}>
                         {error && <Typography variant='caption' color='error' sx={{ flex: 1 }}>{error}</Typography>}
                         <Button size='small' variant='contained' disabled={saving || !editName.trim()} onClick={save}>
                             {saving ? <CircularProgress size={14} /> : selectedName ? 'Update' : 'Add'}
@@ -205,7 +245,7 @@ const TeeSenderDialog: React.FC<IProps> = ({ onClose, backendUrl, accessString }
                 <Button onClick={onClose}>Close</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export default TeeSenderDialog

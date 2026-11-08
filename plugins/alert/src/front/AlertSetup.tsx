@@ -7,7 +7,12 @@ import { EAlertSeverity, IAlertInstanceConfig, IAlertMetricRule, TAlertMetricOpe
 
 // TextToolTip inlined from core FrontTools
 const TextToolTip: React.FC<{ name: string; help: React.ReactElement }> = ({ name, help }) => (
-    <Box display="flex" alignItems="center" mt={2}>
+    <Box
+        sx={{
+            display: "flex",
+            alignItems: "center",
+            mt: 2
+        }}>
         <Typography variant="body1">{name}&nbsp;</Typography>
         <Tooltip title={help}><Info fontSize="inherit" /></Tooltip>
     </Box>
@@ -93,17 +98,28 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                         ].map(({ label, val, set, regex, setRegex }) => (
                             <Stack key={label} direction='column' sx={{ flex: 1, minWidth: 0 }}>
                                 <TextToolTip name={label} help={regexHelp} />
-                                <Stack direction='row' alignItems='baseline'>
+                                <Stack direction='row' sx={{
+                                    alignItems: 'baseline'
+                                }}>
                                     <TextField value={val} onChange={(e: ChangeEvent<HTMLInputElement>) => set(e.target.value)} variant='standard' sx={{ flex: 1, minWidth: 0 }} />
                                     <Button variant='outlined' onClick={() => { if (val) { setRegex([...regex, val]); set('') } }} size='small'>Add</Button>
                                 </Stack>
-                                <Stack mt={1}>{regex.map((r, i) => <Box key={i}><Chip label={r} variant='outlined' onDelete={() => setRegex(regex.filter(x => x !== r))} size='small' /></Box>)}</Stack>
+                                <Stack sx={{
+                                    mt: 1
+                                }}>{regex.map((r, i) => <Box key={i}><Chip label={r} variant='outlined' onDelete={() => setRegex(regex.filter(x => x !== r))} size='small' /></Box>)}</Stack>
                             </Stack>
                         ))}
                     </Stack>
 
                     <Typography variant='subtitle2' sx={{ fontWeight: 'bold', mt: 1, mb: -0.5 }}>Metric alerts (Kubernetes only)</Typography>
-                    <Stack direction='row' spacing={1} alignItems='flex-end' flexWrap='wrap' sx={{ width: '100%' }}>
+                    <Stack
+                        direction='row'
+                        spacing={1}
+                        sx={{
+                            alignItems: 'flex-end',
+                            flexWrap: 'wrap',
+                            width: '100%'
+                        }}>
                         <Autocomplete options={metricOptions} value={newMetric} onChange={(_, v) => setNewMetric(v)} renderInput={(p) => <TextField {...p} variant='standard' label='Metric' />} sx={{ flex: 1, minWidth: '200px' }} size='small' noOptionsText='No metrics available' />
                         <FormControl variant='standard' sx={{ width: '70px' }}>
                             <InputLabel>Operator</InputLabel>
@@ -131,7 +147,12 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                         {newRuleMode === 'cooldown' && <TextField value={newRuleCooldown} onChange={e => setNewRuleCooldown(e.target.value)} variant='standard' label='Cooldown (s)' type='number' sx={{ width: '100px' }} />}
                         <Button variant='outlined' onClick={() => { if (!newMetric || isNaN(+newThreshold)) return; setMetricRules([...metricRules, { metric: newMetric, operator: newOperator, value: +newThreshold, severity: newRuleSeverity, mode: newRuleMode, cooldown: +newRuleCooldown }]); setNewMetric(null); setNewThreshold('0') }} disabled={!newMetric} size='small'>Add</Button>
                     </Stack>
-                    <Stack direction='row' flexWrap='wrap' gap={1}>
+                    <Stack
+                        direction='row'
+                        sx={{
+                            flexWrap: 'wrap',
+                            gap: 1
+                        }}>
                         {metricRules.map((rule, i) => <Chip key={i} label={`${rule.metric} ${rule.operator} ${rule.value} [${rule.severity}] ${rule.mode === 'cooldown' ? `${rule.cooldown}s` : rule.mode === 'continuous' ? 'cont' : 'edge'}`} variant='outlined' size='small'
                             onClick={() => {
                                 setNewMetric(rule.metric)
@@ -146,12 +167,20 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                     </Stack>
 
                     <Typography variant='subtitle2' sx={{ fontWeight: 'bold', mt: 4, mb: -0.5 }}>General</Typography>
-                    <Stack direction='row' spacing={2} alignItems='flex-end' sx={{ width: '100%' }}>
+                    <Stack
+                        direction='row'
+                        spacing={2}
+                        sx={{
+                            alignItems: 'flex-end',
+                            width: '100%'
+                        }}>
                         <TextField value={maxAlerts} onChange={(e: ChangeEvent<HTMLInputElement>) => setMaxAlerts(+e.target.value)} variant='standard' label='Max alerts' type='number' sx={{ width: '100px', flexShrink: 0 }} />
                         <FormControl variant='standard' sx={{ flex: 1, minWidth: 0 }}>
                             <InputLabel shrink>Sender</InputLabel>
                             <Select value={selectedSenderId} onChange={(e: SelectChangeEvent) => { setSelectedSenderId(e.target.value); setSelectedConfigName('') }} displayEmpty>
-                                <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
+                                <MenuItem value=''><Typography variant='body2' sx={{
+                                    color: 'text.secondary'
+                                }}>(none)</Typography></MenuItem>
                                 {Array.from(new Set(senderEntries.map(e => e.senderId))).map(sid => (
                                     <MenuItem key={sid} value={sid}>{sid}</MenuItem>
                                 ))}
@@ -160,7 +189,9 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                         <FormControl variant='standard' sx={{ flex: 1, minWidth: 0 }} disabled={!selectedSenderId}>
                             <InputLabel shrink>Config</InputLabel>
                             <Select value={selectedConfigName} onChange={(e: SelectChangeEvent) => setSelectedConfigName(e.target.value)} displayEmpty>
-                                <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
+                                <MenuItem value=''><Typography variant='body2' sx={{
+                                    color: 'text.secondary'
+                                }}>(none)</Typography></MenuItem>
                                 {senderEntries.filter(e => e.senderId === selectedSenderId).map(e => (
                                     <MenuItem key={e.configName} value={e.configName}>{e.configName}</MenuItem>
                                 ))}
@@ -175,7 +206,7 @@ const AlertSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                 <Button variant='outlined' onClick={cancel}>CANCEL</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { AlertSetup }

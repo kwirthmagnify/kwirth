@@ -54,16 +54,40 @@ const simpleBarChart = (asset: IAsset) => {
         { label: 'SBOM', value: sbom, height: (sbom / maxDataValue) * maxHeightPx, color: 'success.main' },
     ]
     return (
-        <Box display='flex' alignItems='flex-end' justifyContent='space-around' height={maxHeightPx + 40} width='100%' padding={1} bgcolor='background.paper'>
+        <Box
+            sx={{
+                display: 'flex',
+                alignItems: 'flex-end',
+                justifyContent: 'space-around',
+                height: maxHeightPx + 40,
+                width: '100%',
+                padding: 1,
+                bgcolor: 'background.paper'
+            }}>
             {bars.map((bar, index) => (
-                <Box key={index} textAlign='center' sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Box
+                    key={index}
+                    sx={{
+                        textAlign: 'center',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center'
+                    }}>
                     <Typography variant='caption' sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>{bar.value}</Typography>
-                    <Box width={30} height={bar.height} bgcolor={bar.color} marginX={1} sx={{ transition: 'height 0.3s ease', borderRadius: '2px 2px 0 0' }} />
+                    <Box
+                        sx={{
+                            width: 30,
+                            height: bar.height,
+                            bgcolor: bar.color,
+                            marginX: 1,
+                            transition: 'height 0.3s ease',
+                            borderRadius: '2px 2px 0 0'
+                        }} />
                     <Typography variant='caption' sx={{ fontSize: '0.65rem' }}>{bar.label}</Typography>
                 </Box>
             ))}
         </Box>
-    )
+    );
 }
 
 const TrivyTabContentAsset: React.FC<ITrivyTabContentAssetProps> = (props: ITrivyTabContentAssetProps) => {
@@ -95,102 +119,130 @@ const TrivyTabContentAsset: React.FC<ITrivyTabContentAssetProps> = (props: ITriv
         </Menu>
     )
 
-    if (props.mode === 'card') return (<>
-        <Card sx={{ width: '100%', height: '280px', borderWidth: '1px', borderStyle: 'solid', borderColor: 'divider' }}>
-            <CardHeader
-                /*
-                    🔴 `minWidth: 0` on the header's content, or the chip is the one that gets clipped.
+    if (props.mode === 'card') return (
+        <>
+            <Card sx={{ width: '100%', height: '280px', borderWidth: '1px', borderStyle: 'solid', borderColor: 'divider' }}>
+                <CardHeader
+                    /*
+                        🔴 `minWidth: 0` on the header's content, or the chip is the one that gets clipped.
 
-                    A flex item will not shrink below its content's size by default, so with the name on
-                    one line the row grew past the card and the kind chip was cut off at the edge
-                    ('ReplicaS…'). With this the NAME gives way —it has an ellipsis and a tooltip with
-                    the whole thing— and the chip, which is short and is what tells a controller from a
-                    pod, stays whole.
-                */
-                sx={{ '& .MuiCardHeader-content': { minWidth: 0, overflow: 'hidden' } }}
-                avatar={<Avatar sx={{ background: assetAvatarColor(props.asset.vulnerabilityreports?.report?.os?.family || 'X') }}>{getAvatarContent(props.asset.vulnerabilityreports?.report?.os?.family || 'X')}</Avatar>}
-                /*
-                    The card has room for about twenty characters and a pod's name is longer than that,
-                    so the names are cut — and the tooltip is the only way to read which object this is.
-                    Without it two pods of the same deployment look identical on screen.
-                */
-                title={<Box>
-                    {/* One tooltip per line, each showing ITS own full value: the object on top and the
-                        container below. Both are cut to fit the card, so both need it.
+                        A flex item will not shrink below its content's size by default, so with the name on
+                        one line the row grew past the card and the kind chip was cut off at the edge
+                        ('ReplicaS…'). With this the NAME gives way —it has an ellipsis and a tooltip with
+                        the whole thing— and the chip, which is short and is what tells a controller from a
+                        pod, stays whole.
+                    */
+                    sx={{ '& .MuiCardHeader-content': { minWidth: 0, overflow: 'hidden' } }}
+                    avatar={<Avatar sx={{ background: assetAvatarColor(props.asset.vulnerabilityreports?.report?.os?.family || 'X') }}>{getAvatarContent(props.asset.vulnerabilityreports?.report?.os?.family || 'X')}</Avatar>}
+                    /*
+                        The card has room for about twenty characters and a pod's name is longer than that,
+                        so the names are cut — and the tooltip is the only way to read which object this is.
+                        Without it two pods of the same deployment look identical on screen.
+                    */
+                    title={<Box>
+                        {/* One tooltip per line, each showing ITS own full value: the object on top and the
+                            container below. Both are cut to fit the card, so both need it.
 
-                        The KIND goes beside the name because Trivy names a report after the owner of
-                        the pods it scanned: without it a ReplicaSet and a Pod read identically. */}
-                    {/*
-                        🔴 ONE LINE EACH, and that is what `noWrap` is for. The card is 280px tall and
-                        fixed; with the kind chip beside it the name lost width, wrapped to a third line
-                        and pushed the scan date out of the bottom of the card — visible on every
-                        workload whose name is long, which is most of them. The chip does not shrink
-                        (`flexShrink: 0`): it is short, and it is what tells a controller from a pod.
-                        Nothing is lost by clipping, the tooltip carries the whole name.
-                    */}
-                    {/*
-                        🔴 The NAME gets the whole first line, and the chip rides with the CONTAINER.
+                            The KIND goes beside the name because Trivy names a report after the owner of
+                            the pods it scanned: without it a ReplicaSet and a Pod read identically. */}
+                        {/*
+                            🔴 ONE LINE EACH, and that is what `noWrap` is for. The card is 280px tall and
+                            fixed; with the kind chip beside it the name lost width, wrapped to a third line
+                            and pushed the scan date out of the bottom of the card — visible on every
+                            workload whose name is long, which is most of them. The chip does not shrink
+                            (`flexShrink: 0`): it is short, and it is what tells a controller from a pod.
+                            Nothing is lost by clipping, the tooltip carries the whole name.
+                        */}
+                        {/*
+                            🔴 The NAME gets the whole first line, and the chip rides with the CONTAINER.
 
-                        Side by side with the name, the chip took about 70px of the ~190 the line has
-                        (avatar and ⋮ eat the rest) and left room for some fourteen characters: two pods
-                        of the same deployment came out as the same 'kwirth-pos…', which is precisely
-                        what the chip and the tooltip were added to prevent. The container line is
-                        short —'postgres', 'controller'— so the chip fits there with room to spare.
+                            Side by side with the name, the chip took about 70px of the ~190 the line has
+                            (avatar and ⋮ eat the rest) and left room for some fourteen characters: two pods
+                            of the same deployment came out as the same 'kwirth-pos…', which is precisely
+                            what the chip and the tooltip were added to prevent. The container line is
+                            short —'postgres', 'controller'— so the chip fits there with room to spare.
 
-                        It still describes the OBJECT and not the container; they share a line, not a
-                        meaning, and the one on the left is already a container name.
-                    */}
-                    <Tooltip title={fullName(props.asset)} placement='top-start'>
-                        <Typography variant='body2' noWrap>{shorten(props.asset.name, 20)}</Typography>
-                    </Tooltip>
-                    <Stack direction='row' alignItems='center' spacing={0.5} sx={{ minWidth: 0 }}>
-                        <Tooltip title={props.asset.container || 'no container (workload-level report)'} placement='bottom-start'>
-                            <Typography variant='body2' noWrap sx={{ minWidth: 0 }}>{shorten(props.asset.container, 20)}</Typography>
+                            It still describes the OBJECT and not the container; they share a line, not a
+                            meaning, and the one on the left is already a container name.
+                        */}
+                        <Tooltip title={fullName(props.asset)} placement='top-start'>
+                            <Typography variant='body2' noWrap>{shorten(props.asset.name, 20)}</Typography>
                         </Tooltip>
-                        {props.asset.kind && <Chip label={props.asset.kind} size='small' variant='outlined' sx={{ height: 16, fontSize: '0.6rem', flexShrink: 0 }} />}
-                    </Stack>
-                </Box>}
-                action={<IconButton onClick={(event) => setAnchorMenu(event?.currentTarget)}><MoreVert /></IconButton>}
-            />
-            <CardMedia>{simpleBarChart(props.asset)}</CardMedia>
-            <CardContent sx={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'divider' }}>
-                <Stack direction='row'><Divider /><Stack direction='column' sx={{ flex: 1 }}>
-                    <Typography variant='body2'><b>Date:&nbsp;</b>{props.asset.vulnerabilityreports?.report?.updateTimestamp || props.asset.configauditreports?.report?.updateTimestamp}</Typography>
-                </Stack></Stack>
-            </CardContent>
-        </Card>
-        {anchorMenu && assetMenu}
-    </>)
-
-    if (props.mode === 'list') return (<>
-        <Card sx={{ width: '100%' }}>
-            <Stack direction='row' alignItems='center'>
-                <Stack direction='row' width='50%' p={1} alignItems='center'>
-                    <Avatar sx={{ background: assetAvatarColor(props.asset.vulnerabilityreports?.report?.os?.family || 'X') }}>{getAvatarContent(props.asset.vulnerabilityreports?.report?.os?.family || 'X')}</Avatar>
-                    <Stack direction='column' ml={1}>
-                        {/* The same two things as the card: the full name on hover, and the kind, which
-                            is what tells a controller from a pod. */}
-                        <Stack direction='row' alignItems='center' spacing={0.5}>
-                            <Tooltip title={fullName(props.asset)} placement='top-start'>
-                                <Typography variant='body2'><b>{`${shorten(props.asset.name, 20)}/${shorten(props.asset.container, 10)}`}</b></Typography>
+                        <Stack
+                            direction='row'
+                            spacing={0.5}
+                            sx={{
+                                alignItems: 'center',
+                                minWidth: 0
+                            }}>
+                            <Tooltip title={props.asset.container || 'no container (workload-level report)'} placement='bottom-start'>
+                                <Typography variant='body2' noWrap sx={{ minWidth: 0 }}>{shorten(props.asset.container, 20)}</Typography>
                             </Tooltip>
-                            {props.asset.kind && <Chip label={props.asset.kind} size='small' variant='outlined' sx={{ height: 16, fontSize: '0.6rem' }} />}
+                            {props.asset.kind && <Chip label={props.asset.kind} size='small' variant='outlined' sx={{ height: 16, fontSize: '0.6rem', flexShrink: 0 }} />}
                         </Stack>
-                        <Typography variant='body2'>{`${props.asset.vulnerabilityreports?.report?.updateTimestamp || props.asset.configauditreports?.report?.updateTimestamp}`}</Typography>
+                    </Box>}
+                    action={<IconButton onClick={(event) => setAnchorMenu(event?.currentTarget)}><MoreVert /></IconButton>}
+                />
+                <CardMedia>{simpleBarChart(props.asset)}</CardMedia>
+                <CardContent sx={{ borderTopWidth: '1px', borderTopStyle: 'solid', borderTopColor: 'divider' }}>
+                    <Stack direction='row'><Divider /><Stack direction='column' sx={{ flex: 1 }}>
+                        <Typography variant='body2'><b>Date:&nbsp;</b>{props.asset.vulnerabilityreports?.report?.updateTimestamp || props.asset.configauditreports?.report?.updateTimestamp}</Typography>
+                    </Stack></Stack>
+                </CardContent>
+            </Card>
+            {anchorMenu && assetMenu}
+        </>
+    );
+
+    if (props.mode === 'list') return (
+        <>
+            <Card sx={{ width: '100%' }}>
+                <Stack direction='row' sx={{
+                    alignItems: 'center'
+                }}>
+                    <Stack
+                        direction='row'
+                        sx={{
+                            width: '50%',
+                            p: 1,
+                            alignItems: 'center'
+                        }}>
+                        <Avatar sx={{ background: assetAvatarColor(props.asset.vulnerabilityreports?.report?.os?.family || 'X') }}>{getAvatarContent(props.asset.vulnerabilityreports?.report?.os?.family || 'X')}</Avatar>
+                        <Stack direction='column' sx={{
+                            ml: 1
+                        }}>
+                            {/* The same two things as the card: the full name on hover, and the kind, which
+                                is what tells a controller from a pod. */}
+                            <Stack direction='row' spacing={0.5} sx={{
+                                alignItems: 'center'
+                            }}>
+                                <Tooltip title={fullName(props.asset)} placement='top-start'>
+                                    <Typography variant='body2'><b>{`${shorten(props.asset.name, 20)}/${shorten(props.asset.container, 10)}`}</b></Typography>
+                                </Tooltip>
+                                {props.asset.kind && <Chip label={props.asset.kind} size='small' variant='outlined' sx={{ height: 16, fontSize: '0.6rem' }} />}
+                            </Stack>
+                            <Typography variant='body2'>{`${props.asset.vulnerabilityreports?.report?.updateTimestamp || props.asset.configauditreports?.report?.updateTimestamp}`}</Typography>
+                        </Stack>
                     </Stack>
+                    {[TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL].map((plural, i) => (
+                        <Stack
+                            key={i}
+                            direction='column'
+                            sx={{
+                                alignItems: 'center',
+                                width: '10%'
+                            }}>
+                            <Typography sx={{ fontSize: '1.125rem' }}>{getTotalIssues(plural, props.asset)}</Typography>
+                            <Typography variant='caption' sx={{ fontSize: '0.5rem' }}>{['Vulnerabilities', 'ConfigAudit', 'ExposedSecrets'][i]}</Typography>
+                        </Stack>
+                    ))}
+                    <Typography sx={{ flex: 1 }} />
+                    <IconButton onClick={(event) => setAnchorMenu(event.currentTarget)}><MoreVert /></IconButton>
                 </Stack>
-                {[TRIVY_API_VULN_PLURAL, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL].map((plural, i) => (
-                    <Stack key={i} direction='column' sx={{ width: '10%' }} alignItems='center'>
-                        <Typography sx={{ fontSize: '1.125rem' }}>{getTotalIssues(plural, props.asset)}</Typography>
-                        <Typography variant='caption' sx={{ fontSize: '0.5rem' }}>{['Vulnerabilities', 'ConfigAudit', 'ExposedSecrets'][i]}</Typography>
-                    </Stack>
-                ))}
-                <Typography sx={{ flex: 1 }} />
-                <IconButton onClick={(event) => setAnchorMenu(event.currentTarget)}><MoreVert /></IconButton>
-            </Stack>
-        </Card>
-        {anchorMenu && assetMenu}
-    </>)
+            </Card>
+            {anchorMenu && assetMenu}
+        </>
+    );
 
     return <></>
 }

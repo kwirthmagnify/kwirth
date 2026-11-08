@@ -38,10 +38,15 @@ const VALUE_OF: Record<ERouteColumn, (l: IRouteLine) => TSortValue> = {
 export const StatusRoutesTab: React.FC<IRoutesTabProps> = ({ routes, filter, sorts, onSort }) => {
     if (!routes) {
         return (
-            <Typography variant='body2' color='text.secondary' sx={{ p: 4, textAlign: 'center' }}>
-                This Kwirth's core does not list its routes yet. Update the core to see them here.
-            </Typography>
-        )
+            <Typography
+                variant='body2'
+                sx={{
+                    color: 'text.secondary',
+                    p: 4,
+                    textAlign: 'center'
+                }}>This Kwirth's core does not list its routes yet. Update the core to see them here.
+                            </Typography>
+        );
     }
     const clashes = collisions(routes)
     const lines = toLines(routes)
@@ -51,9 +56,18 @@ export const StatusRoutesTab: React.FC<IRoutesTabProps> = ({ routes, filter, sor
         <SortableCell label={label} column={column} sort={sort} onSort={col => onSort(EStatusTable.ROUTES, col)} />
     return (
         <Stack spacing={1} sx={{ pb: 2 }}>
-            <Stack direction='row' spacing={0.75} useFlexGap flexWrap='wrap' alignItems='center'>
+            <Stack
+                direction='row'
+                spacing={0.75}
+                useFlexGap
+                sx={{
+                    flexWrap: 'wrap',
+                    alignItems: 'center'
+                }}>
                 {/* Paths (one per line) and routes (one per method): both, since they are different numbers. */}
-                <Typography variant='caption' color='text.secondary'>{lines.length} paths · {routes.length} routes:</Typography>
+                <Typography variant='caption' sx={{
+                    color: 'text.secondary'
+                }}>{lines.length} paths · {routes.length} routes:</Typography>
                 {countByOwner(routes).map(([kind, n]) => <Chip key={kind} size='small' variant='outlined' label={`${n} ${OWNER_LABEL[kind]}`} />)}
                 {/* Said up front: a collision means one of the two is unreachable, and nothing else says it. */}
                 {clashes.size > 0 &&
@@ -81,7 +95,9 @@ export const StatusRoutesTab: React.FC<IRoutesTabProps> = ({ routes, filter, sor
                     {shown.map(r =>
                         <TableRow key={`${r.ownerKind}:${r.ownerId} ${r.path}`}>
                             <TableCell>
-                                <Stack direction='row' spacing={1} alignItems='center'>
+                                <Stack direction='row' spacing={1} sx={{
+                                    alignItems: 'center'
+                                }}>
                                     {/* Breaks only at a slash-free overflow, never letter by letter on a normal path. */}
                                     <Typography variant='body2' sx={{ fontFamily: 'monospace', overflowWrap: 'anywhere' }}>{r.path}</Typography>
                                     {r.colliding &&
@@ -92,19 +108,23 @@ export const StatusRoutesTab: React.FC<IRoutesTabProps> = ({ routes, filter, sor
                             </TableCell>
                             {/* Many methods wrap to a second row inside the quarter, instead of widening it. */}
                             <TableCell>
-                                <Stack direction='row' spacing={0.5} useFlexGap flexWrap='wrap'>
+                                <Stack direction='row' spacing={0.5} useFlexGap sx={{
+                                    flexWrap: 'wrap'
+                                }}>
                                     {r.methods.map(m =>
                                         <Chip key={m} size='small' label={m} color={METHOD_COLOR[m] ?? 'default'} variant='outlined'
                                             sx={{ fontFamily: 'monospace', minWidth: 52 }} />)}
                                 </Stack>
                             </TableCell>
                             <TableCell sx={{ overflowWrap: 'anywhere' }}>
-                                <Typography variant='body2' component='span' color='text.secondary'>{OWNER_LABEL[r.ownerKind]} </Typography>
+                                <Typography variant='body2' component='span' sx={{
+                                    color: 'text.secondary'
+                                }}>{OWNER_LABEL[r.ownerKind]} </Typography>
                                 <Typography variant='body2' component='span' sx={{ fontWeight: 500 }}>{r.ownerId}</Typography>
                             </TableCell>
                         </TableRow>)}
                 </TableBody>
             </Table>
         </Stack>
-    )
+    );
 }

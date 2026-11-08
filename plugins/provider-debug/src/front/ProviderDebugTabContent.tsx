@@ -135,12 +135,18 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
     }
 
     const formatProviders = () => {
-        if (data.providers.length === 0) return <Typography variant='body2' color='text.secondary'>No providers running.</Typography>
+        if (data.providers.length === 0) return (
+            <Typography variant='body2' sx={{
+                color: 'text.secondary'
+            }}>No providers running.</Typography>
+        );
         return (
-            <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
+            <Stack direction='row' spacing={1} useFlexGap sx={{
+                flexWrap: 'wrap'
+            }}>
                 {data.providers.map(p => <Chip key={p.id} label={p.id} size='small' variant={p.id === instanceConfig.providerId ? 'filled' : 'outlined'} />)}
             </Stack>
-        )
+        );
     }
 
     const toggle = (event: IProviderDebugEvent) => setExpanded(prev => {
@@ -166,13 +172,25 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
                 ref={(el: HTMLElement | null) => { if (el) cardRefs.current.set(event, el); else cardRefs.current.delete(event) }}
                 sx={{ mb: 0.5, ...(current === event ? { outline: 2, outlineColor: 'warning.main', outlineOffset: -2 } : {}) }}
             >
-                <Stack direction='row' spacing={1.5} alignItems='center' sx={{ minWidth: 0, px: 1, py: 0.5, cursor: 'pointer' }} onClick={() => toggle(event)}>
+                <Stack
+                    direction='row'
+                    spacing={1.5}
+                    onClick={() => toggle(event)}
+                    sx={{
+                        alignItems: 'center',
+                        minWidth: 0,
+                        px: 1,
+                        py: 0.5,
+                        cursor: 'pointer'
+                    }}>
                     <IconButton size='small' aria-label={open ? 'Collapse event' : 'Expand event'} onClick={(e) => { e.stopPropagation(); toggle(event) }}>
                         {open ? <ExpandLess fontSize='small' /> : <ExpandMore fontSize='small' />}
                     </IconButton>
                     <Typography variant='caption' color={isMatch(event) ? 'warning.main' : 'text.secondary'} sx={{ fontFamily: 'monospace' }}>{new Date(event.ts).toISOString()}</Typography>
                     <Chip label={event.providerId} size='small' variant='outlined' sx={{ fontSize: '0.65rem', height: 18 }} />
-                    <Typography variant='caption' color='text.secondary' noWrap>{summaryOf(event.event)}</Typography>
+                    <Typography variant='caption' noWrap sx={{
+                        color: 'text.secondary'
+                    }}>{summaryOf(event.event)}</Typography>
                     <Tooltip title={copied === event ? 'Copied' : 'Copy event JSON'}>
                         {/* la fila entera despliega, así que hay que frenar el click aquí */}
                         <IconButton size='small' aria-label='Copy event JSON' sx={{ ml: 'auto' }} onClick={(e) => { e.stopPropagation(); copy(event) }}>
@@ -182,7 +200,7 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
                 </Stack>
                 {open && <Box sx={{ px: 2, pb: 1 }}><JsonBlock value={event.event} highlight={search} /></Box>}
             </Paper>
-        )
+        );
     }
 
     /*
@@ -198,11 +216,29 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
     */
     if (!data.started) {
         return (
-            <Stack ref={boxRef} alignItems='center' justifyContent='center' spacing={1} sx={{ flex: 1, width: '100%', minHeight: `calc(100vh - ${boxTop}px - 8px)`, px: 4, textAlign: 'center' }}>
-                <Typography variant='h6' color='text.secondary'>Provider Debug not started</Typography>
-                <Typography variant='body2' color='text.secondary' sx={{ maxWidth: 480 }}>Start the channel (tab settings ⚙ → Start) to subscribe to a provider and watch its raw events.</Typography>
+            <Stack
+                ref={boxRef}
+                spacing={1}
+                sx={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: 1,
+                    width: '100%',
+                    minHeight: `calc(100vh - ${boxTop}px - 8px)`,
+                    px: 4,
+                    textAlign: 'center'
+                }}>
+                <Typography variant='h6' sx={{
+                    color: 'text.secondary'
+                }}>Provider Debug not started</Typography>
+                <Typography
+                    variant='body2'
+                    sx={{
+                        color: 'text.secondary',
+                        maxWidth: 480
+                    }}>Start the channel (tab settings ⚙ → Start) to subscribe to a provider and watch its raw events.</Typography>
             </Stack>
-        )
+        );
     }
 
     // Resolved once per render: 'matches' walks the whole buffer.
@@ -212,11 +248,28 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
     return (
         <Card sx={{ flex: 1, width: '98%', alignSelf: 'center', m: 1 }}>
             <CardHeader title={
-                <Stack direction='row' alignItems='center' sx={{ width: '100%' }}>
-                    <Typography mr={4}><b>Provider:</b> {instanceConfig.providerId || '(none)'}</Typography>
-                    <Typography mr={4}><b>Events:</b> {data.events.length} / {config.maxEvents}</Typography>
-                    <Typography mr={4}><Info fontSize='small' sx={{ mb: 0.25 }} /><b>&nbsp;Status:</b> {data.paused ? 'paused' : data.started ? 'started' : 'stopped'}</Typography>
-                    <Stack direction='row' alignItems='center' spacing={0.5} sx={{ ml: 'auto' }}>
+                <Stack
+                    direction='row'
+                    sx={{
+                        alignItems: 'center',
+                        width: '100%'
+                    }}>
+                    <Typography sx={{
+                        mr: 4
+                    }}><b>Provider:</b> {instanceConfig.providerId || '(none)'}</Typography>
+                    <Typography sx={{
+                        mr: 4
+                    }}><b>Events:</b> {data.events.length} / {config.maxEvents}</Typography>
+                    <Typography sx={{
+                        mr: 4
+                    }}><Info fontSize='small' sx={{ mb: 0.25 }} /><b>&nbsp;Status:</b> {data.paused ? 'paused' : data.started ? 'started' : 'stopped'}</Typography>
+                    <Stack
+                        direction='row'
+                        spacing={0.5}
+                        sx={{
+                            alignItems: 'center',
+                            ml: 'auto'
+                        }}>
                         {/* siempre visible: sin búsqueda marca 0/0, así el hueco no baila al escribir */}
                         <Typography variant='caption' color={found.length === 0 && search.trim() !== '' ? 'warning.main' : 'text.secondary'} sx={{ minWidth: 44, textAlign: 'right' }}>
                             {`${matchPos + 1}/${found.length}`}
@@ -271,8 +324,17 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
             <CardContent>
                 <Stack direction='column' spacing={1} sx={{ mb: 1 }}>
                     {/* etiqueta y chips en la misma línea; los chips siguen envolviendo si no caben */}
-                    <Stack direction='row' spacing={1} alignItems='center' flexWrap='wrap' useFlexGap>
-                        <Typography variant='caption' color='text.secondary'>Running providers</Typography>
+                    <Stack
+                        direction='row'
+                        spacing={1}
+                        useFlexGap
+                        sx={{
+                            alignItems: 'center',
+                            flexWrap: 'wrap'
+                        }}>
+                        <Typography variant='caption' sx={{
+                            color: 'text.secondary'
+                        }}>Running providers</Typography>
                         {formatProviders()}
                         {/* los dos hitos del arranque, en vez de dos líneas de texto sueltas */}
                         <Stack direction='row' spacing={1} sx={{ ml: 'auto' }}>
@@ -284,7 +346,9 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
                                 variant={data.subscribed ? 'filled' : 'outlined'} />
                         </Stack>
                     </Stack>
-                    {data.signals.map((s, index) => <Typography key={index} variant='caption' color='text.secondary'>*** {s} ***</Typography>)}
+                    {data.signals.map((s, index) => <Typography key={index} variant='caption' sx={{
+                        color: 'text.secondary'
+                    }}>*** {s} ***</Typography>)}
                 </Stack>
                 <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', width: '100%', flexGrow: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
                     <Box sx={{ flex: 1, overflowY: 'auto', ml: 1, mr: 1 }}>
@@ -293,5 +357,5 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
                 </Box>
             </CardContent>
         </Card>
-    )
+    );
 }

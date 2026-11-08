@@ -60,30 +60,59 @@ const MagnifyAppBar: React.FC<IMagnifyAppBarProps> = (props: IMagnifyAppBarProps
                 </Box>
                 <Box sx={{ flex: 1 }} />
                 <Tooltip title={`${(cpu || 0).toFixed(2)}%`}>
-                    <Stack direction={'column'} alignItems={'center'} mr={'2px'}>
-                        <Typography fontSize={8} mb={-1}>CPU</Typography>
+                    <Stack
+                        direction={'column'}
+                        sx={{
+                            alignItems: 'center',
+                            mr: '2px'
+                        }}>
+                        <Typography
+                            sx={{
+                                fontSize: 8,
+                                mb: -1
+                            }}>CPU</Typography>
                         <AreaChart width={120} height={20} data={dataCpu} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                             <Area type='monotone' dataKey='value' stroke='#8884d8' strokeWidth={2} dot={false} fill='#bbbbdd' />
                         </AreaChart>
                     </Stack>
                 </Tooltip>
                 <Tooltip title={`${(memory || 0).toFixed(2)}%`}>
-                    <Stack direction={'column'} alignItems={'center'} mr={'2px'}>
-                        <Typography fontSize={8} mb={-1}>Mem</Typography>
+                    <Stack
+                        direction={'column'}
+                        sx={{
+                            alignItems: 'center',
+                            mr: '2px'
+                        }}>
+                        <Typography
+                            sx={{
+                                fontSize: 8,
+                                mb: -1
+                            }}>Mem</Typography>
                         <AreaChart width={120} height={20} data={dataMemory} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                             <Area type='monotone' dataKey='value' stroke='#d88488' strokeWidth={2} dot={false} fill='#ddbbbb' />
                         </AreaChart>
                     </Stack>
                 </Tooltip>
                 <Tooltip title={`${(txmbps || 0).toFixed(2)}Mbps / ${(rxmbps || 0).toFixed(2)}Mbps`}>
-                    <Stack direction={'column'} alignItems={'center'}>
-                        <Typography fontSize={8} mb={-1}>Net</Typography>
+                    <Stack direction={'column'} sx={{
+                        alignItems: 'center'
+                    }}>
+                        <Typography
+                            sx={{
+                                fontSize: 8,
+                                mb: -1
+                            }}>Net</Typography>
                         <AreaChart width={120} height={20} data={dataNetwork} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                             <Area type='monotone' dataKey='value' stroke='#88d884' strokeWidth={2} dot={false} fill='#bbddbb' />
                         </AreaChart>
                     </Stack>
                 </Tooltip>
-                {props.channelObject.clusterUrl && <Typography variant='caption' color='text.secondary' sx={{ ml: 1 }}>{props.channelObject.clusterUrl}</Typography>}
+                {props.channelObject.clusterUrl && <Typography
+                    variant='caption'
+                    sx={{
+                        color: 'text.secondary',
+                        ml: 1
+                    }}>{props.channelObject.clusterUrl}</Typography>}
                 <Tooltip title='Exit fullscreen'>
                     <IconButton size='small' onClick={() => props.channelObject.exitFullscreen?.()}><FullscreenExit fontSize='small' /></IconButton>
                 </Tooltip>
@@ -117,7 +146,7 @@ const MagnifyAppBar: React.FC<IMagnifyAppBarProps> = (props: IMagnifyAppBarProps
                 </Box>
             </Drawer>
         </AppBar>
-    )
+    );
 }
 
 export { MagnifyAppBar }

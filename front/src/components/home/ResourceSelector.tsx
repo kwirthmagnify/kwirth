@@ -437,152 +437,177 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         props.resourceSelected!.channelId=''
     }
 
-    return (<>
-        <Stack direction='row' spacing={1} sx={{...props.sx}} alignItems='baseline'>
+    return (
+        <>
+            <Stack
+                direction='row'
+                spacing={1}
+                sx={{
+                    alignItems: 'baseline',
+                    ...props.sx
+                }}>
 
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }}>
-                <InputLabel>Cluster</InputLabel>
-                <Select value={cluster?.name} onChange={onChangeCluster}>
-                { props.clusters?.map( (cluster) => {
-                    return <MenuItem key={cluster.name} value={cluster.name} disabled={!cluster.enabled}>
-                        <Stack direction='row' alignItems='center' spacing={1}>
-                            <span style={{ lineHeight: 0 }}>{getIcon(cluster, 20)}</span>
-                            <span>{cluster.name}</span>
-                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: clusterColor(cluster.name).dot, flexShrink: 0 }} />
-                        </Stack>
-                    </MenuItem>
-                })}
-                </Select>
-            </FormControl>
-
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={cluster.name===''}>
-                <InputLabel>View</InputLabel>
-                <Select value={view} onChange={onChangeView} >
-                    <MenuItem key={EInstanceConfigView.NONE} value={EInstanceConfigView.NONE}>none</MenuItem>
-                    <MenuItem key={EInstanceConfigView.CLUSTER} value={EInstanceConfigView.CLUSTER}>cluster</MenuItem>
-                    {clusterHasResources && <MenuItem key={EInstanceConfigView.NAMESPACE} value={EInstanceConfigView.NAMESPACE}>namespace</MenuItem>}
-                    {clusterHasResources && <MenuItem key={EInstanceConfigView.GROUP} value={EInstanceConfigView.GROUP}>controller</MenuItem>}
-                    {clusterHasResources && <MenuItem key={EInstanceConfigView.POD} value={EInstanceConfigView.POD}>pod</MenuItem>}
-                    {clusterHasResources && <MenuItem key={EInstanceConfigView.CONTAINER} value={EInstanceConfigView.CONTAINER}>container</MenuItem>}
-                </Select>
-            </FormControl>
-
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={view==='' || noResourceView}>
-                <InputLabel>Namespace</InputLabel>
-                { /* autoFocus:false en el menu NO es cosmetico: MenuList clona el item ACTIVO con
-                     autoFocus y lo recalcula en cada render, asi que al teclear cambiaba la lista
-                     filtrada, otro MenuItem montaba con foco y se lo robaba al campo de filtro a cada
-                     letra. Apagarlo en el menu tambien apaga autoFocusItem (Menu lo deriva de el), y el
-                     foco inicial lo pone el propio TextField. */ }
-                <Select onChange={onChangeNamespaces} multiple value={namespaces} renderValue={(selected) => selected.join(', ')} onClose={() => setNsFilter('')} MenuProps={{ autoFocus: false }}>
-                    <ListSubheader sx={{ p: 0 }}>
-                        <TextField autoFocus size='small' fullWidth placeholder='Filter...' value={nsFilter} onChange={e => setNsFilter(e.target.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, pt: 0.5 }} />
-                    </ListSubheader>
-                { allNamespaces && allNamespaces.filter(ns => ns.toLowerCase().includes(nsFilter.toLowerCase())).map( (namespace:string) => {
-                    return (
-                        <MenuItem key={namespace} value={namespace}>
-                            <Checkbox checked={namespaces.includes(namespace)} />
-                            <Typography>{namespace}</Typography>
-                        </MenuItem>
-                    )
-                })}
-                </Select>
-            </FormControl>
-
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={namespaces.length===0 || view===EInstanceConfigView.NAMESPACE || noResourceView}>
-                <InputLabel>Controller</InputLabel>
-                <Select onChange={onChangeController} value={controllers} multiple renderValue={(selected) => selected.map(v => v.split('+')[1]).join(', ')} onClose={() => setCtrlFilter('')} MenuProps={{ autoFocus: false }}>
-                    <ListSubheader sx={{ p: 0 }}>
-                        <TextField autoFocus size='small' fullWidth placeholder='Filter...' value={ctrlFilter} onChange={e => setCtrlFilter(e.target.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, pt: 0.5 }} />
-                    </ListSubheader>
-                { allControllers && allControllers.filter(v => v.split('+')[1].toLowerCase().includes(ctrlFilter.toLowerCase())).map( (value) =>
-                    <MenuItem key={value} value={value} sx={{alignContent:'baseline'}}>
-                        <Stack direction={'row'} alignItems={'center'}>
-                            <Checkbox checked={controllers.includes (value)} />
-                            <Stack direction={'row'} alignItems={'baseline'}>
-                                {value.startsWith('ReplicaSet')? getIconFromKind('ReplicaSet', 24): value.startsWith('DaemonSet')? getIconFromKind('DaemonSet', 24): value.startsWith('Deployment')? getIconFromKind('Deployment', 24):value.startsWith('StatefulSet')? getIconFromKind('StatefulSet', 24):value.startsWith('ReplicationController')?getIconFromKind('ReplicationController', 24):value.startsWith('ReplicationController')?getIconFromKind('Job', 24):getIconFromKind('', 24)}
-                                <Typography>&nbsp;{value.split('+')[1]}</Typography>
-                            </Stack>
-                        </Stack>
-                    </MenuItem>
-                )}
-                </Select>
-            </FormControl>
-
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={controllers.length === 0 || view===EInstanceConfigView.NAMESPACE || view===EInstanceConfigView.GROUP}>
-                <InputLabel >Pod</InputLabel>
-                <Select value={pods} onChange={onChangePod} multiple renderValue={(selected) => selected.join(', ')} onClose={() => setPodFilter('')} MenuProps={{ autoFocus: false }}>
-                    <ListSubheader sx={{ p: 0 }}>
-                        <TextField autoFocus size='small' fullWidth placeholder='Filter...' value={podFilter} onChange={e => setPodFilter(e.target.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, pt: 0.5 }} />
-                    </ListSubheader>
-                { allPods && allPods.filter(v => v.toLowerCase().includes(podFilter.toLowerCase())).map( (value:string) =>
-                    <MenuItem key={value} value={value} sx={{alignContent:'center'}}>
-                        <Checkbox checked={pods.includes (value)} />{value}
-                    </MenuItem>
-                )}
-                </Select>
-            </FormControl>
-
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={pods.length === 0 || view===EInstanceConfigView.NAMESPACE || view===EInstanceConfigView.GROUP || view===EInstanceConfigView.POD}>
-                <InputLabel >Container</InputLabel>
-                <Select value={containers} onChange={onChangeContainer} multiple renderValue={(selected) => selected.join(', ')} onClose={() => setContainerFilter('')} MenuProps={{ autoFocus: false }}>
-                    <ListSubheader sx={{ p: 0 }}>
-                        <TextField autoFocus size='small' fullWidth placeholder='Filter...' value={containerFilter} onChange={e => setContainerFilter(e.target.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, pt: 0.5 }} />
-                    </ListSubheader>
-                { allContainers && allContainers.filter(v => v.split('+')[1].toLowerCase().includes(containerFilter.toLowerCase())).map( (value:string) =>
-                    <MenuItem key={value} value={value} sx={{alignContent:'center'}}>
-                        <Checkbox checked={containers.includes(value)} />
-                        <Stack direction={'column'}>
-                            {value.split('+')[1]}
-                            <Typography color={'darkgray'} fontSize={12}>{value.split('+')[0]}</Typography>
-                        </Stack>
-                    </MenuItem>
-                )}
-                </Select>
-            </FormControl>
-
-            <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={cluster.name === ''}>
-                <InputLabel>Channel</InputLabel>
-                <Select
-                    value={props.backChannels.length>0?channel:''}
-                    onChange={onChangeChannel}
-                    renderValue={(v) => {
-                        if (!v) return undefined
-                        const cls = props.frontChannels?.get(v as string)
-                        const icon = cls ? React.cloneElement(getChannelIconSafe(cls), { sx: { fontSize: 14, verticalAlign: 'middle', mr: 0.5 } }) : null
-                        const cd = props.backChannels.find(x => x.id === v)
-                        return <>{icon}<span>{v as string}</span>{cd?.mode === EChannelMode.REMOTE && <RemoteBadge operative={!!resolveRemoteChannelHost(cd.id, cluster.clusterInfo?.id ?? '', props.clusters)} />}</>
-                    }}
-                >
-                    { props.backChannels.filter(c => !props.enabledChannels?.length || props.enabledChannels.includes(c.id)).map(c => {
-                        const cls = props.frontChannels?.get(c.id)
-                        const icon = cls ? React.cloneElement(getChannelIconSafe(cls), { sx: { fontSize: 18, mr: 0.5 } }) : null
-                        /*
-                            It is DISABLED, never hidden. A channel the user installed and cannot find is a
-                            mystery; one that is greyed out with its reason beside it is an answer.
-                            The reason is written inline rather than in a tooltip because MUI disables
-                            pointer events on a disabled MenuItem, so a tooltip would never fire -- and a
-                            reason you have to hover for is half a reason anyway.
-                        */
-                        const unfitCluster = !channelFitsCluster(c, selectedClusterType)
+                <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }}>
+                    <InputLabel>Cluster</InputLabel>
+                    <Select value={cluster?.name} onChange={onChangeCluster}>
+                    { props.clusters?.map( (cluster) => {
                         return (
-                            <MenuItem key={c.id} value={c.id} disabled={!channelFitsView(c, view) || unfitCluster}>
-                                <Stack direction='row' alignItems='center'>
-                                    {icon}
-                                    <span>{c.id}</span>
-                                    {unfitCluster && <Typography variant='caption' color='text.disabled' sx={{ ml: 1 }}>{channelNeeds(c)}</Typography>}
-                                    {c.mode === EChannelMode.REMOTE && <RemoteBadge operative={!!resolveRemoteChannelHost(c.id, cluster.clusterInfo?.id ?? '', props.clusters)} />}
+                            <MenuItem key={cluster.name} value={cluster.name} disabled={!cluster.enabled}>
+                                <Stack direction='row' spacing={1} sx={{
+                                    alignItems: 'center'
+                                }}>
+                                    <span style={{ lineHeight: 0 }}>{getIcon(cluster, 20)}</span>
+                                    <span>{cluster.name}</span>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: clusterColor(cluster.name).dot, flexShrink: 0 }} />
                                 </Stack>
+                            </MenuItem>
+                        );
+                    })}
+                    </Select>
+                </FormControl>
+
+                <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={cluster.name===''}>
+                    <InputLabel>View</InputLabel>
+                    <Select value={view} onChange={onChangeView} >
+                        <MenuItem key={EInstanceConfigView.NONE} value={EInstanceConfigView.NONE}>none</MenuItem>
+                        <MenuItem key={EInstanceConfigView.CLUSTER} value={EInstanceConfigView.CLUSTER}>cluster</MenuItem>
+                        {clusterHasResources && <MenuItem key={EInstanceConfigView.NAMESPACE} value={EInstanceConfigView.NAMESPACE}>namespace</MenuItem>}
+                        {clusterHasResources && <MenuItem key={EInstanceConfigView.GROUP} value={EInstanceConfigView.GROUP}>controller</MenuItem>}
+                        {clusterHasResources && <MenuItem key={EInstanceConfigView.POD} value={EInstanceConfigView.POD}>pod</MenuItem>}
+                        {clusterHasResources && <MenuItem key={EInstanceConfigView.CONTAINER} value={EInstanceConfigView.CONTAINER}>container</MenuItem>}
+                    </Select>
+                </FormControl>
+
+                <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={view==='' || noResourceView}>
+                    <InputLabel>Namespace</InputLabel>
+                    { /* autoFocus:false en el menu NO es cosmetico: MenuList clona el item ACTIVO con
+                         autoFocus y lo recalcula en cada render, asi que al teclear cambiaba la lista
+                         filtrada, otro MenuItem montaba con foco y se lo robaba al campo de filtro a cada
+                         letra. Apagarlo en el menu tambien apaga autoFocusItem (Menu lo deriva de el), y el
+                         foco inicial lo pone el propio TextField. */ }
+                    <Select onChange={onChangeNamespaces} multiple value={namespaces} renderValue={(selected) => selected.join(', ')} onClose={() => setNsFilter('')} MenuProps={{ autoFocus: false }}>
+                        <ListSubheader sx={{ p: 0 }}>
+                            <TextField autoFocus size='small' fullWidth placeholder='Filter...' value={nsFilter} onChange={e => setNsFilter(e.target.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, pt: 0.5 }} />
+                        </ListSubheader>
+                    { allNamespaces && allNamespaces.filter(ns => ns.toLowerCase().includes(nsFilter.toLowerCase())).map( (namespace:string) => {
+                        return (
+                            <MenuItem key={namespace} value={namespace}>
+                                <Checkbox checked={namespaces.includes(namespace)} />
+                                <Typography>{namespace}</Typography>
                             </MenuItem>
                         )
                     })}
-                </Select>
-            </FormControl>
+                    </Select>
+                </FormControl>
 
-            <Button onClick={onAdd} sx={{ width:'4%'}} disabled={!addable()}>ADD</Button>
-        </Stack>
-        { msgBox }
-    </>)
+                <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={namespaces.length===0 || view===EInstanceConfigView.NAMESPACE || noResourceView}>
+                    <InputLabel>Controller</InputLabel>
+                    <Select onChange={onChangeController} value={controllers} multiple renderValue={(selected) => selected.map(v => v.split('+')[1]).join(', ')} onClose={() => setCtrlFilter('')} MenuProps={{ autoFocus: false }}>
+                        <ListSubheader sx={{ p: 0 }}>
+                            <TextField autoFocus size='small' fullWidth placeholder='Filter...' value={ctrlFilter} onChange={e => setCtrlFilter(e.target.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, pt: 0.5 }} />
+                        </ListSubheader>
+                    { allControllers && allControllers.filter(v => v.split('+')[1].toLowerCase().includes(ctrlFilter.toLowerCase())).map( (value) =>
+                        <MenuItem key={value} value={value} sx={{alignContent:'baseline'}}>
+                            <Stack direction={'row'} sx={{
+                                alignItems: 'center'
+                            }}>
+                                <Checkbox checked={controllers.includes (value)} />
+                                <Stack direction={'row'} sx={{
+                                    alignItems: 'baseline'
+                                }}>
+                                    {value.startsWith('ReplicaSet')? getIconFromKind('ReplicaSet', 24): value.startsWith('DaemonSet')? getIconFromKind('DaemonSet', 24): value.startsWith('Deployment')? getIconFromKind('Deployment', 24):value.startsWith('StatefulSet')? getIconFromKind('StatefulSet', 24):value.startsWith('ReplicationController')?getIconFromKind('ReplicationController', 24):value.startsWith('ReplicationController')?getIconFromKind('Job', 24):getIconFromKind('', 24)}
+                                    <Typography>&nbsp;{value.split('+')[1]}</Typography>
+                                </Stack>
+                            </Stack>
+                        </MenuItem>
+                    )}
+                    </Select>
+                </FormControl>
+
+                <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={controllers.length === 0 || view===EInstanceConfigView.NAMESPACE || view===EInstanceConfigView.GROUP}>
+                    <InputLabel >Pod</InputLabel>
+                    <Select value={pods} onChange={onChangePod} multiple renderValue={(selected) => selected.join(', ')} onClose={() => setPodFilter('')} MenuProps={{ autoFocus: false }}>
+                        <ListSubheader sx={{ p: 0 }}>
+                            <TextField autoFocus size='small' fullWidth placeholder='Filter...' value={podFilter} onChange={e => setPodFilter(e.target.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, pt: 0.5 }} />
+                        </ListSubheader>
+                    { allPods && allPods.filter(v => v.toLowerCase().includes(podFilter.toLowerCase())).map( (value:string) =>
+                        <MenuItem key={value} value={value} sx={{alignContent:'center'}}>
+                            <Checkbox checked={pods.includes (value)} />{value}
+                        </MenuItem>
+                    )}
+                    </Select>
+                </FormControl>
+
+                <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={pods.length === 0 || view===EInstanceConfigView.NAMESPACE || view===EInstanceConfigView.GROUP || view===EInstanceConfigView.POD}>
+                    <InputLabel >Container</InputLabel>
+                    <Select value={containers} onChange={onChangeContainer} multiple renderValue={(selected) => selected.join(', ')} onClose={() => setContainerFilter('')} MenuProps={{ autoFocus: false }}>
+                        <ListSubheader sx={{ p: 0 }}>
+                            <TextField autoFocus size='small' fullWidth placeholder='Filter...' value={containerFilter} onChange={e => setContainerFilter(e.target.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation() }} sx={{ px: 1, pt: 0.5 }} />
+                        </ListSubheader>
+                    { allContainers && allContainers.filter(v => v.split('+')[1].toLowerCase().includes(containerFilter.toLowerCase())).map( (value:string) =>
+                        <MenuItem key={value} value={value} sx={{alignContent:'center'}}>
+                            <Checkbox checked={containers.includes(value)} />
+                            <Stack direction={'column'}>
+                                {value.split('+')[1]}
+                                <Typography color={'darkgray'} sx={{
+                                    fontSize: 12
+                                }}>{value.split('+')[0]}</Typography>
+                            </Stack>
+                        </MenuItem>
+                    )}
+                    </Select>
+                </FormControl>
+
+                <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }} disabled={cluster.name === ''}>
+                    <InputLabel>Channel</InputLabel>
+                    <Select
+                        value={props.backChannels.length>0?channel:''}
+                        onChange={onChangeChannel}
+                        renderValue={(v) => {
+                            if (!v) return undefined
+                            const cls = props.frontChannels?.get(v as string)
+                            const icon = cls ? React.cloneElement(getChannelIconSafe(cls), { sx: { fontSize: 14, verticalAlign: 'middle', mr: 0.5 } }) : null
+                            const cd = props.backChannels.find(x => x.id === v)
+                            return <>{icon}<span>{v as string}</span>{cd?.mode === EChannelMode.REMOTE && <RemoteBadge operative={!!resolveRemoteChannelHost(cd.id, cluster.clusterInfo?.id ?? '', props.clusters)} />}</>
+                        }}
+                    >
+                        { props.backChannels.filter(c => !props.enabledChannels?.length || props.enabledChannels.includes(c.id)).map(c => {
+                            const cls = props.frontChannels?.get(c.id)
+                            const icon = cls ? React.cloneElement(getChannelIconSafe(cls), { sx: { fontSize: 18, mr: 0.5 } }) : null
+                            /*
+                                It is DISABLED, never hidden. A channel the user installed and cannot find is a
+                                mystery; one that is greyed out with its reason beside it is an answer.
+                                The reason is written inline rather than in a tooltip because MUI disables
+                                pointer events on a disabled MenuItem, so a tooltip would never fire -- and a
+                                reason you have to hover for is half a reason anyway.
+                            */
+                            const unfitCluster = !channelFitsCluster(c, selectedClusterType)
+                            return (
+                                <MenuItem key={c.id} value={c.id} disabled={!channelFitsView(c, view) || unfitCluster}>
+                                    <Stack direction='row' sx={{
+                                        alignItems: 'center'
+                                    }}>
+                                        {icon}
+                                        <span>{c.id}</span>
+                                        {unfitCluster && <Typography
+                                            variant='caption'
+                                            sx={{
+                                                color: 'text.disabled',
+                                                ml: 1
+                                            }}>{channelNeeds(c)}</Typography>}
+                                        {c.mode === EChannelMode.REMOTE && <RemoteBadge operative={!!resolveRemoteChannelHost(c.id, cluster.clusterInfo?.id ?? '', props.clusters)} />}
+                                    </Stack>
+                                </MenuItem>
+                            );
+                        })}
+                    </Select>
+                </FormControl>
+
+                <Button onClick={onAdd} sx={{ width:'4%'}} disabled={!addable()}>ADD</Button>
+            </Stack>
+            { msgBox }
+        </>
+    );
 }
 
 export type { IResourceSelected }

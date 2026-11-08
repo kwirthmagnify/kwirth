@@ -63,7 +63,9 @@ const HomeBox: React.FC<IHomeBoxProps> = ({ tab, title, icon, color, headline, d
             backgroundColor: alpha(color, 0.08),
             ...(tab ? { '&:hover, &:focus-visible': { backgroundColor: alpha(color, 0.16), outline: 'none' } } : {})
         }}>
-        <Stack direction='row' spacing={1.5} alignItems='flex-start'>
+        <Stack direction='row' spacing={1.5} sx={{
+            alignItems: 'flex-start'
+        }}>
             <Box sx={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 width: 36, height: 36, borderRadius: '50%', color, backgroundColor: alpha(color, 0.16)
@@ -71,10 +73,29 @@ const HomeBox: React.FC<IHomeBoxProps> = ({ tab, title, icon, color, headline, d
                 {icon}
             </Box>
             <Box sx={{ minWidth: 0, flex: 1 }}>
-                <Typography variant='caption' color='text.secondary' display='block' noWrap>{title}</Typography>
+                <Typography
+                    variant='caption'
+                    noWrap
+                    sx={{
+                        color: 'text.secondary',
+                        display: 'block'
+                    }}>{title}</Typography>
                 <Typography variant='subtitle1' sx={{ fontVariantNumeric: 'tabular-nums', lineHeight: 1.3, fontWeight: 600 }} noWrap>{headline}</Typography>
-                <Typography variant='caption' color='text.secondary' display='block' title={detail}>{detail}</Typography>
-                {children && <Stack direction='row' spacing={0.5} useFlexGap flexWrap='wrap' sx={{ mt: 0.75 }}>{children}</Stack>}
+                <Typography
+                    variant='caption'
+                    title={detail}
+                    sx={{
+                        color: 'text.secondary',
+                        display: 'block'
+                    }}>{detail}</Typography>
+                {children && <Stack
+                    direction='row'
+                    spacing={0.5}
+                    useFlexGap
+                    sx={{
+                        flexWrap: 'wrap',
+                        mt: 0.75
+                    }}>{children}</Stack>}
             </Box>
         </Stack>
     </Paper>
@@ -129,12 +150,20 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
     return (
         <Stack spacing={2} sx={{ pb: 2, flex: 1, minHeight: 0 }}>
             <Box>
-                <Stack direction='row' alignItems='center' spacing={1}>
+                <Stack direction='row' spacing={1} sx={{
+                    alignItems: 'center'
+                }}>
                     <Typography variant='subtitle2'>What this Kwirth has inside</Typography>
                     <Chip size='small' variant='outlined' label={`${inventory.components.length} components`} />
                 </Stack>
                 {/* That the snapshot is of one instant is said, not implied. One snapshot is of ALL the tabs. */}
-                <Typography variant='caption' color='text.secondary' display='block' sx={{ mt: 0.5 }}>
+                <Typography
+                    variant='caption'
+                    sx={{
+                        color: 'text.secondary',
+                        display: 'block',
+                        mt: 0.5
+                    }}>
                     Snapshot taken at {new Date(inventory.takenAt).toLocaleTimeString()}
                     {autoRefresh ? ` — refreshing every ${autoRefresh}s while this tab is open` : ' — it does not refresh on its own'}.
                     {' '}Delivered counts since each component started; the rate is measured against your previous snapshot.
@@ -224,5 +253,5 @@ export const StatusHomeTab: React.FC<IHomeTabProps> = ({ inventory, series, auto
                 </HomeBox>
             </Box>
         </Stack>
-    )
+    );
 }

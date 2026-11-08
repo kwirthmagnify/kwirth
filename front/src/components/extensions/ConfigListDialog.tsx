@@ -332,124 +332,155 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
 
     const PerConfigPanel = props.perConfigPanel
 
-    return (<>
-        <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '860px', height: '600px' } }}>
-            <DialogTitleHelp section={ayuda ?? 'guide/extensions/index'} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>{props.title}</DialogTitleHelp>
-            <DialogContent sx={{ display: 'flex', gap: 2, p: '16px !important', overflow: 'hidden', height: '100%' }}>
+    return (
+        <>
+            <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '860px', height: '600px' } }}>
+                <DialogTitleHelp section={ayuda ?? 'guide/extensions/index'} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>{props.title}</DialogTitleHelp>
+                <DialogContent sx={{ display: 'flex', gap: 2, p: '16px !important', overflow: 'hidden', height: '100%' }}>
 
-                {/* Izquierda: las configuraciones que hay */}
-                <Box sx={{ width: 190, display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
-                    <Stack direction='row' alignItems='center' justifyContent='space-between'>
-                        <Typography variant='caption' color='text.secondary' fontWeight='bold'>Configs</Typography>
-                        {/* Lo comun a todas las configuraciones se edita aparte, y el acceso solo aparece
-                            si la extension declara algun campo asi. */}
-                        {camposComunes.length > 0 && (
-                            <Tooltip title='Edit base configuration'>
-                                <IconButton size='small' aria-label='Edit base configuration' onClick={() => setBaseOpen(true)}><Settings sx={{ fontSize: 16 }} /></IconButton>
-                            </Tooltip>
-                        )}
-                    </Stack>
-                    <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
-                        {loading
-                            ? <Box sx={{ p: 1 }}><CircularProgress size={16} /></Box>
-                            : configs.length === 0
-                                ? <Typography variant='caption' color='text.disabled' sx={{ p: 1, display: 'block' }}>No configs yet.</Typography>
-                                : configs.map(cfg => (
-                                    <Box key={cfg.name} sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5, borderBottom: 1, borderColor: 'divider', borderLeft: editingName === cfg.name ? 3 : 0, borderLeftColor: 'primary.main', bgcolor: editingName === cfg.name ? 'action.selected' : 'transparent' }}>
-                                        <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => editar(cfg)}>
-                                            <Typography variant='body2' fontWeight='bold' noWrap>{cfg.name}</Typography>
+                    {/* Izquierda: las configuraciones que hay */}
+                    <Box sx={{ width: 190, display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
+                        <Stack
+                            direction='row'
+                            sx={{
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                            }}>
+                            <Typography
+                                variant='caption'
+                                sx={{
+                                    color: 'text.secondary',
+                                    fontWeight: 'bold'
+                                }}>Configs</Typography>
+                            {/* Lo comun a todas las configuraciones se edita aparte, y el acceso solo aparece
+                                si la extension declara algun campo asi. */}
+                            {camposComunes.length > 0 && (
+                                <Tooltip title='Edit base configuration'>
+                                    <IconButton size='small' aria-label='Edit base configuration' onClick={() => setBaseOpen(true)}><Settings sx={{ fontSize: 16 }} /></IconButton>
+                                </Tooltip>
+                            )}
+                        </Stack>
+                        <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
+                            {loading
+                                ? <Box sx={{ p: 1 }}><CircularProgress size={16} /></Box>
+                                : configs.length === 0
+                                    ? <Typography
+                                variant='caption'
+                                sx={{
+                                    color: 'text.disabled',
+                                    p: 1,
+                                    display: 'block'
+                                }}>No configs yet.</Typography>
+                                    : configs.map(cfg => (
+                                        <Box key={cfg.name} sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5, borderBottom: 1, borderColor: 'divider', borderLeft: editingName === cfg.name ? 3 : 0, borderLeftColor: 'primary.main', bgcolor: editingName === cfg.name ? 'action.selected' : 'transparent' }}>
+                                            <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => editar(cfg)}>
+                                                <Typography variant='body2' noWrap sx={{
+                                                    fontWeight: 'bold'
+                                                }}>{cfg.name}</Typography>
+                                            </Box>
+                                            <Tooltip title='Delete'>
+                                                <span>
+                                                    <IconButton size='small' color='error' aria-label='Delete' disabled={deleting === cfg.name} onClick={() => borrar(cfg.name)}>
+                                                        {deleting === cfg.name ? <CircularProgress size={12} /> : <Delete sx={{ fontSize: 14 }} />}
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
                                         </Box>
-                                        <Tooltip title='Delete'>
-                                            <span>
-                                                <IconButton size='small' color='error' aria-label='Delete' disabled={deleting === cfg.name} onClick={() => borrar(cfg.name)}>
-                                                    {deleting === cfg.name ? <CircularProgress size={12} /> : <Delete sx={{ fontSize: 14 }} />}
-                                                </IconButton>
-                                            </span>
-                                        </Tooltip>
-                                    </Box>
-                                ))
+                                    ))
+                            }
+                        </Box>
+                        <Stack direction='row' spacing={0.5}>
+                            <Button size='small' startIcon={<Add />} onClick={nueva} sx={{ flex: 1 }}>New</Button>
+                            <Button size='small' startIcon={<ContentCopy />} disabled={!editingName} onClick={clonar} sx={{ flex: 1 }}>Clone</Button>
+                        </Stack>
+                    </Box>
+
+                    <Divider orientation='vertical' flexItem />
+
+                    {/* Derecha: la configuracion seleccionada */}
+                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0, overflow: 'hidden' }}>
+                        {showForm
+                            ? <>
+                                <Typography
+                                    variant='caption'
+                                    sx={{
+                                        color: 'text.secondary',
+                                        fontWeight: 'bold'
+                                    }}>
+                                    {editingName ? `Editing: ${editingName}` : 'New config'}
+                                </Typography>
+                                <Box sx={{ flex: 1, overflowY: 'auto', pt: 1 }}>
+                                    <Stack direction='column' spacing={1.5}>
+                                        {schema.filter(f => f.name === 'name').map(f => campo(f))}
+                                        <TextField size='small' label='Description' fullWidth multiline maxRows={2}
+                                            value={values.description ?? ''}
+                                            onChange={e => setValues(prev => ({ ...prev, description: e.target.value || undefined }))} />
+                                        {schema.filter(f => f.name !== 'name' && !f.common).map(f => campo(f))}
+
+                                        {/* Lo propio del tipo, solo cuando la configuracion ya existe: antes de
+                                            guardarla no hay nada a lo que referirse (ni token, ni URL). */}
+                                        {PerConfigPanel && originalName && <PerConfigPanel basePath={props.basePath} configName={originalName} />}
+                                    </Stack>
+                                </Box>
+                                <Stack
+                                    direction='row'
+                                    spacing={1}
+                                    sx={{
+                                        justifyContent: 'flex-end',
+                                        alignItems: 'center'
+                                    }}>
+                                    {error && <Typography variant='caption' color='error' sx={{ flex: 1 }}>{error}</Typography>}
+                                    <Button size='small' variant='contained' disabled={saving || !formValido()} onClick={guardar}>
+                                        {saving ? <CircularProgress size={14} /> : editingName ? 'Update' : 'Add'}
+                                    </Button>
+                                    <Button size='small' onClick={cerrarForm}>Cancel</Button>
+                                </Stack>
+                              </>
+                            : <Box sx={{ m: 'auto', color: 'text.disabled' }}>
+                                <Typography variant='body2'>Select a config to edit or click New.</Typography>
+                              </Box>
                         }
                     </Box>
-                    <Stack direction='row' spacing={0.5}>
-                        <Button size='small' startIcon={<Add />} onClick={nueva} sx={{ flex: 1 }}>New</Button>
-                        <Button size='small' startIcon={<ContentCopy />} disabled={!editingName} onClick={clonar} sx={{ flex: 1 }}>Clone</Button>
-                    </Stack>
-                </Box>
-
-                <Divider orientation='vertical' flexItem />
-
-                {/* Derecha: la configuracion seleccionada */}
-                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0, overflow: 'hidden' }}>
-                    {showForm
-                        ? <>
-                            <Typography variant='caption' color='text.secondary' fontWeight='bold'>
-                                {editingName ? `Editing: ${editingName}` : 'New config'}
-                            </Typography>
-                            <Box sx={{ flex: 1, overflowY: 'auto', pt: 1 }}>
-                                <Stack direction='column' spacing={1.5}>
-                                    {schema.filter(f => f.name === 'name').map(f => campo(f))}
-                                    <TextField size='small' label='Description' fullWidth multiline maxRows={2}
-                                        value={values.description ?? ''}
-                                        onChange={e => setValues(prev => ({ ...prev, description: e.target.value || undefined }))} />
-                                    {schema.filter(f => f.name !== 'name' && !f.common).map(f => campo(f))}
-
-                                    {/* Lo propio del tipo, solo cuando la configuracion ya existe: antes de
-                                        guardarla no hay nada a lo que referirse (ni token, ni URL). */}
-                                    {PerConfigPanel && originalName && <PerConfigPanel basePath={props.basePath} configName={originalName} />}
-                                </Stack>
-                            </Box>
-                            <Stack direction='row' justifyContent='flex-end' alignItems='center' spacing={1}>
-                                {error && <Typography variant='caption' color='error' sx={{ flex: 1 }}>{error}</Typography>}
-                                <Button size='small' variant='contained' disabled={saving || !formValido()} onClick={guardar}>
-                                    {saving ? <CircularProgress size={14} /> : editingName ? 'Update' : 'Add'}
-                                </Button>
-                                <Button size='small' onClick={cerrarForm}>Cancel</Button>
-                            </Stack>
-                          </>
-                        : <Box sx={{ m: 'auto', color: 'text.disabled' }}>
-                            <Typography variant='body2'>Select a config to edit or click New.</Typography>
-                          </Box>
-                    }
-                </Box>
-            </DialogContent>
-            {/*
-                Aqui estaban Export e Import, y se fueron por dos razones.
-
-                🔴 La primera es que el Export escribia LAS CONTRASEÑAS EN CLARO. Serializaba las
-                configuraciones tal cual, sin casilla de credenciales y sin aviso de ninguna clase, asi
-                que exportar las de SMTP dejaba la contraseña del servidor de correo en un fichero en la
-                carpeta de descargas. El bundle las vacia por `getConfigSchema()` salvo que se marquen.
-
-                La segunda, que eran una SEGUNDA PUERTA al mismo almacen: ☰ Kwirth export ya se lleva
-                las configuraciones de senders y webhooks, y tener dos obligaba a investigar cual
-                exportaba que — ademas de discrepar, porque aquella fusionaba y el bundle reemplaza.
-            */}
-            <DialogActions sx={{ justifyContent: 'flex-end', px: 2 }}>
-                <Button onClick={props.onClose}>Close</Button>
-            </DialogActions>
-        </Dialog>
-
-        {/* Lo comun a todas las configuraciones: el servidor de correo es uno, los destinatarios varios. */}
-        {baseOpen && (
-            <Dialog open maxWidth='sm' fullWidth>
-                <DialogTitleHelp section={ayuda ?? 'guide/extensions/index'} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Base configuration</DialogTitleHelp>
-                <DialogContent>
-                    <Stack spacing={2} sx={{ mt: 1 }}>
-                        {camposComunes.map(f => campo(f, base, (name, val) => setBase(prev => ({ ...prev, [name]: val }))))}
-                    </Stack>
                 </DialogContent>
-                <DialogActions>
-                    <Button variant='contained' disabled={savingBase || !baseValida()} onClick={guardarBase}>
-                        {savingBase ? <CircularProgress size={14} /> : 'Save'}
-                    </Button>
-                    {/* Cancelar recarga: lo tecleado y no guardado no puede quedarse en pantalla como si
-                        estuviera puesto. */}
-                    <Button onClick={() => { setBaseOpen(false); reload() }}>Cancel</Button>
+                {/*
+                    Aqui estaban Export e Import, y se fueron por dos razones.
+
+                    🔴 La primera es que el Export escribia LAS CONTRASEÑAS EN CLARO. Serializaba las
+                    configuraciones tal cual, sin casilla de credenciales y sin aviso de ninguna clase, asi
+                    que exportar las de SMTP dejaba la contraseña del servidor de correo en un fichero en la
+                    carpeta de descargas. El bundle las vacia por `getConfigSchema()` salvo que se marquen.
+
+                    La segunda, que eran una SEGUNDA PUERTA al mismo almacen: ☰ Kwirth export ya se lleva
+                    las configuraciones de senders y webhooks, y tener dos obligaba a investigar cual
+                    exportaba que — ademas de discrepar, porque aquella fusionaba y el bundle reemplaza.
+                */}
+                <DialogActions sx={{ justifyContent: 'flex-end', px: 2 }}>
+                    <Button onClick={props.onClose}>Close</Button>
                 </DialogActions>
             </Dialog>
-        )}
 
-    </>)
+            {/* Lo comun a todas las configuraciones: el servidor de correo es uno, los destinatarios varios. */}
+            {baseOpen && (
+                <Dialog open maxWidth='sm' fullWidth>
+                    <DialogTitleHelp section={ayuda ?? 'guide/extensions/index'} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Base configuration</DialogTitleHelp>
+                    <DialogContent>
+                        <Stack spacing={2} sx={{ mt: 1 }}>
+                            {camposComunes.map(f => campo(f, base, (name, val) => setBase(prev => ({ ...prev, [name]: val }))))}
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button variant='contained' disabled={savingBase || !baseValida()} onClick={guardarBase}>
+                            {savingBase ? <CircularProgress size={14} /> : 'Save'}
+                        </Button>
+                        {/* Cancelar recarga: lo tecleado y no guardado no puede quedarse en pantalla como si
+                            estuviera puesto. */}
+                        <Button onClick={() => { setBaseOpen(false); reload() }}>Cancel</Button>
+                    </DialogActions>
+                </Dialog>
+            )}
+
+        </>
+    );
 }
 
 export { ConfigListDialog }

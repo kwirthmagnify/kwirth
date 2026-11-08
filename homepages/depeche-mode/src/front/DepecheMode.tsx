@@ -191,8 +191,15 @@ export const DepecheMode: React.FC<IHomepageProps> = (props) => {
             <Box sx={{ position: 'absolute', inset: 0, overflowY: 'auto' }}>
 
                 {/* ── Header ── */}
-                <Stack direction="row" alignItems="center"
-                    sx={{ px: 3, py: 1.5, borderBottom: `3px solid ${c.blood}`, bgcolor: c.bg }}>
+                <Stack
+                    direction="row"
+                    sx={{
+                        alignItems: "center",
+                        px: 3,
+                        py: 1.5,
+                        borderBottom: `3px solid ${c.blood}`,
+                        bgcolor: c.bg
+                    }}>
                     <img src={dashboardSvg} alt="DASHBOARD" style={{ height: 25, display: 'block' }} />
                 </Stack>
 
@@ -212,11 +219,18 @@ export const DepecheMode: React.FC<IHomepageProps> = (props) => {
                                 backgroundImage: 'none',
                             }}>
                                 <CardContent sx={{ height: '100%', p: '14px !important' }}>
-                                    <Stack direction="column" justifyContent="space-between" sx={{ height: '100%' }}>
+                                    <Stack
+                                        direction="column"
+                                        sx={{
+                                            justifyContent: "space-between",
+                                            height: '100%'
+                                        }}>
 
                                         {/* Name + indicator */}
                                         <Stack direction="column" spacing={0.5}>
-                                            <Stack direction="row" alignItems="center" spacing={1}>
+                                            <Stack direction="row" spacing={1} sx={{
+                                                alignItems: "center"
+                                            }}>
                                                 <Typography sx={{
                                                     fontFamily: DM_FONT, fontWeight: 900, fontSize: '1.1rem',
                                                     letterSpacing: 4, textTransform: 'uppercase', color: c.bone,
@@ -231,7 +245,9 @@ export const DepecheMode: React.FC<IHomepageProps> = (props) => {
                                         </Stack>
 
                                         {/* Metric charts + STRANGELOVE on same row */}
-                                        <Stack direction="row" spacing={1} alignItems="flex-end">
+                                        <Stack direction="row" spacing={1} sx={{
+                                            alignItems: "flex-end"
+                                        }}>
                                             {metrics ? (
                                                 <Stack direction="row" spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
                                                     <AsciiChart label="CPU" history={metricsHistory[cluster.name]?.cpu ?? [metrics.cpu]} c={c} />
@@ -255,7 +271,7 @@ export const DepecheMode: React.FC<IHomepageProps> = (props) => {
                                     </Stack>
                                 </CardContent>
                             </Card>
-                        )
+                        );
                     })}
 
                     {props.clusters.length === 0 && (
@@ -270,5 +286,5 @@ export const DepecheMode: React.FC<IHomepageProps> = (props) => {
                 </Box>
             </Box>
         </Box>
-    )
+    );
 }

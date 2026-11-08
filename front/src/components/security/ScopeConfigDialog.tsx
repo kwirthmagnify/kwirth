@@ -70,7 +70,9 @@ const ScopeConfigDialog: React.FC<IScopeConfigDialogProps> = (props: IScopeConfi
             <DialogTitle>Narrow: {props.entry.label}</DialogTitle>
             <DialogContent>
                 <Stack spacing={2} sx={{ mt: 1 }}>
-                    <Typography variant='caption' color='text.secondary'>
+                    <Typography variant='caption' sx={{
+                        color: 'text.secondary'
+                    }}>
                         {props.entry.description}
                     </Typography>
                     {isFree
@@ -82,7 +84,9 @@ const ScopeConfigDialog: React.FC<IScopeConfigDialogProps> = (props: IScopeConfi
                     {/* Said before saving, not after: leaving it blank grants the whole scope, which is
                         the opposite of what somebody who opened THIS dialog probably intended. */}
                     {!anyFilled && (
-                        <Typography variant='caption' color='warning.main'>
+                        <Typography variant='caption' sx={{
+                            color: 'warning.main'
+                        }}>
                             Nothing filled in — this grants <b>{props.entry.scope}</b> over everything.
                         </Typography>
                     )}
@@ -93,7 +97,7 @@ const ScopeConfigDialog: React.FC<IScopeConfigDialogProps> = (props: IScopeConfi
                 <Button onClick={props.onClose}>Cancel</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { ScopeConfigDialog }

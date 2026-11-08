@@ -57,12 +57,14 @@ const RefEditor: React.FC<{
                 </Select>
             </FormControl>
             {node.senderId && configNames.length === 0 && (
-                <Typography variant='caption' color='warning.main'>
+                <Typography variant='caption' sx={{
+                    color: 'warning.main'
+                }}>
                     No configs registered for "{node.senderId}". Add one via Manage Senders first.
                 </Typography>
             )}
         </Stack>
-    )
+    );
 }
 
 // ─── Fanout editor ────────────────────────────────────────────────────────────
@@ -104,11 +106,20 @@ const FanoutEditor: React.FC<{
 
     return (
         <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography variant='caption' color='text.secondary'>
+            <Typography variant='caption' sx={{
+                color: 'text.secondary'
+            }}>
                 Fans the message to all targets in parallel. Click a child node to configure it.
             </Typography>
             <Typography variant='body2'>{node.targets.length} target(s)</Typography>
-            <Stack direction='row' spacing={0.5} alignItems='center' flexWrap='wrap' useFlexGap>
+            <Stack
+                direction='row'
+                spacing={0.5}
+                useFlexGap
+                sx={{
+                    alignItems: 'center',
+                    flexWrap: 'wrap'
+                }}>
                 <Select size='small' value={childKind}
                     onChange={e => { setChildKind(e.target.value as FanoutChildKind); setPickedConfig('') }}
                     sx={{ ...selectSx, minWidth: 110 }}>
@@ -145,7 +156,7 @@ const FanoutEditor: React.FC<{
                 </Tooltip>
             </Stack>
         </Stack>
-    )
+    );
 }
 
 // ─── Filter editor ────────────────────────────────────────────────────────────
@@ -172,7 +183,9 @@ const FilterEditor: React.FC<{
 
     return (
         <Stack spacing={2} sx={{ mt: 1 }}>
-            {nodeDesc && <Typography variant='caption' color='text.secondary'>{nodeDesc}</Typography>}
+            {nodeDesc && <Typography variant='caption' sx={{
+                color: 'text.secondary'
+            }}>{nodeDesc}</Typography>}
             <FormControl size='small' fullWidth>
                 <InputLabel>{nodeLabel} config</InputLabel>
                 <Select label={`${nodeLabel} config`} value={node.configName} onChange={e => update(e.target.value)}>
@@ -181,18 +194,22 @@ const FilterEditor: React.FC<{
                 </Select>
             </FormControl>
             {filterConfigs.length === 0 && (
-                <Typography variant='caption' color='warning.main'>
+                <Typography variant='caption' sx={{
+                    color: 'warning.main'
+                }}>
                     No configs found. Add one via Manage Senders first.
                 </Typography>
             )}
             {node.next && (
-                <Typography variant='caption' color='text.secondary'>
+                <Typography variant='caption' sx={{
+                    color: 'text.secondary'
+                }}>
                     Next: <strong>{node.next.type === 'ref' ? node.next.senderId : node.next.type}</strong>
                     {' '}(click in canvas to configure)
                 </Typography>
             )}
         </Stack>
-    )
+    );
 }
 
 // ─── NodeEditor dispatcher ────────────────────────────────────────────────────
@@ -205,7 +222,13 @@ const NodeEditor: React.FC<INodeEditorProps> = ({ node, path, flow, availableSen
 
     return (
         <Box sx={{ height: '100%', overflow: 'auto', p: 2 }}>
-            <Stack direction='row' alignItems='center' spacing={1} sx={{ mb: 1 }}>
+            <Stack
+                direction='row'
+                spacing={1}
+                sx={{
+                    alignItems: 'center',
+                    mb: 1
+                }}>
                 <Chip label={node.type === 'filter' ? node.senderId : node.type} size='small' />
                 <Typography variant='subtitle2'>{TYPE_LABEL[node.type] ?? node.type}</Typography>
             </Stack>
@@ -214,7 +237,7 @@ const NodeEditor: React.FC<INodeEditorProps> = ({ node, path, flow, availableSen
             {node.type === 'fanout' && <FanoutEditor  node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
             {node.type === 'filter' && <FilterEditor  node={node} path={path} flow={flow} availableSenders={availableSenders} onFlowChange={onFlowChange} />}
         </Box>
-    )
+    );
 }
 
 export default NodeEditor

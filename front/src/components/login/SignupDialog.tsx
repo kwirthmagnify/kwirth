@@ -84,7 +84,9 @@ const SignupDialog: React.FC<ISignupDialogProps> = (props: ISignupDialogProps) =
             The dialog takes the size of its content, and the content never changes shape: the same fields
             are there while the info loads (empty and disabled) and once it has arrived.
         */
-        <Dialog open={true} maxWidth={false} PaperProps={{ sx: { width: 560 } }} data-testid='signup-dialog'>
+        <Dialog open={true} maxWidth={false} data-testid='signup-dialog' slotProps={{
+            paper: { sx: { width: 560 } }
+        }}>
             {/* no help button: whoever asks is not a user yet, and the guide is the admin's */}
             <DialogTitle>Request access</DialogTitle>
             <DialogContent dividers>
@@ -107,7 +109,7 @@ const SignupDialog: React.FC<ISignupDialogProps> = (props: ISignupDialogProps) =
                 <Button variant='outlined' onClick={props.onCancel}>Cancel</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { SignupDialog }

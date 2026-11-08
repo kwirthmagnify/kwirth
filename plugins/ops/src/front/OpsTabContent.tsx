@@ -232,16 +232,36 @@ const OpsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         <Box ref={opsBoxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', flexGrow: 1, height: `${opsBoxHeight}px`, p: 2, gap: 2 }}>
             {showSelector && <SelectTerminal onSelect={onSelectNewTerm} current={selectedTerminal!} opsData={opsData} />}
             {opsData.started && !selectedTerminal && (
-                <Stack direction='row' spacing={2} alignItems='stretch' sx={{ flexGrow: 1, minHeight: 0 }}>
+                <Stack
+                    direction='row'
+                    spacing={2}
+                    sx={{
+                        alignItems: 'stretch',
+                        flexGrow: 1,
+                        minHeight: 0
+                    }}>
                     <Card sx={{ width: '60%', display: 'flex', flexDirection: 'column', maxHeight: '100%' }}>
-                        <CardHeader title={<Stack direction='row' alignItems='center'><Typography variant='h6'>Objects</Typography><Typography flex={1} /><TextField value={filter} onChange={e => setFilter(e.target.value)} disabled={!opsData.started} variant='standard' placeholder='Filter...' /></Stack>} />
+                        <CardHeader title={<Stack direction='row' sx={{
+                            alignItems: 'center'
+                        }}><Typography variant='h6'>Objects</Typography><Typography sx={{
+                            flex: 1
+                        }} /><TextField value={filter} onChange={e => setFilter(e.target.value)} disabled={!opsData.started} variant='standard' placeholder='Filter...' /></Stack>} />
                         <CardContent sx={{ overflowY: 'auto' }}>
                             {opsData.scopedObjects.filter(so => so.namespace.includes(filter) || so.pod.includes(filter) || so.container.includes(filter)).map((so, index) => (
                                 <ListItem key={index}>
-                                    <Stack direction='row' sx={{ width: '100%' }} alignItems='center'>
+                                    <Stack
+                                        direction='row'
+                                        sx={{
+                                            alignItems: 'center',
+                                            width: '100%'
+                                        }}>
                                         <Typography>{so.namespace + '/' + so.pod + '/' + so.container}</Typography>
-                                        <Typography flex={1} />
-                                        <Stack direction='row' alignItems='center'>
+                                        <Typography sx={{
+                                            flex: 1
+                                        }} />
+                                        <Stack direction='row' sx={{
+                                            alignItems: 'center'
+                                        }}>
                                             <Tooltip title='Restart container'><IconButton onClick={() => launch(LaunchActionEnum.RESTART, so)}><RestartAlt /></IconButton></Tooltip>
                                             <IconButton onClick={() => launch(LaunchActionEnum.TERMINAL, so)} disabled={opsData.terminalManager.terminals.has(so.namespace + '/' + so.pod + '/' + so.container)}><Terminal /></IconButton>
                                             <IconButton onClick={(event) => { setAnchorMenuChart(event.currentTarget); setSelectedScopedObject(so) }}><MoreVert /></IconButton>
@@ -257,10 +277,21 @@ const OpsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                             {opsData.terminalManager.terminals.size === 0 && <>You have no open terminals.</>}
                             {opsData.terminalManager.terminals.size > 0 && Array.from(opsData.terminalManager.terminals.keys()).map((key, index) => (
                                 <ListItem key={index}>
-                                    <Stack direction='row' sx={{ width: '100%' }} alignItems='center'>
+                                    <Stack
+                                        direction='row'
+                                        sx={{
+                                            alignItems: 'center',
+                                            width: '100%'
+                                        }}>
                                         <ListItemButton onClick={() => onSelectNewTerm(key)}>
-                                            <Typography flex={1}>{key}</Typography>
-                                            {opsData.terminalManager.terminals.get(key)!.index > 0 ? <Typography width='32px'>{'F' + opsData.terminalManager.terminals.get(key)!.index}</Typography> : <Typography width='32px' />}
+                                            <Typography sx={{
+                                                flex: 1
+                                            }}>{key}</Typography>
+                                            {opsData.terminalManager.terminals.get(key)!.index > 0 ? <Typography sx={{
+                                                width: '32px'
+                                            }}>{'F' + opsData.terminalManager.terminals.get(key)!.index}</Typography> : <Typography sx={{
+                                                width: '32px'
+                                            }} />}
                                         </ListItemButton>
                                         <IconButton onClick={() => deleteSession(key)}><Delete /></IconButton>
                                     </Stack>
@@ -288,7 +319,7 @@ const OpsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
             {msgBox}
             {anchorMenuChart && selectedScopedObject && <MenuObject onClose={() => setAnchorMenuChart(null)} onOptionSelected={menuObjectOptionSelected} anchorParent={anchorMenuChart} scopedObject={selectedScopedObject} />}
         </Box>
-    )
+    );
 }
 
 export { OpsTabContent }

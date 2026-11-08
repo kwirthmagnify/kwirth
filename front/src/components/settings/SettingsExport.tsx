@@ -150,7 +150,9 @@ const SettingsExport: React.FC<ISettingsExportProps> = (props: ISettingsExportPr
                     configuration; Kwirth only gathers it and writes the file.
                 </Typography>
 
-                { loading && <Stack direction='row' spacing={1} alignItems='center'><CircularProgress size={16} /><Typography variant='body2'>Reading what can be exported…</Typography></Stack> }
+                { loading && <Stack direction='row' spacing={1} sx={{
+                    alignItems: 'center'
+                }}><CircularProgress size={16} /><Typography variant='body2'>Reading what can be exported…</Typography></Stack> }
 
                 { !loading && <>
                     <SelectionList items={exportItems()} selected={selected} onToggle={toggle} disabled={notExportable} />
@@ -172,7 +174,7 @@ const SettingsExport: React.FC<ISettingsExportProps> = (props: ISettingsExportPr
                 <Button variant='outlined' onClick={props.onClose}>Close</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { SettingsExport }

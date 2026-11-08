@@ -14,8 +14,8 @@
     "@kwirthmagnify/kwirth-common-back": "^0.6.10"
   },
   "devDependencies": {
-    "@mui/icons-material": "^7.1.2",
-    "@mui/material": "^7.1.2",
+    "@mui/icons-material": "^9.5.0",
+    "@mui/material": "^9.5.0",
     "@types/node": "^20.12.13",
     "@types/react": "^19.2.16",
     "@types/react-dom": "^19.2.3",

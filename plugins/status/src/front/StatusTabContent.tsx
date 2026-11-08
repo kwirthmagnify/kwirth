@@ -62,12 +62,26 @@ const EmptyState: React.FC<IEmptyStateProps> = ({ title, detail }) => {
         if (ref.current) setTop(ref.current.getBoundingClientRect().top)
     })
     return (
-        <Stack ref={ref} alignItems='center' justifyContent='center' spacing={1}
-            sx={{ flex: 1, width: '100%', minHeight: `calc(100vh - ${top}px - 8px)`, px: 4, textAlign: 'center' }}>
-            <Typography variant='h6' color='text.secondary'>{title}</Typography>
-            <Typography variant='body2' color='text.secondary'>{detail}</Typography>
+        <Stack
+            ref={ref}
+            spacing={1}
+            sx={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: 1,
+                width: '100%',
+                minHeight: `calc(100vh - ${top}px - 8px)`,
+                px: 4,
+                textAlign: 'center'
+            }}>
+            <Typography variant='h6' sx={{
+                color: 'text.secondary'
+            }}>{title}</Typography>
+            <Typography variant='body2' sx={{
+                color: 'text.secondary'
+            }}>{detail}</Typography>
         </Stack>
-    )
+    );
 }
 
 const StatusTabContent: React.FC<IContentProps> = (props) => {
@@ -241,7 +255,9 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 <TableCell><Typography variant='body2' sx={{ fontWeight: 500, overflowWrap: 'anywhere' }}>{c.displayName}</Typography></TableCell>
                 {/* A dash when the core does not say (an older core, or a provider built into it). */}
                 <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: 'monospace' }} aria-label='Version'>
-                    {c.version ?? <Typography variant='body2' component='span' color='text.disabled'>—</Typography>}
+                    {c.version ?? <Typography variant='body2' component='span' sx={{
+                        color: 'text.disabled'
+                    }}>—</Typography>}
                 </TableCell>
                 <TableCell><Chip size='small' label={estado.label} color={estado.color} variant={c.health === EComponentHealth.ACTIVE ? 'outlined' : 'filled'} /></TableCell>
                 {/*
@@ -261,16 +277,31 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                     {(() => {
                         const t = tasaDe(c.id, c.events)
                         if (t === undefined) return null
-                        return <Typography variant='caption' color='text.secondary' display='block'>{t < 1 && t > 0 ? t.toFixed(2) : Math.round(t)}/s</Typography>
+                        return (
+                            <Typography
+                                variant='caption'
+                                sx={{
+                                    color: 'text.secondary',
+                                    display: 'block'
+                                }}>{t < 1 && t > 0 ? t.toFixed(2) : Math.round(t)}/s</Typography>
+                        );
                     })()}
                 </TableCell>}
                 <TableCell>
-                    <Typography variant='body2' color='text.secondary' sx={{ fontFamily: 'monospace', overflowWrap: 'anywhere' }}>{c.installedFrom ?? '—'}</Typography>
+                    <Typography
+                        variant='body2'
+                        sx={{
+                            color: 'text.secondary',
+                            fontFamily: 'monospace',
+                            overflowWrap: 'anywhere'
+                        }}>{c.installedFrom ?? '—'}</Typography>
                 </TableCell>
                 {/* The why is the column that justifies the screen: without it this is one more list. */}
-                <TableCell><Typography variant='body2' color='text.secondary'>{c.reason ?? ''}</Typography></TableCell>
+                <TableCell><Typography variant='body2' sx={{
+                    color: 'text.secondary'
+                }}>{c.reason ?? ''}</Typography></TableCell>
             </TableRow>
-        )
+        );
     }
 
     // How each column sorts. A Record: a column added to the enum and forgotten here does not compile.
@@ -355,7 +386,15 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
                 tab — a snapshot is of all of Kwirth, and asking for one from Performance must not mean
                 going back to Home. What the snapshot is (its time, whether it refreshes) is said on Home.
             */}
-            <Stack direction='row' alignItems='center' spacing={1} sx={{ mb: 1, borderBottom: 1, borderColor: 'divider' }}>
+            <Stack
+                direction='row'
+                spacing={1}
+                sx={{
+                    alignItems: 'center',
+                    mb: 1,
+                    borderBottom: 1,
+                    borderColor: 'divider'
+                }}>
                 {/*
                     Scrollable: with ten tabs, a window narrower than they are clipped the last one under the
                     filter. minWidth 0 lets the flex row shrink it so the arrows appear instead.
@@ -424,11 +463,13 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
 
             {data.signals.length > 0 && (
                 <Box sx={{ mt: 1 }}>
-                    {data.signals.map((s, i) => <Typography key={i} variant='caption' color='error' display='block'>{s}</Typography>)}
+                    {data.signals.map((s, i) => <Typography key={i} variant='caption' color='error' sx={{
+                        display: 'block'
+                    }}>{s}</Typography>)}
                 </Box>
             )}
         </Box>
-    )
+    );
 }
 
 export { StatusTabContent }

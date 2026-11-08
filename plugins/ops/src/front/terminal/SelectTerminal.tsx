@@ -37,7 +37,9 @@ const SelectTerminal: React.FC<ISelectTerminalProps> = (props: ISelectTerminalPr
                             <ListItemButton onClick={() => props.onSelect(key)} key={key} selected={index === selectedIndex}>
                                 <ListItem>
                                     <Stack direction='row' sx={{ width: '100%' }}>
-                                        <Typography flex={1}>{key}</Typography>
+                                        <Typography sx={{
+                                            flex: 1
+                                        }}>{key}</Typography>
                                         {props.opsData.terminalManager.terminals.get(key)!.index > 0 && <Typography>{'F' + props.opsData.terminalManager.terminals.get(key)!.index}</Typography>}
                                     </Stack>
                                 </ListItem>
@@ -50,7 +52,7 @@ const SelectTerminal: React.FC<ISelectTerminalProps> = (props: ISelectTerminalPr
                 <Button variant='outlined' onClick={() => props.onSelect(undefined)}>CANCEL</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { SelectTerminal }

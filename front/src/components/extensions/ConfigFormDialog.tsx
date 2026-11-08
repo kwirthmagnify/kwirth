@@ -185,7 +185,9 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
             <DialogContent>
                 <Stack spacing={2} sx={{ mt: 1 }}>
                     {schema.length === 0
-                        ? <Typography variant='body2' color='text.secondary'>{props.emptyText ?? 'Nothing to configure.'}</Typography>
+                        ? <Typography variant='body2' sx={{
+                        color: 'text.secondary'
+                    }}>{props.emptyText ?? 'Nothing to configure.'}</Typography>
                         : <ConfigFields schema={schema} values={values} onChange={setField} />}
                     {error && <Typography variant='caption' color='error'>{error}</Typography>}
                     {/* El resultado se queda a la vista hasta la siguiente prueba: es lo que se lee para corregir */}
@@ -208,7 +210,7 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
                 <Button onClick={props.onClose}>CANCEL</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { ConfigFormDialog }

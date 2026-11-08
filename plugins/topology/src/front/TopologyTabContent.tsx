@@ -143,8 +143,20 @@ const NodeInfoPanel: React.FC<{ node: ITopologyNode }> = ({ node }) => (
         border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 2,
     }}>
         <Stack spacing={0.5}>
-            <Stack direction='row' alignItems='center' justifyContent='space-between'>
-                <Typography variant='body2' fontWeight={500} noWrap sx={{ maxWidth: 150, color: '#fff' }}>{node.name}</Typography>
+            <Stack
+                direction='row'
+                sx={{
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                <Typography
+                    variant='body2'
+                    noWrap
+                    sx={{
+                        fontWeight: 500,
+                        maxWidth: 150,
+                        color: '#fff'
+                    }}>{node.name}</Typography>
                 <Chip label={node.status} size='small' color={STATUS_COLOR[node.status]} />
             </Stack>
             <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.5)' }}>{node.kind} · {node.namespace}</Typography>
@@ -204,8 +216,18 @@ const InfoResultPanel: React.FC<{ result: ITopologyInfoResult; onClose: () => vo
         bgcolor: 'rgba(10,12,20,0.92)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 2,
     }}>
         <Stack spacing={0.5}>
-            <Stack direction='row' alignItems='center' justifyContent='space-between'>
-                <Typography variant='body2' fontWeight={500} sx={{ color: '#fff' }}>
+            <Stack
+                direction='row'
+                sx={{
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                <Typography
+                    variant='body2'
+                    sx={{
+                        fontWeight: 500,
+                        color: '#fff'
+                    }}>
                     {result.kind === ETopologyQueryKind.ENDPOINTS ? 'Endpoints' : 'Ingress Rules'} — {result.name}
                 </Typography>
                 <IconButton size='small' onClick={onClose} sx={{ color: 'rgba(255,255,255,0.4)', p: 0 }}>
@@ -218,7 +240,13 @@ const InfoResultPanel: React.FC<{ result: ITopologyInfoResult; onClose: () => vo
             {result.kind === ETopologyQueryKind.ENDPOINTS && (result.data as any[]).map((subset: any, si: number) => (
                 <Stack key={si} spacing={0.3}>
                     {(subset.addresses ?? []).map((a: any, ai: number) => (
-                        <Stack key={ai} direction='row' justifyContent='space-between' alignItems='center'>
+                        <Stack
+                            key={ai}
+                            direction='row'
+                            sx={{
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}>
                             <Typography variant='caption' sx={{ color: '#7af', fontFamily: 'monospace' }}>{a.ip}</Typography>
                             <Stack direction='row' spacing={0.5}>
                                 {(subset.ports ?? []).map((p: any, pi: number) => (
@@ -234,9 +262,21 @@ const InfoResultPanel: React.FC<{ result: ITopologyInfoResult; onClose: () => vo
 
             {result.kind === ETopologyQueryKind.INGRESS_RULES && (result.data as any[]).map((rule: any, ri: number) => (
                 <Stack key={ri} spacing={0.3}>
-                    <Typography variant='caption' fontWeight={500} sx={{ color: '#fc9' }}>{rule.host}</Typography>
+                    <Typography
+                        variant='caption'
+                        sx={{
+                            fontWeight: 500,
+                            color: '#fc9'
+                        }}>{rule.host}</Typography>
                     {(rule.paths ?? []).map((p: any, pi: number) => (
-                        <Stack key={pi} direction='row' alignItems='center' spacing={1} sx={{ pl: 1 }}>
+                        <Stack
+                            key={pi}
+                            direction='row'
+                            spacing={1}
+                            sx={{
+                                alignItems: 'center',
+                                pl: 1
+                            }}>
                             <Typography variant='caption' sx={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', minWidth: 80 }}>
                                 {p.path}
                             </Typography>
@@ -495,16 +535,18 @@ const SearchSuggestions: React.FC<{
                 const hex = '#' + (KIND_COLOR[n.kind] ?? 0x888888).toString(16).padStart(6, '0')
                 return (
                     <MenuItem key={n.uid} dense onClick={() => onSelect(n)} sx={{ color: '#ccc', '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}>
-                        <Stack direction='row' spacing={1} alignItems='center'>
+                        <Stack direction='row' spacing={1} sx={{
+                            alignItems: 'center'
+                        }}>
                             <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: hex, flexShrink: 0 }} />
                             <Typography variant='caption' noWrap sx={{ color: '#ccc', maxWidth: 160 }}>{n.name}</Typography>
                             <Typography variant='caption' sx={{ color: '#556', flexShrink: 0 }}>{n.kind}</Typography>
                         </Stack>
                     </MenuItem>
-                )
+                );
             })}
         </Paper>
-    )
+    );
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -1113,7 +1155,9 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
             {/* Loading */}
             {topologyData.loading && (
                 <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                    <Stack alignItems='center' spacing={1}>
+                    <Stack spacing={1} sx={{
+                        alignItems: 'center'
+                    }}>
                         <CircularProgress size={32} sx={{ color: '#378add' }} />
                         <Typography variant='caption' sx={{ color: '#889' }}>Loading cluster topology…</Typography>
                     </Stack>
@@ -1194,16 +1238,6 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                         onChange={e => { setSearchQuery(e.target.value); setSearchFocused(true) }}
                         onFocus={() => setSearchFocused(true)}
                         onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                        InputProps={{
-                            startAdornment: <InputAdornment position='start'><Search sx={{ color: '#557', fontSize: 18 }} /></InputAdornment>,
-                            endAdornment: searchQuery
-                                ? <InputAdornment position='end'>
-                                    <IconButton size='small' onClick={() => { setSearchQuery(''); setSearchFocused(false) }} sx={{ color: '#557' }}>
-                                        <Close fontSize='small' />
-                                    </IconButton>
-                                  </InputAdornment>
-                                : null,
-                        }}
                         sx={{
                             width: '100%',
                             '& .MuiOutlinedInput-root': {
@@ -1214,6 +1248,18 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                                 '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.25)' },
                                 '&.Mui-focused fieldset': { borderColor: '#378add' },
                             },
+                        }}
+                        slotProps={{
+                            input: {
+                                startAdornment: <InputAdornment position='start'><Search sx={{ color: '#557', fontSize: 18 }} /></InputAdornment>,
+                                endAdornment: searchQuery
+                                    ? <InputAdornment position='end'>
+                                        <IconButton size='small' onClick={() => { setSearchQuery(''); setSearchFocused(false) }} sx={{ color: '#557' }}>
+                                            <Close fontSize='small' />
+                                        </IconButton>
+                                      </InputAdornment>
+                                    : null,
+                            }
                         }}
                     />
                     {searchFocused && searchQuery && (
@@ -1317,7 +1363,12 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                 {contextMenu && <>
                     <MenuItem disabled sx={{ opacity: '1 !important' }}>
                         <Stack>
-                            <Typography variant='caption' fontWeight={500} sx={{ color: '#ccc' }}>{contextMenu.node.name}</Typography>
+                            <Typography
+                                variant='caption'
+                                sx={{
+                                    fontWeight: 500,
+                                    color: '#ccc'
+                                }}>{contextMenu.node.name}</Typography>
                             <Typography variant='caption' sx={{ color: '#666' }}>{contextMenu.node.kind} · {contextMenu.node.namespace}</Typography>
                         </Stack>
                     </MenuItem>
@@ -1334,5 +1385,5 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
                 </>}
             </Menu>
         </Box>
-    )
+    );
 }

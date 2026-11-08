@@ -188,249 +188,293 @@ const HttpPullPushConfigDialog: React.FC<IHttpPullPushConfigDialogProps> = ({ on
     const showBody = METHODS_WITH_BODY.includes(form.method)
     const isHttps = (form.url ?? '').toLowerCase().startsWith('https://')
 
-    return <>
-        <Dialog open maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '1000px', height: '700px' } }}>
-            <DialogTitle>HTTP Pull-Push Provider — Connections</DialogTitle>
+    return (
+        <>
+            <Dialog open maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '1000px', height: '700px' } }}>
+                <DialogTitle>HTTP Pull-Push Provider — Connections</DialogTitle>
 
-            <DialogContent sx={{ pt: '16px !important', display: 'flex', gap: 2, overflow: 'hidden' }}>
-                {loading
-                    ? <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', mt: 4 }}><CircularProgress /></Box>
-                    : <>
-                        {/* Izquierda — lista de conexiones */}
-                        <Box sx={{ width: 260, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <Typography variant='caption' color='text.secondary' fontWeight='bold'>Connections</Typography>
+                <DialogContent sx={{ pt: '16px !important', display: 'flex', gap: 2, overflow: 'hidden' }}>
+                    {loading
+                        ? <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', mt: 4 }}><CircularProgress /></Box>
+                        : <>
+                            {/* Izquierda — lista de conexiones */}
+                            <Box sx={{ width: 260, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <Typography
+                                    variant='caption'
+                                    sx={{
+                                        color: 'text.secondary',
+                                        fontWeight: 'bold'
+                                    }}>Connections</Typography>
 
-                            <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
-                                {configs.length === 0
-                                    ? <Typography variant='caption' color='text.disabled' sx={{ p: 1, display: 'block' }}>No connections yet.</Typography>
-                                    : configs.map(config => (
-                                        <Box key={config.name} sx={{
-                                            display: 'flex', alignItems: 'center', px: 1, py: 0.5,
-                                            borderBottom: 1, borderColor: 'divider',
-                                            borderLeft: editingName === config.name ? 3 : 0, borderLeftColor: 'primary.main',
-                                            bgcolor: editingName === config.name ? 'action.selected' : 'transparent',
-                                            opacity: config.enabled ? 1 : 0.55
-                                        }}>
-                                            <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => startEdit(config)}>
-                                                <Typography variant='body2' fontWeight='bold' noWrap>{config.name}</Typography>
-                                                <Typography variant='caption' color='text.secondary' noWrap display='block'>{config.url || '—'}</Typography>
+                                <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
+                                    {configs.length === 0
+                                        ? <Typography
+                                        variant='caption'
+                                        sx={{
+                                            color: 'text.disabled',
+                                            p: 1,
+                                            display: 'block'
+                                        }}>No connections yet.</Typography>
+                                        : configs.map(config => (
+                                            <Box key={config.name} sx={{
+                                                display: 'flex', alignItems: 'center', px: 1, py: 0.5,
+                                                borderBottom: 1, borderColor: 'divider',
+                                                borderLeft: editingName === config.name ? 3 : 0, borderLeftColor: 'primary.main',
+                                                bgcolor: editingName === config.name ? 'action.selected' : 'transparent',
+                                                opacity: config.enabled ? 1 : 0.55
+                                            }}>
+                                                <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => startEdit(config)}>
+                                                    <Typography variant='body2' noWrap sx={{
+                                                        fontWeight: 'bold'
+                                                    }}>{config.name}</Typography>
+                                                    <Typography
+                                                        variant='caption'
+                                                        noWrap
+                                                        sx={{
+                                                            color: 'text.secondary',
+                                                            display: 'block'
+                                                        }}>{config.url || '—'}</Typography>
+                                                </Box>
+                                                <Chip size='small' label={config.enabled ? 'on' : 'off'}
+                                                    color={config.enabled ? 'success' : 'default'} sx={{ mr: 0.5 }} />
+                                                <Tooltip title='Delete'>
+                                                    <span>
+                                                        {/* aria-label con el nombre: hay un boton de borrar por fila y sin esto son
+                                                            indistinguibles para un lector de pantalla (y para un test) */}
+                                                        <IconButton size='small' color='error' aria-label={`Delete ${config.name}`}
+                                                            disabled={deletingName === config.name || saving}
+                                                            onClick={() => removeConnection(config.name)}>
+                                                            {deletingName === config.name ? <CircularProgress size={12} /> : <Delete sx={{ fontSize: 14 }} />}
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
                                             </Box>
-                                            <Chip size='small' label={config.enabled ? 'on' : 'off'}
-                                                color={config.enabled ? 'success' : 'default'} sx={{ mr: 0.5 }} />
-                                            <Tooltip title='Delete'>
-                                                <span>
-                                                    {/* aria-label con el nombre: hay un boton de borrar por fila y sin esto son
-                                                        indistinguibles para un lector de pantalla (y para un test) */}
-                                                    <IconButton size='small' color='error' aria-label={`Delete ${config.name}`}
-                                                        disabled={deletingName === config.name || saving}
-                                                        onClick={() => removeConnection(config.name)}>
-                                                        {deletingName === config.name ? <CircularProgress size={12} /> : <Delete sx={{ fontSize: 14 }} />}
-                                                    </IconButton>
-                                                </span>
-                                            </Tooltip>
-                                        </Box>
-                                    ))
-                                }
+                                        ))
+                                    }
+                                </Box>
+
+                                <Stack direction='row' spacing={0.5}>
+                                    <Button size='small' startIcon={<Add />} onClick={startNew} sx={{ flex: 1 }}>New</Button>
+                                    <Button size='small' startIcon={<ContentCopy />} disabled={!showForm} onClick={startClone} sx={{ flex: 1 }}>Clone</Button>
+                                </Stack>
                             </Box>
 
-                            <Stack direction='row' spacing={0.5}>
-                                <Button size='small' startIcon={<Add />} onClick={startNew} sx={{ flex: 1 }}>New</Button>
-                                <Button size='small' startIcon={<ContentCopy />} disabled={!showForm} onClick={startClone} sx={{ flex: 1 }}>Clone</Button>
-                            </Stack>
-                        </Box>
+                            <Divider orientation='vertical' flexItem />
 
-                        <Divider orientation='vertical' flexItem />
+                            {/* Derecha — formulario de la conexion */}
+                            <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1.5, overflow: 'hidden' }}>
+                                {!showForm
+                                    ? <Box sx={{ m: 'auto', color: 'text.disabled' }}>
+                                        <Typography variant='body2'>Select a connection to edit or click New.</Typography>
+                                      </Box>
+                                    : <>
+                                        <Typography
+                                            variant='caption'
+                                            sx={{
+                                                color: 'text.secondary',
+                                                fontWeight: 'bold'
+                                            }}>
+                                            {editingName ? `Editing: ${editingName}` : 'New connection'}
+                                        </Typography>
 
-                        {/* Derecha — formulario de la conexion */}
-                        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1.5, overflow: 'hidden' }}>
-                            {!showForm
-                                ? <Box sx={{ m: 'auto', color: 'text.disabled' }}>
-                                    <Typography variant='body2'>Select a connection to edit or click New.</Typography>
-                                  </Box>
-                                : <>
-                                    <Typography variant='caption' color='text.secondary' fontWeight='bold'>
-                                        {editingName ? `Editing: ${editingName}` : 'New connection'}
-                                    </Typography>
+                                        <Box sx={{ flex: 1, overflowY: 'auto', pr: 1, pt: 1 }}>
+                                            <Stack spacing={2}>
 
-                                    <Box sx={{ flex: 1, overflowY: 'auto', pr: 1, pt: 1 }}>
-                                        <Stack spacing={2}>
+                                                <Stack direction='row' spacing={2} sx={{
+                                                    alignItems: 'center'
+                                                }}>
+                                                    {/* 'Connection name' y no 'Name': es el identificador que usan los suscriptores, y
+                                                        evita ambiguedad con el 'Name' del editor de cabeceras */}
+                                                    <TextField size='small' label='Connection name' value={form.name} sx={{ width: 220 }}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ name: e.target.value })} />
+                                                    <FormControlLabel label='Enabled' control={
+                                                        <Switch checked={form.enabled} onChange={(_e, checked) => patch({ enabled: checked })} />
+                                                    } />
+                                                </Stack>
 
-                                            <Stack direction='row' spacing={2} alignItems='center'>
-                                                {/* 'Connection name' y no 'Name': es el identificador que usan los suscriptores, y
-                                                    evita ambiguedad con el 'Name' del editor de cabeceras */}
-                                                <TextField size='small' label='Connection name' value={form.name} sx={{ width: 220 }}
-                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ name: e.target.value })} />
-                                                <FormControlLabel label='Enabled' control={
-                                                    <Switch checked={form.enabled} onChange={(_e, checked) => patch({ enabled: checked })} />
-                                                } />
-                                            </Stack>
-
-                                            {!form.enabled &&
-                                                <Alert severity='info'>
-                                                    This connection is stored but not operative: it is not polled and delivers nothing.
-                                                </Alert>
-                                            }
-
-                                            <Stack direction='row' spacing={2}>
-                                                <FormControl size='small' sx={{ width: 120 }}>
-                                                    <InputLabel>Method</InputLabel>
-                                                    <Select label='Method' value={form.method}
-                                                        onChange={e => patch({ method: e.target.value as EHttpMethod })}>
-                                                        {Object.values(EHttpMethod).map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
-                                                    </Select>
-                                                </FormControl>
-                                                <TextField size='small' label='URL' value={form.url} sx={{ flex: 1 }}
-                                                    placeholder='https://api.example.com/quotes'
-                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ url: e.target.value })} />
-                                            </Stack>
-
-                                            <Stack direction='row' spacing={2}>
-                                                <TextField size='small' label='Interval (s)' type='number' sx={{ width: 130 }}
-                                                    value={form.intervalSeconds}
-                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ intervalSeconds: parseInt(e.target.value, 10) || 0 })}
-                                                    slotProps={{ htmlInput: { min: 1 } }} />
-                                                <TextField size='small' label='Timeout (ms)' type='number' sx={{ width: 140 }}
-                                                    value={form.timeoutMs}
-                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ timeoutMs: parseInt(e.target.value, 10) || 0 })}
-                                                    slotProps={{ htmlInput: { min: 1 } }} />
-                                                <TextField size='small' label='Retries' type='number' sx={{ width: 110 }}
-                                                    value={form.retries}
-                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ retries: parseInt(e.target.value, 10) || 0 })}
-                                                    slotProps={{ htmlInput: { min: 0 } }} />
-                                            </Stack>
-
-                                            <Stack direction='row' spacing={2} alignItems='center' flexWrap='wrap' useFlexGap>
-                                                <FormControl size='small' sx={{ width: 160 }}>
-                                                    <InputLabel>Response</InputLabel>
-                                                    <Select label='Response' value={form.responseType}
-                                                        onChange={e => patch({ responseType: e.target.value as EResponseType })}>
-                                                        <MenuItem value={EResponseType.JSON}>JSON (parsed)</MenuItem>
-                                                        <MenuItem value={EResponseType.TEXT}>Text (raw)</MenuItem>
-                                                    </Select>
-                                                </FormControl>
-                                                <FormControl size='small' sx={{ width: 200 }}>
-                                                    <InputLabel>Emit</InputLabel>
-                                                    <Select label='Emit' value={form.emitMode}
-                                                        onChange={e => patch({ emitMode: e.target.value as EEmitMode })}>
-                                                        <MenuItem value={EEmitMode.ALWAYS}>Always</MenuItem>
-                                                        <MenuItem value={EEmitMode.ON_CHANGE}>Only when it changes</MenuItem>
-                                                    </Select>
-                                                </FormControl>
-                                                <FormControlLabel label='Accept self-signed certificates' control={
-                                                    <Switch checked={form.allowInsecureTls} disabled={!isHttps}
-                                                        onChange={(_e, checked) => patch({ allowInsecureTls: checked })} />
-                                                } />
-                                            </Stack>
-
-                                            <Divider />
-
-                                            {/* Autenticacion: los campos dependen del modo elegido */}
-                                            <Stack direction='row' spacing={2} alignItems='center' flexWrap='wrap' useFlexGap>
-                                                <FormControl size='small' sx={{ width: 160 }}>
-                                                    <InputLabel>Auth</InputLabel>
-                                                    <Select label='Auth' value={form.auth.type}
-                                                        onChange={e => patchAuth({ type: e.target.value as EAuthType })}>
-                                                        <MenuItem value={EAuthType.NONE}>None</MenuItem>
-                                                        <MenuItem value={EAuthType.BASIC}>Basic</MenuItem>
-                                                        <MenuItem value={EAuthType.BEARER}>Bearer token</MenuItem>
-                                                        <MenuItem value={EAuthType.HEADER}>Custom header</MenuItem>
-                                                    </Select>
-                                                </FormControl>
-
-                                                {form.auth.type === EAuthType.BASIC && <>
-                                                    <TextField size='small' label='Username' value={form.auth.username ?? ''} sx={{ width: 200 }}
-                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchAuth({ username: e.target.value })} />
-                                                    <SecretField label='Password' value={form.auth.password ?? ''}
-                                                        onChange={v => patchAuth({ password: v })} />
-                                                </>}
-
-                                                {form.auth.type === EAuthType.BEARER &&
-                                                    <SecretField label='Token' value={form.auth.token ?? ''} width={360}
-                                                        onChange={v => patchAuth({ token: v })} />
+                                                {!form.enabled &&
+                                                    <Alert severity='info'>
+                                                        This connection is stored but not operative: it is not polled and delivers nothing.
+                                                    </Alert>
                                                 }
 
-                                                {form.auth.type === EAuthType.HEADER && <>
-                                                    <TextField size='small' label='Header name' value={form.auth.headerName ?? ''} sx={{ width: 200 }}
-                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchAuth({ headerName: e.target.value })} />
-                                                    <SecretField label='Header value' value={form.auth.headerValue ?? ''}
-                                                        onChange={v => patchAuth({ headerValue: v })} />
-                                                </>}
-                                            </Stack>
+                                                <Stack direction='row' spacing={2}>
+                                                    <FormControl size='small' sx={{ width: 120 }}>
+                                                        <InputLabel>Method</InputLabel>
+                                                        <Select label='Method' value={form.method}
+                                                            onChange={e => patch({ method: e.target.value as EHttpMethod })}>
+                                                            {Object.values(EHttpMethod).map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
+                                                        </Select>
+                                                    </FormControl>
+                                                    <TextField size='small' label='URL' value={form.url} sx={{ flex: 1 }}
+                                                        placeholder='https://api.example.com/quotes'
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ url: e.target.value })} />
+                                                </Stack>
 
-                                            <Divider />
+                                                <Stack direction='row' spacing={2}>
+                                                    <TextField size='small' label='Interval (s)' type='number' sx={{ width: 130 }}
+                                                        value={form.intervalSeconds}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ intervalSeconds: parseInt(e.target.value, 10) || 0 })}
+                                                        slotProps={{ htmlInput: { min: 1 } }} />
+                                                    <TextField size='small' label='Timeout (ms)' type='number' sx={{ width: 140 }}
+                                                        value={form.timeoutMs}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ timeoutMs: parseInt(e.target.value, 10) || 0 })}
+                                                        slotProps={{ htmlInput: { min: 1 } }} />
+                                                    <TextField size='small' label='Retries' type='number' sx={{ width: 110 }}
+                                                        value={form.retries}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ retries: parseInt(e.target.value, 10) || 0 })}
+                                                        slotProps={{ htmlInput: { min: 0 } }} />
+                                                </Stack>
 
-                                            <HeaderEditor headers={form.headers} onChange={h => patch({ headers: h })} />
+                                                <Stack
+                                                    direction='row'
+                                                    spacing={2}
+                                                    useFlexGap
+                                                    sx={{
+                                                        alignItems: 'center',
+                                                        flexWrap: 'wrap'
+                                                    }}>
+                                                    <FormControl size='small' sx={{ width: 160 }}>
+                                                        <InputLabel>Response</InputLabel>
+                                                        <Select label='Response' value={form.responseType}
+                                                            onChange={e => patch({ responseType: e.target.value as EResponseType })}>
+                                                            <MenuItem value={EResponseType.JSON}>JSON (parsed)</MenuItem>
+                                                            <MenuItem value={EResponseType.TEXT}>Text (raw)</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
+                                                    <FormControl size='small' sx={{ width: 200 }}>
+                                                        <InputLabel>Emit</InputLabel>
+                                                        <Select label='Emit' value={form.emitMode}
+                                                            onChange={e => patch({ emitMode: e.target.value as EEmitMode })}>
+                                                            <MenuItem value={EEmitMode.ALWAYS}>Always</MenuItem>
+                                                            <MenuItem value={EEmitMode.ON_CHANGE}>Only when it changes</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
+                                                    <FormControlLabel label='Accept self-signed certificates' control={
+                                                        <Switch checked={form.allowInsecureTls} disabled={!isHttps}
+                                                            onChange={(_e, checked) => patch({ allowInsecureTls: checked })} />
+                                                    } />
+                                                </Stack>
 
-                                            {showBody &&
-                                                <TextField size='small' label='Body' multiline minRows={3} value={form.body ?? ''}
-                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ body: e.target.value })} />
-                                            }
-                                        </Stack>
-                                    </Box>
+                                                <Divider />
 
-                                    {errors.length > 0 &&
-                                        <Alert severity='warning' sx={{ py: 0 }}>
-                                            {errors.map((e, i) => <div key={i}>{e}</div>)}
-                                        </Alert>
-                                    }
-                                    {error && <Alert severity='error' sx={{ py: 0 }}>{error}</Alert>}
+                                                {/* Autenticacion: los campos dependen del modo elegido */}
+                                                <Stack
+                                                    direction='row'
+                                                    spacing={2}
+                                                    useFlexGap
+                                                    sx={{
+                                                        alignItems: 'center',
+                                                        flexWrap: 'wrap'
+                                                    }}>
+                                                    <FormControl size='small' sx={{ width: 160 }}>
+                                                        <InputLabel>Auth</InputLabel>
+                                                        <Select label='Auth' value={form.auth.type}
+                                                            onChange={e => patchAuth({ type: e.target.value as EAuthType })}>
+                                                            <MenuItem value={EAuthType.NONE}>None</MenuItem>
+                                                            <MenuItem value={EAuthType.BASIC}>Basic</MenuItem>
+                                                            <MenuItem value={EAuthType.BEARER}>Bearer token</MenuItem>
+                                                            <MenuItem value={EAuthType.HEADER}>Custom header</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
 
-                                    {/* Resultado de la prueba: lo ha ejecutado el back, no el navegador */}
-                                    {testResult &&
-                                        <Alert severity={testResult.ok ? (testResult.status && testResult.status < 400 ? 'success' : 'warning') : 'error'} sx={{ py: 0 }}>
-                                            {testResult.ok
-                                                ? <>
-                                                    <Typography variant='body2'>
-                                                        HTTP {testResult.status} · {testResult.durationMs} ms · {testResult.bytes} bytes
-                                                        {form.responseType === EResponseType.JSON && testResult.jsonParsed === false && ' · body is not valid JSON'}
-                                                    </Typography>
-                                                    {testResult.preview &&
-                                                        <Box component='pre' sx={{ m: 0, mt: 0.5, maxHeight: 120, overflow: 'auto', fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                                                            {testResult.preview}
-                                                        </Box>
+                                                    {form.auth.type === EAuthType.BASIC && <>
+                                                        <TextField size='small' label='Username' value={form.auth.username ?? ''} sx={{ width: 200 }}
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchAuth({ username: e.target.value })} />
+                                                        <SecretField label='Password' value={form.auth.password ?? ''}
+                                                            onChange={v => patchAuth({ password: v })} />
+                                                    </>}
+
+                                                    {form.auth.type === EAuthType.BEARER &&
+                                                        <SecretField label='Token' value={form.auth.token ?? ''} width={360}
+                                                            onChange={v => patchAuth({ token: v })} />
                                                     }
-                                                  </>
-                                                : <Typography variant='body2'>{testResult.error} ({testResult.durationMs} ms)</Typography>
-                                            }
-                                        </Alert>
-                                    }
 
-                                    <Stack direction='row' justifyContent='flex-end' spacing={1}>
-                                        <Tooltip title='Run the request now, from the Kwirth backend — the same network, certificates and identity the real polling uses'>
-                                            <span>
-                                                <Button size='small' disabled={testing || saving} onClick={testConnection}>
-                                                    {testing ? <CircularProgress size={14} /> : 'Test'}
-                                                </Button>
-                                            </span>
-                                        </Tooltip>
-                                        <Button size='small' variant='contained' disabled={saving || testing} onClick={submitForm}>
-                                            {saving ? <CircularProgress size={14} /> : editingName ? 'Update' : 'Add'}
-                                        </Button>
-                                        <Button size='small' disabled={saving} onClick={() => { setShowForm(false); setEditingName(undefined); setErrors([]); setTestResult(undefined) }}>Cancel</Button>
-                                    </Stack>
-                                </>
-                            }
-                        </Box>
-                    </>
-                }
-            </DialogContent>
+                                                    {form.auth.type === EAuthType.HEADER && <>
+                                                        <TextField size='small' label='Header name' value={form.auth.headerName ?? ''} sx={{ width: 200 }}
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchAuth({ headerName: e.target.value })} />
+                                                        <SecretField label='Header value' value={form.auth.headerValue ?? ''}
+                                                            onChange={v => patchAuth({ headerValue: v })} />
+                                                    </>}
+                                                </Stack>
 
-            {/*
-                Aqui estaban Export e Import. Se fueron porque las conexiones de este provider viajan en
-                ☰ Kwirth export, la puerta de TODAS las extensiones, y tener dos obligaba a investigar
-                cual exportaba que.
+                                                <Divider />
 
-                🔴 Y porque el import de aqui FUSIONABA —reemplazaba las conexiones cuyo nombre ya
-                existia y añadia las nuevas, sin quitar nada— mientras que el bundle REEMPLAZA: lo que
-                queda tras importar es exactamente lo que traia el fichero. El mismo contenido dejaba el
-                sistema en dos estados distintos segun por donde entrara, y nada lo advertia.
-            */}
-            <DialogActions sx={{ justifyContent: 'flex-end', px: 2 }}>
-                <Button onClick={onClose} disabled={saving}>Close</Button>
-            </DialogActions>
-        </Dialog>
+                                                <HeaderEditor headers={form.headers} onChange={h => patch({ headers: h })} />
 
-    </>
+                                                {showBody &&
+                                                    <TextField size='small' label='Body' multiline minRows={3} value={form.body ?? ''}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ body: e.target.value })} />
+                                                }
+                                            </Stack>
+                                        </Box>
+
+                                        {errors.length > 0 &&
+                                            <Alert severity='warning' sx={{ py: 0 }}>
+                                                {errors.map((e, i) => <div key={i}>{e}</div>)}
+                                            </Alert>
+                                        }
+                                        {error && <Alert severity='error' sx={{ py: 0 }}>{error}</Alert>}
+
+                                        {/* Resultado de la prueba: lo ha ejecutado el back, no el navegador */}
+                                        {testResult &&
+                                            <Alert severity={testResult.ok ? (testResult.status && testResult.status < 400 ? 'success' : 'warning') : 'error'} sx={{ py: 0 }}>
+                                                {testResult.ok
+                                                    ? <>
+                                                        <Typography variant='body2'>
+                                                            HTTP {testResult.status} · {testResult.durationMs} ms · {testResult.bytes} bytes
+                                                            {form.responseType === EResponseType.JSON && testResult.jsonParsed === false && ' · body is not valid JSON'}
+                                                        </Typography>
+                                                        {testResult.preview &&
+                                                            <Box component='pre' sx={{ m: 0, mt: 0.5, maxHeight: 120, overflow: 'auto', fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                                                                {testResult.preview}
+                                                            </Box>
+                                                        }
+                                                      </>
+                                                    : <Typography variant='body2'>{testResult.error} ({testResult.durationMs} ms)</Typography>
+                                                }
+                                            </Alert>
+                                        }
+
+                                        <Stack direction='row' spacing={1} sx={{
+                                            justifyContent: 'flex-end'
+                                        }}>
+                                            <Tooltip title='Run the request now, from the Kwirth backend — the same network, certificates and identity the real polling uses'>
+                                                <span>
+                                                    <Button size='small' disabled={testing || saving} onClick={testConnection}>
+                                                        {testing ? <CircularProgress size={14} /> : 'Test'}
+                                                    </Button>
+                                                </span>
+                                            </Tooltip>
+                                            <Button size='small' variant='contained' disabled={saving || testing} onClick={submitForm}>
+                                                {saving ? <CircularProgress size={14} /> : editingName ? 'Update' : 'Add'}
+                                            </Button>
+                                            <Button size='small' disabled={saving} onClick={() => { setShowForm(false); setEditingName(undefined); setErrors([]); setTestResult(undefined) }}>Cancel</Button>
+                                        </Stack>
+                                    </>
+                                }
+                            </Box>
+                        </>
+                    }
+                </DialogContent>
+
+                {/*
+                    Aqui estaban Export e Import. Se fueron porque las conexiones de este provider viajan en
+                    ☰ Kwirth export, la puerta de TODAS las extensiones, y tener dos obligaba a investigar
+                    cual exportaba que.
+
+                    🔴 Y porque el import de aqui FUSIONABA —reemplazaba las conexiones cuyo nombre ya
+                    existia y añadia las nuevas, sin quitar nada— mientras que el bundle REEMPLAZA: lo que
+                    queda tras importar es exactamente lo que traia el fichero. El mismo contenido dejaba el
+                    sistema en dos estados distintos segun por donde entrara, y nada lo advertia.
+                */}
+                <DialogActions sx={{ justifyContent: 'flex-end', px: 2 }}>
+                    <Button onClick={onClose} disabled={saving}>Close</Button>
+                </DialogActions>
+            </Dialog>
+
+        </>
+    );
 }
 
 export default HttpPullPushConfigDialog

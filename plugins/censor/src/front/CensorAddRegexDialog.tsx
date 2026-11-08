@@ -40,7 +40,9 @@ const CensorAddRegexDialog: React.FC<ICensorAddRegexDialogProps> = ({ data, send
     }
 
     return (
-        <Dialog open={true} PaperProps={{ sx: { width: 560, maxWidth: '95vw' } }}>
+        <Dialog open={true} slotProps={{
+            paper: { sx: { width: 560, maxWidth: '95vw' } }
+        }}>
             <DialogTitle>Add regex</DialogTitle>
             <DialogContent>
                 <Stack spacing={2} sx={{ pt: 1 }}>
@@ -59,7 +61,9 @@ const CensorAddRegexDialog: React.FC<ICensorAddRegexDialogProps> = ({ data, send
                         onChange={e => onPatternChange(e.target.value)}
                         error={!!patternError}
                         helperText={patternError || ' '}
-                        inputProps={{ style: { fontFamily: 'monospace' } }}
+                        slotProps={{
+                            htmlInput: { style: { fontFamily: 'monospace' } }
+                        }}
                     />
                     <TextField
                         label='Description' size='small' fullWidth multiline rows={3}
@@ -73,7 +77,7 @@ const CensorAddRegexDialog: React.FC<ICensorAddRegexDialogProps> = ({ data, send
                 <Button variant='outlined' onClick={onClose}>Cancel</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { CensorAddRegexDialog }

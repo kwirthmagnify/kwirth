@@ -116,43 +116,57 @@ const UsageLimitsEditor: React.FC<IUsageLimitsEditorProps> = (props: IUsageLimit
         — that a tokens or cost ceiling stops the NEXT call, because the amount is only known once the
         model has answered — is still said, in one line, where the limit is set.
     */
-    return (<Stack direction='column' spacing={0.5} sx={{ mt: 0.5 }}>
-        <Typography variant='caption' color='text.secondary'>
-            Stop spending on <b>{props.subject}</b>: a call goes out only if <b>no</b> enabled ceiling is
-            reached. ⚠️ A <b>calls</b> ceiling stops the call that would exceed it; <b>tokens</b> and
-            <b> cost</b> are only known after the answer, so those stop the <b>next</b> one.
-        </Typography>
-        {props.usage && props.durable === false &&
-            <Typography variant='caption' color='warning.main'>
-                ⚠️ Counters kept <b>in memory</b> (no SQL): they reset on every restart, and so do these limits.
+    return (
+        <Stack direction='column' spacing={0.5} sx={{ mt: 0.5 }}>
+            <Typography variant='caption' sx={{
+                color: 'text.secondary'
+            }}>
+                Stop spending on <b>{props.subject}</b>: a call goes out only if <b>no</b> enabled ceiling is
+                reached. ⚠️ A <b>calls</b> ceiling stops the call that would exceed it; <b>tokens</b> and
+                <b> cost</b> are only known after the answer, so those stop the <b>next</b> one.
             </Typography>
-        }
-        {USAGE_ROWS.map(({ unit, label, of }) => {
-            const w: IUsageWindows = limits[unit] ?? { enabled: false }
-            /*
-                🔴 El gasto YA NO va bajo cada campo. Iba en el helperText de su ventana, y aparecía
-                sólo cuando había consumo — así que el diálogo CAMBIABA DE TAMAÑO al seleccionar un
-                modelo: ocho helpers que aparecen de golpe son ocho líneas más de alto, y el contenido
-                salta bajo el cursor. Un diálogo que se mueve mientras lo lees cuesta más que el dato
-                que daba, y el dato está en el panel de consumo.
-            */
-            return (<Stack key={unit} direction='row' spacing={1} alignItems='flex-start'>
-                {/* flexShrink: 0 — inside the row the label box would otherwise shrink below its width
-                    and split 'Input tokens' into two lines, which costs the height the two columns were
-                    meant to save. */}
-                <FormControlLabel sx={{ width: '150px', flexShrink: 0, mr: 0, mt: 0.5 }} control={
-                    <Checkbox size='small' checked={!!w.enabled} disabled={props.disabled}
-                        onChange={e => patch(unit, { enabled: e.target.checked })} />
-                } label={<Typography variant='body2'>{label}</Typography>} />
-                <TextField value={w.daily ?? ''} onChange={e => patch(unit, { daily: numberOrUndefined(e.target.value) })}
-                    label='Per day' variant='standard' type='number' fullWidth size='small'
-                    disabled={props.disabled || !w.enabled} inputProps={{ min: 0 }} placeholder='no limit' />
-                <TextField value={w.monthly ?? ''} onChange={e => patch(unit, { monthly: numberOrUndefined(e.target.value) })}
-                    label='Per month' variant='standard' type='number' fullWidth size='small'
-                    disabled={props.disabled || !w.enabled} inputProps={{ min: 0 }} placeholder='no limit' />
-            </Stack>)
-        })}
-    </Stack>)
+            {props.usage && props.durable === false &&
+                <Typography variant='caption' sx={{
+                    color: 'warning.main'
+                }}>
+                    ⚠️ Counters kept <b>in memory</b> (no SQL): they reset on every restart, and so do these limits.
+                </Typography>
+            }
+            {USAGE_ROWS.map(({ unit, label, of }) => {
+                const w: IUsageWindows = limits[unit] ?? { enabled: false }
+                /*
+                    🔴 El gasto YA NO va bajo cada campo. Iba en el helperText de su ventana, y aparecía
+                    sólo cuando había consumo — así que el diálogo CAMBIABA DE TAMAÑO al seleccionar un
+                    modelo: ocho helpers que aparecen de golpe son ocho líneas más de alto, y el contenido
+                    salta bajo el cursor. Un diálogo que se mueve mientras lo lees cuesta más que el dato
+                    que daba, y el dato está en el panel de consumo.
+                */
+                return (
+                    <Stack key={unit} direction='row' spacing={1} sx={{
+                        alignItems: 'flex-start'
+                    }}>
+                        {/* flexShrink: 0 — inside the row the label box would otherwise shrink below its width
+                            and split 'Input tokens' into two lines, which costs the height the two columns were
+                            meant to save. */}
+                        <FormControlLabel sx={{ width: '150px', flexShrink: 0, mr: 0, mt: 0.5 }} control={
+                            <Checkbox size='small' checked={!!w.enabled} disabled={props.disabled}
+                                onChange={e => patch(unit, { enabled: e.target.checked })} />
+                        } label={<Typography variant='body2'>{label}</Typography>} />
+                        <TextField value={w.daily ?? ''} onChange={e => patch(unit, { daily: numberOrUndefined(e.target.value) })}
+                            label='Per day' variant='standard' type='number' fullWidth size='small'
+                            disabled={props.disabled || !w.enabled} placeholder='no limit' slotProps={{
+                            htmlInput: { min: 0 }
+                        }} />
+                        <TextField value={w.monthly ?? ''} onChange={e => patch(unit, { monthly: numberOrUndefined(e.target.value) })}
+                            label='Per month' variant='standard' type='number' fullWidth size='small'
+                            disabled={props.disabled || !w.enabled} placeholder='no limit' slotProps={{
+                            htmlInput: { min: 0 }
+                        }} />
+                    </Stack>
+                );
+            })}
+        </Stack>
+    );
 }
 
 // ── LlmSelector ─────────────────────────────────────────────────────────────
@@ -270,7 +284,9 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
         control that applies the form to the list scrolled out of sight.
     */
     return (
-        <Dialog open={true} onClose={() => props.onClose(undefined)} PaperProps={{ sx: { width: 'auto', maxWidth: 'none', height: 'auto' } }}>
+        <Dialog open={true} onClose={() => props.onClose(undefined)} slotProps={{
+            paper: { sx: { width: 'auto', maxWidth: 'none', height: 'auto' } }
+        }}>
             <DialogTitle sx={{ pb: 1 }}>AI — LLM config</DialogTitle>
             <DialogContent style={{ display: 'flex' }}>
                 {/* The list STRETCHES to the height the form sets, and never sets it itself: absolute
@@ -282,7 +298,9 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                                 <ListItemButton key={index} selected={selectedIndex === index} onClick={() => onLlmSelected(index)}>
                                     <Stack direction='column'>
                                         <Typography sx={{ fontWeight: selectedIndex === index ? 'bold' : 'normal' }}>{llm.id}</Typography>
-                                        <Typography color='darkgray' fontSize={12}>{llm.provider}</Typography>
+                                        <Typography color='darkgray' sx={{
+                                            fontSize: 12
+                                        }}>{llm.provider}</Typography>
                                     </Stack>
                                 </ListItemButton>
                             ))}
@@ -295,7 +313,14 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                     properties it creates. */}
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', minWidth: 0 }}>
                     <Stack spacing={2} style={{ width: '100%' }}>
-                        <Stack direction='row' spacing={3} alignItems='stretch' sx={{ flexWrap: 'wrap', height: '100%' }}>
+                        <Stack
+                            direction='row'
+                            spacing={3}
+                            sx={{
+                                alignItems: 'stretch',
+                                flexWrap: 'wrap',
+                                height: '100%'
+                            }}>
                         <Stack direction='column' spacing={1} sx={{ flex: `0 0 ${COL_WIDTH}px`, width: COL_WIDTH }}>
                             <TextField value={id} onChange={e => setId(e.target.value)} placeholder='Enter LLM id' label='LLM ID' variant='standard' fullWidth />
                             <FormControl variant='standard' sx={{ width: '100%' }}>
@@ -330,25 +355,51 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                                 blank cost field otherwise reads as 'free', and that is a bill nobody is
                                 counting. */}
                             <Stack direction='row' spacing={1} sx={{ flexWrap: 'nowrap' }}>
-                                <TextField value={inputCostPerMillion} onChange={e => setInputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Input cost /M' variant='standard' type='number' sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 0, step: 0.01 }}
-                                    placeholder={providerCost(provider, 'inputCostPerMillion')} InputLabelProps={{ shrink: true }} />
-                                <TextField value={outputCostPerMillion} onChange={e => setOutputCostPerMillion(e.target.value === '' ? '' : +e.target.value)} label='Output cost /M' variant='standard' type='number' sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 0, step: 0.01 }}
-                                    placeholder={providerCost(provider, 'outputCostPerMillion')} InputLabelProps={{ shrink: true }} />
+                                <TextField
+                                    value={inputCostPerMillion}
+                                    onChange={e => setInputCostPerMillion(e.target.value === '' ? '' : +e.target.value)}
+                                    label='Input cost /M'
+                                    variant='standard'
+                                    type='number'
+                                    sx={{ flex: 1, minWidth: 0 }}
+                                    placeholder={providerCost(provider, 'inputCostPerMillion')}
+                                    slotProps={{
+                                        htmlInput: { min: 0, step: 0.01 },
+                                        inputLabel: { shrink: true }
+                                    }} />
+                                <TextField
+                                    value={outputCostPerMillion}
+                                    onChange={e => setOutputCostPerMillion(e.target.value === '' ? '' : +e.target.value)}
+                                    label='Output cost /M'
+                                    variant='standard'
+                                    type='number'
+                                    sx={{ flex: 1, minWidth: 0 }}
+                                    placeholder={providerCost(provider, 'outputCostPerMillion')}
+                                    slotProps={{
+                                        htmlInput: { min: 0, step: 0.01 },
+                                        inputLabel: { shrink: true }
+                                    }} />
                             </Stack>
-                            <Stack direction='row' alignItems='center'>
-                                <Typography flex={1}>Use provider API Key</Typography>
+                            <Stack direction='row' sx={{
+                                alignItems: 'center'
+                            }}>
+                                <Typography sx={{
+                                    flex: 1
+                                }}>Use provider API Key</Typography>
                                 <Checkbox checked={useProviderKey} onChange={e => setUseProviderKey(e.target.checked)} />
                             </Stack>
                             <TextField value={key} onChange={e => setKey(e.target.value)} disabled={useProviderKey} label='API Key' placeholder='Enter API Key' variant='standard' fullWidth
                                 type={showPassword ? 'text' : 'password'}
-                                InputProps={{
-                                    endAdornment: (
-                                        <InputAdornment position='end'>
-                                            <IconButton onClick={() => setShowPassword(!showPassword)} edge='end'>
-                                                {showPassword ? <VisibilityOff /> : <Visibility />}
-                                            </IconButton>
-                                        </InputAdornment>
-                                    )
+                                slotProps={{
+                                    input: {
+                                        endAdornment: (
+                                            <InputAdornment position='end'>
+                                                <IconButton onClick={() => setShowPassword(!showPassword)} edge='end'>
+                                                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        )
+                                    }
                                 }}
                             />
                         </Stack>
@@ -368,7 +419,9 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                                 measures is not what the field seems to promise. ONE fixed line, the same
                                 in both cases — a caption that grows when the checkbox is ticked is one
                                 more thing resizing the form. */}
-                            <Typography variant='caption' color='text.secondary'>
+                            <Typography variant='caption' sx={{
+                                color: 'text.secondary'
+                            }}>
                                 Left empty, the provider's limits apply. Spending is counted per API key.
                             </Typography>
                         </Stack>
@@ -376,19 +429,23 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                     </Stack>
                     <Stack direction='row' spacing={1} sx={{ pt: 2 }}>
                         <Button variant='outlined' size='small' onClick={onNew}>New</Button>
-                        <Typography flex={1} />
+                        <Typography sx={{
+                            flex: 1
+                        }} />
                         <Button color='error' onClick={onRemove} disabled={selectedIndex === null}>Remove</Button>
                         <Button variant='contained' onClick={onAdd} disabled={!id || !model}>{selectedIndex !== null ? 'Update' : 'Add'}</Button>
                     </Stack>
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Box flex={1} />
+                <Box sx={{
+                    flex: 1
+                }} />
                 <Button onClick={() => props.onClose(llms)} variant='contained'>OK</Button>
                 <Button onClick={() => props.onClose(undefined)} variant='outlined'>Cancel</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 // ── AiConfigProvider ─────────────────────────────────────────────────────────
@@ -493,7 +550,9 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     }
 
     return (
-        <Dialog open={true} onClose={() => props.onClose(undefined)} PaperProps={{ sx: { width: 'auto', maxWidth: 'none', height: 'auto' } }}>
+        <Dialog open={true} onClose={() => props.onClose(undefined)} slotProps={{
+            paper: { sx: { width: 'auto', maxWidth: 'none', height: 'auto' } }
+        }}>
             <DialogTitle sx={{ pb: 1 }}>AI — Provider config</DialogTitle>
             {/* Same layout as the LLM dialog: see the notes there. */}
             <DialogContent style={{ display: 'flex' }}>
@@ -504,7 +563,9 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                                 <ListItemButton key={index} selected={selectedIndex === index} onClick={() => onProviderSelected(p, index)}>
                                     <Stack direction='column'>
                                         <Typography sx={{ fontWeight: selectedIndex === index ? 'bold' : 'normal' }}>{p.name}</Typography>
-                                        <Typography color='darkgray' fontSize={11}>{p.models?.length || 0} models loaded</Typography>
+                                        <Typography color='darkgray' sx={{
+                                            fontSize: 11
+                                        }}>{p.models?.length || 0} models loaded</Typography>
                                     </Stack>
                                 </ListItemButton>
                             ))}
@@ -517,7 +578,13 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                     properties it creates. */}
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', minWidth: 0 }}>
                     <Stack spacing={2} style={{ width: '100%' }}>
-                    <Stack direction='row' spacing={3} alignItems='flex-start' sx={{ flexWrap: 'wrap' }}>
+                    <Stack
+                        direction='row'
+                        spacing={3}
+                        sx={{
+                            alignItems: 'flex-start',
+                            flexWrap: 'wrap'
+                        }}>
                     <Stack direction='column' spacing={1} sx={{ flex: `0 0 ${COL_WIDTH}px`, width: COL_WIDTH }}>
                         <TextField label='Name' variant='standard' fullWidth placeholder='e.g. huawei-maas, openai-prod'
                             value={providerName} onChange={e => setProviderName(e.target.value)}
@@ -534,14 +601,16 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                         <TextField label='API Key / Token' type={showPassword ? 'text' : 'password'} variant='standard' fullWidth
                             value={providerKey} onChange={e => setProviderKey(e.target.value)}
                             helperText='This key can be afterwards linked to specific uses.'
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position='end'>
-                                        <IconButton onClick={() => setShowPassword(!showPassword)} edge='end'>
-                                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                )
+                            slotProps={{
+                                input: {
+                                    endAdornment: (
+                                        <InputAdornment position='end'>
+                                            <IconButton onClick={() => setShowPassword(!showPassword)} edge='end'>
+                                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    )
+                                }
                             }}
                         />
                         {/* ALWAYS on screen, disabled when the type does not use it. A field that comes
@@ -556,10 +625,16 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                             model added. Left empty, a model with no price of its own counts as 0. */}
                         <Typography variant='subtitle2' sx={{ pt: 1 }}>Default model costs</Typography>
                         <Stack direction='row' spacing={1} sx={{ flexWrap: 'wrap' }}>
-                            <TextField value={providerInputCost} onChange={e => setProviderInputCost(e.target.value === '' ? '' : +e.target.value)} label='Input cost /M' variant='standard' type='number' sx={{ flex: 1, minWidth: '110px' }} inputProps={{ min: 0, step: 0.01 }} />
-                            <TextField value={providerOutputCost} onChange={e => setProviderOutputCost(e.target.value === '' ? '' : +e.target.value)} label='Output cost /M' variant='standard' type='number' sx={{ flex: 1, minWidth: '110px' }} inputProps={{ min: 0, step: 0.01 }} />
+                            <TextField value={providerInputCost} onChange={e => setProviderInputCost(e.target.value === '' ? '' : +e.target.value)} label='Input cost /M' variant='standard' type='number' sx={{ flex: 1, minWidth: '110px' }} slotProps={{
+                                htmlInput: { min: 0, step: 0.01 }
+                            }} />
+                            <TextField value={providerOutputCost} onChange={e => setProviderOutputCost(e.target.value === '' ? '' : +e.target.value)} label='Output cost /M' variant='standard' type='number' sx={{ flex: 1, minWidth: '110px' }} slotProps={{
+                                htmlInput: { min: 0, step: 0.01 }
+                            }} />
                         </Stack>
-                        <Typography variant='caption' color='text.secondary'>
+                        <Typography variant='caption' sx={{
+                            color: 'text.secondary'
+                        }}>
                             Used by models that declare no cost of their own.
                         </Typography>
                     </Stack>
@@ -578,7 +653,13 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                     </Stack>
                     </Stack>
                     </Stack>
-                    <Stack direction='row' spacing={1} alignItems='center' sx={{ pt: 2 }}>
+                    <Stack
+                        direction='row'
+                        spacing={1}
+                        sx={{
+                            alignItems: 'center',
+                            pt: 2
+                        }}>
                         <Button variant='outlined' onClick={onNew}>New</Button>
                         { props.onLoadModels && (
                             <Button variant='outlined' onClick={onLoadModels} disabled={!providerType || !providerKey || loadingModels}
@@ -586,19 +667,23 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                                 {loadingModels ? 'Loading...' : `Load models${pendingModels.length ? ` (${pendingModels.length})` : ''}`}
                             </Button>
                         )}
-                        <Typography flex={1} />
+                        <Typography sx={{
+                            flex: 1
+                        }} />
                         <Button variant='text' color='error' onClick={onRemove} disabled={selectedIndex === null}>Remove</Button>
                         <Button variant='contained' onClick={onAdd} disabled={!providerName.trim() || !providerType}>{selectedIndex !== null ? 'Update' : 'Add'}</Button>
                     </Stack>
                 </Box>
             </DialogContent>
             <DialogActions sx={{ p: 2 }}>
-                <Box flex={1} />
+                <Box sx={{
+                    flex: 1
+                }} />
                 <Button onClick={() => props.onClose(providers)} variant='contained'>Save</Button>
                 <Button onClick={() => props.onClose(undefined)} variant='outlined'>Cancel</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 // ── ToolSelector ─────────────────────────────────────────────────────────────
@@ -612,7 +697,13 @@ interface IToolSelectorProps {
 }
 
 const ToolSelector: React.FC<IToolSelectorProps> = ({ tools, selected, autoTools, disabled, onChange }) => (
-    <Stack direction='row' alignItems='flex-end' spacing={1} sx={{ width: '100%' }}>
+    <Stack
+        direction='row'
+        spacing={1}
+        sx={{
+            alignItems: 'flex-end',
+            width: '100%'
+        }}>
         <FormControlLabel
             control={<Switch size='small' checked={autoTools} onChange={e => onChange(selected, e.target.checked)} disabled={disabled} />}
             label={<Typography variant='caption'>Auto</Typography>}
@@ -633,7 +724,12 @@ const ToolSelector: React.FC<IToolSelectorProps> = ({ tools, selected, autoTools
                         <Checkbox size='small' checked={selected.includes(t.name)} />
                         <Stack direction='column'>
                             <Typography variant='body2'>{t.name}</Typography>
-                            {t.description && <Typography variant='caption' color='text.secondary' sx={{ fontSize: '0.65rem' }}>{t.description}</Typography>}
+                            {t.description && <Typography
+                                variant='caption'
+                                sx={{
+                                    color: 'text.secondary',
+                                    fontSize: '0.65rem'
+                                }}>{t.description}</Typography>}
                         </Stack>
                     </MenuItem>
                 ))}

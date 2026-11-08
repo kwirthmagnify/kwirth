@@ -39,7 +39,9 @@ export const MircSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
             <DialogTitle>Configure mIRC channel</DialogTitle>
             <DialogContent>
                 <Stack direction='column' spacing={2} sx={{ m: 1 }}>
-                    <Typography variant='caption' color='text.secondary'>
+                    <Typography variant='caption' sx={{
+                        color: 'text.secondary'
+                    }}>
                         Your nick is how other users see you across all clusters you can reach.
                     </Typography>
                     <TextField value={nick} onChange={(e) => setNick(e.target.value)} variant='standard' label='Nick' fullWidth autoFocus />
@@ -50,5 +52,5 @@ export const MircSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                 <Button variant='outlined' onClick={cancel}>CANCEL</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }

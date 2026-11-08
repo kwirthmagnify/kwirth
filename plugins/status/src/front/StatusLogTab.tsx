@@ -73,9 +73,21 @@ interface ILogMessageProps {
     tabs that tell "there is nothing here" differently read as two different kinds of problem.
 */
 const LogMessage: React.FC<ILogMessageProps> = ({ title, detail, warning }) => (
-    <Stack aria-label='Log message' alignItems='center' justifyContent='center' spacing={1} sx={{ flex: 1, height: '100%', px: 4, textAlign: 'center' }}>
+    <Stack
+        aria-label='Log message'
+        spacing={1}
+        sx={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            flex: 1,
+            height: '100%',
+            px: 4,
+            textAlign: 'center'
+        }}>
         <Typography variant='subtitle1' color={warning ? 'warning.main' : 'text.secondary'}>{title}</Typography>
-        <Typography variant='body2' color='text.secondary'>{detail}</Typography>
+        <Typography variant='body2' sx={{
+            color: 'text.secondary'
+        }}>{detail}</Typography>
     </Stack>
 )
 
@@ -109,13 +121,15 @@ export const StatusCoreLogTab: React.FC<ICoreLogTabProps> = ({ admin, log, filte
     const shown = filterLogLines(log.lines, filter)
     return (
         <Stack spacing={1} sx={{ height: '100%', minHeight: 0 }}>
-            <Typography variant='caption' color='text.secondary'>
+            <Typography variant='caption' sx={{
+                color: 'text.secondary'
+            }}>
                 Last {log.lines.length} lines of the container running now (at most {CORE_LOG_LINES}). It is read again with every snapshot.
                 {matchNote(shown.length, log.lines.length, filter)}
             </Typography>
             {shown.length === 0 ? <LogMessage {...noMatch(filter, log.lines.length)} /> : <LogBox lines={shown} />}
         </Stack>
-    )
+    );
 }
 
 interface IPreviousLogTabProps {
@@ -156,11 +170,13 @@ export const StatusPreviousLogTab: React.FC<IPreviousLogTabProps> = ({ admin, re
                 </Box>
             </Typography>
             {(t?.finishedAt || filter.trim()) &&
-                <Typography variant='caption' color='text.secondary'>
+                <Typography variant='caption' sx={{
+                    color: 'text.secondary'
+                }}>
                     {t?.finishedAt && <>Ended at {t.finishedAt}{t.startedAt && <>, started at {t.startedAt}</>}</>}
                     {matchNote(shown.length, log.lines.length, filter)}
                 </Typography>}
             {shown.length === 0 ? <LogMessage {...noMatch(filter, log.lines.length)} /> : <LogBox lines={shown} />}
         </Stack>
-    )
+    );
 }

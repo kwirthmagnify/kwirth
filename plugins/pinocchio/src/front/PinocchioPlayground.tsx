@@ -308,9 +308,13 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
     }
 
     return (
-        <Dialog open={true} PaperProps={{ sx: { width: '90vw', maxWidth: '1300px', height: '85vh' } }}>
+        <Dialog open={true} slotProps={{
+            paper: { sx: { width: '90vw', maxWidth: '1300px', height: '85vh' } }
+        }}>
             <DialogTitle sx={{ pb: 0 }}>
-                <Stack direction='row' alignItems='center' spacing={1}>
+                <Stack direction='row' spacing={1} sx={{
+                    alignItems: 'center'
+                }}>
                     <Science />
                     <Typography variant='h6' sx={{ flex: 1 }}>Playground</Typography>
                     <HelpButton docsUrl={docsUrl(props.clusterUrl)} section='user/06-playground' />
@@ -328,7 +332,13 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 {/* Tab 0: LLM + Input */}
                 {tab === 0 && (
                     <Stack spacing={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', px: 2, pt: 1 }}>
-                        <Stack direction='row' spacing={2} alignItems='flex-end' sx={{ flex: '0 0 auto' }}>
+                        <Stack
+                            direction='row'
+                            spacing={2}
+                            sx={{
+                                alignItems: 'flex-end',
+                                flex: '0 0 auto'
+                            }}>
                             <FormControl variant='standard' sx={{ minWidth: 160 }}>
                                 <InputLabel>LLM</InputLabel>
                                 <Select value={llm} onChange={e => { setLlm(e.target.value); markDirty() }}>
@@ -368,8 +378,12 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                             </Box>
                         </Stack>
                         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                            <Stack direction='row' alignItems='center' spacing={0.5}>
-                                <Typography variant='caption' color='text.secondary'>
+                            <Stack direction='row' spacing={0.5} sx={{
+                                alignItems: 'center'
+                            }}>
+                                <Typography variant='caption' sx={{
+                                    color: 'text.secondary'
+                                }}>
                                     {triggerType === 'artifact' ? 'Artifact JSON' : 'Event JSON'}
                                 </Typography>
                                 <IconButton size='small' onClick={e => openHistory(e, triggerType)} disabled={(triggerType === 'artifact' ? artifactHistory : businessHistory).length === 0}>
@@ -386,7 +400,13 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 {/* Tab 1: Call */}
                 {tab === 1 && (
                     <Stack spacing={1} sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', px: 2, pt: 1 }}>
-                        <Stack direction='row' alignItems='flex-end' spacing={1} sx={{ flex: '0 0 auto' }}>
+                        <Stack
+                            direction='row'
+                            spacing={1}
+                            sx={{
+                                alignItems: 'flex-end',
+                                flex: '0 0 auto'
+                            }}>
                             <FormControl variant='standard' sx={{ minWidth: 140 }}>
                                 <InputLabel>Prompt type</InputLabel>
                                 <Select value={promptType} onChange={e => { setPromptType(e.target.value as 'jinja' | 'artifact'); markDirty() }}>
@@ -405,15 +425,31 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                         </Stack>
                         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: 1 }}>
                             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                                <Stack direction='row' alignItems='center' spacing={0.5} sx={{ flexShrink: 0 }}>
-                                    <Typography variant='caption' color='text.secondary'>System</Typography>
+                                <Stack
+                                    direction='row'
+                                    spacing={0.5}
+                                    sx={{
+                                        alignItems: 'center',
+                                        flexShrink: 0
+                                    }}>
+                                    <Typography variant='caption' sx={{
+                                        color: 'text.secondary'
+                                    }}>System</Typography>
                                     <IconButton size='small' onClick={e => openHistory(e, 'system')} disabled={systemHistory.length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
                                 </Stack>
                                 <textarea value={system} onChange={e => { setSystem(e.target.value); markDirty() }} style={{ flex: 1, resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13, minHeight: 0 }} placeholder='Enter system prompt…' />
                             </Box>
                             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                                <Stack direction='row' alignItems='center' spacing={0.5} sx={{ flexShrink: 0 }}>
-                                    <Typography variant='caption' color='text.secondary'>Prompt</Typography>
+                                <Stack
+                                    direction='row'
+                                    spacing={0.5}
+                                    sx={{
+                                        alignItems: 'center',
+                                        flexShrink: 0
+                                    }}>
+                                    <Typography variant='caption' sx={{
+                                        color: 'text.secondary'
+                                    }}>Prompt</Typography>
                                     <IconButton size='small' onClick={e => openHistory(e, 'prompt')} disabled={promptHistory.length === 0}><HistoryOutlined sx={{ fontSize: 14 }} /></IconButton>
                                 </Stack>
                                 <textarea value={prompt} onChange={e => { setPrompt(e.target.value); markDirty() }} disabled={promptType === 'artifact'} style={{ flex: 1, resize: 'none', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13, minHeight: 0 }} placeholder='Enter the prompt template…' />
@@ -443,7 +479,9 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 {tab === 2 && (
                     <Box sx={{ flex: 1, overflowY: 'auto', bgcolor: 'action.hover', borderRadius: 1, p: 1, mx: 2, mt: 1 }}>
                         {newContent.filter(item => !('findings' in item || 'report' in item) && (item as IMessage).role !== 'llm').length === 0
-                            ? <Typography variant='body2' color='text.disabled'>No input yet — fire an event first.</Typography>
+                            ? <Typography variant='body2' sx={{
+                            color: 'text.disabled'
+                        }}>No input yet — fire an event first.</Typography>
                             : newContent.filter(item => !('findings' in item || 'report' in item) && (item as IMessage).role !== 'llm').map((item, i) => renderItem(item, i))
                         }
                     </Box>
@@ -453,7 +491,9 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 {tab === 3 && (
                     <Box sx={{ flex: 1, overflowY: 'auto', bgcolor: 'action.hover', borderRadius: 1, p: 1, mx: 2, mt: 1 }}>
                         {newContent.filter(item => 'findings' in item || 'report' in item || (item as IMessage).role === 'llm').length === 0
-                            ? <Typography variant='body2' color='text.disabled'>No results yet — apply config then fire.</Typography>
+                            ? <Typography variant='body2' sx={{
+                            color: 'text.disabled'
+                        }}>No results yet — apply config then fire.</Typography>
                             : newContent.filter(item => 'findings' in item || 'report' in item || (item as IMessage).role === 'llm').map((item, i) => {
                                 if ((item as IMessage).role === 'llm') {
                                     const msg = item as IMessage
@@ -467,15 +507,23 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                                 const a = item as IAnalysis
                                 return (
                                     <Box key={i} sx={{ mb: 1, pb: 1, borderBottom: 1, borderColor: 'divider' }}>
-                                        {a.text && <Typography variant='caption' color='text.secondary'>{new Date(a.timestamp).toLocaleTimeString()} {a.text}</Typography>}
+                                        {a.text && <Typography variant='caption' sx={{
+                                            color: 'text.secondary'
+                                        }}>{new Date(a.timestamp).toLocaleTimeString()} {a.text}</Typography>}
                                         {(a.findings ?? []).map((f, fi) => (
                                             <Typography key={fi} variant='body2' sx={{ fontFamily: 'monospace', fontSize: 12 }}>
                                                 <b>[{f.level}]</b> {f.description}
                                             </Typography>
                                         ))}
-                                        {a.report && <Typography variant='body2' color='text.secondary' sx={{ fontStyle: 'italic', fontSize: 12 }}>Report available</Typography>}
+                                        {a.report && <Typography
+                                            variant='body2'
+                                            sx={{
+                                                color: 'text.secondary',
+                                                fontStyle: 'italic',
+                                                fontSize: 12
+                                            }}>Report available</Typography>}
                                     </Box>
-                                )
+                                );
                             })
                         }
                     </Box>
@@ -497,7 +545,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 </Box>
             </DialogActions>
 
-            <Menu anchorEl={historyAnchor} open={Boolean(historyAnchor)} onClose={() => setHistoryAnchor(null)} PaperProps={{ sx: { maxHeight: 300, overflowY: 'auto' } }}>
+            <Menu anchorEl={historyAnchor} open={Boolean(historyAnchor)} onClose={() => setHistoryAnchor(null)} slotProps={{ paper: { sx: { maxHeight: 300, overflowY: 'auto' } } }}>
                 {historyType === 'spacetype'
                     ? spaceTypeHistory.map((entry, i) => (
                         <MenuItem key={i} onClick={() => selectSpaceTypeHistory(entry)} sx={{ display: 'flex', gap: 1 }}>
@@ -522,7 +570,9 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 }
             </Menu>
 
-            <Dialog open={showExportDialog} onClose={() => setShowExportDialog(false)} PaperProps={{ sx: { width: 420, height: 340 } }}>
+            <Dialog open={showExportDialog} onClose={() => setShowExportDialog(false)} slotProps={{
+                paper: { sx: { width: 420, height: 340 } }
+            }}>
                 <DialogTitle>Export playground</DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1, px: 3, overflow: 'hidden' }}>
                     <ToggleButtonGroup value={exportMode} exclusive size='small' onChange={(_, v) => { if (v) setExportMode(v) }}>
@@ -567,10 +617,14 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={showImportDialog} onClose={() => { setShowImportDialog(false); setPendingImportTriggerId(''); setPendingImportVersionId('') }} PaperProps={{ sx: { width: 400, height: 340 } }}>
+            <Dialog open={showImportDialog} onClose={() => { setShowImportDialog(false); setPendingImportTriggerId(''); setPendingImportVersionId('') }} slotProps={{
+                paper: { sx: { width: 400, height: 340 } }
+            }}>
                 <DialogTitle>Import from trigger</DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1, px: 3, overflow: 'hidden' }}>
-                    <Typography variant='body2' color='warning.main'>
+                    <Typography variant='body2' sx={{
+                        color: 'warning.main'
+                    }}>
                         This will overwrite the current playground configuration (LLM, steps, tools, system and prompt).
                     </Typography>
                     <FormControl variant='standard' fullWidth>
@@ -597,7 +651,7 @@ const PinocchioPlayground: React.FC<IProps> = (props) => {
                 </DialogActions>
             </Dialog>
         </Dialog>
-    )
+    );
 }
 
 export { PinocchioPlayground }

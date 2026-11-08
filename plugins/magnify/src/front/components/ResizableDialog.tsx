@@ -29,13 +29,14 @@ const CustomHandle = React.forwardRef<HTMLDivElement, any>((props, ref) => {
 })
 
 const PaperComponent = React.forwardRef<HTMLDivElement, any>((props, ref) => {
-    const { nodeRef, position, onDrag, onStart, onStop, disabled, ...other } = props
+    // onDragMove, not onDrag: in slotProps.paper an onDrag collides with the DOM one that PaperProps types
+    const { nodeRef, position, onDragMove, onStart, onStop, disabled, ...other } = props
     return (
         <Draggable
             nodeRef={nodeRef} handle='#draggable-dialog-title'
             cancel={'[class*="MuiIconButton-root"], [class*="MuiButton-root"], .no-drag'}
             position={disabled ? { x: 0, y: 0 } : position}
-            onStart={onStart} onDrag={onDrag} onStop={onStop} disabled={disabled}
+            onStart={onStart} onDrag={onDragMove} onStop={onStop} disabled={disabled}
         >
             <Paper {...other} ref={nodeRef} style={{ ...other.style, position: 'fixed', top: 0, left: 0, margin: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }} />
         </Draggable>
@@ -111,11 +112,14 @@ function ResizableDialogImpl(
         })
     }, [])
 
+    // Props for PaperComponent (react-draggable), not for Paper: built apart from slotProps so the object literal
+    // check of PaperProps does not reject them (nodeRef, position...). PaperComponent strips them before <Paper>.
+    const draggablePaperProps = { nodeRef: paperRef, position: { x: layout.x, y: layout.y }, onStart: handleDragStart, onDragMove: handleDrag, onStop: handleDragStop, disabled: isMaximized }
+
     return (
         <Dialog
             open={true} hideBackdrop disableEnforceFocus disableRestoreFocus disablePortal maxWidth={false}
             onMouseDown={onFocus} PaperComponent={PaperComponent as any}
-            PaperProps={{ nodeRef: paperRef, position: { x: layout.x, y: layout.y }, onStart: handleDragStart, onDrag: handleDrag, onStop: handleDragStop, disabled: isMaximized }}
             sx={{
                 pointerEvents: 'none',
                 '& .MuiDialog-container': { display: 'block' },
@@ -123,6 +127,9 @@ function ResizableDialogImpl(
                     pointerEvents: 'auto', maxWidth: 'none', maxHeight: 'none', 
                     transition: (isDragging || isResizing) ? 'none' : 'all 0.2s ease-in-out' 
                 }
+            }}
+            slotProps={{
+                paper: draggablePaperProps
             }}
         >
             <ResizableBox
@@ -185,7 +192,7 @@ function ResizableDialogImpl(
                 </Box>
             </ResizableBox>
         </Dialog>
-    )
+    );
 }
 
 const ResizableDialog = React.forwardRef(ResizableDialogImpl)

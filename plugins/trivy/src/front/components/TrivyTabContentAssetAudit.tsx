@@ -14,7 +14,9 @@ const TrivyTabContentAssetAudit: React.FC<ITabContentTrivyAssetAuditProps> = (pr
     return (
         <Accordion sx={{ m: 0.1 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Stack direction='row' alignItems='center'>
+                <Stack direction='row' sx={{
+                    alignItems: 'center'
+                }}>
                     <Typography sx={{ width: '120px' }}>{check.severity}</Typography>
                     <Typography variant='body2'>{title}</Typography>
                 </Stack>
@@ -28,7 +30,7 @@ const TrivyTabContentAssetAudit: React.FC<ITabContentTrivyAssetAuditProps> = (pr
                 <List>{check.messages.map((m: string, index: number) => <ListItem key={index}><Typography variant='body2'>{m}</Typography></ListItem>)}</List>
             </AccordionDetails>
         </Accordion>
-    )
+    );
 }
 
 export { TrivyTabContentAssetAudit }

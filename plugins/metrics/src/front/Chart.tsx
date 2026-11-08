@@ -170,7 +170,7 @@ export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
     const renderLabel = (data:any) => {
         var values:any[] = props.series.map (s => s[data.index])
         var total:number = values.reduce((acc,value) => acc + (value? value.value:0), 0)  //+++ sometimes value is undefined
-        return <text x={data.x + data.width/3.5} y={data.y-10}>{total.toPrecision(3).replace(/0+$/, '').replace(/\.+$/, '')}</text>
+        return <text x={data.x + data.width/3.5} y={data.y-10}>{total.toPrecision(3).replace(/0+$/, '').replace(/\.+$/, '')}</text>;
     }
 
     switch (chartType) {
@@ -247,7 +247,15 @@ export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
         case EChartType.ValueChart:
             result = (
                 <div style={{height:height*0.8, alignItems:'center', justifyContent:'center', display:'flex', width:'100%'}}>
-                    <Stack direction={'row'} alignItems={'center'} justifyContent={'center'} spacing={2} sx={{ flexWrap: 'wrap', width:'100%'}}>
+                    <Stack
+                        direction={'row'}
+                        spacing={2}
+                        sx={{
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexWrap: 'wrap',
+                            width:'100%'
+                        }}>
                         { props.series.map( (serie,index) => {
                             let value = serie[serie.length-1].value
                             let valueStr = '0'
@@ -259,19 +267,39 @@ export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
                             }
 
                             return (
-                                <Stack key={index} direction={'column'} alignItems={'center'} flex={1} sx={{ height: height }}>
+                                <Stack
+                                    key={index}
+                                    direction={'column'}
+                                    sx={{
+                                        alignItems: 'center',
+                                        flex: 1,
+                                        height: height
+                                    }}>
                                     <Box sx={{ height: '90%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                                        <Typography mt={2} textAlign={'center'} fontSize={Math.min(48, 192/props.series.length)} color={props.series.length===1?props.colour:METRICSCOLOURS[index]}>
+                                        <Typography
+                                            color={props.series.length===1?props.colour:METRICSCOLOURS[index]}
+                                            sx={{
+                                                mt: 2,
+                                                textAlign: 'center',
+                                                fontSize: Math.min(48, 192/props.series.length)
+                                            }}>
                                             {valueStr}
                                         </Typography>
                                     </Box>
                                     <Box sx={{ height: '10%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                                        <Typography textAlign={'center'} fontSize={12} color={props.series.length===1?props.colour:METRICSCOLOURS[index]} sx={{ maxHeight: '60px', overflowY: 'auto', fontSize: '12px'}}>
+                                        <Typography
+                                            color={props.series.length===1?props.colour:METRICSCOLOURS[index]}
+                                            sx={{
+                                                textAlign: 'center',
+                                                maxHeight: '60px',
+                                                overflowY: 'auto',
+                                                fontSize: '12px'
+                                            }}>
                                             {props.names[index]}
                                         </Typography>
                                     </Box>
                                 </Stack>
-                            )
+                            );
                         })}
                     </Stack>
                 </div>
@@ -310,10 +338,18 @@ export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
     return (
         <Card sx={{margin:compact?'3px':'6px', width:'100%'}}>
             <CardHeader sx={{border:0, borderBottom:1, borderStyle:'solid', borderColor: 'divider', backgroundColor:'background.default', height:compact?'0px':'24px'}} title= {
-                <Stack direction={'column'} alignItems={'center'}>
-                    <Stack direction={'row'} alignItems={'center'}>
+                <Stack direction={'column'} sx={{
+                    alignItems: 'center'
+                }}>
+                    <Stack direction={'row'} sx={{
+                        alignItems: 'center'
+                    }}>
                         <MUITooltip key={'tooltip'+props.metricDefinition.metric+JSON.stringify(props.names)} title={<Typography style={{fontSize:12}}><b>{props.metricDefinition.metric}</b><br/><br/>{props.metricDefinition.help}</Typography>}>
-                                <Typography width='100%' fontSize={compact?'10px':'16px'}>{title.length>40?title.substring(0,40)+'...':title}</Typography>
+                                <Typography
+                                    sx={{
+                                        width: '100%',
+                                        fontSize: compact?'10px':'16px'
+                                    }}>{title.length>40?title.substring(0,40)+'...':title}</Typography>
                         </MUITooltip>
                         { props.configurable && <>
                             <IconButton onClick={(event) => setAnchorMenuChart(event.currentTarget)}><MoreVert fontSize='small'/></IconButton>
@@ -323,7 +359,9 @@ export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
                 </Stack>
             } />
             <CardContent sx={{backgroundColor:'background.paper'}}>
-                <Stack direction='column' alignItems='center'>
+                <Stack direction='column' sx={{
+                    alignItems: 'center'
+                }}>
                     <div style={{width:'100%'}}>
                         <ResponsiveContainer height={height} key={props.metricDefinition.metric+JSON.stringify(props.names)}>
                             {result}
@@ -332,5 +370,5 @@ export const Chart: React.FC<IChartProps> = (props:IChartProps) => {
                 </Stack>
             </CardContent>
         </Card>
-    )
+    );
 }

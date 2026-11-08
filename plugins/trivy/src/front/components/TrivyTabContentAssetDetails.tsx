@@ -50,9 +50,13 @@ const TrivyTabContentAssetDetails: React.FC<ITrivyTabContentAssetDetailsProps> =
     const filter = useRef<HTMLInputElement>()
 
     return (
-        <Dialog open={true} disableRestoreFocus PaperProps={{ sx: { backgroundColor: 'background.paper', borderWidth: '1px', borderStyle: 'solid', borderColor: 'divider' } }}>
+        <Dialog open={true} disableRestoreFocus slotProps={{
+            paper: { sx: { backgroundColor: 'background.paper', borderWidth: '1px', borderStyle: 'solid', borderColor: 'divider' } }
+        }}>
             <DialogTitle>
-                <Stack direction='row' spacing={2} alignItems='center'>
+                <Stack direction='row' spacing={2} sx={{
+                    alignItems: 'center'
+                }}>
                     <Avatar>{getAvatarContent(report?.os?.family || 'X')}</Avatar>
                     <Stack direction='column'>
                         <Typography variant='body2'>{asset.namespace}</Typography>
@@ -61,7 +65,9 @@ const TrivyTabContentAssetDetails: React.FC<ITrivyTabContentAssetDetailsProps> =
                 </Stack>
             </DialogTitle>
             <DialogContent sx={{ overflowY: 'hidden' }}>
-                <Stack direction='column' spacing={1} mt={1}>
+                <Stack direction='column' spacing={1} sx={{
+                    mt: 1
+                }}>
                     {(props.detail === TRIVY_API_VULN_PLURAL || props.detail === TRIVY_API_AUDIT_PLURAL || props.detail === TRIVY_API_EXPOSED_PLURAL) && summaryVulnAuditExposed(props.asset, props.detail)}
                     <Card sx={{ p: 1 }}>
                         {props.detail === TRIVY_API_VULN_PLURAL && <>
@@ -81,7 +87,7 @@ const TrivyTabContentAssetDetails: React.FC<ITrivyTabContentAssetDetailsProps> =
             </DialogContent>
             <DialogActions><Button variant='outlined' onClick={() => props.onClose()}>ok</Button></DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { TrivyTabContentAssetDetails }

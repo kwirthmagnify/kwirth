@@ -158,7 +158,9 @@ const SettingsImport: React.FC<ISettingsImportProps> = (props: ISettingsImportPr
                         : <>Choose a configuration bundle file to import into cluster <b>{props.clusterName}</b>.</> }
                 </Typography>
 
-                { loading && <Stack direction='row' spacing={1} alignItems='center'><CircularProgress size={16} /><Typography variant='body2'>Reading the configuration file…</Typography></Stack> }
+                { loading && <Stack direction='row' spacing={1} sx={{
+                    alignItems: 'center'
+                }}><CircularProgress size={16} /><Typography variant='body2'>Reading the configuration file…</Typography></Stack> }
 
                 { !loading && !importBundle && <>
                     <input ref={fileRef} type='file' accept='.json,application/json' style={{ display: 'none' }}
@@ -177,7 +179,7 @@ const SettingsImport: React.FC<ISettingsImportProps> = (props: ISettingsImportPr
                 <Button variant='outlined' size='small' onClick={props.onClose}>Close</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { SettingsImport }

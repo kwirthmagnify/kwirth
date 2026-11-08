@@ -195,246 +195,293 @@ const CensorConfigDialog: React.FC<ICensorConfigDialogProps> = ({ data, channelO
         Las configuraciones de censor viajan en ☰ Kwirth export, como las de cualquier otra extension.
     */
 
-    return <>
-        <Dialog open={true} PaperProps={{ sx: { width: '92vw', maxWidth: '1200px', height: '82vh' } }}>
-            <DialogTitle>Censor config</DialogTitle>
-            <DialogContent sx={{ display: 'flex', height: '100%', overflow: 'hidden', py: 1, px: 2 }}>
+    return (
+        <>
+            <Dialog open={true} slotProps={{
+                paper: { sx: { width: '92vw', maxWidth: '1200px', height: '82vh' } }
+            }}>
+                <DialogTitle>Censor config</DialogTitle>
+                <DialogContent sx={{ display: 'flex', height: '100%', overflow: 'hidden', py: 1, px: 2 }}>
 
-                {/* Left panel — config list */}
-                <Box sx={{ flex: '0 0 230px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pr: 1 }}>
-                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 'bold', px: 0.5, pt: 0.5 }}>Configs</Typography>
-                    <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', border: 1, borderColor: 'divider', borderRadius: 1, mt: 0.5 }}>
-                        <List dense sx={{ py: 0 }}>
-                            {localConfigs.map((cfg, i) => (
-                                <ListItemButton key={i} selected={selectedIdx === i} onClick={() => onConfigSelect(cfg, i)} dense sx={{ py: 0.5 }}>
-                                    <Stack direction='column' sx={{ minWidth: 0, flex: 1 }}>
-                                        <Stack direction='row' spacing={0.5} alignItems='center'>
-                                            <Typography variant='body2' sx={{ fontWeight: selectedIdx === i ? 'bold' : 'normal', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                                                {cfg.name}
-                                            </Typography>
-                                            {cfg.active && <Chip label='ON' size='small' color='success' sx={{ height: 14, fontSize: 9, px: 0, '& .MuiChip-label': { px: 0.5 } }} />}
-                                        </Stack>
-                                        <Typography color='textSecondary' variant='caption'>v{cfg.version}</Typography>
-                                    </Stack>
-                                </ListItemButton>
-                            ))}
-                        </List>
-                    </Box>
-                    <Stack direction='row' spacing={0.5} sx={{ px: 0.5, pt: 0.5, justifyContent: 'center' }}>
-                        <Button variant='outlined' size='small' startIcon={<AddIcon />} onClick={onConfigNew} sx={{ fontSize: 11 }}>New</Button>
-                        <Button variant='outlined' size='small' startIcon={<ContentCopyIcon />} onClick={onConfigClone} disabled={selectedIdx === null} sx={{ fontSize: 11 }}>Clone</Button>
-                        <Button variant='outlined' size='small' color='error' startIcon={<DeleteIcon />} onClick={onDeleteLocal} disabled={selectedIdx === null} sx={{ fontSize: 11 }}>Delete</Button>
-                    </Stack>
-                    <Divider sx={{ mt: 1 }} />
-                    {/* Uno solo para todo el canal: arranca el análisis de las configs ON al arrancar el channel */}
-                    <Tooltip title='When the channel starts, begin analyzing with every ON config, without waiting for the Start button'>
-                        <FormControlLabel
-                            control={<Switch size='small' checked={autoStart} onChange={e => setAutoStart(e.target.checked)} />}
-                            label={<Typography variant='caption'>Auto start what's ON</Typography>}
-                            sx={{ ml: 0.5, mt: 0.5 }} />
-                    </Tooltip>
-                </Box>
-
-                {/* Right panel — editor */}
-                <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', pl: 2, pt: 1 }}>
-                    <Tabs value={configTab} onChange={(_, v) => setConfigTab(v)} variant='fullWidth'
-                        sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}>
-                        <Tab value={ECensorConfigTab.General} label='General' />
-                        <Tab value={ECensorConfigTab.Prompt} label='Prompt' />
-                        <Tab value={ECensorConfigTab.Logstream} label='Logstream' />
-                        <Tab value={ECensorConfigTab.Business} label='Business' />
-                        <Tab value={ECensorConfigTab.Sender} label='Sender' />
-                    </Tabs>
-
-                    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-
-                        {configTab === ECensorConfigTab.General && (
-                            <Stack spacing={1.5} sx={{ pt: 1.5 }}>
-                                <Stack direction='row' spacing={2} alignItems='center'>
-                                    <TextField label='Name' size='small' value={configName} onChange={e => setConfigName(e.target.value)} sx={{ flex: 1 }} />
-                                    <TextField label='Version' size='small' value={configVersion} onChange={e => setConfigVersion(e.target.value)} sx={{ width: 100 }} />
-                                    <FormControlLabel
-                                        control={<Switch checked={configActive} onChange={e => setConfigActive(e.target.checked)} />}
-                                        label='Active'
-                                        sx={{ ml: 0, whiteSpace: 'nowrap' }} />
-                                </Stack>
-                                <Stack direction='row' spacing={2} alignItems='center'>
-                                    <FormControl size='small' sx={{ flex: 3, minWidth: 0 }}>
-                                        <InputLabel>LLM</InputLabel>
-                                        <Select label='LLM' value={llmId} onChange={e => setLlmId(e.target.value)} renderValue={v => v as string}>
-                                            {data.llms.length === 0 && <MenuItem value='' disabled>No LLMs configured</MenuItem>}
-                                            {data.llms.map(llm => (
-                                                <MenuItem key={llm.id} value={llm.id}>{llm.id} ({llm.provider}/{llm.model})</MenuItem>
-                                            ))}
-                                        </Select>
-                                    </FormControl>
-                                    <TextField label='Temperature' size='small' type='number' value={temperature}
-                                        onChange={e => setTemperature(Math.min(2, Math.max(0, +e.target.value)))}
-                                        sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 0, max: 2, step: 0.1 }} />
-                                </Stack>
-                                <Stack direction='row' spacing={2} alignItems='center'>
-                                    <FormControl size='small' sx={{ flex: 1, minWidth: 0 }}>
-                                        <InputLabel>Batch</InputLabel>
-                                        <Select label='Batch' value={batchMode} onChange={e => setBatchMode(e.target.value as 'fixed' | 'auto')}>
-                                            <MenuItem value='fixed'>Fixed</MenuItem>
-                                            <MenuItem value='auto'>Auto</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                    <TextField label={batchMode === 'auto' ? 'Initial size' : 'Batch size'} size='small' type='number' value={batchSize}
-                                        onChange={e => setBatchSize(Math.max(1, +e.target.value))}
-                                        sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 1 }} />
-                                    <TextField label='Min size' size='small' type='number' value={batchSizeMin}
-                                        onChange={e => setBatchSizeMin(Math.max(1, +e.target.value))}
-                                        disabled={batchMode !== 'auto'}
-                                        sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 1 }} />
-                                    <TextField label='Max line (0=∞)' size='small' type='number' value={maxLineLength}
-                                        onChange={e => setMaxLineLength(Math.max(0, +e.target.value))}
-                                        sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 0 }} />
-                                    <TextField label='Timeout (s)' size='small' type='number' value={batchTimeout}
-                                        onChange={e => setBatchTimeout(Math.max(1, +e.target.value))}
-                                        sx={{ flex: 1, minWidth: 0 }} inputProps={{ min: 1 }} />
-                                </Stack>
-                            </Stack>
-                        )}
-
-                        {configTab === ECensorConfigTab.Prompt && (
-                            <Stack spacing={1.5} sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, pt: 1.5 }}>
-                                <TextField label='System prompt (optional)' size='small' multiline value={system}
-                                    onChange={e => setSystem(e.target.value)} fullWidth
-                                    placeholder='Leave empty to use the default noise-filtering prompt'
-                                    sx={{ flex: 1, minHeight: 0, '& .MuiInputBase-root': { height: '100%', alignItems: 'flex-start' }, '& textarea': { height: '100% !important', overflow: 'auto !important', boxSizing: 'border-box' } }} />
-                                <TextField label='Output example (JSON)' size='small' multiline value={exampleJson}
-                                    onChange={e => {
-                                        setExampleJson(e.target.value)
-                                        try { JSON.parse(e.target.value); setExampleJsonError('') }
-                                        catch (err) { setExampleJsonError(String(err)) }
-                                    }}
-                                    error={!!exampleJsonError} helperText={exampleJsonError || 'Must be valid JSON with double quotes'}
-                                    fullWidth inputProps={{ style: { fontFamily: 'monospace', fontSize: '12px' } }}
-                                    sx={{ flex: 1, minHeight: 0, '& .MuiInputBase-root': { height: '100%', alignItems: 'flex-start' }, '& textarea': { height: '100% !important', overflow: 'auto !important', boxSizing: 'border-box' } }} />
-                            </Stack>
-                        )}
-
-                        {configTab === ECensorConfigTab.Logstream && (
-                            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                                <Stack spacing={1} sx={{ pt: 1.5 }}>
-                                    <FormControlLabel
-                                        control={<Switch checked={logstreamEnabled} onChange={e => setLogstreamEnabled(e.target.checked)} />}
-                                        label='Enable logstream ingestion' />
-                                    {logstreamEnabled && (
-                                        <>
-                                            <FormControlLabel
-                                                control={<Switch checked={logstreamAll} onChange={e => setLogstreamAll(e.target.checked)} />}
-                                                label='Audit all objects' />
-                                            {!logstreamAll && (
-                                                <Stack spacing={1}>
-                                                    {logstreamSources.map((src, i) => (
-                                                        <Stack key={i} direction='row' spacing={1} alignItems='center'>
-                                                            <TextField label='Namespace' size='small' value={src.namespace ?? ''}
-                                                                onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, namespace: e.target.value } : s))}
-                                                                sx={{ flex: 1 }} placeholder='any' />
-                                                            <TextField label='Pod regex' size='small' value={src.podRegex ?? ''}
-                                                                onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, podRegex: e.target.value } : s))}
-                                                                sx={{ flex: 1.5 }} placeholder='e.g. myapp-.*' />
-                                                            <TextField label='Label selector' size='small' value={src.labelSelector ?? ''}
-                                                                onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, labelSelector: e.target.value } : s))}
-                                                                sx={{ flex: 2 }} placeholder='e.g. app=myapp' />
-                                                            <IconButton size='small' onClick={() => setLogstreamSources(prev => prev.filter((_, j) => j !== i))}>
-                                                                <DeleteIcon sx={{ fontSize: 14 }} />
-                                                            </IconButton>
-                                                        </Stack>
-                                                    ))}
-                                                    <Button variant='outlined' size='small' startIcon={<AddIcon />}
-                                                        onClick={() => setLogstreamSources(prev => [...prev, { namespace: '', podRegex: '', labelSelector: '' }])}>
-                                                        Add source
-                                                    </Button>
-                                                </Stack>
-                                            )}
-                                        </>
-                                    )}
-                                </Stack>
-                            </Box>
-                        )}
-
-                        {configTab === ECensorConfigTab.Business && (
-                            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                                <Stack spacing={1} sx={{ pt: 1.5 }}>
-                                    {businessSources.map((src, i) => (
-                                        <Stack key={i} direction='row' spacing={1} alignItems='center'>
-                                            <TextField label='Space' size='small' value={src.space ?? ''}
-                                                onChange={e => setBusinessSources(prev => prev.map((s, j) => j === i ? { ...s, space: e.target.value } : s))}
-                                                sx={{ flex: 1 }} placeholder='any' />
-                                            <TextField label='Type' size='small' value={src.type ?? ''}
-                                                onChange={e => setBusinessSources(prev => prev.map((s, j) => j === i ? { ...s, type: e.target.value } : s))}
-                                                sx={{ flex: 1 }} placeholder='any' />
-                                            <TextField label='Path' size='small' value={src.businessPath ?? ''}
-                                                onChange={e => setBusinessSources(prev => prev.map((s, j) => j === i ? { ...s, businessPath: e.target.value } : s))}
-                                                sx={{ flex: 2 }} placeholder='dot-notation' />
-                                            <FormControlLabel
-                                                control={<Switch size='small' checked={src.addTimestamp ?? false}
-                                                    onChange={e => setBusinessSources(prev => prev.map((s, j) => j === i ? { ...s, addTimestamp: e.target.checked } : s))} />}
-                                                label={<Typography variant='caption'>TS</Typography>}
-                                                sx={{ ml: 0, mr: 0, whiteSpace: 'nowrap' }} />
-                                            <IconButton size='small' onClick={() => setBusinessSources(prev => prev.filter((_, j) => j !== i))}>
-                                                <DeleteIcon sx={{ fontSize: 14 }} />
-                                            </IconButton>
-                                        </Stack>
-                                    ))}
-                                    <Button variant='outlined' size='small' startIcon={<AddIcon />}
-                                        onClick={() => setBusinessSources(prev => [...prev, { space: '', type: '', businessPath: '', addTimestamp: false }])}>
-                                        Add source
-                                    </Button>
-                                </Stack>
-                            </Box>
-                        )}
-
-                        {configTab === ECensorConfigTab.Sender && (
-                            <Box sx={{ pt: 1.5 }}>
-                                <Stack direction='row' spacing={2} alignItems='center'>
-                                    <FormControl size='small' sx={{ flex: 1 }}>
-                                        <InputLabel>Sender config</InputLabel>
-                                        <Select label='Sender config' value={senderId && senderConfigName ? `${senderId}::${senderConfigName}` : ''}
-                                            onChange={e => {
-                                                const val = e.target.value
-                                                if (!val) { setSenderId(''); setSenderConfigName('') }
-                                                else { const [sid, scn] = val.split('::'); setSenderId(sid); setSenderConfigName(scn) }
+                    {/* Left panel — config list */}
+                    <Box sx={{ flex: '0 0 230px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pr: 1 }}>
+                        <Typography
+                            variant='caption'
+                            sx={{
+                                color: 'text.secondary',
+                                fontWeight: 'bold',
+                                px: 0.5,
+                                pt: 0.5
+                            }}>Configs</Typography>
+                        <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', border: 1, borderColor: 'divider', borderRadius: 1, mt: 0.5 }}>
+                            <List dense sx={{ py: 0 }}>
+                                {localConfigs.map((cfg, i) => (
+                                    <ListItemButton key={i} selected={selectedIdx === i} onClick={() => onConfigSelect(cfg, i)} dense sx={{ py: 0.5 }}>
+                                        <Stack direction='column' sx={{ minWidth: 0, flex: 1 }}>
+                                            <Stack direction='row' spacing={0.5} sx={{
+                                                alignItems: 'center'
                                             }}>
-                                            <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
-                                            {senderEntries.map(e => (
-                                                <MenuItem key={`${e.senderId}::${e.configName}`} value={`${e.senderId}::${e.configName}`}>
-                                                    <Stack direction='row' spacing={1} alignItems='center'>
-                                                        <Chip label={e.senderId} size='small' variant='outlined' sx={{ fontSize: '0.65rem', height: 18 }} />
-                                                        <Typography variant='body2'>{e.configName}</Typography>
-                                                    </Stack>
-                                                </MenuItem>
-                                            ))}
-                                        </Select>
-                                    </FormControl>
-                                </Stack>
-                            </Box>
-                        )}
-
+                                                <Typography variant='body2' sx={{ fontWeight: selectedIdx === i ? 'bold' : 'normal', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                                                    {cfg.name}
+                                                </Typography>
+                                                {cfg.active && <Chip label='ON' size='small' color='success' sx={{ height: 14, fontSize: 9, px: 0, '& .MuiChip-label': { px: 0.5 } }} />}
+                                            </Stack>
+                                            <Typography color='textSecondary' variant='caption'>v{cfg.version}</Typography>
+                                        </Stack>
+                                    </ListItemButton>
+                                ))}
+                            </List>
+                        </Box>
+                        <Stack direction='row' spacing={0.5} sx={{ px: 0.5, pt: 0.5, justifyContent: 'center' }}>
+                            <Button variant='outlined' size='small' startIcon={<AddIcon />} onClick={onConfigNew} sx={{ fontSize: 11 }}>New</Button>
+                            <Button variant='outlined' size='small' startIcon={<ContentCopyIcon />} onClick={onConfigClone} disabled={selectedIdx === null} sx={{ fontSize: 11 }}>Clone</Button>
+                            <Button variant='outlined' size='small' color='error' startIcon={<DeleteIcon />} onClick={onDeleteLocal} disabled={selectedIdx === null} sx={{ fontSize: 11 }}>Delete</Button>
+                        </Stack>
+                        <Divider sx={{ mt: 1 }} />
+                        {/* Uno solo para todo el canal: arranca el análisis de las configs ON al arrancar el channel */}
+                        <Tooltip title='When the channel starts, begin analyzing with every ON config, without waiting for the Start button'>
+                            <FormControlLabel
+                                control={<Switch size='small' checked={autoStart} onChange={e => setAutoStart(e.target.checked)} />}
+                                label={<Typography variant='caption'>Auto start what's ON</Typography>}
+                                sx={{ ml: 0.5, mt: 0.5 }} />
+                        </Tooltip>
                     </Box>
 
-                    <Stack direction='row' spacing={2} alignItems='center' sx={{ pt: 1 }}>
-                        <Box sx={{ flex: 1 }} />
-                        <Button variant='contained' size='small'
-                            disabled={!configName || !configVersion || !!exampleJsonError}
-                            onClick={onSaveLocal}>
-                            {localConfigs.some(c => c.name === configName && c.version === configVersion) ? 'Update' : 'Add'}
-                        </Button>
-                    </Stack>
-                </Box>
-            </DialogContent>
-            <DialogActions>
-                <Box sx={{ flex: 1 }} />
-                <Button onClick={handleOk} variant='contained' disabled={!llmId || !!exampleJsonError}>OK</Button>
-                <Button variant='outlined' onClick={onClose}>Cancel</Button>
-            </DialogActions>
-        </Dialog>
+                    {/* Right panel — editor */}
+                    <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', pl: 2, pt: 1 }}>
+                        <Tabs value={configTab} onChange={(_, v) => setConfigTab(v)} variant='fullWidth'
+                            sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}>
+                            <Tab value={ECensorConfigTab.General} label='General' />
+                            <Tab value={ECensorConfigTab.Prompt} label='Prompt' />
+                            <Tab value={ECensorConfigTab.Logstream} label='Logstream' />
+                            <Tab value={ECensorConfigTab.Business} label='Business' />
+                            <Tab value={ECensorConfigTab.Sender} label='Sender' />
+                        </Tabs>
 
-        {msgBox}
-    </>
+                        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+
+                            {configTab === ECensorConfigTab.General && (
+                                <Stack spacing={1.5} sx={{ pt: 1.5 }}>
+                                    <Stack direction='row' spacing={2} sx={{
+                                        alignItems: 'center'
+                                    }}>
+                                        <TextField label='Name' size='small' value={configName} onChange={e => setConfigName(e.target.value)} sx={{ flex: 1 }} />
+                                        <TextField label='Version' size='small' value={configVersion} onChange={e => setConfigVersion(e.target.value)} sx={{ width: 100 }} />
+                                        <FormControlLabel
+                                            control={<Switch checked={configActive} onChange={e => setConfigActive(e.target.checked)} />}
+                                            label='Active'
+                                            sx={{ ml: 0, whiteSpace: 'nowrap' }} />
+                                    </Stack>
+                                    <Stack direction='row' spacing={2} sx={{
+                                        alignItems: 'center'
+                                    }}>
+                                        <FormControl size='small' sx={{ flex: 3, minWidth: 0 }}>
+                                            <InputLabel>LLM</InputLabel>
+                                            <Select label='LLM' value={llmId} onChange={e => setLlmId(e.target.value)} renderValue={v => v as string}>
+                                                {data.llms.length === 0 && <MenuItem value='' disabled>No LLMs configured</MenuItem>}
+                                                {data.llms.map(llm => (
+                                                    <MenuItem key={llm.id} value={llm.id}>{llm.id} ({llm.provider}/{llm.model})</MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        <TextField label='Temperature' size='small' type='number' value={temperature}
+                                            onChange={e => setTemperature(Math.min(2, Math.max(0, +e.target.value)))}
+                                            sx={{ flex: 1, minWidth: 0 }} slotProps={{
+                                            htmlInput: { min: 0, max: 2, step: 0.1 }
+                                        }} />
+                                    </Stack>
+                                    <Stack direction='row' spacing={2} sx={{
+                                        alignItems: 'center'
+                                    }}>
+                                        <FormControl size='small' sx={{ flex: 1, minWidth: 0 }}>
+                                            <InputLabel>Batch</InputLabel>
+                                            <Select label='Batch' value={batchMode} onChange={e => setBatchMode(e.target.value as 'fixed' | 'auto')}>
+                                                <MenuItem value='fixed'>Fixed</MenuItem>
+                                                <MenuItem value='auto'>Auto</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                        <TextField label={batchMode === 'auto' ? 'Initial size' : 'Batch size'} size='small' type='number' value={batchSize}
+                                            onChange={e => setBatchSize(Math.max(1, +e.target.value))}
+                                            sx={{ flex: 1, minWidth: 0 }} slotProps={{
+                                            htmlInput: { min: 1 }
+                                        }} />
+                                        <TextField label='Min size' size='small' type='number' value={batchSizeMin}
+                                            onChange={e => setBatchSizeMin(Math.max(1, +e.target.value))}
+                                            disabled={batchMode !== 'auto'}
+                                            sx={{ flex: 1, minWidth: 0 }} slotProps={{
+                                            htmlInput: { min: 1 }
+                                        }} />
+                                        <TextField label='Max line (0=∞)' size='small' type='number' value={maxLineLength}
+                                            onChange={e => setMaxLineLength(Math.max(0, +e.target.value))}
+                                            sx={{ flex: 1, minWidth: 0 }} slotProps={{
+                                            htmlInput: { min: 0 }
+                                        }} />
+                                        <TextField label='Timeout (s)' size='small' type='number' value={batchTimeout}
+                                            onChange={e => setBatchTimeout(Math.max(1, +e.target.value))}
+                                            sx={{ flex: 1, minWidth: 0 }} slotProps={{
+                                            htmlInput: { min: 1 }
+                                        }} />
+                                    </Stack>
+                                </Stack>
+                            )}
+
+                            {configTab === ECensorConfigTab.Prompt && (
+                                <Stack spacing={1.5} sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, pt: 1.5 }}>
+                                    <TextField label='System prompt (optional)' size='small' multiline value={system}
+                                        onChange={e => setSystem(e.target.value)} fullWidth
+                                        placeholder='Leave empty to use the default noise-filtering prompt'
+                                        sx={{ flex: 1, minHeight: 0, '& .MuiInputBase-root': { height: '100%', alignItems: 'flex-start' }, '& textarea': { height: '100% !important', overflow: 'auto !important', boxSizing: 'border-box' } }} />
+                                    <TextField label='Output example (JSON)' size='small' multiline value={exampleJson}
+                                        onChange={e => {
+                                            setExampleJson(e.target.value)
+                                            try { JSON.parse(e.target.value); setExampleJsonError('') }
+                                            catch (err) { setExampleJsonError(String(err)) }
+                                        }}
+                                        error={!!exampleJsonError} helperText={exampleJsonError || 'Must be valid JSON with double quotes'}
+                                        fullWidth sx={{ flex: 1, minHeight: 0, '& .MuiInputBase-root': { height: '100%', alignItems: 'flex-start' }, '& textarea': { height: '100% !important', overflow: 'auto !important', boxSizing: 'border-box' } }}
+                                        slotProps={{
+                                            htmlInput: { style: { fontFamily: 'monospace', fontSize: '12px' } }
+                                        }} />
+                                </Stack>
+                            )}
+
+                            {configTab === ECensorConfigTab.Logstream && (
+                                <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                                    <Stack spacing={1} sx={{ pt: 1.5 }}>
+                                        <FormControlLabel
+                                            control={<Switch checked={logstreamEnabled} onChange={e => setLogstreamEnabled(e.target.checked)} />}
+                                            label='Enable logstream ingestion' />
+                                        {logstreamEnabled && (
+                                            <>
+                                                <FormControlLabel
+                                                    control={<Switch checked={logstreamAll} onChange={e => setLogstreamAll(e.target.checked)} />}
+                                                    label='Audit all objects' />
+                                                {!logstreamAll && (
+                                                    <Stack spacing={1}>
+                                                        {logstreamSources.map((src, i) => (
+                                                            <Stack key={i} direction='row' spacing={1} sx={{
+                                                                alignItems: 'center'
+                                                            }}>
+                                                                <TextField label='Namespace' size='small' value={src.namespace ?? ''}
+                                                                    onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, namespace: e.target.value } : s))}
+                                                                    sx={{ flex: 1 }} placeholder='any' />
+                                                                <TextField label='Pod regex' size='small' value={src.podRegex ?? ''}
+                                                                    onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, podRegex: e.target.value } : s))}
+                                                                    sx={{ flex: 1.5 }} placeholder='e.g. myapp-.*' />
+                                                                <TextField label='Label selector' size='small' value={src.labelSelector ?? ''}
+                                                                    onChange={e => setLogstreamSources(prev => prev.map((s, j) => j === i ? { ...s, labelSelector: e.target.value } : s))}
+                                                                    sx={{ flex: 2 }} placeholder='e.g. app=myapp' />
+                                                                <IconButton size='small' onClick={() => setLogstreamSources(prev => prev.filter((_, j) => j !== i))}>
+                                                                    <DeleteIcon sx={{ fontSize: 14 }} />
+                                                                </IconButton>
+                                                            </Stack>
+                                                        ))}
+                                                        <Button variant='outlined' size='small' startIcon={<AddIcon />}
+                                                            onClick={() => setLogstreamSources(prev => [...prev, { namespace: '', podRegex: '', labelSelector: '' }])}>
+                                                            Add source
+                                                        </Button>
+                                                    </Stack>
+                                                )}
+                                            </>
+                                        )}
+                                    </Stack>
+                                </Box>
+                            )}
+
+                            {configTab === ECensorConfigTab.Business && (
+                                <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                                    <Stack spacing={1} sx={{ pt: 1.5 }}>
+                                        {businessSources.map((src, i) => (
+                                            <Stack key={i} direction='row' spacing={1} sx={{
+                                                alignItems: 'center'
+                                            }}>
+                                                <TextField label='Space' size='small' value={src.space ?? ''}
+                                                    onChange={e => setBusinessSources(prev => prev.map((s, j) => j === i ? { ...s, space: e.target.value } : s))}
+                                                    sx={{ flex: 1 }} placeholder='any' />
+                                                <TextField label='Type' size='small' value={src.type ?? ''}
+                                                    onChange={e => setBusinessSources(prev => prev.map((s, j) => j === i ? { ...s, type: e.target.value } : s))}
+                                                    sx={{ flex: 1 }} placeholder='any' />
+                                                <TextField label='Path' size='small' value={src.businessPath ?? ''}
+                                                    onChange={e => setBusinessSources(prev => prev.map((s, j) => j === i ? { ...s, businessPath: e.target.value } : s))}
+                                                    sx={{ flex: 2 }} placeholder='dot-notation' />
+                                                <FormControlLabel
+                                                    control={<Switch size='small' checked={src.addTimestamp ?? false}
+                                                        onChange={e => setBusinessSources(prev => prev.map((s, j) => j === i ? { ...s, addTimestamp: e.target.checked } : s))} />}
+                                                    label={<Typography variant='caption'>TS</Typography>}
+                                                    sx={{ ml: 0, mr: 0, whiteSpace: 'nowrap' }} />
+                                                <IconButton size='small' onClick={() => setBusinessSources(prev => prev.filter((_, j) => j !== i))}>
+                                                    <DeleteIcon sx={{ fontSize: 14 }} />
+                                                </IconButton>
+                                            </Stack>
+                                        ))}
+                                        <Button variant='outlined' size='small' startIcon={<AddIcon />}
+                                            onClick={() => setBusinessSources(prev => [...prev, { space: '', type: '', businessPath: '', addTimestamp: false }])}>
+                                            Add source
+                                        </Button>
+                                    </Stack>
+                                </Box>
+                            )}
+
+                            {configTab === ECensorConfigTab.Sender && (
+                                <Box sx={{ pt: 1.5 }}>
+                                    <Stack direction='row' spacing={2} sx={{
+                                        alignItems: 'center'
+                                    }}>
+                                        <FormControl size='small' sx={{ flex: 1 }}>
+                                            <InputLabel>Sender config</InputLabel>
+                                            <Select label='Sender config' value={senderId && senderConfigName ? `${senderId}::${senderConfigName}` : ''}
+                                                onChange={e => {
+                                                    const val = e.target.value
+                                                    if (!val) { setSenderId(''); setSenderConfigName('') }
+                                                    else { const [sid, scn] = val.split('::'); setSenderId(sid); setSenderConfigName(scn) }
+                                                }}>
+                                                <MenuItem value=''><Typography variant='body2' sx={{
+                                                    color: 'text.secondary'
+                                                }}>(none)</Typography></MenuItem>
+                                                {senderEntries.map(e => (
+                                                    <MenuItem key={`${e.senderId}::${e.configName}`} value={`${e.senderId}::${e.configName}`}>
+                                                        <Stack direction='row' spacing={1} sx={{
+                                                            alignItems: 'center'
+                                                        }}>
+                                                            <Chip label={e.senderId} size='small' variant='outlined' sx={{ fontSize: '0.65rem', height: 18 }} />
+                                                            <Typography variant='body2'>{e.configName}</Typography>
+                                                        </Stack>
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    </Stack>
+                                </Box>
+                            )}
+
+                        </Box>
+
+                        <Stack
+                            direction='row'
+                            spacing={2}
+                            sx={{
+                                alignItems: 'center',
+                                pt: 1
+                            }}>
+                            <Box sx={{ flex: 1 }} />
+                            <Button variant='contained' size='small'
+                                disabled={!configName || !configVersion || !!exampleJsonError}
+                                onClick={onSaveLocal}>
+                                {localConfigs.some(c => c.name === configName && c.version === configVersion) ? 'Update' : 'Add'}
+                            </Button>
+                        </Stack>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Box sx={{ flex: 1 }} />
+                    <Button onClick={handleOk} variant='contained' disabled={!llmId || !!exampleJsonError}>OK</Button>
+                    <Button variant='outlined' onClick={onClose}>Cancel</Button>
+                </DialogActions>
+            </Dialog>
+
+            {msgBox}
+        </>
+    );
 }
 
 export { CensorConfigDialog }

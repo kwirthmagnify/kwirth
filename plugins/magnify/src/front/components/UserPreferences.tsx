@@ -111,172 +111,251 @@ const UserPreferences: React.FC<IUserPreferencesProps> = (props:IUserPreferences
         setCustomActions([...customActions])
     }
 
-    return <Box width='100%' height='100%' display='flex' flexDirection='column' p={2} sx={{ bgcolor: 'background.default', borderBottomRightRadius: '8px', overflowY: 'auto' }}>
-        <Accordion defaultExpanded>
-            <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography component='span'><b>Display</b></Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-                <Stack direction='column' spacing={0.5}>
-                    <Stack direction='row' alignItems='center'>
-                        <Typography variant='body2' sx={{ flexGrow: 1 }}>Palette mode</Typography>
-                        <Typography variant='body2' color='text.secondary' sx={{ mr: 1 }}>{palette === 'dark' ? 'Dark' : 'Light'}</Typography>
-                        <Switch size='small' checked={palette === 'dark'} onChange={(e) => { const v = e.target.checked ? 'dark' : 'light'; setPalette(v); props.channelObject.setPalette?.(v); setDisplayChanged(true) }} />
-                    </Stack>
-                    <Stack direction='row' alignItems='center'>
-                        <Typography variant='body2' sx={{ flexGrow: 1 }}>About Kwirth</Typography>
-                        <Button size='small' onClick={() => setShowAbout(true)}>About</Button>
-                    </Stack>
-                </Stack>
-            </AccordionDetails>
-            <AccordionActions>
-                <Button size='small' onClick={save} disabled={!displayChanged}>Save</Button>
-            </AccordionActions>
-        </Accordion>
-
-        {/* They run things in the cluster: a pod, a shell. That is writing. */}
-        <Accordion disabled={!canWrite}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography component='span'><b>Custom actions</b></Typography>
-                {!canWrite && <Typography variant='caption' color='text.secondary' sx={{ ml: 1 }}>— needs '{EMagnifyScope.WRITE}'</Typography>}
-            </AccordionSummary>
-            <AccordionDetails>
-                {customActions.map((ca, index) => (
-                    <Stack key={'action' + index} direction='column' spacing={1} sx={{ mb: 2 }}>
-                        <Stack direction='row' spacing={1} alignItems='center'>
-                            <Select value={ca.type} onChange={(e) => { ca.type = e.target.value; setCustomActions([...customActions]) }} variant='standard' sx={{ width: 100 }}>
-                                <MenuItem value='kwirth' disabled>Kwirth</MenuItem>
-                                <MenuItem value='kube'>Kube</MenuItem>
-                            </Select>
-                            <TextField value={ca.name} onChange={(e) => { ca.name = e.target.value; setCustomActions([...customActions]) }} variant='standard' placeholder='Name' sx={{ minWidth: '15%' }} />
-                            <Select value={ca.onReady} onChange={(e) => { ca.onReady = e.target.value; setCustomActions([...customActions]) }} variant='standard' sx={{ minWidth: '10%' }}>
-                                <MenuItem value='nothing'>Nothing</MenuItem>
-                                <MenuItem value='shell'>Shell</MenuItem>
-                                <MenuItem value='http' disabled>HTTP</MenuItem>
-                                <MenuItem value='https' disabled>HTTPS</MenuItem>
-                            </Select>
-                            <FormControlLabel control={<Checkbox size='small' onChange={(e) => { ca.forward = e.target.checked; setCustomActions([...customActions]) }} checked={ca.forward} disabled={'nothing shell'.includes(ca.onReady)} />} label='Forward' />
-                            <TextField value={ca.url} onChange={(e) => { ca.url = e.target.value; setCustomActions([...customActions]) }} disabled={'nothing shell'.includes(ca.onReady) || ca.forward} fullWidth variant='standard' placeholder='URL' />
-                            <Box sx={{ flexGrow: 1 }} />
-                            <Button size='small' onClick={() => removeCustomAction(index)}>Remove</Button>
+    return (
+        <Box
+            sx={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                p: 2,
+                bgcolor: 'background.default',
+                borderBottomRightRadius: '8px',
+                overflowY: 'auto'
+            }}>
+            <Accordion defaultExpanded>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography component='span'><b>Display</b></Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                    <Stack direction='column' spacing={0.5}>
+                        <Stack direction='row' sx={{
+                            alignItems: 'center'
+                        }}>
+                            <Typography variant='body2' sx={{ flexGrow: 1 }}>Palette mode</Typography>
+                            <Typography
+                                variant='body2'
+                                sx={{
+                                    color: 'text.secondary',
+                                    mr: 1
+                                }}>{palette === 'dark' ? 'Dark' : 'Light'}</Typography>
+                            <Switch size='small' checked={palette === 'dark'} onChange={(e) => { const v = e.target.checked ? 'dark' : 'light'; setPalette(v); props.channelObject.setPalette?.(v); setDisplayChanged(true) }} />
                         </Stack>
-                        <TextareaAutosize key={'yaml' + index} value={ca.podYaml} onChange={(e) => { ca.podYaml = e.target.value; setCustomActions([...customActions]) }} style={{ height: 100, fontFamily: 'monospace', fontSize: 12, padding: 8, boxSizing: 'border-box', width: '100%' }} placeholder={podExplanation} />
+                        <Stack direction='row' sx={{
+                            alignItems: 'center'
+                        }}>
+                            <Typography variant='body2' sx={{ flexGrow: 1 }}>About Kwirth</Typography>
+                            <Button size='small' onClick={() => setShowAbout(true)}>About</Button>
+                        </Stack>
                     </Stack>
-                ))}
-                <Stack direction='row' justifyContent='flex-end'>
-                    <Button size='small' onClick={() => setCustomActions([...customActions, { type: 'kube', name: '', podYaml: '', onReady: 'nothing' }])}>Add</Button>
-                </Stack>
-            </AccordionDetails>
-            <AccordionActions>
-                <Button size='small' onClick={save}>Save</Button>
-            </AccordionActions>
-        </Accordion>
+                </AccordionDetails>
+                <AccordionActions>
+                    <Button size='small' onClick={save} disabled={!displayChanged}>Save</Button>
+                </AccordionActions>
+            </Accordion>
 
-        <Accordion disabled={!canRead}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography component='span'><b>External content</b></Typography>
-                {!canRead && <Typography variant='caption' color='text.secondary' sx={{ ml: 1 }}>— needs '{EMagnifyScope.READ}'</Typography>}
-            </AccordionSummary>
-            <AccordionDetails>
-                <TextField value={logLines} onChange={(e) => { setLogLines(+e.target.value); setExternalChanged(true) }} variant='standard' label='Max messages' type='number' fullWidth />
-            </AccordionDetails>
-            <AccordionActions>
-                <Button size='small' onClick={save} disabled={!externalChanged}>Save</Button>
-            </AccordionActions>
-        </Accordion>
-
-        {/* It chooses WHICH kinds are fetched and kept: without read there is nothing to choose from. */}
-        <Accordion disabled={!canRead}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography component='span'><b>Data management</b></Typography>
-                {!canRead && <Typography variant='caption' color='text.secondary' sx={{ ml: 1 }}>— needs '{EMagnifyScope.READ}'</Typography>}
-            </AccordionSummary>
-            <AccordionDetails>
-                <Stack direction='row' spacing={2}>
-                    <Stack direction='column' flex={1}>
-                        <Typography variant='body2' fontWeight='bold'>Storage</Typography>
-                        <FormControlLabel control={<Checkbox size='small' onChange={(e) => { setDataHelm(e.target.checked); setDataChanged(true) }} checked={dataHelm} />} label={<Typography variant='body2'>Keep Helm data</Typography>} />
-                        <FormControlLabel control={<Checkbox size='small' onChange={(e) => { setDataManagedFields(e.target.checked); setDataChanged(true) }} checked={dataManagedFields} />} label={<Typography variant='body2'>Keep managed fields</Typography>} />
-                    </Stack>
-                    <Stack direction='column' flex={1}>
-                        <Typography variant='body2' fontWeight='bold'>Source</Typography>
-                        {allKinds.map(kind => (
-                            <FormControlLabel key={kind.name} control={<Checkbox size='small' onChange={() => changeKind('source', kind)} checked={sourceList.some(s => s.name === kind.name)} />} label={<Typography variant='body2'>{kind.name}</Typography>} />
-                        ))}
-                    </Stack>
-                    <Stack direction='column' flex={1}>
-                        <Typography variant='body2' fontWeight='bold'>Sync</Typography>
-                        {allKinds.map(kind => (
-                            <FormControlLabel key={kind.name} control={<Checkbox size='small' onChange={() => changeKind('sync', kind)} checked={syncList.some(s => s.name === kind.name)} />} label={<Typography variant='body2'>{kind.name}</Typography>} />
-                        ))}
-                    </Stack>
-                </Stack>
-            </AccordionDetails>
-            <AccordionActions>
-                <Button size='small' onClick={save} disabled={!dataChanged}>Save</Button>
-            </AccordionActions>
-        </Accordion>
-
-        <Accordion disabled={!canRead}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography component='span'><b>Debug</b></Typography>
-                {!canRead && <Typography variant='caption' color='text.secondary' sx={{ ml: 1 }}>— needs '{EMagnifyScope.READ}'</Typography>}
-            </AccordionSummary>
-            <AccordionDetails>
-                <Stack direction='column' spacing={0.5}>
-                    <Stack direction='row' alignItems='center' spacing={1}>
-                        <Typography variant='body2' sx={{ flexGrow: 1 }}>Files collection ({props.files.length} objects, {(JSON.stringify(props.files).length / 1024 / 1024).toFixed(2)} MB)</Typography>
-                        <TextField inputRef={filterRef} label='Filter' variant='standard' size='small' />
-                        <Button size='small' onClick={reload}>Reload</Button>
-                        <Button size='small' onClick={showFiles}>Show</Button>
-                    </Stack>
-                    <Stack direction='row' alignItems='center'>
-                        <Typography variant='body2' sx={{ flexGrow: 1 }}>Metrics names</Typography>
-                        <Button size='small' onClick={() => console.log(props.channelObject.metricsList?.keys())}>Show</Button>
-                    </Stack>
-                    <Stack direction='row' alignItems='center'>
-                        <Typography variant='body2' sx={{ flexGrow: 1 }}>Channel object</Typography>
-                        <Button size='small' onClick={() => console.log(props.channelObject)}>Show</Button>
-                    </Stack>
-                    <Stack direction='row' alignItems='center'>
-                        <Typography variant='body2' sx={{ flexGrow: 1 }}>Message tracing (log received messages to console)</Typography>
-                        <Checkbox size='small' checked={tracing} onChange={() => { setTracing(!tracing); setDebugChanged(true) }} />
-                    </Stack>
-                </Stack>
-            </AccordionDetails>
-            <AccordionActions>
-                <Button size='small' onClick={save} disabled={!debugChanged}>Save</Button>
-            </AccordionActions>
-        </Accordion>
-
-        {/* It opens the core's extension MANAGERS — installing and removing plugins, providers, senders
-            and themes. That is not a Magnify permission: it is 'admin', the same scope the core's own
-            menu puts them behind. Offering it to anybody else is a door that opens onto a refusal. */}
-        <Accordion disabled={!canAdmin}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography component='span'><b>Extensions</b></Typography>
-                {!canAdmin && <Typography variant='caption' color='text.secondary' sx={{ ml: 1 }}>— needs 'admin'</Typography>}
-            </AccordionSummary>
-            <AccordionDetails>
-                <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
-                    {([
-                        { type: EExtensionType.PLUGIN,   label: 'Plugins',   desc: 'Install, update and remove channel plugins that extend Kwirth with new visualization and analysis capabilities.' },
-                        { type: EExtensionType.PROVIDER, label: 'Providers', desc: 'Configure data source providers that feed events and metrics into your channels from external systems.' },
-                        { type: EExtensionType.SENDER,   label: 'Senders',   desc: 'Manage notification senders to forward alerts and reports to Slack, Teams, email and other destinations.' },
-                        { type: EExtensionType.THEME,    label: 'Themes',    desc: 'Install and activate visual themes to customize the look and feel of Kwirth.' }
-                    ]).map(({ type, label, desc }) => (
-                        <Box key={type} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, flex: 1, minWidth: 120, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <Typography variant='body2' fontWeight='bold'>{label}</Typography>
-                            <Typography variant='caption' color='text.secondary' sx={{ flexGrow: 1 }}>{desc}</Typography>
-                            <Button size='small' onClick={() => props.channelObject.openManager?.(type)}>Manage</Button>
-                        </Box>
+            {/* They run things in the cluster: a pod, a shell. That is writing. */}
+            <Accordion disabled={!canWrite}>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography component='span'><b>Custom actions</b></Typography>
+                    {!canWrite && <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            ml: 1
+                        }}>— needs '{EMagnifyScope.WRITE}'</Typography>}
+                </AccordionSummary>
+                <AccordionDetails>
+                    {customActions.map((ca, index) => (
+                        <Stack key={'action' + index} direction='column' spacing={1} sx={{ mb: 2 }}>
+                            <Stack direction='row' spacing={1} sx={{
+                                alignItems: 'center'
+                            }}>
+                                <Select value={ca.type} onChange={(e) => { ca.type = e.target.value; setCustomActions([...customActions]) }} variant='standard' sx={{ width: 100 }}>
+                                    <MenuItem value='kwirth' disabled>Kwirth</MenuItem>
+                                    <MenuItem value='kube'>Kube</MenuItem>
+                                </Select>
+                                <TextField value={ca.name} onChange={(e) => { ca.name = e.target.value; setCustomActions([...customActions]) }} variant='standard' placeholder='Name' sx={{ minWidth: '15%' }} />
+                                <Select value={ca.onReady} onChange={(e) => { ca.onReady = e.target.value; setCustomActions([...customActions]) }} variant='standard' sx={{ minWidth: '10%' }}>
+                                    <MenuItem value='nothing'>Nothing</MenuItem>
+                                    <MenuItem value='shell'>Shell</MenuItem>
+                                    <MenuItem value='http' disabled>HTTP</MenuItem>
+                                    <MenuItem value='https' disabled>HTTPS</MenuItem>
+                                </Select>
+                                <FormControlLabel control={<Checkbox size='small' onChange={(e) => { ca.forward = e.target.checked; setCustomActions([...customActions]) }} checked={ca.forward} disabled={'nothing shell'.includes(ca.onReady)} />} label='Forward' />
+                                <TextField value={ca.url} onChange={(e) => { ca.url = e.target.value; setCustomActions([...customActions]) }} disabled={'nothing shell'.includes(ca.onReady) || ca.forward} fullWidth variant='standard' placeholder='URL' />
+                                <Box sx={{ flexGrow: 1 }} />
+                                <Button size='small' onClick={() => removeCustomAction(index)}>Remove</Button>
+                            </Stack>
+                            <TextareaAutosize key={'yaml' + index} value={ca.podYaml} onChange={(e) => { ca.podYaml = e.target.value; setCustomActions([...customActions]) }} style={{ height: 100, fontFamily: 'monospace', fontSize: 12, padding: 8, boxSizing: 'border-box', width: '100%' }} placeholder={podExplanation} />
+                        </Stack>
                     ))}
-                </Stack>
-            </AccordionDetails>
-        </Accordion>
+                    <Stack direction='row' sx={{
+                        justifyContent: 'flex-end'
+                    }}>
+                        <Button size='small' onClick={() => setCustomActions([...customActions, { type: 'kube', name: '', podYaml: '', onReady: 'nothing' }])}>Add</Button>
+                    </Stack>
+                </AccordionDetails>
+                <AccordionActions>
+                    <Button size='small' onClick={save}>Save</Button>
+                </AccordionActions>
+            </Accordion>
 
-        { showAbout && <About kwirthVersion={props.channelObject.kwirthVersion} onClose={() => setShowAbout(false)}/>}
-    </Box>
+            <Accordion disabled={!canRead}>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography component='span'><b>External content</b></Typography>
+                    {!canRead && <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            ml: 1
+                        }}>— needs '{EMagnifyScope.READ}'</Typography>}
+                </AccordionSummary>
+                <AccordionDetails>
+                    <TextField value={logLines} onChange={(e) => { setLogLines(+e.target.value); setExternalChanged(true) }} variant='standard' label='Max messages' type='number' fullWidth />
+                </AccordionDetails>
+                <AccordionActions>
+                    <Button size='small' onClick={save} disabled={!externalChanged}>Save</Button>
+                </AccordionActions>
+            </Accordion>
+
+            {/* It chooses WHICH kinds are fetched and kept: without read there is nothing to choose from. */}
+            <Accordion disabled={!canRead}>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography component='span'><b>Data management</b></Typography>
+                    {!canRead && <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            ml: 1
+                        }}>— needs '{EMagnifyScope.READ}'</Typography>}
+                </AccordionSummary>
+                <AccordionDetails>
+                    <Stack direction='row' spacing={2}>
+                        <Stack direction='column' sx={{
+                            flex: 1
+                        }}>
+                            <Typography variant='body2' sx={{
+                                fontWeight: 'bold'
+                            }}>Storage</Typography>
+                            <FormControlLabel control={<Checkbox size='small' onChange={(e) => { setDataHelm(e.target.checked); setDataChanged(true) }} checked={dataHelm} />} label={<Typography variant='body2'>Keep Helm data</Typography>} />
+                            <FormControlLabel control={<Checkbox size='small' onChange={(e) => { setDataManagedFields(e.target.checked); setDataChanged(true) }} checked={dataManagedFields} />} label={<Typography variant='body2'>Keep managed fields</Typography>} />
+                        </Stack>
+                        <Stack direction='column' sx={{
+                            flex: 1
+                        }}>
+                            <Typography variant='body2' sx={{
+                                fontWeight: 'bold'
+                            }}>Source</Typography>
+                            {allKinds.map(kind => (
+                                <FormControlLabel key={kind.name} control={<Checkbox size='small' onChange={() => changeKind('source', kind)} checked={sourceList.some(s => s.name === kind.name)} />} label={<Typography variant='body2'>{kind.name}</Typography>} />
+                            ))}
+                        </Stack>
+                        <Stack direction='column' sx={{
+                            flex: 1
+                        }}>
+                            <Typography variant='body2' sx={{
+                                fontWeight: 'bold'
+                            }}>Sync</Typography>
+                            {allKinds.map(kind => (
+                                <FormControlLabel key={kind.name} control={<Checkbox size='small' onChange={() => changeKind('sync', kind)} checked={syncList.some(s => s.name === kind.name)} />} label={<Typography variant='body2'>{kind.name}</Typography>} />
+                            ))}
+                        </Stack>
+                    </Stack>
+                </AccordionDetails>
+                <AccordionActions>
+                    <Button size='small' onClick={save} disabled={!dataChanged}>Save</Button>
+                </AccordionActions>
+            </Accordion>
+
+            <Accordion disabled={!canRead}>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography component='span'><b>Debug</b></Typography>
+                    {!canRead && <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            ml: 1
+                        }}>— needs '{EMagnifyScope.READ}'</Typography>}
+                </AccordionSummary>
+                <AccordionDetails>
+                    <Stack direction='column' spacing={0.5}>
+                        <Stack direction='row' spacing={1} sx={{
+                            alignItems: 'center'
+                        }}>
+                            <Typography variant='body2' sx={{ flexGrow: 1 }}>Files collection ({props.files.length} objects, {(JSON.stringify(props.files).length / 1024 / 1024).toFixed(2)} MB)</Typography>
+                            <TextField inputRef={filterRef} label='Filter' variant='standard' size='small' />
+                            <Button size='small' onClick={reload}>Reload</Button>
+                            <Button size='small' onClick={showFiles}>Show</Button>
+                        </Stack>
+                        <Stack direction='row' sx={{
+                            alignItems: 'center'
+                        }}>
+                            <Typography variant='body2' sx={{ flexGrow: 1 }}>Metrics names</Typography>
+                            <Button size='small' onClick={() => console.log(props.channelObject.metricsList?.keys())}>Show</Button>
+                        </Stack>
+                        <Stack direction='row' sx={{
+                            alignItems: 'center'
+                        }}>
+                            <Typography variant='body2' sx={{ flexGrow: 1 }}>Channel object</Typography>
+                            <Button size='small' onClick={() => console.log(props.channelObject)}>Show</Button>
+                        </Stack>
+                        <Stack direction='row' sx={{
+                            alignItems: 'center'
+                        }}>
+                            <Typography variant='body2' sx={{ flexGrow: 1 }}>Message tracing (log received messages to console)</Typography>
+                            <Checkbox size='small' checked={tracing} onChange={() => { setTracing(!tracing); setDebugChanged(true) }} />
+                        </Stack>
+                    </Stack>
+                </AccordionDetails>
+                <AccordionActions>
+                    <Button size='small' onClick={save} disabled={!debugChanged}>Save</Button>
+                </AccordionActions>
+            </Accordion>
+
+            {/* It opens the core's extension MANAGERS — installing and removing plugins, providers, senders
+                and themes. That is not a Magnify permission: it is 'admin', the same scope the core's own
+                menu puts them behind. Offering it to anybody else is a door that opens onto a refusal. */}
+            <Accordion disabled={!canAdmin}>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography component='span'><b>Extensions</b></Typography>
+                    {!canAdmin && <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            ml: 1
+                        }}>— needs 'admin'</Typography>}
+                </AccordionSummary>
+                <AccordionDetails>
+                    <Stack direction='row' spacing={1} useFlexGap sx={{
+                        flexWrap: 'wrap'
+                    }}>
+                        {([
+                            { type: EExtensionType.PLUGIN,   label: 'Plugins',   desc: 'Install, update and remove channel plugins that extend Kwirth with new visualization and analysis capabilities.' },
+                            { type: EExtensionType.PROVIDER, label: 'Providers', desc: 'Configure data source providers that feed events and metrics into your channels from external systems.' },
+                            { type: EExtensionType.SENDER,   label: 'Senders',   desc: 'Manage notification senders to forward alerts and reports to Slack, Teams, email and other destinations.' },
+                            { type: EExtensionType.THEME,    label: 'Themes',    desc: 'Install and activate visual themes to customize the look and feel of Kwirth.' }
+                        ]).map(({ type, label, desc }) => (
+                            <Box key={type} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, flex: 1, minWidth: 120, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <Typography variant='body2' sx={{
+                                    fontWeight: 'bold'
+                                }}>{label}</Typography>
+                                <Typography
+                                    variant='caption'
+                                    sx={{
+                                        color: 'text.secondary',
+                                        flexGrow: 1
+                                    }}>{desc}</Typography>
+                                <Button size='small' onClick={() => props.channelObject.openManager?.(type)}>Manage</Button>
+                            </Box>
+                        ))}
+                    </Stack>
+                </AccordionDetails>
+            </Accordion>
+
+            { showAbout && <About kwirthVersion={props.channelObject.kwirthVersion} onClose={() => setShowAbout(false)}/>}
+        </Box>
+    );
 }
 
 export { UserPreferences }

@@ -96,19 +96,32 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
     const theme = useTheme()
     return (
         <Box sx={{ ...extensionCardSx, background: gradientFor(model.name, theme.palette.mode === 'dark') }}>
-            <Stack direction='row' alignItems='flex-start' spacing={1.5}>
+            <Stack direction='row' spacing={1.5} sx={{
+                alignItems: 'flex-start'
+            }}>
                 {/* El icono se centra con la FILA DEL TITULO, no con el bloque entero: alineado arriba
                     quedaba mas alto que el nombre, y centrado con todo el bloque se hundia hasta la
                     descripcion. La fila del titulo mide lo que su control mas alto (el boton de web). */}
                 <Box sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', height: TITLE_ROW_HEIGHT }}>
                     {model.icon ?? resolveExtensionIcon(model.iconName, fallbackIcon)}
                 </Box>
-                <Box flex={1} minWidth={0}>
+                <Box
+                    sx={{
+                        flex: 1,
+                        minWidth: 0
+                    }}>
                     {/* El boton de web va DENTRO de la fila del titulo, no como columna aparte del Stack
                         exterior. Fuera se alineaba por arriba (`flex-start`) contra un chip de 20px siendo
                         el de 30, asi que sus centros quedaban a 5px y se veia caido. Aqui lo centra la
                         propia fila, sin margenes magicos. */}
-                    <Stack direction='row' alignItems='center' spacing={0.5} sx={{ width: '100%', height: TITLE_ROW_HEIGHT }}>
+                    <Stack
+                        direction='row'
+                        spacing={0.5}
+                        sx={{
+                            alignItems: 'center',
+                            width: '100%',
+                            height: TITLE_ROW_HEIGHT
+                        }}>
                         <Box sx={extensionCardTitleSx}>
                             <TruncatedText text={model.name} variant='body2' fontWeight='bold' sx={ONE_LINE_SX} />
                         </Box>
@@ -126,7 +139,13 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
                     {model.subtitle && <TruncatedText text={model.subtitle} variant='caption' color='text.disabled' sx={{ ...ONE_LINE_SX, mt: 0.25 }} />}
                 </Box>
             </Stack>
-            <Stack direction='row' alignItems='center' spacing={0.5} sx={{ mt: 1 }}>
+            <Stack
+                direction='row'
+                spacing={0.5}
+                sx={{
+                    alignItems: 'center',
+                    mt: 1
+                }}>
                 <MarketplaceSourceIcon label={model.marketplaceLabel} installedFrom={model.installedFrom} />
                 <MarketplaceBadge label={model.marketplaceLabel} installedFrom={model.installedFrom} />
                 {chips}
@@ -136,7 +155,7 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
                 <ActionButtons actions={actions} />
             </Stack>
         </Box>
-    )
+    );
 }
 
 /*

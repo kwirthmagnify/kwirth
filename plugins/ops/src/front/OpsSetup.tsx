@@ -30,11 +30,15 @@ const OpsSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
             <DialogTitle>Configure Ops</DialogTitle>
             <DialogContent>
                 <Stack sx={{ m: 2 }}>
-                    <Stack direction='row' alignItems='center'>
+                    <Stack direction='row' sx={{
+                        alignItems: 'center'
+                    }}>
                         <Typography>KeepAlive shell session on backend</Typography>
                         <Switch checked={sessionKeepAlive} onChange={(e) => setSessionKeepAlive(e.target.checked)} />
                     </Stack>
-                    <Stack direction='row' alignItems='center'>
+                    <Stack direction='row' sx={{
+                        alignItems: 'center'
+                    }}>
                         <Typography sx={{ flexGrow: 1 }}>Function access key</Typography>
                         <Select value={accessKey} onChange={(e) => setAccessKey(e.target.value as ESwitchKey)} variant='standard' sx={{ width: '150px', textAlign: 'center' }}>
                             <MenuItem value={ESwitchKey.DISABLED}>Disabled</MenuItem>
@@ -52,7 +56,7 @@ const OpsSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                 <Button variant='outlined' onClick={cancel}>CANCEL</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { OpsSetup, OpsIcon }

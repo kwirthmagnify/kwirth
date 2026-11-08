@@ -310,7 +310,9 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
     if (inventory.edges.length === 0) {
         return (
             <Box sx={{ p: 3 }}>
-                <Typography variant='body2' color='text.secondary'>
+                <Typography variant='body2' sx={{
+                    color: 'text.secondary'
+                }}>
                     {anonimos > 0
                         ? `There is consumption right now — ${anonimos} subscriber${anonimos > 1 ? 's' : ''} — but no graph to draw: `
                           + 'they subscribed straight to the provider instead of going through the core, so nobody knows who they are. '
@@ -318,11 +320,15 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
                         : 'Nothing is subscribed to anything right now, so there is no graph to draw.'}
                 </Typography>
             </Box>
-        )
+        );
     }
 
     if (!posiciones) {
-        return <Box sx={{ p: 3 }}><Typography variant='body2' color='text.secondary'>Laying out the graph…</Typography></Box>
+        return (
+            <Box sx={{ p: 3 }}><Typography variant='body2' sx={{
+                color: 'text.secondary'
+            }}>Laying out the graph…</Typography></Box>
+        );
     }
 
     /*
@@ -345,12 +351,20 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <Stack direction='row' spacing={1} alignItems='center' sx={{ mb: 1 }}>
+            <Stack
+                direction='row'
+                spacing={1}
+                sx={{
+                    alignItems: 'center',
+                    mb: 1
+                }}>
                 {/*
                     La leyenda no es adorno: sin ella, cada quien decide por su cuenta qué significa una
                     línea, y lo natural es suponer que significa tráfico.
                 */}
-                <Typography variant='caption' color='text.secondary'>
+                <Typography variant='caption' sx={{
+                    color: 'text.secondary'
+                }}>
                     A line means <b>an active subscription</b>. A <b>moving line</b> means its producer is
                     delivering right now — but not how much goes to each consumer: that is measured per
                     component, not per line.
@@ -432,7 +446,7 @@ const StatusDiagram: React.FC<IDiagramProps> = ({ inventory, active, autoRefresh
                 </ReactFlow>
             </Box>
         </Box>
-    )
+    );
 }
 
 export { StatusDiagram }

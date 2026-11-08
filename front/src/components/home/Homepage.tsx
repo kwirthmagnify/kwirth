@@ -151,118 +151,140 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
     }
 
     const drawTabCard = (tabList:ITabSummary[], listType:EListType) => {
-        return <>
-            <Card>
-                <CardHeader title={`${listType=== EListType.LAST? 'Last':'Fav'} tabs`} sx={{borderBottom:1, borderColor:'divider'}}/>
-                    <CardContent sx={{overflowY:'auto', overflowX:'hidden', minHeight:'50%', maxHeight:'50%' }}>
-                    {
-                        tabList.map(tab => {
-                            const channelClass = props.frontChannels.get(tab.channel)
-                            const channelAvailable = !!channelClass
-                            const channelIcon: JSX.Element = getChannelIconSafe(channelClass)
+        return (
+            <>
+                <Card>
+                    <CardHeader title={`${listType=== EListType.LAST? 'Last':'Fav'} tabs`} sx={{borderBottom:1, borderColor:'divider'}}/>
+                        <CardContent sx={{overflowY:'auto', overflowX:'hidden', minHeight:'50%', maxHeight:'50%' }}>
+                        {
+                            tabList.map(tab => {
+                                const channelClass = props.frontChannels.get(tab.channel)
+                                const channelAvailable = !!channelClass
+                                const channelIcon: JSX.Element = getChannelIconSafe(channelClass)
 
-                            let viewIcon = <></>
-                            switch (tab.channelObject.view) {
-                                case EInstanceConfigView.NAMESPACE:
-                                    viewIcon = getIconFromKind('Namespace', 20)
-                                    break
-                                case EInstanceConfigView.GROUP:
-                                    viewIcon = getIconFromKind('Controller', 20)
-                                    break
-                                case EInstanceConfigView.POD:
-                                    viewIcon = getIconFromKind('Pod', 20)
-                                    break
-                                case EInstanceConfigView.CONTAINER:
-                                    viewIcon = getIconFromKind('Container', 20)
-                                    break
-                                default:
-                                    viewIcon = getIconFromKind('', 20)
-                                    break
-                            }
-
-                            let name = tab.name
-                            if (name.length>50) name = name.substring(0,25) + '...' + name.substring(name.length-25)
-
-                            let disabled = !channelAvailable || ((!props.clusters.find(c => c.name === tab.channelObject.clusterName)) && tab.channelObject.clusterName!=='$cluster')
-
-                            return <Stack key={listType+tab.name+tab.channel} direction={'row'} alignItems={'center'} flex={1}>
-                                <Tooltip title={channelAvailable ? tab.channel : `Channel '${tab.channel}' is not available — plugin may not be installed`}>
-                                    <Box sx={iconSlotSx}>{channelIcon}</Box>
-                                </Tooltip>
-                                <Typography>&nbsp;</Typography>
-                                <Tooltip title={`View: ${tab.channelObject.view}`}>
-                                    <Box sx={iconSlotSx}>{viewIcon}</Box>
-                                </Tooltip>
-                                <Typography>&nbsp;</Typography>
-                                <Tooltip title={disabled? `Cannot access cluster '${tab.channelObject.clusterName}'`: `'${tab.name}' on cluster '${tab.channelObject.clusterName}'`}>
-                                    <Typography>{name}</Typography>
-                                </Tooltip>
-                                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: clusterColor(tab.channelObject.clusterName).dot, flexShrink: 0, mx: 0.5 }} />
-                                <Typography flexGrow={1}/>
-                                <Tooltip title={`Open this configuration on a new tab`}>
-                                    <span>
-                                        <IconButton onClick={() => props.onHomepageSelectTab(tab)} disabled={disabled}>
-                                            <Launch/>
-                                        </IconButton>
-                                    </span>
-                                </Tooltip>
-                                <Tooltip title={`Restore these tab parameters to resource selector`}>
-                                    <span>
-                                        <IconButton onClick={() => props.onRestoreTabParameters(tab)} disabled={disabled}>
-                                            <FactCheck/>
-                                        </IconButton>
-                                    </span>
-                                </Tooltip>
-                                
-                                { listType !== EListType.FAV && 
-                                    <IconButton onClick={() => toFavTabs(tab)} disabled={disabled}>
-                                        <Star/>
-                                    </IconButton>
+                                let viewIcon = <></>
+                                switch (tab.channelObject.view) {
+                                    case EInstanceConfigView.NAMESPACE:
+                                        viewIcon = getIconFromKind('Namespace', 20)
+                                        break
+                                    case EInstanceConfigView.GROUP:
+                                        viewIcon = getIconFromKind('Controller', 20)
+                                        break
+                                    case EInstanceConfigView.POD:
+                                        viewIcon = getIconFromKind('Pod', 20)
+                                        break
+                                    case EInstanceConfigView.CONTAINER:
+                                        viewIcon = getIconFromKind('Container', 20)
+                                        break
+                                    default:
+                                        viewIcon = getIconFromKind('', 20)
+                                        break
                                 }
-                                <IconButton onClick={() => deleteFromTabsList(tabList, tab)}>
-                                    <Delete/>
-                                </IconButton>
-                            </Stack>
-                        })
-                    }
-                </CardContent>
-            </Card>
-        </>
+
+                                let name = tab.name
+                                if (name.length>50) name = name.substring(0,25) + '...' + name.substring(name.length-25)
+
+                                let disabled = !channelAvailable || ((!props.clusters.find(c => c.name === tab.channelObject.clusterName)) && tab.channelObject.clusterName!=='$cluster')
+
+                                return (
+                                    <Stack
+                                        key={listType+tab.name+tab.channel}
+                                        direction={'row'}
+                                        sx={{
+                                            alignItems: 'center',
+                                            flex: 1
+                                        }}>
+                                        <Tooltip title={channelAvailable ? tab.channel : `Channel '${tab.channel}' is not available — plugin may not be installed`}>
+                                            <Box sx={iconSlotSx}>{channelIcon}</Box>
+                                        </Tooltip>
+                                        <Typography>&nbsp;</Typography>
+                                        <Tooltip title={`View: ${tab.channelObject.view}`}>
+                                            <Box sx={iconSlotSx}>{viewIcon}</Box>
+                                        </Tooltip>
+                                        <Typography>&nbsp;</Typography>
+                                        <Tooltip title={disabled? `Cannot access cluster '${tab.channelObject.clusterName}'`: `'${tab.name}' on cluster '${tab.channelObject.clusterName}'`}>
+                                            <Typography>{name}</Typography>
+                                        </Tooltip>
+                                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: clusterColor(tab.channelObject.clusterName).dot, flexShrink: 0, mx: 0.5 }} />
+                                        <Typography sx={{
+                                            flexGrow: 1
+                                        }}/>
+                                        <Tooltip title={`Open this configuration on a new tab`}>
+                                            <span>
+                                                <IconButton onClick={() => props.onHomepageSelectTab(tab)} disabled={disabled}>
+                                                    <Launch/>
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                        <Tooltip title={`Restore these tab parameters to resource selector`}>
+                                            <span>
+                                                <IconButton onClick={() => props.onRestoreTabParameters(tab)} disabled={disabled}>
+                                                    <FactCheck/>
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                        
+                                        { listType !== EListType.FAV && 
+                                            <IconButton onClick={() => toFavTabs(tab)} disabled={disabled}>
+                                                <Star/>
+                                            </IconButton>
+                                        }
+                                        <IconButton onClick={() => deleteFromTabsList(tabList, tab)}>
+                                            <Delete/>
+                                        </IconButton>
+                                    </Stack>
+                                );
+                            })
+                        }
+                    </CardContent>
+                </Card>
+            </>
+        );
     }
 
     const drawWorkspaceCard = (workspaceList:IWorkspaceSummary[], listType:EListType) => {
-        return <>
-            <Card>
-                <CardHeader title={`${listType === EListType.LAST? 'Last':'Fav'} workspaces`} sx={{borderBottom:1, borderColor:'divider'}}/>
-                <CardContent sx={{overflowY:'auto', overflowX:'hidden', maxHeight:'150px'}}>
-                    { workspaceList.map (workspace => {
-                        return <Stack key={listType+workspace.name} direction={'row'} spacing={1} alignItems={'baseline'}>
-                            <Typography>{workspace.name}</Typography>
-                            <Typography fontSize={'12px'}>{workspace.description}</Typography>
-                            <Typography flexGrow={1}/>
-                            <Tooltip title='Open workspace and start all tabs'>
-                                <IconButton onClick={() => props.onSelectWorkspace(workspace)}>
-                                    <Launch/>
-                                </IconButton>
-                            </Tooltip>
-                            <Tooltip title='Open workspace without starting tabs'>
-                                <IconButton onClick={() => props.onRestoreWorkspace(workspace)}>
-                                    <FactCheck/>
-                                </IconButton>
-                            </Tooltip>
-                            { listType !== EListType.FAV && 
-                                <IconButton onClick={() => toFavWorkspaces(workspace)}>
-                                    <Star/>
-                                </IconButton>
-                            }
-                            <IconButton onClick={() => deleteFromWorkspacesList(workspaceList, workspace)}>
-                                <Delete/>
-                            </IconButton>
-                        </Stack>
-                    })}
-                </CardContent>
-            </Card>
-        </>
+        return (
+            <>
+                <Card>
+                    <CardHeader title={`${listType === EListType.LAST? 'Last':'Fav'} workspaces`} sx={{borderBottom:1, borderColor:'divider'}}/>
+                    <CardContent sx={{overflowY:'auto', overflowX:'hidden', maxHeight:'150px'}}>
+                        { workspaceList.map (workspace => {
+                            return (
+                                <Stack key={listType+workspace.name} direction={'row'} spacing={1} sx={{
+                                    alignItems: 'baseline'
+                                }}>
+                                    <Typography>{workspace.name}</Typography>
+                                    <Typography sx={{
+                                        fontSize: '12px'
+                                    }}>{workspace.description}</Typography>
+                                    <Typography sx={{
+                                        flexGrow: 1
+                                    }}/>
+                                    <Tooltip title='Open workspace and start all tabs'>
+                                        <IconButton onClick={() => props.onSelectWorkspace(workspace)}>
+                                            <Launch/>
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title='Open workspace without starting tabs'>
+                                        <IconButton onClick={() => props.onRestoreWorkspace(workspace)}>
+                                            <FactCheck/>
+                                        </IconButton>
+                                    </Tooltip>
+                                    { listType !== EListType.FAV && 
+                                        <IconButton onClick={() => toFavWorkspaces(workspace)}>
+                                            <Star/>
+                                        </IconButton>
+                                    }
+                                    <IconButton onClick={() => deleteFromWorkspacesList(workspaceList, workspace)}>
+                                        <Delete/>
+                                    </IconButton>
+                                </Stack>
+                            );
+                        })}
+                    </CardContent>
+                </Card>
+            </>
+        );
     }
 
     const distributionIcon = (flavour:EClusterFlavour|undefined) => {
@@ -277,7 +299,9 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                 content = <>{getIconFromKind('IconK3s', 20)}&nbsp;SUSE K3s</>
                 break
             case EClusterFlavour.K3D:
-                content = <Stack direction={'row'} alignItems={'center'}>{getIconFromKind('IconK3d', 24)}&nbsp;K3D</Stack>
+                content = <Stack direction={'row'} sx={{
+                    alignItems: 'center'
+                }}>{getIconFromKind('IconK3d', 24)}&nbsp;K3D</Stack>
                 break
             case EClusterFlavour.EKS:
                 content = <>{getIconFromKind('IconEks', 20)}&nbsp;AWS Kubernetes</>
@@ -303,7 +327,14 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                 content = <>{getIconFromKind('IconK8s', 20)}&nbsp;Kubernetes</>
                 break
         }
-        return <Stack flexDirection={'row'} fontSize={12} alignItems={'center'}>{content}</Stack>
+        return (
+            <Stack
+                sx={{
+                    flexDirection: 'row',
+                    fontSize: 12,
+                    alignItems: 'center'
+                }}>{content}</Stack>
+        );
     }
 
     /*
@@ -349,10 +380,19 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                 <CardHeader sx={{borderBottom:(cardExpanded?1:0), borderColor:'divider'}}
                     title={<Fade key={cardExpanded ? 'expanded' : 'collapsed'} in={true} timeout={350}>
                         <Box>
-                        {cardExpanded && <Stack direction={'row'} alignItems={'center'}>
+                        {cardExpanded && <Stack direction={'row'} sx={{
+                            alignItems: 'center'
+                        }}>
                             <Typography variant="h6">Cluster details</Typography>
-                            <Typography flexGrow={1}></Typography>
-                            <Stack sx={{ml:'32px'}} direction={'row'} alignItems={'center'}>
+                            <Typography sx={{
+                                flexGrow: 1
+                            }}></Typography>
+                            <Stack
+                                direction={'row'}
+                                sx={{
+                                    alignItems: 'center',
+                                    ml:'32px'
+                                }}>
                                 {channelIcons()}
                             </Stack>
                         </Stack>}
@@ -361,12 +401,23 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                             {hasCluster && <Typography sx={{ml:'32px'}}><b>Nodes: </b>{props.cluster?.clusterInfo?.nodes?.length}</Typography>}
                             {hasCluster && <Typography sx={{ml:'32px'}}><b>Resources: </b>{props.cluster?.clusterInfo?.vcpu} vCPU / {((props.cluster?.clusterInfo?.memory||0)/1024/1024/1024).toFixed(2)} GB</Typography>}
 
-                            <Typography flexGrow={1}></Typography>
+                            <Typography sx={{
+                                flexGrow: 1
+                            }}></Typography>
 
                             {hasCluster && <>
                             <Tooltip title={`${(cpu||0).toFixed(2)}%`}>
-                                <Stack direction={'column'} alignItems={'center'} mr={'2px'}>
-                                    <Typography fontSize={8} mb={-1}>CPU</Typography>
+                                <Stack
+                                    direction={'column'}
+                                    sx={{
+                                        alignItems: 'center',
+                                        mr: '2px'
+                                    }}>
+                                    <Typography
+                                        sx={{
+                                            fontSize: 8,
+                                            mb: -1
+                                        }}>CPU</Typography>
                                     <AreaChart width={120} height={20} data={dataCpu} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                                         <Area type="monotone" dataKey="value" stroke="#8884d8" strokeWidth={2} dot={false} fill={'#bbbbdd'}/>
                                     </AreaChart>
@@ -374,16 +425,31 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                             </Tooltip>
                             {/* <Tooltip title={`${(memory||0).toFixed()}GB / ${((props.cluster?.clusterInfo?.memory||0)/1024/1024/1024).toFixed()}GB`}> */}
                             <Tooltip title={`${(memory||0).toFixed(2)}%`}>
-                                <Stack direction={'column'} alignItems={'center'} mr={'2px'}>
-                                    <Typography fontSize={8} mb={-1}>Mem</Typography>
+                                <Stack
+                                    direction={'column'}
+                                    sx={{
+                                        alignItems: 'center',
+                                        mr: '2px'
+                                    }}>
+                                    <Typography
+                                        sx={{
+                                            fontSize: 8,
+                                            mb: -1
+                                        }}>Mem</Typography>
                                     <AreaChart width={120} height={20} data={dataMemory} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                                         <Area type="monotone" dataKey="value" stroke="#d88488" strokeWidth={2} dot={false} fill={'#ddbbbb'}/>
                                     </AreaChart>
                                 </Stack>
                             </Tooltip>
                             <Tooltip title={`${(txmbps||0).toFixed(2)}Mbps / ${(rxmbps||0).toFixed(2)}Mbps`}>
-                                <Stack direction={'column'} alignItems={'center'}>
-                                    <Typography fontSize={8} mb={-1}>Net</Typography>
+                                <Stack direction={'column'} sx={{
+                                    alignItems: 'center'
+                                }}>
+                                    <Typography
+                                        sx={{
+                                            fontSize: 8,
+                                            mb: -1
+                                        }}>Net</Typography>
                                     <AreaChart width={120} height={20} data={dataNetwork} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                                         <Area type="monotone" dataKey="value" stroke="#88d884" strokeWidth={2} dot={false} fill={'#bbddbb'}/>
                                     </AreaChart>
@@ -402,16 +468,24 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                 <Collapse in={cardExpanded} timeout="auto" unmountOnExit>
                     <CardContent>
                         <Stack direction={'row'} spacing={2} sx={{mt:'4px'}}>
-                            <Stack width={'25%'}>
-                                <Typography fontSize={20}><b>Context</b></Typography>
+                            <Stack sx={{
+                                width: '25%'
+                            }}>
+                                <Typography sx={{
+                                    fontSize: 20
+                                }}><b>Context</b></Typography>
                                 <Typography><b>Home cluster: </b>{homeCluster} [{clusterUrl}]</Typography>
                                 <Typography><b>Selected cluster: </b>{props.cluster?.clusterInfo?.name}</Typography>
                                 <Typography><b>Cluster channels: </b>{homeChannels}</Typography>
                                 <Typography><b>Front channels: </b>{frontChannels}</Typography>
                             </Stack>
                             <Divider orientation='vertical' flexItem/>
-                            <Stack width={'25%'}>
-                                <Typography fontSize={20}><b>Kwirth Info</b></Typography>
+                            <Stack sx={{
+                                width: '25%'
+                            }}>
+                                <Typography sx={{
+                                    fontSize: 20
+                                }}><b>Kwirth Info</b></Typography>
                                 <Typography><b>Kwirth version: </b>{kwirthVersion}</Typography>
                                 <Typography><b>Namespace: </b>{kwrithNamespace}</Typography>
                                 <Typography><b>Deployment: </b>{kwrithDeployment || 'N/A'}</Typography>
@@ -420,10 +494,16 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                             </Stack>
                             {hasCluster && <>
                             <Divider orientation='vertical' flexItem/>
-                            <Stack width={'25%'}>
-                                <Typography fontSize={20}><b>Cluster Info</b></Typography>
+                            <Stack sx={{
+                                width: '25%'
+                            }}>
+                                <Typography sx={{
+                                    fontSize: 20
+                                }}><b>Cluster Info</b></Typography>
                                 <Typography><b>Name: </b>{props.cluster?.clusterInfo?.name}</Typography>
-                                <Stack direction={'row'} alignItems={'center'}>
+                                <Stack direction={'row'} sx={{
+                                    alignItems: 'center'
+                                }}>
                                     <Typography><b>Flavour: &nbsp;</b></Typography>
                                     {distributionIcon(props.cluster?.clusterInfo?.flavour)}
                                 </Stack>
@@ -440,7 +520,12 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                             </>}
                             {hasCluster && <>
                             <Divider orientation='vertical' flexItem/>
-                            <Stack width={'25%'} direction={'row'} alignItems={'center'}>
+                            <Stack
+                                direction={'row'}
+                                sx={{
+                                    width: '25%',
+                                    alignItems: 'center'
+                                }}>
                                 <MiniGauge value={cpu} max={100} label='CPU' format={v => `${v.toFixed(1)}%`} />
                                 <MiniGauge value={memory} max={100} label='Mem' format={v => `${v.toFixed(1)}%`} />
                                 <MiniGauge value={txmbps} max={10} label='Tx Mbps' />
@@ -454,14 +539,32 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
                 
             </Card>
 
-            <Stack direction={'column'} spacing={2} width={'100%'} height={'100%'}>
+            <Stack
+                direction={'column'}
+                spacing={2}
+                sx={{
+                    width: '100%',
+                    height: '100%'
+                }}>
 
                 <Stack direction={'row'} spacing={2} sx={{width:'100%', height:'100%'}}>
-                    <Stack direction={'column'} width='100%' spacing={2} height='100%'>
+                    <Stack
+                        direction={'column'}
+                        spacing={2}
+                        sx={{
+                            width: '100%',
+                            height: '100%'
+                        }}>
                         {drawTabCard(props.lastTabs, EListType.LAST)}
                         {drawTabCard(props.favTabs, EListType.FAV)}
                     </Stack>
-                    <Stack direction={'column'} width='100%' spacing={2} height='100%'>
+                    <Stack
+                        direction={'column'}
+                        spacing={2}
+                        sx={{
+                            width: '100%',
+                            height: '100%'
+                        }}>
                         {drawWorkspaceCard(props.lastWorkspaces, EListType.LAST)}
                         {drawWorkspaceCard(props.favWorkspaces, EListType.FAV)}
                     </Stack>
@@ -469,7 +572,7 @@ const Homepage: React.FC<IHomepageProps> = (props:IHomepageProps) => {
 
             </Stack>
         </Stack>
-    )
+    );
 }
 
 export { Homepage }

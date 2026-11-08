@@ -105,13 +105,23 @@ const RuleRow: React.FC<{
 
     return (
         <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 1, py: 0.75, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Stack direction='row' spacing={1} alignItems='center' sx={{ flex: 1 }}>
+            <Stack
+                direction='row'
+                spacing={1}
+                sx={{
+                    alignItems: 'center',
+                    flex: 1
+                }}>
                 <TextField size='small' label='From' type='time' sx={{ width: 110 }}
                     value={rule.from} onChange={e => onChange({ ...rule, from: e.target.value })}
-                    InputLabelProps={{ shrink: true }} />
+                    slotProps={{
+                        inputLabel: { shrink: true }
+                    }} />
                 <TextField size='small' label='To' type='time' sx={{ width: 110 }}
                     value={rule.to} onChange={e => onChange({ ...rule, to: e.target.value })}
-                    InputLabelProps={{ shrink: true }} />
+                    slotProps={{
+                        inputLabel: { shrink: true }
+                    }} />
                 <FormControl size='small' sx={{ minWidth: 110, flexShrink: 0 }}>
                     <InputLabel>Action</InputLabel>
                     <Select label='Action' value={rule.action}
@@ -147,7 +157,7 @@ const RuleRow: React.FC<{
                 <Delete fontSize='small' />
             </IconButton>
         </Box>
-    )
+    );
 }
 
 // ─── Config form ──────────────────────────────────────────────────────────────
@@ -172,7 +182,9 @@ const ConfigForm: React.FC<{
 
     return (
         <Stack spacing={2}>
-            <Stack direction='row' spacing={1} alignItems='center'>
+            <Stack direction='row' spacing={1} sx={{
+                alignItems: 'center'
+            }}>
                 <TextField
                     size='small' label='Name *' value={config.name}
                     onChange={e => onChange({ ...config, name: e.target.value })}
@@ -206,7 +218,9 @@ const ConfigForm: React.FC<{
             <Divider><Typography variant='caption'>Rules (evaluated in order — first match wins)</Typography></Divider>
 
             {config.rules.length === 0 && (
-                <Typography variant='body2' color='text.secondary'>No rules yet. Add one below.</Typography>
+                <Typography variant='body2' sx={{
+                    color: 'text.secondary'
+                }}>No rules yet. Add one below.</Typography>
             )}
             {config.rules.map((rule, i) => (
                 <RuleRow key={i} rule={rule}
@@ -219,7 +233,7 @@ const ConfigForm: React.FC<{
             </Button>
 
         </Stack>
-    )
+    );
 }
 
 // ─── Main dialog ──────────────────────────────────────────────────────────────
@@ -317,17 +331,36 @@ const TimedConfigDialog: React.FC<ITimedConfigDialogProps> = ({ onClose, backend
 
                 {/* Left — config list */}
                 <Box sx={{ width: 190, display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
-                    <Typography variant='caption' color='text.secondary' fontWeight='bold'>Configs</Typography>
+                    <Typography
+                        variant='caption'
+                        sx={{
+                            color: 'text.secondary',
+                            fontWeight: 'bold'
+                        }}>Configs</Typography>
                     <Box sx={{ flex: 1, border: 1, borderColor: 'divider', borderRadius: 1, overflowY: 'auto' }}>
                         {loading
                             ? <Box sx={{ p: 1 }}><CircularProgress size={16} /></Box>
                             : configs.length === 0
-                                ? <Typography variant='caption' color='text.disabled' sx={{ p: 1, display: 'block' }}>No configs yet.</Typography>
+                                ? <Typography
+                            variant='caption'
+                            sx={{
+                                color: 'text.disabled',
+                                p: 1,
+                                display: 'block'
+                            }}>No configs yet.</Typography>
                                 : configs.map(cfg => (
                                     <Box key={cfg.name} sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5, borderBottom: 1, borderColor: 'divider', borderLeft: formConfig.name === cfg.name && showForm ? 3 : 0, borderLeftColor: 'primary.main', bgcolor: formConfig.name === cfg.name && showForm ? 'action.selected' : 'transparent' }}>
                                         <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => startEdit(cfg)}>
-                                            <Typography variant='body2' fontWeight='bold' noWrap>{cfg.name}</Typography>
-                                            <Typography variant='caption' color='text.secondary' noWrap display='block'>{configSummary(cfg)}</Typography>
+                                            <Typography variant='body2' noWrap sx={{
+                                                fontWeight: 'bold'
+                                            }}>{cfg.name}</Typography>
+                                            <Typography
+                                                variant='caption'
+                                                noWrap
+                                                sx={{
+                                                    color: 'text.secondary',
+                                                    display: 'block'
+                                                }}>{configSummary(cfg)}</Typography>
                                         </Box>
                                         <Tooltip title='Delete'>
                                             <span>
@@ -352,13 +385,24 @@ const TimedConfigDialog: React.FC<ITimedConfigDialogProps> = ({ onClose, backend
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0, overflow: 'hidden' }}>
                     {showForm
                         ? <>
-                            <Typography variant='caption' color='text.secondary' fontWeight='bold'>
+                            <Typography
+                                variant='caption'
+                                sx={{
+                                    color: 'text.secondary',
+                                    fontWeight: 'bold'
+                                }}>
                                 {originalFormName ? `Editing: ${originalFormName}` : 'New config'}
                             </Typography>
                             <Box sx={{ flex: 1, overflowY: 'auto', pt: 1 }}>
                                 <ConfigForm config={formConfig} onChange={setFormConfig} />
                             </Box>
-                            <Stack direction='row' justifyContent='flex-end' alignItems='center' spacing={1}>
+                            <Stack
+                                direction='row'
+                                spacing={1}
+                                sx={{
+                                    justifyContent: 'flex-end',
+                                    alignItems: 'center'
+                                }}>
                                 {error && <Typography variant='caption' color='error' sx={{ flex: 1 }}>{error}</Typography>}
                                 <Button size='small' onClick={() => { setShowForm(false); setError(undefined) }}>Cancel</Button>
                                 <Button size='small' variant='contained' disabled={saving || !formConfig.name.trim()} onClick={saveConfig}>
@@ -376,7 +420,7 @@ const TimedConfigDialog: React.FC<ITimedConfigDialogProps> = ({ onClose, backend
                 <Button onClick={onClose}>Close</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export { TimedConfigDialog }

@@ -39,7 +39,9 @@ const Figure: React.FC<IFigureProps> = ({ label, value, hint, icon, color }) => 
         borderLeft: `4px solid ${color}`,
         backgroundColor: alpha(color, 0.08)
     }}>
-        <Stack direction='row' spacing={1.5} alignItems='center'>
+        <Stack direction='row' spacing={1.5} sx={{
+            alignItems: 'center'
+        }}>
             <Box sx={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 width: 36, height: 36, borderRadius: '50%', color, backgroundColor: alpha(color, 0.16)
@@ -47,9 +49,22 @@ const Figure: React.FC<IFigureProps> = ({ label, value, hint, icon, color }) => 
                 {icon}
             </Box>
             <Box sx={{ minWidth: 0 }}>
-                <Typography variant='caption' color='text.secondary' display='block' noWrap>{label}</Typography>
+                <Typography
+                    variant='caption'
+                    noWrap
+                    sx={{
+                        color: 'text.secondary',
+                        display: 'block'
+                    }}>{label}</Typography>
                 <Typography variant='subtitle1' sx={{ fontVariantNumeric: 'tabular-nums', lineHeight: 1.3, fontWeight: 600 }} noWrap>{value}</Typography>
-                {hint && <Typography variant='caption' color='text.secondary' display='block' noWrap title={hint}>{hint}</Typography>}
+                {hint && <Typography
+                    variant='caption'
+                    noWrap
+                    title={hint}
+                    sx={{
+                        color: 'text.secondary',
+                        display: 'block'
+                    }}>{hint}</Typography>}
             </Box>
         </Stack>
     </Paper>
@@ -78,7 +93,13 @@ const SessionChart: React.FC<IChartProps> = ({ title, unit, series, lines }) => 
         <Paper variant='outlined' sx={{ p: 1.5, flex: 1, minWidth: 280 }}>
             <Typography variant='subtitle2' sx={{ mb: 1 }}>{title}</Typography>
             {!drawable
-                ? <Typography variant='body2' color='text.secondary' sx={{ py: 5, textAlign: 'center' }}>
+                ? <Typography
+                variant='body2'
+                sx={{
+                    color: 'text.secondary',
+                    py: 5,
+                    textAlign: 'center'
+                }}>
                     A line needs two snapshots. Take another one, or turn auto-refresh on.
                 </Typography>
                 : <Box sx={{ height: 150 }}>
@@ -96,7 +117,7 @@ const SessionChart: React.FC<IChartProps> = ({ title, unit, series, lines }) => 
                     </ResponsiveContainer>
                 </Box>}
         </Paper>
-    )
+    );
 }
 
 const mb = formatMb
@@ -106,10 +127,15 @@ export const StatusPerformanceTab: React.FC<IPerformanceTabProps> = ({ inventory
     const p = inventory.process
     if (!p) {
         return (
-            <Typography variant='body2' color='text.secondary' sx={{ p: 4, textAlign: 'center' }}>
-                This Kwirth's Status back end does not report the process yet. Update the Status plugin.
-            </Typography>
-        )
+            <Typography
+                variant='body2'
+                sx={{
+                    color: 'text.secondary',
+                    p: 4,
+                    textAlign: 'center'
+                }}>This Kwirth's Status back end does not report the process yet. Update the Status plugin.
+                            </Typography>
+        );
     }
     const last = series[series.length - 1]
     const cpu = last?.takenAt === inventory.takenAt ? last.cpuPercent : undefined
@@ -146,7 +172,9 @@ export const StatusPerformanceTab: React.FC<IPerformanceTabProps> = ({ inventory
                     icon={<Schedule />} color={color.uptime} />
             </Box>
 
-            <Stack direction='row' spacing={2} useFlexGap flexWrap='wrap'>
+            <Stack direction='row' spacing={2} useFlexGap sx={{
+                flexWrap: 'wrap'
+            }}>
                 <SessionChart title='Memory' unit='MB' series={series} lines={[
                     { key: 'rssMb', name: 'RSS', color: color.rss },
                     { key: 'heapUsedMb', name: 'Heap used', color: color.heap }
@@ -162,11 +190,13 @@ export const StatusPerformanceTab: React.FC<IPerformanceTabProps> = ({ inventory
             </Stack>
 
             {/* Said, not implied: this is a session view and it is not kept anywhere. */}
-            <Typography variant='caption' color='text.secondary'>
+            <Typography variant='caption' sx={{
+                color: 'text.secondary'
+            }}>
                 {series.length} snapshot{series.length === 1 ? '' : 's'} since this channel started, kept only in this browser
                 and thrown away when you stop it. This is the Kwirth process only — every extension runs inside it, so
                 nothing here can be attributed to one of them.
             </Typography>
         </Stack>
-    )
+    );
 }

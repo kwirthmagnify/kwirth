@@ -28,7 +28,9 @@ const NOT_REPORTED = "This plugin's channel does not report what it has running.
 const CountCell: React.FC<ICountCellProps> = ({ value, label }) => (
     <TableCell align='right' sx={{ whiteSpace: 'nowrap' }} aria-label={label}>
         {value === undefined
-            ? <Tooltip title={NOT_REPORTED}><Typography variant='body2' color='text.disabled'>—</Typography></Tooltip>
+            ? <Tooltip title={NOT_REPORTED}><Typography variant='body2' sx={{
+            color: 'text.disabled'
+        }}>—</Typography></Tooltip>
             : <Typography variant='body2' sx={{ fontVariantNumeric: 'tabular-nums' }}>{value}</Typography>}
     </TableCell>
 )
@@ -46,17 +48,27 @@ const VALUE_OF: Record<EPluginColumn, (p: IPluginStatus) => TSortValue> = {
 export const StatusPluginsTab: React.FC<IPluginsTabProps> = ({ plugins, filter, sorts, onSort }) => {
     if (!plugins) {
         return (
-            <Typography variant='body2' color='text.secondary' sx={{ p: 4, textAlign: 'center' }}>
-                This Kwirth's core does not list its plugins yet. Update the core to see them here.
-            </Typography>
-        )
+            <Typography
+                variant='body2'
+                sx={{
+                    color: 'text.secondary',
+                    p: 4,
+                    textAlign: 'center'
+                }}>This Kwirth's core does not list its plugins yet. Update the core to see them here.
+                            </Typography>
+        );
     }
     if (plugins.length === 0) {
         return (
-            <Typography variant='body2' color='text.secondary' sx={{ p: 4, textAlign: 'center' }}>
-                No plugin is installed in this Kwirth.
-            </Typography>
-        )
+            <Typography
+                variant='body2'
+                sx={{
+                    color: 'text.secondary',
+                    p: 4,
+                    textAlign: 'center'
+                }}>No plugin is installed in this Kwirth.
+                            </Typography>
+        );
     }
     const s = summarizePlugins(plugins)
     const sort = sorts[EStatusTable.PLUGINS]
@@ -65,8 +77,17 @@ export const StatusPluginsTab: React.FC<IPluginsTabProps> = ({ plugins, filter, 
         <SortableCell label={label} column={column} sort={sort} onSort={col => onSort(EStatusTable.PLUGINS, col)} align={align} />
     return (
         <Stack spacing={1} sx={{ pb: 2 }}>
-            <Stack direction='row' spacing={0.75} useFlexGap flexWrap='wrap' alignItems='center'>
-                <Typography variant='caption' color='text.secondary'>{s.total} plugin{s.total === 1 ? '' : 's'}:</Typography>
+            <Stack
+                direction='row'
+                spacing={0.75}
+                useFlexGap
+                sx={{
+                    flexWrap: 'wrap',
+                    alignItems: 'center'
+                }}>
+                <Typography variant='caption' sx={{
+                    color: 'text.secondary'
+                }}>{s.total} plugin{s.total === 1 ? '' : 's'}:</Typography>
                 <Chip size='small' variant='outlined' label={`${s.instances} instance${s.instances === 1 ? '' : 's'} open`} />
                 {s.failed > 0 && <Chip size='small' color='error' label={`${s.failed} failed`} />}
                 {/* Said up front: the instance count above leaves these out, and it must not look complete. */}
@@ -106,7 +127,12 @@ export const StatusPluginsTab: React.FC<IPluginsTabProps> = ({ plugins, filter, 
                                 <TableCell>
                                     <Typography variant='body2' sx={{ fontWeight: 500 }}>{p.name}</Typography>
                                     {p.name !== p.id &&
-                                        <Typography variant='caption' color='text.secondary' sx={{ fontFamily: 'monospace' }}>{p.id}</Typography>}
+                                        <Typography
+                                            variant='caption'
+                                            sx={{
+                                                color: 'text.secondary',
+                                                fontFamily: 'monospace'
+                                            }}>{p.id}</Typography>}
                                 </TableCell>
                                 <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{p.version}</TableCell>
                                 <TableCell sx={{ whiteSpace: 'nowrap' }} aria-label='State'>
@@ -119,13 +145,19 @@ export const StatusPluginsTab: React.FC<IPluginsTabProps> = ({ plugins, filter, 
                                 <CountCell value={p.instances?.instances} label='Instances' />
                                 <CountCell value={p.instances?.connections} label='Connections' />
                                 <TableCell>
-                                    <Typography variant='body2' color='text.secondary' sx={{ fontFamily: 'monospace', overflowWrap: 'anywhere' }}>{p.source ?? '—'}</Typography>
+                                    <Typography
+                                        variant='body2'
+                                        sx={{
+                                            color: 'text.secondary',
+                                            fontFamily: 'monospace',
+                                            overflowWrap: 'anywhere'
+                                        }}>{p.source ?? '—'}</Typography>
                                 </TableCell>
                             </TableRow>
-                        )
+                        );
                     })}
                 </TableBody>
             </Table>
         </Stack>
-    )
+    );
 }

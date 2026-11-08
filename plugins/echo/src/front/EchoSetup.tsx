@@ -78,12 +78,18 @@ export const EchoSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                     <TextField value={maxLines} onChange={(e) => setMaxLines(+e.target.value)} type='number' variant='standard' label='Max lines' fullWidth />
                     <TextField value={interval} onChange={(e) => setInterval(+e.target.value)} type='number' variant='standard' label='Interval' fullWidth />
                     <Stack direction='column' spacing={0.5}>
-                        <Typography variant='caption' color='text.secondary'>Sender config</Typography>
+                        <Typography variant='caption' sx={{
+                            color: 'text.secondary'
+                        }}>Sender config</Typography>
                         <Select value={selectedSender} onChange={(e) => setSelectedSender(e.target.value)} displayEmpty size='small' variant='standard'>
-                            <MenuItem value=''><Typography variant='body2' color='text.secondary'>(none)</Typography></MenuItem>
+                            <MenuItem value=''><Typography variant='body2' sx={{
+                                color: 'text.secondary'
+                            }}>(none)</Typography></MenuItem>
                             {senderEntries.map(e => (
                                 <MenuItem key={`${e.senderId}::${e.configName}`} value={`${e.senderId}::${e.configName}`}>
-                                    <Stack direction='row' spacing={1} alignItems='center'>
+                                    <Stack direction='row' spacing={1} sx={{
+                                        alignItems: 'center'
+                                    }}>
                                         <Chip label={e.senderId} size='small' variant='outlined' sx={{ fontSize: '0.65rem', height: 18 }} />
                                         <Typography variant='body2'>{e.configName}</Typography>
                                     </Stack>
@@ -99,5 +105,5 @@ export const EchoSetup: React.FC<ISetupProps> = (props: ISetupProps) => {
                 <Button variant='outlined' onClick={cancel}>CANCEL</Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
