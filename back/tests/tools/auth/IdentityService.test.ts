@@ -41,15 +41,15 @@ test('readUsers devuelve el secret kwirth-users', async () => {
     assert.deepEqual(got, users)
 })
 
-test('readUsers cae al fallback kwirth.users si kwirth-users no existe', async () => {
+test('readUsers ya no lee la grafia vieja kwirth.users', async () => {
     const users = encodeUsers([makeUser()])
     const secrets = mockSecrets({ 'kwirth.users': users }, ['kwirth-users'])
     const got = await IdentityService.readUsers(secrets)
-    assert.deepEqual(got, users)
+    assert.equal(got, undefined)
 })
 
 test('readUsers devuelve undefined si no hay ningun secret', async () => {
-    const secrets = mockSecrets({}, ['kwirth-users', 'kwirth.users'])
+    const secrets = mockSecrets({}, ['kwirth-users'])
     const got = await IdentityService.readUsers(secrets)
     assert.equal(got, undefined)
 })

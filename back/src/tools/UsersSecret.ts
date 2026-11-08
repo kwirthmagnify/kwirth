@@ -15,30 +15,23 @@ import { V1Secret } from '@kubernetes/client-node'
     to start when more than one answers, and it can only do that if it is told how many there were.
 
     It lives here, and not inline where it is used, so the harness can actually exercise it: the rules
-    below (which spelling wins, what counts as a candidate) are the ones worth pinning down, and
-    `index.ts` is not loaded by the tests.
+    below (what counts as a candidate) are the ones worth pinning down, and `index.ts` is not loaded by
+    the tests.
 */
 
-/** The two spellings of the users Secret, in order of preference: the dashed one wins. */
-export const USERS_SECRET_NAMES = ['kwirth-users', 'kwirth.users']
+/**
+ * The name of the users Secret. Only this one counts: the historical 'kwirth.users' spelling is no
+ * longer looked for, so a leftover Secret with that name neither names a namespace nor counts as a
+ * second installation.
+ */
+export const USERS_SECRET_NAME = 'kwirth-users'
 
 /**
  * The namespaces of the Secrets that could name this Kwirth's own namespace, given everything the
  * cluster returned. Empty means there is none; more than one means it cannot be told apart.
- *
- * The spellings are NOT merged: the dashed one is looked for first and, only if nothing is named that
- * way, the dotted one. A cluster holding one of each is still two installations, and both are reported.
  */
-export const usersSecretNamespaces = (secrets: V1Secret[]): string[] => {
-    const namespacesOf = (name: string): string[] =>
-        secrets.filter(s => s.metadata?.name === name).map(s => s.metadata?.namespace ?? '(unknown)')
-
-    for (const name of USERS_SECRET_NAMES) {
-        const found = namespacesOf(name)
-        if (found.length > 0) return found
-    }
-    return []
-}
+export const usersSecretNamespaces = (secrets: V1Secret[]): string[] =>
+    secrets.filter(s => s.metadata?.name === USERS_SECRET_NAME).map(s => s.metadata?.namespace ?? '(unknown)')
 
 /**
  * The namespace to adopt, given what the launcher asked for and what the cluster holds. Same shape as

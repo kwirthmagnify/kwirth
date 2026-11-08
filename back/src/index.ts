@@ -129,7 +129,7 @@ import { ILlm, ILlmProvider, STORAGE_KEY_LLMS, STORAGE_KEY_PROVIDERS } from '@kw
 import { ConfigBundleApi } from './api/ConfigBundleApi'
 import { ConfigBundleManager } from './tools/ConfigBundleManager'
 import { redactSharedAi } from './tools/SharedAiPortability'
-import { usersSecretNamespaces, resolveUsersNamespace, USERS_SECRET_NAMES } from './tools/UsersSecret'
+import { usersSecretNamespaces, resolveUsersNamespace, USERS_SECRET_NAME } from './tools/UsersSecret'
 import { buildExtensionRefs } from './tools/ExtensionRefs'
 const fs = require('fs')
 
@@ -418,7 +418,7 @@ const getKubernetesKwirthData = async (context:string|undefined):Promise<KwirthD
 
                 if (candidates.length > 1) {
                     const namespaces = [...candidates].sort().join(', ')
-                    logError(ELogComponent.CORE, `Found ${candidates.length} users secrets (${USERS_SECRET_NAMES.join(' / ')}) in this cluster, in namespaces: ${namespaces}`)
+                    logError(ELogComponent.CORE, `Found ${candidates.length} users secrets (${USERS_SECRET_NAME}) in this cluster, in namespaces: ${namespaces}`)
                     logError(ELogComponent.CORE, 'Running outside the cluster, that secret is what tells Kwirth which namespace is its own, and there is more than one candidate')
                     logError(ELogComponent.CORE, 'Refusing to start: set KWIRTH_NAMESPACE to the one wanted, or point this Kwirth at a cluster with a single installation. Picking one would take over another installation store')
                     process.exit(1)

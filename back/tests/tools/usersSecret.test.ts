@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { V1Secret } from '@kubernetes/client-node'
-import { usersSecretNamespaces, resolveUsersNamespace, USERS_SECRET_NAMES } from '../../src/tools/UsersSecret'
+import { usersSecretNamespaces, resolveUsersNamespace, USERS_SECRET_NAME } from '../../src/tools/UsersSecret'
 
 /*
     Which namespace Kwirth adopts as its own when it runs OUTSIDE the cluster.
@@ -40,26 +40,12 @@ test('🔴 DOS instalaciones: los devuelve AMBOS, para que quien llama pueda neg
     assert.deepEqual([...found].sort(), ['kwirth', 'otro-kwirth'])
 })
 
-test('la grafia con guion gana a la del punto, y no se mezclan', () => {
-    // Con las dos presentes manda 'kwirth-users', como hacia el codigo original.
-    const found = usersSecretNamespaces([
+test('la grafia vieja kwirth.users ya no cuenta: ni nombra namespace ni suma instalaciones', () => {
+    assert.deepEqual(usersSecretNamespaces([secret('kwirth.users', 'viejo')]), [])
+    assert.deepEqual(usersSecretNamespaces([
         secret('kwirth.users', 'viejo'),
         secret('kwirth-users', 'nuevo')
-    ])
-    assert.deepEqual(found, ['nuevo'])
-})
-
-test('la grafia con punto se usa SOLO si no hay ninguna con guion', () => {
-    assert.deepEqual(usersSecretNamespaces([secret('kwirth.users', 'viejo')]), ['viejo'])
-})
-
-test('🔴 dos con la grafia del punto tambien son dos instalaciones', () => {
-    // No es un caso teorico: quien siga con la grafia vieja merece el mismo corte que los demas.
-    const found = usersSecretNamespaces([
-        secret('kwirth.users', 'uno'),
-        secret('kwirth.users', 'dos')
-    ])
-    assert.equal(found.length, 2)
+    ]), ['nuevo'])
 })
 
 test('un secret sin namespace no se descarta en silencio: cuenta, y se nombra', () => {
@@ -75,8 +61,8 @@ test('un secret sin namespace no se descarta en silencio: cuenta, y se nombra', 
     assert.ok(found.includes('(unknown)'))
 })
 
-test('los nombres que se buscan estan en orden de preferencia', () => {
-    assert.deepEqual(USERS_SECRET_NAMES, ['kwirth-users', 'kwirth.users'])
+test('el unico nombre que se busca es kwirth-users', () => {
+    assert.equal(USERS_SECRET_NAME, 'kwirth-users')
 })
 
 /*

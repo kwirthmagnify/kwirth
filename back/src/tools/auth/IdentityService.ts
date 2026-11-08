@@ -4,6 +4,7 @@ import { AuthorizationManagement } from '../AuthorizationManagement'
 import { ApiKeyApi } from '../../api/ApiKeyApi'
 import { ISecrets } from '../ISecrets'
 import { IConfigMaps } from '../IConfigMap'
+import { USERS_SECRET_NAME } from '../UsersSecret'
 
 /*
     Identity issuance shared by the different authentication methods (kwirth login and IdP connectors).
@@ -22,23 +23,18 @@ export class IdentityService {
     */
     static lock: Semaphore = new Semaphore(1)
 
-    // reads the users secret (with the historical 'kwirth.users' fallback) and returns it RE-INDEXED by
-    // the user's real id (decoded from each value), not by the Secret's key. The key of a K8s Secret's
-    // data does not admit '@' (emails), so it is stored as base64url(id) (see writeUsers); here we undo
-    // that detail so that callers use users[id].
+    // reads the users secret ('kwirth-users' only: the historical 'kwirth.users' is no longer read) and
+    // returns it RE-INDEXED by the user's real id (decoded from each value), not by the Secret's key. The
+    // key of a K8s Secret's data does not admit '@' (emails), so it is stored as base64url(id) (see
+    // writeUsers); here we undo that detail so that callers use users[id].
     static readUsers = async (secrets: ISecrets): Promise<{ [username:string]:string } | undefined> => {
         let raw:{ [key:string]:string }
         try {
-            raw = await secrets.read('kwirth-users')
+            raw = await secrets.read(USERS_SECRET_NAME)
         }
         catch (err) {
-            try {
-                raw = await secrets.read('kwirth.users')
-            }
-            catch (err) {
-                console.log(`*** Cannot read 'kwirth-users' secret on source ***`)
-                return undefined
-            }
+            console.log(`*** Cannot read '${USERS_SECRET_NAME}' secret on source ***`)
+            return undefined
         }
         if (!raw || typeof raw !== 'object') return undefined
         const users:{ [username:string]:string } = {}
@@ -60,7 +56,7 @@ export class IdentityService {
         for (const [id, value] of Object.entries(users)) {
             data[Buffer.from(id, 'utf8').toString('base64url')] = value
         }
-        await secrets.write('kwirth-users', data)
+        await secrets.write(USERS_SECRET_NAME, data)
     }
 
     // locates and deserialises a user by their id (username = email in IdP users)
