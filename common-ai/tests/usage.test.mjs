@@ -411,3 +411,103 @@ test('an EMPTIED limits object inherits, instead of silently meaning unlimited',
     await assert.rejects(() => generateText({ model, prompt: 'x' }), UsageLimitError)
     assert.equal(cuts[0].limit, 10, 'emptied means inherit, not unlimited')
 })
+
+/*
+    Una llamada que LANZA puede haber gastado igual, y eso tiene que contar.
+
+    `generateObject` lanza cuando lo que devuelve el modelo no valida contra el esquema, pero para
+    entonces el modelo ya ha contestado y ya ha cobrado: el error del SDK trae su `usage` dentro. Antes
+    el apunte vivía DESPUÉS del `await`, así que no se ejecutaba, y esos tokens no contaban contra
+    ningún tope. No es un caso raro: un canal cuyo modelo devuelve algo que no casa el ejemplo lo hace
+    en CADA llamada, así que podía gastar sin límite y sin dejar rastro en los contadores.
+*/
+const rejecting = (err) => () => Promise.reject(err)
+
+const schemaError = (inputTokens, outputTokens) => {
+    const err = new Error('No object generated: response did not match schema')
+    err.name = 'AI_NoObjectGeneratedError'
+    err.usage = { inputTokens, outputTokens }
+    return err
+}
+
+test('lo que gastó una respuesta RECHAZADA por el esquema se cuenta igual', async () => {
+    const { service, added } = fakeService()
+    setUsageService(service)
+    const model = buildModel(llm(), providerWith(undefined))
+
+    await assert.rejects(() => runWithUsageGuard({ model }, rejecting(schemaError(120, 30))), /No object generated/)
+
+    assert.equal(added.length, 1, 'el modelo contestó y cobró: el apunte tiene que estar')
+    assert.equal(added[0].amounts.tokensIn, 120)
+    assert.equal(added[0].amounts.tokensOut, 30)
+    assert.equal(added[0].amounts.calls, 1, 'y la llamada ocurrió, así que cuenta como una')
+    // y el coste sale de las tarifas del LLM, igual que en una llamada que sí validó
+    assert.equal(added[0].amounts.cost, 120 / 1_000_000 * 1000 + 30 / 1_000_000 * 2000)
+})
+
+test('y el error se propaga: contabilizarlo no es tragárselo', async () => {
+    const { service } = fakeService()
+    setUsageService(service)
+    const model = buildModel(llm(), providerWith(undefined))
+
+    await assert.rejects(
+        () => runWithUsageGuard({ model }, rejecting(schemaError(1, 1))),
+        (err) => {
+            assert.equal(err.name, 'AI_NoObjectGeneratedError', 'el llamante tiene que poder distinguir por qué falló')
+            return true
+        }
+    )
+})
+
+/*  Un fallo de verdad —la conexión, un aborto por tiempo— no trae cifras, y apuntar ceros falsearía
+    los contadores: diría que hubo una llamada de cero tokens donde no hubo llamada que cobrar. */
+test('un fallo SIN cifras no apunta nada', async () => {
+    const { service, added } = fakeService()
+    setUsageService(service)
+    const model = buildModel(llm(), providerWith(undefined))
+
+    await assert.rejects(() => runWithUsageGuard({ model }, rejecting(new Error('connect ECONNREFUSED'))), /ECONNREFUSED/)
+    assert.equal(added.length, 0, 'sin gasto conocido no hay apunte')
+})
+
+test('un usage a medias vale: se apunta lo que haya', async () => {
+    const { service, added } = fakeService()
+    setUsageService(service)
+    const model = buildModel(llm(), providerWith(undefined))
+    const err = new Error('rejected')
+    err.usage = { inputTokens: 50 }   // el proveedor no siempre devuelve las dos cifras
+
+    await assert.rejects(() => runWithUsageGuard({ model }, rejecting(err)), /rejected/)
+    assert.equal(added.length, 1)
+    assert.equal(added[0].amounts.tokensIn, 50)
+    assert.equal(added[0].amounts.tokensOut, 0, 'lo que no vino se cuenta como cero, no inventa')
+})
+
+/*  El tope se comprueba ANTES de llamar, así que un gasto apuntado por esta vía corta la llamada
+    SIGUIENTE — que es exactamente lo que hace el gasto de una llamada que sí validó. */
+test('ese gasto cuenta para el tope de la llamada siguiente', async () => {
+    /*  Un servicio que ACUMULA, no uno que devuelve siempre lo mismo: lo que se quiere ver aquí es el
+        encadenado —lo que apunta una llamada es lo que lee la siguiente—, y con un read fijo eso no se
+        puede distinguir de que el tope ya estuviera pasado de antes. */
+    const daily = { ...ZERO }
+    const service = {
+        durable: true,
+        async read() { return { daily: { ...daily }, monthly: { ...ZERO } } },
+        async add(scope, subject, amounts) {
+            daily.tokensIn += amounts.tokensIn
+            daily.tokensOut += amounts.tokensOut
+            daily.calls += amounts.calls
+            daily.cost += amounts.cost
+        },
+        onCut() {}
+    }
+    setUsageService(service)
+    const model = buildModel(llm({ limits: { tokensIn: { enabled: true, daily: 100 } } }), providerWith(undefined))
+
+    // la primera se RECHAZA por el esquema, pero el modelo gastó 150 de entrada
+    await assert.rejects(() => runWithUsageGuard({ model }, rejecting(schemaError(150, 10))), /No object generated/)
+    assert.equal(daily.tokensIn, 150, 'el gasto de la rechazada quedó apuntado')
+
+    // y por eso la siguiente ya no sale: antes esos 150 no existían para nadie
+    await assert.rejects(() => runWithUsageGuard({ model }, answering(1, 1)), UsageLimitError)
+})

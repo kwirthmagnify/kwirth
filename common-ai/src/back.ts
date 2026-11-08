@@ -376,19 +376,62 @@ export const runWithUsageGuard = async (options: { model?: unknown }, call: () =
         contabilidad de aquí arriba (2026-10-14). Un tramo instrumentado solo cuando va bien no está
         instrumentado. */
     const callStarted = Date.now()
-    let ok = false
-    let result: { usage?: { inputTokens?: number, outputTokens?: number } }
     try {
-        result = await call()
-        ok = true
-    }
-    finally {
+        const result = await call()
         const callMs = Date.now() - callStarted
-        if (callMs > 30_000 || !ok) logUsage(`AI usage: the model ${ok ? 'took' : 'FAILED after'} ${Math.round(callMs / 1000)} s`)
+        if (callMs > 30_000) logUsage(`AI usage: the model took ${Math.round(callMs / 1000)} s`)
+        usageRecord(options, result)
+        return result
     }
+    catch (err) {
+        /*  🔴 Una llamada que LANZA puede haber gastado igual, y hasta aquí ese gasto se tiraba.
 
-    usageRecord(options, result)
-    return result
+            `generateObject` lanza cuando lo que devuelve el modelo no valida contra el esquema, pero
+            para entonces el modelo ya ha contestado y ya ha cobrado: el error del SDK
+            (`NoObjectGeneratedError`) trae su `usage` dentro. Como `usageRecord` vivía DESPUÉS del
+            `await`, no llegaba a ejecutarse y esos tokens no contaban contra ningún tope — y no es un
+            caso raro: un canal cuyo modelo devuelve algo que no casa el ejemplo lo hace en cada
+            llamada, así que podía gastar sin límite y sin dejar rastro en los contadores.
+
+            Y entonces tampoco se llama FAILED: el modelo respondió. Decir que falló mandaba a mirar al
+            sitio equivocado —la conexión, el tiempo— cuando lo que hay que mirar es el esquema. */
+        const callMs = Date.now() - callStarted
+        const gastado = usageOfRejected(err)
+        if (gastado) {
+            const total = (gastado.usage?.inputTokens ?? 0) + (gastado.usage?.outputTokens ?? 0)
+            logUsage(`AI usage: the model answered in ${Math.round(callMs / 1000)} s but its answer was rejected (${errorName(err)}) — the ${total} token(s) it spent are counted anyway`)
+            usageRecord(options, gastado)
+        }
+        else {
+            logUsage(`AI usage: the model FAILED after ${Math.round(callMs / 1000)} s`)
+        }
+        throw err
+    }
+}
+
+/** El nombre del error del SDK (`NoObjectGeneratedError`, `AI_TypeValidationError`…), para decir POR QUÉ. */
+const errorName = (err: unknown): string =>
+    typeof err === 'object' && err !== null && typeof (err as { name?: unknown }).name === 'string'
+        ? (err as { name: string }).name
+        : 'unknown error'
+
+/*
+    Lo que gastó una llamada que el SDK dio por fallida, si es que lo dice.
+
+    Se lee a mano en vez de con `NoObjectGeneratedError.isInstance`: el error puede venir de otra copia
+    del SDK —cada canal trae la suya— y entonces el `instanceof` falla aunque el error sea exactamente
+    ese. Lo que importa son los números, y los números están o no están.
+*/
+const usageOfRejected = (err: unknown): { usage?: { inputTokens?: number, outputTokens?: number } } | undefined => {
+    if (typeof err !== 'object' || err === null) return undefined
+    const usage = (err as { usage?: unknown }).usage
+    if (typeof usage !== 'object' || usage === null) return undefined
+    const { inputTokens, outputTokens } = usage as { inputTokens?: unknown, outputTokens?: unknown }
+    const entrada = typeof inputTokens === 'number' ? inputTokens : undefined
+    const salida = typeof outputTokens === 'number' ? outputTokens : undefined
+    // sin ninguna de las dos cifras no hay nada que apuntar, y apuntar ceros falsearia los contadores
+    if (entrada === undefined && salida === undefined) return undefined
+    return { usage: { inputTokens: entrada, outputTokens: salida } }
 }
 
 export interface IVisionResult<T> {
