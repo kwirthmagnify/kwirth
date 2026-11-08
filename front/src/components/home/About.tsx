@@ -18,7 +18,8 @@ const About: React.FC<IAboutProps> = (props:IAboutProps) => {
 
     return (
         <>
-            <Dialog open={true} ref={escapeRef} disableRestoreFocus={true} fullWidth maxWidth={'md'}>
+            {/* The content is fixed (a card and a drawing of a fixed size) and the dialog adapts to it. */}
+            <Dialog open={true} ref={escapeRef} disableRestoreFocus={true} maxWidth={false}>
                 <DialogTitle>About Kwirth...</DialogTitle>
                 <DialogContent>
                     <Stack
@@ -74,15 +75,13 @@ const About: React.FC<IAboutProps> = (props:IAboutProps) => {
                                 color: 'text.secondary'
                             }}>© 2025 Kwirth contributors · Apache 2.0</Typography>
                         </Stack>
-                        {/* Drawn whole, at once: it used to be typed out character by character. */}
-                        <Stack
-                            sx={{
-                                height: '400px',
-                                width: '500px',
-                                ml: 2
-                            }}>
-                            <pre style={{fontSize:6}}>{brand.join('\n')}</pre>
-                        </Stack>
+                        {/* Drawn whole, at once: it used to be typed out character by character. Its size is
+                            set by the drawing itself: an explicit line-height and no margin, because inherited
+                            from the body (1.5) the 47 lines no longer fitted the old 400px box and the dialog
+                            scrolled. */}
+                        <Box sx={{ ml: 2 }}>
+                            <pre style={{ fontSize: 6, lineHeight: 1.2, margin: 0 }}>{brand.join('\n')}</pre>
+                        </Box>
                     </Stack>
                 </DialogContent>
                 <DialogActions>

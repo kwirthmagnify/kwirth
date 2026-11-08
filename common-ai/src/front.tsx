@@ -284,8 +284,8 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
         control that applies the form to the list scrolled out of sight.
     */
     return (
-        <Dialog open={true} onClose={() => props.onClose(undefined)} slotProps={{
-            paper: { sx: { width: 'auto', maxWidth: 'none', height: 'auto' } }
+        <Dialog open={true} onClose={() => props.onClose(undefined)} maxWidth={false} slotProps={{
+            paper: { sx: { width: 'auto', height: 'auto' } }
         }}>
             <DialogTitle sx={{ pb: 1 }}>AI — LLM config</DialogTitle>
             <DialogContent style={{ display: 'flex' }}>
@@ -318,7 +318,7 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                             spacing={3}
                             sx={{
                                 alignItems: 'stretch',
-                                flexWrap: 'wrap',
+                                flexWrap: 'nowrap',
                                 height: '100%'
                             }}>
                         <Stack direction='column' spacing={1} sx={{ flex: `0 0 ${COL_WIDTH}px`, width: COL_WIDTH }}>
@@ -550,8 +550,8 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     }
 
     return (
-        <Dialog open={true} onClose={() => props.onClose(undefined)} slotProps={{
-            paper: { sx: { width: 'auto', maxWidth: 'none', height: 'auto' } }
+        <Dialog open={true} onClose={() => props.onClose(undefined)} maxWidth={false} slotProps={{
+            paper: { sx: { width: 'auto', height: 'auto' } }
         }}>
             <DialogTitle sx={{ pb: 1 }}>AI — Provider config</DialogTitle>
             {/* Same layout as the LLM dialog: see the notes there. */}
@@ -583,7 +583,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                         spacing={3}
                         sx={{
                             alignItems: 'flex-start',
-                            flexWrap: 'wrap'
+                            flexWrap: 'nowrap'
                         }}>
                     <Stack direction='column' spacing={1} sx={{ flex: `0 0 ${COL_WIDTH}px`, width: COL_WIDTH }}>
                         <TextField label='Name' variant='standard' fullWidth placeholder='e.g. huawei-maas, openai-prod'
@@ -624,11 +624,11 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                             of the provider as a whole goes here once, instead of being retyped on every
                             model added. Left empty, a model with no price of its own counts as 0. */}
                         <Typography variant='subtitle2' sx={{ pt: 1 }}>Default model costs</Typography>
-                        <Stack direction='row' spacing={1} sx={{ flexWrap: 'wrap' }}>
-                            <TextField value={providerInputCost} onChange={e => setProviderInputCost(e.target.value === '' ? '' : +e.target.value)} label='Input cost /M' variant='standard' type='number' sx={{ flex: 1, minWidth: '110px' }} slotProps={{
+                        <Stack direction='row' spacing={1} sx={{ flexWrap: 'nowrap' }}>
+                            <TextField value={providerInputCost} onChange={e => setProviderInputCost(e.target.value === '' ? '' : +e.target.value)} label='Input cost /M' variant='standard' type='number' sx={{ flex: 1, minWidth: 0 }} slotProps={{
                                 htmlInput: { min: 0, step: 0.01 }
                             }} />
-                            <TextField value={providerOutputCost} onChange={e => setProviderOutputCost(e.target.value === '' ? '' : +e.target.value)} label='Output cost /M' variant='standard' type='number' sx={{ flex: 1, minWidth: '110px' }} slotProps={{
+                            <TextField value={providerOutputCost} onChange={e => setProviderOutputCost(e.target.value === '' ? '' : +e.target.value)} label='Output cost /M' variant='standard' type='number' sx={{ flex: 1, minWidth: 0 }} slotProps={{
                                 htmlInput: { min: 0, step: 0.01 }
                             }} />
                         </Stack>
