@@ -10,14 +10,7 @@
         "lib": ["ES2020", "DOM"],
         "types": ["node"],
         "skipLibCheck": true,
-        "esModuleInterop": true,
-        "paths": {
-            "@kwirthmagnify/kwirth-common": ["../../common/src/index.ts"],
-            "@kwirthmagnify/kwirth-common-back": ["../../common-back/src/index.ts"],
-            "@kwirthmagnify/kwirth-common-front": ["../../common-front/src/index.ts"],
-            "@kwirthmagnify/kwirth-common-ai": ["../../common-ai/src/index.ts"],
-            "@kwirthmagnify/kwirth-common-ai/back": ["../../common-ai/src/back.ts"]
-        }
+        "esModuleInterop": true
     },
     "include": ["src"]
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, Divider, IconButton, Stack, Tooltip, Typography } from '@mui/material'
 import { AccountTree } from '@mui/icons-material'
 import { IClusterEvent, IHomepageProps, ITabSummary, IWorkspaceSummary } from '@kwirthmagnify/kwirth-common-front'
+import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 
 const MATRIX_GREEN = '#00ff41'
 const MATRIX_DIM = '#006620'
@@ -398,14 +399,14 @@ const Matrix: React.FC<IHomepageProps> = (props) => {
     const launchMagnify = (clusterName: string) => {
         props.onHomepageSelectTab({
             name: clusterName, description: '', channel: 'magnify',
-            channelObject: { clusterName, view: 'cluster', namespace: '', group: '', pod: '', container: '' }
+            channelObject: { clusterName, view: EInstanceConfigView.CLUSTER, namespace: '', group: '', pod: '', container: '' }
         })
     }
 
     const launchTopology = (clusterName: string) => {
         props.onHomepageSelectTab({
             name: clusterName, description: '', channel: 'topology',
-            channelObject: { clusterName, view: 'cluster', namespace: '', group: '', pod: '', container: '' }
+            channelObject: { clusterName, view: EInstanceConfigView.CLUSTER, namespace: '', group: '', pod: '', container: '' }
         })
     }
 
