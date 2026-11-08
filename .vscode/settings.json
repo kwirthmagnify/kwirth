@@ -6,5 +6,6 @@
         "kwirthmagnify",
         "uncordon"
     ],
-    "cSpell.diagnosticLevel": "Hint"
+    "cSpell.diagnosticLevel": "Hint",
+    "git.repositoryScanMaxDepth": 2
 }
