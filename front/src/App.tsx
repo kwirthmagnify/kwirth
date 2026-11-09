@@ -1586,6 +1586,17 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setFullscreenTab(undefined)
             setLogged(false)
         }
+        /*
+            The extension's own Start (its not-started screen): the same as the tab menu's Start. Its button is only
+            on the tab being shown, which is the selected one, the tab onClickChannelStart starts. Then a refresh, as
+            Stop does: starting only flips the channel's own data (started = true), and from the menu the repaint
+            came from the menu closing. Without it Agora stayed on its not-started screen until something else
+            repainted the tab.
+        */
+        newTab.channelObject.startChannel = () => {
+            onClickChannelStart()
+            setChannelMessageAction({ action: EChannelRefreshAction.REFRESH })
+        }
         newTab.channelObject.stopChannel = () => stopTabChannel(newTab)
         newTab.channelObject.isExtensionLicensed = (type: string, id: string) => licenseInfo ? (licenseInfo.extensions[type]?.includes(id) ?? false) : true
         if (newTab.channel.requirements.userSettings) {

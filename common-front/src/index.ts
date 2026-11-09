@@ -113,6 +113,7 @@ export interface IChannelObject {
     setPalette?: (palette: string) => void
     notify?: (channelId: string | undefined, level: ENotifyLevel, message: string) => void
     exit?: () => void
+    startChannel?: () => void   // starts this tab's channel exactly as the tab menu's Start does (its setup dialog first, when the channel has one)
     stopChannel?: () => void
     openManager?: (type: EExtensionType) => void
     metricsList?: Map<string, MetricDefinition>
@@ -185,6 +186,8 @@ export { getDce, hasDce } from './dce'
 export { DialogTitleHelp } from './DialogTitleHelp'
 export type { IDialogTitleHelpProps } from './DialogTitleHelp'
 export { MenuNotification } from './MenuNotification'
+export { ChannelNotStarted } from './ChannelNotStarted'
+export type { IChannelNotStartedProps } from './ChannelNotStarted'
 export type { INotification } from './MenuNotification'
 
 export interface ITabSummary {
