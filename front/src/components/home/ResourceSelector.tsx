@@ -7,7 +7,7 @@ import { MsgBoxOkError } from '../../tools/MsgBox'
 import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { BackChannelData, EChannelMode, EClusterType, EInstanceConfigView, EInstanceMessageChannel } from '@kwirthmagnify/kwirth-common'
 import { ITabObject } from '../../model/ITabObject'
-import { getIconFromKind, getChannelIconSafe } from '@kwirthmagnify/kwirth-common-front'
+import { getIconFromKind, getChannelIconSafe, IResourceSelected } from '@kwirthmagnify/kwirth-common-front'
 import { TChannelConstructor } from '../../channels/IChannel'
 import { resolveRemoteChannelHost } from '../../tools/ChannelResolution'
 
@@ -78,17 +78,6 @@ const channelFitsView = (channel: BackChannelData, view: EInstanceConfigView | '
         default:
             return channel.resourced
     }
-}
-
-interface IResourceSelected {
-    channelId: string
-    clusterName: string
-    view: string
-    namespaces: string[]
-    controllers: string[]
-    pods: string[]
-    containers: string[]
-    name: string
 }
 
 interface IResourceSelectorProps {
@@ -305,6 +294,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     }
 
     const onAdd = () => {
+        // ADD is disabled without a view (addable); this keeps the selection's view an EInstanceConfigView.
+        if (view === '') return
         let tabName = ''
         if (view===EInstanceConfigView.NONE)
             tabName = channel.toUpperCase()
@@ -610,5 +601,4 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     );
 }
 
-export type { IResourceSelected }
 export { ResourceSelector }

@@ -6,14 +6,12 @@ import {
     EChannelRefreshAction, ENotifyLevel,
     IChannelMessageAction, IChannelSettings, IChannelRequirements
 } from '@kwirthmagnify/kwirth-common-front'
-import { IResourceSelected } from '../components/home/ResourceSelector'
 import { IClusterInfo } from '../model/Cluster'
 import { INotification } from '@kwirthmagnify/kwirth-common-front'
 
 interface IChannelObject extends IChannelObjectBase {
     notifications?: INotification[]
     clusterInfo?: IClusterInfo
-    createTab?: (resource: IResourceSelected, start: boolean, settings: any) => void
     frontChannels?: Map<string, TChannelConstructor>
     /** In-place cluster switch — set up by the framework for any channel with clusterManagement. */
     switchCluster?: (clusterName: string) => void
