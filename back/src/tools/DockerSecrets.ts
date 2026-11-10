@@ -50,4 +50,12 @@ export class DockerSecrets implements ISecrets {
     public readAllKeys = async (name: string): Promise<Record<string, any>> => {
         try { return JSON.parse(fs.readFileSync(this.path + name, 'utf-8')) } catch { return {} }
     }
+
+    public list = async (prefix: string): Promise<string[]> => {
+        try { return fs.readdirSync(this.path).filter(n => n.startsWith(prefix)) } catch { return [] }
+    }
+
+    public delete = async (name: string): Promise<void> => {
+        try { fs.unlinkSync(this.path + name) } catch (err: any) { if (err.code !== 'ENOENT') console.log(`Error deleting docker secret ${name} (${err}).`) }
+    }
 }

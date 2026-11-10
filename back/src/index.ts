@@ -13,6 +13,7 @@ import { getLastKwirthVersion, showLogo } from './tools/branding/Branding'
 
 // HTTP server for serving front, api and websockets
 import { StoreApi } from './api/StoreApi'
+import { ChannelStorageApi } from './api/ChannelStorageApi'
 import { UserApi } from './api/UserApi'
 import { SignupApi } from './api/SignupApi'
 import { ApiKeyApi } from './api/ApiKeyApi'
@@ -1617,6 +1618,9 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         let storeApi:StoreApi = new StoreApi(ri.configMaps, apiKeyApi)
         riRouter.use(`/store`, storeApi.router)
         recordRoute(`${envRootPath}/store`, ERouteOwnerKind.CORE, 'store', storeApi.router)
+        let channelStorageApi = new ChannelStorageApi(ri.configMaps, ri.secrets, apiKeyApi)
+        riRouter.use(`/core/storage/channel`, channelStorageApi.router)
+        recordRoute(`${envRootPath}/core/storage/channel`, ERouteOwnerKind.CORE, 'channel storage', channelStorageApi.router)
         let userApi:UserApi = new UserApi(ri.secrets, apiKeyApi, () => validScopeSet(registeredChannels))
         riRouter.use(`/user`, userApi.router)
         recordRoute(`${envRootPath}/user`, ERouteOwnerKind.CORE, 'user', userApi.router)

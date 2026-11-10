@@ -152,4 +152,25 @@ export class KubernetesConfigMaps implements IConfigMaps {
             return {}
         }
     }
+
+    public list = async (prefix: string): Promise<string[]> => {
+        try {
+            const all = await this.coreApi.listNamespacedConfigMap({ namespace: this.namespace })
+            return all.items.map(cm => cm.metadata?.name ?? '').filter(n => n.startsWith(prefix))
+        }
+        catch (err: any) {
+            logError(ELogComponent.CORE, `Error listing ConfigMaps ${this.namespace}/${prefix}*: ${err}`)
+            return []
+        }
+    }
+
+    public delete = async (name: string): Promise<void> => {
+        try {
+            await this.coreApi.deleteNamespacedConfigMap({ name, namespace: this.namespace })
+            logInfo(ELogComponent.CORE, `ConfigMap ${this.namespace}/${name} deleted`)
+        }
+        catch (err: any) {
+            if (err.code !== 404) logError(ELogComponent.CORE, `Error deleting ConfigMap ${this.namespace}/${name}: ${err}`)
+        }
+    }
 }

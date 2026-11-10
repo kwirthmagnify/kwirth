@@ -49,4 +49,12 @@ export class NodeConfigMaps implements IConfigMaps {
         const file = path.join(this.dir, name)
         try { return JSON.parse(fs.readFileSync(file, 'utf-8')) } catch { return {} }
     }
+
+    list = async (prefix: string): Promise<string[]> => {
+        try { return fs.readdirSync(this.dir).filter(n => n.startsWith(prefix)) } catch { return [] }
+    }
+
+    delete = async (name: string): Promise<void> => {
+        try { fs.unlinkSync(path.join(this.dir, name)) } catch (err: any) { if (err.code !== 'ENOENT') console.log(`Error deleting configmap ${name} (${err}).`) }
+    }
 }

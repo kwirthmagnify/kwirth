@@ -134,4 +134,25 @@ export class KubernetesSecrets implements ISecrets {
             return {}
         }
     }
+
+    public list = async (prefix: string): Promise<string[]> => {
+        try {
+            const all = await this.coreApi.listNamespacedSecret({ namespace: this.namespace })
+            return all.items.map(s => s.metadata?.name ?? '').filter(n => n.startsWith(prefix))
+        }
+        catch (err: any) {
+            logError(ELogComponent.STORAGE, `Error listing secrets ${this.namespace}/${prefix}*: ${err}`)
+            return []
+        }
+    }
+
+    public delete = async (name: string): Promise<void> => {
+        try {
+            await this.coreApi.deleteNamespacedSecret({ name, namespace: this.namespace })
+            logWarning(ELogComponent.STORAGE, `Secret ${this.namespace}/${name} deleted`)
+        }
+        catch (err: any) {
+            if (err.code !== 404) logError(ELogComponent.STORAGE, `Error deleting secret ${this.namespace}/${name}: ${err}`)
+        }
+    }
 }
