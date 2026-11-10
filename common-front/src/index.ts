@@ -68,6 +68,22 @@ export interface IRemoteChannelHandle {
     close: () => void                             // closes every connection and stops the retries
 }
 
+/*
+    What a new tab is made of: the channel, the cluster, the view and the resources it starts on, and the
+    tab's name. What the resource selector produces when the user adds a tab, and what `createTab` takes so
+    that a channel can open a tab of another one (a setup tool opening each product it installed).
+*/
+export interface IResourceSelected {
+    channelId: string
+    clusterName: string
+    view: EInstanceConfigView
+    namespaces: string[]
+    controllers: string[]
+    pods: string[]
+    containers: string[]
+    name: string
+}
+
 export interface IChannelObject {
     clusterName: string
     view: EInstanceConfigView
@@ -107,7 +123,7 @@ export interface IChannelObject {
     clusterInfo?: any
     channelSettings?: IChannelSettings
     updateChannelSettings?: (channelSettings: IChannelSettings) => void
-    createTab?: (resource: any, start: boolean, settings: any) => void
+    createTab?: (resource: IResourceSelected, start: boolean, settings: any) => void
     readChannelUserPreferences?: (channelId: string) => Promise<any>
     writeChannelUserPreferences?: (channelId: string, data: any) => Promise<boolean>
     setPalette?: (palette: string) => void
