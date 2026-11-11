@@ -9,7 +9,7 @@ import { clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
       · what is installed and the catalogue are TWO separate sections, each with its filter
       · an extension already installed cannot be installed again from the catalogue
-      · a type that does NOT declare a configuration dialog shows no cog
+      · the cog opens the type's own configuration: for aitoolset, the grant per tool
       · a card's chips share a size (mixing sizes looks untidy)
 
     NON-destructive: it only opens the dialog, filters and switches view. It installs and uninstalls
@@ -112,11 +112,59 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
         await expect(desinstalar.first()).toBeEnabled()
     })
 
-    test('un tipo sin dialogo de configuracion no enseña engranaje', async () => {
-        // aitoolset does not declare renderConfigDialog: the generic dialog must NOT invent the action.
-        // The day it is given configuration, this test falls and the decision has to be a deliberate one.
-        await expect(dialog().locator('span[aria-label="Configure"]')).toHaveCount(0)
-        await expect(dialog().getByText(/\d+ configs?$/)).toHaveCount(0)
+    /*
+        The grant per tool (plans/ai-tool-grants, T3). This used to be "a type without a configuration
+        dialog shows no cog" — written to fall the day aitoolset got configuration, and that day came:
+        the cog opens the grant dialog (plugins × tools).
+
+        Read-only: it opens the dialog, looks and leaves through Cancel. Nothing is saved.
+    */
+    test('cada toolset instalado dice a cuantos plugins esta concedido', async () => {
+        const counters = await dialog().getByText(/^\d+ tools?$/).count()
+        const grants = await dialog().getByText(/^(\d+ plugins?|No plugin)$/).count()
+        expect(grants, 'algun toolset instalado no enseña su chip de concesion').toBe(counters)
+    })
+
+    test('el engranaje abre la concesion: plugins por tools, con All y el effect de cada tool', async () => {
+        await dialog().locator('span[aria-label="Configure"] button').first().click()
+        const grant = page.getByRole('dialog').filter({ hasText: /^Grant: / })
+        await expect(grant).toBeVisible({ timeout: 20000 })
+
+        await expect(grant.getByRole('columnheader', { name: 'Plugin' })).toBeVisible()
+        await expect(grant.getByRole('columnheader', { name: 'All', exact: true })).toBeVisible()
+        // Every tool column carries its effect; at least one tool, or the toolset would be empty
+        const effects = await grant.locator('thead .MuiChip-root').allTextContents()
+        expect(effects.length, 'la concesion no enseña ninguna tool').toBeGreaterThan(0)
+        for (const e of effects) expect(['read', 'write', 'removed']).toContain(e)
+        // One row per installed plugin. No particular plugin is named: which ones are installed is the
+        // environment's business (pinocchio was assumed here, and this dev did not have it).
+        expect(await grant.getByRole('switch', { name: / all tools$/ }).count(), 'la concesion no enseña ningun plugin').toBeGreaterThan(0)
+
+        await grant.getByRole('button', { name: 'Cancel' }).click()
+        await expect(grant).toHaveCount(0)
+    })
+
+    test('con All encendido las casillas de ese plugin quedan marcadas y bloqueadas (sin guardar)', async () => {
+        await dialog().locator('span[aria-label="Configure"] button').first().click()
+        const grant = page.getByRole('dialog').filter({ hasText: /^Grant: / })
+        await expect(grant).toBeVisible({ timeout: 20000 })
+
+        // The first plugin row, whichever it is
+        const all = grant.getByRole('switch', { name: / all tools$/ }).first()
+        const pluginId = ((await all.getAttribute('aria-label')) ?? '').replace(/ all tools$/, '')
+        expect(pluginId, 'no se pudo leer el plugin de la primera fila').not.toEqual('')
+        // ⚠️ The switch is ALSO an input[type=checkbox] and its label starts the same: it is left out by role
+        const casillas = grant.locator(`input[type="checkbox"]:not([role="switch"])[aria-label^="${pluginId} "]`)
+        if (!(await all.isChecked())) await all.click()
+        expect(await casillas.count()).toBeGreaterThan(0)
+        for (let i = 0; i < await casillas.count(); i++) {
+            await expect(casillas.nth(i)).toBeChecked()
+            await expect(casillas.nth(i)).toBeDisabled()
+        }
+
+        // Cancel: what was touched here is NOT saved
+        await grant.getByRole('button', { name: 'Cancel' }).click()
+        await expect(grant).toHaveCount(0)
     })
 
     test('los dos filtros son independientes: el de instalados no toca el catalogo', async () => {
@@ -167,9 +215,9 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
         await dialog().getByRole('button', { name: 'List view' }).click()
         await expect(dialog().locator('.MuiSelect-select').first()).toBeVisible({ timeout: 40000 })
 
-        // ⚠️ VERSION Selects only. In the installed section there is another Select — the grant one —
-        // living in a different column: lumping them together made the measurement fail by comparing
-        // apples with oranges. They are told apart by their content, which is a version number.
+        // ⚠️ VERSION Selects only. There used to be another Select in the installed section — the old
+        // grant one, now the cog's dialog — and other types still have one: they are told apart by their
+        // content, which is a version number.
         const columnXs = await dialog().locator('.MuiSelect-select').evaluateAll(els => els
             .map(e => ({ version: (e.textContent ?? '').replace(/​/g, '').trim(), left: Math.round(e.getBoundingClientRect().left) }))
             .filter(c => /^\d+\.\d+\.\d+$/.test(c.version)))

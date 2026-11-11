@@ -204,6 +204,21 @@ export interface IAiToolsetInfo {
     tools: IAiToolInfo[]
 }
 
+/*
+    What the admin grants a plugin inside ONE toolset (plan: plans/ai-tool-grants/PLAN.md, T1).
+
+    Two ways of granting, chosen by the admin per plugin:
+    - `allTools: true`: every tool of the toolset, INCLUDING the ones a future version brings. `tools` is
+      ignored (but kept, so switching it off gives back the previous selection).
+    - `allTools: false`: only the tools listed. A new version's tools do not enter by themselves.
+      `tools: []` = nothing granted.
+*/
+export interface IToolsetGrant {
+    pluginId: string
+    allTools: boolean
+    tools: string[]     // short tool names
+}
+
 // A plugin's ceiling, in two layers: the toolsets it may use, minus the tools turned off inside them.
 // The plugin stores it along with the rest of ITS configuration; the core only provides the editor.
 export interface IToolsetConfig {

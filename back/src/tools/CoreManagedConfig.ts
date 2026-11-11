@@ -5,7 +5,8 @@ import { PluginManager } from './PluginManager'
 import { ProviderManager } from './ProviderManager'
 import { SenderManager } from './SenderManager'
 import { WebhookManager } from './WebhookManager'
-import { AiToolsetManager } from './AiToolsetManager'
+import { AiToolsetManager, isToolsetGrant, unknownGrantTools } from './AiToolsetManager'
+import { getToolset } from '@kwirthmagnify/kwirth-common-ai/back'
 import { IdpManager } from './IdpManager'
 
 /*
@@ -229,18 +230,34 @@ export const idpInstances = (manager: IdpManager, connectorId: string): IExtensi
 
     ⚠️ They reference PLUGINS by id. If that plugin is not at the destination, the grant is of no use;
     `setGrants` returns the ones that were applied, and the warning comes from there.
+
+    And they reference TOOLS by name (plans/ai-tool-grants, T2): the destination may have another version of
+    the toolset. Tools it does not carry are DROPPED with a warning rather than failing the whole import —
+    `setGrants` would refuse them, and losing every grant over one tool is worse than losing that tool.
+    An entry in the old format ([pluginId, ...]) is not converted: it is skipped and reported.
 */
 export const toolsetGrants = (manager: AiToolsetManager, id: string): IExtension => ({
     exportConfig: async () => ({ grants: (await manager.listGrants())[id] ?? [] }),
     importConfig: async (data) => {
         const entrantes = (data as { grants?: unknown })?.grants
         if (!Array.isArray(entrantes)) return nada()
-        const aplicados = await manager.setGrants(id, entrantes as string[])
-        const perdidos = (entrantes as string[]).filter(p => !aplicados.includes(p))
+        const validos = entrantes.filter(isToolsetGrant)
+        const invalidos = entrantes.length - validos.length
+        const warnings: string[] = []
+        if (invalidos) warnings.push(`${invalidos} grant(s) with an obsolete format were skipped — grant them again`)
+
+        const toolset = getToolset(id)
+        const desconocidas = toolset ? unknownGrantTools(toolset, validos) : []
+        if (desconocidas.length) warnings.push(`tool(s) not in this version of the toolset were dropped: ${desconocidas.join(', ')}`)
+        const limpios = validos.map(g => ({ ...g, tools: g.tools.filter(t => !desconocidas.includes(t)) }))
+
+        const aplicados = (await manager.setGrants(id, limpios)).map(g => g.pluginId)
+        const perdidos = limpios.map(g => g.pluginId).filter(p => !aplicados.includes(p))
+        if (perdidos.length) warnings.push(`granted to plugin(s) not installed here: ${perdidos.join(', ')}`)
         return {
             applied: aplicados.length,
-            skipped: perdidos.length,
-            warnings: perdidos.length ? [`granted to plugin(s) not installed here: ${perdidos.join(', ')}`] : []
+            skipped: perdidos.length + invalidos,
+            warnings
         }
     }
 })

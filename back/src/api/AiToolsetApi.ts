@@ -1,6 +1,6 @@
 import { Router, Request, Response, raw } from 'express'
-import { AiToolsetManager } from '../tools/AiToolsetManager'
-import { listToolsetInfos, isBuiltInToolsetId, getToolset } from '@kwirthmagnify/kwirth-common-ai/back'
+import { AiToolsetManager, isToolsetGrant } from '../tools/AiToolsetManager'
+import { listToolsetInfos, isBuiltInToolsetId, getToolset, getToolsetGrants } from '@kwirthmagnify/kwirth-common-ai/back'
 import { ELogComponent, logError, logInfo } from '../tools/Logging'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
@@ -33,7 +33,9 @@ export class AiToolsetApi {
         this.router.get('/', async (_req: Request, res: Response) => {
             try {
                 const metas = await this.manager.listInstalled()
-                res.json(metas.map(m => ({ ...m, toolCount: getToolset(m.id)?.tools.length })))
+                // grantCount, also from the registry: the plugins that are granted at least one tool — what
+                // is really in force, not what is stored (an obsolete entry or one granting nothing do not count).
+                res.json(metas.map(m => ({ ...m, toolCount: getToolset(m.id)?.tools.length, grantCount: getToolsetGrants(m.id).length })))
             }
             catch (err) {
                 res.status(500).json({ error: String(err) })
@@ -52,7 +54,7 @@ export class AiToolsetApi {
             }
         })
 
-        // ── Grants: which plugins may use each toolset ──────────────────────────────────────────────
+        // ── Grants: which plugins may use each toolset, and which of its tools ──────────────────────
         //
         // The whole map in one read: the question one has to be able to answer fast is "who can write to
         // the cluster through AI?", and that is answered by looking at who has been granted k8s-ops.
@@ -67,11 +69,11 @@ export class AiToolsetApi {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
             try {
-                const plugins = req.body?.plugins
-                if (!Array.isArray(plugins) || plugins.some(p => typeof p !== 'string')) {
-                    return void res.status(400).json({ error: 'plugins must be an array of plugin ids' })
+                const grants: unknown = req.body?.grants
+                if (!Array.isArray(grants) || !grants.every(isToolsetGrant)) {
+                    return void res.status(400).json({ error: 'grants must be an array of { pluginId, allTools, tools }' })
                 }
-                res.json({ toolsetId: req.params.id, plugins: await this.manager.setGrants(req.params.id, plugins) })
+                res.json({ toolsetId: req.params.id, grants: await this.manager.setGrants(req.params.id, grants) })
             }
             catch (err) { res.status(400).json({ error: String(err) }) }
         })

@@ -602,17 +602,6 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         return await res.json()
     }
 
-    const loadToolsetGrants = async (): Promise<Record<string, string[]>> => {
-        const res = await fetch(`${backendUrl}/core/aitoolsets/grants`, addGetAuthorization(accessString))
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return await res.json()
-    }
-
-    const saveToolsetGrants = async (toolsetId: string, pluginIds: string[]) => {
-        const res = await fetch(`${backendUrl}/core/aitoolsets/grants/${toolsetId}`, addPutAuthorization(accessString, JSON.stringify({ plugins: pluginIds })))
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    }
-
     const onThemeInstalled = (id: string) => { loadThemeFront(id); refreshInstalledThemes() }
     const onThemeUninstalled = (id: string) => { unloadThemeFront(id); refreshInstalledThemes() }
     const onHomepageInstalled = (id: string) => { loadHomepageFront(id); refreshInstalledHomepages() }
@@ -3221,7 +3210,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     descriptor={makeHomepageDescriptor({ activeHomepageId, onActivate: onHomepageActivate, onHomepageLoad: onHomepageInstalled, onHomepageUnload: onHomepageUninstalled })}
                     onClose={() => setShowHomepageManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showDocsManagerDialog && <ExtensionManagerDialog descriptor={makeDocsDescriptor(backendUrl)} onClose={() => setShowDocsManagerDialog(false)} /> }
-                { showAiToolsetManagerDialog && <ExtensionManagerDialog descriptor={makeAiToolsetDescriptor({ loadGrants: loadToolsetGrants, saveGrants: saveToolsetGrants })} onClose={() => setShowAiToolsetManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
+                { showAiToolsetManagerDialog && <ExtensionManagerDialog descriptor={makeAiToolsetDescriptor()} onClose={() => setShowAiToolsetManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 {/*
                     Installing or removing a DCE invalidates the loader's cache, so the next consumer
                     re-reads what is installed. What it does NOT do is replace the instance whoever is

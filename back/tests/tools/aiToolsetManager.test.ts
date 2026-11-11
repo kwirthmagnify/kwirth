@@ -185,14 +185,14 @@ test('reinstalar NO revoca la concesion que el admin ya dio', async () => {
 
     const tgz = await makeToolsetTgz('test-grants')
     await mgr.install(tgz, 'dev')
-    await mgr.setGrants('test-grants', ['agora'])
+    await mgr.setGrants('test-grants', [{ pluginId: 'agora', allTools: false, tools: ['ping'] }])
 
     await mgr.install(tgz, 'dev')   // el rebuild de un dev, o una version nueva del marketplace
 
     assert.equal(isToolsetGrantedTo('test-grants', 'agora'), true, 'la concesion no sobrevivio a la reinstalacion')
-    assert.deepEqual(getToolsetGrants('test-grants'), ['agora'])
+    assert.deepEqual(getToolsetGrants('test-grants'), [{ pluginId: 'agora', allTools: false, tools: ['ping'] }])
     // and the in-memory registry and what is stored say the same thing, which is exactly what used to break
-    assert.deepEqual((await mgr.listGrants())['test-grants'], ['agora'])
+    assert.deepEqual((await mgr.listGrants())['test-grants'], [{ pluginId: 'agora', allTools: false, tools: ['ping'] }])
 
     await mgr.uninstall('test-grants')
     fs.rmSync(tgz, { force: true })
@@ -206,13 +206,87 @@ test('desinstalar SI se lleva la concesion, y tambien la guardada', async () => 
 
     const tgz = await makeToolsetTgz('test-grants-gone')
     await mgr.install(tgz, 'local')
-    await mgr.setGrants('test-grants-gone', ['agora'])
+    await mgr.setGrants('test-grants-gone', [{ pluginId: 'agora', allTools: true, tools: [] }])
     await mgr.uninstall('test-grants-gone')
 
     assert.equal(isToolsetGrantedTo('test-grants-gone', 'agora'), false)
     assert.equal((await mgr.listGrants())['test-grants-gone'], undefined)
 
     fs.rmSync(tgz, { force: true })
+})
+
+// ── grant per tool (plans/ai-tool-grants, T2) ────────────────────────────────────────────────────────
+
+test('conceder una tool que el toolset no tiene se RECHAZA y no se guarda nada', async () => {
+    const mgr = new AiToolsetManager(fakeConfigMaps())
+    await mgr.init()
+    const tgz = await makeToolsetTgz('test-grant-unknown')
+    await mgr.install(tgz, 'local')
+
+    await assert.rejects(
+        mgr.setGrants('test-grant-unknown', [{ pluginId: 'agora', allTools: false, tools: ['ping', 'no-existe'] }]),
+        /no-existe/
+    )
+    assert.equal((await mgr.listGrants())['test-grant-unknown'], undefined)
+    assert.deepEqual(getToolsetGrants('test-grant-unknown'), [])
+
+    await mgr.uninstall('test-grant-unknown')
+    fs.rmSync(tgz, { force: true })
+})
+
+test('con All la lista no se valida: se conserva para cuando se apague', async () => {
+    const mgr = new AiToolsetManager(fakeConfigMaps())
+    await mgr.init()
+    const tgz = await makeToolsetTgz('test-grant-all')
+    await mgr.install(tgz, 'local')
+
+    const saved = await mgr.setGrants('test-grant-all', [{ pluginId: 'agora', allTools: true, tools: ['ping'] }])
+    assert.deepEqual(saved, [{ pluginId: 'agora', allTools: true, tools: ['ping'] }])
+
+    await mgr.uninstall('test-grant-all')
+    fs.rmSync(tgz, { force: true })
+})
+
+test('un plugin sin nada concedido SE GUARDA (auditoria) pero no concede', async () => {
+    const mgr = new AiToolsetManager(fakeConfigMaps())
+    await mgr.init()
+    const tgz = await makeToolsetTgz('test-grant-none')
+    await mgr.install(tgz, 'local')
+
+    await mgr.setGrants('test-grant-none', [{ pluginId: 'agora', allTools: false, tools: [] }])
+    assert.deepEqual((await mgr.listGrants())['test-grant-none'], [{ pluginId: 'agora', allTools: false, tools: [] }])
+    assert.equal(isToolsetGrantedTo('test-grant-none', 'agora'), false)
+
+    await mgr.uninstall('test-grant-none')
+    fs.rmSync(tgz, { force: true })
+})
+
+test('plugins y tools repetidos se deduplican al guardar', async () => {
+    const mgr = new AiToolsetManager(fakeConfigMaps())
+    await mgr.init()
+    const tgz = await makeToolsetTgz('test-grant-dedup')
+    await mgr.install(tgz, 'local')
+
+    const saved = await mgr.setGrants('test-grant-dedup', [
+        { pluginId: 'agora', allTools: false, tools: ['ping', 'ping'] },
+        { pluginId: 'agora', allTools: false, tools: ['ping'] }
+    ])
+    assert.deepEqual(saved, [{ pluginId: 'agora', allTools: false, tools: ['ping'] }])
+
+    await mgr.uninstall('test-grant-dedup')
+    fs.rmSync(tgz, { force: true })
+})
+
+test('🔴 sin migracion: el formato antiguo se DESCARTA al leer, no se convierte', async () => {
+    const cms = fakeConfigMaps()
+    await cms.write('kwirth-aitoolsets-grants', {
+        'viejo': ['agora', 'pinocchio'],
+        'nuevo': [{ pluginId: 'agora', allTools: true, tools: [] }]
+    })
+    const mgr = new AiToolsetManager(cms)
+    await mgr.init()
+
+    assert.deepEqual(await mgr.listGrants(), { 'nuevo': [{ pluginId: 'agora', allTools: true, tools: [] }] })
 })
 
 // ── installing from a folder (the dev path) ──────────────────────────────────────────────────────────

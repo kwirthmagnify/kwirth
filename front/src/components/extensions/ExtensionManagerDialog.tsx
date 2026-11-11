@@ -802,3 +802,4 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
 }
 
 export { ExtensionManagerDialog }
+export type { IInstalledPluginRef }

@@ -87,9 +87,8 @@ manager would list something that does not work.
 Open **☰ → Manage extensions → AI toolsets**.
 
 ![AI toolsets manager](../../../_media/guide/manage-aitoolsets.png)
-*Each card carries the number of tools it really loaded and the selector saying **who may use it** — here
-every toolset has been granted to one plugin. A new installation starts the other way round: toolsets
-present, selectors empty, nothing reachable by anybody.*
+*Each card carries the number of tools it really loaded and how many plugins it has been granted to. A new
+installation starts with **No plugin** everywhere: toolsets present, nothing reachable by anybody.*
 
 The layout is the one every extension family uses — see [Extending kwirth](../../admin/08-extending-kwirth) for
 the common flow. Three details are specific to this family:
@@ -97,8 +96,8 @@ the common flow. Three details are specific to this family:
 | Element | What it shows |
 |---|---|
 | **tools chip** | How many tools the toolset actually **brought into the running core**, not how many its package claims. A toolset whose code failed to load shows **no** chip rather than an inflated number. |
-| **plugin selector** | **Who may use this toolset.** Empty means nobody: an installed toolset that has been granted to no one is inert. This is the only decision taken in this dialog. |
-| **No ⚙ settings** | A toolset has nothing to configure at install time. *Which* of the granted toolsets a channel actually uses, in what order, and which of their tools are switched off, is decided per channel — not here. |
+| **plugins chip** | How many plugins are granted **at least one** of its tools — `No plugin` when nobody is. A plugin whose grant was emptied does not count. |
+| **⚙ settings** | Opens the toolset's **grant**: which plugins may use it, and which of its tools each one (see [Granting](#granting-installing-is-not-giving)). It is the only decision taken here. *Which* of the granted toolsets a channel actually uses, in what order, and which tools it switches off, is decided per channel. |
 
 Installing from a URL or a local file works exactly as in the other families: paste the package URL and click
 ⬇, or use **Browse…** to upload a `.tgz`.
@@ -110,7 +109,7 @@ the design. Installing puts the tools in the building; granting hands someone th
 
 | | Where | Who decides | Answers |
 |---|---|---|---|
-| **Grant** | this dialog, the selector on each card | an **admin** — the only route of this API that demands the `admin` scope | *may this plugin use this toolset at all?* |
+| **Grant** | this manager, the ⚙ on each card | an **admin** — the only route of this API that demands the `admin` scope | *may this plugin use this toolset, and which of its tools?* |
 | **Configuration** | inside each channel | whoever configures that channel | *of what it may use, what does it use, in what order, and with which tools switched off?* |
 
 A plugin needs **both**. The grant is the ceiling and the configuration is what is picked from underneath it:
@@ -120,6 +119,30 @@ the fact rather than failing silently.
 > **The question this answers.** *"Who can change my cluster through an LLM?"* is a question you must be able
 > to answer in seconds, and here you answer it by looking at **who has been granted `k8s-ops`** — one line,
 > one dialog. That is why the grants are held per toolset and not scattered across each channel's settings.
+
+### The grant dialog
+
+![AI toolset grant](../../../_media/guide/aitoolset-grant.png)
+*One row per installed plugin, one column per tool of the toolset, each with its effect (`read` / `write`).*
+
+For each plugin you choose one of two ways of granting:
+
+| | What the plugin receives | When the toolset is upgraded |
+|---|---|---|
+| **All** switch on | every tool of the toolset | the tools the new version brings are granted **too** |
+| ticked boxes | only the ticked tools | new tools are **not** granted until you tick them |
+
+So `k8s-ops` can be given to a plugin for scaling deployments and **not** for deleting pods — both tools live
+in the same toolset, and the grant tells them apart.
+
+- With **All** on, the boxes show ticked and greyed out. The ticks underneath are kept: switching **All** off
+  gives you back the selection you had.
+- Nothing ticked and **All** off means *not granted*: the plugin gets nothing from this toolset.
+- A plugin that has a grant but is not installed here is listed greyed out as *not installed*, so the grant
+  can still be taken away.
+- If a new version of the toolset drops or renames a tool that was granted, it appears in a column of its own,
+  struck through and marked *removed*: it is ignored while it is there, and saving removes it from the grant.
+- Nothing is applied until **Save**; **Cancel** leaves the grant as it was.
 
 Three consequences worth knowing before you grant:
 
@@ -131,22 +154,39 @@ Three consequences worth knowing before you grant:
   tools. Nothing is cached behind your back.
 - **Updating a toolset keeps its grants; uninstalling clears them.** Installing a newer version of a toolset
   —or rebuilding one you are developing— leaves untouched who may use it: the grant belongs to the toolset
-  *id*, not to the version you happened to install. Uninstalling is the opposite and does clear it, so that
-  installing something again later never resurrects permissions nobody re-granted.
+  *id*, not to the version you happened to install. Only a plugin granted with **All** picks up the tools
+  the new version adds. Uninstalling is the opposite and does clear it, so that installing something again
+  later never resurrects permissions nobody re-granted.
+
+> ⚠️ **Upgrading from a Kwirth with whole-toolset grants.** Grants used to be *toolset → plugins*, with no
+> choice of tools. That format is **not** migrated: after the upgrade every toolset reads **No plugin** and
+> AI channels have no tools until you grant them again in this dialog. The core logs a warning for each
+> grant it discarded.
 
 ## Where tools are switched on
 
-Installing a toolset makes it **available** and granting it makes it **reachable** by one plugin. What the
-channel then *uses* is the third step: each AI-enabled channel is assigned an **ordered list** of toolsets —
-picked from those granted to it — and may switch off individual tools inside them:
+Installing a toolset makes it **available** and granting it makes it **reachable** by one plugin — all of
+it or some of its tools. What the channel then *uses* is the third step: each AI-enabled channel is assigned
+an **ordered list** of toolsets — picked from those granted to it — and may switch off individual tools
+inside them:
 
 ```
-effective tools = (the assigned toolsets, in order) − (the tools switched off)
+effective tools = (the assigned toolsets, in order)
+                ∩ (the tools granted to the plugin)      ← decided by the admin
+                − (the tools switched off)               ← decided in the channel
                   with the first toolset that provides a name winning it
 ```
 
-So the granularity you get is: **pick the toolsets, order them, then turn off the tools you don't want**. A
-channel with no configuration has **no** tools.
+So the granularity you get is: **the admin grants tools, the channel picks the toolsets, orders them and
+turns off the ones it doesn't want**. A channel with no configuration has **no** tools.
+
+A tool that was not granted takes no part in the race for a name: if `ts1` has a `get_logs` the plugin was not
+granted and `ts2` also has one, the plugin gets the one from `ts2`. The same holds for a tool switched off.
+
+Switching a tool off in the channel and not granting it look the same from the model's side — the tool is not
+offered — but they are fixed in different places. The core keeps them apart in its trace (Pinocchio prints the
+tools of a granted toolset that were not granted as `TOOLS NOT GRANTED [...]`), so you know whether to go to
+the channel's configuration or to this grant.
 
 ### When two toolsets bring the same tool name
 

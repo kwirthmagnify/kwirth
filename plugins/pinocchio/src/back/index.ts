@@ -329,7 +329,9 @@ export class PinocchioChannel implements IChannel {
         const resolucion = resolveTools(techo, PINOCCHIO_ID)
         const pegas = [
             resolucion.notGranted.length ? `SIN CONCEDER [${resolucion.notGranted.join(', ')}]` : '',
-            resolucion.missing.length ? `SIN INSTALAR [${resolucion.missing.join(', ')}]` : ''
+            resolucion.missing.length ? `SIN INSTALAR [${resolucion.missing.join(', ')}]` : '',
+            // A granted toolset whose grant leaves some tools out (plans/ai-tool-grants): fixed in the toolset's grant
+            resolucion.notGrantedTools.length ? `TOOLS NOT GRANTED [${resolucion.notGrantedTools.join(', ')}]` : ''
         ].filter(Boolean).join(' ')
         this.backChannelObject.logTrace?.(`[pinocchio] ${trigger.id}/${version.id}: auto=${!!version.autoTools} marcadas=${version.tools?.length ?? 0} -> ${Object.keys(tools).length} tools ofrecidas ${pegas || `[${techo.activeToolsets.join(', ') || 'ninguno'}]`}`)
 

@@ -1,4 +1,5 @@
 import { test, expect, Page, APIRequestContext } from '@playwright/test'
+import type { IToolsetGrant } from '@kwirthmagnify/kwirth-common-ai'
 import { login, dismissOpenDialogs, pickCombo, pickLastCombo, CARGA } from './helpers'
 
 /*
@@ -9,9 +10,10 @@ import { login, dismissOpenDialogs, pickCombo, pickLastCombo, CARGA } from './he
     check "that there are tools" —that was true before as well— but that the list IS that of the toolsets
     Pinocchio has within reach:
 
-      · the ones from the toolsets granted to `pinocchio` are there (k8s-describe, k8s-observability)
-      · `delete_pod` is NOT, which lives in `k8s-ops` and is NOT granted to it
-      · `times_two` is NOT, which lives in `playground` and is not even installed
+      · the ones from the toolsets granted to `pinocchio` are there (k8s-observability, with 'All')
+      · from a PARTIAL grant (k8s-describe, only `describe_pod`) only that tool is there, and the rest of
+        the toolset is not (plans/ai-tool-grants)
+      · the tools of the toolsets NOT granted to it are not there
 
     With the old path all three always showed up, because they all came from the same place. If any of
     them reappears, the compiled catalogue has crept back in.
@@ -29,11 +31,19 @@ import { login, dismissOpenDialogs, pickCombo, pickLastCombo, CARGA } from './he
 
 test.describe.configure({ mode: 'serial' })
 
-/** What the test needs to see. `k8s-ops` is deliberately LEFT OUT: it is the negative half of the test. */
-const NECESARIOS = ['k8s-describe', 'k8s-observability']
+/*
+    What the test grants pinocchio. `k8s-ops` is deliberately LEFT OUT: it is the negative half of the test.
+    k8s-observability goes with 'All'; k8s-describe with ONE tool, which is the per-tool half.
+*/
 const PINOCCHIO = 'pinocchio'
+const PARCIAL = 'k8s-describe'
+const PARCIAL_TOOL = 'describe_pod'
+const CONCESION: Record<string, IToolsetGrant> = {
+    'k8s-describe': { pluginId: PINOCCHIO, allTools: false, tools: [PARCIAL_TOOL] },
+    'k8s-observability': { pluginId: PINOCCHIO, allTools: true, tools: [] }
+}
 
-type TGrants = Record<string, string[]>
+type TGrants = Record<string, IToolsetGrant[]>
 
 /*
     The front end signs every call to the back end with its accessString, and the test has no way of
@@ -65,10 +75,10 @@ const leerGrants = async (api: APIRequestContext, acc: IBackAccess): Promise<TGr
     return await res.json() as TGrants
 }
 
-const escribirGrant = async (api: APIRequestContext, acc: IBackAccess, toolsetId: string, plugins: string[]): Promise<void> => {
+const escribirGrant = async (api: APIRequestContext, acc: IBackAccess, toolsetId: string, grants: IToolsetGrant[]): Promise<void> => {
     const res = await api.put(`${acc.base}/core/aitoolsets/grants/${toolsetId}`, {
         headers: { authorization: acc.auth, 'content-type': 'application/json' },
-        data: { plugins }
+        data: { grants }
     })
     // Granting demands the admin scope: if the e2e's user lacks it, better to say so than to give 0 tools.
     expect(res.ok(), `no se pudo conceder '${toolsetId}' (${res.status()}): ¿el usuario del e2e es admin?`).toBeTruthy()
@@ -102,12 +112,20 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
         await dismissOpenDialogs(page)
         expect(acceso.auth, 'no se pudo tomar prestada la autorizacion del front').not.toEqual('')
 
+        // Without pinocchio installed there is nothing to test: it is said with a skip, not with a red
+        // that blames the channel selector (which is what happened the first time).
+        const pluginsRes = await page.request.get(`${acceso.base}/core/plugins`, { headers: { authorization: acceso.auth } })
+        expect(pluginsRes.ok(), `no se pudieron leer los plugins (${pluginsRes.status()})`).toBeTruthy()
+        const instalados = await pluginsRes.json() as { id: string }[]
+        test.skip(!instalados.some(p => p.id === PINOCCHIO), `el plugin '${PINOCCHIO}' no esta instalado en este entorno`)
+
         // ── the grant, before opening anything: the channel asks for its tool list on start ──
+        // Pinocchio's entry is REPLACED by the test's (the partial one has to be exactly that); the other
+        // plugins' entries are left as they were.
         original = await leerGrants(page.request, acceso)
-        for (const id of NECESARIOS) {
-            const actuales = original[id] ?? []
-            if (actuales.includes(PINOCCHIO)) continue
-            await escribirGrant(page.request, acceso, id, [...actuales, PINOCCHIO])
+        for (const [id, suya] of Object.entries(CONCESION)) {
+            const otros = (original[id] ?? []).filter(g => g.pluginId !== PINOCCHIO)
+            await escribirGrant(page.request, acceso, id, [...otros, suya])
             tocados.push(id)
         }
 
@@ -184,16 +202,29 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
         // Two different causes for the same symptom, and the message has to tell them apart: with no
         // registry there are no tools, and with a registry but no grant there are none either — but they
         // are fixed in different places.
-        expect(herramientas.length, `no hay ninguna tool disponible: los toolsets ${NECESARIOS.join(', ')} estan instalados pero ¿llego la concesion a '${PINOCCHIO}'?`).toBeGreaterThan(0)
+        expect(herramientas.length, `no hay ninguna tool disponible: los toolsets ${Object.keys(CONCESION).join(', ')} estan instalados pero ¿llego la concesion a '${PINOCCHIO}'?`).toBeGreaterThan(0)
         // And the selector's label exists (empty when none is ticked, 'all (N)' with autoTools)
         expect(typeof rotulo).toBe('string')
     })
 
     test('las tools que ofrece son las de los toolsets CONCEDIDOS', async () => {
         const ofrecidas = nombresDe(herramientas)
-        // From k8s-describe and k8s-observability, the two the test grants itself
-        expect(ofrecidas.has('describe_pod'), 'falta describe_pod (k8s-describe)').toBe(true)
-        expect(ofrecidas.has('get_pod_logs'), 'falta get_pod_logs (k8s-observability)').toBe(true)
+        // From k8s-describe (the one tool granted) and k8s-observability ('All'), the two the test grants itself
+        expect(ofrecidas.has(PARCIAL_TOOL), `falta ${PARCIAL_TOOL} (${PARCIAL}, concedida)`).toBe(true)
+        expect(ofrecidas.has('get_pod_logs'), 'falta get_pod_logs (k8s-observability, All)').toBe(true)
+    })
+
+    test('🔴 de una concesion PARCIAL solo ofrece las tools concedidas', async () => {
+        const res = await page.request.get(`${acceso.base}/core/aitoolsets/catalog`, { headers: { authorization: acceso.auth } })
+        expect(res.ok(), `no se pudo leer el catalogo de toolsets (${res.status()})`).toBeTruthy()
+        const catalogo = await res.json() as { id: string, tools?: { name: string }[] }[]
+        const resto = (catalogo.find(t => t.id === PARCIAL)?.tools ?? []).map(t => t.name).filter(n => n !== PARCIAL_TOOL)
+        test.skip(resto.length === 0, `${PARCIAL} solo tiene ${PARCIAL_TOOL}: no hay tools sin conceder que comprobar`)
+
+        const ofrecidas = nombresDe(herramientas)
+        for (const tool of resto) {
+            expect(ofrecidas.has(tool), `'${tool}' no deberia estar: de ${PARCIAL} solo se concedio ${PARCIAL_TOOL}`).toBe(false)
+        }
     })
 
     /*
@@ -214,7 +245,8 @@ test.describe('pinocchio: las tools salen del registro de toolsets', () => {
         const catalogo = await res.json() as { id: string, tools?: { name: string }[] }[]
 
         const concedidosAhora = await leerGrants(page.request, acceso)
-        const sinConceder = catalogo.filter(t => !(concedidosAhora[t.id] ?? []).includes(PINOCCHIO))
+        // Not granted = pinocchio has no entry, or one that grants nothing
+        const sinConceder = catalogo.filter(t => !(concedidosAhora[t.id] ?? []).some(g => g.pluginId === PINOCCHIO && (g.allTools || g.tools.length > 0)))
         test.skip(sinConceder.length === 0, 'todos los toolsets instalados estan concedidos a pinocchio: no hay nada fuera de alcance que comprobar')
 
         const ofrecidas = nombresDe(herramientas)

@@ -1,4 +1,6 @@
-import { test, expect, Page } from '@playwright/test'
+import { test, expect, Page, Locator } from '@playwright/test'
+import { readFileSync } from 'fs'
+import path from 'path'
 import { login, clickExtensionMenuItem, dismissOpenDialogs, GUIDE_MEDIA, capturePedida } from './helpers'
 
 // Regenerates the screenshots of the extension management dialogs for the guide (docs/_media/guide).
@@ -55,6 +57,52 @@ const relabelCustomers = (pairs: Record<string, string>) => {
     }
 }
 
+/*
+    The AI toolset grant dialog.
+
+    🔴 Its ROWS are the INSTALLED plugins, and the development environment has the paid ones installed:
+    disabling the private marketplaces hides them from the catalogue, not from here. So the rows are
+    filtered against a WHITELIST — the public plugins manifest of this repo — and every other row is taken
+    out of the DOM before shooting. A whitelist and not a list of paid ids: a new paid plugin nobody added
+    to a blacklist would leak; one missing from the public manifest is simply not shown.
+
+    Nothing is saved: the dialog is opened, shot and cancelled.
+*/
+const GRANT_FILE = 'aitoolset-grant.png'
+// A PUBLIC toolset: in the development environment K8s Ops may be a build from a private marketplace, and its
+// name and badge would end up in the public guide.
+const GRANT_TOOLSET = 'K8s Describe'
+const PUBLIC_PLUGINS: string[] = [...new Set((JSON.parse(readFileSync(path.resolve(__dirname, '..', '..', '..', 'plugins', 'manifest.json'), 'utf-8')) as { id: string }[]).map(e => e.id))]
+
+/** Removes from the grant table every row whose plugin is not in the whitelist. */
+const keepPublicRows = (allowed: string[]) => {
+    for (const sw of Array.from(document.querySelectorAll('input[role="switch"][aria-label$=" all tools"]'))) {
+        const id = (sw.getAttribute('aria-label') ?? '').replace(/ all tools$/, '')
+        if (!allowed.includes(id)) sw.closest('tr')?.remove()
+    }
+}
+
+async function captureGrant(page: Page, manager: Locator): Promise<void> {
+    // Narrowed with the INSTALLED section's filter (the first one), not by guessing the card's markup.
+    // No fallback to "any toolset": the next one could be a private build.
+    const filter = manager.getByPlaceholder('Filter…').first()
+    await filter.fill(GRANT_TOOLSET)
+    await page.waitForTimeout(400)
+    const gears = manager.locator('span[aria-label="Configure"] button')
+    expect(await gears.count(), `'${GRANT_TOOLSET}' no esta instalado: no hay toolset publico que capturar`).toBe(1)
+    await gears.first().click()
+    const grant = page.getByRole('dialog').filter({ hasText: /^Grant: / })
+    await grant.waitFor({ timeout: 20000 })
+    await expect(grant.getByRole('columnheader', { name: 'All', exact: true })).toBeVisible()
+    await page.evaluate(keepPublicRows, PUBLIC_PLUGINS)
+    await page.evaluate(relabelCustomers, RELABEL)
+    await page.mouse.move(0, 0)
+    await page.waitForTimeout(800)
+    await grant.screenshot({ path: `${MEDIA}/${GRANT_FILE}` })
+    await grant.getByRole('button', { name: 'Cancel' }).click()
+    await expect(grant).toHaveCount(0)
+}
+
 async function captureSession(page: Page): Promise<ISession> {
     const found: ISession = { auth: '', backend: '' }
     page.on('request', req => {
@@ -107,18 +155,21 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
             await page.waitForTimeout(400)
         }
 
-        for (const m of MANAGERS.filter(x => pedida(x.file))) {
+        // A manager is opened when its own image is asked for OR when an image behind it is (the grant
+        // dialog lives behind the AI toolsets one): asking for that one alone must not re-shoot the manager.
+        const conGrant = (m: { file: string }) => m.file === 'manage-aitoolsets.png' && pedida(GRANT_FILE)
+        for (const m of MANAGERS.filter(x => pedida(x.file) || conGrant(x))) {
             await clickExtensionMenuItem(page, m.menu)
             const dialog = page.getByRole('dialog').filter({ hasText: m.title })
             await dialog.waitFor({ timeout: 10000 })
             // give it time to resolve the catalogue: otherwise the spinner is captured
             await page.waitForTimeout(2500)
             await page.evaluate(relabelCustomers, RELABEL)
-            await dialog.screenshot({ path: `${MEDIA}/${m.file}` })
+            if (pedida(m.file)) await dialog.screenshot({ path: `${MEDIA}/${m.file}` })
 
             // the list view goes to the guide too: it is the half of the screen that drifted the most
             const listToggle = dialog.getByRole('button', { name: /list view/i }).first()
-            if (await listToggle.count() > 0) {
+            if (pedida(m.file) && await listToggle.count() > 0) {
                 await listToggle.click()
                 // The pointer stays over the button and MUI ends up drawing its tooltip ('List view') ON
                 // TOP of the screenshot. The mouse is moved away and given time to vanish before shooting.
@@ -128,6 +179,9 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
                 await page.evaluate(relabelCustomers, RELABEL)
                 await dialog.screenshot({ path: `${MEDIA}/${m.file.replace('.png', '-list.png')}` })
             }
+
+            // The AI toolsets' GRANT dialog (plans/ai-tool-grants): plugins × tools, behind the card's ⚙.
+            if (conGrant(m)) await captureGrant(page, dialog)
             await dismissOpenDialogs(page)
         }
     }

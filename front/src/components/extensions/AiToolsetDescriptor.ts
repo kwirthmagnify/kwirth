@@ -1,6 +1,8 @@
+import React from 'react'
 import { Construction } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IExtensionVerdict } from './extensionManagerModel'
+import { AiToolsetGrantDialog } from './AiToolsetGrantDialog'
 
 /*
     The `aitoolset` type's descriptor (plan: plans/ai-tools/PLAN.md) and the generic manager's FIRST
@@ -8,7 +10,8 @@ import { EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExt
     premiering it could not break anything that already worked.
 
     The two sections, the filter, card/list, the version Select, installing from catalogue/URL/file, the
-    provenance and the plugin selector are all put there by ExtensionManagerDialog.
+    provenance and the gear are all put there by ExtensionManagerDialog; the grant dialog behind the gear
+    is this type's own (AiToolsetGrantDialog).
 */
 
 interface IAiToolsetEntry {
@@ -25,13 +28,11 @@ interface IAiToolsetEntry {
     requiresRestart?: boolean
     /** Installed only: how many tools it brings, for the chip. The back end's catalogue fills it in. */
     toolCount?: number
+    /** Installed only: how many plugins are granted at least one of its tools. */
+    grantCount?: number
 }
 
-/** What the descriptor needs from the application in order to read and save the grants. */
-interface IAiToolsetDescriptorDeps {
-    loadGrants: () => Promise<Record<string, string[]>>
-    saveGrants: (toolsetId: string, pluginIds: string[]) => Promise<void>
-}
+const HELP_SECTION = 'guide/extensions/aitoolsets/index?id=the-ai-toolsets-manager'
 
 const toModel = (e: IAiToolsetEntry): IExtensionCardModel => ({
     name: e.displayName || e.name || e.id,
@@ -51,14 +52,14 @@ const canUninstall = (e: IAiToolsetEntry): IExtensionVerdict => {
     return { allowed: true }
 }
 
-const makeAiToolsetDescriptor = (deps: IAiToolsetDescriptorDeps): IExtensionManagerDescriptor<IAiToolsetEntry, IAiToolsetEntry> => ({
+const makeAiToolsetDescriptor = (): IExtensionManagerDescriptor<IAiToolsetEntry, IAiToolsetEntry> => ({
     extensionType: EExtensionType.AITOOLSET,
     title: 'Manage AI toolsets',
     noun: { singular: 'AI toolset', plural: 'AI toolsets' },
     // The type's guide already exists (CL9 2026-09-16), so the dialog carries its help button (rule 7).
     // It points at the manager's section and not at the top of the page: whoever opens the help FROM the
     // dialog wants what they are looking at, not the introduction to the concept.
-    helpSection: 'guide/extensions/aitoolsets/index?id=the-ai-toolsets-manager',
+    helpSection: HELP_SECTION,
     icon: Construction,
     endpoints: {
         installed: '/core/aitoolsets',
@@ -71,25 +72,29 @@ const makeAiToolsetDescriptor = (deps: IAiToolsetDescriptorDeps): IExtensionMana
     canUninstall,
 
     /*
-        THE GRANT: which plugins may use this toolset (plan: "El techo en dos fases", phase 1).
+        THE GRANT: which plugins may use this toolset, and which of its tools (plans/ai-tool-grants, T3).
+        It opens from the card's gear.
 
         It is granted from the TOOLSET and not from the plugin because the dangerous one is the toolset:
         `k8s-ops` is the eight writing tools, and this way "who can write to the cluster through AI?" is
         answered on ONE screen, instead of walking the installed channels one by one.
 
-        ⚠️ By default nobody uses it: installing leaves the toolset available, not granted. Hence the
-        control says 'No plugin' rather than staying blank.
+        ⚠️ By default nobody uses it: installing leaves the toolset available, not granted.
     */
-    pluginSelector: {
-        tooltip: 'Plugins allowed to use this toolset',
-        load: deps.loadGrants,
-        save: (toolset, pluginIds) => deps.saveGrants(toolset.id, pluginIds)
-    },
+    renderConfigDialog: (e, onClose) => React.createElement(AiToolsetGrantDialog, {
+        toolsetId: e.id,
+        title: `Grant: ${e.displayName || e.name || e.id}`,
+        helpSection: HELP_SECTION,
+        onClose
+    }),
 
-    extraChips: (e, section): IExtensionChip[] =>
-        section === EManagerSection.INSTALLED && e.toolCount !== undefined
-            ? [{ label: `${e.toolCount} tool${e.toolCount > 1 ? 's' : ''}`, variant: 'outlined' }]
-            : []
+    extraChips: (e, section): IExtensionChip[] => {
+        if (section !== EManagerSection.INSTALLED) return []
+        const chips: IExtensionChip[] = []
+        if (e.toolCount !== undefined) chips.push({ label: `${e.toolCount} tool${e.toolCount > 1 ? 's' : ''}`, variant: 'outlined' })
+        if (e.grantCount !== undefined) chips.push({ label: e.grantCount ? `${e.grantCount} plugin${e.grantCount > 1 ? 's' : ''}` : 'No plugin', variant: 'outlined' })
+        return chips
+    }
 })
 
 export { makeAiToolsetDescriptor }

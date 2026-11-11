@@ -6,6 +6,8 @@ import { WebhookManager } from '../../src/tools/WebhookManager'
 import { IdpManager } from '../../src/tools/IdpManager'
 import { AiToolsetManager } from '../../src/tools/AiToolsetManager'
 import { PluginManager } from '../../src/tools/PluginManager'
+import { registerToolset, unregisterToolset } from '@kwirthmagnify/kwirth-common-ai/back'
+import { EToolEffect, EToolSensitivity } from '@kwirthmagnify/kwirth-common-ai'
 
 /*
     The configuration the core stores ABOUT an extension.
@@ -192,18 +194,52 @@ test('🔴 y NO se tocan las instancias de OTROS conectores', async () => {
 
 test('una concesion a un plugin que no esta instalado aqui se avisa', async () => {
     // `setGrants` returns those that WERE applied: the difference is what was lost along the way.
+    const agora = { pluginId: 'agora', allTools: true, tools: [] }
+    const fantasma = { pluginId: 'fantasma', allTools: true, tools: [] }
     const manager = {
-        listGrants: async () => ({ 'k8s-ops': ['agora', 'fantasma'] }),
-        setGrants: async () => ['agora']
+        listGrants: async () => ({ 'k8s-ops': [agora, fantasma] }),
+        setGrants: async () => [agora]
     } as unknown as AiToolsetManager
 
     const e = toolsetGrants(manager, 'k8s-ops')
-    assert.deepEqual(await e.exportConfig!(opts(false)), { grants: ['agora', 'fantasma'] })
+    assert.deepEqual(await e.exportConfig!(opts(false)), { grants: [agora, fantasma] })
 
-    const r = await e.importConfig!({ grants: ['agora', 'fantasma'] })
+    const r = await e.importConfig!({ grants: [agora, fantasma] })
     assert.equal(r.applied, 1)
     assert.equal(r.skipped, 1)
     assert.ok(r.warnings[0].includes('fantasma'))
+})
+
+test('importar una concesion en formato antiguo se salta y se avisa', async () => {
+    let recibido: unknown = undefined
+    const manager = {
+        listGrants: async () => ({}),
+        setGrants: async (_id: string, g: unknown[]) => { recibido = g; return g }
+    } as unknown as AiToolsetManager
+
+    const r = await toolsetGrants(manager, 'k8s-ops').importConfig!({ grants: ['agora', { pluginId: 'p', allTools: true, tools: [] }] })
+    assert.deepEqual(recibido, [{ pluginId: 'p', allTools: true, tools: [] }])
+    assert.equal(r.applied, 1)
+    assert.equal(r.skipped, 1)
+    assert.ok(r.warnings[0].includes('obsolete'))
+})
+
+test('importar tools que el toolset de destino no tiene las quita y avisa, sin tumbar el import', async () => {
+    registerToolset({
+        id: 'cmc-toolset', version: '0.0.1', displayName: 'x', description: 'x', requires: [],
+        tools: [{ name: 'ping', description: 'p', effect: EToolEffect.READ, sensitivity: EToolSensitivity.PUBLIC, inputSchema: {} as never, execute: async () => 'pong' }]
+    })
+    let recibido: unknown = undefined
+    const manager = {
+        listGrants: async () => ({}),
+        setGrants: async (_id: string, g: unknown[]) => { recibido = g; return g }
+    } as unknown as AiToolsetManager
+
+    const r = await toolsetGrants(manager, 'cmc-toolset').importConfig!({ grants: [{ pluginId: 'p', allTools: false, tools: ['ping', 'nueva'] }] })
+    assert.deepEqual(recibido, [{ pluginId: 'p', allTools: false, tools: ['ping'] }])
+    assert.equal(r.applied, 1)
+    assert.ok(r.warnings.some(w => w.includes('nueva')))
+    unregisterToolset('cmc-toolset')
 })
 
 // ─── config de instalacion ─────────────────────────────────────────────────────

@@ -83,6 +83,7 @@ A channel can now work **across clusters**: a tab opened on one kwirth can reach
   - More providers: **Anthropic** and any **OpenAI-compatible** endpoint, on top of the existing ones.
   - **Structured vision**: a multimodal helper that returns typed output from an image, not free text.
   - **An agent engine** with tool effects: tools declare whether they read or write, and a read-only agent is denied writes at invocation — the decision is about what a tool *does*, not which package it came from.
+  - **AI toolsets are granted per tool.** The ⚙ of each toolset opens its grant: one row per plugin, one column per tool. A plugin gets either **All** the tools (including the ones a future version brings) or only the ticked ones — so `k8s-ops` can be given for scaling a deployment and not for deleting a pod. ⚠️ **Breaking:** the old whole-toolset grants are **not** migrated; after upgrading, every toolset reads *No plugin* and AI channels have no tools until they are granted again. See [AI toolsets](guide/extensions/aitoolsets/index?id=the-grant-dialog).
 
 ### Data and storage
 

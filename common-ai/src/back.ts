@@ -1,4 +1,4 @@
-import { ILlm, ILlmModel, ILlmProvider, ECapability, EToolEffect, EToolSensitivity, EUsagePeriod, EUsageUnit, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, IUsageAmounts, IUsageLimits, IUsageWindows, parseToolRef, toolRef } from './index'
+import { ILlm, ILlmModel, ILlmProvider, ECapability, EToolEffect, EToolSensitivity, EUsagePeriod, EUsageUnit, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, IToolsetGrant, IUsageAmounts, IUsageLimits, IUsageWindows, parseToolRef, toolRef } from './index'
 // TYPES ONLY: the compiler erases them, so common-ai does not drag the Kubernetes client (~6.6 MB) into
 // any bundle. That is why @kubernetes/client-node is an optional peer and not a dependency.
 import type { AppsV1Api, CoreV1Api, CustomObjectsApi, NetworkingV1Api } from '@kubernetes/client-node'
@@ -977,21 +977,49 @@ const builtInToolsetIds = new Set<string>()
     And by default nobody uses it (user's decision, 2026-09-17): installing a toolset leaves it available,
     not granted. Installing `k8s-ops` must not give anyone write access by accident.
 */
-const toolsetGrants = new Map<string, Set<string>>()   // toolsetId → invited plugins
+// And the grant is per TOOL (plan: plans/ai-tool-grants/PLAN.md, T1): the admin grants a plugin either every
+// tool of the toolset (`allTools`, future ones included) or an explicit list (new ones are NOT granted).
+const toolsetGrants = new Map<string, Map<string, IToolsetGrant>>()   // toolsetId → pluginId → its grant
 
 export const isBuiltInToolsetId = (id: string): boolean => builtInToolsetIds.has(id)
 
-/** Grants a toolset to a list of plugins. Replaces the previous grant; `[]` takes it away from everyone. */
-export const setToolsetGrants = (toolsetId: string, pluginIds: string[]): void => {
-    toolsetGrants.set(toolsetId, new Set(pluginIds))
+/** Whether a grant gives anything at all. */
+const grantsSomething = (g: IToolsetGrant): boolean => g.allTools || g.tools.length > 0
+
+/**
+ * Sets a toolset's grant. Replaces the previous one; `[]` takes it away from everyone.
+ *
+ * A plugin granted nothing (`allTools: false`, `tools: []`) is NOT kept: "granted nothing" and "not
+ * granted" must behave the same, or `isToolsetGrantedTo` would say yes to a plugin that can use nothing.
+ * Repeated plugins are merged: the union of their tools, and `allTools` if any of them says so.
+ */
+export const setToolsetGrants = (toolsetId: string, grants: IToolsetGrant[]): void => {
+    const byPlugin = new Map<string, IToolsetGrant>()
+    for (const g of grants) {
+        if (!grantsSomething(g)) continue
+        const previous = byPlugin.get(g.pluginId)
+        byPlugin.set(g.pluginId, {
+            pluginId: g.pluginId,
+            allTools: g.allTools || (previous?.allTools ?? false),
+            tools: [...new Set([...(previous?.tools ?? []), ...g.tools])]
+        })
+    }
+    toolsetGrants.set(toolsetId, byPlugin)
 }
 
-/** Who a toolset is granted to. Empty = nobody, which is the default state. */
-export const getToolsetGrants = (toolsetId: string): string[] => [...(toolsetGrants.get(toolsetId) ?? [])]
+/** A toolset's grant, as it lives in the registry. Empty = nobody, which is the default state. */
+export const getToolsetGrants = (toolsetId: string): IToolsetGrant[] =>
+    [...(toolsetGrants.get(toolsetId)?.values() ?? [])].map(g => ({ ...g, tools: [...g.tools] }))
 
-/** Whether THAT plugin may use THAT toolset. */
+/** Whether THAT plugin may use THAT toolset: at least one of its tools is granted to it. */
 export const isToolsetGrantedTo = (toolsetId: string, pluginId: string): boolean =>
     toolsetGrants.get(toolsetId)?.has(pluginId) ?? false
+
+/** Whether THAT plugin may use THAT tool of THAT toolset. */
+export const isToolGrantedTo = (toolsetId: string, toolName: string, pluginId: string): boolean => {
+    const g = toolsetGrants.get(toolsetId)?.get(pluginId)
+    return g !== undefined && (g.allTools || g.tools.includes(toolName))
+}
 
 /**
  * Registers a toolset. `builtIn` is only used by the core for its own: it marks the id as reserved.
@@ -1067,6 +1095,9 @@ export const buildToolHost = (requires: ECapability[], context: IToolContext): I
 /**
  * Invokes a tool by its qualified reference. A single invocation path for built-in and installed alike,
  * with the host built according to the `requires` of ITS toolset.
+ *
+ * ⚠️ It is NOT a gate: it does not know who is asking, so it does not check the grant. Whatever runs on
+ * behalf of a plugin goes through `buildAgentTools`, which resolves with the requester.
  */
 export const invokeToolRef = async (ref: string, args: Record<string, unknown>, context: IToolContext): Promise<unknown> => {
     const resolved = resolveToolRef(ref)
@@ -1128,6 +1159,13 @@ export interface IToolResolution {
      * looking in the wrong place.
      */
     notGranted: string[]
+    /**
+     * Tools of a GRANTED toolset that the admin did not grant to this plugin, as qualified references.
+     *
+     * Apart from `disabledTools` on purpose: "the admin took it from you" is fixed in the toolset's grant,
+     * "you turned it off" in the plugin's own config.
+     */
+    notGrantedTools: string[]
 }
 
 /**
@@ -1143,6 +1181,7 @@ export const resolveTools = (config: IToolsetConfig, requesterId?: string): IToo
     const shadowed: IShadowedTool[] = []
     const missing: string[] = []
     const notGranted: string[] = []
+    const notGrantedTools: string[] = []
     const taken = new Map<string, string>()   // short name → toolset serving it
 
     for (const toolsetId of config.activeToolsets) {
@@ -1162,6 +1201,12 @@ export const resolveTools = (config: IToolsetConfig, requesterId?: string): IToo
         }
         for (const tool of toolset.tools) {
             const ref = toolRef(toolsetId, tool.name)
+            // A tool not granted is out of play BEFORE the shadowing, like a disabled one: it must not hide a
+            // tool with the same name from a toolset of lower precedence.
+            if (requesterId !== undefined && !isToolGrantedTo(toolsetId, tool.name, requesterId)) {
+                notGrantedTools.push(ref)
+                continue
+            }
             if (disabled.has(ref)) continue
             const owner = taken.get(tool.name)
             if (owner) {
@@ -1172,7 +1217,7 @@ export const resolveTools = (config: IToolsetConfig, requesterId?: string): IToo
             effective.push({ name: tool.name, ref, toolsetId, tool })
         }
     }
-    return { effective, shadowed, missing, notGranted }
+    return { effective, shadowed, missing, notGranted, notGrantedTools }
 }
 
 /** One concrete invocation, as the two hooks see it. */

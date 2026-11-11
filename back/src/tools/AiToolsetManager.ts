@@ -1,4 +1,5 @@
-import { IAiToolset, registerToolset, unregisterToolset, isBuiltInToolsetId, getToolset, setToolsetGrants, getToolsetGrants } from '@kwirthmagnify/kwirth-common-ai/back'
+import { IAiToolset, registerToolset, unregisterToolset, isBuiltInToolsetId, getToolset, setToolsetGrants } from '@kwirthmagnify/kwirth-common-ai/back'
+import { IToolsetGrant } from '@kwirthmagnify/kwirth-common-ai'
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { assertInstallable } from './ExtensionInstallGuard'
@@ -46,12 +47,47 @@ const INDEX_KEY = 'kwirth-aitoolsets-index'
     It is stored in the CORE and not in the plugin, the other way round from the precedence order: the
     toolset is a core extension, and the guest list is exactly what the plugin must not get to decide.
 
-    A single ConfigMap with the whole map { toolsetId: [pluginId, ...] }: it is four lines of data, and
+    A single ConfigMap with the whole map { toolsetId: IToolsetGrant[] }: it is a few lines of data, and
     keeping them together makes "who can write to the cluster through AI?" answerable in one read.
+
+    The grant is per TOOL (plans/ai-tool-grants, T2): every tool (`allTools`, future ones included) or an
+    explicit list. 🔴 NO migration from the old format ({ toolsetId: [pluginId, ...] }): an entry that does
+    not have the new shape is DISCARDED on reading, with a warning, and the admin grants it again.
 */
 const GRANTS_KEY = 'kwirth-aitoolsets-grants'
 
-type TToolsetGrants = Record<string, string[]>
+type TToolsetGrants = Record<string, IToolsetGrant[]>
+
+/** Whether a value has the shape of a grant. Used on what is stored and on what arrives through the API. */
+export const isToolsetGrant = (value: unknown): value is IToolsetGrant => {
+    if (typeof value !== 'object' || value === null) return false
+    const g = value as Partial<IToolsetGrant>
+    return typeof g.pluginId === 'string'
+        && typeof g.allTools === 'boolean'
+        && Array.isArray(g.tools) && g.tools.every(t => typeof t === 'string')
+}
+
+/** The tools a grant names that the toolset does not carry. With `allTools` the list does not count. */
+export const unknownGrantTools = (toolset: IAiToolset, grants: IToolsetGrant[]): string[] => {
+    const known = new Set(toolset.tools.map(t => t.name))
+    return [...new Set(grants.filter(g => !g.allTools).flatMap(g => g.tools).filter(t => !known.has(t)))]
+}
+
+/** Deduplicates plugins (merging their tools) and tools. Entries granting nothing ARE kept: auditing. */
+const normalizeGrants = (grants: IToolsetGrant[]): IToolsetGrant[] => {
+    const byPlugin = new Map<string, IToolsetGrant>()
+    for (const g of grants) {
+        const previous = byPlugin.get(g.pluginId)
+        byPlugin.set(g.pluginId, {
+            pluginId: g.pluginId,
+            allTools: g.allTools || (previous?.allTools ?? false),
+            tools: [...new Set([...(previous?.tools ?? []), ...g.tools])]
+        })
+    }
+    return [...byPlugin.values()]
+}
+
+const describeGrant = (g: IToolsetGrant): string => `${g.pluginId}(${g.allTools ? 'all' : g.tools.join('|') || 'none'})`
 
 interface IDevAiToolset {
     tgzPath: string
@@ -80,9 +116,24 @@ export class AiToolsetManager {
 
     // ── Concesiones ─────────────────────────────────────────────────────────────
 
-    /** The complete map, exactly as it is stored. */
+    /**
+     * The complete map, as it is stored — minus what does not have the current shape.
+     *
+     * 🔴 No migration (user's decision, 2026-11-11): an entry in the old format ([pluginId, ...]) is
+     * dropped with a warning instead of being converted. It is not rewritten here: the next `setGrants`
+     * of that toolset overwrites it, and until then it simply grants nothing.
+     */
     async listGrants(): Promise<TToolsetGrants> {
-        return ((await this.configMaps.read(GRANTS_KEY, {})) as TToolsetGrants) || {}
+        const stored = ((await this.configMaps.read(GRANTS_KEY, {})) as Record<string, unknown>) || {}
+        const grants: TToolsetGrants = {}
+        for (const [toolsetId, value] of Object.entries(stored)) {
+            if (Array.isArray(value) && value.every(isToolsetGrant)) {
+                grants[toolsetId] = value
+                continue
+            }
+            logWarning(ELogComponent.CORE, `AI toolset '${toolsetId}': stored grant has an obsolete format and was discarded — grant it again`)
+        }
+        return grants
     }
 
     /**
@@ -94,8 +145,9 @@ export class AiToolsetManager {
      */
     async applyGrants(): Promise<void> {
         const grants = await this.listGrants()
-        for (const [toolsetId, plugins] of Object.entries(grants)) {
-            setToolsetGrants(toolsetId, plugins)
+        for (const [toolsetId, toolsetGrants] of Object.entries(grants)) {
+            setToolsetGrants(toolsetId, toolsetGrants)
+            this.warnOrphanTools(toolsetId, toolsetGrants)
         }
         const total = Object.values(grants).reduce((n, p) => n + p.length, 0)
         logInfo(ELogComponent.CORE, `AI toolset grants applied: ${Object.keys(grants).length} toolset(s), ${total} grant(s)`)
@@ -111,26 +163,47 @@ export class AiToolsetManager {
      */
     private async restoreGrants(toolsetId: string): Promise<void> {
         if (!getToolset(toolsetId)) return
-        const plugins = (await this.listGrants())[toolsetId]
-        if (!plugins?.length) return
-        setToolsetGrants(toolsetId, plugins)
-        logInfo(ELogComponent.CORE, `AI toolset '${toolsetId}' grants restored after reinstall: ${plugins.join(', ')}`)
+        const toolsetGrants = (await this.listGrants())[toolsetId]
+        if (!toolsetGrants?.length) return
+        // Restored AS STORED: an explicit list does not pick up the tools the new version brings — only
+        // `allTools` does, by definition.
+        setToolsetGrants(toolsetId, toolsetGrants)
+        this.warnOrphanTools(toolsetId, toolsetGrants)
+        logInfo(ELogComponent.CORE, `AI toolset '${toolsetId}' grants restored after reinstall: ${toolsetGrants.map(describeGrant).join(', ')}`)
     }
 
-    /** Grants a toolset to a list of plugins (replacing the previous one) and persists it. */
-    async setGrants(toolsetId: string, pluginIds: string[]): Promise<string[]> {
-        if (!getToolset(toolsetId)) throw new Error(`AI toolset '${toolsetId}' is not registered`)
+    /**
+     * A new version may drop or rename a tool that was granted. It is NOT removed from the store (the
+     * admin sees it in the dialog and decides); the registry ignores it, and the log says so.
+     */
+    private warnOrphanTools(toolsetId: string, toolsetGrants: IToolsetGrant[]): void {
+        const toolset = getToolset(toolsetId)
+        if (!toolset) return
+        const orphans = unknownGrantTools(toolset, toolsetGrants)
+        if (orphans.length) logWarning(ELogComponent.CORE, `AI toolset '${toolsetId}': granted tool(s) no longer in the toolset: ${orphans.join(', ')}`)
+    }
+
+    /**
+     * Sets a toolset's grant (replacing the previous one) and persists it.
+     *
+     * Throws if a list names a tool the toolset does not carry: saving a grant that does nothing would
+     * make the admin believe it does.
+     */
+    async setGrants(toolsetId: string, toolsetGrants: IToolsetGrant[]): Promise<IToolsetGrant[]> {
+        const toolset = getToolset(toolsetId)
+        if (!toolset) throw new Error(`AI toolset '${toolsetId}' is not registered`)
+        const unknown = unknownGrantTools(toolset, toolsetGrants)
+        if (unknown.length) throw new Error(`AI toolset '${toolsetId}' has no tool(s): ${unknown.join(', ')}`)
 
         const grants = await this.listGrants()
-        // An empty list is STORED as empty rather than deleting the entry: "we took it away from
-        // everybody" and "it was never touched" look the same in the ConfigMap, but they do not mean the
-        // same thing when auditing.
-        grants[toolsetId] = [...new Set(pluginIds)]
+        // A plugin granted nothing is STORED rather than dropped: "we took it away from it" and "it was
+        // never touched" look the same in the registry, but they do not mean the same thing when auditing.
+        grants[toolsetId] = normalizeGrants(toolsetGrants)
         await this.configMaps.write(GRANTS_KEY, grants)
         setToolsetGrants(toolsetId, grants[toolsetId])
 
-        logInfo(ELogComponent.CORE, `AI toolset '${toolsetId}' granted to: ${grants[toolsetId].join(', ') || '(nobody)'}`)
-        return getToolsetGrants(toolsetId)
+        logInfo(ELogComponent.CORE, `AI toolset '${toolsetId}' granted to: ${grants[toolsetId].map(describeGrant).join(', ') || '(nobody)'}`)
+        return grants[toolsetId]
     }
 
     async listInstalled(): Promise<IAiToolsetMeta[]> {
