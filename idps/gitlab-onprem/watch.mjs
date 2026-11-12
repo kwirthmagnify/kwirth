@@ -22,12 +22,21 @@ const kwirthBackGlobalsPlugin = {
 fs.mkdirSync('dist', { recursive: true })
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
+// The same dist/package.json build.mjs writes. 'type: commonjs' is not optional: back.js is CJS and the root
+// package.json says "module", so without it the core's require() of back.js fails.
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
-    id: meta.id, name: meta.name, displayName: meta.displayName,
-    version: meta.version, description: meta.description,
+    type: 'commonjs',
+    extensionType: 'idp',
+    id: meta.id,
+    name: meta.name,
+    displayName: meta.displayName,
+    version: meta.version,
+    description: meta.description,
     ...(meta.website ? { website: meta.website } : {}),
-    ...(meta.publishConfig ? { publishConfig: meta.publishConfig } : {})
-    requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? [] }, null, 2))
+    ...(meta.publishConfig ? { publishConfig: meta.publishConfig } : {}),
+    requiresRestart: meta.requiresRestart ?? false,
+    requiresExtension: meta.requiresExtension ?? [],
+}, null, 2))
 
 const ctx = await esbuild.context({
     entryPoints: ['src/index.ts'],
