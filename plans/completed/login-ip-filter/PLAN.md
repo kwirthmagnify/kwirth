@@ -1,6 +1,6 @@
 # Filtro de IP en el login — PLAN
 
-> **Estado:** streams validados (2026-11-12) · **L1 ✅** (`kwirth-common@0.5.81` → `0.5.82` con `enabled`) · **L2 ✅** · **L3 ✅** (QA del usuario completo, que cubre también L2) · L4 siguiente · producto en [PRD.md](PRD.md).
+> **Estado:** streams validados (2026-11-12) · **L1 ✅** (`kwirth-common@0.5.81` → `0.5.82` con `enabled`) · **L2 ✅** · **L3 ✅** (QA del usuario completo, que cubre también L2) · **L4 ✅** · ✅ **CERRADO el 2026-11-12** · producto en [PRD.md](PRD.md).
 
 ## Estado verificado del código (2026-11-12)
 
@@ -84,10 +84,8 @@
 > `enabled: false` vuelve a entrar, **sin reiniciar el back** (CA2, CA5, CA6). Los cambios del ConfigMap
 > de D los hizo Claude con `kubectl patch` sobre `data.data`, verificando cada uno con un POST a `/login`.
 >
-> ⚠️ **Sin explicar:** durante el QA el back de dev se cayó (nodemon vivo, sin proceso `ts-node`, sin heap
-> snapshot) entre las 20:01 —tests pasando contra él— y el primer parche del ConfigMap. El usuario lo
-> levantó sin que se viera el error. No hay indicio de que sea de este cambio, pero tampoco prueba de lo
-> contrario: si se repite, el log de nodemon es lo primero.
+> La caída del back de dev durante el QA (nodemon vivo, sin proceso `ts-node`) **no fue de este cambio**:
+> la causó otra sesión, con un error de tipos (lo confirmó el usuario).
 
 > **Entregado.** Pestaña **Login access**: interruptor, recuadro "How Kwirth sees you" (dirección resuelta,
 > la de la conexión y el estado de `X-Forwarded-For`) con el botón "Trust the proxy I'm coming through", y las
@@ -131,7 +129,32 @@
   leído). El 403 real no se provoca por e2e: el back no deja guardar una lista que deje fuera al que llama,
   así que lo cubren los tests de L2. Después, QA del usuario (incluye CA6 con `kubectl edit`).
 
-### L4 · Documentación y cierre
+### L4 · Documentación y cierre — ✅ cerrado (2026-11-12, en la CL9)
+
+> **Guía** `guide/admin/02-initial-config`: sección *Login access* (qué cubre, cada parte de la pestaña, lo
+> que no se deja guardar, proxies de confianza con el diagrama del ingress, el aviso del rate limiter, los
+> tres casos de ingress-nginx con balanceador delante, la vía de escape con el comando literal, el fallo
+> cerrado, el desktop y lo que ve quien entra) y enlace desde *kwirth settings*. tgz de docs regenerado y
+> servido (GET 200 de la página y de la captura; render revisado en el visor).
+>
+> **Capturas:** nueva `admin-kwirth-settings-login-access.png`; recapturadas las cinco del diálogo
+> (`admin-kwirth-settings`, `-notifications`, `-log`, `admin-marketplaces`, `admin-package-registries`)
+> porque la fila de pestañas cambia, y `admin-kwirth-portability` (mismo spec). El spec vacía las listas
+> en el formulario antes del ejemplo y cierra con Cancel: no guarda nada.
+>
+> 🔴 **La pestaña nueva rompió dos specs** que nadie había lanzado: `getByRole('tab', { name: 'Log' })`
+> casa por substring con "**Log**in access" (`kwirth-log-settings.spec.ts` y el capture). Arreglados con
+> `exact: true`. Después se pasaron **todos** los specs que abren *Kwirth settings* (9): 27 ✔, 3 ⏭ de
+> siempre, 1 flaky (`help-popup`, arrancó en la pantalla de login con la sesión perdida; pasó al reintento).
+> 📌 Lección: al añadir una pestaña, un menú o un botón, correr los e2e de **todo** el diálogo, no solo los
+> de lo nuevo.
+>
+> **Changelog** 0.6.31 (dos entradas), **métricas** (`docs/qa/`, fila y los dos PNG).
+>
+> **Consumidores (punto 6):** revisados los que leen el export de portabilidad del core (tabla de contratos
+> del índice privado). No les afecta: el campo nuevo de `core.settings` es opcional, y un import que
+> restaura un bundle del **mismo** Kwirth lo hace un admin que ha entrado a través de ese filtro, así que
+> pasa la validación. No necesita tarea.
 
 - Guía de administración: la pestaña, los proxies de confianza (con el ejemplo del ingress), el aviso de §8
   y la vía de escape con el comando literal.

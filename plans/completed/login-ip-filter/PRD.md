@@ -1,6 +1,6 @@
 # Filtro de IP en el login — PRD
 
-> **Estado:** vivo, sin empezar · abierto 2026-11-12 · plan en [PLAN.md](PLAN.md).
+> **Estado:** ✅ cerrado el 2026-11-12 (abierto el mismo día) · plan en [PLAN.md](PLAN.md).
 
 ## 1. Resumen ejecutivo
 

@@ -47,6 +47,8 @@ What you save here is **stored by kwirth and survives a restart**. The [Metrics 
 
 Managing these settings requires the **`admin`** scope; without it the dialog will tell you so instead of loading.
 
+The other tabs are covered below: [Notifications](#notifications), the [log](#how-much-kwirth-writes-to-its-log), [marketplaces](#adding-your-own-marketplace), [package registries](#package-registries) and [Login access](#login-access) — where kwirth can be logged into from.
+
 > The interval can also be set at deploy time (Helm `metricsinterval` / `--metricsinterval`). Precedence is: what you save in this dialog wins; otherwise the deploy-time value; otherwise 15 seconds. So the Helm value acts as the starting point until somebody changes it here.
 
 ### Notifications
@@ -329,6 +331,76 @@ The secret is stored encrypted by kwirth, outside the settings, exactly like the
 > **Credentials never follow a redirect to another host.** Registries commonly answer a download with a redirect to object storage bearing a pre-signed URL; forwarding the `Authorization` header there would hand your credential to a third party, and those endpoints usually reject the double authentication anyway.
 
 > **The credential has to keep working after the install.** kwirth keeps installed extensions in its own storage, but not everything ends up there: an artefact too large for it is fetched from its registry again when needed, and a documentation extension is unpacked to a local directory rather than stored, so it is downloaded again whenever that directory is not there. In Kubernetes that is **every restart**, because a new pod starts with an empty filesystem. So a registry password that is rotated, revoked or left to expire does not fail on the next install: it fails on the next **restart**, and the affected extension comes up missing. The kwirth log names it, with the URL and the HTTP status.
+
+### Login access
+
+The **Login access** tab restricts **where kwirth can be logged into from**: a list of IP addresses and networks (CIDR), IPv4 or IPv6. A login from anywhere else is refused before the password is even looked at.
+
+![The Login access tab of the kwirth settings dialog](../../_media/guide/admin-kwirth-settings-login-access.png)
+
+It covers **every way in that hands out an access key**: the user and password login, the password change, the identity provider sign-in (both when it starts and when it comes back) and the access requests (signup). It does **not** cover what is already in: sessions that are open keep working, and so do the API keys you issued to external tools — those are controlled from [API management](05-api-management).
+
+| Part of the tab | What it does |
+|---|---|
+| **Restrict login to the allowed addresses** | The switch. **Off on a new installation**: until somebody turns it on, anybody may try to log in, as always |
+| **How Kwirth sees you** | The address kwirth resolved for **you**, right now, the address of the connection, and what happened to the `X-Forwarded-For` header. Look here before saving anything |
+| **Trust my proxy** | Enabled only when your request came through a proxy whose `X-Forwarded-For` is being ignored. It adds that proxy's network to the trusted proxies (a `/16` for IPv4, a `/64` for IPv6) — narrow it down if you want |
+| **Add localhost** | Adds `127.0.0.1` **and** `::1`. `localhost` can resolve to either, and which one your browser uses is not something you can tell by looking |
+| **Allowed addresses** | Where a login may come from: `10.0.0.0/8`, `192.168.1.20`, `2001:db8::/32`… |
+| **Trusted proxies** | The ingress or load balancers whose `X-Forwarded-For` kwirth believes. See below |
+
+Nothing changes until you press **OK**, and kwirth refuses to save two things:
+
+- **A list that leaves you out.** If the address shown under *How Kwirth sees you* is not in the allowed list, saving would lock you out on your next login, so kwirth says so and keeps the dialog open for you to fix it. The check uses the trusted proxies **you are saving**, not the ones stored.
+- **The switch on with an empty list.** It would restrict nothing.
+
+Importing a configuration from another kwirth goes through the same checks: a bundle carrying a list that leaves out whoever imports it is refused.
+
+#### Trusted proxies: how kwirth knows who you are
+
+Behind an ingress, the connection kwirth receives does not come from your browser: it comes from the ingress controller. Your real address travels in the `X-Forwarded-For` header, which the ingress adds. The catch is that **anybody can write that header**, so kwirth only believes it when the connection comes from a proxy you trust:
+
+- With **no trusted proxies**, `X-Forwarded-For` is ignored and everybody is seen with the address of the connection — behind an ingress, the ingress's own.
+- With the ingress's network trusted, kwirth reads the header **from the right**, skipping trusted hops: your address is the first one that is not a trusted proxy. Whatever a client writes further left is never read, so it cannot pretend to be somebody else.
+
+```
+browser 203.0.113.9 ──► ingress-nginx (pod 10.42.1.7) ──► kwirth
+                         X-Forwarded-For: 203.0.113.9
+```
+
+Here the trusted proxy is the **pod network of the cluster** — `10.42.0.0/16` on k3s/k3d, `10.244.0.0/16` on kubeadm with flannel, whatever your CNI uses — not the address of the ingress pod, which changes every time it restarts. *How Kwirth sees you* tells you when one is missing: *X-Forwarded-For: ignored (not from a trusted proxy)*, and **Trust my proxy** fills it in.
+
+> Trusting the whole pod network means that any pod in the cluster that talks to kwirth's Service directly could forge the header. That is usually acceptable; if it is not for you, a `NetworkPolicy` that only lets the ingress namespace reach kwirth closes it.
+
+> ⚠️ **This is not only about the filter.** The address kwirth resolves is also the one the login's brute-force protection counts by (address + user), and the one recorded with each access key. Without trusted proxies, behind an ingress everybody shares one address, so somebody failing five times with a user blocks that user's login for fifteen minutes **for everybody**. Configure the trusted proxies even if you never turn the filter on.
+
+If there is a **cloud load balancer in front of the ingress**, the ingress itself may be seeing the balancer instead of the browser — and what the ingress does not know, kwirth cannot know either. That is fixed on the ingress, in one of three ways:
+
+| Setup | What to set on ingress-nginx |
+|---|---|
+| The balancer passes the client address through | `externalTrafficPolicy: Local` on the ingress-nginx `Service` |
+| The balancer speaks PROXY protocol | `use-proxy-protocol: "true"` in the ingress-nginx ConfigMap, and PROXY protocol enabled on the balancer |
+| The balancer adds `X-Forwarded-For` | `use-forwarded-headers: "true"` and `proxy-real-ip-cidr: <the balancer's network>` in the ingress-nginx ConfigMap |
+
+#### If you lock yourself out
+
+The usual way to get there is your own address changing after you saved the list — a new VPN, a dynamic IP. The way back is to switch the filter off **in the storage**, without the UI. kwirth reads the setting on **every** login attempt, so it takes effect at once, with no restart.
+
+In Kubernetes the settings live in the `kwirth.settings` ConfigMap, in kwirth's namespace:
+
+```bash
+kubectl edit configmap kwirth.settings -n <kwirth-namespace>
+```
+
+The value is one line of JSON under `data.data`. Inside `"loginIpFilter"`, change `"enabled":true` to `"enabled":false` and save. On Docker or on a bare host, edit the `kwirth.settings` file in kwirth's store the same way.
+
+> If kwirth cannot **read** that ConfigMap (the API server failing, not the ConfigMap missing), the login answers *503* rather than letting people in: an unreadable filter is not an empty one.
+
+On the desktop app, `localhost` is always allowed: the person in front of the screen is the local user.
+
+#### What the person logging in sees
+
+A refused login says **"Login is not allowed from your IP address."** — on the password form, on the password change, and when coming back from an identity provider. A refused access request says the same.
 
 ## What to configure next
 

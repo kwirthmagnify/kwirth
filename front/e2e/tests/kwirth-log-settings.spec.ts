@@ -35,7 +35,8 @@ const openLogTab = async (page: Page) => {
     const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth settings' })
     // El campo se habilita cuando el dialogo ha terminado de traer sus datos: espera de carga, no de UI.
     await expect(dialog.getByLabel(INTERVAL_LABEL)).toBeEnabled({ timeout: CARGA })
-    await dialog.getByRole('tab', { name: 'Log' }).click()
+    // exact: 'Log' is also the start of 'Login access'
+    await dialog.getByRole('tab', { name: 'Log', exact: true }).click()
     return dialog
 }
 

@@ -48,9 +48,31 @@ test('capture kwirth-settings (dark)', async ({ page }) => {
     await page.waitForTimeout(500)
     await page.screenshot({ path: `${MEDIA}/admin-kwirth-settings-notifications.png` })
 
-    await dialog.getByRole('tab', { name: 'Log' }).click()
+    // exact: 'Log' is also the start of 'Login access'
+    await dialog.getByRole('tab', { name: 'Log', exact: true }).click()
     await page.waitForTimeout(500)
     await page.screenshot({ path: `${MEDIA}/admin-kwirth-settings-log.png` })
+
+    /*
+        Login access (plans/login-ip-filter), filled in as an example: switched on, an office network plus
+        localhost, and the ingress pod network as trusted proxy. Only typed into the form — the dialog is
+        closed with Cancel below, so none of it is saved.
+    */
+    await dialog.getByRole('tab', { name: 'Login access' }).click()
+    // whatever this dev has stored is emptied first (in the form only), so the guide shows the example
+    for (const label of ['Allowed address', 'Trusted proxy'])
+        while (await dialog.getByLabel(new RegExp(`^${label} \\d+$`)).count() > 0)
+            await dialog.getByRole('button', { name: `Remove ${label} 1`, exact: true }).click()
+    await dialog.getByLabel('Restrict login to the allowed addresses').check()
+    await dialog.getByRole('button', { name: 'Add allowed address' }).click()
+    await dialog.getByLabel('Allowed address 1', { exact: true }).fill('10.0.0.0/8')
+    await dialog.getByRole('button', { name: 'Add localhost' }).click()
+    await dialog.getByRole('button', { name: 'Add trusted proxy' }).click()
+    await dialog.getByLabel('Trusted proxy 1', { exact: true }).fill('10.42.0.0/16')
+    // the focus ring of the last field typed into would end up in the picture
+    await dialog.getByRole('tab', { name: 'Login access' }).focus()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: `${MEDIA}/admin-kwirth-settings-login-access.png` })
 
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await dismissOpenDialogs(page)
