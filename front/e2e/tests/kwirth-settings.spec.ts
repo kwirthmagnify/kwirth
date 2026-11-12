@@ -115,7 +115,7 @@ test('Login access: la pestana dice como ve Kwirth al admin, con todo a la vista
     await expect(sees(page)).not.toContainText('unknown')
     await expect(page.getByText(/^X-Forwarded-For: /)).toBeVisible()
     // nothing appears or disappears: the button and both lists are there whether they apply or not
-    await expect(page.getByRole('button', { name: "Trust the proxy I'm coming through" })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Trust my proxy' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Add allowed address' })).toBeEnabled()
     await expect(page.getByRole('button', { name: 'Add trusted proxy' })).toBeEnabled()
     await dismissOpenDialogs(page)

@@ -427,7 +427,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     */
     const ipList = (label: string, entries: string[], setEntries: React.Dispatch<React.SetStateAction<string[]>>, placeholder: string) => (
         <Box sx={{ width: '50%' }}>
-            <Box sx={{ height: 144, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }}>
+            <Box sx={{ height: 168, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }}>
                 { entries.map((entry, index) =>
                     <Stack key={index} direction='row' spacing={1} sx={{ alignItems: 'center' }}>
                         <TextField value={entry} variant='standard' placeholder={placeholder} sx={{ width: '85%' }}
@@ -860,12 +860,12 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                                     {/* Both always there, each enabled only when it would add something. They only
                                         fill the lists: nothing changes until OK, and what is shown on the left is
                                         the SAVED configuration's view. */}
-                                    <Stack spacing={0.5} sx={{ alignItems: 'stretch' }}>
-                                        <Tooltip title={suggestedProxy ? `Adds ${suggestedProxy} to the trusted proxies` : ''}>
-                                            <span><Button size='small' variant='outlined' fullWidth sx={{ whiteSpace: 'nowrap' }} onClick={trustProxy} disabled={loading || error!=='' || !canTrustProxy}>Trust the proxy I'm coming through</Button></span>
+                                    <Stack direction='row' spacing={1} sx={{ flexShrink: 0 }}>
+                                        <Tooltip title={suggestedProxy ? `Trust the proxy you are coming through: adds ${suggestedProxy} to the trusted proxies` : 'Trust the proxy you are coming through (enabled when its X-Forwarded-For is being ignored)'}>
+                                            <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={trustProxy} disabled={loading || error!=='' || !canTrustProxy}>Trust my proxy</Button></span>
                                         </Tooltip>
                                         <Tooltip title='Adds 127.0.0.1 and ::1 to the allowed addresses (localhost over IPv4 and IPv6)'>
-                                            <span><Button size='small' variant='outlined' fullWidth sx={{ whiteSpace: 'nowrap' }} onClick={addLocalhost} disabled={loading || error!=='' || missingLoopbacks.length === 0}>Add localhost</Button></span>
+                                            <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={addLocalhost} disabled={loading || error!=='' || missingLoopbacks.length === 0}>Add localhost</Button></span>
                                         </Tooltip>
                                     </Stack>
                                 </Stack>
