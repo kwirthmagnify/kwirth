@@ -1,4 +1,6 @@
 import express, { Request, Response} from 'express'
+import { IncomingMessage } from 'http'
+import { callerOf, loginIpFilterOf, validateLoginIpFilter } from '../tools/LoginIpFilter'
 import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
@@ -54,14 +56,34 @@ export class SettingsApi {
     }
 
     /*
+        The same read, telling 'there is nothing stored' ({}) from 'it could not be read' (undefined). The
+        login filter needs the difference: an unreadable configmap is not an empty filter, and opening the
+        door because the API server hiccuped would turn a security control into a coin toss. Only the
+        kubernetes store can tell them apart; the file stores return the default on any error.
+    */
+    public static async readStrict(configMaps: IConfigMaps): Promise<IKwirthSettings|undefined> {
+        const stored = await configMaps.read(SETTINGS_KEY, {})
+        return stored === undefined ? undefined : stored as IKwirthSettings
+    }
+
+    /*
         Writes settings splitting credentials into ISecrets, the same the PUT handler does. Used by the
         config-bundle import, which cannot go through the HTTP route: it has the data, not a Request.
         The log is applied hot for the same reason as the PUT.
+
+        'origin' is the request of whoever imports. A bundle from another installation can carry a login
+        IP filter that leaves them outside, and the import has to refuse it exactly as the PUT does.
     */
-    public async writeWithSecrets(incoming: IKwirthSettings): Promise<void> {
+    public async writeWithSecrets(incoming: IKwirthSettings, origin?: IncomingMessage): Promise<void> {
         const stored = await SettingsApi.read(this.configMaps)
         const merged: IKwirthSettings = { ...stored, ...incoming }
         if (incoming.metricsInterval !== undefined) merged.metricsInterval = +incoming.metricsInterval
+
+        if (incoming.loginIpFilter !== undefined) {
+            const filter = validateLoginIpFilter(incoming.loginIpFilter, origin, this.apiKeyApi.isDesktop)
+            if (typeof filter === 'string') throw new Error(filter)
+            merged.loginIpFilter = filter
+        }
 
         if (incoming.marketplaces !== undefined) {
             const problem = SettingsApi.validateMarketplaces(incoming.marketplaces)
@@ -297,6 +319,28 @@ export class SettingsApi {
                 }
             })
 
+        /*
+            How the core sees whoever is asking, for the 'Login access' tab: their resolved address, the
+            address of the connection, and whether an X-Forwarded-For was ignored (a proxy is missing from
+            the trusted list). Resolved with the STORED trusted proxies: it is what the login will do now.
+        */
+        this.router.route('/caller')
+            .all( async (req:Request, res:Response, next) => {
+                if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+                if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
+                next()
+            })
+            .get( async (req:Request, res:Response) => {
+                try {
+                    const stored = await SettingsApi.read(this.configMaps)
+                    res.status(200).json(callerOf(req, loginIpFilterOf(stored)))
+                }
+                catch (err) {
+                    logError(ELogComponent.CORE, `Error resolving the caller address: ${err}`)
+                    res.status(500).json({})
+                }
+            })
+
         this.router.route('/')
             .all( async (req:Request, res:Response, next) => {
                 if (! (await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
@@ -337,11 +381,15 @@ export class SettingsApi {
                         const problem = SettingsApi.validatePackageRegistries(incoming.packageRegistries)
                         if (problem) { res.status(400).json({ error: problem }); return }
                     }
+                    // checked against the request: the filter being saved must still let its author in
+                    const loginIpFilter = incoming.loginIpFilter === undefined ? undefined : validateLoginIpFilter(incoming.loginIpFilter, req, this.apiKeyApi.isDesktop)
+                    if (typeof loginIpFilter === 'string') { res.status(400).json({ error: loginIpFilter }); return }
 
                     // a merge over what is stored: a partial PUT must not delete settings it does not send
                     const stored = await SettingsApi.read(this.configMaps)
                     const merged: IKwirthSettings = { ...stored, ...incoming }
                     if (incoming.metricsInterval !== undefined) merged.metricsInterval = +incoming.metricsInterval
+                    if (loginIpFilter) merged.loginIpFilter = loginIpFilter
 
                     if (incoming.marketplaces !== undefined) {
                         const { clean, tokens } = this.splitCredentials(incoming.marketplaces)

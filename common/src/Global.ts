@@ -93,8 +93,9 @@ interface IKwirthSettings {
     */
     log?: IKwirthLogSettings
     /*
-        Where a login may come from. Undefined or an empty 'allowed' = anybody may try, as before. Read by
-        the login on every attempt, so emptying it with 'kubectl edit' takes effect without a restart.
+        Where a login may come from. Undefined, switched off or an empty 'allowed' = anybody may try, as
+        before. Read by the login on every attempt, so switching it off with 'kubectl edit' takes effect
+        without a restart.
     */
     loginIpFilter?: ILoginIpFilter
 }
@@ -102,15 +103,19 @@ interface IKwirthSettings {
 /*
     Where a login may come from (plan: plans/login-ip-filter). Both lists hold IPs or CIDRs, IPv4 or IPv6.
 
+    'enabled' is the switch, off on a fresh installation. The filter acts ONLY when it is on AND 'allowed'
+    has something: an empty list lets everybody in even when switched on, so a hand edit of the configmap
+    cannot lock the whole world out. Switching it off is also the way out ('kubectl edit').
+
     'allowed' is checked on every way in that issues an AccessKey (password login and change, IdP start and
-    callback, signup). Empty means the filter is OFF: no installation changes behaviour until somebody
-    fills it.
+    callback, signup).
 
     'trustedProxies' is what makes the filter impossible to dodge. X-Forwarded-For is believed ONLY when the
     connection comes from one of them, and it is walked right to left skipping trusted hops: the client is
     the first hop that is not trusted. Whatever a client writes on the left of the header is never read.
 */
 interface ILoginIpFilter {
+    enabled: boolean
     allowed: string[]
     trustedProxies: string[]
 }

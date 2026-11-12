@@ -4,6 +4,7 @@ import {
     IImportPreviewEntry, IImportEntryOutcome, IImportReport, IExtensionImportResult,
     CONFIG_BUNDLE_KIND, CONFIG_BUNDLE_FORMAT_VERSION, CORE_SETTINGS_KEY, CORE_SHARED_AI_KEY, bundleEntryKey
 } from '@kwirthmagnify/kwirth-common'
+import { IncomingMessage } from 'http'
 import { ELogComponent, logInfo, logWarning } from './Logging'
 
 /*
@@ -62,7 +63,8 @@ export type TExtensionSource = () => Promise<IExtensionRef[]>
 /** What the core contributes on its own account. Injected for the same reason. */
 export interface ICorePortableConfig {
     readSettings: (includeCredentials: boolean) => Promise<unknown>
-    writeSettings: (data: unknown) => Promise<void>
+    // 'origin': the request of whoever imports, so a login IP filter that would lock them out is refused
+    writeSettings: (data: unknown, origin?: IncomingMessage) => Promise<void>
     readSharedAi: (includeCredentials: boolean) => Promise<unknown>
     writeSharedAi: (data: unknown) => Promise<void>
 }
@@ -78,6 +80,8 @@ export interface IImportRequest {
     bundle: IConfigBundle
     /** The keys to apply. When it is not passed, everything applicable is applied. */
     include?: string[]
+    /** Who is importing. The settings may carry a login IP filter that must still let them in. */
+    origin?: IncomingMessage
 }
 
 /*
@@ -269,7 +273,7 @@ export class ConfigBundleManager {
 
         const coreApplied: string[] = []
         if (bundle.core.settings !== undefined && quiere(CORE_SETTINGS_KEY)) {
-            await this.core.writeSettings(bundle.core.settings)
+            await this.core.writeSettings(bundle.core.settings, request.origin)
             coreApplied.push(CORE_SETTINGS_KEY)
         }
         if (bundle.core.sharedAi !== undefined && quiere(CORE_SHARED_AI_KEY)) {

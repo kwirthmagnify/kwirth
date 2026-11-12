@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express'
 import * as crypto from 'crypto'
-import { EAuthMethodKind, ESignupStatus, ESsoResult, IAuthMethod, ILoginResponse, ISignupInfo, ISignupReply, ISignupRequest, ISignupSubmit } from '@kwirthmagnify/kwirth-common'
+import { EAuthMethodKind, ELoginRefusal, ESignupStatus, ESsoResult, IAuthMethod, ICallerAddress, ILoginRefusal, ILoginResponse, ISignupInfo, ISignupReply, ISignupRequest, ISignupSubmit } from '@kwirthmagnify/kwirth-common'
+import { SettingsApi } from './SettingsApi'
+import { callerOf, isLoginAllowed, loginIpFilterOf } from '../tools/LoginIpFilter'
 import { ISecrets } from '../tools/ISecrets'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { ApiKeyApi } from './ApiKeyApi'
@@ -102,6 +104,29 @@ export class AuthApi {
         return `${this.baseUrl(req)}/core/auth/${instanceId}/callback`
     }
 
+    /*
+        The login IP filter (plan: plans/login-ip-filter) for the IdP flow and the signup: who is asking
+        when they may go on, or the outcome to report. UNAVAILABLE when there is no running instance or its
+        settings cannot be read — an unreadable filter is not an empty one. Read on every request, like
+        the password login, so switching it off with 'kubectl edit' works without a restart.
+    */
+    private async ipVerdict(req: Request): Promise<ICallerAddress | ESsoResult> {
+        const ctx = this.getContext()
+        if (!ctx) return ESsoResult.UNAVAILABLE
+        const settings = await SettingsApi.readStrict(ctx.configMaps)
+        if (!settings) {
+            logError(ELogComponent.AUTH, 'IdP login refused: the settings holding the login IP filter could not be read')
+            return ESsoResult.UNAVAILABLE
+        }
+        const filter = loginIpFilterOf(settings)
+        const caller = callerOf(req, filter)
+        if (!isLoginAllowed(filter, caller.ip, ctx.apiKeyApi.isDesktop)) {
+            logWarning(ELogComponent.AUTH, `IdP login or signup refused from ${caller.ip || 'an unknown address'}: outside the login IP allow list`)
+            return ESsoResult.IPNOTALLOWED
+        }
+        return caller
+    }
+
     private static randomToken(): string {
         return crypto.randomBytes(32).toString('base64url')
     }
@@ -154,6 +179,18 @@ export class AuthApi {
                 res.status(503).send('Identity providers not ready')
                 return
             }
+            /*
+                Refused HERE too, not only on the callback: sending somebody to sign in with the IdP to
+                turn them away on the way back is a round trip for nothing. The callback checks again — it
+                is the one that issues the key. A refusal goes back to the front end like any callback
+                failure, so the login screen says why.
+            */
+            const verdict = await this.ipVerdict(req)
+            if (typeof verdict === 'string') {
+                const front = this.allowedReturnTo(typeof req.query.returnTo === 'string' ? req.query.returnTo : undefined, req) || `${this.baseUrl(req)}/front`
+                res.redirect(`${front}${front.includes('?') ? '&' : '?'}ssoerror=${verdict}`)
+                return
+            }
             const instanceId = req.params.instanceId
             const inst = await idpManager.getInstance(instanceId)
             if (!inst || !inst.enabled) {
@@ -204,6 +241,11 @@ export class AuthApi {
             }
             const allowedReturn = this.allowedReturnTo(entry.returnTo, req)
             if (allowedReturn) front = allowedReturn
+
+            // before the exchange with the IdP: this is the step that issues the key, and the address may
+            // not be the one that started the flow
+            const verdict = await this.ipVerdict(req)
+            if (typeof verdict === 'string') return fail(verdict)
 
             const inst = await idpManager.getInstance(instanceId)
             const connector = inst ? idpManager.getConnector(inst.connectorId) : undefined
@@ -261,8 +303,7 @@ export class AuthApi {
                 return fail(ESsoResult.IDPMISMATCH)
             }
 
-            const ip = (req as any).clientIp || req.headers['x-forwarded-for'] || req.socket.remoteAddress
-            const apiKey = await IdentityService.createApiKey(user, String(ip), ctx.configMaps, ctx.apiKeyApi)
+            const apiKey = await IdentityService.createApiKey(user, verdict.ip, ctx.configMaps, ctx.apiKeyApi)
             if (!apiKey) return fail(ESsoResult.ISSUE)
             user.accessKey = apiKey.accessKey
 
@@ -285,6 +326,16 @@ export class AuthApi {
 
         // what the signup dialog shows. It does NOT spend the code: the submit does.
         this.router.post('/signup/info', async (req: Request, res: Response) => {
+            const verdict = await this.ipVerdict(req)
+            if (verdict === ESsoResult.IPNOTALLOWED) {
+                const refusal: ILoginRefusal = { refusal: ELoginRefusal.IPNOTALLOWED }
+                res.status(403).json(refusal)
+                return
+            }
+            if (typeof verdict === 'string') {
+                res.status(503).json({})
+                return
+            }
             const entry = this.signupCodes.peek(String(req.body?.code || ''))
             if (!entry) {
                 res.status(404).json({})
@@ -301,6 +352,21 @@ export class AuthApi {
             minute has gone by and two submits may race for the last place under the cap.
         */
         this.router.post('/signup', async (req: Request, res: Response) => {
+            /*
+                Before the code is spent: a refused address must not burn the code of somebody who may
+                retry from the right network. It answers with this route's own contract (409 + the
+                ESsoResult), which the signup dialog already turns into a message.
+            */
+            const verdict = await this.ipVerdict(req)
+            if (verdict === ESsoResult.IPNOTALLOWED) {
+                const reply: ISignupReply = { result: ESsoResult.IPNOTALLOWED }
+                res.status(409).json(reply)
+                return
+            }
+            if (typeof verdict === 'string') {
+                res.status(503).json({})
+                return
+            }
             const body = (req.body ?? {}) as Partial<ISignupSubmit>
             const entry = this.signupCodes.take(String(body.code || ''))
             if (!entry) {

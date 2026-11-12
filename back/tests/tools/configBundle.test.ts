@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { IncomingMessage } from 'http'
 import { EExtensionType, EBundleEntryStatus, IConfigBundle, CONFIG_BUNDLE_KIND, CONFIG_BUNDLE_FORMAT_VERSION, CORE_SETTINGS_KEY, IExtensionImportResult } from '@kwirthmagnify/kwirth-common'
 import { ConfigBundleManager, exportStatusOf, importStatusOf, normalizeEntry, validateBundle, IExtensionRef, ICorePortableConfig } from '../../src/tools/ConfigBundleManager'
 
@@ -242,6 +243,27 @@ test('el import aplica lo del core y lo de quien puede recibirlo', async () => {
     assert.deepEqual(core.settings, { metricsInterval: 60 })
     assert.deepEqual(informe.coreApplied, [CORE_SETTINGS_KEY])
     assert.deepEqual(informe.entries[0].result, { applied: 1, skipped: 0, warnings: [] })
+})
+
+test('el import entrega la peticion de quien importa a writeSettings (filtro IP de login)', async () => {
+    const core = coreFalso()
+    let received: IncomingMessage | undefined
+    core.writeSettings = async (_d: unknown, origin?: IncomingMessage) => { received = origin }
+    const manager = new ConfigBundleManager(async () => [], core, '0.6.31')
+    const origin = { socket: { remoteAddress: '198.51.100.7' }, headers: {} } as unknown as IncomingMessage
+    await manager.import({ bundle: { ...bundleBueno([]), core: { settings: { metricsInterval: 60 } } }, origin })
+    assert.equal(received, origin)
+})
+
+test('si writeSettings rechaza (un filtro que deja fuera a quien importa), el import se para antes de tocar nada mas', async () => {
+    const core = coreFalso()
+    core.writeSettings = async () => { throw new Error('saving it would lock you out') }
+    let tocada = false
+    const ref: IExtensionRef = { ...refConInstancia('a'), instance: { importConfig: async () => { tocada = true; return { applied: 1, skipped: 0, warnings: [] } } } as unknown as IExtensionRef['instance'] }
+    const manager = new ConfigBundleManager(async () => [ref], core, '0.6.31')
+    const bundle: IConfigBundle = { ...bundleBueno([{ type: EExtensionType.PLUGIN, id: 'a', config: {} }]), core: { settings: {} } }
+    await assert.rejects(manager.import({ bundle }), /lock you out/)
+    assert.equal(tocada, false)
 })
 
 test('lo que no se puede importar se IGNORA con su motivo, y el resto entra', async () => {

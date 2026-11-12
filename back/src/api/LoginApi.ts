@@ -2,7 +2,9 @@ import express, { Request, Response} from 'express'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { ApiKeyApi } from './ApiKeyApi'
-import { IUser } from '@kwirthmagnify/kwirth-common'
+import { ELoginRefusal, ICallerAddress, ILoginRefusal, IUser } from '@kwirthmagnify/kwirth-common'
+import { SettingsApi } from './SettingsApi'
+import { callerOf, isLoginAllowed, loginIpFilterOf } from '../tools/LoginIpFilter'
 import { ISecrets } from '../tools/ISecrets'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { IdentityService } from '../tools/auth/IdentityService'
@@ -66,10 +68,34 @@ export class LoginApi {
     public router = express.Router()
 
     // Brute-force key: ip + user. Per-user so one noisy ip cannot lock every account out, and per-ip so a
-    // single attacker cannot spread attempts across users to dodge the cap.
-    private static rateKey(req:Request): string {
-        const ip = (req as any).clientIp || req.headers['x-forwarded-for'] || req.socket.remoteAddress || ''
-        return `${ip}:${req.body?.user || ''}`
+    // single attacker cannot spread attempts across users to dodge the cap. The ip is the RESOLVED one
+    // (ClientIp): a raw X-Forwarded-For let anybody rotate it and never hit the cap.
+    private static rateKey(req:Request, caller: ICallerAddress): string {
+        return `${caller.ip}:${req.body?.user || ''}`
+    }
+
+    /*
+        The login IP filter (plan: plans/login-ip-filter), FIRST of all: before the rate limiter, and a
+        refusal does not count as a failed attempt — it says nothing about the password. The settings are
+        read on every attempt, so switching the filter off with 'kubectl edit' works without a restart.
+        Returns who is asking when they may go on; otherwise it has already answered.
+    */
+    private async gate(req:Request, res:Response): Promise<ICallerAddress|undefined> {
+        const settings = await SettingsApi.readStrict(this.configMaps)
+        if (!settings) {
+            logError(ELogComponent.AUTH, 'Login refused: the settings holding the login IP filter could not be read')
+            res.status(503).json({})
+            return undefined
+        }
+        const filter = loginIpFilterOf(settings)
+        const caller = callerOf(req, filter)
+        if (!isLoginAllowed(filter, caller.ip, this.apiKeyApi.isDesktop)) {
+            logWarning(ELogComponent.AUTH, `Login refused for '${req.body?.user || ''}' from ${caller.ip || 'an unknown address'}: outside the login IP allow list`)
+            const refusal: ILoginRefusal = { refusal: ELoginRefusal.IPNOTALLOWED }
+            res.status(403).json(refusal)
+            return undefined
+        }
+        return caller
     }
 
     constructor (secrets: ISecrets, configMaps: IConfigMaps, apiKeyApi:ApiKeyApi) {
@@ -80,7 +106,9 @@ export class LoginApi {
         // authentication (login)
         this.router.post('/', async (req:Request,res:Response) => {
             guard(IdentityService.lock.use ( async () => {
-                const rateKey = LoginApi.rateKey(req)
+                const caller = await this.gate(req, res)
+                if (!caller) return
+                const rateKey = LoginApi.rateKey(req, caller)
                 const retryMs = LoginApi.rateLimiter.retryAfterMs(rateKey)
                 if (retryMs > 0) {
                     logWarning(ELogComponent.CORE, `Login blocked by rate limit: ${rateKey} (retry in ${Math.ceil(retryMs/1000)}s)`)
@@ -120,8 +148,7 @@ export class LoginApi {
                         res.status(201).send()
                         return
                     }
-                    let ip = (req as any).clientIp || req.headers['x-forwarded-for'] || req.socket.remoteAddress
-                    let newApiKey = await IdentityService.createApiKey(user, ip, this.configMaps, this.apiKeyApi)
+                    let newApiKey = await IdentityService.createApiKey(user, caller.ip, this.configMaps, this.apiKeyApi)
                     if (newApiKey) {
                         user.accessKey = newApiKey.accessKey
                         res.status(200).json(IdentityService.okResponse(user))
@@ -146,7 +173,9 @@ export class LoginApi {
         // to change the default password.
         this.router.post('/password', async (req:Request,res:Response) => {
             guard(IdentityService.lock.use ( async () => {
-                const rateKey = LoginApi.rateKey(req)
+                const caller = await this.gate(req, res)
+                if (!caller) return
+                const rateKey = LoginApi.rateKey(req, caller)
                 const retryMs = LoginApi.rateLimiter.retryAfterMs(rateKey)
                 if (retryMs > 0) {
                     logWarning(ELogComponent.CORE, `Password change blocked by rate limit: ${rateKey} (retry in ${Math.ceil(retryMs/1000)}s)`)
@@ -184,8 +213,7 @@ export class LoginApi {
                     }
                     LoginApi.rateLimiter.success(rateKey)
                     user.password = await bcrypt.hash(req.body.newpassword, 10)
-                    let ip = (req as any).clientIp || req.headers['x-forwarded-for'] || req.socket.remoteAddress
-                    let newApiKey = await IdentityService.createApiKey(user, ip, this.configMaps, this.apiKeyApi)
+                    let newApiKey = await IdentityService.createApiKey(user, caller.ip, this.configMaps, this.apiKeyApi)
                     if (newApiKey) {
                         user.accessKey=newApiKey.accessKey
                         users[req.body.user]=btoa(JSON.stringify(user))

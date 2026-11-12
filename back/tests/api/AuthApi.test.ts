@@ -8,7 +8,8 @@ import { IdpManager } from '../../src/tools/IdpManager'
 import { EIdpConnectorKind, IIdpConnector, IIdpIdentity, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
-import { IUser } from '@kwirthmagnify/kwirth-common'
+import { ESsoResult, IKwirthSettings, IUser } from '@kwirthmagnify/kwirth-common'
+import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 
 // the identity the fake connector returns; the tests adjust it before each callback. It also records the
 // redirect_uri it is handed at EACH end of the flow: OAuth2 requires both to be the same string, and that
@@ -68,7 +69,17 @@ const redirectUriOf = (location: string): string =>
 interface IServerOptions {
     /** ROOTPATH: the subpath the deployment hangs off, as the core receives it ('' or '/kwirth'). */
     rootPath?: string
+    /** What 'kwirth.settings' holds, read on every request; undefined inside = unreadable. Absent = {}. */
+    settings?: { current: IKwirthSettings | undefined }
 }
+
+// the context's configmaps, serving the login IP filter's settings from a holder the test can change
+const settingsConfigMaps = (holder: { current: IKwirthSettings | undefined }): IConfigMaps => ({
+    read: (async (name: string, def?: unknown) => name === 'kwirth.settings' ? holder.current : (def ?? [])) as IConfigMaps['read'],
+    write: (async () => ({})) as IConfigMaps['write'],
+    writeKey: async () => {},
+    readAllKeys: async () => ({})
+})
 
 async function startServer(options: IServerOptions = {}) {
     const rootPath = options.rootPath ?? ''
@@ -80,7 +91,11 @@ async function startServer(options: IServerOptions = {}) {
     idpManager.registerConnector('fake', FakeConnector)
     await idpManager.saveInstance({ id: 'google', connectorId: 'fake', label: 'Login with Google', enabled: true, config: {} })
 
-    const ctx: IAuthContext = { secrets, configMaps: memConfigMaps(), apiKeyApi: { apiKeys: [] } as any }
+    const ctx: IAuthContext = {
+        secrets,
+        configMaps: options.settings ? settingsConfigMaps(options.settings) : memConfigMaps(),
+        apiKeyApi: { apiKeys: [], isDesktop: false } as unknown as ApiKeyApi
+    }
     const authApi = new AuthApi(() => idpManager, () => ctx, rootPath, 'kwirth')
 
     const app = express()
@@ -279,6 +294,62 @@ test('el mismo redirect_uri viaja en start y en callback', async () => {
         await getRaw(srv.base, `/core/auth/google/callback?state=${state}&code=xyz`)
         assert.equal(fakeControl.authRedirectUri, `${srv.base}/core/auth/google/callback`)
         assert.equal(fakeControl.callbackRedirectUri, fakeControl.authRedirectUri)
+    }
+    finally { await srv.stop() }
+})
+
+// ---- login IP filter (plan: plans/login-ip-filter) ----
+// 127.0.0.1 is trusted as a proxy so X-Forwarded-For can say who the client is, as an ingress would.
+const ipFilterOn = (allowed: string[]): IKwirthSettings => ({ loginIpFilter: { enabled: true, allowed, trustedProxies: ['127.0.0.1'] } })
+const FROM_OUTSIDE = { 'X-Forwarded-For': '203.0.113.9' }
+const FROM_INSIDE = { 'X-Forwarded-For': '10.1.2.3' }
+
+test('filtro IP: start desde fuera vuelve al front con ssoerror=ipnotallowed, sin ir al IdP', async () => {
+    const srv = await startServer({ settings: { current: ipFilterOn(['10.0.0.0/8']) } })
+    try {
+        const r = await getRaw(srv.base, '/core/auth/google/start', FROM_OUTSIDE)
+        assert.equal(r.status, 302)
+        const location = new URL(r.location)
+        assert.notEqual(location.hostname, 'idp.test')
+        assert.equal(location.pathname, '/front')
+        assert.equal(location.searchParams.get('ssoerror'), ESsoResult.IPNOTALLOWED)
+    }
+    finally { await srv.stop() }
+})
+
+test('filtro IP: el callback vuelve a mirar (la direccion puede no ser la que empezo)', async () => {
+    const settings: { current: IKwirthSettings | undefined } = { current: {} }
+    const srv = await startServer({ settings })
+    try {
+        fakeControl.identity = { email: 'alice@example.com', emailVerified: true }
+        const state = await startFlow(srv.base)
+        settings.current = ipFilterOn(['10.0.0.0/8'])
+        const cb = await getRaw(srv.base, `/core/auth/google/callback?state=${state}&code=xyz`, FROM_OUTSIDE)
+        const q = new URL(cb.location).searchParams
+        assert.equal(q.get('ssoerror'), ESsoResult.IPNOTALLOWED)
+        assert.equal(q.get('sso'), null, 'no AccessKey')
+    }
+    finally { await srv.stop() }
+})
+
+test('filtro IP: desde dentro, el flujo del IdP completo emite el AccessKey', async () => {
+    const srv = await startServer({ settings: { current: ipFilterOn(['10.0.0.0/8']) } })
+    try {
+        fakeControl.identity = { email: 'alice@example.com', emailVerified: true }
+        const start = await getRaw(srv.base, '/core/auth/google/start', FROM_INSIDE)
+        assert.equal(new URL(start.location).hostname, 'idp.test')
+        const state = new URL(start.location).searchParams.get('state') as string
+        const cb = await getRaw(srv.base, `/core/auth/google/callback?state=${state}&code=xyz`, FROM_INSIDE)
+        assert.ok(new URL(cb.location).searchParams.get('sso'))
+    }
+    finally { await srv.stop() }
+})
+
+test('filtro IP: settings ilegibles → ssoerror=unavailable (falla cerrado)', async () => {
+    const srv = await startServer({ settings: { current: undefined } })
+    try {
+        const r = await getRaw(srv.base, '/core/auth/google/start')
+        assert.equal(new URL(r.location).searchParams.get('ssoerror'), ESsoResult.UNAVAILABLE)
     }
     finally { await srv.stop() }
 })

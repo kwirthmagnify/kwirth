@@ -6,7 +6,9 @@ import express from 'express'
 import type { AddressInfo } from 'net'
 import { LoginApi } from '../../src/api/LoginApi'
 import { IdentityService } from '../../src/tools/auth/IdentityService'
-import { IUser } from '@kwirthmagnify/kwirth-common'
+import { ELoginRefusal, IKwirthSettings, ILoginRefusal, IUser } from '@kwirthmagnify/kwirth-common'
+import { LoginRateLimiter } from '../../src/tools/LoginRateLimiter'
+import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 
@@ -325,4 +327,148 @@ test('POST /login espera mientras alguien tiene IdentityService.lock', async () 
         assert.equal((await pending).status, 200)
     }
     finally { release(); await holder; await srv.stop() }
+})
+
+// ---- login IP filter (plan: plans/login-ip-filter) ----
+/*
+    The server listens on 127.0.0.1, so every request arrives from the loopback. To be "somebody else",
+    the tests trust 127.0.0.1 as a proxy and say who the client is in X-Forwarded-For — exactly what an
+    ingress does. The settings are a mutable object: the login reads them on every attempt.
+*/
+const settingsConfigMaps = (holder: { settings: IKwirthSettings | undefined }): IConfigMaps => ({
+    read: (async (name: string, def?: unknown) => name === 'kwirth.settings' ? holder.settings : (def ?? [])) as IConfigMaps['read'],
+    write: (async () => ({})) as IConfigMaps['write'],
+    writeKey: async () => {},
+    readAllKeys: async () => ({})
+})
+
+async function startFilteredServer(usersMap: { [k:string]: string }, holder: { settings: IKwirthSettings | undefined }) {
+    LoginApi.rateLimiter = new LoginRateLimiter()
+    const app = express()
+    app.use(express.json())
+    const apiKeyApi = { apiKeys: [], isDesktop: false } as unknown as ApiKeyApi
+    app.use('/login', new LoginApi(mockSecrets(usersMap), settingsConfigMaps(holder), apiKeyApi).router)
+    const server = app.listen(0)
+    await new Promise<void>(r => server.once('listening', () => r()))
+    const port = (server.address() as AddressInfo).port
+    return { base: `http://127.0.0.1:${port}`, stop: () => new Promise<void>(r => server.close(() => r())) }
+}
+
+const postFrom = (base: string, path: string, body: object, forwardedFor?: string) =>
+    fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(forwardedFor ? { 'X-Forwarded-For': forwardedFor } : {}) }, body: JSON.stringify(body) })
+
+const filterOn = (allowed: string[], trustedProxies: string[] = ['127.0.0.1']): IKwirthSettings => ({ loginIpFilter: { enabled: true, allowed, trustedProxies } })
+const ALICE = { user: 'alice@example.com', password: sha256('secret') }
+
+test('filtro IP: instalacion nueva (sin settings guardados) deja entrar desde cualquier sitio', async () => {
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), { settings: {} })
+    try {
+        assert.equal((await postFrom(srv.base, '/login', ALICE, '203.0.113.9')).status, 200)
+    }
+    finally { await srv.stop() }
+})
+
+test('filtro IP: desactivado con lista, deja entrar desde fuera de la lista', async () => {
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), { settings: { loginIpFilter: { enabled: false, allowed: ['10.0.0.0/8'], trustedProxies: ['127.0.0.1'] } } })
+    try {
+        assert.equal((await postFrom(srv.base, '/login', ALICE, '203.0.113.9')).status, 200)
+    }
+    finally { await srv.stop() }
+})
+
+test('filtro IP: activado, desde fuera → 403 con ELoginRefusal.IPNOTALLOWED', async () => {
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), { settings: filterOn(['10.0.0.0/8']) })
+    try {
+        const res = await postFrom(srv.base, '/login', ALICE, '203.0.113.9')
+        assert.equal(res.status, 403)
+        const body: ILoginRefusal = await res.json()
+        assert.equal(body.refusal, ELoginRefusal.IPNOTALLOWED)
+    }
+    finally { await srv.stop() }
+})
+
+test('filtro IP: activado, desde dentro → 200', async () => {
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), { settings: filterOn(['10.0.0.0/8']) })
+    try {
+        assert.equal((await postFrom(srv.base, '/login', ALICE, '10.1.2.3')).status, 200)
+    }
+    finally { await srv.stop() }
+})
+
+test('🔴 filtro IP: X-Forwarded-For desde una conexion NO de confianza no cuela', async () => {
+    // nobody is trusted: the header names an allowed address, the connection (127.0.0.1) is not one
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), { settings: filterOn(['10.0.0.0/8'], []) })
+    try {
+        assert.equal((await postFrom(srv.base, '/login', ALICE, '10.1.2.3')).status, 403)
+    }
+    finally { await srv.stop() }
+})
+
+test('🔴 filtro IP: lo que el cliente escribe a la IZQUIERDA de la cabecera no cuenta', async () => {
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), { settings: filterOn(['10.0.0.0/8']) })
+    try {
+        assert.equal((await postFrom(srv.base, '/login', ALICE, '10.1.2.3, 203.0.113.9')).status, 403)
+    }
+    finally { await srv.stop() }
+})
+
+test('filtro IP: activado con la lista VACIA deja entrar (nadie se queda fuera por una edicion a mano)', async () => {
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), { settings: filterOn([]) })
+    try {
+        assert.equal((await postFrom(srv.base, '/login', ALICE, '203.0.113.9')).status, 200)
+    }
+    finally { await srv.stop() }
+})
+
+test('filtro IP: /login/password tambien se filtra', async () => {
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), { settings: filterOn(['10.0.0.0/8']) })
+    try {
+        const res = await postFrom(srv.base, '/login/password', { ...ALICE, newpassword: sha256('other') }, '203.0.113.9')
+        assert.equal(res.status, 403)
+    }
+    finally { await srv.stop() }
+})
+
+test('filtro IP: el rechazo no cuenta para el rate limiter', async () => {
+    const holder: { settings: IKwirthSettings | undefined } = { settings: filterOn(['10.0.0.0/8']) }
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), holder)
+    try {
+        for (let i = 0; i < 6; i++) assert.equal((await postFrom(srv.base, '/login', ALICE, '203.0.113.9')).status, 403)
+        // the same client, now allowed: its refusals did not use up any attempts
+        holder.settings = filterOn(['203.0.113.0/24'])
+        assert.equal((await postFrom(srv.base, '/login', ALICE, '203.0.113.9')).status, 200)
+    }
+    finally { await srv.stop() }
+})
+
+test('filtro IP: se lee en cada intento — desactivarlo (kubectl edit) surte efecto sin reiniciar', async () => {
+    const holder: { settings: IKwirthSettings | undefined } = { settings: filterOn(['10.0.0.0/8']) }
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), holder)
+    try {
+        assert.equal((await postFrom(srv.base, '/login', ALICE, '203.0.113.9')).status, 403)
+        holder.settings = { loginIpFilter: { enabled: false, allowed: ['10.0.0.0/8'], trustedProxies: ['127.0.0.1'] } }
+        assert.equal((await postFrom(srv.base, '/login', ALICE, '203.0.113.9')).status, 200)
+    }
+    finally { await srv.stop() }
+})
+
+test('filtro IP: si los settings no se pueden leer, el login falla CERRADO (503)', async () => {
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), { settings: undefined })
+    try {
+        assert.equal((await postFrom(srv.base, '/login', ALICE)).status, 503)
+    }
+    finally { await srv.stop() }
+})
+
+test('🔴 rate limiter: rotar X-Forwarded-For ya no esquiva el tope de intentos', async () => {
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), { settings: {} })
+    try {
+        for (let i = 0; i < 5; i++) {
+            const res = await postFrom(srv.base, '/login', { user: 'alice@example.com', password: sha256('wrong') }, `198.51.100.${i}`)
+            assert.equal(res.status, 401)
+        }
+        // before, each invented address was a fresh key; now the key is the real connection
+        assert.equal((await postFrom(srv.base, '/login', ALICE, '198.51.100.99')).status, 429)
+    }
+    finally { await srv.stop() }
 })

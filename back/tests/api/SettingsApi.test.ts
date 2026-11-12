@@ -6,7 +6,8 @@ import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 import { SettingsApi } from '../../src/api/SettingsApi'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
-import { accessKeySerialize, IKwirthSettings, EPackageRegistryAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
+import { accessKeySerialize, IKwirthSettings, EPackageRegistryAuthType, EManifestAuthType, ICallerAddress } from '@kwirthmagnify/kwirth-common'
+import { IncomingMessage } from 'http'
 
 // configuring Kwirth (/core/settings) is admin-only: validKey + the 'admin' scope
 const adminKey = { id: 'adminkey', type: 'permanent', resources: 'admin,cluster::::' }
@@ -578,4 +579,114 @@ test('previousLogSenderLines is independent of how many are READ', () => {
     const settings = { previousLogLines: 1000, previousLogSenderLines: 200 }
     assert.equal(SettingsApi.resolvePreviousLogLines(settings), 1000)
     assert.equal(SettingsApi.resolvePreviousLogSenderLines(settings), 200)
+})
+
+// ---- login IP filter (plan: plans/login-ip-filter) ----
+/*
+    The ApiKeyApi here is a desktop one, and on the desktop the loopback is always allowed. So the author is
+    made somebody else: the filter being saved trusts 127.0.0.1 and X-Forwarded-For names the client.
+*/
+const FROM = (ip: string) => ({ ...JSON_AUTH, 'X-Forwarded-For': ip })
+const put = (base: string, body: object, headers: Record<string, string> = JSON_AUTH) =>
+    fetch(`${base}/core/settings`, { method: 'PUT', headers, body: JSON.stringify(body) })
+
+test('loginIpFilter: a filter that includes its author is saved, cleaned', async () => {
+    const srv = await startServer()
+    try {
+        const res = await put(srv.base, { loginIpFilter: { enabled: true, allowed: [' 203.0.113.0/24 ', '', '203.0.113.0/24'], trustedProxies: ['127.0.0.1'] } }, FROM('203.0.113.9'))
+        assert.equal(res.status, 200)
+        assert.deepEqual(srv.store.current()?.loginIpFilter, { enabled: true, allowed: ['203.0.113.0/24'], trustedProxies: ['127.0.0.1'] })
+        // and the GET gives it back like any other field
+        const got = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
+        assert.deepEqual(got.loginIpFilter, { enabled: true, allowed: ['203.0.113.0/24'], trustedProxies: ['127.0.0.1'] })
+    }
+    finally { await srv.stop() }
+})
+
+test('🔴 loginIpFilter: switching it on with a list that leaves the author out → 400, nothing written', async () => {
+    const srv = await startServer({ metricsInterval: 30 })
+    try {
+        const res = await put(srv.base, { loginIpFilter: { enabled: true, allowed: ['10.0.0.0/8'], trustedProxies: ['127.0.0.1'] } }, FROM('203.0.113.9'))
+        assert.equal(res.status, 400)
+        assert.match((await res.json()).error, /203\.0\.113\.9/)
+        assert.deepEqual(srv.store.current(), { metricsInterval: 30 })
+        assert.equal(srv.changes.length, 0)
+    }
+    finally { await srv.stop() }
+})
+
+test('loginIpFilter: the same list switched OFF can be saved from anywhere', async () => {
+    const srv = await startServer()
+    try {
+        const res = await put(srv.base, { loginIpFilter: { enabled: false, allowed: ['10.0.0.0/8'], trustedProxies: [] } }, FROM('203.0.113.9'))
+        assert.equal(res.status, 200)
+    }
+    finally { await srv.stop() }
+})
+
+test('loginIpFilter: a malformed entry or shape → 400', async () => {
+    const srv = await startServer()
+    try {
+        assert.equal((await put(srv.base, { loginIpFilter: { enabled: false, allowed: ['office'], trustedProxies: [] } })).status, 400)
+        assert.equal((await put(srv.base, { loginIpFilter: { enabled: false, allowed: [], trustedProxies: ['10.0.0.0/40'] } })).status, 400)
+        assert.equal((await put(srv.base, { loginIpFilter: { allowed: [], trustedProxies: [] } })).status, 400)
+        assert.equal(srv.store.current(), undefined)
+    }
+    finally { await srv.stop() }
+})
+
+test('loginIpFilter: a PUT that does not send it keeps the stored one', async () => {
+    const stored: IKwirthSettings = { loginIpFilter: { enabled: true, allowed: ['10.0.0.0/8'], trustedProxies: [] } }
+    const srv = await startServer(stored)
+    try {
+        assert.equal((await put(srv.base, { metricsInterval: 20 })).status, 200)
+        assert.deepEqual(srv.store.current()?.loginIpFilter, stored.loginIpFilter)
+    }
+    finally { await srv.stop() }
+})
+
+test('loginIpFilter: the import (writeWithSecrets) refuses a filter that locks its author out', async () => {
+    const store = memConfigMaps()
+    const apiKeyApi = await ApiKeyApi.create(store.cm, 'masterx', false)
+    const settingsApi = await SettingsApi.create(store.cm, memSecrets().s, apiKeyApi!)
+    const origin = { socket: { remoteAddress: '198.51.100.7' }, headers: {} } as unknown as IncomingMessage
+    await assert.rejects(settingsApi!.writeWithSecrets({ loginIpFilter: { enabled: true, allowed: ['10.0.0.0/8'], trustedProxies: [] } }, origin), /198\.51\.100\.7/)
+    assert.equal(store.current(), undefined)
+    await settingsApi!.writeWithSecrets({ loginIpFilter: { enabled: true, allowed: ['198.51.100.0/24'], trustedProxies: [] } }, origin)
+    assert.deepEqual(store.current()?.loginIpFilter, { enabled: true, allowed: ['198.51.100.0/24'], trustedProxies: [] })
+})
+
+test('readStrict tells "nothing stored" ({}) from "unreadable" (undefined)', async () => {
+    const empty = memConfigMaps()
+    assert.deepEqual(await SettingsApi.readStrict(empty.cm), {})
+    const broken: IConfigMaps = { ...empty.cm, read: (async () => undefined) as IConfigMaps['read'] }
+    assert.equal(await SettingsApi.readStrict(broken), undefined)
+})
+
+test('GET /core/settings/caller: how the core sees the admin, with the STORED trusted proxies', async () => {
+    const srv = await startServer({ loginIpFilter: { enabled: false, allowed: [], trustedProxies: ['127.0.0.1'] } })
+    try {
+        const behind = await (await fetch(`${srv.base}/core/settings/caller`, { headers: { ...AUTH, 'X-Forwarded-For': '198.51.100.20' } })).json() as ICallerAddress
+        assert.deepEqual(behind, { ip: '198.51.100.20', remoteAddress: '127.0.0.1', forwardedIgnored: false })
+    }
+    finally { await srv.stop() }
+})
+
+test('GET /core/settings/caller: a forwarded header from an untrusted connection is reported as ignored', async () => {
+    const srv = await startServer()
+    try {
+        const caller = await (await fetch(`${srv.base}/core/settings/caller`, { headers: { ...AUTH, 'X-Forwarded-For': '198.51.100.20' } })).json() as ICallerAddress
+        assert.deepEqual(caller, { ip: '127.0.0.1', remoteAddress: '127.0.0.1', forwardedIgnored: true })
+    }
+    finally { await srv.stop() }
+})
+
+test('GET /core/settings/caller is admin-only', async () => {
+    const srv = await startServer()
+    try {
+        assert.equal((await fetch(`${srv.base}/core/settings/caller`, { headers: NONADMIN_AUTH })).status, 403)
+        // validKey answers 403 without a key too, as the main route does
+        assert.equal((await fetch(`${srv.base}/core/settings/caller`)).status, 403)
+    }
+    finally { await srv.stop() }
 })

@@ -58,8 +58,9 @@ Además, la IP de origen que el core usa hoy **no es fiable**:
 
 ## 6. Requisitos funcionales
 
-- **RF1** · `IKwirthSettings.loginIpFilter?: ILoginIpFilter` (`allowed: string[]`, `trustedProxies: string[]`),
-  persistido en el ConfigMap `kwirth.settings` del core.
+- **RF1** · `IKwirthSettings.loginIpFilter?: ILoginIpFilter` (`enabled: boolean`, `allowed: string[]`,
+  `trustedProxies: string[]`), persistido en el ConfigMap `kwirth.settings` del core. El filtro actúa solo
+  si `enabled` **y** `allowed` no está vacía (D9).
 - **RF2** · Se comprueba la IP del cliente, **antes** que el rate limiter y sin contar como intento fallido, en:
   `POST /login`, `POST /login/password`, `GET /core/auth/:instanceId/start`,
   `GET /core/auth/:instanceId/callback`, `POST /core/auth/signup/info` y `POST /core/auth/signup`.
@@ -85,12 +86,19 @@ Además, la IP de origen que el core usa hoy **no es fiable**:
 - **D4 · Lista vacía = apagado.** Ninguna instalación existente cambia de comportamiento por el filtro.
 - **D5 · Proxies de confianza explícitos.** Sin ellos, `X-Forwarded-For` se ignora. Es lo único que hace el
   filtro no falsificable.
-- **D6 · Vía de escape = editar el ConfigMap** (`kubectl edit configmap kwirth.settings`; en Docker/Node, el
-  fichero del store). Sin variable de entorno.
+- **D6 · Vía de escape = editar el ConfigMap** (`kubectl edit configmap kwirth.settings` y poner
+  `"enabled": false` dentro de `loginIpFilter`; en Docker/Node, el fichero del store). Sin variable de entorno.
 - **D7 · El login lee los settings en cada intento**, no una copia en memoria: así la vía de escape surte
   efecto al momento, sin reiniciar el core. Es una lectura más por login, del mismo orden que la del Secret
   de usuarios que ya se hace.
 - **D8 · Tipos validados** (`ILoginIpFilter`, `loginIpFilter`, `ELoginRefusal`, `ESsoResult.IPNOTALLOWED`).
+- **D9 · Interruptor explícito, apagado la primera vez** (usuario, 2026-11-12). `ILoginIpFilter.enabled`;
+  una instalación nueva arranca con el filtro apagado y entra todo el mundo. Encendido con la lista vacía
+  también entra todo el mundo: una edición a mano del ConfigMap nunca puede dejar fuera a todos. Desde la UI,
+  encenderlo con una lista que no incluye a quien guarda lo rechaza RF5.
+- **D10 · Falla cerrado si los settings no se pueden leer** (decidido al implementar). En Kubernetes, un
+  error leyendo el ConfigMap (no un 404) no es "filtro vacío": el login responde 503 y el IdP `unavailable`.
+  Los stores de fichero (Docker/Node) devuelven el valor por defecto ante cualquier error y no lo distinguen.
 
 ## 8. Lo que hay que decir en voz alta
 

@@ -81,7 +81,7 @@ export class ConfigBundleApi {
             if (problema) return void res.status(400).json({ error: problema })
             try {
                 const include = Array.isArray(req.body.include) ? req.body.include as string[] : undefined
-                res.json(await this.manager.import({ bundle: req.body.bundle as IConfigBundle, include }))
+                res.json(await this.manager.import({ bundle: req.body.bundle as IConfigBundle, include, origin: req }))
             }
             catch (err) {
                 logError(ELogComponent.CORE, `Config bundle import error: ${err}`)

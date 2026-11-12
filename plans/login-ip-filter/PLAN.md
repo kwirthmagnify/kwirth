@@ -1,6 +1,6 @@
 # Filtro de IP en el login — PLAN
 
-> **Estado:** streams validados (2026-11-12) · **L1 ✅** (`kwirth-common@0.5.81`) · L2 siguiente · producto en [PRD.md](PRD.md).
+> **Estado:** streams validados (2026-11-12) · **L1 ✅** (`kwirth-common@0.5.81` → `0.5.82` con `enabled`) · **L2 ✅** · L3 siguiente · producto en [PRD.md](PRD.md).
 
 ## Estado verificado del código (2026-11-12)
 
@@ -33,7 +33,33 @@
 - Publicar `kwirth-common` (externalizada: sin cascada), subir la dependencia en back y front.
 - **Validación:** build de common, comprobar los exports con node y GET del registro después de publicar.
 
-### L2 · Back
+### L2 · Back — ✅ cerrado (2026-11-12)
+
+> **Entregado.** `tools/ClientIp.ts` (resolución con proxies de confianza sobre `net.BlockList`) y
+> `tools/LoginIpFilter.ts` (funciones puras; la lectura de settings la hacen las rutas con
+> `SettingsApi.readStrict`, para que SettingsApi pueda usar la validación sin un ciclo de imports). Puerta en
+> `/login`, `/login/password`, `/core/auth/:id/start`, `/core/auth/:id/callback`, `/core/auth/signup/info` y
+> `/core/auth/signup`. Validación en el PUT y en el import (`IImportRequest.origin` → `writeSettings(data,
+> origin)` → `writeWithSecrets(incoming, origin)`). `GET /core/settings/caller`. `request-ip` fuera.
+>
+> **Cambios sobre lo previsto:**
+> - **`enabled`** (D9): pedido por el usuario a mitad del stream → `kwirth-common@0.5.82`.
+> - **`/core/auth/signup` responde con su propio contrato** (`409 { result: ESsoResult.IPNOTALLOWED }`), no
+>   con el 403 de RF3: el diálogo de signup ya convierte `ESsoResult` en mensaje. Y comprueba **antes** de
+>   gastar el código, para que un rechazo no queme el código de quien puede reintentar desde la red buena.
+>   `signup/info` sí da `403 ILoginRefusal`.
+> - **El WebSocket no usa la función común.** Su IP solo sale en logs, y resolverla exigiría leer los
+>   settings de forma asíncrona antes de registrar los listeners del socket (riesgo de perder mensajes). El
+>   log ahora dice lo que sabe: la dirección de la conexión y, aparte, `X-Forwarded-For` tal cual. Antes
+>   imprimía la entrada **izquierda** de la cabecera como si fuera el cliente.
+> - **El import que trae un filtro inválido se para con 500** (el `catch` de `ConfigBundleApi`), antes de
+>   aplicar nada: los settings son lo primero que se escribe.
+> - **Falla cerrado** si los settings no se pueden leer (D10).
+>
+> **Tests:** `clientIp.test.ts` (18) y `loginIpFilter.test.ts` (15) nuevos; LoginApi +12, AuthApi +4,
+> Signup +2, SettingsApi +10, configBundle +2. Suite del back: 951 tests, 947 ✔, 0 ✖, 4 skipped. En la
+> primera corrida fallaron 3 de webhooks (`ENOTEMPTY` en `/tmp/kwirth-webhook-extract-<timestamp>`, dos
+> ficheros chocando en paralelo) y pasaron en la segunda sin tocar nada: inestables, ajenos a esto.
 
 - `tools/ClientIp.ts`: `clientAddressOf(remoteAddress, forwardedFor, trusted)` → `ICallerAddress`;
   normaliza `::ffff:a.b.c.d`; recorre `X-Forwarded-For` de derecha a izquierda saltando proxies de confianza;

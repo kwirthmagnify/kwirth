@@ -83,6 +83,7 @@ import { resolveChannelMode } from './tools/ChannelPlacement'
 // NewsChannel, PinocchioChannel, FilemanChannel and MetricsChannel removed — now loaded as plugins
 
 import { IncomingMessage } from 'http'
+import { normalizeIp } from './tools/ClientIp'
 
 import fileUpload from 'express-fileupload'
 import v8 from 'node:v8'
@@ -1965,8 +1966,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                         in force until the next restart — with the dialog showing one thing and the core
                         writing another, which is precisely the kind of lie this setting exists to avoid.
                     */
-                    writeSettings: async (data: unknown) => {
-                        await settingsResult!.writeWithSecrets(data as IKwirthSettings)
+                    writeSettings: async (data: unknown, origin?: IncomingMessage) => {
+                        await settingsResult!.writeWithSecrets(data as IKwirthSettings, origin)
                     },
                     // The common AI store: the models in a configmap and the providers in a secret,
                     // exactly as AiConfigApi stores them. BOTH are always read — what credentials decide
@@ -3313,9 +3314,16 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
         }
 
         wsServer.on('connection', (webSocket:WebSocket, req:IncomingMessage) => {
-            const ipHeader = req.headers['x-forwarded-for']
-            const ip = (Array.isArray(ipHeader) ? ipHeader[0] : ipHeader || req.socket.remoteAddress || '').split(',')[0].trim()
-            logInfo(ELogComponent.CORE, `Client connected from ${ip}`)
+            /*
+                Only a log line, and it says what it knows: the address of the connection and, apart, the
+                X-Forwarded-For as it came. It used to print the header's LEFTMOST entry as "the client",
+                which is precisely the one anybody can write. Nothing is decided with this; the address
+                that decides (the login) is resolved with the trusted proxies, in ClientIp.
+            */
+            const ip = normalizeIp(req.socket.remoteAddress) || 'an unknown address'
+            const forwardedFor = req.headers['x-forwarded-for']
+            const forwardedText = Array.isArray(forwardedFor) ? forwardedFor.join(', ') : forwardedFor
+            logInfo(ELogComponent.CORE, `Client connected from ${ip}${forwardedText ? ` (X-Forwarded-For: ${forwardedText})` : ''}`)
 
             if (req.url) {
                 // This block precesses web socket connections for channels (they are not the websocket connecitons for kwrith itself)

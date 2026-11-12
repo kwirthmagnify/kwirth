@@ -10,7 +10,7 @@ import { SignupStore, SIGNUP_PENDING_CAP } from '../../src/tools/auth/SignupStor
 import { EIdpConnectorKind, IIdpConnector, IIdpIdentity, IIdpInstanceConfig, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
-import { accessKeySerialize, ESignupStatus, ESsoResult, IIdpSignupPolicy, ISignupInfo, ISignupRequest, IUser } from '@kwirthmagnify/kwirth-common'
+import { accessKeySerialize, ELoginRefusal, ESignupStatus, ESsoResult, IIdpSignupPolicy, IKwirthSettings, ILoginRefusal, ISignupInfo, ISignupReply, ISignupRequest, IUser } from '@kwirthmagnify/kwirth-common'
 
 /*
     Signup end to end in the back end (plan: plans/completed/signup, S2): the IdP callback, the two public endpoints
@@ -72,7 +72,16 @@ interface IServerOptions {
     signup?: IIdpSignupPolicy
     seed?: (secrets: ISecrets) => Promise<void>
     notifySignup?: IAuthContext['notifySignup']
+    /** What 'kwirth.settings' holds (the login IP filter), read on every request. Absent = {}. */
+    settings?: { current: IKwirthSettings | undefined }
 }
+
+const settingsConfigMaps = (holder: { current: IKwirthSettings | undefined }): IConfigMaps => ({
+    read: (async (name: string, def?: unknown) => name === 'kwirth.settings' ? holder.current : (def ?? [])) as IConfigMaps['read'],
+    write: (async () => ({})) as IConfigMaps['write'],
+    writeKey: async () => {},
+    readAllKeys: async () => ({})
+})
 
 async function startServer(options: IServerOptions = {}) {
     const secrets = memSecrets({ 'alice@example.com': encodeUser({ id: 'alice@example.com', idp: 'google' }) })
@@ -90,7 +99,7 @@ async function startServer(options: IServerOptions = {}) {
         ],
         masterKey: 'x', isDesktop: true, refreshKeys: async () => {}
     }
-    const ctx: IAuthContext = { secrets, configMaps: memConfigMaps(), apiKeyApi, notifySignup: options.notifySignup }
+    const ctx: IAuthContext = { secrets, configMaps: options.settings ? settingsConfigMaps(options.settings) : memConfigMaps(), apiKeyApi, notifySignup: options.notifySignup }
     const authApi = new AuthApi(() => idpManager, () => ctx, '', 'kwirth')
     const signupApi = new SignupApi(secrets, apiKeyApi, () => new Set(['', 'admin', 'cluster', 'view']))
 
@@ -451,4 +460,39 @@ test('🔴 S4: si el aviso falla, la peticion queda hecha y el proceso sigue en 
         assert.deepEqual(escaped, [], 'a failed notice must not escape as an unhandledRejection (fatal here)')
     }
     finally { process.off('unhandledRejection', onReject); await srv.stop() }
+})
+
+// ---- login IP filter (plan: plans/login-ip-filter) ----
+// the filter is switched on AFTER the callback, so the code exists and only the dialog's endpoints decide
+const signupFilterOn: IKwirthSettings = { loginIpFilter: { enabled: true, allowed: ['10.0.0.0/8'], trustedProxies: ['127.0.0.1'] } }
+const OUTSIDE = { 'Content-Type': 'application/json', 'X-Forwarded-For': '203.0.113.9' }
+
+test('filtro IP: signup/info desde fuera → 403 con ELoginRefusal.IPNOTALLOWED', async () => {
+    const settings: { current: IKwirthSettings | undefined } = { current: {} }
+    const srv = await startServer({ signup: OPEN, settings })
+    try {
+        const code = (await loginAs(srv.base, 'carol@example.com')).get('signup')
+        settings.current = signupFilterOn
+        const res = await postJson(srv.base, '/core/auth/signup/info', { code }, OUTSIDE)
+        assert.equal(res.status, 403)
+        assert.equal((await res.json() as ILoginRefusal).refusal, ELoginRefusal.IPNOTALLOWED)
+    }
+    finally { await srv.stop() }
+})
+
+test('filtro IP: signup desde fuera → 409 ipnotallowed, y el codigo NO se gasta', async () => {
+    const settings: { current: IKwirthSettings | undefined } = { current: {} }
+    const srv = await startServer({ signup: OPEN, settings })
+    try {
+        const code = (await loginAs(srv.base, 'carol@example.com')).get('signup')
+        settings.current = signupFilterOn
+        const refused = await postJson(srv.base, '/core/auth/signup', { code, name: 'Carol' }, OUTSIDE)
+        assert.equal(refused.status, 409)
+        assert.equal((await refused.json() as ISignupReply).result, ESsoResult.IPNOTALLOWED)
+        assert.equal(await SignupStore.get(srv.secrets, 'carol@example.com'), undefined, 'nothing saved')
+        // the same code still works once the address is allowed
+        settings.current = {}
+        assert.equal((await postJson(srv.base, '/core/auth/signup', { code, name: 'Carol' })).status, 200)
+    }
+    finally { await srv.stop() }
 })
