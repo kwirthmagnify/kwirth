@@ -7,6 +7,7 @@ import { IdentityService } from '../tools/auth/IdentityService'
 import { unknownScopesIn } from '../tools/ScopeCatalog'
 import { guard } from '../tools/RequestGuard'
 import { ELogComponent } from '../tools/Logging'
+import { normalizeUserTags, userTagsProblem } from '@kwirthmagnify/kwirth-common'
 
 export class UserApi {
     secrets: ISecrets
@@ -16,6 +17,20 @@ export class UserApi {
     // it delegates to IdentityService: it re-indexes by real id and handles the key's base64url encoding
     readUsersSecret = async (secrets: ISecrets) => {
         return IdentityService.readUsers(secrets)
+    }
+
+    /*
+        The user's tags as they are stored (plans/user-tags): normalized, and refused with the reason when one is
+        malformed or there are too many — the same check the front makes before saving. A body without the field
+        leaves the user without tags (there is no migration: no field = no tags), and an empty list is stored as
+        no field at all.
+    */
+    static tagsOfBody = (body: { tags?: unknown } | undefined): { tags?: string[], problem?: string } => {
+        if (body?.tags === undefined) return {}
+        const tags = normalizeUserTags(body.tags)
+        const problem = userTagsProblem(tags)
+        if (problem) return { problem }
+        return tags.length > 0 ? { tags } : {}
     }
 
     constructor (secrets: ISecrets, apiKeyApi: ApiKeyApi, validScopes?: () => Set<string>) {
@@ -56,7 +71,9 @@ export class UserApi {
                         }
                         const bad = this.validScopes ? unknownScopesIn(req.body?.resources ?? '', this.validScopes()) : []
                         if (bad.length) { res.status(400).json({ error: `Unknown scopes: ${bad.join(', ')}` }); return }
-                        const user = { ...req.body, password: await bcrypt.hash(req.body.password, 10) }
+                        const { tags, problem } = UserApi.tagsOfBody(req.body)
+                        if (problem) { res.status(400).json({ error: problem }); return }
+                        const user = { ...req.body, tags, password: await bcrypt.hash(req.body.password, 10) }
                         users[user.id] = btoa(JSON.stringify(user))
                         await IdentityService.writeUsers(this.secrets, users)
                         res.status(200).json()
@@ -120,6 +137,8 @@ export class UserApi {
                     }
                     const bad = this.validScopes ? unknownScopesIn(req.body?.resources ?? '', this.validScopes()) : []
                     if (bad.length) { res.status(400).json({ error: `Unknown scopes: ${bad.join(', ')}` }); return }
+                    const { tags, problem } = UserApi.tagsOfBody(req.body)
+                    if (problem) { res.status(400).json({ error: problem }); return }
                     let password: string
                     if (req.body.password) {
                         password = await bcrypt.hash(req.body.password, 10)
@@ -128,7 +147,7 @@ export class UserApi {
                         const existing = JSON.parse(atob(users[req.params.user] ?? users[req.body.id]))
                         password = existing.password
                     }
-                    users[req.body.id] = btoa(JSON.stringify({ ...req.body, password }))
+                    users[req.body.id] = btoa(JSON.stringify({ ...req.body, tags, password }))
                     await IdentityService.writeUsers(this.secrets, users)
                     res.status(200).json()
                 }

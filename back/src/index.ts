@@ -63,6 +63,7 @@ import { NodeConfigMaps } from './tools/NodeConfigMaps'
 import { NodeSecrets } from './tools/NodeSecrets'
 
 import { IUserInfo, IKwirthSettings, EExecutionEnvironment, EExtensionType, ERouteOwnerKind, IExtensionRequirement, ISignupRequest } from '@kwirthmagnify/kwirth-common'
+import { userInfoOf } from './tools/auth/UserInfo'
 import { EStoreKind, IEnvironmentCapabilities, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType, servesCoreLogFromMemory } from './tools/ExecutionEnvironment'
 import { resolveInstallationIdentity, defaultProbes } from './tools/InstallationIdentity'
 
@@ -2720,7 +2721,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                     for (const v of Object.values(raw)) {
                         try {
                             const u = JSON.parse(Buffer.from(v, 'base64').toString('utf8'))
-                            if (u && typeof u.id === 'string') out.push({ id: u.id, name: typeof u.name === 'string' && u.name ? u.name : u.id, ...(u.idp ? { idp: u.idp } : {}) })
+                            const info = userInfoOf(u)   // id, name, IdP and tags — never the secrets
+                            if (info) out.push(info)
                         }
                         catch { /* entrada corrupta: se ignora */ }
                     }

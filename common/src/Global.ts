@@ -18,6 +18,7 @@ interface IUser {
     startContainer?: string
     exitFullScreen?: boolean  // whether the user may leave fullscreen mode
     enabledChannels?: string[]  // the list of channels the user may launch; undefined = all of them
+    tags?: string[]           // `<extension>:<value>`, set by an admin; read by each extension, never a permission (UserTags.ts)
 }
 
 interface ILoginResponse {
@@ -35,6 +36,7 @@ interface IUserInfo {
     id: string
     name: string
     idp?: string
+    tags?: string[]   // the user's tags (UserTags.ts); an extension reads only its own (`userTagsOf`)
 }
 
 interface IClusterMetricsConfig {

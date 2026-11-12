@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { sha256 as sha256js } from 'js-sha256'
-import { Alert, Box, Button, Checkbox, Chip, Divider, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemButton, ListSubheader, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
+import { Alert, Autocomplete, Box, Button, Checkbox, Chip, Divider, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemButton, ListSubheader, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import { MsgBoxButtons, MsgBoxOkError, MsgBoxYesNo } from '../../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
-import { IUser, IExtensionScope, ESignupStatus, ISignupApproval, ISignupRequest } from '@kwirthmagnify/kwirth-common'
+import { IUser, IExtensionScope, ESignupStatus, ISignupApproval, ISignupRequest, normalizeUserTags, userTagsProblem, USER_TAG_RE } from '@kwirthmagnify/kwirth-common'
 import { ResourceEditor } from './ResourceEditor'
 import copy from 'clipboard-copy'
 
@@ -27,6 +27,17 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
     const [startChannel, setStartChannel] = useState<string>('')
     const [exitFullScreen, setExitFullScreen] = useState<boolean>(true)
     const [enabledChannels, setEnabledChannels] = useState<string>('')
+    // plans/user-tags: `<extension>:<value>`, read by each extension; checked here as the back checks them on save.
+    const [tags, setTags] = useState<string[]>([])
+    // The text being typed in the tags field (not a chip yet). Controlled, so New / another user / Save clear it too.
+    const [tagInput, setTagInput] = useState('')
+    /*
+        What is saved: the chips PLUS the text still being typed. Seen in the QA: a tag typed and saved without
+        pressing Enter never became a chip and was lost — what is written on screen is what gets saved.
+    */
+    const effectiveTags = normalizeUserTags([...tags, tagInput])
+    const tagsProblem = userTagsProblem(effectiveTags)
+    const resetTags = (next: string[]) => { setTags(next); setTagInput('') }
     const [idps, setIdps] = useState<{id:string, label:string}[]>([])
     const [scopeCatalog, setScopeCatalog] = useState<IExtensionScope[]>([])
     // signup requests (plan: plans/completed/signup). While one is selected the editor is reviewing it, not a user:
@@ -53,6 +64,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         setStartChannel('')
         setExitFullScreen(true)
         setEnabledChannels('')
+        resetTags([])
     }
 
     const onClickSignup = (request: ISignupRequest) => {
@@ -173,6 +185,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         setStartChannel(user.startChannel||'')
         setExitFullScreen(user.exitFullScreen !== false)
         setEnabledChannels(user.enabledChannels?.join(',') || '')
+        resetTags(user.tags ?? [])
     }
 
     const onClickCopyPassword = () => {
@@ -188,7 +201,8 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
             idp,
             startChannel: startChannel || undefined,
             exitFullScreen,
-            enabledChannels: enabledChannels ? enabledChannels.split(',').map(s => s.trim()).filter(Boolean) : undefined
+            enabledChannels: enabledChannels ? enabledChannels.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+            tags: effectiveTags
         }
         let payload = JSON.stringify(user)
         try {
@@ -200,7 +214,9 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
                 res = await fetch(`${backendUrl}/user`, addPostAuthorization(accessString, payload))
             }
             if (!res.ok) {
-                setMsgBox(MsgBoxOkError('User management', `Could not save user (HTTP ${res.status}).`, setMsgBox))
+                // The back says why (an unknown scope, a malformed tag…): shown as it comes.
+                const detail = await res.json().catch(() => ({}))
+                setMsgBox(MsgBoxOkError('User management', `Could not save user (${detail.error ?? `HTTP ${res.status}`}).`, setMsgBox))
                 return
             }
         }
@@ -217,6 +233,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         setStartChannel('')
         setExitFullScreen(true)
         setEnabledChannels('')
+        resetTags([])
         getUsers()
     }
 
@@ -236,6 +253,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
         setStartChannel('')
         setExitFullScreen(true)
         setEnabledChannels('')
+        resetTags([])
     }
 
     const onClickDelete= () => {
@@ -253,6 +271,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
             setStartChannel('')
             setExitFullScreen(true)
             setEnabledChannels('')
+            resetTags([])
             getUsers()
         }
     }
@@ -324,6 +343,24 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
                                 <TextField value={enabledChannels} onChange={(e) => setEnabledChannels(e.target.value)} variant='standard' label='Enabled channels' placeholder='e.g. magnify,ops (empty = all)' sx={{ width: '30%' }} />
                                 <FormControlLabel control={<Checkbox checked={exitFullScreen} onChange={(e) => setExitFullScreen(e.target.checked)} />} label='Can exit fullscreen' />
                             </Stack>
+                            {/*
+                                plans/user-tags: the admin types them (no catalogue yet: V2). Typed and confirmed with
+                                Enter, shown as chips; a malformed one is said under the field and Save stays disabled,
+                                the same check the back makes. They grant nothing: each extension decides what its own
+                                tags change in how it works.
+                            */}
+                            <Autocomplete multiple freeSolo options={[] as string[]} value={tags}
+                                inputValue={tagInput} onInputChange={(_e, value) => setTagInput(value)}
+                                disabled={selectedSignup !== undefined}
+                                onChange={(_e, value) => setTags(normalizeUserTags(value))}
+                                renderValue={(value, getItemProps) => value.map((tag, index) => {
+                                    const { key, ...itemProps } = getItemProps({ index })
+                                    return <Chip key={key} size='small' label={tag} color={USER_TAG_RE.test(tag) ? 'default' : 'error'} {...itemProps} />
+                                })}
+                                renderInput={(params) => <TextField {...params} variant='standard' label='Tags'
+                                    placeholder={tags.length === 0 ? 'e.g. agora:sre — type one and press Enter' : ''}
+                                    error={tagsProblem !== undefined}
+                                    helperText={tagsProblem ?? 'Read by each extension to adapt how it works for this user (<extension>:<value>). They grant no permission.'} />} />
 
                             <ResourceEditor resources={allResources} onUpdate={(r) => setAllResources(r)} scopeCatalog={scopeCatalog}/>
                         </Stack>
@@ -340,7 +377,7 @@ const ManageUserSecurity: React.FC<IManageUserSecurityProps> = (props:IManageUse
                             '& .MuiButton-root': { whiteSpace: 'nowrap' }
                         }}>
                         <Button variant='outlined' size='small' onClick={onClickNew}>New</Button>
-                        <Button variant='outlined' size='small' onClick={onClickSave} disabled={selectedSignup !== undefined || id==='' || (idp==='' && password==='' && selectedUser===undefined)}>Save</Button>
+                        <Button variant='outlined' size='small' onClick={onClickSave} disabled={selectedSignup !== undefined || id==='' || (idp==='' && password==='' && selectedUser===undefined) || tagsProblem !== undefined}>Save</Button>
                         <Button variant='outlined' size='small' onClick={onClickCopyPassword} disabled={selectedSignup !== undefined || password===''}>Copy password</Button>
                         <Button variant='outlined' size='small' onClick={onClickDelete} disabled={selectedUser === undefined || id==='admin'}>Delete</Button>
                         <Divider orientation='vertical' flexItem />
