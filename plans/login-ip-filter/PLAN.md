@@ -1,6 +1,6 @@
 # Filtro de IP en el login — PLAN
 
-> **Estado:** streams validados (2026-11-12) · **L1 ✅** (`kwirth-common@0.5.81` → `0.5.82` con `enabled`) · **L2 ✅** · **L3 entregado, pendiente del QA del usuario** (que cubre también L2) · producto en [PRD.md](PRD.md).
+> **Estado:** streams validados (2026-11-12) · **L1 ✅** (`kwirth-common@0.5.81` → `0.5.82` con `enabled`) · **L2 ✅** · **L3 ✅** (QA del usuario completo, que cubre también L2) · L4 siguiente · producto en [PRD.md](PRD.md).
 
 ## Estado verificado del código (2026-11-12)
 
@@ -76,7 +76,18 @@
   para el rate limiter), `SettingsApi` (400 por formato y por dejarse fuera), `configBundle` (import
   rechazado). Harness completo en verde. Sin UI: el QA se hace en L3.
 
-### L3 · Front — entregado (2026-11-12), pendiente de QA
+### L3 · Front — ✅ cerrado (2026-11-12, QA del usuario)
+
+> **QA validado:** vista del tab, validación (entrada mal formada, encendido sin lista, lista que deja fuera
+> a quien guarda), filtro activo con `Add localhost` + logout/login, y la vía de escape: con
+> `allowed: ["192.0.2.0/24"]` el login dice "Login is not allowed from your IP address." y con
+> `enabled: false` vuelve a entrar, **sin reiniciar el back** (CA2, CA5, CA6). Los cambios del ConfigMap
+> de D los hizo Claude con `kubectl patch` sobre `data.data`, verificando cada uno con un POST a `/login`.
+>
+> ⚠️ **Sin explicar:** durante el QA el back de dev se cayó (nodemon vivo, sin proceso `ts-node`, sin heap
+> snapshot) entre las 20:01 —tests pasando contra él— y el primer parche del ConfigMap. El usuario lo
+> levantó sin que se viera el error. No hay indicio de que sea de este cambio, pero tampoco prueba de lo
+> contrario: si se repite, el log de nodemon es lo primero.
 
 > **Entregado.** Pestaña **Login access**: interruptor, recuadro "How Kwirth sees you" (dirección resuelta,
 > la de la conexión y el estado de `X-Forwarded-For`) con el botón "Trust the proxy I'm coming through", y las
