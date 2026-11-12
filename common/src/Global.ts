@@ -92,6 +92,47 @@ interface IKwirthSettings {
         without recompiling, and there was no level filter at all.
     */
     log?: IKwirthLogSettings
+    /*
+        Where a login may come from. Undefined or an empty 'allowed' = anybody may try, as before. Read by
+        the login on every attempt, so emptying it with 'kubectl edit' takes effect without a restart.
+    */
+    loginIpFilter?: ILoginIpFilter
 }
 
-export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig, IKwirthSettings }
+/*
+    Where a login may come from (plan: plans/login-ip-filter). Both lists hold IPs or CIDRs, IPv4 or IPv6.
+
+    'allowed' is checked on every way in that issues an AccessKey (password login and change, IdP start and
+    callback, signup). Empty means the filter is OFF: no installation changes behaviour until somebody
+    fills it.
+
+    'trustedProxies' is what makes the filter impossible to dodge. X-Forwarded-For is believed ONLY when the
+    connection comes from one of them, and it is walked right to left skipping trusted hops: the client is
+    the first hop that is not trusted. Whatever a client writes on the left of the header is never read.
+*/
+interface ILoginIpFilter {
+    allowed: string[]
+    trustedProxies: string[]
+}
+
+// Why a login was refused, as the body of the 403. Typed so the front end never decides by a message.
+enum ELoginRefusal {
+    IPNOTALLOWED = 'ipnotallowed'
+}
+
+interface ILoginRefusal {
+    refusal: ELoginRefusal
+}
+
+/*
+    How the core sees whoever is asking, so the settings dialog can show it: the resolved client address,
+    the address of the TCP connection, and whether an X-Forwarded-For arrived and was ignored because the
+    connection did not come from a trusted proxy (the hint that a proxy is missing from the list).
+*/
+interface ICallerAddress {
+    ip: string
+    remoteAddress: string
+    forwardedIgnored: boolean
+}
+
+export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig, IKwirthSettings, ILoginIpFilter, ELoginRefusal, ILoginRefusal, ICallerAddress }

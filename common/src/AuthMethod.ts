@@ -30,7 +30,8 @@ enum ESsoResult {
     ISSUE = 'issue',                // the AccessKey could not be issued
     PENDING = 'pending',            // there is a signup request for this email, still waiting for an admin
     REJECTED = 'rejected',          // the signup request for this email was rejected
-    SIGNUPLIMIT = 'signuplimit'     // the IdP has too many pending requests to take another one
+    SIGNUPLIMIT = 'signuplimit',    // the IdP has too many pending requests to take another one
+    IPNOTALLOWED = 'ipnotallowed'   // the client's address is outside the login allow list (IKwirthSettings.loginIpFilter)
 }
 
 export { EAuthMethodKind, IAuthMethod, ESsoResult }

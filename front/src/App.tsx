@@ -131,7 +131,8 @@ const SSO_RESULT_MESSAGES: Record<ESsoResult, string> = {
     [ESsoResult.ISSUE]: 'Your access key could not be issued. Please try again.',
     [ESsoResult.PENDING]: 'Your access request is pending. An administrator will review it.',
     [ESsoResult.REJECTED]: 'Your access request was rejected.',
-    [ESsoResult.SIGNUPLIMIT]: 'Access requests cannot be accepted right now. Please contact an administrator.'
+    [ESsoResult.SIGNUPLIMIT]: 'Access requests cannot be accepted right now. Please contact an administrator.',
+    [ESsoResult.IPNOTALLOWED]: 'Login is not allowed from your IP address.'
 }
 
 const App: React.FC<IAppProps> = (props:IAppProps) => {

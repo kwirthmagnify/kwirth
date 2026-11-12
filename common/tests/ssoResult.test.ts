@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { ESsoResult } from '../src/AuthMethod'
 import { ESignupStatus } from '../src/Signup'
+import { ELoginRefusal } from '../src/Global'
 
 /*
     The values of ESsoResult travel in the URL (`?ssoerror=<value>`) from a back end to a front end that
@@ -24,6 +25,16 @@ test('ESsoResult adds the three signup outcomes, all distinct', () => {
     assert.equal(ESsoResult.SIGNUPLIMIT, 'signuplimit')
     const values = Object.values(ESsoResult)
     assert.equal(new Set(values).size, values.length)
+})
+
+test('ESsoResult.IPNOTALLOWED is the login-ip-filter refusal, and stays distinct', () => {
+    assert.equal(ESsoResult.IPNOTALLOWED, 'ipnotallowed')
+    const values = Object.values(ESsoResult)
+    assert.equal(new Set(values).size, values.length)
+})
+
+test('ELoginRefusal travels in the body of the 403: its values are the wire strings', () => {
+    assert.equal(ELoginRefusal.IPNOTALLOWED, 'ipnotallowed')
 })
 
 test('ESignupStatus is persisted: its values are the stored strings', () => {
