@@ -132,6 +132,20 @@ test('Login access: una entrada que no es IP ni CIDR pone el campo en rojo y des
     await dismissOpenDialogs(page)   // Cancel: nothing saved
 })
 
+test('Login access: "Add localhost" anade 127.0.0.1 y ::1 una sola vez', async () => {
+    await dismissOpenDialogs(page)
+    await openLoginAccess(page)
+    const before = await page.getByLabel(ALLOWED_FIELDS).count()
+    test.skip(before > 0, 'the environment already has allowed addresses: this test only runs on a clean list')
+    const addLocalhost = page.getByRole('button', { name: 'Add localhost' })
+    await addLocalhost.click()
+    await expect(page.getByLabel('Allowed address 1', { exact: true })).toHaveValue('127.0.0.1')
+    await expect(page.getByLabel('Allowed address 2', { exact: true })).toHaveValue('::1')
+    // both are there: pressing it again would add nothing, so it is disabled
+    await expect(addLocalhost).toBeDisabled()
+    await dismissOpenDialogs(page)   // Cancel: nothing saved
+})
+
 test('🔴 Login access: activar con una lista que deja fuera al admin se rechaza, el dialogo sigue editable y no se guarda nada', async () => {
     await dismissOpenDialogs(page)
     await openLoginAccess(page)

@@ -75,6 +75,9 @@ const isValidIpEntry = (entry: string): boolean => {
     return /^\d{1,3}$/.test(prefix) && Number(prefix) <= (v4 ? 32 : 128)
 }
 
+// localhost over IPv4 and over IPv6, for the 'Add localhost' button
+const LOOPBACK_ENTRIES = ['127.0.0.1', '::1']
+
 // A blank row is not an error: it is dropped on save.
 const ipListValid = (entries: string[]): boolean => entries.every(e => e.trim() === '' || isValidIpEntry(e))
 const cleanIpList = (entries: string[]): string[] => Array.from(new Set(entries.map(e => e.trim()).filter(e => e !== '')))
@@ -422,7 +425,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         One editable list of IPs/CIDRs (Login access): fixed-width rows in a box of fixed height that scrolls
         inside, so adding entries never moves the rest of the tab.
     */
-    const ipList = (label: string, entries: string[], setEntries: React.Dispatch<React.SetStateAction<string[]>>, placeholder: string) => (
+    const ipList = (label: string, entries: string[], setEntries: React.Dispatch<React.SetStateAction<string[]>>, placeholder: string, extraAction?: React.ReactNode) => (
         <Box sx={{ width: '50%' }}>
             <Box sx={{ height: 80, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }}>
                 { entries.map((entry, index) =>
@@ -439,9 +442,20 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 )}
                 { entries.length === 0 && <Typography variant='body2' sx={{ color: 'text.secondary', pt: 1 }}>None.</Typography> }
             </Box>
-            <Button size='small' startIcon={<Add />} onClick={() => setEntries(prev => [...prev, ''])} disabled={loading || error!==''}>Add {label.toLowerCase()}</Button>
+            <Stack direction='row' spacing={1}>
+                <Button size='small' startIcon={<Add />} onClick={() => setEntries(prev => [...prev, ''])} disabled={loading || error!==''}>Add {label.toLowerCase()}</Button>
+                { extraAction }
+            </Stack>
         </Box>
     )
+
+    /*
+        Both loopbacks at once. 'localhost' may resolve to either, and which one the browser uses is not
+        something anybody can tell by looking: adding only 127.0.0.1 and arriving as ::1 is exactly how an
+        admin testing on their own machine got "the list does not include your own address".
+    */
+    const missingLoopbacks = LOOPBACK_ENTRIES.filter(l => !allowedIps.map(a => a.trim()).includes(l))
+    const addLocalhost = () => setAllowedIps(prev => [...prev.filter(a => a.trim() !== ''), ...missingLoopbacks])
 
     const suggestedProxy = caller ? proxySubnetOf(caller.remoteAddress) : undefined
     const canTrustProxy = caller !== undefined && caller.forwardedIgnored && suggestedProxy !== undefined && !trustedProxies.map(p => p.trim()).includes(suggestedProxy)
@@ -864,7 +878,10 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                                 </Box>
                             </Stack>
                             <Stack direction='row' spacing={2}>
-                                { ipList('Allowed address', allowedIps, setAllowedIps, '10.0.0.0/8') }
+                                { ipList('Allowed address', allowedIps, setAllowedIps, '10.0.0.0/8',
+                                    <Tooltip title='Adds 127.0.0.1 and ::1 (localhost over IPv4 and IPv6)'>
+                                        <span><Button size='small' startIcon={<Add />} onClick={addLocalhost} disabled={loading || error!=='' || missingLoopbacks.length === 0}>Add localhost</Button></span>
+                                    </Tooltip>) }
                                 { ipList('Trusted proxy', trustedProxies, setTrustedProxies, '10.42.0.0/16') }
                             </Stack>
                         </Stack>

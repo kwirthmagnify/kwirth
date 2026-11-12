@@ -90,6 +90,10 @@
 >   siempre está, así que no mueve nada) y no deshabilita nada. Afecta a todos los guardados del diálogo.
 > - **Contenido fijo medido en el navegador:** 460/460 px en los dos estados del recuadro (con y sin
 >   cabecera ignorada). La primera versión medía 495 y partía el botón en dos líneas.
+> - **Botón "Add localhost"** (QA del usuario, 2026-11-12): añade `127.0.0.1` y `::1` a la vez. En el QA
+>   el usuario añadió `127.0.0.1` y el back le dijo que no era su IP: el navegador llegaba por `::1`
+>   (`localhost` resuelto a IPv6). El filtro no trata los loopback como equivalentes; el botón quita el
+>   tropiezo sin cambiar esa regla. Deshabilitado cuando ya están los dos.
 > - El botón propone /16 en IPv4 y /64 en IPv6; con un proxy en `::1` sale `0:0:0:0::/64` (correcto, sin
 >   comprimir).
 >
