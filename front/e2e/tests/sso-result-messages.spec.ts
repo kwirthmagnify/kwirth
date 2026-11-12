@@ -18,6 +18,8 @@ const CASES: { result: string, message: RegExp }[] = [
     { result: 'pending', message: /Your access request is pending/ },
     { result: 'rejected', message: /Your access request was rejected/ },
     { result: 'signuplimit', message: /Access requests cannot be accepted right now/ },
+    // the login IP filter (plans/login-ip-filter): refused on the IdP's start or callback
+    { result: 'ipnotallowed', message: /Login is not allowed from your IP address\./ },
     { result: 'from-a-newer-back-end', message: /Single Sign-On failed \(from-a-newer-back-end\)\./ }
 ]
 

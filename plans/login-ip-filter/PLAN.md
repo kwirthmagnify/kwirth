@@ -1,6 +1,6 @@
 # Filtro de IP en el login — PLAN
 
-> **Estado:** streams validados (2026-11-12) · **L1 ✅** (`kwirth-common@0.5.81` → `0.5.82` con `enabled`) · **L2 ✅** · L3 siguiente · producto en [PRD.md](PRD.md).
+> **Estado:** streams validados (2026-11-12) · **L1 ✅** (`kwirth-common@0.5.81` → `0.5.82` con `enabled`) · **L2 ✅** · **L3 entregado, pendiente del QA del usuario** (que cubre también L2) · producto en [PRD.md](PRD.md).
 
 ## Estado verificado del código (2026-11-12)
 
@@ -76,7 +76,30 @@
   para el rate limiter), `SettingsApi` (400 por formato y por dejarse fuera), `configBundle` (import
   rechazado). Harness completo en verde. Sin UI: el QA se hace en L3.
 
-### L3 · Front
+### L3 · Front — entregado (2026-11-12), pendiente de QA
+
+> **Entregado.** Pestaña **Login access**: interruptor, recuadro "How Kwirth sees you" (dirección resuelta,
+> la de la conexión y el estado de `X-Forwarded-For`) con el botón "Trust the proxy I'm coming through", y las
+> dos listas en cajas de altura fija. Mensaje del rechazo en `Login.tsx` (login **y** cambio de contraseña,
+> por el `ILoginRefusal` tipado) y en `SignupDialog.tsx` (un 403 de `signup/info` decía "código caducado").
+>
+> **Cambios sobre lo previsto:**
+> - **El error de guardado ya no congela el diálogo.** Iba a `error`, que deshabilita todo (OK incluido):
+>   un guardado rechazado no se podía corregir sin cerrar y perder lo editado. Con el filtro es el caso
+>   normal ("te dejarías fuera"). Ahora es `saveError`, se muestra en la barra de acciones (un hueco que
+>   siempre está, así que no mueve nada) y no deshabilita nada. Afecta a todos los guardados del diálogo.
+> - **Contenido fijo medido en el navegador:** 460/460 px en los dos estados del recuadro (con y sin
+>   cabecera ignorada). La primera versión medía 495 y partía el botón en dos líneas.
+> - El botón propone /16 en IPv4 y /64 en IPv6; con un proxy en `::1` sale `0:0:0:0::/64` (correcto, sin
+>   comprimir).
+>
+> **e2e:** 3 nuevos en `kwirth-settings.spec.ts` (sin guardar nada: el único guardado lo rechaza el back) y
+> el caso `ipnotallowed` en `sso-result-messages.spec.ts`. Corridas: settings 5/5, sso 7/7, signup-ui y
+> login-idp-password en verde. Una corrida del test del intervalo (previo) dio flaky con el front aún
+> recompilando y pasó en el reintento; la siguiente, 5/5 a la primera.
+>
+> ⚠️ El primer e2e guarda el diálogo entero, así que el ConfigMap del dev ya lleva
+> `loginIpFilter: { enabled: false, allowed: [], trustedProxies: [] }`. Inofensivo: es el estado apagado.
 
 - Pestaña **Login access** (`ESettingsKwirthTab.LOGIN_ACCESS`): dos listas editables de filas de ancho fijo
   como Marketplaces, validación de formato en el cliente, recuadro "How Kwirth sees you" con

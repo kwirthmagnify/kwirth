@@ -88,4 +88,76 @@ test('Kwirth settings: no deja guardar un intervalo no positivo', async () => {
     expect(await reopened.inputValue()).toBe(original)
     await dismissOpenDialogs(page)
 })
+
+/*
+    Login access (plans/login-ip-filter). NON-destructive by construction: nothing here is ever saved.
+    The only save attempted is one the back end REFUSES — a filter switched on with an allow list that
+    leaves the browser out (192.0.2.0/24 is TEST-NET-1, reserved for documentation: nobody comes from
+    there) — so there is nothing to restore, and the test checks that nothing was persisted.
+*/
+const ALLOWED_FIELDS = /^Allowed address \d+$/
+const RESTRICT_LABEL = 'Restrict login to the allowed addresses'
+
+async function openLoginAccess(page: Page) {
+    await openSettings(page)
+    await page.getByRole('tab', { name: 'Login access' }).click()
+    await expect(page.getByText('How Kwirth sees you')).toBeVisible()
+}
+
+test('Login access: la pestana dice como ve Kwirth al admin, con todo a la vista', async () => {
+    await dismissOpenDialogs(page)
+    await openLoginAccess(page)
+    // the address the core resolved for this browser: some address, never 'unknown' once loaded
+    await expect(page.getByText(/^Your address: /)).not.toContainText('unknown')
+    await expect(page.getByText(/^X-Forwarded-For: /)).toBeVisible()
+    // nothing appears or disappears: the button and both lists are there whether they apply or not
+    await expect(page.getByRole('button', { name: "Trust the proxy I'm coming through" })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add allowed address' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Add trusted proxy' })).toBeEnabled()
+    await dismissOpenDialogs(page)
+})
+
+test('Login access: una entrada que no es IP ni CIDR pone el campo en rojo y desactiva OK', async () => {
+    await dismissOpenDialogs(page)
+    await openLoginAccess(page)
+    const before = await page.getByLabel(ALLOWED_FIELDS).count()
+    await page.getByRole('button', { name: 'Add allowed address' }).click()
+    const field = page.getByLabel(`Allowed address ${before + 1}`, { exact: true })
+    await field.fill('office-network')
+    await expect(field).toHaveAttribute('aria-invalid', 'true')
+    await expect(page.getByRole('button', { name: 'OK' })).toBeDisabled()
+    await field.fill('10.0.0.0/8')
+    await expect(field).toHaveAttribute('aria-invalid', 'false')
+    await expect(page.getByRole('button', { name: 'OK' })).toBeEnabled()
+    await dismissOpenDialogs(page)   // Cancel: nothing saved
+})
+
+test('🔴 Login access: activar con una lista que deja fuera al admin se rechaza, el dialogo sigue editable y no se guarda nada', async () => {
+    await dismissOpenDialogs(page)
+    await openLoginAccess(page)
+    const restrict = page.getByLabel(RESTRICT_LABEL)
+    const wasEnabled = await restrict.isChecked()
+    const before = await page.getByLabel(ALLOWED_FIELDS).count()
+
+    // the browser has to end up OUTSIDE the list, and a live filter is never touched
+    test.skip(wasEnabled || before > 0, 'the environment already has a login filter or allowed addresses: this test only runs on a clean one')
+    await restrict.check()
+    await page.getByRole('button', { name: 'Add allowed address' }).click()
+    await page.getByLabel(`Allowed address ${before + 1}`, { exact: true }).fill('192.0.2.0/24')
+
+    const ok = page.getByRole('button', { name: 'OK' })
+    await ok.click()
+    // refused by the back end: the reason is shown, the dialog stays open and can still be fixed
+    await expect(page.getByText(/saving it would lock you out/)).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('[role="dialog"]')).toBeVisible()
+    await expect(ok).toBeEnabled()
+    await expect(restrict).toBeEnabled()
+    await dismissOpenDialogs(page)
+
+    // and nothing was persisted
+    await openLoginAccess(page)
+    await expect(page.getByLabel(RESTRICT_LABEL)).not.toBeChecked()
+    await expect(page.getByLabel(ALLOWED_FIELDS)).toHaveCount(0)
+    await dismissOpenDialogs(page)
+})
 })

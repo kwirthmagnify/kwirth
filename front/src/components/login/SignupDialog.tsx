@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Alert, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material'
-import { ESsoResult, ISignupInfo, ISignupReply, ISignupSubmit } from '@kwirthmagnify/kwirth-common'
+import { ELoginRefusal, ESsoResult, ILoginRefusal, ISignupInfo, ISignupReply, ISignupSubmit } from '@kwirthmagnify/kwirth-common'
 import { addPostAuthorization } from '../../tools/AuthorizationManagement'
 
 /*
@@ -35,6 +35,14 @@ const SignupDialog: React.FC<ISignupDialogProps> = (props: ISignupDialogProps) =
         (async () => {
             try {
                 const res = await fetch(`${props.backendUrl}/core/auth/signup/info`, addPostAuthorization('', JSON.stringify({ code: props.code })))
+                // the login IP filter (plans/login-ip-filter): said as a refusal, not as an expired code
+                if (res.status === 403) {
+                    const body = await res.json().catch(() => ({})) as Partial<ILoginRefusal>
+                    if (body.refusal === ELoginRefusal.IPNOTALLOWED) {
+                        props.onRefused(ESsoResult.IPNOTALLOWED)
+                        return
+                    }
+                }
                 if (res.status !== 200) {
                     props.onExpired()
                     return

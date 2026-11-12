@@ -5,7 +5,16 @@ import { ExpandMore } from '@kwirthmagnify/kwirth-common-front/icons'
 import { MsgBoxOkError, MsgBoxOkWarning } from '../../tools/MsgBox'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addPostAuthorization } from '../../tools/AuthorizationManagement'
-import { EAuthMethodKind, IAuthMethod, ILoginResponse, IUser } from '@kwirthmagnify/kwirth-common'
+import { EAuthMethodKind, ELoginRefusal, IAuthMethod, ILoginRefusal, ILoginResponse, IUser } from '@kwirthmagnify/kwirth-common'
+
+const IP_NOT_ALLOWED_MESSAGE = 'Login is not allowed from your IP address.'
+
+// Whether a 403 is the login IP filter's (plans/login-ip-filter): decided by the typed refusal, never by a text.
+const isIpRefusal = async (response: Response): Promise<boolean> => {
+    if (response.status !== 403) return false
+    const body = await response.json().catch(() => ({})) as Partial<ILoginRefusal>
+    return body.refusal === ELoginRefusal.IPNOTALLOWED
+}
 
 interface ILoginProps {
     methods: IAuthMethod[]
@@ -70,6 +79,12 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
                     setPassword('')
                     loginOk(await result.json())
                 }
+                else if (result && await isIpRefusal(result)) {
+                    setMsgBox(MsgBoxOkError('Login', IP_NOT_ALLOWED_MESSAGE, setMsgBox))
+                    setUser('')
+                    setPassword('')
+                    setChangingPassword(false)
+                }
                 else {
                     setMsgBox(MsgBoxOkWarning('Login',`Password could not be changesd.`, setMsgBox))
                     setUser('')
@@ -97,7 +112,7 @@ const Login: React.FC<ILoginProps> = (props:ILoginProps) => {
                         setMsgBox(MsgBoxOkError('Login',`You have entered invalid credentials.`, setMsgBox))
                         break
                     case 403:
-                        setMsgBox(MsgBoxOkError('Login',`Access has been denied.`, setMsgBox))
+                        setMsgBox(MsgBoxOkError('Login', await isIpRefusal(result) ? IP_NOT_ALLOWED_MESSAGE : `Access has been denied.`, setMsgBox))
                         break
                     case 503:
                         setMsgBox(MsgBoxOkError('Login',`Backend seems to be starting or in error (error 503).`, setMsgBox))

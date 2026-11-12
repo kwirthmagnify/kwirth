@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react'
 import { Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
 import { Add, Delete, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
+import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType, ICallerAddress } from '@kwirthmagnify/kwirth-common'
 /*
     'import type' and not a normal import, deliberately. CRA transpiles with Babel, which compiles file by
     file and cannot tell whether an imported name is a type or a value: with a normal import it leaves the
@@ -40,7 +40,57 @@ enum ESettingsKwirthTab {
     NOTIFICATIONS = 'notifications',
     LOG = 'log',
     MARKETPLACES = 'marketplaces',
-    REGISTRIES = 'registries'
+    REGISTRIES = 'registries',
+    LOGIN_ACCESS = 'loginaccess'
+}
+
+/*
+    Login access (plans/login-ip-filter). What is checked here is only a hint for the eye — a red field
+    before pressing OK. The back end validates for real, and it is also the one that refuses a list that
+    would lock out whoever saves it.
+*/
+const IPV4_OCTET = '(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)'
+const IPV4 = new RegExp(`^${IPV4_OCTET}(\\.${IPV4_OCTET}){3}$`)
+
+// The eight groups of an IPv6 address, '::' expanded; undefined if it is not one.
+const expandIpv6 = (address: string): string[] | undefined => {
+    if (!/^[0-9a-fA-F:]+$/.test(address)) return undefined
+    const halves = address.split('::')
+    if (halves.length > 2) return undefined
+    const head = halves[0] ? halves[0].split(':') : []
+    const tail = halves.length === 2 && halves[1] ? halves[1].split(':') : []
+    const missing = 8 - head.length - tail.length
+    if (halves.length === 1 ? head.length !== 8 : missing < 1) return undefined
+    const groups = [...head, ...Array<string>(halves.length === 2 ? missing : 0).fill('0'), ...tail]
+    if (groups.some(g => !/^[0-9a-fA-F]{1,4}$/.test(g))) return undefined
+    return groups.map(g => g.toLowerCase().replace(/^0+(?=.)/, ''))
+}
+
+const isValidIpEntry = (entry: string): boolean => {
+    const [address, prefix, ...rest] = entry.trim().split('/')
+    if (rest.length > 0) return false
+    const v4 = IPV4.test(address)
+    if (!v4 && !expandIpv6(address)) return false
+    if (prefix === undefined) return true
+    return /^\d{1,3}$/.test(prefix) && Number(prefix) <= (v4 ? 32 : 128)
+}
+
+// A blank row is not an error: it is dropped on save.
+const ipListValid = (entries: string[]): boolean => entries.every(e => e.trim() === '' || isValidIpEntry(e))
+const cleanIpList = (entries: string[]): string[] => Array.from(new Set(entries.map(e => e.trim()).filter(e => e !== '')))
+
+/*
+    The network the proxy we are coming through lives in, for 'Trust the proxy I'm coming through': a /16 for
+    IPv4 and a /64 for IPv6. Proxy pods change address on every restart, so trusting the one address seen
+    now would stop working on the next one; the admin narrows it down if they want.
+*/
+const proxySubnetOf = (address: string): string | undefined => {
+    if (IPV4.test(address)) {
+        const [a, b] = address.split('.')
+        return `${a}.${b}.0.0/16`
+    }
+    const groups = expandIpv6(address)
+    return groups ? `${groups.slice(0, 4).join(':')}::/64` : undefined
 }
 
 // An editable row: IMarketplace as it is (the token already travels inside manifestAuth) plus the state
@@ -129,8 +179,20 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const [logBufferLines, setLogBufferLines] = useState<number>(5000)
     const [marketplaces, setMarketplaces] = useState<IMarketplaceRow[]>([])
     const [registries, setRegistries] = useState<IPackageRegistryRow[]>([])
+    // login access (plans/login-ip-filter): off on a fresh installation
+    const [ipFilterEnabled, setIpFilterEnabled] = useState(false)
+    const [allowedIps, setAllowedIps] = useState<string[]>([])
+    const [trustedProxies, setTrustedProxies] = useState<string[]>([])
+    const [caller, setCaller] = useState<ICallerAddress | undefined>(undefined)
     const [loading, setLoading] = useState(true)
+    // 'error' is a LOAD error and disables the whole form: without the current values there is nothing to edit
     const [error, setError] = useState('')
+    /*
+        A SAVE error, apart, and it disables nothing. It used to go into 'error', which froze the dialog —
+        OK included — so a refused save could not be corrected without closing and losing the edits. With the
+        login filter that is the usual case: "this list would lock you out" has to be fixable right there.
+    */
+    const [saveError, setSaveError] = useState('')
     const { backendUrl } = useContext(SessionContext) as SessionContextType
     const escapeRef = useEscapeToClose(() => props.onClose(undefined))
 
@@ -162,6 +224,12 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 setLogLevels(settings.log?.levels ?? {})
                 setLogAnsi(settings.log?.ansi ?? true)
                 setLogBufferLines(settings.log?.bufferLines ?? 5000)
+                setIpFilterEnabled(settings.loginIpFilter?.enabled === true)
+                setAllowedIps(settings.loginIpFilter?.allowed ?? [])
+                setTrustedProxies(settings.loginIpFilter?.trustedProxies ?? [])
+                // how the core sees whoever is here; if it fails the tab says it does not know
+                const callerResponse = await fetch(`${props.clusterUrl}/core/settings/caller`, addGetAuthorization(props.accessString))
+                if (callerResponse.ok) setCaller(await callerResponse.json() as ICallerAddress)
                 // If this fails the screen does not break: the tab simply has nothing to draw.
                 const components = await fetch(`${props.clusterUrl}/core/settings/log/components`, addGetAuthorization(props.accessString))
                 if (components.ok) setLogComponents(await components.json() as ILogComponentInfo[])
@@ -297,7 +365,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
 
 
     const ok = async () => {
-        setError('')
+        setSaveError('')
         try {
             // what is in the form is sent, secrets included: the back end diverts them to its encrypted
             // store. An empty field means deleting the stored secret, so it is sent exactly as it is.
@@ -330,11 +398,12 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 previousLogSenderLines,
                 signupSenderId: signupSenderChosen ? signupSenderId : '',
                 signupSenderConfigName: signupSenderChosen ? signupSenderConfigName : '',
-                log: { levels: logLevels, ansi: logAnsi, bufferLines: logBufferLines } })
+                log: { levels: logLevels, ansi: logAnsi, bufferLines: logBufferLines },
+                loginIpFilter: { enabled: ipFilterEnabled, allowed: cleanIpList(allowedIps), trustedProxies: cleanIpList(trustedProxies) } })
             const response = await fetch(`${props.clusterUrl}/core/settings`, addPutAuthorization(props.accessString, payload))
             if (!response.ok) {
                 const detail = await response.json().catch(() => ({}))
-                setError(response.status === 403
+                setSaveError(response.status === 403
                     ? 'You need the admin scope to manage Kwirth settings.'
                     : detail?.error ?? `Could not save settings (${response.status}).`)
                 return
@@ -345,9 +414,44 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
             props.onClose(guardados)
         }
         catch {
-            setError('Could not reach Kwirth to save its settings.')
+            setSaveError('Could not reach Kwirth to save its settings.')
         }
     }
+
+    /*
+        One editable list of IPs/CIDRs (Login access): fixed-width rows in a box of fixed height that scrolls
+        inside, so adding entries never moves the rest of the tab.
+    */
+    const ipList = (label: string, entries: string[], setEntries: React.Dispatch<React.SetStateAction<string[]>>, placeholder: string) => (
+        <Box sx={{ width: '50%' }}>
+            <Box sx={{ height: 80, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }}>
+                { entries.map((entry, index) =>
+                    <Stack key={index} direction='row' spacing={1} sx={{ alignItems: 'center' }}>
+                        <TextField value={entry} variant='standard' placeholder={placeholder} sx={{ width: '85%' }}
+                            slotProps={{ htmlInput: { 'aria-label': `${label} ${index + 1}` } }}
+                            error={entry.trim() !== '' && !isValidIpEntry(entry)} disabled={loading || error!==''}
+                            onChange={e => setEntries(prev => prev.map((v, i) => i === index ? e.target.value : v))} />
+                        <Tooltip title='Remove'>
+                            <span><IconButton size='small' color='error' disabled={loading || error!==''} aria-label={`Remove ${label} ${index + 1}`}
+                                onClick={() => setEntries(prev => prev.filter((_, i) => i !== index))}><Delete fontSize='small' /></IconButton></span>
+                        </Tooltip>
+                    </Stack>
+                )}
+                { entries.length === 0 && <Typography variant='body2' sx={{ color: 'text.secondary', pt: 1 }}>None.</Typography> }
+            </Box>
+            <Button size='small' startIcon={<Add />} onClick={() => setEntries(prev => [...prev, ''])} disabled={loading || error!==''}>Add {label.toLowerCase()}</Button>
+        </Box>
+    )
+
+    const suggestedProxy = caller ? proxySubnetOf(caller.remoteAddress) : undefined
+    const canTrustProxy = caller !== undefined && caller.forwardedIgnored && suggestedProxy !== undefined && !trustedProxies.map(p => p.trim()).includes(suggestedProxy)
+    const trustProxy = () => { if (suggestedProxy) setTrustedProxies(prev => [...prev.filter(p => p.trim() !== ''), suggestedProxy]) }
+
+    // the forwarded header as the core treats it NOW (with the stored trusted proxies)
+    const forwardedState = !caller ? 'unknown'
+        : caller.forwardedIgnored ? 'ignored (not from a trusted proxy)'
+        : caller.ip !== caller.remoteAddress ? 'used (from a trusted proxy)'
+        : 'not received'
 
     const marketplaceRow = (m: IMarketplaceRow, index: number) => {
         const tokenAuth = m.manifestAuth !== undefined && m.manifestAuth.type !== EManifestAuthType.NONE
@@ -557,6 +661,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         <Tab label='Log' value={ESettingsKwirthTab.LOG} />
                         <Tab label='Marketplaces' value={ESettingsKwirthTab.MARKETPLACES} />
                         <Tab label='Package registries' value={ESettingsKwirthTab.REGISTRIES} />
+                        <Tab label='Login access' value={ESettingsKwirthTab.LOGIN_ACCESS} />
                     </Tabs>
 
                     <Box hidden={tab !== ESettingsKwirthTab.GENERAL}>
@@ -718,6 +823,53 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         </Stack>
                     </Box>
 
+                    {/* Login access (plans/login-ip-filter). Fixed content: the box that says how Kwirth sees
+                        you and both lists are always there; what does not apply is disabled, never hidden. */}
+                    <Box hidden={tab !== ESettingsKwirthTab.LOGIN_ACCESS}>
+                        <Stack spacing={1} direction='column' sx={{ mt: 2 }}>
+                            <Typography variant='body2'>
+                                Where Kwirth can be logged into from: user and password, password change, identity providers and
+                                access requests. Sessions already open and API keys are not affected. With the restriction off, or
+                                with no allowed address, anybody may try to log in.
+                            </Typography>
+                            <FormControlLabel control={<Checkbox checked={ipFilterEnabled} onChange={e => setIpFilterEnabled(e.target.checked)} disabled={loading || error!==''} />}
+                                label='Restrict login to the allowed addresses' />
+                            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                                <Stack direction='row' spacing={2} sx={{ alignItems: 'center' }}>
+                                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                                        <Typography variant='subtitle2'>How Kwirth sees you</Typography>
+                                        <Typography variant='body2'>
+                                            Your address: <b>{caller?.ip || 'unknown'}</b> · connection from: <b>{caller?.remoteAddress || 'unknown'}</b>
+                                        </Typography>
+                                        <Typography variant='body2' sx={{ color: caller?.forwardedIgnored ? 'warning.main' : 'text.secondary' }}>
+                                            X-Forwarded-For: {forwardedState}
+                                        </Typography>
+                                    </Box>
+                                    {/* Always there, enabled only when a proxy's header is being ignored. It only
+                                        fills the list: nothing changes until OK, and what is shown above is the
+                                        SAVED configuration's view. */}
+                                    <Tooltip title={suggestedProxy ? `Adds ${suggestedProxy} to the trusted proxies` : ''}>
+                                        <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={trustProxy} disabled={loading || error!=='' || !canTrustProxy}>Trust the proxy I'm coming through</Button></span>
+                                    </Tooltip>
+                                </Stack>
+                            </Box>
+                            <Stack direction='row' spacing={2}>
+                                <Box sx={{ width: '50%' }}>
+                                    <Typography variant='subtitle2'>Allowed addresses</Typography>
+                                    <Typography variant='caption' sx={{ color: 'text.secondary' }}>IPs or CIDRs a login may come from</Typography>
+                                </Box>
+                                <Box sx={{ width: '50%' }}>
+                                    <Typography variant='subtitle2'>Trusted proxies</Typography>
+                                    <Typography variant='caption' sx={{ color: 'text.secondary' }}>Ingress or load balancers whose X-Forwarded-For is believed</Typography>
+                                </Box>
+                            </Stack>
+                            <Stack direction='row' spacing={2}>
+                                { ipList('Allowed address', allowedIps, setAllowedIps, '10.0.0.0/8') }
+                                { ipList('Trusted proxy', trustedProxies, setTrustedProxies, '10.42.0.0/16') }
+                            </Stack>
+                        </Stack>
+                    </Box>
+
                     { loading && <Stack
                         direction='row'
                         spacing={1}
@@ -732,12 +884,15 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         Only on the log tab, and it says so. No confirmation is needed because nothing here is
                         written until OK: Cancel undoes it.
                     */}
-                    <Box>
+                    {/* The save error lives here, in a space that is always there: shown inside the content it
+                        could sit below the fold of a long tab, and it must not push anything around. */}
+                    <Stack direction='row' spacing={1} sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}>
                         { tab === ESettingsKwirthTab.LOG &&
                             <Button size='small' onClick={resetLog} disabled={loading || error!==''}>Reset to defaults</Button> }
-                    </Box>
+                        <Typography variant='body2' color='error' noWrap title={saveError} role={saveError ? 'alert' : undefined}>{saveError}</Typography>
+                    </Stack>
                     <Stack direction='row' spacing={1}>
-                        <Button variant='outlined' onClick={ok} disabled={loading || error!=='' || metricsInterval<=0 || !rowsValid()}>OK</Button>
+                        <Button variant='outlined' onClick={ok} disabled={loading || error!=='' || metricsInterval<=0 || !rowsValid() || !ipListValid(allowedIps) || !ipListValid(trustedProxies)}>OK</Button>
                         <Button variant='outlined' onClick={() => props.onClose(undefined)}>Cancel</Button>
                     </Stack>
                 </DialogActions>
