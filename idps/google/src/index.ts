@@ -16,8 +16,15 @@ export default class GoogleConnector implements IIdpConnector {
         return oidcConfigSchema()
     }
 
-    buildAuthorizationUrl(config: Record<string, unknown>, ctx: IIdpAuthContext): Promise<string> {
-        return oidcBuildAuthorizationUrl(config, ctx, DEFAULT_ISSUER)
+    /*
+        prompt=select_account: without it Google signs in silently with whatever account the browser already has
+        open, and there is no way to log in to Kwirth with a different Google account (a second user, an admin
+        account next to a personal one…). With it Google always shows its account chooser.
+    */
+    async buildAuthorizationUrl(config: Record<string, unknown>, ctx: IIdpAuthContext): Promise<string> {
+        const url = new URL(await oidcBuildAuthorizationUrl(config, ctx, DEFAULT_ISSUER))
+        url.searchParams.set('prompt', 'select_account')
+        return url.toString()
     }
 
     handleCallback(config: Record<string, unknown>, ctx: IIdpCallbackContext): Promise<IIdpIdentity> {

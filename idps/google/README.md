@@ -58,6 +58,13 @@ Signing in with Google is **not** by itself permission to use Kwirth. The identi
 matched against Kwirth's users, and the account must already exist and be bound to this provider. A
 verified email that belongs to nobody is refused.
 
+## Choosing the account
+
+Every sign-in shows **Google's account chooser** (`prompt=select_account`), even when the browser already
+has a Google session open. Without it Google would sign in silently with that open account, and there
+would be no way to enter Kwirth with a different one — a second user, or an admin account next to a
+personal one.
+
 ## Build
 
 ```bash
