@@ -655,7 +655,13 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const previousFocus = document.activeElement as HTMLElement
 
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'F11' && event.ctrlKey && event.altKey && !event.shiftKey) {
+            /*
+                Ctrl+Shift+Enter, the same on Windows and Linux. Not Ctrl+Shift+F11: GNOME grabs it before the
+                browser sees it. This one is taken by neither desktop nor by Chrome/Edge/Firefox while the page
+                has the focus (they only use it in the address bar), and CodeMirror binds Ctrl+Enter, not this.
+                Listened to in the capture phase, so a focused xterm or editor does not swallow it first.
+            */
+            if (event.key === 'Enter' && event.ctrlKey && event.shiftKey && !event.altKey && !event.metaKey) {
                 event.stopPropagation()
                 event.preventDefault()
                 setFullscreenTab( (prev) => {
