@@ -101,6 +101,7 @@ kwirth-bundled.json
 !/dces/xyflow/
 !/dces/file-manager/
 !/dces/sample/
+!/dces/swagger-ui/
 !/dces/manifest.json
 
 # Familia SUSE (de pago): COMODIN a proposito, para que cada artefacto suse-* nuevo quede cubierto desde
