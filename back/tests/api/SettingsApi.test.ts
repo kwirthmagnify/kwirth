@@ -615,6 +615,17 @@ test('🔴 loginIpFilter: switching it on with a list that leaves the author out
     finally { await srv.stop() }
 })
 
+test('loginIpFilter: switching it on with no allowed address → 400, nothing written', async () => {
+    const srv = await startServer()
+    try {
+        const res = await put(srv.base, { loginIpFilter: { enabled: true, allowed: [], trustedProxies: [] } })
+        assert.equal(res.status, 400)
+        assert.match((await res.json()).error, /at least one allowed address/)
+        assert.equal(srv.store.current(), undefined)
+    }
+    finally { await srv.stop() }
+})
+
 test('loginIpFilter: the same list switched OFF can be saved from anywhere', async () => {
     const srv = await startServer()
     try {

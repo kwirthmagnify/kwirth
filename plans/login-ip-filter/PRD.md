@@ -95,7 +95,9 @@ Además, la IP de origen que el core usa hoy **no es fiable**:
 - **D9 · Interruptor explícito, apagado la primera vez** (usuario, 2026-11-12). `ILoginIpFilter.enabled`;
   una instalación nueva arranca con el filtro apagado y entra todo el mundo. Encendido con la lista vacía
   también entra todo el mundo: una edición a mano del ConfigMap nunca puede dejar fuera a todos. Desde la UI,
-  encenderlo con una lista que no incluye a quien guarda lo rechaza RF5.
+  encenderlo con una lista que no incluye a quien guarda lo rechaza RF5. **Y encenderlo con la lista vacía
+  tampoco se puede guardar** (QA, 2026-11-12: "lo activo y traga" — marcar *Restrict* y que no restrinja
+  nada es un engaño). En ejecución esa combinación sigue dejando entrar a todos; solo se impide guardarla.
 - **D10 · Falla cerrado si los settings no se pueden leer** (decidido al implementar). En Kubernetes, un
   error leyendo el ConfigMap (no un 404) no es "filtro vacío": el login responde 503 y el IdP `unavailable`.
   Los stores de fichero (Docker/Node) devuelven el valor por defecto ante cualquier error y no lo distinguen.

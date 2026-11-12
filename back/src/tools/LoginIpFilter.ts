@@ -57,6 +57,14 @@ export const validateLoginIpFilter = (incoming: unknown, origin: IncomingMessage
     const badProxies = invalidEntries(filter.trustedProxies)
     if (badProxies.length > 0) return `Not an IP or CIDR in the trusted proxies: ${badProxies.join(', ')}`
 
+    /*
+        Switched on with nothing allowed is refused HERE, on save, and only here. At runtime it still lets
+        everybody in (a hand edit of the configmap must never lock the world out), which is exactly why it
+        cannot be saved from the dialog: the admin ticks 'Restrict', presses OK, and nothing is restricted
+        (found in QA, 2026-11-12).
+    */
+    if (filter.enabled && filter.allowed.length === 0) return 'Add at least one allowed address to restrict login'
+
     if (origin) {
         const caller = callerOf(origin, filter)
         if (!isLoginAllowed(filter, caller.ip, isDesktop)) return `The login allow list does not include your own address (${caller.ip || 'unknown'}): saving it would lock you out`

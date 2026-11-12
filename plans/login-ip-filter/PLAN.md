@@ -90,6 +90,9 @@
 >   siempre está, así que no mueve nada) y no deshabilita nada. Afecta a todos los guardados del diálogo.
 > - **Contenido fijo medido en el navegador:** 460/460 px en los dos estados del recuadro (con y sin
 >   cabecera ignorada). La primera versión medía 495 y partía el botón en dos líneas.
+> - **Encendido con la lista vacía ya no se guarda** (QA del usuario, 2026-11-12): el PUT y el import lo
+>   rechazan con "Add at least one allowed address to restrict login". En ejecución sigue dejando entrar a
+>   todos (D9). +1 test en `loginIpFilter.test.ts` y +1 en `SettingsApi.test.ts`; suite del back 953/949 ✔.
 > - **Botón "Add localhost"** (QA del usuario, 2026-11-12): añade `127.0.0.1` y `::1` a la vez. En el QA
 >   el usuario añadió `127.0.0.1` y el back le dijo que no era su IP: el navegador llegaba por `::1`
 >   (`localhost` resuelto a IPv6). El filtro no trata los loopback como equivalentes; el botón quita el

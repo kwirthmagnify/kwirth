@@ -99,6 +99,14 @@ test('validate: the author is resolved with the trusted proxies BEING SAVED, not
     assert.equal(typeof validateLoginIpFilter(on(['198.51.100.0/24'], ['10.42.0.0/16']), behindIngress, false), 'object')
 })
 
+test('🔴 validate: switched ON with an empty allow list cannot be saved (it would restrict nothing)', () => {
+    assert.equal(validateLoginIpFilter(on([]), undefined, false), 'Add at least one allowed address to restrict login')
+    // blanks do not count as entries
+    assert.equal(validateLoginIpFilter(on(['  ', '']), requestFrom('10.0.0.1'), false), 'Add at least one allowed address to restrict login')
+    // switched off, an empty list is the normal state
+    assert.equal(typeof validateLoginIpFilter({ enabled: false, allowed: [], trustedProxies: [] }, undefined, false), 'object')
+})
+
 test('validate: without an origin only the shape is checked', () => {
     assert.equal(typeof validateLoginIpFilter(on(['10.0.0.0/8']), undefined, false), 'object')
 })
