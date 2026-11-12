@@ -21,6 +21,7 @@ The editor's permissions part — **Scopes**, the object filters and their **NEW
 | **Auto-start channel** | If set, the named channel (e.g. `magnify`, `ops`) is launched automatically in **fullscreen mode** immediately after the user logs in. Leave empty to disable. |
 | **Enabled channels** | Comma-separated list of channel IDs the user is allowed to open (e.g. `magnify,ops`). Leave empty to allow **all** channels. |
 | **Can exit fullscreen** | When unchecked, the user cannot leave fullscreen mode once it starts — useful for kiosk-style deployments. Checked by default. |
+| **Tags** | Labels of the form `<extension>:<value>` (e.g. `agora:sre`) that extensions read to adapt **how** they work for this user. They grant **no** permission. See [User tags](#user-tags). |
 
 ## Create a user
 
@@ -176,6 +177,43 @@ Channels not in the list will not appear in the **Add** menu for that user.
 Uncheck this to prevent the user from leaving fullscreen mode. Combined with **Auto-start channel**, this creates a **kiosk mode**: the user logs in and is immediately locked to one channel view with no way to navigate away.
 
 > **Tip — kiosk setup:** set **Auto-start channel** = `magnify`, uncheck **Can exit fullscreen**, and assign only the `stream` scope to the user. They will see the log stream from the moment they log in, with no access to the rest of the UI.
+
+## User tags
+
+A **tag** says something about **who** the user is, so that an extension can adapt what it does to them. A chat
+assistant, for instance, can answer an executive with an overview and an SRE with the technical detail — each
+extension decides what its own tags mean.
+
+**The form is `<extension>:<value>`**, in lower case: the id of the extension that reads it, a colon, and a value
+made of letters, digits, `.`, `_` and `-` (up to 64 characters each part). `agora:sre`, `agora:executive`,
+`reports:finance`. An extension reads **only its own** tags (those that start with its id) and ignores the rest, so
+two extensions never step on each other. At most **32** tags per user.
+
+> 🔴 **Tags grant nothing.** They never give access to anything: that is what the user's **resources and scopes**
+> are for. A tag changes **how** an extension does something, never **whether** the user may do it.
+
+### Adding and removing them
+
+**User security** → pick the user → **Tags**:
+
+1. Type the tag and press **Enter**: it becomes a chip. It is stored in lower case — `Agora:SRE` is saved as
+   `agora:sre`.
+2. A tag that does not have the form turns **red**, the reason appears under the field
+   (*Invalid tag 'sre': the form is <extension>:<value>, e.g. chat:sre*) and **Save** stays disabled until you fix it
+   or remove it with its ✕.
+3. **Save**. Text still being typed when you press Save counts too — what is on screen is what is saved.
+
+Only an admin edits tags: a user never edits their own. A request approved from **Access requests** creates a user
+with no tags; add them afterwards by editing the user.
+
+### Which tags exist
+
+Kwirth does not keep a list: the tags an extension understands are in **that extension's guide**. A tag nobody
+reads does nothing (and does no harm).
+
+> **For extension developers.** The user's tags reach a channel in `IUserInfo.tags` through `getUsers()`.
+> `userTagsOf(tags, '<your-id>')` (from `@kwirthmagnify/kwirth-common`) keeps only yours. Never use them to decide
+> access.
 
 ## Worked example — a read-only user for one namespace
 
