@@ -101,14 +101,18 @@ const RESTRICT_LABEL = 'Restrict login to the allowed addresses'
 async function openLoginAccess(page: Page) {
     await openSettings(page)
     await page.getByRole('tab', { name: 'Login access' }).click()
-    await expect(page.getByText('How Kwirth sees you')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add localhost' })).toBeVisible()
 }
+
+// the line that says how the core resolved this browser
+const sees = (page: Page) => page.locator('p', { hasText: 'How Kwirth sees you:' })
 
 test('Login access: la pestana dice como ve Kwirth al admin, con todo a la vista', async () => {
     await dismissOpenDialogs(page)
     await openLoginAccess(page)
     // the address the core resolved for this browser: some address, never 'unknown' once loaded
-    await expect(page.getByText(/^Your address: /)).not.toContainText('unknown')
+    await expect(sees(page)).toBeVisible()
+    await expect(sees(page)).not.toContainText('unknown')
     await expect(page.getByText(/^X-Forwarded-For: /)).toBeVisible()
     // nothing appears or disappears: the button and both lists are there whether they apply or not
     await expect(page.getByRole('button', { name: "Trust the proxy I'm coming through" })).toBeVisible()

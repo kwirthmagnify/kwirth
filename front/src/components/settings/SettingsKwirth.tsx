@@ -425,9 +425,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         One editable list of IPs/CIDRs (Login access): fixed-width rows in a box of fixed height that scrolls
         inside, so adding entries never moves the rest of the tab.
     */
-    const ipList = (label: string, entries: string[], setEntries: React.Dispatch<React.SetStateAction<string[]>>, placeholder: string, extraAction?: React.ReactNode) => (
+    const ipList = (label: string, entries: string[], setEntries: React.Dispatch<React.SetStateAction<string[]>>, placeholder: string) => (
         <Box sx={{ width: '50%' }}>
-            <Box sx={{ height: 80, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }}>
+            <Box sx={{ height: 144, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }}>
                 { entries.map((entry, index) =>
                     <Stack key={index} direction='row' spacing={1} sx={{ alignItems: 'center' }}>
                         <TextField value={entry} variant='standard' placeholder={placeholder} sx={{ width: '85%' }}
@@ -442,10 +442,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 )}
                 { entries.length === 0 && <Typography variant='body2' sx={{ color: 'text.secondary', pt: 1 }}>None.</Typography> }
             </Box>
-            <Stack direction='row' spacing={1}>
-                <Button size='small' startIcon={<Add />} onClick={() => setEntries(prev => [...prev, ''])} disabled={loading || error!==''}>Add {label.toLowerCase()}</Button>
-                { extraAction }
-            </Stack>
+            <Button size='small' startIcon={<Add />} onClick={() => setEntries(prev => [...prev, ''])} disabled={loading || error!==''}>Add {label.toLowerCase()}</Button>
         </Box>
     )
 
@@ -841,47 +838,48 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         you and both lists are always there; what does not apply is disabled, never hidden. */}
                     <Box hidden={tab !== ESettingsKwirthTab.LOGIN_ACCESS}>
                         <Stack spacing={1} direction='column' sx={{ mt: 2 }}>
-                            <Typography variant='body2'>
-                                Where Kwirth can be logged into from: user and password, password change, identity providers and
-                                access requests. Sessions already open and API keys are not affected. With the restriction off, or
-                                with no allowed address, anybody may try to log in.
-                            </Typography>
-                            <FormControlLabel control={<Checkbox checked={ipFilterEnabled} onChange={e => setIpFilterEnabled(e.target.checked)} disabled={loading || error!==''} />}
-                                label='Restrict login to the allowed addresses' />
-                            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                            {/* The switch and what it covers, together: the explanation used to be three lines
+                                of its own, and that height belongs to the lists. */}
+                            <Box>
+                                <FormControlLabel control={<Checkbox size='small' checked={ipFilterEnabled} onChange={e => setIpFilterEnabled(e.target.checked)} disabled={loading || error!==''} />}
+                                    label='Restrict login to the allowed addresses' />
+                                <Typography variant='caption' component='div' sx={{ color: 'text.secondary', mt: -0.5 }}>
+                                    Password login, password change, identity providers and access requests. Open sessions and API keys are not affected.
+                                </Typography>
+                            </Box>
+                            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, px: 1.5, py: 1 }}>
                                 <Stack direction='row' spacing={2} sx={{ alignItems: 'center' }}>
                                     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                                        <Typography variant='subtitle2'>How Kwirth sees you</Typography>
                                         <Typography variant='body2'>
-                                            Your address: <b>{caller?.ip || 'unknown'}</b> · connection from: <b>{caller?.remoteAddress || 'unknown'}</b>
+                                            <b>How Kwirth sees you:</b> {caller?.ip || 'unknown'} <Typography component='span' variant='body2' sx={{ color: 'text.secondary' }}>(connection from {caller?.remoteAddress || 'unknown'})</Typography>
                                         </Typography>
                                         <Typography variant='body2' sx={{ color: caller?.forwardedIgnored ? 'warning.main' : 'text.secondary' }}>
                                             X-Forwarded-For: {forwardedState}
                                         </Typography>
                                     </Box>
-                                    {/* Always there, enabled only when a proxy's header is being ignored. It only
-                                        fills the list: nothing changes until OK, and what is shown above is the
-                                        SAVED configuration's view. */}
-                                    <Tooltip title={suggestedProxy ? `Adds ${suggestedProxy} to the trusted proxies` : ''}>
-                                        <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={trustProxy} disabled={loading || error!=='' || !canTrustProxy}>Trust the proxy I'm coming through</Button></span>
-                                    </Tooltip>
+                                    {/* Both always there, each enabled only when it would add something. They only
+                                        fill the lists: nothing changes until OK, and what is shown on the left is
+                                        the SAVED configuration's view. */}
+                                    <Stack spacing={0.5} sx={{ alignItems: 'stretch' }}>
+                                        <Tooltip title={suggestedProxy ? `Adds ${suggestedProxy} to the trusted proxies` : ''}>
+                                            <span><Button size='small' variant='outlined' fullWidth sx={{ whiteSpace: 'nowrap' }} onClick={trustProxy} disabled={loading || error!=='' || !canTrustProxy}>Trust the proxy I'm coming through</Button></span>
+                                        </Tooltip>
+                                        <Tooltip title='Adds 127.0.0.1 and ::1 to the allowed addresses (localhost over IPv4 and IPv6)'>
+                                            <span><Button size='small' variant='outlined' fullWidth sx={{ whiteSpace: 'nowrap' }} onClick={addLocalhost} disabled={loading || error!=='' || missingLoopbacks.length === 0}>Add localhost</Button></span>
+                                        </Tooltip>
+                                    </Stack>
                                 </Stack>
                             </Box>
                             <Stack direction='row' spacing={2}>
-                                <Box sx={{ width: '50%' }}>
-                                    <Typography variant='subtitle2'>Allowed addresses</Typography>
-                                    <Typography variant='caption' sx={{ color: 'text.secondary' }}>IPs or CIDRs a login may come from</Typography>
-                                </Box>
-                                <Box sx={{ width: '50%' }}>
-                                    <Typography variant='subtitle2'>Trusted proxies</Typography>
-                                    <Typography variant='caption' sx={{ color: 'text.secondary' }}>Ingress or load balancers whose X-Forwarded-For is believed</Typography>
-                                </Box>
+                                <Typography variant='body2' noWrap sx={{ width: '50%' }}>
+                                    <b>Allowed addresses</b> <Typography component='span' variant='caption' sx={{ color: 'text.secondary' }}>· IPs or CIDRs a login may come from</Typography>
+                                </Typography>
+                                <Typography variant='body2' noWrap sx={{ width: '50%' }}>
+                                    <b>Trusted proxies</b> <Typography component='span' variant='caption' sx={{ color: 'text.secondary' }}>· whose X-Forwarded-For is believed</Typography>
+                                </Typography>
                             </Stack>
                             <Stack direction='row' spacing={2}>
-                                { ipList('Allowed address', allowedIps, setAllowedIps, '10.0.0.0/8',
-                                    <Tooltip title='Adds 127.0.0.1 and ::1 (localhost over IPv4 and IPv6)'>
-                                        <span><Button size='small' startIcon={<Add />} onClick={addLocalhost} disabled={loading || error!=='' || missingLoopbacks.length === 0}>Add localhost</Button></span>
-                                    </Tooltip>) }
+                                { ipList('Allowed address', allowedIps, setAllowedIps, '10.0.0.0/8') }
                                 { ipList('Trusted proxy', trustedProxies, setTrustedProxies, '10.42.0.0/16') }
                             </Stack>
                         </Stack>
