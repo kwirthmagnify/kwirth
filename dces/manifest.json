@@ -1,6 +1,16 @@
 [
   {
     "extensionType": "dce",
+    "id": "swagger-ui",
+    "name": "@kwirthmagnify/kwirth-dce-swagger-ui",
+    "displayName": "Swagger UI",
+    "version": "0.1.0",
+    "description": "Shared Swagger UI for Kwirth extensions: serves the page to read and try an OpenAPI document, without each extension bundling its own copy",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-swagger-ui/-/kwirth-dce-swagger-ui-0.1.0.tgz",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "dce",
     "id": "sample",
     "name": "@kwirthmagnify/kwirth-dce-sample",
     "displayName": "Sample DCE",
