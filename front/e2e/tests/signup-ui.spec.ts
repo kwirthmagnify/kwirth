@@ -167,6 +167,19 @@ test.describe('signup: what the admin sees and does', () => {
 
         const all = await (await api.get('/core/signups', { headers: auth })).json() as ISignupRequest[]
         expect(all.map(r => r.id)).not.toContain(REJECTED.id)
+
+        /*
+            🔴 What the user reported: deleting one request removed the OTHER one, and the deleted one came back
+            on reopening User security. So the request that was NOT deleted has to survive: in the list right
+            away, in the back end, and after closing and reopening the dialog (a fresh read of the store).
+        */
+        expect(all.map(r => r.id)).toContain(PENDING.id)
+        await expect(dialog.getByTestId(`signup-request-${PENDING.id}`)).toBeVisible()
+        await dismissOpenDialogs(page)
+        await openUserSecurity(page)
+        const reopened = page.getByRole('dialog').filter({ hasText: 'User management' })
+        await expect(reopened.getByTestId(`signup-request-${PENDING.id}`)).toBeVisible({ timeout: 15000 })
+        await expect(reopened.getByTestId(`signup-request-${REJECTED.id}`)).toHaveCount(0)
     })
 
     test('una pendiente se revisa con sus datos fijos y se aprueba con un recurso', async () => {
