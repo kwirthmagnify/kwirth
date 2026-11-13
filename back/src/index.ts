@@ -23,6 +23,7 @@ import { MarketplaceManager, seedBuiltInMarketplaces } from './tools/Marketplace
 import { routeRegistry } from './tools/RouteRegistry'
 import { userStoreName } from './tools/UserStoreName'
 import { wsUpgradeAllowed } from './tools/WsPathGuard'
+import { pathWebsocketChannel } from './tools/WsPathDelegation'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { buildPreviousContainerMessage, logPreviousContainerBanner, readPreviousContainerLog } from './tools/PreviousContainerLog'
 import { buildSignupMessage, signupSenderOf } from './tools/auth/SignupNotice'
@@ -114,6 +115,7 @@ import { SenderManager } from './tools/SenderManager'
 import { WebhookManager } from './tools/WebhookManager'
 import { handleInbound } from './tools/WebhookReceiver'
 import { openRemoteChannel } from './tools/RemoteChannel'
+import { announcedLocalChannelData, announcedRemoteChannelData, channelRouterOf, clusterRouteResolversOf, mountedRouterAlias, resolveRemoteEndpoint, unresolvableRemoteChannel } from './tools/ClusterRouting'
 import { AuthApi } from './api/AuthApi'
 import { IdpApi } from './api/IdpApi'
 import { IdpManager } from './tools/IdpManager'
@@ -1721,7 +1723,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                         // and NOT started here — avoids self-hosting (e.g. Agora, which needs in-cluster storage).
                         const installMode = resolveChannelMode(channelInstance.requirements, runningEnv.isK8s)
                         if (installMode === EChannelMode.REMOTE) {
-                            const remoteData = { ...channelInstance.getChannelData(), mode: EChannelMode.REMOTE }
+                            const remoteData = announcedRemoteChannelData(channelInstance)
                             if (!activeRI.remoteChannels.some(c => c.id === id)) activeRI.remoteChannels.push(remoteData)
                             if (!activeRI.kwirthData.channels.some(c => c.id === id)) activeRI.kwirthData.channels.push(remoteData)
                             logInfo(ELogComponent.CORE, `Plugin channel '${id}' is 'single' and this is not its in-cluster home → announced as remote (not hosted here)`)
@@ -1810,15 +1812,16 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                         // arrancar deja un unhandledRejection que se lleva el proceso por delante.
                         channelInstance.startChannel()?.catch((err: unknown) =>
                             logError(ELogComponent.CORE, `Channel '${id}' failed to start after a hot install — it stays down, kwirth keeps running: ${err instanceof Error ? err.message : String(err)}`))
-                        if ((channelInstance as any).providesRouter && (channelInstance as any).router) {
-                            const alias = (channelInstance as any).routerAlias
+                        const hotRouter = channelRouterOf(channelInstance)
+                        if (hotRouter) {
+                            const alias = mountedRouterAlias(channelInstance)
                             const mountPath = alias ? `${envRootPath}/channel/${alias}` : `${envRootPath}/${activeRI.id}/channel/${id}`
-                            expressApp.use(mountPath, (channelInstance as any).router)
-                            recordRoute(mountPath, ERouteOwnerKind.CHANNEL, id, (channelInstance as any).router)
+                            expressApp.use(mountPath, hotRouter)
+                            recordRoute(mountPath, ERouteOwnerKind.CHANNEL, id, hotRouter)
                             logInfo(ELogComponent.CORE, `Plugin '${id}' HTTP router mounted at '${mountPath}'`)
                         }
                         if (!activeRI.kwirthData.channels.some(c => c.id === id))
-                            activeRI.kwirthData.channels.push({ ...channelInstance.getChannelData(), mode: EChannelMode.LOCAL })
+                            activeRI.kwirthData.channels.push(announcedLocalChannelData(channelInstance, (m) => logWarning(ELogComponent.CORE, m)))
                         const channelData = channelInstance.getChannelData()
                         /*
                             ⚠️ The endpoint paths below embed activeRI.id, which is a NEW uuid on every
@@ -2130,11 +2133,12 @@ const startChannelEndpoints = (ri:IRunningInstance, expressApp:Application) => {
                 recordRoute(`${envRootPath}/${ri.id}/channel/${channelData.id}/${endpoint.name}`, ERouteOwnerKind.CHANNEL, channelData.id, undefined, endpoint.methods)
             }
         }
-        if ((channel as any).providesRouter && (channel as any).router) {
-            const alias = (channel as any).routerAlias
+        const channelRouter = channelRouterOf(channel)
+        if (channelRouter) {
+            const alias = mountedRouterAlias(channel)
             const mountPath = alias ? `${envRootPath}/channel/${alias}` : `${envRootPath}/${ri.id}/channel/${channelData.id}`
-            expressApp.use(mountPath, (channel as any).router)
-            recordRoute(mountPath, ERouteOwnerKind.CHANNEL, channelData.id, (channel as any).router)
+            expressApp.use(mountPath, channelRouter)
+            recordRoute(mountPath, ERouteOwnerKind.CHANNEL, channelData.id, channelRouter)
             logInfo(ELogComponent.CORE, `Channel '${channelData.id}' HTTP router mounted at '${mountPath}'`)
         }
     }
@@ -2305,7 +2309,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     // (runningEnv.isK8s = FORCE==='k8s' or running inside a pod). On desktop/docker it is
                     // announced as remote and NOT started here (avoids split-brain).
                     if (resolveChannelMode(channelInstance.requirements, runningEnv.isK8s) === EChannelMode.REMOTE) {
-                        runningInstance.remoteChannels.push({ ...channelInstance.getChannelData(), mode: EChannelMode.REMOTE })
+                        runningInstance.remoteChannels.push(announcedRemoteChannelData(channelInstance))
                         logInfo(ELogComponent.CORE, `Channel '${channelId}' is 'single' and this is not its in-cluster home → announced as remote (not hosted here)`)
                     }
                     else {
@@ -2743,7 +2747,16 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             // manages it (START with ITS accessKey, reconnection with backoff, capture of the instance).
             // The raw WS is not exposed; the plugin uses the handle. The implementation lives in
             // tools/RemoteChannel.
-            openRemoteChannel: (endpoint, config, handlers) => openRemoteChannel(endpoint, config, handlers, (m) => logError(ELogComponent.CHANNEL, m), (m) => logInfo(ELogComponent.CHANNEL, m)),
+            // A PROXIED endpoint (with 'route') is dialled through the resolver's router on this very core
+            // (tools/ClusterRouting); one without a route goes through untouched.
+            openRemoteChannel: (endpoint, config, handlers) => {
+                const resolved = resolveRemoteEndpoint(endpoint, `http://localhost:${envPort}${envRootPath}`, clusterRouteResolversOf(runningInstance.kwirthData.channels))
+                if (!resolved) {
+                    logError(ELogComponent.CHANNEL, `openRemoteChannel: cluster '${endpoint.name}' is reached through the route '${endpoint.route?.resolver}', and no installed extension resolves it: the connection stays down`)
+                    return unresolvableRemoteChannel(handlers)
+                }
+                return openRemoteChannel(resolved, config, handlers, (m) => logError(ELogComponent.CHANNEL, m), (m) => logInfo(ELogComponent.CHANNEL, m))
+            },
             // Reads a user's PROFILE store (ConfigMap kwirth-store-<userId>, key '<group>-<key>') and
             // returns the value already parsed (the store keeps each value JSON-stringified). Read-only,
             // tolerante a fallo. Ej.: readUserStore(userId, 'clusters', 'list') → IClusterEndpoint[].
@@ -2818,7 +2831,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         // this '.channels' object is sent to clients when they want to know something about support channels on the backend they're connected to.
         // Hosted channels are announced as LOCAL; 'single' channels not hosted here (see gate) are announced as REMOTE.
         localKwirthData.channels = [
-            ...Array.from(runningInstance.channels.values()).map(c => ({ ...c.getChannelData(), mode: EChannelMode.LOCAL })),
+            ...Array.from(runningInstance.channels.values()).map(c => announcedLocalChannelData(c, (m) => logWarning(ELogComponent.CORE, m))),
             ...runningInstance.remoteChannels,
         ]
 
@@ -3324,6 +3337,24 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
             const forwardedFor = req.headers['x-forwarded-for']
             const forwardedText = Array.isArray(forwardedFor) ? forwardedFor.join(', ') : forwardedFor
             logInfo(ELogComponent.CORE, `Client connected from ${ip}${forwardedText ? ` (X-Forwarded-For: ${forwardedText})` : ''}`)
+
+            /*
+                A WebSocket under a channel's router path (<rootPath>/channel/<alias>/...) belongs to that
+                channel, if it claims them (tools/WsPathDelegation). It is handed over BEFORE anything is
+                attached to it, and the core forgets it. Any other path goes on exactly as before.
+            */
+            const activeForPath = instances.find(r => r.active)
+            const pathChannel = activeForPath ? pathWebsocketChannel(req.url, envRootPath, activeForPath.channels.values()) : undefined
+            if (pathChannel) {
+                try {
+                    pathChannel.pathWebsocketRequest!(webSocket, req)
+                }
+                catch (err) {
+                    logError(ELogComponent.CORE, `Channel '${pathChannel.getChannelData().id}' failed to take the WebSocket on '${(req.url || '').split('?')[0]}': ${err instanceof Error ? err.message : String(err)}`)
+                    try { webSocket.close() } catch { /* already gone */ }
+                }
+                return
+            }
 
             if (req.url) {
                 // This block precesses web socket connections for channels (they are not the websocket connecitons for kwrith itself)
