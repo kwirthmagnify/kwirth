@@ -24,6 +24,7 @@ import { routeRegistry } from './tools/RouteRegistry'
 import { userStoreName } from './tools/UserStoreName'
 import { wsUpgradeAllowed } from './tools/WsPathGuard'
 import { pathWebsocketChannel } from './tools/WsPathDelegation'
+import { LiveKeyConnections } from './tools/LiveKeyConnections'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { buildPreviousContainerMessage, logPreviousContainerBanner, readPreviousContainerLog } from './tools/PreviousContainerLog'
 import { buildSignupMessage, signupSenderOf } from './tools/auth/SignupNotice'
@@ -718,6 +719,24 @@ const sendChannelSignal = (webSocket: WebSocket, level: ESignalMessageLevel, tex
     catch (err) { logError(ELogComponent.CORE, `Could not send channel signal '${text}': ${err}`) }
 }
 
+// Which live instances were started with which access key, so deleting a key cuts them (K1, tools/LiveKeyConnections)
+const liveKeyConnections = new LiveKeyConnections()
+
+const liveKeyIdOf = (serializedAccessKey: string | undefined): string | undefined => {
+    if (!serializedAccessKey) return undefined
+    try { return accessKeyDeserialize(serializedAccessKey).id || undefined }
+    catch { return undefined }
+}
+
+// DELETE /key/:key: whoever is connected with that key is told and cut now, not at their next start
+const cutDeletedKey = (ri: IRunningInstance, keyId: string): void => {
+    const cut = liveKeyConnections.revoke(keyId, ri.channels, use => {
+        const instanceMessage: IInstanceMessage = { action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED, type: EInstanceMessageType.SIGNAL, channel: use.channelId, instance: use.instanceId }
+        sendChannelSignal(use.ws, ESignalMessageLevel.ERROR, 'Access key revoked: this instance has been stopped', instanceMessage, ri.channels)
+    })
+    if (cut > 0) logWarning(ELogComponent.AUTH, `Access key ${keyId.substring(0, 8)}... deleted: ${cut} live instance(s) started with it have been cut`)
+}
+
 const sendChannelSignalAsset = (webSocket: WebSocket, level: ESignalMessageLevel, event: ESignalMessageEvent, text: string, instanceMessage: IInstanceMessage, ri:IRunningInstance, namespace:string, pod:string, container?:string) => {
     if (ri.channels.has(instanceMessage.channel)) {
         let signalMessage:ISignalMessage = {
@@ -1047,7 +1066,8 @@ const getRequestedValidatedScopedPods = async (ri:IRunningInstance, instanceConf
     return selectedPods
 }
 
-const processReconnect = async (webSocket: WebSocket, instanceMessage: IInstanceMessage, localChannels:Map<string,IChannel>) => {
+// Returns the id of the channel the instance was reattached in, or undefined if it was not
+const processReconnect = async (webSocket: WebSocket, instanceMessage: IInstanceMessage, localChannels:Map<string,IChannel>): Promise<string | undefined> => {
     logInfo(ELogComponent.CORE, `Trying to reconnect instance '${instanceMessage.instance}' on channel ${instanceMessage.channel}`)
     for (let channel of localChannels.values()) {
         logInfo(ELogComponent.CORE, 'Review channel for reconnect: ' + channel.getChannelData().id)
@@ -1056,11 +1076,11 @@ const processReconnect = async (webSocket: WebSocket, instanceMessage: IInstance
             let updated = channel.updateConnection(webSocket, instanceMessage.instance)
             if (updated) {
                 sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.RECONNECT, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Reconnect successful on channel: '+channel.channelId)
-                return
+                return channel.getChannelData().id
             }
             else {
                 sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.RECONNECT, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'An error has occurred while updating connection to channel '+channel.channelId)
-                return
+                return undefined
             }
         }
         else {
@@ -1069,6 +1089,20 @@ const processReconnect = async (webSocket: WebSocket, instanceMessage: IInstance
     }
     logInfo(ELogComponent.CORE, `Instance '${instanceMessage.instance}' not found for reconnect in any channels`)
     sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.RECONNECT, EInstanceMessageFlow.RESPONSE, instanceMessage.channel, instanceMessage, 'Instance has not been found for reconnect', false)
+    return undefined
+}
+
+/*
+    A START is accepted: the instance gets its id and the requester is told, BEFORE the channel is handed
+    the objects (the client needs the id to follow what comes). From this very moment the instance runs
+    under the START's key (K1): registering it later, when addObject finishes, left a gap —as long as the
+    channel took to send its first data— in which deleting the key did not reach it.
+*/
+const acceptStart = (webSocket: WebSocket, instanceConfig: IInstanceConfig): void => {
+    instanceConfig.instance = uuid()
+    const keyId = liveKeyIdOf(instanceConfig.accessKey)
+    if (keyId) liveKeyConnections.register(keyId, { ws: webSocket, channelId: instanceConfig.channel, instanceId: instanceConfig.instance })
+    sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, instanceConfig.channel, instanceConfig, 'Instance Config accepted')
 }
 
 const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSocket, instanceConfig: IInstanceConfig, accessKeyResources: ResourceIdentifier[], validNamespaces: string[], validPodNames: string[], validContainers: string[]) => {
@@ -1105,8 +1139,7 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
             if (instanceConfig.view !== EInstanceConfigView.NONE) {
                 logInfo(ELogComponent.CORE, `Autonomous channel '${instanceConfig.channel}' started with view '${instanceConfig.view}': the view is ignored and no resources are granted`)
             }
-            instanceConfig.instance = uuid()
-            sendInstanceConfigSignalMessage(webSocket, EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, instanceConfig.channel, instanceConfig, 'Instance Config accepted')
+            acceptStart(webSocket, instanceConfig)
             await channel.addObject(webSocket, instanceConfig, '', '', '')
             return
         }
@@ -1115,8 +1148,7 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
             logWarning(ELogComponent.CORE, `A cluster-wide access key has been received for starting instance on channel ${instanceConfig.channel} (${instanceConfig.accessKey.substring(0,8)}...)`)
             let channel = ri.channels.get(instanceConfig.channel)
             if (channel) {
-                instanceConfig.instance = uuid()
-                sendInstanceConfigSignalMessage(webSocket,EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, instanceConfig.channel, instanceConfig, 'Instance Config accepted')
+                acceptStart(webSocket, instanceConfig)
                 await channel.addObject(webSocket, instanceConfig, '*all', '*all', '*all')
             }
             else {
@@ -1131,8 +1163,7 @@ const processStartInstanceConfig = async (ri:IRunningInstance, webSocket: WebSoc
             }
             
             // we confirm startInstance is ok prior to launching watchPods (because client needs to know instanceId)
-            instanceConfig.instance = uuid()
-            sendInstanceConfigSignalMessage(webSocket,EInstanceMessageAction.START, EInstanceMessageFlow.RESPONSE, instanceConfig.channel, instanceConfig, 'Instance Config accepted')
+            acceptStart(webSocket, instanceConfig)
 
             switch (instanceConfig.view) {
                 case EInstanceConfigView.NAMESPACE:
@@ -1436,7 +1467,11 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
                 sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Channel ${instanceMessage.channel} does not support reconnect`, instanceMessage, ri.channels)
                 return
             }
-            processReconnect (webSocket, instanceMessage, ri.channels)
+            const reconnectKey = (instanceMessage as IInstanceConfig).accessKey
+            const reattachedIn = await processReconnect (webSocket, instanceMessage, ri.channels)
+            // the instance now lives on this socket, and under the key it was reattached with (K1)
+            const reconnectKeyId = liveKeyIdOf(reconnectKey)
+            if (reattachedIn && reconnectKeyId) liveKeyConnections.register(reconnectKeyId, { ws: webSocket, channelId: reattachedIn, instanceId: instanceMessage.instance })
             return
         }
 
@@ -1531,11 +1566,13 @@ const processClientMessage = async (webSocket:WebSocket, message:string, ri:IRun
                     sendChannelSignal(webSocket, ESignalMessageLevel.ERROR, `Channel '${instanceConfig.channel}' is not allowed for this user`, instanceConfig, ri.channels)
                     break
                 }
+                // registered under its key as soon as it is accepted (acceptStart, K1)
                 processStartInstanceConfig(ri, webSocket, instanceConfig, accessKeyResources, validNamespaces, validPodNames, validContainers)
                 break
             }
             case EInstanceMessageAction.STOP:
                 processStopInstanceConfig(webSocket, instanceConfig, ri.channels)
+                liveKeyConnections.unregister(instanceConfig.channel, instanceConfig.instance)
                 break
             case EInstanceMessageAction.MODIFY:
                 if (ri.channels.get(instanceConfig.channel)?.getChannelData().modifiable) {
@@ -1604,7 +1641,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
     try {
         const riRouter = express.Router()
 
-        let result = await ApiKeyApi.create(ri.configMaps, ri.masterKey, runningEnv.isDesktop, () => validScopeSet(registeredChannels))
+        let result = await ApiKeyApi.create(ri.configMaps, ri.masterKey, runningEnv.isDesktop, () => validScopeSet(registeredChannels), (keyId: string) => cutDeletedKey(ri, keyId))
         if (!result) {
             logError(ELogComponent.CORE, 'Could not get apikeyapi setting up routes')
             return false
@@ -3385,6 +3422,8 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                         let channel = ri.channels.get(websocketRequest.channel)!
                         logInfo(ELogComponent.CORE, 'Websocket connection request routed to' + websocketRequest.channel)
                         channel.websocketRequest(webSocket, websocketRequest.instance, websocketRequest.instanceConfig)
+                        // closed along with its instance if the key that started it is deleted (K1)
+                        liveKeyConnections.attachSocket(websocketRequest.channel, websocketRequest.instance, webSocket)
                         ri.clusterInfo.pendingWebsocket.splice(websocketRequestIndex,1)
                         return
                     }
@@ -3420,6 +3459,8 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                         }
                     }
                 }
+                // what the channels have just let go of leaves the key index too (K1)
+                liveKeyConnections.prune(ri.channels, webSocket)
             }
 
             webSocket.onclose = () => {
