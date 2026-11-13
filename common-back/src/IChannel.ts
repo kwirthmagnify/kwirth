@@ -1,5 +1,6 @@
 import { BackChannelData, IInstanceConfig, IInstanceMessage, AccessKey, EInstanceMessageAction, IBackChannelRequirements, IExtensionScope, IChannelInstances } from '@kwirthmagnify/kwirth-common'
 import { Request, Response } from 'express'
+import { IncomingMessage } from 'http'
 import { IExtension } from './IExtension'
 
 export interface IChannel extends IExtension {
@@ -20,6 +21,14 @@ export interface IChannel extends IExtension {
     startChannel(): Promise<void>
     endpointRequest(endpoint: string, req: Request, res: Response, accessKey?: AccessKey): void
     websocketRequest(newWebSocket: WebSocket, instanceId: string, instanceConfig: IInstanceConfig): void
+    /*
+        A raw WebSocket whose path falls under this channel's router (<rootPath>/channel/<routerAlias>/...),
+        handed over as soon as it connects. Only for a channel with providesRouter + routerAlias: it is the
+        websocket counterpart of that router. From then on the socket is the channel's — the core attaches
+        nothing to it. 'req' is the upgrade request: full path and query, headers and remote address.
+        Optional: a channel that does not implement it gets no such sockets, and they are treated as before.
+    */
+    pathWebsocketRequest?(webSocket: WebSocket, req: IncomingMessage): void
 
     processProviderEvent(providerId: string, obj: any): void
 

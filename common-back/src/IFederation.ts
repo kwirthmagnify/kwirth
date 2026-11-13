@@ -1,4 +1,4 @@
-import { IInstanceMessage } from '@kwirthmagnify/kwirth-common'
+import { IInstanceMessage, IClusterRoute } from '@kwirthmagnify/kwirth-common'
 
 // Types for BACK-side multi-cluster federation (back-to-back over WebSocket). They are the back end's
 // OWN COPY: the front end has its equivalents in common-front (IClusterEndpoint/ERemoteConnState/... for
@@ -14,6 +14,12 @@ export interface IClusterEndpoint {
     url: string
     accessString: string
     id?: string
+    /*
+        Set on PROXIED entries (see ClusterRoute in common): 'url' is then the cluster's REAL url, which
+        this core cannot reach, and openRemoteChannel connects through the route instead — resolved by the
+        core, so the plugin passes the endpoint exactly as it read it.
+    */
+    route?: IClusterRoute
 }
 
 // State of a remote connection managed by the core. Never string literals.
