@@ -4,30 +4,41 @@
         "agora": "../plugins/agora/dist",
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
-        "specula": "../plugins/specula/dist",
-        "incipit": "../plugins/incipit/dist"
+        "specula": "../plugins/specula/dist"
     },
     "providers": {
         "agent-metrics": "../providers/agent-metrics/dist",
-        "cloud-config": "../providers/cloud-config/dist"
+        "cloud-config": "../providers/cloud-config/dist",
+        "aws": "../providers/aws/dist",
+        "azure": "../providers/azure/dist"
     },
     "senders": {
     },
     "webhooks": {
     },
-    "logins": {},
+    "logins": {
+        "specula": "../plugins/specula/login/dist"
+    },
     "homepages": {
     },
     "themes": {},
     "senderConfigs": {},
-    "idps": {},
+    "idps": {
+        "google": "../idps/google/dist"
+    },
     "aitoolsets": {
+        "aws-serverless": "../aitoolsets/aws-serverless/dist",
+        "aws-serverless-ops": "../aitoolsets/aws-serverless-ops/dist"
     },
     "dces": {
+        "swagger-ui": "../dces/swagger-ui/dist"
     },
     "docs": {
         "excubitor": "../plugins/excubitor/docs/",
         "agora": "../plugins/agora/docs/",
-        "specula": "../plugins/specula/docs/"
+        "specula": "../plugins/specula/docs/",
+        "aws": "../providers/aws/docs/",
+        "aws-serverless": "../aitoolsets/aws-serverless/docs/",
+        "aws-serverless-ops": "../aitoolsets/aws-serverless-ops/docs/"
     }
 }
