@@ -1,10 +1,10 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import {
-    Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, Divider, FormControl,
-    FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Switch, TextField,
+    Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, Divider, FormControl,
+    IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Switch, TextField,
     Tooltip, Typography
 } from '@mui/material'
-import { Add, ContentCopy, Delete, Download, Settings, Upload, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Add, ContentCopy, Delete, Settings, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'

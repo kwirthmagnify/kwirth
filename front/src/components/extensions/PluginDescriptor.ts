@@ -1,4 +1,3 @@
-import React from 'react'
 import { Extension } from '../../icons'
 import { EExtensionType, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { IExtensionManagerDescriptor, IExtensionCardModel, IExtensionRequirement, IExtensionVerdict } from './extensionManagerModel'

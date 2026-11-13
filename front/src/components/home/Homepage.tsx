@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Box, Card, CardContent, CardHeader, Collapse, Divider, Fade, IconButton, Stack, Tooltip, Typography } from '@mui/material'
 import { IWorkspaceSummary } from '../../model/IWorkspace'
 import { ITabSummary } from '../../model/ITabObject'
-import { Delete, ExpandLess, ExpandMore, FactCheck, HelpOutline, Launch } from '@kwirthmagnify/kwirth-common-front/icons'
+import { Delete, ExpandLess, ExpandMore, FactCheck, Launch } from '@kwirthmagnify/kwirth-common-front/icons'
 import { Star } from '../../icons'
 
 import { IHomepageProps } from '@kwirthmagnify/kwirth-common-front'

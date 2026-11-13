@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Chip, IconButton, MenuItem, Select, Stack, Tooltip, Typography, useTheme } from '@mui/material'
+import { Box, Chip, IconButton, MenuItem, Select, Stack, Tooltip, useTheme } from '@mui/material'
 import { Launch } from '@kwirthmagnify/kwirth-common-front/icons'
 import { MarketplaceBadge, MarketplaceSourceIcon, compactChip } from './MarketplaceBadge'
 import { extensionCardSx, extensionCardDescriptionSx, extensionCardDescriptionOneLineSx, extensionCardTitleSx } from './extensionCardStyle'
