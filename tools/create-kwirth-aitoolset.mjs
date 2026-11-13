@@ -291,6 +291,15 @@ const distMeta = {
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 
+// The package is published from dist/, so the README has to be THERE or the package goes out without it.
+if (fs.existsSync('README.md')) {
+    fs.copyFileSync('README.md', path.join('dist', 'README.md'))
+    console.log('Copied README.md to dist/')
+}
+else {
+    console.warn('WARNING: no README.md — the published package would have none')
+}
+
 // ⚠️ The core does NOT watch an aitoolset's dist: it reads it ONCE, at startup. Building is not enough.
 console.log('')
 console.log('Restart the kwirth back to load this build — AI toolsets have no hot reload.')
