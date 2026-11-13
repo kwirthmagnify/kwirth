@@ -1,3 +1,5 @@
+import { IClusterRouteResolver } from './ClusterRoute'
+
 //transient
 enum ClusterTypeEnum {
     KUBERNETES = 'kubernetes'
@@ -124,6 +126,12 @@ interface BackChannelData {
         unjustified privilege and noise in the audit trail for a channel that never looks at a pod.
     */
     mode?: EChannelMode  // hosted here (local) or elsewhere (remote); set by the core when announcing channels
+    /*
+        This channel resolves PROXIED cluster-list entries (see ClusterRoute). Only honoured for a channel
+        with providesRouter + routerAlias, and only when 'id' equals that routerAlias: the core drops it
+        otherwise, because the resolved url would point at a router that is not there.
+    */
+    clusterRouteResolver?: IClusterRouteResolver
 }
 
 interface KwirthData {
