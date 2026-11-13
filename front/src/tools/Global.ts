@@ -1,6 +1,7 @@
 import { KwirthData, ENotifyLevel, EClusterType } from '@kwirthmagnify/kwirth-common'
 import { Cluster, IClusterInfo } from '../model/Cluster'
 import { addGetAuthorization } from './AuthorizationManagement'
+import { clusterBaseUrl, resolvedClusterUrl, routeAwaitsTicket, unresolvedRouteMessage } from './ClusterRouting'
 import { MetricDefinition } from '@kwirthmagnify/kwirth-common-front'
 
 export { ENotifyLevel }
@@ -17,15 +18,16 @@ export { ENotifyLevel }
 */
 const providerBase: Map<string, string> = new Map()
 export const fetchProvider = async (cluster: Cluster, providerId: string, subpath: string): Promise<Response> => {
-    const key = `${cluster.url}|${providerId}`
+    const base = clusterBaseUrl(cluster)
+    const key = `${base}|${providerId}`
     const remembered = providerBase.get(key)
-    if (remembered) return fetch(`${cluster.url}${remembered}${subpath}`, addGetAuthorization(cluster.accessString))
-    const current = await fetch(`${cluster.url}/core/providerconfig/${providerId}${subpath}`, addGetAuthorization(cluster.accessString))
+    if (remembered) return fetch(`${base}${remembered}${subpath}`, addGetAuthorization(cluster.accessString))
+    const current = await fetch(`${base}/core/providerconfig/${providerId}${subpath}`, addGetAuthorization(cluster.accessString))
     if (current.status !== 404) {
         providerBase.set(key, `/core/providerconfig/${providerId}`)
         return current
     }
-    const legacy = await fetch(`${cluster.url}/provider/${providerId}${subpath}`, addGetAuthorization(cluster.accessString))
+    const legacy = await fetch(`${base}/provider/${providerId}${subpath}`, addGetAuthorization(cluster.accessString))
     // a 404 on both means the provider is not installed there: nothing is remembered, so it is asked again next time
     if (legacy.status !== 404) providerBase.set(key, `/provider/${providerId}`)
     return legacy
@@ -55,11 +57,29 @@ export const getMetricsNames = async (cluster:Cluster) => {
 export const readClusterInfo = async (cluster: Cluster, notify: (channel:string|undefined, level:ENotifyLevel, msg:string)=> void): Promise<void> => {
     try {
         cluster.enabled = false
-        let responseInfo = await fetch(`${cluster.url}/config/info`, addGetAuthorization(cluster.accessString))
+        // A proxied entry whose ticket has not come yet just waits: it is read when the ticket arrives (RouteTickets).
+        if (routeAwaitsTicket(cluster)) return
+        // A proxied entry nobody resolves stays disabled, and says why (instead of a bare network error).
+        const base = resolvedClusterUrl(cluster)
+        if (!base) {
+            notify(undefined, ENotifyLevel.WARNING, unresolvedRouteMessage(cluster))
+            return
+        }
+        let responseInfo = await fetch(`${base}/config/info`, addGetAuthorization(cluster.accessString))
         if (responseInfo.status===200) {
             cluster.kwirthData = await responseInfo.json() as KwirthData
             // accessString, name & url are set in clustersList, we don't overwrite them here
-            cluster.home = false
+            /*
+                cluster.home = false
+                Disabled on purpose: this function must NOT touch 'home'. It was written (as 'source = false') when it
+                only read the entries of the saved cluster list, which are never home, so the line did nothing. Later the
+                pluginVersion effect in App.tsx started calling it on the SELECTED cluster to refresh its channels after a
+                plugin loads, and the selected cluster is the home one (App.tsx selects it when the list arrives). From
+                then on, any plugin load after the list wiped the flag: Manage clusters let the home be edited/deleted
+                and saved it into the user's list, the Homepage lost its fallback, and every channel got 'home: false'
+                for all clusters (Excubitor and Magnify lose their 'home' label; Agora works around it by name).
+                'home' is set in ONE place only, loadSourceCluster in App.tsx; the list entries come without it.
+            */
             cluster.enabled = true
             if (cluster.kwirthData) {
                 let metricsRequired = Array.from(cluster.kwirthData.channels).reduce( (prev, current) => { return prev || current.metrics}, false)
@@ -70,7 +90,7 @@ export const readClusterInfo = async (cluster: Cluster, notify: (channel:string|
             console.log('Get config info status code:', responseInfo.status)
             return
         }
-        let responseCluster = await fetch(`${cluster.url}/config/cluster`, addGetAuthorization(cluster.accessString))
+        let responseCluster = await fetch(`${base}/config/cluster`, addGetAuthorization(cluster.accessString))
         if (responseCluster.status===200) {
             cluster.clusterInfo = await responseCluster.json() as IClusterInfo
             cluster.id = cluster.clusterInfo.id

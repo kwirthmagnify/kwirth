@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react'
 import { useEscapeToClose } from '../../tools/useKeyboard'
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, List, ListItem, ListItemButton, Stack, TextField, Typography } from '@mui/material'
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, InputLabel, List, ListItem, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutlined'
 import ErrorOutline from '@mui/icons-material/ErrorOutlined'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
@@ -9,7 +9,11 @@ import { Cluster } from '../../model/Cluster'
 import { MsgBoxButtons, MsgBoxWaitCancel, MsgBoxYesNo } from '../../tools/MsgBox'
 import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { ENotifyLevel, readClusterInfo } from '../../tools/Global'
-import { KwirthData } from '@kwirthmagnify/kwirth-common'
+import { clusterRouteResolvers, resolvedClusterUrl, unresolvedRouteMessage } from '../../tools/ClusterRouting'
+import { IClusterRoute, KwirthData } from '@kwirthmagnify/kwirth-common'
+
+// The value of the Route select for an entry reached directly (no route).
+const DIRECT_ROUTE = ''
 
 interface IManageClustersProps {
   onClose:(clusters:Cluster[]) => void
@@ -37,6 +41,8 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     const [name, setName] = useState<string>('')
     const [url, setUrl] = useState<string>('')
     const [accessKey, setAccessKey] = useState<string>('')
+    const [routeResolver, setRouteResolver] = useState<string>(DIRECT_ROUTE)
+    const [routeUid, setRouteUid] = useState<string>('')
     const [msgBox, setMsgBox] = useState(<></>)
     const [refresh, setRefresh] = useState(0)
     const [testResult, setTestResult] = useState<ITestResult | null>(null)
@@ -48,6 +54,20 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         setName(cluster.name)
         setUrl(cluster.url)
         setAccessKey(cluster.accessString)
+        setRouteResolver(cluster.route?.resolver ?? DIRECT_ROUTE)
+        setRouteUid(cluster.route?.clusterUid ?? '')
+    }
+
+    // The route being edited: none for a direct entry.
+    const editedRoute = (): IClusterRoute | undefined =>
+        routeResolver === DIRECT_ROUTE ? undefined : { resolver: routeResolver, clusterUid: routeUid.trim() }
+
+    const clearForm = () => {
+        setName('')
+        setUrl('')
+        setAccessKey('')
+        setRouteResolver(DIRECT_ROUTE)
+        setRouteUid('')
     }
 
     const onClickSave = async () => {
@@ -55,6 +75,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             selectedCluster.accessString = accessKey
             selectedCluster.name = name
             selectedCluster.url = url
+            selectedCluster.route = editedRoute()
             selectedCluster.kwirthData = undefined
             const updated = [...clusters.filter(c => c !== selectedCluster), selectedCluster]
             await readClusterInfo(selectedCluster, props.notify)
@@ -66,30 +87,46 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             c.accessString = accessKey
             c.name = name
             c.url = url
+            c.route = editedRoute()
             c.kwirthData = undefined
             const updated = [...clusters, c]
             await readClusterInfo(c, props.notify)
             setClusters(updated)
             setRefresh(Math.random())
         }
-        setName('')
-        setUrl('')
-        setAccessKey('')
+        clearForm()
     }
 
     const onClickTest = async () => {
+        /*
+            TEST goes exactly where the cluster will be used: through its route when it has one. The form is
+            tested, not the saved entry, so a scratch Cluster carries what is being edited.
+        */
+        const probe = new Cluster()
+        probe.name = name || 'this cluster'
+        probe.url = url
+        probe.route = editedRoute()
+        const base = resolvedClusterUrl(probe)
+        if (!base) {
+            setTestResult({ success: false, error: unresolvedRouteMessage(probe) })
+            return
+        }
         try {
             setMsgBox(MsgBoxWaitCancel('Test cluster', 'Connecting to cluster and verifying Kwirth availability...', setMsgBox))
 
             const [infoResponse, clusterResponse] = await Promise.all([
-                fetch(`${url}/config/info`, addGetAuthorization(accessKey)),
-                fetch(`${url}/config/cluster`, addGetAuthorization(accessKey))
+                fetch(`${base}/config/info`, addGetAuthorization(accessKey)),
+                fetch(`${base}/config/cluster`, addGetAuthorization(accessKey))
             ])
 
             if (infoResponse.status !== 200 || clusterResponse.status !== 200) {
                 const status = infoResponse.status !== 200 ? infoResponse.status : clusterResponse.status
                 setMsgBox(<></>)
-                setTestResult({ success: false, error: `Connection failed (HTTP ${status}). Check the URL and API key.` })
+                // Reached, but refused: it is the key, not the address.
+                const error = status === 401 || status === 403
+                    ? `The cluster was reached, but it refused the API key (HTTP ${status}).`
+                    : `Connection failed (HTTP ${status}). Check the ${probe.route ? 'route and cluster UID' : 'URL'} and the API key.`
+                setTestResult({ success: false, error })
                 return
             }
 
@@ -101,15 +138,13 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         }
         catch (error) {
             setMsgBox(<></>)
-            setTestResult({ success: false, error: `Could not test connection: ${error}` })
+            setTestResult({ success: false, error: `The cluster could not be reached${probe.route ? ` through the route '${probe.route.resolver}'` : ''}: ${error}` })
         }
     }
 
     const onClickNew= () => {
         setSelectedCluster(undefined)
-        setName('')
-        setUrl('')
-        setAccessKey('')
+        clearForm()
     }
 
     const onClickDelete= () => {
@@ -119,9 +154,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     const onConfirmDelete= async () => {
         if (selectedCluster) {
             setClusters(clusters.filter(c => c !== selectedCluster))
-            setName('')
-            setUrl('')
-            setAccessKey('')
+            clearForm()
             setSelectedCluster(undefined)
         }
     }
@@ -178,6 +211,23 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                 <TextField value={selectedCluster?.id || ''} disabled variant='standard' label='Id'></TextField>
                                 <TextField value={url} onChange={(e) => setUrl(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='URL'></TextField>
                                 <TextField value={accessKey} onChange={(e) => setAccessKey(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='API Key'></TextField>
+                                {/*
+                                    How this core reaches the cluster: directly, or through a route that an installed
+                                    extension resolves. Always visible; disabled when there is nothing to choose.
+                                */}
+                                <Stack direction='row' spacing={1}>
+                                    <FormControl variant='standard' sx={{ width: 180 }} disabled={selectedCluster?.home || (clusterRouteResolvers().length === 0 && routeResolver === DIRECT_ROUTE)}>
+                                        {/* DIRECT_ROUTE is '': without displayEmpty MUI would show it as no selection at all */}
+                                        <InputLabel id='manage-clusters-route-label' shrink>Route</InputLabel>
+                                        <Select labelId='manage-clusters-route-label' displayEmpty value={routeResolver} onChange={(e) => setRouteResolver(e.target.value)}>
+                                            <MenuItem value={DIRECT_ROUTE}>Direct</MenuItem>
+                                            { clusterRouteResolvers().map(r => <MenuItem key={r.id} value={r.id}>{r.id}</MenuItem>) }
+                                            {/* A saved route whose resolver is gone stays selectable, so it is seen and can be changed */}
+                                            { routeResolver !== DIRECT_ROUTE && !clusterRouteResolvers().some(r => r.id === routeResolver) && <MenuItem value={routeResolver}>{routeResolver} (not installed)</MenuItem> }
+                                        </Select>
+                                    </FormControl>
+                                    <TextField value={routeUid} onChange={(e) => setRouteUid(e.target.value)} disabled={selectedCluster?.home || routeResolver === DIRECT_ROUTE} variant='standard' label='Cluster UID' sx={{ flexGrow: 1 }}></TextField>
+                                </Stack>
                             </Stack>
                         }
                     </Stack>
@@ -185,8 +235,8 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                 <DialogActions>
                   <Stack direction='row' spacing={1}>
                     <Button variant='outlined' onClick={onClickNew}>NEW</Button>
-                    <Button variant='outlined' onClick={onClickSave} disabled={selectedCluster?.home || name==='' || url==='' || accessKey==='' }>SAVE</Button>
-                    <Button variant='outlined' onClick={onClickTest} disabled={!url || !url.toLocaleLowerCase().startsWith('http') || !accessKey}>TEST</Button>
+                    <Button variant='outlined' onClick={onClickSave} disabled={selectedCluster?.home || name==='' || url==='' || accessKey==='' || (routeResolver !== DIRECT_ROUTE && routeUid.trim()==='') }>SAVE</Button>
+                    <Button variant='outlined' onClick={onClickTest} disabled={!url || !url.toLocaleLowerCase().startsWith('http') || !accessKey || (routeResolver !== DIRECT_ROUTE && routeUid.trim()==='')}>TEST</Button>
                     <Button variant='outlined' onClick={onClickDelete} disabled={selectedCluster===undefined || selectedCluster?.home}>DELETE</Button>
                   </Stack>
                   <Typography sx={{flexGrow:1}}></Typography>

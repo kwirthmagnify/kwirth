@@ -10,6 +10,7 @@ import { ITabObject } from '../../model/ITabObject'
 import { getIconFromKind, getChannelIconSafe, IResourceSelected } from '@kwirthmagnify/kwirth-common-front'
 import { TChannelConstructor } from '../../channels/IChannel'
 import { resolveRemoteChannelHost } from '../../tools/ChannelResolution'
+import { clusterBaseUrl } from '../../tools/ClusterRouting'
 
 // Remote channel indicator in the dropdown: an 'R' in a circle. Green = operational (its in-cluster
 // Kwirth is connected and can be delegated to); grey = not operational (no host connected, the ADD will
@@ -138,7 +139,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         if (cluster?.kwirthData?.clusterType === EClusterType.NONE) { setAllNamespaces([]); return }
         if (cluster?.url) {
             try {
-                let response = await fetch(`${cluster.url}/config/namespace`, addGetAuthorization(cluster.accessString))
+                let response = await fetch(`${clusterBaseUrl(cluster)}/config/namespace`, addGetAuthorization(cluster.accessString))
                 if (response.status!==200) {
                     setMsgBox(MsgBoxOkError('Resource Selector',`Error accessing cluster: ${JSON.stringify(response.status)}`, setMsgBox))
                 }
@@ -155,8 +156,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
 
     const loadAllControllers = async (cluster:Cluster,namespace:string) => {
         const [groupsResponse, podsResponse] = await Promise.all([
-            fetch(`${cluster!.url}/config/${namespace}/groups`, addGetAuthorization(cluster!.accessString)),
-            fetch(`${cluster!.url}/config/${namespace}/groups/pods`, addGetAuthorization(cluster!.accessString))
+            fetch(`${clusterBaseUrl(cluster!)}/config/${namespace}/groups`, addGetAuthorization(cluster!.accessString)),
+            fetch(`${clusterBaseUrl(cluster!)}/config/${namespace}/groups/pods`, addGetAuthorization(cluster!.accessString))
         ])
         const data = await groupsResponse.json() as IController[]
         const podMap = await podsResponse.json() as Record<string, string[]>
@@ -189,7 +190,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     }
 
     const loadAllContainers = async (cluster: Cluster, namespace:string, pod:string) => {
-        let response = await fetch(`${cluster.url}/config/${namespace}/${pod}/containers`, addGetAuthorization(cluster.accessString))
+        let response = await fetch(`${clusterBaseUrl(cluster)}/config/${namespace}/${pod}/containers`, addGetAuthorization(cluster.accessString))
         let data = await response.json()
         setAllContainers((prev) => [...new Set([...prev, ...(data as string[]).map(c => pod+'+'+c)])])
     }
@@ -375,7 +376,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         // Nor when the installation has no cluster at all: the tab being restored cannot have resources.
         if (c?.kwirthData?.clusterType === EClusterType.NONE) return
 
-        let alln=await (await fetch(`${c.url}/config/namespace`, addGetAuthorization(c.accessString))).json()
+        let alln=await (await fetch(`${clusterBaseUrl(c)}/config/namespace`, addGetAuthorization(c.accessString))).json()
         setAllNamespaces(alln)
         setNamespaces(props.resourceSelected!.namespaces)
 
@@ -385,8 +386,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             const podNsMap = new Map<string, string>()
             for (let namespace of props.resourceSelected!.namespaces) {
                 const [gs, pm] = await Promise.all([
-                    (await fetch(`${c.url}/config/${namespace}/groups`, addGetAuthorization(c.accessString))).json(),
-                    (await fetch(`${c.url}/config/${namespace}/groups/pods`, addGetAuthorization(c.accessString))).json() as Promise<Record<string, string[]>>
+                    (await fetch(`${clusterBaseUrl(c)}/config/${namespace}/groups`, addGetAuthorization(c.accessString))).json(),
+                    (await fetch(`${clusterBaseUrl(c)}/config/${namespace}/groups/pods`, addGetAuthorization(c.accessString))).json() as Promise<Record<string, string[]>>
                 ])
                 for (const [key, pods] of Object.entries(pm)) {
                     podMap.set(key, [...new Set([...(podMap.get(key) ?? []), ...pods])])
@@ -411,7 +412,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                     let allc:string[]=[]
                     for (let pod of props.resourceSelected!.pods) {
                         let ns = podNsMap.get(pod) ?? props.resourceSelected!.namespaces[0]
-                        let cs = await (await fetch(`${c.url}/config/${ns}/${pod}/containers`, addGetAuthorization(c.accessString))).json()
+                        let cs = await (await fetch(`${clusterBaseUrl(c)}/config/${ns}/${pod}/containers`, addGetAuthorization(c.accessString))).json()
                         console.log(cs)
                         allc.push(...cs.map ((c: string) => pod+'+'+c))
                     }

@@ -8,6 +8,9 @@ import { AccountCircle } from './icons'
 // model
 import { Cluster, IClusterInfo } from './model/Cluster'
 import { resolveRemoteChannelHost } from './tools/ChannelResolution'
+import { clusterBaseUrl, setClusterRouting } from './tools/ClusterRouting'
+import { RemoteConnection } from './tools/RemoteConnection'
+import { startRouteTickets } from './tools/RouteTickets'
 
 // components
 import { RenameTab } from './components/common/RenameTab'
@@ -36,7 +39,7 @@ import { IWorkspace, IWorkspaceSummary } from './model/IWorkspace'
 
 import { SessionContext } from './model/SessionContext'
 import { addGetAuthorization, addDeleteAuthorization, addPostAuthorization, addPutAuthorization } from './tools/AuthorizationManagement'
-import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, ESignalMessageReason, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize, IAuthMethod, ILoginResponse, EExtensionType, EChannelMode } from '@kwirthmagnify/kwirth-common'
+import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanceConfig, InstanceMessageChannelEnum, parseResources, KwirthData, BackChannelData, IUser, ISignalMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, EInstanceConfigObject, AccessKey, accessKeyDeserialize, IAuthMethod, ILoginResponse, EExtensionType, EChannelMode } from '@kwirthmagnify/kwirth-common'
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
@@ -648,7 +651,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         if (pluginVersion === 0) return
         const cluster = clusters?.find(c => c.name === selectedClusterName)
         if (!cluster) return
-        readClusterInfo(cluster, notify).then(() => setUsablechannels(cluster))
+        readClusterInfo(cluster, notify).then(() => {
+            // the home's channels may have changed with the plugin: so may the routing of the proxied entries
+            if (cluster.home) applyHomeRouting(cluster)
+            setUsablechannels(cluster)
+        })
     }, [pluginVersion])
 
 
@@ -947,7 +954,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         console.log(`[fedtrace][clusters] summary pushed to tabs: ${JSON.stringify(summary)} (total=${clusters.length}, home=${clusters.filter(c => c.home).length})`)
         tabs.current.forEach(tab => {
             if (tab.channel.requirements.clusterManagement) tab.channelObject.clusters = summary
-            if (tab.channel.requirements.multiCluster) tab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, home: !!c.home, id: c.id }))
+            if (tab.channel.requirements.multiCluster) tab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: clusterBaseUrl(c), accessString: c.accessString, home: !!c.home, id: c.id, route: c.route }))
         })
         let c = clusters.find(c => c.home)
         if (c) onChangeCluster(c.name)
@@ -1046,6 +1053,27 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         }
     }
 
+    /*
+        Proxied cluster-list entries resolve against THIS core and the resolvers its channels announce, so the
+        routing comes from the home cluster: at startup, and again every time the home is re-read (a plugin that
+        resolves routes may have loaded or gone since). Only when it CHANGES: the ticket feeds start again for
+        the current resolvers (the entries waiting for a ticket are read when it comes), and the proxied entries
+        are read again, so they follow the change (one whose ticket has not come yet just waits).
+    */
+    const applyHomeRouting = (home: Cluster) => {
+        if (!home.kwirthData) return
+        if (!setClusterRouting(home.url, home.kwirthData.channels)) return
+        const refresh = () => setChannelMessageAction({ action: EChannelRefreshAction.REFRESH })
+        startRouteTickets(home, () => userSettingsRef.current?.keepAliveInterval || 30, (resolverId: string) => {
+            for (const c of clustersRef.current) {
+                if (c.route?.resolver === resolverId && !c.enabled) readClusterInfo(c, notify).then(refresh)
+            }
+        })
+        for (const c of clustersRef.current) {
+            if (c.route) readClusterInfo(c, notify).then(refresh)
+        }
+    }
+
     const loadSourceCluster = async (url:string, myAccessString:string) : Promise<Cluster|undefined> => {
         let response = await fetch(`${url}/config/info`, addGetAuthorization(myAccessString))
         let srcCluster = new Cluster()
@@ -1063,6 +1091,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         srcCluster.accessString = myAccessString
         srcCluster.home = true
         srcCluster.enabled = true
+        applyHomeRouting(srcCluster)
         let srcMetricsRequired = Array.from(srcCluster.kwirthData.channels).reduce( (prev, current) => { return prev || current.metrics}, false)
         if (srcMetricsRequired) getMetricsNames(srcCluster)
         return srcCluster
@@ -1186,7 +1215,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         // A REMOTE (single, delegated) channel had its in-cluster host resolved into channelObject.clusterUrl by
         // populateTabObject; the framework socket must open there, not to the local cluster. Non-remote channels
         // leave clusterUrl = cluster.url (or unset) → same as before.
-        tab.ws = new WebSocket(tab.channelObject?.clusterUrl ?? cluster.url)
+        tab.ws = new WebSocket(tab.channelObject?.clusterUrl ?? clusterBaseUrl(cluster))
         tab.ws.onopen = fn
     }
 
@@ -1280,7 +1309,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         // stay the target cluster (same id).
         const channelMode = cluster.kwirthData?.channels?.find(ch => ch.id === channelId)?.mode
         const host = channelMode === EChannelMode.REMOTE ? resolveRemoteChannelHost(channelId, cluster.clusterInfo?.id ?? '', clusters) : undefined
-        if (newTab.channel.requirements.clusterUrl) newTab.channelObject.clusterUrl = host?.url ?? cluster.url
+        if (newTab.channel.requirements.clusterUrl) newTab.channelObject.clusterUrl = clusterBaseUrl(host ?? cluster)
         if (newTab.channel.requirements.clusterInfo) newTab.channelObject.clusterInfo = cluster.clusterInfo
         newTab.channelObject.kwirthVersion = cluster.kwirthData?.version   // version del core, disponible para cualquier plugin (p.ej. su drawer)
         if (newTab.channel.requirements.accessString) newTab.channelObject.accessString = host?.accessString ?? cluster?.accessString
@@ -1302,176 +1331,35 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             }
         }
         if (newTab.channel.requirements.multiCluster) {
-            newTab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: c.url, accessString: c.accessString, home: !!c.home, id: c.id }))
+            newTab.channelObject.getClusters = () => clustersRef.current.map(c => ({ name: c.name, url: clusterBaseUrl(c), accessString: c.accessString, home: !!c.home, id: c.id, route: c.route }))
             // Multi-cluster federation: it opens one WS per cluster (by name), starts it (START with ITS
             // accessKey) and delivers messages through onMessage(uid). It handles reconnection (a 10s
             // backoff, a fresh START → a new snapshot → the channel re-merges). The raw WS is NOT exposed;
             // the channel uses send(uid)/close(). With no id → DOWN + a warning.
             newTab.channelObject.openRemoteChannels = (clusterNames: string[], instanceConfig: any, handlers) => {
-                /*
-                    `keepAlive` is not an extra: a reverse proxy closes connections it considers idle, and a
-                    federated DATA connection is quiet by nature — it only speaks when the posture of that
-                    cluster changes. Without a heartbeat an AWS ALB cut them at its 60 s default, and the user
-                    watched "reconnecting… / back online" every minute (reported 2026-10-08). The retry below
-                    hid how bad it was: it reconnected, so it looked survivable, while every cut cost a fresh
-                    START and a fresh snapshot.
-                    Same interval the home connection uses (user settings), on purpose: two knobs for the same
-                    thing is how they end up out of sync, and the day someone raises one and not the other this
-                    comes back with a worse diagnosis.
-                */
-                /*
-                    🔴 `using` guarda COPIAS de la url y la clave, no el objeto Cluster.
-
-                    Guardaba la referencia, y el diálogo de Manage clusters edita los clusters EN EL SITIO
-                    (`selectedCluster.url = url`, sobre los mismos objetos que la lista de App). Con eso,
-                    la comprobación de "¿ha cambiado el endpoint?" comparaba un objeto consigo mismo: daba
-                    "no ha cambiado" siempre, y la conexión viva nunca se soltaba. La pestaña abierta
-                    seguía diciendo 3/3 mientras una nueva decía 2/3 — y el arreglo que debía evitarlo
-                    estaba leyendo su propia escritura (visto en dev, 2026-10-09).
-
-                    Copiar los dos valores al conectar hace la comparación inmune a que alguien mute el
-                    objeto por detrás, que es exactamente lo que pasa aquí.
-                */
-                interface IRemoteConn { clusterId: string; ws?: WebSocket; closed: boolean; retry?: ReturnType<typeof setInterval>; keepAlive?: ReturnType<typeof setInterval>; startAck?: ReturnType<typeof setTimeout>; instanceId?: string; using?: { url: string; accessString: string } }
-                const conns: IRemoteConn[] = []
-                const connect = (endpoint: Cluster, conn: IRemoteConn) => {
-                    let ws: WebSocket
-                    try { ws = new WebSocket(endpoint.url) }
-                    catch { return }
-                    conn.using = { url: endpoint.url, accessString: endpoint.accessString }   // con qué dirección y clave está hablando AHORA MISMO (por VALOR: ver IRemoteConn)
-                    conn.ws = ws
-                    ws.onopen = () => {
-                        if (conn.retry) { clearInterval(conn.retry); conn.retry = undefined }
-                        ws.send(JSON.stringify({ ...instanceConfig, action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.SIGNAL, instance: '', accessKey: endpoint.accessString }))
-                        /*
-                            🔴 HANDSHAKING, no CONNECTED. Un socket abierto NO es un cluster operativo.
-
-                            Aquí se daba por conectado en cuanto el socket se abría, sin esperar a que el
-                            otro extremo contestara. Con eso, un cluster cuyo START se rechaza —clave
-                            inválida, canal inexistente, una URL que no sirve este canal— se pintaba verde
-                            y "contribuyendo" mientras no aportaba un solo finding. El 2026-10-09 se vio en
-                            crudo: el back decía `down` para el mismo cluster y la topbar seguía en 3/3.
-
-                            El back ya lo hacía bien (RemoteChannel: CONNECTED solo con el START RESPONSE
-                            que trae instancia). Que los dos lados midan lo mismo es lo que permite creerse
-                            el indicador; dos definiciones de "conectado" garantizan que una miente.
-                        */
-                        /*  ⚠️ Debería ser HANDSHAKING —socket abierto, instancia todavía no—, que es lo que
-                            el back usa. El enum de common-front no lo tiene: está declarado DOS VECES, en
-                            common-front y en common-back, y solo el del back lo incluye. Añadirlo obliga a
-                            publicar common-front y a reinstalarlo en front y plugins, así que se usa
-                            RECONNECTING, que ya pinta el indicador en naranja y NO cuenta como conectado,
-                            que es lo que importa. La unificación de los dos enums está en el backlog. */
-                        handlers.onState(conn.clusterId, ERemoteConnState.RECONNECTING)
-                        /*  Y si el START no se contesta, no se deja la conexión colgada en naranja para
-                            siempre: se cierra, y el bucle de reintento —que re-resuelve el endpoint— la
-                            vuelve a levantar. Un socket que abre y calla es justo lo que pasa cuando al
-                            otro lado hay algo que no es este canal. */
-                        if (conn.startAck) clearTimeout(conn.startAck)
-                        conn.startAck = setTimeout(() => { if (!conn.closed && !conn.instanceId) { try { ws.close() } catch { /* noop */ } } }, 10000)
-                        // The ping only makes sense once an instance has been assigned (the START reply gives
-                        // it), which is why it is re-armed on EVERY connection: after a reconnect the instance
-                        // is a different one.
-                        if (conn.keepAlive) clearInterval(conn.keepAlive)
-                        conn.keepAlive = setInterval(() => {
-                            if (conn.closed || !conn.instanceId || conn.ws?.readyState !== WebSocket.OPEN) return
-                            conn.ws.send(JSON.stringify({
-                                action: EInstanceMessageAction.PING,
-                                flow: EInstanceMessageFlow.REQUEST,
-                                type: EInstanceMessageType.SIGNAL,
-                                channel: newTab.channel.channelId,
-                                instance: conn.instanceId
-                            }))
-                        }, (userSettingsRef.current?.keepAliveInterval || 30) * 1000)
-                    }
-                    ws.onmessage = (ev) => {
-                        try {
-                            const m = JSON.parse(ev.data)
-                            // The back end assigns the instance in the reply to the START; we keep it per
-                            // connection so commands (accept/assign/remediate) can be SENT referencing an
-                            // instance valid in THAT cluster (otherwise the back end answers "Instance not
-                            // found for command").
-                            if (m?.action === EInstanceMessageAction.START && m?.flow === EInstanceMessageFlow.RESPONSE && m?.instance) {
-                                conn.instanceId = m.instance
-                                if (conn.startAck) { clearTimeout(conn.startAck); conn.startAck = undefined }
-                                // AHORA sí: hay instancia en el otro lado, o sea el canal existe allí, la
-                                // clave vale y los mensajes van a llegar a alguien. Es el mismo criterio
-                                // que el back, y el único que hace que el indicador signifique algo.
-                                handlers.onState(conn.clusterId, ERemoteConnState.CONNECTED)
-                            }
-                            /*
-                                🔴 The channel is no longer installed over there, and the socket does NOT
-                                say so: uninstalling a plugin on a member leaves the cluster up and the
-                                connection open, so nothing here ever changes state. The tab went on
-                                believing that member was reporting — counting it in the coverage badge
-                                with data that had stopped arriving, and never re-subscribing to its
-                                findings when the plugin came back (a NEW tab did see them, because it
-                                starts from a snapshot). Reported 2026-10-14.
-
-                                Closing is the whole fix: `onclose` already reports RECONNECTING and the
-                                retry loop re-resolves the endpoint and re-STARTs. While the plugin is
-                                away each START is refused and the 10 s watchdog closes again; the moment
-                                it is back, the START is answered with an instance, state goes CONNECTED
-                                and the snapshot re-subscribes. Same criterion the back end uses.
-                            */
-                            // 🔴 SOLO por código: una frase en inglés no es un protocolo (ver ESignalMessageReason).
-                            // Sin mirar el `flow`: llega como respuesta a algo nuestro Y empujado por el core
-                            // al desinstalar (UNSOLICITED). Filtrar por RESPONSE descarta el que llega a tiempo.
-                            if (m?.reason === ESignalMessageReason.CHANNEL_UNSUPPORTED) {
-                                if (conn.instanceId) console.log(`Remote channel gone on ${conn.clusterId} (uninstalled?): closing to re-handshake`, new Date().toISOString())
-                                conn.instanceId = undefined
-                                handlers.onMessage(conn.clusterId, m)   // el plugin decide qué hacer con sus datos
-                                try { ws.close() } catch { /* noop */ }
-                                return
-                            }
-                            handlers.onMessage(conn.clusterId, m)
-                        } catch { /* no-JSON: ignora */ }
-                    }
-                    ws.onclose = (ev) => {
-                        /*
-                            The close code is the only thing that says WHO ended the connection, and without
-                            it a drop is indistinguishable from any other: 1006 means nobody sent a close
-                            frame (the network or an intermediary killed it), 1000/1001 means somebody closed
-                            it on purpose, 1011/1008 means the far end rejected it. Diagnosing the federated
-                            connections dropping on ECS cost a morning for the lack of this one line.
-                        */
-                        console.log(`Remote DATA websocket closed (${conn.clusterId}): code=${ev.code} reason='${ev.reason}' wasClean=${ev.wasClean}`, new Date().toISOString())
-                        // Always stopped, even if the connection is already closed or retrying: an interval
-                        // that outlives its socket keeps firing against a `readyState` that is not OPEN, and
-                        // every reconnect would leave one more behind.
-                        if (conn.keepAlive) { clearInterval(conn.keepAlive); conn.keepAlive = undefined }
-                        if (conn.startAck) { clearTimeout(conn.startAck); conn.startAck = undefined }
-                        conn.instanceId = undefined   // la instancia muere con el socket: la nueva la asigna el próximo START
-                        if (conn.closed || conn.retry) return
-                        handlers.onState(conn.clusterId, ERemoteConnState.RECONNECTING)
-                        /*
-                            🔴 El endpoint se RE-RESUELVE en cada reintento, no se reusa el que se capturó
-                            al abrir. Reusarlo dejaba la pestaña hablando para siempre con la URL que leyó
-                            al arrancar: se corregía la URL de un cluster en Manage clusters y la pestaña
-                            abierta ni se enteraba, mientras una nueva usaba ya la nueva. Dos pestañas del
-                            mismo usuario, el mismo cluster, estados distintos — y nadie había roto nada
-                            (visto en dev, 2026-10-08).
-                            Si el cluster ya no está en la lista se cae al endpoint anterior: seguir
-                            intentando con lo último que funcionó es mejor que dejar de intentar.
-                        */
-                        conn.retry = setInterval(() => {
-                            if (conn.closed) return
-                            const fresh = clustersRef.current.find(c => (c.id || c.name) === conn.clusterId || c.name === endpoint.name)
-                            connect(fresh ?? endpoint, conn)
-                        }, 10000)
-                    }
-                    ws.onerror = () => { try { ws.close() } catch { /* noop */ } }
-                }
+                // One managed connection per cluster (tools/RemoteConnection, where the lessons it carries are written).
+                const conns: RemoteConnection[] = []
                 for (const name of clusterNames) {
                     const ep = clustersRef.current.find(c => c.name === name)
-                    const conn: IRemoteConn = { clusterId: ep?.id || name, closed: false }
+                    const clusterId = ep?.id || name
                     if (!ep || !ep.id) {
-                        handlers.onState(conn.clusterId, ERemoteConnState.DOWN)
+                        handlers.onState(clusterId, ERemoteConnState.DOWN)
                         notify(undefined, ENotifyLevel.WARNING, `Cluster '${name}' has no id or is unreachable; excluded from the landscape view`)
                         continue
                     }
+                    /*
+                        Re-resolved on every retry. If the cluster is no longer in the list it falls back to the
+                        previous endpoint: going on trying with the last one that worked is better than giving up.
+                    */
+                    let last: Cluster = ep
+                    const resolve = (): Cluster => {
+                        const fresh = clustersRef.current.find(c => (c.id || c.name) === clusterId || c.name === last.name)
+                        if (fresh) last = fresh
+                        return last
+                    }
+                    const conn = new RemoteConnection(clusterId, resolve, instanceConfig, newTab.channel.channelId, () => userSettingsRef.current?.keepAliveInterval || 30, handlers)
                     conns.push(conn)
-                    connect(ep, conn)
+                    conn.start()
                 }
                 /*
                     🔴 Reevaluar las conexiones VIVAS cuando cambia la lista de clusters.
@@ -1488,31 +1376,19 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 */
                 const refresh = (): void => {
                     for (const c of conns) {
-                        if (c.closed) continue
                         const fresh = clustersRef.current.find(x => (x.id || x.name) === c.clusterId)
-                        if (!fresh || !c.using) continue
-                        if (fresh.url === c.using.url && fresh.accessString === c.using.accessString) continue
-                        console.log(`Cluster ${c.clusterId} changed endpoint: dropping its federated connection to pick the new one up`)
-                        if (c.ws) { try { c.ws.close() } catch { /* el onclose dispara el reintento */ } }
+                        if (fresh) c.refresh(fresh)
                     }
                 }
                 fedRefreshRef.current.push(refresh)
                 return {
-                    send: (clusterId: string, msg: any) => {
-                        const c = conns.find(x => x.clusterId === clusterId)
-                        // The command must carry the instance THIS cluster assigned to its DATA connection
-                        // (not the home one's): the back end looks the instance up by id and discards the
-                        // command when it does not match.
-                        if (c?.ws && c.ws.readyState === WebSocket.OPEN) c.ws.send(JSON.stringify({ ...msg, instance: c.instanceId ?? msg.instance }))
-                    },
+                    // The command must carry the instance THIS cluster assigned to its DATA connection (not the
+                    // home one's): the back end looks the instance up by id and discards the command when it does
+                    // not match. RemoteConnection.send fills it in.
+                    send: (clusterId: string, msg: any) => conns.find(x => x.clusterId === clusterId)?.send(msg),
                     close: () => {
                         fedRefreshRef.current = fedRefreshRef.current.filter(f => f !== refresh)
-                        for (const c of conns) {
-                            c.closed = true
-                            if (c.retry) { clearInterval(c.retry); c.retry = undefined }
-                            if (c.keepAlive) { clearInterval(c.keepAlive); c.keepAlive = undefined }
-                            if (c.ws) { c.ws.onclose = null; c.ws.onerror = null; c.ws.onmessage = null; try { c.ws.close() } catch { /* noop */ } }
-                        }
+                        for (const c of conns) c.close()
                     }
                 }
             }
@@ -1559,7 +1435,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 newTab.reconnectRef = undefined
                 // 3. Repoint the channelObject at the target cluster
                 newTab.channelObject.clusterName = target.name
-                newTab.channelObject.clusterUrl = target.url
+                newTab.channelObject.clusterUrl = clusterBaseUrl(target)
                 newTab.channelObject.accessString = target.accessString
                 newTab.channelObject.clusterInfo = target.clusterInfo
                 newTab.channelObject.instanceId = ''
@@ -1941,7 +1817,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     ws.onopen = (event) => socketReconnect(event, selfId)
                 }
                 catch  {}
-            }, 10000, tab.channelObject.clusterUrl ?? cluster.url, tab)   // reconnect to the delegated host too
+            }, 10000, tab.channelObject.clusterUrl ?? clusterBaseUrl(cluster), tab)   // reconnect to the delegated host too
             tab.reconnectRef = selfId   // track it so removeTab can stop retrying when the tab closes
         }
         else {
@@ -1989,7 +1865,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     }
                 }
                 catch  {}
-            }, 10000, tab.channelObject.clusterUrl ?? restartCluster.url, tab)
+            }, 10000, tab.channelObject.clusterUrl ?? clusterBaseUrl(restartCluster), tab)
             tab.reconnectRef = restartId
         }
     }
@@ -3236,9 +3112,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     const SetupComp = ext.SetupDialog
                     return <SetupComp config={homepageSetupConfig} onSave={(cfg: Record<string, any>) => { onHomepageActivate(homepageSetupId, cfg); setHomepageSetupId(undefined) }} onClose={() => setHomepageSetupId(undefined)} />
                 })() }
-                { showSettingsKwirth && clusters && <SettingsKwirth onClose={onSettingsKwirthClosed} clusterName={selectedClusterName} clusterUrl={clusters.find(c => c.name===selectedClusterName)?.url ?? ''} accessString={clusters.find(c => c.name===selectedClusterName)?.accessString ?? ''} /> }
-                { showSettingsExport && clusters && <SettingsExport onClose={() => setShowSettingsExport(false)} clusterName={selectedClusterName} clusterUrl={clusters.find(c => c.name===selectedClusterName)?.url ?? ''} accessString={clusters.find(c => c.name===selectedClusterName)?.accessString ?? ''} /> }
-                { showSettingsImport && clusters && <SettingsImport onClose={() => setShowSettingsImport(false)} clusterName={selectedClusterName} clusterUrl={clusters.find(c => c.name===selectedClusterName)?.url ?? ''} accessString={clusters.find(c => c.name===selectedClusterName)?.accessString ?? ''} /> }
+                { showSettingsKwirth && clusters && <SettingsKwirth onClose={onSettingsKwirthClosed} clusterName={selectedClusterName} clusterUrl={clusters.filter(c => c.name===selectedClusterName).map(clusterBaseUrl)[0] ?? ''} accessString={clusters.find(c => c.name===selectedClusterName)?.accessString ?? ''} /> }
+                { showSettingsExport && clusters && <SettingsExport onClose={() => setShowSettingsExport(false)} clusterName={selectedClusterName} clusterUrl={clusters.filter(c => c.name===selectedClusterName).map(clusterBaseUrl)[0] ?? ''} accessString={clusters.find(c => c.name===selectedClusterName)?.accessString ?? ''} /> }
+                { showSettingsImport && clusters && <SettingsImport onClose={() => setShowSettingsImport(false)} clusterName={selectedClusterName} clusterUrl={clusters.filter(c => c.name===selectedClusterName).map(clusterBaseUrl)[0] ?? ''} accessString={clusters.find(c => c.name===selectedClusterName)?.accessString ?? ''} /> }
                 
                 { initialMessage !== '' && MsgBoxOk('Kwirth',initialMessage, () => setInitialMessage(''))}
                 { firstLogin && <FirstTimeLogin onClose={onFirstTimeLoginClose}/> }
