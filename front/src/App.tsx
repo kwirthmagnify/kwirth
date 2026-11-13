@@ -272,6 +272,14 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }), [mode, activeThemeName])
 
     const [frontChannels, setFrontChannels] = useState<Map<string, TChannelConstructor>>(new Map())
+    /*
+        The LATEST front channel map, for the tabs. A tab that needs it used to copy the 'frontChannels' of the
+        render that created it, and it only joins tabs.current at the end of createTab: a plugin front that
+        finished loading in between updated every tab but that one, which kept a map without it for good. On
+        the desktop it happened every time — its start channel (Magnify) opens as soon as ITS front is loaded,
+        while the others are still coming — and Magnify offered no log, ops, metrics… for a selected pod.
+    */
+    const frontChannelsRef = useRef<Map<string, TChannelConstructor>>(new Map())
     const [licenseInfo, setLicenseInfo] = useState<{ customerId: string; extensions: Record<string, string[]>; expiry: string } | null>(null)
     const [user, setUser] = useState<IUser>()
     const [logged,setLogged] = useState(false)
@@ -488,6 +496,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
                 setFrontChannels(prev => {
                     const next = new Map(prev).set(id, PluginChannel as TChannelConstructor)
+                    frontChannelsRef.current = next
                     for (const tab of tabs.current) {
                         if (tab.channel.requirements.frontChannels) {
                             tab.channelObject.frontChannels = next
@@ -512,6 +521,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         setFrontChannels(prev => {
             const next = new Map(prev)
             next.delete(id)
+            frontChannelsRef.current = next
             for (const tab of tabs.current) {
                 if (tab.channel.requirements.frontChannels) {
                     tab.channelObject.frontChannels = next
@@ -1314,7 +1324,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         newTab.channelObject.kwirthVersion = cluster.kwirthData?.version   // version del core, disponible para cualquier plugin (p.ej. su drawer)
         if (newTab.channel.requirements.accessString) newTab.channelObject.accessString = host?.accessString ?? cluster?.accessString
         if (newTab.channel.requirements.metrics) newTab.channelObject.metricsList = cluster.metricsList
-        if (newTab.channel.requirements.frontChannels) newTab.channelObject.frontChannels = frontChannels
+        if (newTab.channel.requirements.frontChannels) newTab.channelObject.frontChannels = frontChannelsRef.current
         if (newTab.channel.requirements.backChannels) newTab.channelObject.backChannels = backChannels
         if (newTab.channel.requirements.notifier) newTab.channelObject.notify = notify
         if (newTab.channel.requirements.notifications) newTab.channelObject.notifications = notifications.current
@@ -1550,6 +1560,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             }
         })
         selectedTab.current = newTab
+        // again, now that it is in tabs.current: what loaded while it was being created has to reach it too
+        if (newTab.channel.requirements.frontChannels) newTab.channelObject.frontChannels = frontChannelsRef.current
         tabs.current.push(newTab)
         if (fullscreen) setFullscreenTab(newTab)
         setChannelMessageAction({action : EChannelRefreshAction.REFRESH})  // force re-render for showing new tab
