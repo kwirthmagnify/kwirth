@@ -1,7 +1,7 @@
 import { AdmissionregistrationV1Api, ApiextensionsV1Api, ApisApi, AppsV1Api, AutoscalingV2Api, BatchV1Api, CoordinationV1Api, CoreV1Api, CustomObjectsApi, Exec, KubeConfig, KubernetesObjectApi, Log, NetworkingV1Api, NodeV1Api, PolicyV1Api, RbacAuthorizationV1Api, SchedulingV1Api, StorageV1Api, V1Node, VersionApi } from '@kubernetes/client-node'
 import { quantityToScalar } from '@kubernetes/client-node/dist/util.js'
 import { EClusterType, EClusterFlavour, ERancherRole, IDceAccess, IExtensionAccess, IInstanceConfig, IPluginAccess, IRouteAccess, ISenderAccess, IWebhookAccess } from '@kwirthmagnify/kwirth-common'
-import { IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
+import { IProviderSubscriber, IProviderOperationInfo, IProviderOperationOptions, IProviderOperationResult } from '@kwirthmagnify/kwirth-common-back'
 import { ServiceAccountToken } from '../tools/ServiceAccountToken'
 import { IProvider } from '../providers/IProvider'
 import { isPluviderId, TPluviderChannel } from '../providers/Pluvider'
@@ -77,6 +77,10 @@ export interface IProviderHandle {
     unsubscribe(subscriber: IProviderSubscriber): unknown
     // a one-off read (IProvider.getData); rejects when the producer does not serve reads
     getData(request: Record<string, unknown>): Promise<unknown>
+    // the operations it offers (IProvider.getOperations); none when it does not operate
+    getOperations(): IProviderOperationInfo[]
+    // runs one (IProvider.runOperation), LOGGED by the core with who ran it; rejects when it has none
+    runOperation(name: string, args: Record<string, unknown>, options: IProviderOperationOptions): Promise<IProviderOperationResult>
 }
 
 /* A provider or a pluvider, seen only as the thing you subscribe to: both offer exactly this. */
@@ -86,6 +90,9 @@ interface ISubscriptionTarget {
     updateSubscription?(subscriber: IProviderSubscriber, data: any): unknown
     // the one-off read of the contract (IProvider.getData); a pluvider does not serve it
     getData?(request: Record<string, unknown>): Promise<unknown>
+    // the operations of the contract (IProvider.getOperations / runOperation); a pluvider does not offer them
+    getOperations?(): IProviderOperationInfo[]
+    runOperation?(name: string, args: Record<string, unknown>, options: IProviderOperationOptions): Promise<IProviderOperationResult>
 }
 
 interface ISubscriptionEntry extends ISubscription {
@@ -339,6 +346,29 @@ export class ClusterInfo {
             getData: (request: Record<string, unknown>) => {
                 if (typeof target.getData !== 'function') return Promise.reject(new Error(`Provider '${providerId}' does not serve getData`))
                 return target.getData(request)
+            },
+            getOperations: () => {
+                try { return typeof target.getOperations === 'function' ? target.getOperations() : [] }
+                catch { return [] }   // a provider that fails listing them offers none, it does not take the caller down
+            },
+            /*
+                An operation CHANGES the world, so it leaves a trace here, in the core, whatever the consumer
+                says or does not say: who ran which operation on which provider, whether it was a dry run, and
+                how it ended. The arguments are not logged: they may carry names the operator considers
+                sensitive, and the provider logs what it needs.
+            */
+            runOperation: async (name: string, args: Record<string, unknown>, options: IProviderOperationOptions) => {
+                if (typeof target.runOperation !== 'function') throw new Error(`Provider '${providerId}' has no operations`)
+                const how = options?.dryRun ? 'dry run of' : 'ran'
+                try {
+                    const result = await target.runOperation(name, args, { dryRun: options?.dryRun === true })
+                    providerLogger(providerId).info(`operation: '${edgeId}' ${how} '${name}' → ${result?.success ? 'ok' : `failed: ${result?.error ?? 'no reason given'}`}`)
+                    return result
+                }
+                catch (err) {
+                    providerLogger(providerId).warning(`operation: '${edgeId}' ${how} '${name}' → threw: ${err}`)
+                    throw err
+                }
             }
         }
     }

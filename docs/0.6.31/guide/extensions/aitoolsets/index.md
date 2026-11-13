@@ -61,11 +61,17 @@ execute: async (args, host) => {
 | `ECapability.METRICS` | `host.metrics` — the metric samples kwirth keeps in memory |
 | `ECapability.EVENTS` | `host.events` — the recent cluster-event buffer |
 | `ECapability.REPOS` | `host.repos` — source repository credentials |
+| `ECapability.PROVIDERS` | `host.providers.get(id)` — the handle of a provider the toolset **names** in `providers: [...]`: its reads (`getData`) and its operations (`getOperations`, `runOperation`). A provider it does not name is `undefined` |
 
 The Kubernetes clients are **the ones kwirth itself uses** — the same authenticated instances, not new
 connections. What a toolset does *not* get is equally deliberate: the other API clients kwirth holds, the
 service-account token, senders, webhooks and the Docker client stay out. The set can be widened later, but
 it is widened on purpose rather than handed over wholesale.
+
+**Through a provider, not with its credential.** A toolset that reads a cloud declares `ECapability.PROVIDERS` and
+the providers it uses (`providers: ['aws']`, for example), and asks them. The credential and
+its IAM policy stay in the provider; the toolset holds none. Every operation the provider runs for a tool is
+logged by kwirth with the channel the tool ran for.
 
 > **A tool that needs a capability it was not given should say so.** If `host.k8s` is missing, fail with a
 > message that names the tool and the reason — an error deep inside a client call tells nobody anything.

@@ -24,8 +24,10 @@ prompt and takes the remaining values from the flags (or their defaults).
   --publisher <@scope>      npm scope (default @my-scope)
   --description <text>      one-line description
   --website <url>           optional website
-  --capabilities <list>     what the host must lend: k8s,metrics,events,repos (comma separated,
-                            empty for a toolset that needs nothing)
+  --capabilities <list>     what the host must lend: k8s,metrics,events,repos,providers (comma
+                            separated, empty for a toolset that needs nothing)
+  --providers <list>        with the 'providers' capability: the ids of the providers the tools reach
+                            (comma separated, e.g. aws). The host lends ONLY these
   --tool <snake_case>       name of the first tool (default depends on the capability)
   --effect <read|write>     what the first tool does to the world (default read)
   --sensitivity <public|internal>
@@ -40,7 +42,7 @@ prompt and takes the remaining values from the flags (or their defaults).
     process.exit(0)
 }
 
-const CAPS = ['k8s', 'metrics', 'events', 'repos']
+const CAPS = ['k8s', 'metrics', 'events', 'repos', 'providers']
 
 const interactive = !flag('id')
 const rl = interactive ? createInterface({ input: process.stdin, output: process.stdout }) : undefined
@@ -71,16 +73,22 @@ if (interactive) {
     console.log('  metrics  - the metric samples the core keeps in memory')
     console.log('  events   - the cluster event buffer')
     console.log('  repos    - source repository credentials (GitHub / GitLab)')
+    console.log('  providers - the handles of the providers you name (their reads and operations)')
 }
 const capsRaw = flag('capabilities') ?? await ask('Capabilities (comma separated, empty for none)', 'k8s')
 const caps = capsRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
 
+// With 'providers', WHICH ones: the host lends only the providers the toolset names, so the list is part of
+// the contract, not a detail of the code.
+const providersRaw = flag('providers') ?? (caps.includes('providers') ? await ask('Provider ids the tools reach (comma separated, e.g. aws)') : '')
+const providerIds = providersRaw.split(',').map(s => s.trim()).filter(Boolean)
+
 const primary = caps[0] ?? 'none'
-const defaultTool = { k8s: 'list_namespaces', metrics: 'get_latest_usage', events: 'get_recent_events', repos: 'list_repo_hosts', none: 'echo_back' }[primary]
+const defaultTool = { k8s: 'list_namespaces', metrics: 'get_latest_usage', events: 'get_recent_events', repos: 'list_repo_hosts', providers: 'list_provider_operations', none: 'echo_back' }[primary]
 
 const toolName    = flag('tool') ?? await ask('Name of the first tool (snake_case)', defaultTool)
 const effect      = (flag('effect') ?? await ask('What it does to the world (read/write)', 'read')).toLowerCase()
-const sensDefault = caps.includes('repos') ? 'internal' : 'public'
+const sensDefault = caps.includes('repos') || caps.includes('providers') ? 'internal' : 'public'
 const sensitivity = (flag('sensitivity') ?? await ask('Who may be offered it (public/internal)', sensDefault)).toLowerCase()
 
 const wantsVerify = caps.includes('k8s')
@@ -97,6 +105,19 @@ if (!id || !/^[a-z][a-z0-9-]*$/.test(id)) {
 const malas = caps.filter(c => !CAPS.includes(c))
 if (malas.length) {
     console.error(`Error: Unknown capability '${malas.join(', ')}' (expected ${CAPS.join(', ')})`)
+    process.exit(1)
+}
+if (caps.includes('providers') && providerIds.length === 0) {
+    console.error("Error: The 'providers' capability needs --providers <ids> (e.g. --providers aws): the host lends only the providers named")
+    process.exit(1)
+}
+if (!caps.includes('providers') && providerIds.length) {
+    console.error("Error: --providers needs the 'providers' capability (--capabilities providers,...)")
+    process.exit(1)
+}
+const malosIds = providerIds.filter(p => !/^[a-z][a-z0-9-]*$/.test(p))
+if (malosIds.length) {
+    console.error(`Error: Provider id '${malosIds.join(', ')}' must be lowercase kebab-case (e.g. aws, cloud-config)`)
     process.exit(1)
 }
 if (!/^[a-z][a-z0-9_]*$/.test(toolName)) {
@@ -129,6 +150,7 @@ if (fs.existsSync(toolsetDir) && !intoExisting) {
 }
 
 const usesK8s   = caps.includes('k8s')
+const usesProviders = caps.includes('providers')
 const effectRef = effect === 'write' ? 'EToolEffect.WRITE' : 'EToolEffect.READ'
 const sensRef   = sensitivity === 'internal' ? 'EToolSensitivity.INTERNAL' : 'EToolSensitivity.PUBLIC'
 const requires  = caps.length ? caps.map(c => `ECapability.${c.toUpperCase()}`).join(', ') : ''
@@ -138,6 +160,8 @@ const requires  = caps.length ? caps.map(c => `ECapability.${c.toUpperCase()}`).
 const websiteLine = website ? `\n    "website": "${website}",` : ''
 const devDeps = [
     ...(usesK8s ? ['        "@kubernetes/client-node": "^1.4.0"'] : []),
+    // The provider handle's TYPES (IProviderHandle): at runtime common-back is the core's global, never bundled.
+    ...(usesProviders ? ['        "@kwirthmagnify/kwirth-common-back": "^0.6.11"'] : []),
     '        "@types/node": "^20.12.13"',
     '        "esbuild": "^0.27.2"',
     '        "typescript": "^5.4.0"'
@@ -156,7 +180,7 @@ write('package.json', `{
         "test": "node --test tests/*.test.mjs"
     },
     "dependencies": {
-        "@kwirthmagnify/kwirth-common-ai": "^0.5.58"
+        "@kwirthmagnify/kwirth-common-ai": "^0.5.80"
     },
     "devDependencies": {
 ${devDeps}
@@ -338,6 +362,23 @@ const ejemplos = {
                 return { hosts: r.creds.map(c => ({ host: c.host, type: c.type })) }`,
         descr: 'Lists the Git hosts this channel has credentials for, so you know what can be read.'
     },
+    providers: {
+        importa: '',
+        extra: `import type { IProviderHandle } from '@kwirthmagnify/kwirth-common-back'\n`,
+        guarda: `const provider = (host: IToolHost, toolName: string, args: Record<string, unknown>, providerId: string): IProviderHandle => {
+    host.trace(toolName, args)
+    // undefined when the provider is not named in \`providers\`, or is not installed in this Kwirth.
+    const handle = host.providers?.get(providerId)
+    if (!handle) throw new Error(\`[${id}] '\${toolName}' needs the provider '\${providerId}' and the host did not provide it\`)
+    return handle
+}`,
+        schema: 'z.object({})',
+        cuerpo: `                const p = provider(host, '${toolName}', {}, '${providerIds[0] ?? ''}')
+                // Reads go through p.getData(request), whose shape the provider documents in its getDataHelp();
+                // operations through p.runOperation(name, args, { dryRun }). A provider that only reads offers none.
+                return { provider: p.id, operations: p.getOperations().map(o => ({ name: o.name, description: o.description })) }`,
+        descr: `Lists the operations the ${providerIds[0] ?? ''} provider offers, so you know what it can do.`
+    },
     none: {
         importa: '',
         guarda: '',
@@ -356,7 +397,7 @@ const importsCommon = ['ECapability', 'EToolEffect', 'EToolSensitivity'].filter(
 
 write('src/index.ts', `import { ${importsBack} } from '@kwirthmagnify/kwirth-common-ai/back'
 import { ${importsCommon} } from '@kwirthmagnify/kwirth-common-ai'
-
+${ej.extra ?? ''}
 /*
     Toolset \`${id}\` — ${description}
 
@@ -372,7 +413,7 @@ const ${camelId}: IAiToolset = {
     version: '0.1.0',
     displayName: '${name}',
     description: '${description}',
-    requires: [${requires}],
+    requires: [${requires}],${usesProviders ? `\n    // The ONLY providers the host lends to these tools (ECapability.PROVIDERS).\n    providers: [${providerIds.map(p => `'${p}'`).join(', ')}],` : ''}
     tools: [
         defineTool({
             name: '${toolName}',
@@ -425,13 +466,20 @@ const fakeHost = () => {
     const repos = { creds: [{ host: 'github.com', type: 'github', token: 'ghp_x' }] }
     return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), repos } }
 }`,
+    providers: `/** Lends ONLY the provider the toolset names, like the real host: any other id is undefined. */
+const fakeHost = () => {
+    const traced = []
+    const handle = { id: '${providerIds[0] ?? ''}', getOperations: () => [{ name: 'restart', description: 'Restarts it', args: { usage: 'what to restart', example: {} } }] }
+    const providers = { get: (id) => id === handle.id ? handle : undefined }
+    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), providers } }
+}`,
     none: `const fakeHost = () => {
     const traced = []
     return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }) } }
 }`
 }
 
-const llamada = { k8s: '{}', metrics: '{}', events: '{ limit: 5 }', repos: '{}', none: "{ text: 'hola' }" }[primary]
+const llamada = { k8s: '{}', metrics: '{}', events: '{ limit: 5 }', repos: '{}', providers: '{}', none: "{ text: 'hola' }" }[primary]
 const asercion = {
     k8s: `    assert.deepEqual(res.namespaces, ['default', 'kube-system'])
     assert.equal(res.cluster, 'test-cluster')`,
@@ -442,6 +490,7 @@ const asercion = {
     assert.equal(res.events[4].obj.n, 29)   // los ultimos son los mas recientes`,
     repos: `    assert.deepEqual(res.hosts, [{ host: 'github.com', type: 'github' }])
     assert.equal(JSON.stringify(res).includes('ghp_x'), false, 'el token no puede salir de aqui')`,
+    providers: `    assert.deepEqual(res, { provider: '${providerIds[0] ?? ''}', operations: [{ name: 'restart', description: 'Restarts it' }] })`,
     none: `    assert.equal(res.text, 'hola')
     assert.equal(res.length, 4)`
 }[primary]
@@ -451,7 +500,7 @@ test('sin la capability provisionada, la tool lo dice', async () => {
     // The host lends ONLY what was declared: a tool that does not check its own blows up with an opaque TypeError.
     await assert.rejects(
         () => tool.execute(${llamada}, { trace: () => {} }),
-        /${primary === 'repos' ? 'source repository credentials' : primary === 'k8s' ? 'cluster access' : primary}/
+        /${primary === 'repos' ? 'source repository credentials' : primary === 'k8s' ? 'cluster access' : primary === 'providers' ? 'needs the provider' : primary}/
     )
 })
 `
@@ -482,7 +531,7 @@ ${mocks[primary]}
 
 test('el toolset declara lo que necesita, y su tool', () => {
     assert.equal(toolset.id, '${id}')
-    assert.deepEqual(toolset.requires, [${caps.map(c => `commonAi.ECapability.${c.toUpperCase()}`).join(', ')}])
+    assert.deepEqual(toolset.requires, [${caps.map(c => `commonAi.ECapability.${c.toUpperCase()}`).join(', ')}])${usesProviders ? `\n    assert.deepEqual(toolset.providers, [${providerIds.map(p => `'${p}'`).join(', ')}])` : ''}
     assert.equal(toolset.tools.length, 1)
     assert.equal(tool.name, '${toolName}')
     assert.equal(tool.effect, commonAi.EToolEffect.${effect.toUpperCase()})
@@ -577,7 +626,7 @@ if (wantsVerify) {
 // ─── README.md ─────────────────────────────────────────────────────────────
 
 const capsTabla = caps.length
-    ? caps.map(c => `| \`${c.toUpperCase()}\` | ${{ k8s: 'cluster identity, node map and the core/apps/networking clients', metrics: 'the metric samples the core keeps in memory', events: 'the cluster event buffer', repos: 'source repository credentials (GitHub / GitLab)' }[c]} |`).join('\n')
+    ? caps.map(c => `| \`${c.toUpperCase()}\` | ${{ k8s: 'cluster identity, node map and the core/apps/networking clients', metrics: 'the metric samples the core keeps in memory', events: 'the cluster event buffer', repos: 'source repository credentials (GitHub / GitLab)', providers: `the handles of the providers named in \`providers\` (${providerIds.map(p => `\`${p}\``).join(', ')}): their reads (\`getData\`) and operations` }[c]} |`).join('\n')
     : '| *(none)* | only `trace()`, which is lent to every tool and is never declared |'
 
 write('README.md', `# ${name}

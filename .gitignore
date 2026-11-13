@@ -114,6 +114,8 @@ kwirth-bundled.json
 # AI toolsets de pago: mismo criterio que el resto de artefactos de pago — repo propio, fuera del publico
 /aitoolsets/k8s-ops/
 /aitoolsets/source-repos/
+/aitoolsets/aws-serverless/
+/aitoolsets/aws-serverless-ops/
 /senders/jira/
 /senders/gitlab-issues/
 /webhooks/jira/

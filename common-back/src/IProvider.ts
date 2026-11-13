@@ -52,6 +52,49 @@ export interface IProviderHandle {
      * It goes through the handle, like subscribing, so the core's registry knows who reads from whom.
      */
     getData(request: Record<string, unknown>): Promise<unknown>
+    /** The operations the producer offers (IProvider.getOperations); none when it does not operate. */
+    getOperations(): IProviderOperationInfo[]
+    /**
+     * Runs one of its operations (IProvider.runOperation). Rejects with a clear error when the producer
+     * has no operations. It goes through the handle so the core can log WHO ran WHAT on WHOM: an operation
+     * changes the world, and that has to leave a trace that does not depend on the consumer saying so.
+     */
+    runOperation(name: string, args: Record<string, unknown>, options: IProviderOperationOptions): Promise<IProviderOperationResult>
+}
+
+/**
+ * One operation a provider offers: something that CHANGES the world it watches (reads go through getData).
+ * Its arguments are described like getData's request, so a consumer can show them and an AI tool can map
+ * its own input onto them.
+ */
+export interface IProviderOperationInfo {
+    /** Stable id of the operation, e.g. 'ecs-force-deployment'. */
+    name: string
+    /** What it changes, in one line. */
+    description: string
+    /** Its arguments: usage, example, fields — the same shape as getDataHelp. */
+    args: IProviderSubscriptionHelp
+}
+
+/** How an operation is run. */
+export interface IProviderOperationOptions {
+    /** True: say what would change and change nothing. */
+    dryRun: boolean
+}
+
+/**
+ * What an operation did — or, on a dry run, what it would do. "No error" is not "done": `success` says it.
+ */
+export interface IProviderOperationResult {
+    success: boolean
+    /** True when nothing was changed (a dry run, or an operation refused before touching anything). */
+    dryRun: boolean
+    /** What was done, or would be done. */
+    message?: string
+    /** Why it was not done. A missing permission is NAMED, not reported as a generic failure. */
+    error?: string
+    /** The change in detail (before / after), for a dry run to show and a log to keep. */
+    preview?: Record<string, unknown>
 }
 
 /**
@@ -204,6 +247,18 @@ export interface IProvider extends IExtension {
      * consumer such as provider-debug can show and try it. OPTIONAL, like getSubscriptionHelp.
      */
     getDataHelp?(): IProviderSubscriptionHelp
+    /**
+     * The OPERATIONS this provider offers: things that CHANGE the world it watches (restart a service,
+     * scale it, roll it back). OPTIONAL: a provider that does not operate implements neither this nor
+     * runOperation, and nothing changes for it. Reads never go here: they are getData.
+     */
+    getOperations?(): IProviderOperationInfo[]
+    /**
+     * Runs one operation. With `dryRun` it says what WOULD change and changes nothing — computed against
+     * the real system, not guessed. Consumers reach it through IProviderHandle.runOperation, which is what
+     * lets the core log who ran what on whom.
+     */
+    runOperation?(name: string, args: Record<string, unknown>, options: IProviderOperationOptions): Promise<IProviderOperationResult>
     /**
      * Names of the configurations the provider has defined (the equivalent of
      * ISender.getConfigNames). OPTIONAL: it only makes sense on a provider that owns its

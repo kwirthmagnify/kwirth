@@ -2,6 +2,9 @@ import { ILlm, ILlmModel, ILlmProvider, ECapability, EToolEffect, EToolSensitivi
 // TYPES ONLY: the compiler erases them, so common-ai does not drag the Kubernetes client (~6.6 MB) into
 // any bundle. That is why @kubernetes/client-node is an optional peer and not a dependency.
 import type { AppsV1Api, CoreV1Api, CustomObjectsApi, NetworkingV1Api } from '@kubernetes/client-node'
+// TYPES ONLY as well: the provider handle a toolset with ECapability.PROVIDERS receives. Erased on compile, so no
+// runtime dependency on common-back; the toolsets that use it depend on common-back themselves.
+import type { IProviderHandle } from '@kwirthmagnify/kwirth-common-back'
 
 interface ILogChannel {
     logInfo?: (msg: string) => void
@@ -687,6 +690,12 @@ export interface IToolContext {
     clusterEvents?: any[]   // recent k8s events buffer ({type, obj}), optional for backward compat
     sourceRepos?: ISourceRepoCred[]   // git credentials for the source-repos toolset (optional; Agora provisions them)
     trace: (toolName: string, args: Record<string, unknown>) => void
+    /*
+        The extension the tools run for (Agora's channel): what the core sees as the CONSUMER when a toolset with
+        ECapability.PROVIDERS reaches a provider through clusterInfo.getProvider. So the core's log of an operation
+        reads "'agora' ran 'ecs-scale'". Without it no provider is lent.
+    */
+    consumer?: object
 }
 
 // Parse a repo reference (full URL or 'owner/name'; bare form assumes github.com). Owner keeps GitLab subgroups.
@@ -917,6 +926,15 @@ export interface IReposCapability {
 }
 
 /**
+ * The providers a toolset declared (`ECapability.PROVIDERS` + its `providers` list), and ONLY those: reads
+ * (getData) and operations (getOperations / runOperation), through the core's handle, so the core knows who
+ * reads and logs who operates. Undefined: the toolset did not declare that provider, or it is not installed here.
+ */
+export interface IProvidersCapability {
+    get(providerId: string): IProviderHandle | undefined
+}
+
+/**
  * What a tool receives when it runs. Only the capabilities its toolset declared come filled in:
  * a `requires: []` receives nothing but `trace`.
  */
@@ -927,6 +945,7 @@ export interface IToolHost {
     metrics?: IMetricsCapability
     events?: IEventsCapability
     repos?: IReposCapability
+    providers?: IProvidersCapability
 }
 
 /** An executable tool: what travels to the front end (IAiToolInfo) plus what it takes to invoke it. */
@@ -1058,6 +1077,7 @@ export const listToolsetInfos = (): IAiToolsetInfo[] =>
         displayName: t.displayName,
         description: t.description,
         requires: t.requires,
+        ...(t.providers ? { providers: t.providers } : {}),
         tools: t.tools.map(x => ({ name: x.name, description: x.description, effect: x.effect, sensitivity: x.sensitivity }))
     }))
 
@@ -1068,7 +1088,7 @@ export const listToolsetInfos = (): IAiToolsetInfo[] =>
  * if every site assembled its own object, one of them being too generous would be enough for the
  * declaration to stop meaning anything.
  */
-export const buildToolHost = (requires: ECapability[], context: IToolContext): IToolHost => {
+export const buildToolHost = (requires: ECapability[], context: IToolContext, providers?: string[]): IToolHost => {
     const host: IToolHost = { trace: context.trace }
     const ci = context.clusterInfo
     // No cluster means no cluster capability, even when declared: better that the tool receives
@@ -1089,6 +1109,18 @@ export const buildToolHost = (requires: ECapability[], context: IToolContext): I
     if (requires.includes(ECapability.METRICS)) host.metrics = { samples: (context.clusterMetrics ?? []) as IMetricsSample[] }
     if (requires.includes(ECapability.EVENTS)) host.events = { recent: (context.clusterEvents ?? []) as IClusterEvent[] }
     if (requires.includes(ECapability.REPOS)) host.repos = { creds: context.sourceRepos ?? [] }
+    /*
+        The providers: only the ones the toolset NAMED, asked for on behalf of the extension the tools run for
+        (context.consumer), so the core's registry and its log of operations attribute them. No consumer, or a
+        host without getProvider, lends nothing: a tool then says the provider is not available.
+    */
+    if (requires.includes(ECapability.PROVIDERS) && context.consumer && typeof ci?.getProvider === 'function') {
+        const declared = new Set(providers ?? [])
+        host.providers = {
+            get: (providerId: string): IProviderHandle | undefined =>
+                declared.has(providerId) ? (ci.getProvider(providerId, context.consumer) as IProviderHandle | undefined) : undefined
+        }
+    }
     return host
 }
 
@@ -1102,7 +1134,7 @@ export const buildToolHost = (requires: ECapability[], context: IToolContext): I
 export const invokeToolRef = async (ref: string, args: Record<string, unknown>, context: IToolContext): Promise<unknown> => {
     const resolved = resolveToolRef(ref)
     if (!resolved) throw new Error(`[common-ai] unknown tool '${ref}'`)
-    return resolved.tool.execute(args, buildToolHost(resolved.toolset.requires, context))
+    return resolved.tool.execute(args, buildToolHost(resolved.toolset.requires, context, resolved.toolset.providers))
 }
 
 /** Resolves a qualified reference '<toolset>/<tool>' against the registry. */
@@ -1295,7 +1327,7 @@ export const buildAgentTools = (
                     return denial
                 }
 
-                const host = buildToolHost(getToolset(e.toolsetId)?.requires ?? [], context)
+                const host = buildToolHost(getToolset(e.toolsetId)?.requires ?? [], context, getToolset(e.toolsetId)?.providers)
                 try {
                     // runWithToolContext also wraps the tools written against the OLD contract (the ones
                     // that read ctx()). That is what lets the 43 be migrated package by package in S3,

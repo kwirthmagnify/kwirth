@@ -168,7 +168,8 @@ export enum ECapability {
     K8S = 'k8s',                // cluster access
     METRICS = 'metrics',        // metrics, current and historical
     EVENTS = 'events',          // cluster event buffer
-    REPOS = 'repos'             // source repository credentials
+    REPOS = 'repos',            // source repository credentials
+    PROVIDERS = 'providers'     // handles of the providers the toolset names in `providers` (reads and operations)
 }
 
 /** Separator of a qualified reference to a tool: '<toolset>/<tool>'. */
@@ -201,6 +202,8 @@ export interface IAiToolsetInfo {
     displayName: string
     description: string
     requires: ECapability[]
+    /** With ECapability.PROVIDERS: the ids of the providers it needs (e.g. ['aws']). The host lends ONLY these. */
+    providers?: string[]
     tools: IAiToolInfo[]
 }
 

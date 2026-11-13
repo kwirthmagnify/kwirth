@@ -166,6 +166,38 @@ test('la fachada de cluster NO deja pasar las credenciales del core', () => {
     assert.equal(JSON.stringify(host.k8s).includes('NO-DEBE-SALIR'), false)
 })
 
+// ── ECapability.PROVIDERS (plan iria/plans/aws-serverless-toolsets, S1) ──────────────────────────────────────
+// The toolset names the providers it needs; the host lends ONLY those, asked for on behalf of the consumer the
+// tools run for (the channel), so the core's registry and its log of operations attribute them.
+
+const providersContext = (asked) => fakeContext({
+    consumer: { id: 'agora' },
+    clusterInfo: { ...fakeContext().clusterInfo, getProvider: (id, consumer) => { asked.push({ id, consumer }); return { id, getData: async () => 'data', getOperations: () => [], runOperation: async () => ({ success: true, dryRun: true }) } } }
+})
+
+test('PROVIDERS: only the providers the toolset named, asked for on behalf of the consumer', () => {
+    const asked = []
+    const host = buildToolHost([ECapability.PROVIDERS], providersContext(asked), ['aws'])
+    assert.ok(host.providers)
+    assert.equal(host.providers.get('aws').id, 'aws')
+    assert.equal(host.providers.get('azure'), undefined, 'not named by the toolset: not lent, and not even asked for')
+    assert.deepEqual(asked, [{ id: 'aws', consumer: { id: 'agora' } }])
+})
+
+test('PROVIDERS: not declared, no consumer, or a host without getProvider = no providers at all', () => {
+    assert.equal(buildToolHost([ECapability.K8S], providersContext([]), ['aws']).providers, undefined, 'not in requires')
+    assert.equal(buildToolHost([ECapability.PROVIDERS], fakeContext({ consumer: undefined }), ['aws']).providers, undefined, 'no consumer to attribute it to')
+    assert.equal(buildToolHost([ECapability.PROVIDERS], fakeContext({ consumer: { id: 'agora' } }), ['aws']).providers, undefined, 'clusterInfo without getProvider')
+    const none = buildToolHost([ECapability.PROVIDERS], providersContext([]))
+    assert.equal(none.providers.get('aws'), undefined, 'declared the capability but named no provider: nothing')
+})
+
+test('PROVIDERS: the list goes to the front with the toolset, so the admin sees what it reaches', () => {
+    registerToolset({ id: 'reg-prov', version: '0.1.0', displayName: 'P', description: 'p', requires: [ECapability.PROVIDERS], providers: ['aws'], tools: [] })
+    assert.deepEqual(listToolsetInfos().find(t => t.id === 'reg-prov').providers, ['aws'])
+    unregisterToolset('reg-prov')
+})
+
 test('sin cluster no se inventa la capability aunque se declare', () => {
     // Better the tool receives undefined and says so, than handing it a half-built facade that blows up inside.
     const host = buildToolHost([ECapability.K8S], fakeContext({ clusterInfo: undefined }))
