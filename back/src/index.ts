@@ -3102,7 +3102,13 @@ const launchDesktop = async (localKwirthData:KwirthData, expressApp:Application)
                                     let description = 'Volatile key for desktop'
                                     let expire:number = Date.now() + 10000000000  // 4 months
                                     let days:number = 1
-                                    let accessKey:AccessKey = { id: uuid(), type: 'volatile', resources: 'cluster::::' }
+                                    /*
+                                        The desktop user is the owner of the machine and of its kubeconfig: what Kwirth guards
+                                        behind 'admin' (managing extensions, users, keys) is already within their reach. With
+                                        'cluster' alone, everything gated on 'admin' was closed on the desktop — Magnify's
+                                        Extensions section among them. Same resources as the default 'admin' user.
+                                    */
+                                    let accessKey:AccessKey = { id: uuid(), type: 'volatile', resources: 'cluster,admin::::' }
                                     let apiKey:ApiKey={ accessKey, description, expire, days }
                                     if (runningInstance.apiKeyApi) 
                                         runningInstance.apiKeyApi.apiKeys.push(apiKey)
