@@ -1,5 +1,5 @@
 import { FC, ReactNode, useEffect } from 'react'
-import { EInstanceConfigView, EChannelRefreshAction, ENotifyLevel, IChannelMessageAction, IChannelSettings, IChannelRequirements, EExtensionType, IExtensionScope, BackChannelData } from '@kwirthmagnify/kwirth-common'
+import { EInstanceConfigView, EChannelRefreshAction, ENotifyLevel, IChannelMessageAction, IChannelSettings, IChannelRequirements, EExtensionType, IExtensionScope, BackChannelData, IClusterRoute } from '@kwirthmagnify/kwirth-common'
 
 type CloseWithId = (id: string) => void
 type CloseNoId = () => void
@@ -47,6 +47,11 @@ export interface IClusterEndpoint {
     accessString: string
     home: boolean              // the cluster Kwirth was launched from (formerly 'source')
     id: string                 // the cluster's uid (kube-system uid); '' when not resolved yet (readClusterInfo pending)
+    /*
+        Set on PROXIED entries (see ClusterRoute in common). Informative only: 'url' is already the one to
+        connect to, resolved by the core, so a channel never resolves anything itself.
+    */
+    route?: IClusterRoute
 }
 
 // State of a remote connection managed by the core (multi-cluster federation). Never string literals.
