@@ -12,18 +12,21 @@ export class ApiKeyApi {
     public masterKey: string
     public isDesktop: boolean
     private validScopes?: () => Set<string>   // conjunto de scopes conocidos, para validar al guardar
+    // A deleted key must stop working NOW, also for whoever is already connected with it (K1): the core cuts those connections
+    private onKeyDeleted?: (keyId: string) => void
 
-    private constructor(configMaps: IConfigMaps, masterKey: string, isDesktop:boolean, validScopes?: () => Set<string>) {
+    private constructor(configMaps: IConfigMaps, masterKey: string, isDesktop:boolean, validScopes?: () => Set<string>, onKeyDeleted?: (keyId: string) => void) {
         this.configMaps = configMaps
         this.masterKey = masterKey
         this.isDesktop = isDesktop
         this.validScopes = validScopes
+        this.onKeyDeleted = onKeyDeleted
         this.initializeRoutes()
     }
 
-    public static async create(configMaps: IConfigMaps, masterKey: string, isDesktop: boolean, validScopes?: () => Set<string>): Promise<ApiKeyApi|undefined> {
+    public static async create(configMaps: IConfigMaps, masterKey: string, isDesktop: boolean, validScopes?: () => Set<string>, onKeyDeleted?: (keyId: string) => void): Promise<ApiKeyApi|undefined> {
         try {
-            const instance = new ApiKeyApi(configMaps, masterKey, isDesktop, validScopes)
+            const instance = new ApiKeyApi(configMaps, masterKey, isDesktop, validScopes, onKeyDeleted)
             const result = await configMaps.read('kwirth.keys', [])
             const cleanKeys = AuthorizationManagement.cleanApiKeys(result)
             instance.apiKeys = cleanKeys
@@ -157,9 +160,15 @@ export class ApiKeyApi {
                     // remove api key from permanent store (if exists)
                     let storedKeys=await this.configMaps.read('kwirth.keys',[]) as ApiKey[]
                     storedKeys = AuthorizationManagement.cleanApiKeys(storedKeys)
+                    const existed = storedKeys.some(apiKey => apiKey.accessKey.id===req.params.key)
                     storedKeys=storedKeys.filter(apiKey => apiKey.accessKey.id!==req.params.key)
                     await this.configMaps.write('kwirth.keys', storedKeys )
                     this.apiKeys=[...this.apiKeys.filter(a => a.accessKey.type === 'volatile'), ...storedKeys]
+                    // only a key that was really deleted (a volatile one is kept above), and after it is gone from apiKeys: a RECONNECT racing with this is already rejected
+                    if (existed) {
+                        try { this.onKeyDeleted?.(req.params.key) }
+                        catch (err) { console.log('Could not cut the live connections of a deleted key', err) }
+                    }
                     res.status(200).json({})
                 }
                 catch (err) {
