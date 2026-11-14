@@ -39,17 +39,22 @@ Two small settings are worth knowing, both reached from the **☰ main menu**.
 
 ### kwirth settings
 
-**☰ → kwirth Settings** configures **kwirth itself** on the selected cluster, as opposed to your personal preferences. The main option is the **metrics read interval** — how often (in seconds) kwirth samples cluster metrics:
+**☰ → kwirth Settings** configures **kwirth itself** on the selected cluster, as opposed to your personal preferences. Its **General** tab holds two settings, each in its own card that says what it does, when a change applies and where the value comes from when it is not set here:
 
 ![Kwirth settings dialog](../../_media/guide/admin-kwirth-settings.png)
 
-What you save here is **stored by kwirth and survives a restart**. The [Metrics provider](../extensions/providers/metrics) picks up a new value on its next read, so you do not need to restart anything for it to take effect.
+| Card | Setting | When a change applies |
+|---|---|---|
+| **Cluster metrics** | **Cluster metrics read interval (seconds)** — how often kwirth samples the CPU and memory of nodes and pods. Every chart and metrics channel is fed from these samples | On the next sample: the [Metrics provider](../extensions/providers/metrics) picks it up on its next read, no restart needed |
+| **Previous container log** | **Previous container log lines to keep (on startup)** — how many lines of its previous container's log kwirth reads after a restart, to show them in the About dialog and send them through the sender chosen in [Notifications](#notifications) | From the **next restart**: the log is read once, at startup. Only when kwirth runs inside the cluster |
+
+What you save here is **stored by kwirth and survives a restart**.
 
 Managing these settings requires the **`admin`** scope; without it the dialog will tell you so instead of loading.
 
 The other tabs are covered below: [Notifications](#notifications), the [log](#how-much-kwirth-writes-to-its-log), [marketplaces](#adding-your-own-marketplace), [package registries](#package-registries) and [Login access](#login-access) — where kwirth can be logged into from.
 
-> The interval can also be set at deploy time (Helm `metricsinterval` / `--metricsinterval`). Precedence is: what you save in this dialog wins; otherwise the deploy-time value; otherwise 15 seconds. So the Helm value acts as the starting point until somebody changes it here.
+> Both can also be set at deploy time: the interval with Helm `metricsInterval` (`METRICSINTERVAL`), the lines with Helm `previousLogLines` (`PREVIOUSLOGLINES`). Precedence is: what you save in this dialog wins; otherwise the deploy-time value; otherwise the default (15 seconds and 1000 lines). So the Helm value acts as the starting point until somebody changes it here.
 
 ### Notifications
 
