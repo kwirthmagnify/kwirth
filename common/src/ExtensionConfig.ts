@@ -43,6 +43,12 @@
                   not supported it falls back to a text field, and whatever the user types by hand still
                   works — which is also what happens when 'options' comes back empty from a schema the
                   extension generates hot.
+      'textarea'  a MULTI-LINE text field in a monospaced font, with a fixed height that scrolls inside
+                  (the dialog does not grow with the content). For scripts, templates, keys: anything
+                  whose line breaks, tabs and backslashes must be kept exactly as typed — a single-line
+                  field with '\n' escapes was rejected because the backslash is ambiguous precisely there
+                  (C:\temp\new.txt, printf "a\n"). Combined with 'secret' it is masked with an eye, and
+                  with 'aiInstructions' it offers to have an LLM draft it.
 
     WHICH form draws which, because they are not all the same form:
       · The single-configuration form (providers, logins) and the identity providers' one draw ALL of the
@@ -51,9 +57,11 @@
       · The multi-configuration list (senders, webhooks) has its own renderer and draws every type EXCEPT
         'multiselect'. Its presentation is deliberately different —the switch sits at the right of a row,
         the dropdown offers an empty option— because it edits a named configuration out of a list.
+      · 'textarea' is drawn by ONE shared component (ConfigTextArea) in both forms above, secret eye and
+        AI button included, so the two cannot drift on it.
       · Plugins are configured as free JSON and have no schema at all.
 */
-export type TConfigFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select' | 'json' | 'multiselect'
+export type TConfigFieldType = 'text' | 'number' | 'boolean' | 'password' | 'select' | 'json' | 'multiselect' | 'textarea'
 
 /*
     A field of an extension's configuration form.
@@ -81,6 +89,63 @@ export interface IConfigFieldDef {
     default?: string | number | boolean
     /** The field is common to ALL of the extension's configurations, not specific to each one. */
     common?: boolean
+    /*
+        The value is a SECRET. Today it only means something on a 'textarea' — a 'password' is a secret by
+        its type — and it exists for values that are secret AND multi-line, like an SSH private key, which
+        a single-line password field would break by dropping its line breaks.
+
+        A secret field is handled like any other value: it is stored, returned and pre-filled REAL; the
+        only differences are that the form masks it behind an eye, and that it is NEVER sent to an LLM
+        (see 'aiInstructions'). The same exclusion applies to every 'password' field.
+    */
+    secret?: boolean
+    /*
+        The field can be DRAFTED BY AN LLM: the form shows an AI button next to it (disabled when Kwirth
+        has no LLM configured), the user describes in natural language what they want, and the result
+        replaces the field's content WITHOUT being saved — the user reviews it and saves it.
+
+        The text is the context the extension gives the model for THIS field: what the value is, what
+        contract it must follow, what form the answer takes. The core adds the current values of the
+        form's other fields — never a 'password' nor a 'secret' one — and the user's request.
+
+        The LLM only WRITES TEXT: it is called with no tools, it runs nothing and sees the result of
+        nothing. Today the form honours it on 'textarea' fields.
+    */
+    aiInstructions?: string
+}
+
+/*
+    One field of the form, as the AI assistant sees it.
+
+    The front never includes 'password' nor 'secret' fields, and the back drops them AGAIN by their
+    type/secret before building the prompt: one filter is a convention, two make it a guarantee.
+*/
+export interface IConfigAiAssistField {
+    name: string
+    label: string
+    type?: TConfigFieldType
+    secret?: boolean
+    value: string | number | boolean
+}
+
+/* The body of POST /core/aiconfig/assist. */
+export interface IConfigAiAssistRequest {
+    /** Which configured LLM key to use. */
+    llmId: string
+    /** The field being drafted. Its current value travels in 'fields', so the user can also ask "change it to…". */
+    fieldName: string
+    /** The extension's context for that field (IConfigFieldDef.aiInstructions). */
+    aiInstructions: string
+    /** The form's fields, for context (the interpreter, the target…). */
+    fields: IConfigAiAssistField[]
+    /** What the user wants, in natural language. */
+    request: string
+}
+
+/* The answer of POST /core/aiconfig/assist. On error: an HTTP status and { error }. */
+export interface IConfigAiAssistResponse {
+    /** The drafted value, with any markdown fences stripped. */
+    text: string
 }
 
 /*
