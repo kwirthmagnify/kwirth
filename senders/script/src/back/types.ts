@@ -19,8 +19,17 @@ export enum EScriptStdin {
     JSON = 'json'
 }
 
+/** Where the script runs. */
+export enum EScriptTarget {
+    /** in the Kwirth back end itself */
+    LOCAL = 'local',
+    /** on another machine, Linux or Windows, through the DCE 'ssh' */
+    SSH = 'ssh'
+}
+
 export interface IScriptSenderConfig extends ISenderConfig {
     name: string
+    target: EScriptTarget
     interpreter: EScriptInterpreter
     script: string
     stdin: EScriptStdin
@@ -34,6 +43,16 @@ export interface IScriptSenderConfig extends ISenderConfig {
     wait: boolean
     /** the process is killed when it runs longer; default 30 */
     timeoutSeconds?: number
+    /** target = ssh: the machine, its port (22) and the user to log in as */
+    sshHost?: string
+    sshPort?: number
+    sshUser?: string
+    /** target = ssh: a password, or a private key (with its passphrase if it has one) */
+    sshPassword?: string
+    sshPrivateKey?: string
+    sshPassphrase?: string
+    /** target = ssh: the host key the machine must present ('SHA256:…'); empty = any, and it is reported */
+    sshFingerprint?: string
 }
 
 /** What send() and sendBatch() return. */
@@ -44,10 +63,15 @@ export interface IScriptRunResult extends ISenderResult {
     stderr: string
     /** true when stdout or stderr were longer and only their end is kept */
     truncated: boolean
+    /** SSH only: the host key the machine presented ('SHA256:…'), so that it can be pinned */
+    hostFingerprint?: string
 }
 
 /** What send() and sendBatch() return when the configuration does NOT wait for the script. */
 export interface IScriptStartResult extends ISenderResult {
     started: true
-    pid: number
+    /** local only: there is no remote pid over SSH */
+    pid?: number
+    /** SSH only: the machine it was started on */
+    host?: string
 }

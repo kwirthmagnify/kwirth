@@ -84,6 +84,38 @@ test.describe('script sender: textarea and AI assistant', () => {
         }
     })
 
+    test('the SSH fields are always there: DISABLED while it runs on this Kwirth, enabled on "Another machine (SSH)"', async () => {
+        const ssh = [
+            () => cfg().getByLabel('SSH host', { exact: false }).first(),
+            () => cfg().getByLabel('SSH port', { exact: true }),
+            () => cfg().getByLabel('SSH user', { exact: false }).first(),
+            () => cfg().getByLabel('SSH password', { exact: true }),
+            () => cfg().getByRole('textbox', { name: 'SSH private key', exact: true }),
+            () => cfg().getByLabel('Private key passphrase', { exact: true }),
+            () => cfg().getByLabel(/Host key fingerprint/)
+        ]
+        await expect(cfg().getByText('This Kwirth', { exact: true })).toBeVisible()
+        for (const field of ssh) {
+            await expect(field()).toBeVisible()
+            await expect(field()).toBeDisabled()
+        }
+        // A required field that is disabled does not block the save.
+        await cfg().getByLabel('Name *', { exact: true }).fill('not-saved')
+        await scriptField().fill('true')
+        await expect(cfg().getByRole('button', { name: 'Add' })).toBeEnabled()
+
+        await cfg().getByText('This Kwirth', { exact: true }).click()
+        await page.getByRole('option', { name: 'Another machine (SSH)' }).click()
+        for (const field of ssh) await expect(field()).toBeEnabled()
+        // Now host and user are required: without them there is nothing to save.
+        await expect(cfg().getByRole('button', { name: 'Add' })).toBeDisabled()
+        await cfg().getByLabel('SSH host', { exact: false }).first().fill('web-1.example')
+        await cfg().getByLabel('SSH user', { exact: false }).first().fill('deploy')
+        await expect(cfg().getByRole('button', { name: 'Add' })).toBeEnabled()
+        await cfg().getByRole('button', { name: 'Cancel' }).click()
+        await newConfig()
+    })
+
     test('the script is a multi-line, monospaced field of FIXED height', async () => {
         const field = scriptField()
         await expect(field).toHaveJSProperty('tagName', 'TEXTAREA')

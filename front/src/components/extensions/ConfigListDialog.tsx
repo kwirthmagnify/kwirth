@@ -6,7 +6,7 @@ import {
 } from '@mui/material'
 import { Add, ContentCopy, Delete, Settings, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, isConfigFieldEnabled } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { ConfigTextArea } from './ConfigTextArea'
@@ -151,7 +151,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         finally { setSavingBase(false) }
     }
 
-    const baseValida = (): boolean => camposComunes.filter(f => f.required).every(f => {
+    const baseValida = (): boolean => camposComunes.filter(f => f.required && isConfigFieldEnabled(f, schema, base)).every(f => {
         const v = base[f.name]
         return v !== undefined && v !== '' && v !== false
     })
@@ -254,7 +254,8 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
 
     const formValido = (): boolean => {
         if (!values.name) return false
-        return schema.filter(f => f.required && !f.common && f.name !== 'name').every(f => {
+        // A field greyed out by enabledWhen is not required while it is (see IConfigFieldDef.enabledWhen).
+        return schema.filter(f => f.required && !f.common && f.name !== 'name' && isConfigFieldEnabled(f, schema, values)).every(f => {
             const v = values[f.name]
             return v !== undefined && v !== '' && v !== false
         })
@@ -301,19 +302,21 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
             if (escribir) escribir(f.name, val)
             else setValues(prev => ({ ...prev, [f.name]: val }))
         }
+        // Greyed out, never hidden, while another field says it does not apply (IConfigFieldDef.enabledWhen).
+        const disabled = !isConfigFieldEnabled(f, schema, valores)
 
         if (f.type === 'boolean') {
             return (
                 <Box key={f.name} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography variant='body2'>{f.label}</Typography>
-                    <Switch size='small' checked={Boolean(value)} onChange={e => onChange(e.target.checked)} />
+                    <Typography variant='body2' color={disabled ? 'text.disabled' : undefined}>{f.label}</Typography>
+                    <Switch size='small' checked={Boolean(value)} disabled={disabled} onChange={e => onChange(e.target.checked)} />
                 </Box>
             )
         }
 
         if (f.type === 'select' && f.options) {
             return (
-                <FormControl key={f.name} size='small' fullWidth>
+                <FormControl key={f.name} size='small' fullWidth disabled={disabled}>
                     <InputLabel>{f.label}{f.required ? ' *' : ''}</InputLabel>
                     <Select label={`${f.label}${f.required ? ' *' : ''}`} value={value || ''} displayEmpty onChange={e => onChange(e.target.value)}>
                         <MenuItem value=''><em>—</em></MenuItem>
@@ -324,13 +327,13 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         }
 
         if (f.type === 'textarea') {
-            return <ConfigTextArea key={f.name} field={f} value={String(value)} onChange={onChange} fields={schema} values={valores} />
+            return <ConfigTextArea key={f.name} field={f} value={String(value)} onChange={onChange} fields={schema} values={valores} disabled={disabled} />
         }
 
         const esSecreto = f.type === 'password'
         const visible = revealed.has(f.name)
         return (
-            <TextField key={f.name} size='small' fullWidth
+            <TextField key={f.name} size='small' fullWidth disabled={disabled}
                 label={`${f.label}${f.required ? ' *' : ''}`}
                 type={f.type === 'number' ? 'number' : (esSecreto && !visible) ? 'password' : 'text'}
                 autoComplete={esSecreto ? 'new-password' : 'off'}

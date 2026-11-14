@@ -112,6 +112,37 @@ export interface IConfigFieldDef {
         nothing. Today the form honours it on 'textarea' fields.
     */
     aiInstructions?: string
+    /*
+        The field is ENABLED only while another field of the same form holds one of these values; the rest
+        of the time it is shown DISABLED — never hidden: a form whose fields come and go is harder to read
+        than one that greys out what does not apply. Its value is kept, and saved, as it is.
+
+        Example: the script sender's 'ssh*' fields carry { field: 'target', values: ['ssh'] }.
+
+        A disabled field is not required: 'required' is only checked while it is enabled. The extension
+        still validates what it receives — the form is a convenience, not a guarantee.
+    */
+    enabledWhen?: IConfigFieldEnabledWhen
+}
+
+/** See IConfigFieldDef.enabledWhen. */
+export interface IConfigFieldEnabledWhen {
+    /** The name of the other field. */
+    field: string
+    /** The values of that field that enable this one. */
+    values: (string | boolean)[]
+}
+
+/**
+ * Whether a field is enabled given the current values of its form (see IConfigFieldDef.enabledWhen). The
+ * other field's 'default' stands in while it has no value yet, so the answer does not depend on whether
+ * the form pre-filled the defaults.
+ */
+export const isConfigFieldEnabled = (field: IConfigFieldDef, schema: IConfigFieldDef[], values: Record<string, unknown>): boolean => {
+    if (!field.enabledWhen) return true
+    const { field: other, values: enabling } = field.enabledWhen
+    const current = values[other] ?? schema.find(f => f.name === other)?.default
+    return enabling.some(v => v === current)
 }
 
 /*

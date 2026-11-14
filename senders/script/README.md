@@ -2,11 +2,13 @@
 
 > 🔴 **This sender runs code.** Every message sent to one of its configurations runs the script written in
 > that configuration, **with the identity of the Kwirth back end**: its service account, its file system,
-> its network. Only someone who administers senders can write one — treat that permission accordingly.
+> its network — or, on another machine, with the identity of the SSH user you configure. Only someone who
+> administers senders can write one — treat that permission accordingly.
 
 A sender whose destination is not a service but **a script you write in its configuration**. When the
 destination is something Kwirth does not know — an internal API, a vendor CLI, a command — you do not need a
-new sender: three lines of shell are enough.
+new sender: three lines of shell are enough. The script runs inside Kwirth or **on another machine** (Linux,
+or Windows with OpenSSH) over SSH.
 
 > **Kwirth** is an open-source Kubernetes observability and operations tool: logs, metrics, events and more,
 > in real time, extended with plugins like this one. Senders are how Kwirth delivers notifications.
@@ -14,20 +16,28 @@ new sender: three lines of shell are enough.
 
 ## Installing it
 
-From Kwirth: **☰ → Manage extensions → Senders**, find **Script Sender** and install it. Then create one or
-more named configurations for it, and pick them wherever Kwirth asks for a sender.
+From Kwirth: **☰ → Manage extensions → Senders**, find **Script Sender** and install it — it brings the
+**SSH** DCE (`@kwirthmagnify/kwirth-dce-ssh`) with it. Then create one or more named configurations for it,
+and pick them wherever Kwirth asks for a sender.
 
 ## Configuration
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `name` | text | — | the configuration name; whoever sends picks the sender by it |
+| `target` | select | `local` | `local` (inside Kwirth) · `ssh` (another machine, see below) |
 | `interpreter` | select | `sh` | `sh` · `bash` · `pwsh` (PowerShell 7) · `powershell` (Windows PowerShell 5.1) · `cmd` |
 | `script` | textarea | — | the script. Can be [drafted by an AI](#let-the-ai-write-it) |
 | `stdin` | select | `text` | what the script gets on stdin: `none`, `text` (the message body) or `json` (the whole message) |
 | `env` | boolean | `true` | adds the `KWIRTH_*` environment variables |
 | `wait` | boolean | `true` | wait for the script to finish; off = the delivery returns as soon as it starts (see below) |
 | `timeoutSeconds` | number | `30` | the script — and everything it started — is killed when it runs longer |
+| `sshHost`, `sshPort`, `sshUser` | text / number / text | —, `22`, — | `target = ssh`: the machine and the user to log in as |
+| `sshPassword` | password | — | `target = ssh`: a password… |
+| `sshPrivateKey`, `sshPassphrase` | secret textarea / password | — | …or a private key, with its passphrase if it has one |
+| `sshFingerprint` | text | — | `target = ssh`: the host key it must present (`SHA256:…`); empty = any |
+
+The `ssh*` fields are always on the form, greyed out while `target` is `local`.
 
 ## What the script receives
 
@@ -63,9 +73,29 @@ stopping the sender kills whatever is still running.
 At most **20 runs of one configuration** can be going on in the background at once: past that, the delivery
 fails saying so, so that a storm of alarms cannot fill the back end's pod with processes.
 
+## Running on another machine (`target = ssh`)
+
+For every message Kwirth connects through the SSH DCE, uploads the script by SFTP to the user's home as a
+hidden file only that user can read (`.kwirth-script-<uuid>.sh`/`.ps1`/`.cmd`), runs it with the chosen
+interpreter and the message on stdin, removes it and disconnects.
+
+- The `KWIRTH_*` variables are written at the top of the uploaded file, in the interpreter's language (SSH
+  servers only accept the variables they allow). With `cmd` they lose line breaks and double quotes: read
+  stdin.
+- The environment is the SSH user's, with what that machine has installed.
+- Windows: OpenSSH runs commands with its default shell, `cmd`, and the launch line is written for it.
+  PowerShell files get a UTF-8 BOM so Windows PowerShell 5.1 keeps accents.
+- 🔴 The timeout closes the SSH channel but does **not** stop the script on the machine: an SSH server leaves
+  it running (one that still writes dies when it tries to; one that waits goes on). Limit it inside the
+  script if it must not outlive the timeout (on Linux, `timeout 25 long-command`).
+- `sshFingerprint` empty accepts any host key: the log says once which one it was, and every result carries
+  it in `hostFingerprint`, so you can copy it into the field and have it checked from then on
+  (`ssh-keygen -lf <host key>.pub` on the machine prints the same). Another key fails the delivery.
+- Not waiting returns `{ started: true, host }` once connected and uploaded.
+
 ## The environment is clean — on purpose
 
-The back end's environment holds credentials (database, tokens, master key). The script **does not inherit
+Inside Kwirth (`target = local`): the back end's environment holds credentials (database, tokens, master key). The script **does not inherit
 it**: it starts with `PATH`, `HOME`, `LANG`, `LC_ALL`, `TZ` and `TMPDIR` (on Windows, `PATH`, `PATHEXT`,
 `SYSTEMROOT`, `WINDIR`, `COMSPEC`, `TEMP`, `TMP`, `USERPROFILE`, `APPDATA`, `LOCALAPPDATA`, `PROGRAMDATA`,
 `PROGRAMFILES` and a few system ones), plus the `KWIRTH_*` variables. A script that expects a variable of
@@ -73,7 +103,7 @@ the container will not find it.
 
 ## Which interpreters are there
 
-It depends on **where Kwirth runs**:
+It depends on **where the script runs** — over SSH, on what that machine has. Inside Kwirth:
 
 - **Kwirth's official container image** (Alpine): only **`sh`** — BusyBox's POSIX shell — with BusyBox
   tools. **`wget` is there; `curl`, `bash`, `jq` and `pwsh` are not.**

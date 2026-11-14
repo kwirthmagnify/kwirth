@@ -5,8 +5,7 @@
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
         "specula": "../plugins/specula/dist",
-        "ianus": "../plugins/ianus/dist",
-        "incipit": "../plugins/incipit/dist"
+        "ianus": "../plugins/ianus/dist"
     },
     "providers": {
         "agent-metrics": "../providers/agent-metrics/dist",
@@ -34,7 +33,8 @@
         "aws-serverless-ops": "../aitoolsets/aws-serverless-ops/dist"
     },
     "dces": {
-        "swagger-ui": "../dces/swagger-ui/dist"
+        "swagger-ui": "../dces/swagger-ui/dist",
+        "ssh": "../dces/ssh/dist"
     },
     "docs": {
         "excubitor": "../plugins/excubitor/docs/",

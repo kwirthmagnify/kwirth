@@ -103,6 +103,7 @@ And `packs/create-pack.mjs` takes `--include dce:my-icons`, reading from `dces/m
 | [Net Tools](nettools) | DNS resolution and TCP reachability, from where kwirth runs. Spawns no processes |
 | [XYFlow](xyflow) | React Flow and elk, for the extensions that draw graphs |
 | [File Manager](file-manager) | the file browser's library, for the extensions that draw a file tree |
+| [SSH](ssh) | an SSH client: run a command on another machine, Linux or Windows, and copy files over SFTP |
 
 ## Writing your own
 

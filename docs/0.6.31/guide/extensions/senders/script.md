@@ -5,7 +5,8 @@
 
 > 🔴 **This sender runs code.** Every message sent to one of its configurations runs the script written in
 > that configuration **with the identity of the kwirth backend** — its service account, its file system,
-> its network. Only someone who administers senders can write one.
+> its network — or, on another machine, **with the identity of the SSH user** you configure. Only someone
+> who administers senders can write one.
 
 ## What it does
 
@@ -13,8 +14,9 @@ The **script** sender's destination is not a service but **a script you write in
 When a message has to go somewhere kwirth has no sender for — an internal API, a vendor CLI, a command that
 reacts to an alarm — you write three lines of shell instead of waiting for a new sender.
 
-Each message runs the script once; a **batch** (log forwarding hands over many lines at once) runs it
-**once for the whole batch**, never once per line.
+The script runs **inside kwirth** or **on another machine** — a Linux server, or Windows with OpenSSH — that
+kwirth reaches over SSH. Each message runs the script once; a **batch** (log forwarding hands over many lines
+at once) runs it **once for the whole batch**, never once per line.
 
 ## Configuration
 
@@ -22,12 +24,19 @@ Each message runs the script once; a **batch** (log forwarding hands over many l
 |---|---|---|
 | **Name** * | text | Config name (`script::<name>`). |
 | **Description** | text | Free-text note. |
+| **Run on** * | select | **This Kwirth** (default) or **Another machine (SSH)** — see [running on another machine](#running-on-another-machine). |
 | **Interpreter** * | select | `sh`, `bash`, `pwsh` (PowerShell 7), `powershell` (Windows PowerShell 5.1) or `cmd`. **sh** by default. See [which interpreters are there](#which-interpreters-are-there). |
 | **Script** * | multi-line | The script. Line breaks, tabs and backslashes are kept exactly as you type them. The 🤖 button lets an LLM [draft it for you](../ai-assist). |
 | **Standard input** | select | What the script gets on stdin: **Nothing**, **The message body as text** (default) or **The whole message as JSON**. |
 | **KWIRTH_\* environment variables** | toggle | Adds the message as environment variables. **On** by default. |
 | **Wait for the script to finish** | toggle | **On** by default: the delivery waits for the script and its result. Off: the delivery returns as soon as the script starts — see [not waiting](#not-waiting-for-the-script). |
 | **Timeout (seconds)** | number | The script — **and everything it started** — is killed when it runs longer. **30** by default. |
+| **SSH host** *, **SSH port**, **SSH user** * | text / number / text | The machine, its port (**22**) and the user to log in as. |
+| **SSH password** | password | A password… |
+| **SSH private key**, **Private key passphrase** | secret multi-line / password | …or a private key (OpenSSH or PEM text), with its passphrase if it has one. |
+| **Host key fingerprint** | text | The key the machine must present, `SHA256:…`. Empty = any — see [the host key](#the-host-key). |
+
+The **SSH** fields are always on the form, **greyed out** while the script runs on this kwirth.
 
 ## What the script receives
 
@@ -69,9 +78,59 @@ call, a long job:
   *"20 runs of this script are still going in the background"*, so a storm of alarms cannot fill the pod
   with processes.
 
+## Running on another machine
+
+With **Run on = Another machine (SSH)** the script runs on a machine kwirth reaches over SSH. It needs the
+**[SSH DCE](../dces/ssh)**, which is installed together with this sender.
+
+For every message kwirth connects, **uploads the script** by SFTP to the SSH user's home directory — as a
+hidden file, `.kwirth-script-<uuid>.sh` (or `.ps1`, `.cmd`), readable only by that user —, runs it with the
+interpreter you chose and the message on stdin, **removes it**, and disconnects. If the file cannot be removed,
+the delivery still succeeds and a warning goes to the sender's log.
+
+What changes compared with running inside kwirth:
+
+- **The `KWIRTH_*` variables travel inside the uploaded file**, written at its top in the interpreter's own
+  language (`export` in sh/bash, `$env:` in PowerShell, `set` in cmd). An SSH server only accepts the
+  variables its configuration allows, so they are not sent through the connection. A `#!` line stays the
+  first one. With **cmd** the variables lose their line breaks and double quotes — read the message from
+  **stdin** there.
+- **The environment is the SSH user's**, with whatever that machine has installed — not the clean
+  environment described below. Choose a user with only the permissions the script needs.
+- **Windows**: OpenSSH Server runs commands with its default shell, **cmd** — kwirth writes the line that
+  launches the script for it. PowerShell scripts are uploaded with a UTF-8 BOM, so accents arrive intact in
+  Windows PowerShell 5.1. If the machine's default shell was changed to PowerShell, use **powershell** or
+  **pwsh** as the interpreter.
+- 🔴 **The timeout closes the SSH channel, but it does not stop the script on the machine.** The delivery
+  fails (*"…did not finish within N s on host:22 and its SSH channel was closed"*), yet an SSH server leaves
+  the process running: a script that still writes output dies when it tries to, one that is waiting — a
+  `sleep`, a slow call — goes on. If the script must not outlive its timeout, limit it inside the script
+  (on Linux, `timeout 25 long-command`).
+- Errors name the machine: *"the script exited with code 3 on web-1:22: …"*.
+- **Not waiting** works the same: the delivery returns once kwirth has **connected and uploaded** the script
+  (a machine that is not there, wrong credentials or another host key still fail it), answering
+  `{ started: true, host }`.
+
+### The host key
+
+**Host key fingerprint** is the key the machine must present, in the form `ssh-keygen -lf` prints it
+(`SHA256:…`; the prefix and the trailing `=` are optional). Another key fails the delivery with *"the host key
+of web-1 is SHA256:…, not the expected SHA256:…"* — which is what an impostor machine would look like.
+
+Empty, **any** key is accepted — whoever sits in between would get the script and the message —, the sender's
+log says once *"the host key of web-1 was not checked (no fingerprint configured): it is SHA256:…"*, and every
+result carries it in `hostFingerprint`. Send a test from [Sender Debug](../plugins/sender-debug), copy it into
+the field, and from then on it is checked. To read it on the machine itself:
+
+```sh
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub                      # Linux
+ssh-keygen -lf C:\ProgramData\ssh\ssh_host_ed25519_key.pub            # Windows (OpenSSH Server)
+```
+
 ## The environment is clean — on purpose
 
-The backend's environment holds credentials: the database password, tokens, the master key. **The script
+This is about running **inside kwirth** (on another machine, the environment is the SSH user's). The
+backend's environment holds credentials: the database password, tokens, the master key. **The script
 does not inherit it.** It starts with `PATH`, `HOME`, `LANG`, `LC_ALL`, `TZ` and `TMPDIR` — on Windows,
 `PATH`, `PATHEXT`, `SYSTEMROOT`, `WINDIR`, `COMSPEC`, `TEMP`, `TMP`, `USERPROFILE`, `APPDATA`,
 `LOCALAPPDATA`, `PROGRAMDATA`, `PROGRAMFILES` and a few system ones — plus the `KWIRTH_*` variables. A
@@ -79,7 +138,8 @@ script that expects a variable of the container will not find it.
 
 ## Which interpreters are there
 
-It depends on **where kwirth runs**, not on the sender:
+It depends on **where the script runs** — over SSH, on what that machine has installed — not on the sender.
+Inside kwirth:
 
 - **kwirth's official container image** (Alpine): only **`sh`** — BusyBox's POSIX shell — with BusyBox
   tools. **`wget` is there; `curl`, `bash`, `jq` and `pwsh` are not.** Write POSIX `sh`.
@@ -127,4 +187,4 @@ to run. See [Generate a field with AI](../ai-assist).
 
 - Combine with **[regex](regex)** to run the script only for the messages that match, or with
   **[tee](tee)** to run it **and** notify elsewhere.
-- Running a script **on another machine** (SSH, Linux or Windows) is coming in a later version.
+- Running in a **pod of the cluster** and over **WinRM** are not there yet.

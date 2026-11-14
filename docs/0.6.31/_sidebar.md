@@ -109,6 +109,7 @@
       * [Net Tools](/0.6.31/guide/extensions/dces/nettools)
       * [XYFlow](/0.6.31/guide/extensions/dces/xyflow)
       * [File Manager](/0.6.31/guide/extensions/dces/file-manager)
+      * [SSH](/0.6.31/guide/extensions/dces/ssh)
 * [Installation](/0.6.31/installation)
 * [How it works](/0.6.31/how)
 * [Data streaming](/0.6.31/datastreaming)

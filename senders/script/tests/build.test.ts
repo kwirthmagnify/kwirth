@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ISenderMessage } from '@kwirthmagnify/kwirth-common-back'
 import { EScriptInterpreter, EScriptStdin } from '../src/back/types'
-import { cleanEnv, commandLine, kwirthEnv, OutputTail, scriptContent, scriptExtension, stdinPayload, INHERITED_LINUX } from '../src/back/build'
+import { cleanEnv, commandLine, kwirthEnv, OutputTail, scriptContent, scriptExtension, stdinPayload, INHERITED_LINUX, envPrelude, remoteCommand, remoteScriptContent, windowsPath } from '../src/back/build'
 
 // What a run is made of, decided without running anything — so it is tested the same on Linux and Windows.
 
@@ -93,4 +93,47 @@ test('the output keeps its END within the limit, and says it was cut', () => {
     tail.push('67890ABC')
     assert.equal(tail.value, '4567890ABC')
     assert.equal(tail.truncated, true)
+})
+
+// ── remote runs (target = ssh) ──────────────────────────────────────────────────────────────────────
+
+const VARS = { KWIRTH_SUBJECT: "It's down", KWIRTH_BODY: 'a\r\nb "q" 100% $X' }
+
+test('envPrelude, sh/bash: export with single quotes; a quote inside becomes \'\\\'\'', () => {
+    assert.equal(envPrelude(EScriptInterpreter.SH, VARS), `export KWIRTH_SUBJECT='It'\\''s down'\nexport KWIRTH_BODY='a\r\nb "q" 100% $X'\n`)
+    assert.equal(envPrelude(EScriptInterpreter.BASH, {}), '')
+})
+
+test('envPrelude, PowerShell: $env: with single quotes; a quote inside is doubled', () => {
+    const expected = `$env:KWIRTH_SUBJECT = 'It''s down'\n$env:KWIRTH_BODY = 'a\r\nb "q" 100% $X'\n`
+    assert.equal(envPrelude(EScriptInterpreter.PWSH, VARS), expected)
+    assert.equal(envPrelude(EScriptInterpreter.POWERSHELL, VARS), expected)
+})
+
+test('envPrelude, cmd: @set "N=v" — line breaks become spaces, " becomes \', % is doubled', () => {
+    assert.equal(envPrelude(EScriptInterpreter.CMD, VARS), `@set "KWIRTH_SUBJECT=It's down"\n@set "KWIRTH_BODY=a b 'q' 100%% $X"\n`)
+})
+
+test('remoteScriptContent: variables first, after a #! line; LF for sh, CRLF for cmd, BOM for PowerShell', () => {
+    const v = { KWIRTH_LEVEL: 'error' }
+    assert.equal(remoteScriptContent(EScriptInterpreter.SH, 'echo 1\r\necho 2', v), `export KWIRTH_LEVEL='error'\necho 1\necho 2`)
+    assert.equal(remoteScriptContent(EScriptInterpreter.SH, '#!/bin/sh\necho 1', v), `#!/bin/sh\nexport KWIRTH_LEVEL='error'\necho 1`)
+    assert.equal(remoteScriptContent(EScriptInterpreter.BASH, '#!/bin/bash', v), `#!/bin/bash\nexport KWIRTH_LEVEL='error'\n`)
+    assert.equal(remoteScriptContent(EScriptInterpreter.CMD, 'echo %KWIRTH_LEVEL%\necho x', v), '@set "KWIRTH_LEVEL=error"\r\necho %KWIRTH_LEVEL%\r\necho x')
+    assert.equal(remoteScriptContent(EScriptInterpreter.POWERSHELL, 'Write-Output 1', v), `\uFEFF$env:KWIRTH_LEVEL = 'error'\nWrite-Output 1`)
+    assert.equal(remoteScriptContent(EScriptInterpreter.PWSH, 'x', {}), '\uFEFFx')
+})
+
+test('windowsPath: the SFTP form of a Windows path becomes a Windows path; anything else is left alone', () => {
+    assert.equal(windowsPath('/C:/Users/deploy/.kwirth-script-1.cmd'), 'C:\\Users\\deploy\\.kwirth-script-1.cmd')
+    assert.equal(windowsPath('/d:/x'), 'd:\\x')
+    assert.equal(windowsPath('/home/deploy/x.sh'), '/home/deploy/x.sh')
+})
+
+test('remoteCommand: POSIX quoting for sh/bash, cmd-style double quotes and Windows paths for the rest', () => {
+    assert.equal(remoteCommand(EScriptInterpreter.SH, "/home/o'neil/x.sh"), `sh '/home/o'\\''neil/x.sh'`)
+    assert.equal(remoteCommand(EScriptInterpreter.BASH, '/home/d/x.sh'), `bash '/home/d/x.sh'`)
+    assert.equal(remoteCommand(EScriptInterpreter.CMD, '/C:/Users/d/x.cmd'), 'cmd /d /c "C:\\Users\\d\\x.cmd"')
+    assert.equal(remoteCommand(EScriptInterpreter.POWERSHELL, '/C:/Users/d/x.ps1'), 'powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "C:\\Users\\d\\x.ps1"')
+    assert.equal(remoteCommand(EScriptInterpreter.PWSH, '/home/d/x.ps1'), 'pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "/home/d/x.ps1"')
 })

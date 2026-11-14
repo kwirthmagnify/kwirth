@@ -34,6 +34,8 @@ interface IConfigTextAreaProps {
     values: TFormValues
     /** The eye was pressed on a hidden secret, BEFORE revealing it (ConfigFields' onRevealSecret). */
     onReveal?: () => void | Promise<void>
+    /** Greyed out by IConfigFieldDef.enabledWhen: shown, not editable, and the AI button off with it. */
+    disabled?: boolean
 }
 
 const isSecretDef = (f: IConfigFieldDef): boolean => f.type === 'password' || f.secret === true
@@ -81,17 +83,17 @@ const ConfigTextArea: React.FC<IConfigTextAreaProps> = (props) => {
         return (
             <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5, minHeight: 30 }}>
-                    <Typography variant='body2'>{label}</Typography>
+                    <Typography variant='body2' color={props.disabled ? 'text.disabled' : undefined}>{label}</Typography>
                     <Tooltip title={llms.length === 0 ? 'No LLM is configured in Kwirth' : 'Generate with AI'}>
                         <span>
-                            <IconButton size='small' aria-label='Generate with AI' disabled={llms.length === 0} onClick={() => setAssistOpen(true)}>
+                            <IconButton size='small' aria-label='Generate with AI' disabled={llms.length === 0 || props.disabled} onClick={() => setAssistOpen(true)}>
                                 <SmartToy fontSize='small' />
                             </IconButton>
                         </span>
                     </Tooltip>
                     {eye}
                 </Box>
-                <TextField size='small' fullWidth multiline rows={ROWS} value={shown}
+                <TextField size='small' fullWidth multiline rows={ROWS} value={shown} disabled={props.disabled}
                     onChange={e => { if (!masked) props.onChange(e.target.value) }}
                     slotProps={{ input: { readOnly: masked }, htmlInput }} />
                 {assistOpen && (
@@ -105,7 +107,7 @@ const ConfigTextArea: React.FC<IConfigTextAreaProps> = (props) => {
     }
 
     return (
-        <TextField size='small' fullWidth multiline rows={ROWS} label={label} value={shown}
+        <TextField size='small' fullWidth multiline rows={ROWS} label={label} value={shown} disabled={props.disabled}
             onChange={e => { if (!masked) props.onChange(e.target.value) }}
             slotProps={{
                 input: { readOnly: masked, endAdornment: eye ? <InputAdornment position='end' sx={{ alignSelf: 'flex-start', mt: 1.5 }}>{eye}</InputAdornment> : undefined },

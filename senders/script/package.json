@@ -21,5 +21,11 @@
         "typescript": "^5.4.0"
     },
     "requiresRestart": false,
-    "requiresExtension": []
+    "requiresExtension": [
+        {
+            "extensionType": "dce",
+            "id": "ssh",
+            "minVersion": "0.1.0"
+        }
+    ]
 }

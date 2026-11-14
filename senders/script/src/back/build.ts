@@ -140,3 +140,77 @@ export class OutputTail {
     get value(): string { return this.text }
     get truncated(): boolean { return this.cut }
 }
+
+// ── remote runs (target = ssh) ──────────────────────────────────────────────────────────────────────
+
+/*
+    Over SSH the KWIRTH_* variables are not passed by the connection: sshd only accepts the variables its
+    AcceptEnv allows, and on a command line each remote shell quotes differently. They are written at the
+    top of the uploaded script instead, in the interpreter's own language — the one quoting that is known.
+
+      · sh/bash    export NAME='value'      — a ' inside becomes '\''; anything else, line breaks
+                                              included, is literal inside single quotes.
+      · PowerShell $env:NAME = 'value'      — a ' inside becomes ''; the rest is literal.
+      · cmd        @set "NAME=value"        — 🔴 cmd cannot hold a line break in a variable, and a " ends
+                                              the quoted set: line breaks become spaces and " becomes '.
+                                              % is doubled (a batch file expands it). With cmd the message
+                                              is read from stdin; the guide says so.
+*/
+export const envPrelude = (interpreter: EScriptInterpreter, vars: Record<string, string>): string => {
+    const names = Object.keys(vars)
+    switch (interpreter) {
+        case EScriptInterpreter.SH:
+        case EScriptInterpreter.BASH:
+            return names.map(n => `export ${n}='${vars[n].replace(/'/g, `'\\''`)}'\n`).join('')
+        case EScriptInterpreter.PWSH:
+        case EScriptInterpreter.POWERSHELL:
+            return names.map(n => `$env:${n} = '${vars[n].replace(/'/g, `''`)}'\n`).join('')
+        case EScriptInterpreter.CMD:
+            return names.map(n => `@set "${n}=${vars[n].replace(/\r\n|\r|\n/g, ' ').replace(/"/g, `'`).replace(/%/g, '%%')}"\n`).join('')
+    }
+}
+
+/*
+    The text of the file uploaded to the remote machine: the variables first (after a #! line, which must
+    stay the first one), then the script, with the line ends the interpreter wants.
+
+    PowerShell files get a UTF-8 BOM: Windows PowerShell 5.1 reads a .ps1 without one in the ANSI code page,
+    and an accent in the message — or in the script — arrives garbled. PowerShell 7 reads either.
+*/
+export const remoteScriptContent = (interpreter: EScriptInterpreter, script: string, vars: Record<string, string>): string => {
+    const prelude = envPrelude(interpreter, vars)
+    const lf = script.replace(/\r\n?/g, '\n')
+    let text = prelude + lf
+    if (lf.startsWith('#!')) {
+        const end = lf.indexOf('\n')
+        text = end < 0 ? `${lf}\n${prelude}` : lf.slice(0, end + 1) + prelude + lf.slice(end + 1)
+    }
+    const content = scriptContent(interpreter, text)
+    return interpreter === EScriptInterpreter.PWSH || interpreter === EScriptInterpreter.POWERSHELL ? '\uFEFF' + content : content
+}
+
+/** '/C:/Users/k/x.cmd', as SFTP names it on Windows OpenSSH, to 'C:\Users\k\x.cmd'. Anything else, unchanged. */
+export const windowsPath = (sftpPath: string): string =>
+    /^\/[A-Za-z]:/.test(sftpPath) ? sftpPath.slice(1).replace(/\//g, '\\') : sftpPath
+
+/*
+    The command sent over SSH to run the uploaded file. It is read by the remote user's shell: a POSIX
+    shell on Linux, and on Windows OpenSSH's default shell, cmd — so the Windows lines are written for cmd
+    (double quotes). The home directory never holds a double quote on either.
+*/
+export const remoteCommand = (interpreter: EScriptInterpreter, sftpPath: string): string => {
+    const posix = `'${sftpPath.replace(/'/g, `'\\''`)}'`
+    const win = `"${windowsPath(sftpPath)}"`
+    switch (interpreter) {
+        case EScriptInterpreter.SH:
+            return `sh ${posix}`
+        case EScriptInterpreter.BASH:
+            return `bash ${posix}`
+        case EScriptInterpreter.PWSH:
+            return `pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ${win}`
+        case EScriptInterpreter.POWERSHELL:
+            return `powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ${win}`
+        case EScriptInterpreter.CMD:
+            return `cmd /d /c ${win}`
+    }
+}

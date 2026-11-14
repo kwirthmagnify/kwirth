@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Checkbox, FormControlLabel, IconButton, ListItemText, MenuItem, Switch, TextField } from '@mui/material'
 import { Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
-import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, isConfigFieldEnabled } from '@kwirthmagnify/kwirth-common'
 import { ConfigTextArea } from './ConfigTextArea'
 
 /*
@@ -47,12 +47,24 @@ const ConfigFields: React.FC<IConfigFieldsProps> = (props: IConfigFieldsProps) =
         setShown(s => ({ ...s, [name]: !s[name] }))
     }
 
+    /*
+        The values as enabledWhen compares them: a boolean field kept as text by the form that stores
+        everything as text ('true') compares as the boolean it means.
+    */
+    const typedValues: Record<string, unknown> = Object.fromEntries(props.schema.map(f => {
+        const v = props.values[f.name]
+        return [f.name, f.type === 'boolean' && typeof v === 'string' ? v === 'true' : v]
+    }))
+
     const field = (f: IConfigFieldDef) => {
+        // Greyed out, never hidden, while another field says it does not apply (IConfigFieldDef.enabledWhen).
+        const disabled = !isConfigFieldEnabled(f, props.schema, typedValues)
+
         // A boolean is a switch, not a text field with 'true' inside. The value is read as a string too,
         // because a form that keeps everything as text is one of the two consumers.
         if (f.type === 'boolean') {
             return (
-                <FormControlLabel key={f.name} label={f.label}
+                <FormControlLabel key={f.name} label={f.label} disabled={disabled}
                     control={<Switch size='small' checked={props.values[f.name] === true || props.values[f.name] === 'true'}
                         onChange={e => props.onChange(f.name, e.target.checked)} />} />
             )
@@ -60,7 +72,7 @@ const ConfigFields: React.FC<IConfigFieldsProps> = (props: IConfigFieldsProps) =
 
         if (f.type === 'textarea') {
             return <ConfigTextArea key={f.name} field={f} value={String(props.values[f.name] ?? '')}
-                onChange={v => props.onChange(f.name, v)} fields={props.schema} values={props.values}
+                onChange={v => props.onChange(f.name, v)} fields={props.schema} values={props.values} disabled={disabled}
                 onReveal={props.onRevealSecret ? () => props.onRevealSecret!(f.name) : undefined} />
         }
 
@@ -70,7 +82,8 @@ const ConfigFields: React.FC<IConfigFieldsProps> = (props: IConfigFieldsProps) =
             value: props.values[f.name] ?? '',
             size: 'small' as const,
             fullWidth: true,
-            required: f.required,
+            disabled,
+            required: f.required && !disabled,
             sx: { '& .MuiOutlinedInput-root': { backgroundColor: 'transparent' } }
         }
 

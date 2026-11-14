@@ -143,6 +143,31 @@ Antes S4+S6: el DCE no tiene QA propio, solo se ve funcionar a través del sende
   no hay, queda dicho como pendiente y el stream no se da por cerrado. **QA** con sender-debug. Publicar
   DCE (primero) y sender.
 
+**Avance (2026-11-14) — código, tests, e2e y docs hechos; pendiente el QA del usuario (Linux y Windows):**
+
+- Contrato del DCE validado (sesión `connect` → `home`/`put`/`remove`/`exec`/`close`; resultados `ok`/fallo
+  tipado `ESshError`; exit ≠ 0 es resultado, el timeout es fallo). `dces/ssh` con el scaffolder; ssh2
+  empaquetado sin sus dos nativos opcionales (~735 KB sin minificar). 18 tests contra un servidor `ssh2` en
+  proceso; c8 97.56 / 89.69 / 100 %.
+- 🔴 **Hallazgo 5 — la regla de diálogos pedía deshabilitar, y el core no sabía.** El usuario eligió
+  `enabledWhen` en `IConfigFieldDef` (`IConfigFieldEnabledWhen { field, values }`, `isConfigFieldEnabled`
+  con el `default` del otro campo como respaldo): `kwirth-common@0.5.87` publicado; `ConfigFields`,
+  `ConfigListDialog` y `ConfigTextArea` deshabilitan y no exigen un requerido deshabilitado.
+- Sender: `target` (`EScriptTarget`) + `ssh*` con `enabledWhen`; `remote.ts` con la copia local del
+  contrato; `KWIRTH_*` como preámbulo en el fichero subido (D7), BOM para PowerShell, rutas Windows, línea
+  de lanzamiento para `cmd`; `wait=off` arranca al conectar+subir y devuelve `{ started, host }`;
+  `IScriptStartResult.pid` pasa a opcional; RF8: aviso de huella no comprobada una vez por config. Tipos
+  validados. `requiresExtension` = `dce:ssh:0.1.0`. 61 tests (58 ✔, 3 Windows); c8 97.90 / 87.44 / 87.50 %.
+- e2e `sender-script` 8 ✔ (los `ssh*` deshabilitados con local); regresión de formularios en verde salvo el
+  ajeno `idp-manager:108`.
+- Verificado con los **bundles reales** contra un servidor en proceso y contra **OpenSSH 10.3 real**
+  (contenedor `kwirth-qa-ssh`, puerto 2222, usuario `kwirth`).
+- 🔴 **Hallazgo 6 — cerrar el canal NO mata el proceso remoto.** Contra OpenSSH real, un `sleep 30` siguió
+  vivo tras el timeout. El servidor de pruebas lo mataba (test falso): corregido para ser fiel, y contrato,
+  READMEs y guías dicen ahora que el script debe limitarse solo (`timeout` en Linux). Posible mejora V2:
+  un vigilante remoto que mate el árbol (p. ej. `timeout -s KILL` cuando exista), sin abrir aquí.
+- Pendiente para cerrar C: QA del usuario, Windows con OpenSSH incluido (si no hay máquina, C no se cierra).
+
 ## 3. Orden y dependencias
 
 ```

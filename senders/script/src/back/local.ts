@@ -5,6 +5,7 @@ import path from 'path'
 import { ISenderMessage } from '@kwirthmagnify/kwirth-common-back'
 import { IScriptRunResult, IScriptSenderConfig } from './types'
 import { cleanEnv, commandLine, kwirthEnv, OutputTail, scriptContent, scriptExtension, stdinPayload } from './build'
+import { IBackgroundRun, tailOf } from './run'
 
 /*
     Runs a configuration's script on THIS host — the back end's container, or the machine Kwirth runs on.
@@ -21,12 +22,9 @@ import { cleanEnv, commandLine, kwirthEnv, OutputTail, scriptContent, scriptExte
 export const DEFAULT_TIMEOUT_SECONDS = 30
 export const OUTPUT_LIMIT = 8 * 1024
 
-/** A started run. `done` only exists once the process is running, so it never rejects unobserved. */
-export interface ILocalRun {
+/** A started local run; its kill() takes the script and everything it started. */
+export interface ILocalRun extends IBackgroundRun {
     pid: number
-    done: Promise<IScriptRunResult>
-    /** kills the script and everything it started */
-    kill: () => void
 }
 
 /*
@@ -98,7 +96,8 @@ export const startLocal = async (config: IScriptSenderConfig, messages: ISenderM
 
         child.on('spawn', () => {
             started = true
-            resolveStart({ pid: child.pid ?? -1, done, kill: () => killTree(child) })
+            const pid = child.pid ?? -1
+            resolveStart({ pid, label: String(pid), done, kill: () => killTree(child) })
         })
         child.on('error', err => finish(() => started ? rejectDone(spawnError(config, err)) : rejectStart(spawnError(config, err))))
         child.stdout?.on('data', (c: Buffer) => stdout.push(c.toString()))
@@ -125,12 +124,6 @@ export const startLocal = async (config: IScriptSenderConfig, messages: ISenderM
 /** A run that is waited for: started, and then its end. */
 export const runLocal = async (config: IScriptSenderConfig, messages: ISenderMessage[], batch: boolean): Promise<IScriptRunResult> =>
     (await startLocal(config, messages, batch)).done
-
-/** The last lines of stderr, for an error message that says what the script said. */
-const tailOf = (stderr: string): string => {
-    const t = stderr.trim()
-    return t === '' ? '' : `: ${t.length > 500 ? '…' + t.slice(t.length - 500) : t}`
-}
 
 /*
     A spawn failure translated: ENOENT means the interpreter is not on this host — saying so beats

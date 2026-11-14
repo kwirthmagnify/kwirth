@@ -55,6 +55,11 @@ const until = async (what: string, check: () => boolean, ms = 5000): Promise<voi
 }
 
 const alive = (pid: number): boolean => { try { process.kill(pid, 0); return true } catch { return false } }
+/** The pid of a LOCAL run started without waiting: it must be there. */
+const pidOf = (r: IScriptStartResult): number => {
+    assert.equal(typeof r.pid, 'number', 'a local start carries its pid')
+    return r.pid as number
+}
 
 const scratch = (): string => fs.mkdtempSync(path.join(os.tmpdir(), 'kwirth-script-test-'))
 
@@ -248,7 +253,8 @@ test('wait=off: the delivery returns as soon as the script STARTS, and the scrip
         const r = await configured({ wait: false, script: `sleep 1; cat > "${out}"` }).send('c', ALARM) as IScriptStartResult
         assert.ok(Date.now() - started < 800, 'it waited for the script')
         assert.equal(r.started, true)
-        assert.ok(r.pid > 0)
+        assert.ok(pidOf(r) > 0)
+        assert.equal(r.host, undefined)
         assert.equal(fs.existsSync(out), false, 'the script cannot have finished yet')
         await until('the script writes its output', () => fs.existsSync(out) && fs.readFileSync(out, 'utf8') === ALARM.body)
     }
@@ -277,7 +283,7 @@ test('wait=off: the timeout still kills the script, and says so in the log', NOT
     const r = await configured({ wait: false, timeoutSeconds: 1, script: 'sleep 30' }, logger).send('c', ALARM) as IScriptStartResult
     await until('the timeout is logged', () => errors.length === 1, 4000)
     assert.match(errors[0], /did not finish within 1 s and was killed/)
-    assert.equal(alive(r.pid), false)
+    assert.equal(alive(pidOf(r)), false)
 })
 
 test('wait=off: the temporary directory is gone once the script ends', NOT_UNIX, async () => {
@@ -295,7 +301,7 @@ test('wait=off: the temporary directory is gone once the script ends', NOT_UNIX,
 test(`wait=off: past ${MAX_BACKGROUND_RUNS} runs still going, the delivery fails instead of drowning the pod — and stop kills them all`, NOT_UNIX, async () => {
     const s = configured({ wait: false, stdin: EScriptStdin.NONE, timeoutSeconds: 30, script: 'sleep 30' })
     const pids: number[] = []
-    for (let i = 0; i < MAX_BACKGROUND_RUNS; i++) pids.push((await s.send('c', ALARM) as IScriptStartResult).pid)
+    for (let i = 0; i < MAX_BACKGROUND_RUNS; i++) pids.push(pidOf(await s.send('c', ALARM) as IScriptStartResult))
     await assert.rejects(s.send('c', ALARM), new RegExp(`${MAX_BACKGROUND_RUNS} runs of this script are still going in the background`))
     assert.ok(pids.every(alive))
 

@@ -122,7 +122,7 @@ IdP connectors, logins and providers share — and Kwirth draws the form from it
 | `json` | today, a single-line text field |
 | `textarea` | a **multi-line**, monospaced field of fixed height that scrolls inside. Line breaks, tabs and backslashes are kept exactly as typed: use it for scripts, templates, keys |
 
-Two flags change how a field is treated:
+Three properties change how a field is treated:
 
 - **`secret: true`** — the value is a secret. Meant for multi-line secrets on a `textarea` (an SSH
   private key), which a single-line `password` would break. It gets the eye, it is emptied in an export
@@ -133,11 +133,18 @@ Two flags change how a field is treated:
   follow, the form of the answer. The core adds the other (non-secret) fields of the form and the user's
   request; the model answers with the value only, and it lands in the field unsaved. Honoured today on
   `textarea` fields.
+- **`enabledWhen: { field, values }`** — the field is **enabled** only while another field of the form holds
+  one of `values`; the rest of the time it is shown **disabled** — never hidden. Its value is kept and saved
+  as it is, and a disabled field is not `required`. When the other field has no value yet, its `default`
+  decides. Your sender still validates what it receives: the form is a convenience, not a guarantee.
+  (`kwirth-common` 0.5.87.)
 
 ```typescript
+{ name: 'target', label: 'Run on', type: 'select', options: ['local', 'ssh'], default: 'local' },
 { name: 'script', label: 'Script', type: 'textarea', required: true,
   aiInstructions: 'A shell script run once per message. The message body arrives on stdin. Exit 0 on success.' },
-{ name: 'sshPrivateKey', label: 'SSH private key', type: 'textarea', secret: true },
+{ name: 'sshHost', label: 'SSH host', required: true, enabledWhen: { field: 'target', values: ['ssh'] } },
+{ name: 'sshPrivateKey', label: 'SSH private key', type: 'textarea', secret: true, enabledWhen: { field: 'target', values: ['ssh'] } },
 ```
 
 ### Consuming a provider from your sender

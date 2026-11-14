@@ -101,10 +101,11 @@ mensaje que llegue a esa config lo ejecute, aquí o en otra máquina, con el men
 | `sshPassword` | password | — | contraseña, o vacío si va con clave |
 | `sshPrivateKey` | **textarea secreto** (D12) | — | clave privada PEM/OpenSSH |
 | `sshPassphrase` | password | — | passphrase de la clave, si la tiene |
-| `sshHostFingerprint` | text | — | huella SHA256 esperada; vacío = se acepta y se avisa (D8) |
+| `sshFingerprint` | text | — | huella SHA256 esperada; vacío = se acepta y se avisa (D8) |
 
-Los campos `ssh*` están **siempre visibles** y se ignoran con `target=local` (regla de diálogos: nada
-aparece ni desaparece). Los secretos se devuelven reales y se muestran con el ojo (regla de secretos).
+Los campos `ssh*` están **siempre visibles** y **deshabilitados** con `target=local` (regla de diálogos:
+nada aparece ni desaparece), con `enabledWhen` en `IConfigFieldDef` (`kwirth-common` 0.5.87, validado el
+2026-11-14). Los secretos se devuelven reales y se muestran con el ojo (regla de secretos).
 
 Variables con `env` activo: `KWIRTH_BODY`, `KWIRTH_SUBJECT`, `KWIRTH_LEVEL`, `KWIRTH_TO` (lista
 separada por comas) y `KWIRTH_MESSAGE` (el JSON completo, para quien quiera `origin` o `metadata`).
@@ -169,7 +170,7 @@ así sirve a cualquier extensión con un `textarea` (plantillas de webhook, expr
   diciéndolo (una ráfaga de alarmas no puede llenar el pod de procesos). (Añadido 2026-11-14 a petición
   del usuario; tipos y tope validados.)
 - **RF7** — `target=ssh`: autenticación por contraseña **o** por clave privada (con passphrase opcional).
-- **RF8** — `target=ssh` con `sshHostFingerprint` informada: si la huella recibida no coincide, **no se
+- **RF8** — `target=ssh` con `sshFingerprint` informada: si la huella recibida no coincide, **no se
   ejecuta** y el envío falla diciendo ambas huellas. Vacía: se ejecuta y se escribe un aviso con la huella
   recibida, para copiarla a la config.
 - **RF9** — `target=ssh`: sin dependencia del DCE instalado ⇒ el envío falla con un error que lo dice
@@ -195,8 +196,8 @@ así sirve a cualquier extensión con un `textarea` (plantillas de webhook, expr
   saltan con `test.skip()` fuera de ella.
 - **RNF2** — El sender no empaqueta dependencias: local con builtins de Node; SSH a través del DCE.
 - **RNF3** — El sender es solo back; el diálogo lo genera el core desde `getConfigSchema()`.
-- **RNF4** — Los tests de SSH corren contra un servidor SSH de prueba (contenedor), nunca contra máquinas
-  reales.
+- **RNF4** — Los tests de SSH corren contra un servidor SSH de prueba (la clase `Server` de `ssh2`, dentro
+  del propio proceso del test: sin contenedores), nunca contra máquinas reales.
 
 ## 6. Decisiones cerradas
 
