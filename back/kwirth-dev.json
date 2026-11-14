@@ -5,7 +5,8 @@
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
         "specula": "../plugins/specula/dist",
-        "ianus": "../plugins/ianus/dist"
+        "ianus": "../plugins/ianus/dist",
+        "incipit": "../plugins/incipit/dist"
     },
     "providers": {
         "agent-metrics": "../providers/agent-metrics/dist",
@@ -14,6 +15,7 @@
         "azure": "../providers/azure/dist"
     },
     "senders": {
+        "script": "../senders/script/dist"
     },
     "webhooks": {
     },

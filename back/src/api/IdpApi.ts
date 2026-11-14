@@ -4,6 +4,7 @@ import { ApiKeyApi } from './ApiKeyApi'
 import { IdpManager } from '../tools/IdpManager'
 import { IIdpInstanceConfig } from '@kwirthmagnify/kwirth-common-back'
 import { ELogComponent, logError } from '../tools/Logging'
+import { secretFieldNames } from '../tools/ConfigFieldSecrets'
 
 const SECRET_MASK = '********'
 
@@ -141,7 +142,7 @@ export class IdpApi {
     /** undefined = the schema could not be read, which is NOT the same as 'this connector has none'. */
     private passwordFields(connectorId: string): string[] | undefined {
         const schema = this.idpManager.getConnectorSchema(connectorId)
-        return schema?.filter(f => f.type === 'password').map(f => f.name)
+        return schema ? secretFieldNames(schema) : undefined
     }
 
     /*

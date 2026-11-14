@@ -4,8 +4,10 @@ import { IConfigMaps } from '../tools/IConfigMap'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
-import { EUsageScope, getUsageService, loadModels, usageSubjectForKey } from '@kwirthmagnify/kwirth-common-ai/back'
+import { EUsageScope, getUsageService, loadModels, usageSubjectForKey, buildModel, generateText, UsageLimitError } from '@kwirthmagnify/kwirth-common-ai/back'
+import { IConfigAiAssistRequest, IConfigAiAssistResponse } from '@kwirthmagnify/kwirth-common'
 import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
+import { buildAiAssistPrompt, stripFences, validateAiAssistRequest } from '../tools/AiAssist'
 
 export class AiConfigApi {
     public router = express.Router()
@@ -70,6 +72,8 @@ export class AiConfigApi {
             }
         })
 
+        this.router.post('/assist', authMiddleware, (req: Request, res: Response) => this.assist(req, res))
+
         this.router.route('/llms')
             .all(authMiddleware)
             .get(async (_req: Request, res: Response) => {
@@ -132,6 +136,39 @@ export class AiConfigApi {
                     res.status(500).json({ available: false, durable: false, providers: {}, llms: {} })
                 }
             })
+    }
+
+    /*
+        POST /assist — an LLM drafts the value of one field of a configuration form (IConfigFieldDef with
+        'aiInstructions'). The gate is the same as the one editing an extension's configuration: whoever
+        can write the field can ask for it to be drafted.
+
+        🔴 Called with NO tools: the model writes text and nothing else. The wrapped generateText counts
+        the call against the key's ceilings like any other LLM call in Kwirth; a ceiling reached is a 429,
+        so the dialog can say exactly that instead of "it failed".
+    */
+    private async assist(req: Request, res: Response): Promise<void> {
+        const body = req.body as IConfigAiAssistRequest | undefined
+        const invalid = validateAiAssistRequest(body)
+        if (invalid || !body) { res.status(400).json({ error: invalid }); return }
+
+        const llm = (await this.readLlms()).find(l => l.id === body.llmId)
+        if (!llm) { res.status(404).json({ error: `LLM '${body.llmId}' is not configured` }); return }
+        const model = buildModel(llm, await this.readProviders())
+        if (!model) { res.status(400).json({ error: `LLM '${body.llmId}' cannot be used: its provider or key is missing` }); return }
+
+        try {
+            const { system, prompt } = buildAiAssistPrompt(body)
+            const result = await generateText({ model, system, prompt })
+            const answer: IConfigAiAssistResponse = { text: stripFences(result.text) }
+            res.status(200).json(answer)
+        }
+        catch (err) {
+            const msg = err instanceof Error ? err.message : String(err)
+            if (err instanceof UsageLimitError) { res.status(429).json({ error: msg }); return }
+            logError(ELogComponent.CORE, `AiConfigApi: the AI assistant failed for field '${body.fieldName}': ${msg}`)
+            res.status(502).json({ error: msg })
+        }
     }
 
     private async readProviders(): Promise<ILlmProvider[]> {

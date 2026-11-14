@@ -66,6 +66,23 @@ test('sin credenciales, el campo secreto se VACIA — no se omite', async () => 
     assert.equal(r.stored.configs[0].host, 'smtp.example.com', 'lo que no es secreto no se toca')
 })
 
+test('🔴 sin credenciales, un textarea marcado secret (una clave SSH) se vacia igual que un password', async () => {
+    // IConfigFieldDef.secret (kwirth-common 0.5.86): a multi-line secret is not type 'password', and the
+    // export used to ask only for that — the key would have travelled in clear.
+    const schema = [
+        { name: 'name', label: 'Name' },
+        { name: 'script', label: 'Script', type: 'textarea' },
+        { name: 'sshPrivateKey', label: 'SSH private key', type: 'textarea', secret: true },
+        { name: 'sshPassword', label: 'SSH password', type: 'password' }
+    ]
+    const config = { name: 'remoto', script: 'echo hi\n', sshPrivateKey: '-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----', sshPassword: 'pw' }
+    const e = senderConfigs(senderFalso(schema, [config]), 'script')
+    const r = await e.exportConfig!(opts(false)) as { stored: { configs: Record<string, unknown>[] } }
+    assert.equal(r.stored.configs[0].sshPrivateKey, '')
+    assert.equal(r.stored.configs[0].sshPassword, '')
+    assert.equal(r.stored.configs[0].script, 'echo hi\n', 'a textarea that is not secret travels intact')
+})
+
 test('un sender SIN esquema no exporta nada, en vez de arriesgarse', async () => {
     // With no schema the core does not know which field is the password. Between omitting the
     // configuration and writing a secret in the clear into a file that ends up in Downloads, it omits.

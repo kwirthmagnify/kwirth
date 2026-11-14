@@ -8,6 +8,7 @@ import { WebhookManager } from './WebhookManager'
 import { AiToolsetManager, isToolsetGrant, unknownGrantTools } from './AiToolsetManager'
 import { getToolset } from '@kwirthmagnify/kwirth-common-ai/back'
 import { IdpManager } from './IdpManager'
+import { secretFieldNames } from './ConfigFieldSecrets'
 
 /*
     The configuration the core stores ABOUT an extension, presented as one more `IExtension`.
@@ -84,7 +85,7 @@ export const senderConfigs = (manager: SenderManager, id: string): IExtension =>
         if (!schema) {
             return { stored: { configs: [] }, omitted: stored.configs.length }
         }
-        const secretos = schema.filter(f => f.type === 'password').map(f => f.name)
+        const secretos = secretFieldNames(schema)
         // Strip secrets from BOTH the base fields and each named config.
         const { configs, ...common } = stored
         const cleanCommon: Record<string, unknown> = {}
@@ -123,7 +124,7 @@ export const webhookConfigs = (manager: WebhookManager, id: string): IExtension 
 
         const schema = manager.getWebhook(id)?.getConfigSchema?.()
         if (!schema) return { configs: [], omitted: configs.length }
-        const secretos = schema.filter(f => f.type === 'password').map(f => f.name)
+        const secretos = secretFieldNames(schema)
         return {
             configs: configs.map(c => {
                 const limpio = { ...c } as IWebhookConfig & Record<string, unknown>
@@ -171,7 +172,7 @@ export const idpInstances = (manager: IdpManager, connectorId: string): IExtensi
         if (options.includeCredentials) return { instances: mias }
 
         const schema = manager.getConnectorSchema(connectorId)
-        const secretos = (schema ?? []).filter(f => f.type === 'password').map(f => f.name)
+        const secretos = secretFieldNames(schema ?? [])
         return {
             instances: mias.map(i => ({
                 ...i,
