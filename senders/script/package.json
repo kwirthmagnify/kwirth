@@ -1,0 +1,25 @@
+{
+    "id": "script",
+    "name": "@kwirthmagnify/kwirth-sender-script",
+    "publisher": "@kwirthmagnify",
+    "version": "0.1.0",
+    "displayName": "Script Sender",
+    "description": "Script sender for Kwirth — runs a script written in its configuration (sh, bash, pwsh, powershell, cmd) with the message on stdin and/or environment variables",
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs",
+        "test": "node tests/run.mjs",
+        "watch": "node watch.mjs"
+    },
+    "dependencies": {
+        "@kwirthmagnify/kwirth-common-back": "^0.6.14"
+    },
+    "devDependencies": {
+        "@types/node": "^20.12.13",
+        "c8": "^12.0.0",
+        "esbuild": "^0.27.7",
+        "typescript": "^5.4.0"
+    },
+    "requiresRestart": false,
+    "requiresExtension": []
+}

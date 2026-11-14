@@ -217,6 +217,15 @@
   },
   {
     "extensionType": "sender",
+    "id": "script",
+    "version": "0.1.0",
+    "name": "Script Sender",
+    "displayName": "Script Sender",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-script/-/kwirth-sender-script-0.1.0.tgz",
+    "description": "Script sender for Kwirth — runs a script written in its configuration (sh, bash, pwsh, powershell, cmd) with the message on stdin and/or environment variables"
+  },
+  {
+    "extensionType": "sender",
     "id": "teams",
     "version": "0.1.15",
     "name": "MS Teams Sender",
