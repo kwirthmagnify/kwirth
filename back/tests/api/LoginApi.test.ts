@@ -6,7 +6,7 @@ import express from 'express'
 import type { AddressInfo } from 'net'
 import { LoginApi } from '../../src/api/LoginApi'
 import { IdentityService } from '../../src/tools/auth/IdentityService'
-import { ELoginRefusal, IKwirthSettings, ILoginRefusal, IUser } from '@kwirthmagnify/kwirth-common'
+import { ELoginRefusal, IKwirthSettings, ILoginIpEntry, ILoginRefusal, IUser } from '@kwirthmagnify/kwirth-common'
 import { LoginRateLimiter } from '../../src/tools/LoginRateLimiter'
 import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 import { ISecrets } from '../../src/tools/ISecrets'
@@ -357,7 +357,9 @@ async function startFilteredServer(usersMap: { [k:string]: string }, holder: { s
 const postFrom = (base: string, path: string, body: object, forwardedFor?: string) =>
     fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(forwardedFor ? { 'X-Forwarded-For': forwardedFor } : {}) }, body: JSON.stringify(body) })
 
-const filterOn = (allowed: string[], trustedProxies: string[] = ['127.0.0.1']): IKwirthSettings => ({ loginIpFilter: { enabled: true, allowed, trustedProxies } })
+// a list of entries without comments: the filter only reads the addresses
+const ips = (...addresses: string[]): ILoginIpEntry[] => addresses.map(address => ({ address, comment: '' }))
+const filterOn = (allowed: string[], trustedProxies: string[] = ['127.0.0.1']): IKwirthSettings => ({ loginIpFilter: { enabled: true, allowed: ips(...allowed), trustedProxies: ips(...trustedProxies) } })
 const ALICE = { user: 'alice@example.com', password: sha256('secret') }
 
 test('filtro IP: instalacion nueva (sin settings guardados) deja entrar desde cualquier sitio', async () => {
@@ -369,7 +371,7 @@ test('filtro IP: instalacion nueva (sin settings guardados) deja entrar desde cu
 })
 
 test('filtro IP: desactivado con lista, deja entrar desde fuera de la lista', async () => {
-    const srv = await startFilteredServer(encodeUsers([makeUser()]), { settings: { loginIpFilter: { enabled: false, allowed: ['10.0.0.0/8'], trustedProxies: ['127.0.0.1'] } } })
+    const srv = await startFilteredServer(encodeUsers([makeUser()]), { settings: { loginIpFilter: { enabled: false, allowed: ips('10.0.0.0/8'), trustedProxies: ips('127.0.0.1') } } })
     try {
         assert.equal((await postFrom(srv.base, '/login', ALICE, '203.0.113.9')).status, 200)
     }
@@ -446,7 +448,7 @@ test('filtro IP: se lee en cada intento — desactivarlo (kubectl edit) surte ef
     const srv = await startFilteredServer(encodeUsers([makeUser()]), holder)
     try {
         assert.equal((await postFrom(srv.base, '/login', ALICE, '203.0.113.9')).status, 403)
-        holder.settings = { loginIpFilter: { enabled: false, allowed: ['10.0.0.0/8'], trustedProxies: ['127.0.0.1'] } }
+        holder.settings = { loginIpFilter: { enabled: false, allowed: ips('10.0.0.0/8'), trustedProxies: ips('127.0.0.1') } }
         assert.equal((await postFrom(srv.base, '/login', ALICE, '203.0.113.9')).status, 200)
     }
     finally { await srv.stop() }

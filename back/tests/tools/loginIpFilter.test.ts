@@ -1,14 +1,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { IncomingMessage } from 'http'
-import { IKwirthSettings, ILoginIpFilter } from '@kwirthmagnify/kwirth-common'
-import { isLoginAllowed, isLoginIpFilterActive, loginIpFilterOf, validateLoginIpFilter } from '../../src/tools/LoginIpFilter'
+import { IKwirthSettings, ILoginIpEntry, ILoginIpFilter } from '@kwirthmagnify/kwirth-common'
+import { addressesOf, isLoginAllowed, isLoginIpFilterActive, loginIpFilterOf, validateLoginIpFilter } from '../../src/tools/LoginIpFilter'
 
 // just what callerOf reads from a request: the socket address and the forwarded header
 const requestFrom = (remoteAddress: string, forwardedFor?: string): IncomingMessage =>
     ({ socket: { remoteAddress }, headers: forwardedFor ? { 'x-forwarded-for': forwardedFor } : {} }) as unknown as IncomingMessage
 
-const on = (allowed: string[], trustedProxies: string[] = []): ILoginIpFilter => ({ enabled: true, allowed, trustedProxies })
+// a list of entries without comments, which is what most checks need
+const ips = (...addresses: string[]): ILoginIpEntry[] => addresses.map(address => ({ address, comment: '' }))
+
+const on = (allowed: string[], trustedProxies: string[] = []): ILoginIpFilter => ({ enabled: true, allowed: ips(...allowed), trustedProxies: ips(...trustedProxies) })
 
 // ---- defaults: a fresh installation lets everybody in ----
 
@@ -23,7 +26,7 @@ test('fresh installation: a login from anywhere is allowed', () => {
 })
 
 test('switched OFF with a list: the list does not apply', () => {
-    const filter: ILoginIpFilter = { enabled: false, allowed: ['10.0.0.0/8'], trustedProxies: [] }
+    const filter: ILoginIpFilter = { enabled: false, allowed: ips('10.0.0.0/8'), trustedProxies: [] }
     assert.equal(isLoginIpFilterActive(filter), false)
     assert.equal(isLoginAllowed(filter, '203.0.113.9', false), true)
 })
@@ -35,7 +38,7 @@ test('🔴 switched ON with an EMPTY list: everybody may still log in (a hand ed
 })
 
 test('only "enabled === true" switches it on; anything else stored counts as off', () => {
-    const stored = { loginIpFilter: { enabled: 'yes', allowed: ['10.0.0.0/8'], trustedProxies: [] } } as unknown as IKwirthSettings
+    const stored = { loginIpFilter: { enabled: 'yes', allowed: ips('10.0.0.0/8'), trustedProxies: [] } } as unknown as IKwirthSettings
     assert.equal(loginIpFilterOf(stored).enabled, false)
 })
 
@@ -57,6 +60,17 @@ test('the loopback is always allowed on the desktop, and only there', () => {
     assert.equal(isLoginAllowed(filter, '203.0.113.9', true), false)
 })
 
+test('the comment never takes part in the check: only the address does', () => {
+    const filter: ILoginIpFilter = { enabled: true, allowed: [{ address: '10.0.0.0/8', comment: '203.0.113.9' }], trustedProxies: [] }
+    assert.equal(isLoginAllowed(filter, '10.4.5.6', false), true)
+    assert.equal(isLoginAllowed(filter, '203.0.113.9', false), false)
+})
+
+test('addressesOf: the addresses of a list, in order, without the comments', () => {
+    assert.deepEqual(addressesOf([{ address: '10.0.0.0/8', comment: 'office' }, { address: '::1', comment: '' }]), ['10.0.0.0/8', '::1'])
+    assert.deepEqual(addressesOf([]), [])
+})
+
 // ---- validation on save ----
 
 test('validate: the shape is checked, field by field', () => {
@@ -66,14 +80,33 @@ test('validate: the shape is checked, field by field', () => {
     assert.match(validateLoginIpFilter(undefined, undefined, false) as string, /enabled/)
 })
 
-test('validate: entries are trimmed, blanks and repeats dropped', () => {
-    const result = validateLoginIpFilter({ enabled: false, allowed: [' 10.0.0.0/8 ', '', '10.0.0.0/8'], trustedProxies: ['10.42.0.0/16', '  '] }, undefined, false)
-    assert.deepEqual(result, { enabled: false, allowed: ['10.0.0.0/8'], trustedProxies: ['10.42.0.0/16'] })
+test('validate: a list of plain strings (the old shape) is refused', () => {
+    assert.match(validateLoginIpFilter({ enabled: false, allowed: ['10.0.0.0/8'], trustedProxies: [] }, undefined, false) as string, /allowed must be a list of \{ address, comment \}/)
+    assert.match(validateLoginIpFilter({ enabled: false, allowed: [], trustedProxies: ['10.42.0.0/16'] }, undefined, false) as string, /trustedProxies must be/)
+})
+
+test('validate: an entry without its comment, or with a non-string one, is refused', () => {
+    assert.match(validateLoginIpFilter({ enabled: false, allowed: [{ address: '10.0.0.0/8' }], trustedProxies: [] }, undefined, false) as string, /allowed/)
+    assert.match(validateLoginIpFilter({ enabled: false, allowed: [{ address: '10.0.0.0/8', comment: 7 }], trustedProxies: [] }, undefined, false) as string, /allowed/)
+    assert.match(validateLoginIpFilter({ enabled: false, allowed: [null], trustedProxies: [] }, undefined, false) as string, /allowed/)
+})
+
+test('validate: entries are trimmed, blanks and repeats dropped; a repeat keeps the FIRST comment', () => {
+    const result = validateLoginIpFilter({
+        enabled: false,
+        allowed: [{ address: ' 10.0.0.0/8 ', comment: ' office ' }, { address: '', comment: 'orphan note' }, { address: '10.0.0.0/8', comment: 'second' }],
+        trustedProxies: [{ address: '10.42.0.0/16', comment: 'ingress' }, { address: '  ', comment: '' }]
+    }, undefined, false)
+    assert.deepEqual(result, {
+        enabled: false,
+        allowed: [{ address: '10.0.0.0/8', comment: 'office' }],
+        trustedProxies: [{ address: '10.42.0.0/16', comment: 'ingress' }]
+    })
 })
 
 test('validate: a bad entry is named, in either list', () => {
-    assert.match(validateLoginIpFilter({ enabled: false, allowed: ['10.0.0.0/8', 'office'], trustedProxies: [] }, undefined, false) as string, /allow list: office/)
-    assert.match(validateLoginIpFilter({ enabled: false, allowed: [], trustedProxies: ['10.42.0.0/99'] }, undefined, false) as string, /trusted proxies: 10\.42\.0\.0\/99/)
+    assert.match(validateLoginIpFilter({ enabled: false, allowed: ips('10.0.0.0/8', 'office'), trustedProxies: [] }, undefined, false) as string, /allow list: office/)
+    assert.match(validateLoginIpFilter({ enabled: false, allowed: [], trustedProxies: ips('10.42.0.0/99') }, undefined, false) as string, /trusted proxies: 10\.42\.0\.0\/99/)
 })
 
 test('🔴 validate: switching it on with a list that leaves the author out is refused', () => {
@@ -83,7 +116,7 @@ test('🔴 validate: switching it on with a list that leaves the author out is r
 })
 
 test('validate: the same list switched OFF can be saved from outside it', () => {
-    const result = validateLoginIpFilter({ enabled: false, allowed: ['10.0.0.0/8'], trustedProxies: [] }, requestFrom('203.0.113.9'), false)
+    const result = validateLoginIpFilter({ enabled: false, allowed: ips('10.0.0.0/8'), trustedProxies: [] }, requestFrom('203.0.113.9'), false)
     assert.equal(typeof result, 'object')
 })
 
@@ -101,8 +134,8 @@ test('validate: the author is resolved with the trusted proxies BEING SAVED, not
 
 test('🔴 validate: switched ON with an empty allow list cannot be saved (it would restrict nothing)', () => {
     assert.equal(validateLoginIpFilter(on([]), undefined, false), 'Add at least one allowed address to restrict login')
-    // blanks do not count as entries
-    assert.equal(validateLoginIpFilter(on(['  ', '']), requestFrom('10.0.0.1'), false), 'Add at least one allowed address to restrict login')
+    // blank addresses do not count as entries, even with a comment
+    assert.equal(validateLoginIpFilter({ enabled: true, allowed: [{ address: '  ', comment: 'office' }, { address: '', comment: '' }], trustedProxies: [] }, requestFrom('10.0.0.1'), false), 'Add at least one allowed address to restrict login')
     // switched off, an empty list is the normal state
     assert.equal(typeof validateLoginIpFilter({ enabled: false, allowed: [], trustedProxies: [] }, undefined, false), 'object')
 })

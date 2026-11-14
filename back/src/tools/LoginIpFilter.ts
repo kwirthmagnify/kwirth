@@ -1,5 +1,5 @@
 import { IncomingMessage } from 'http'
-import { ICallerAddress, IKwirthSettings, ILoginIpFilter } from '@kwirthmagnify/kwirth-common'
+import { ICallerAddress, IKwirthSettings, ILoginIpEntry, ILoginIpFilter } from '@kwirthmagnify/kwirth-common'
 import { clientAddressOf, invalidEntries, ipInList, isLoopback } from './ClientIp'
 
 /*
@@ -20,9 +20,12 @@ export const loginIpFilterOf = (settings: IKwirthSettings): ILoginIpFilter => ({
 
 export const isLoginIpFilterActive = (filter: ILoginIpFilter): boolean => filter.enabled && filter.allowed.length > 0
 
+// The IPs/CIDRs of a list, which is all the checks look at: the comments are for people.
+export const addressesOf = (entries: ILoginIpEntry[]): string[] => entries.map(e => e.address)
+
 // The client behind a request, believing X-Forwarded-For only from the filter's trusted proxies.
 export const callerOf = (req: IncomingMessage, filter: ILoginIpFilter): ICallerAddress =>
-    clientAddressOf(req.socket.remoteAddress, req.headers['x-forwarded-for'], filter.trustedProxies)
+    clientAddressOf(req.socket.remoteAddress, req.headers['x-forwarded-for'], addressesOf(filter.trustedProxies))
 
 /*
     Whether a login from 'ip' may go ahead. On the desktop the loopback is always allowed: the person in
@@ -31,13 +34,24 @@ export const callerOf = (req: IncomingMessage, filter: ILoginIpFilter): ICallerA
 export const isLoginAllowed = (filter: ILoginIpFilter, ip: string, isDesktop: boolean): boolean => {
     if (!isLoginIpFilterActive(filter)) return true
     if (isDesktop && isLoopback(ip)) return true
-    return ipInList(ip, filter.allowed)
+    return ipInList(ip, addressesOf(filter.allowed))
 }
 
-const isStringArray = (value: unknown): value is string[] => Array.isArray(value) && value.every(v => typeof v === 'string')
+const isEntryArray = (value: unknown): value is ILoginIpEntry[] => Array.isArray(value) && value.every(v =>
+    typeof v === 'object' && v !== null && typeof (v as ILoginIpEntry).address === 'string' && typeof (v as ILoginIpEntry).comment === 'string')
 
-// Trimmed, without blanks or repeats.
-const cleanList = (value: string[]): string[] => [...new Set(value.map(v => v.trim()).filter(v => v !== ''))]
+// Trimmed, without blank addresses; an address that repeats keeps its first entry (and its comment).
+const cleanList = (value: ILoginIpEntry[]): ILoginIpEntry[] => {
+    const seen = new Set<string>()
+    const result: ILoginIpEntry[] = []
+    for (const entry of value) {
+        const address = entry.address.trim()
+        if (address === '' || seen.has(address)) continue
+        seen.add(address)
+        result.push({ address, comment: entry.comment.trim() })
+    }
+    return result
+}
 
 /*
     Checks a filter that is about to be saved and returns it cleaned, or the reason it cannot be saved.
@@ -48,13 +62,13 @@ const cleanList = (value: string[]): string[] => [...new Set(value.map(v => v.tr
 export const validateLoginIpFilter = (incoming: unknown, origin: IncomingMessage | undefined, isDesktop: boolean): ILoginIpFilter | string => {
     const raw = (incoming ?? {}) as Partial<Record<keyof ILoginIpFilter, unknown>>
     if (typeof raw.enabled !== 'boolean') return 'loginIpFilter.enabled must be true or false'
-    if (!isStringArray(raw.allowed)) return 'loginIpFilter.allowed must be a list of IPs or CIDRs'
-    if (!isStringArray(raw.trustedProxies)) return 'loginIpFilter.trustedProxies must be a list of IPs or CIDRs'
+    if (!isEntryArray(raw.allowed)) return 'loginIpFilter.allowed must be a list of { address, comment }'
+    if (!isEntryArray(raw.trustedProxies)) return 'loginIpFilter.trustedProxies must be a list of { address, comment }'
     const filter: ILoginIpFilter = { enabled: raw.enabled, allowed: cleanList(raw.allowed), trustedProxies: cleanList(raw.trustedProxies) }
 
-    const badAllowed = invalidEntries(filter.allowed)
+    const badAllowed = invalidEntries(addressesOf(filter.allowed))
     if (badAllowed.length > 0) return `Not an IP or CIDR in the login allow list: ${badAllowed.join(', ')}`
-    const badProxies = invalidEntries(filter.trustedProxies)
+    const badProxies = invalidEntries(addressesOf(filter.trustedProxies))
     if (badProxies.length > 0) return `Not an IP or CIDR in the trusted proxies: ${badProxies.join(', ')}`
 
     /*

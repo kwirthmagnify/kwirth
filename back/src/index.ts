@@ -26,7 +26,7 @@ import { wsUpgradeAllowed } from './tools/WsPathGuard'
 import { pathWebsocketChannel } from './tools/WsPathDelegation'
 import { LiveKeyConnections } from './tools/LiveKeyConnections'
 import { WsCallerAddresses } from './tools/WsCallerAddress'
-import { loginIpFilterOf } from './tools/LoginIpFilter'
+import { addressesOf, loginIpFilterOf } from './tools/LoginIpFilter'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { buildPreviousContainerMessage, logPreviousContainerBanner, readPreviousContainerLog } from './tools/PreviousContainerLog'
 import { buildSignupMessage, signupSenderOf } from './tools/auth/SignupNotice'
@@ -3329,7 +3329,7 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
         // The trusted proxies the WebSocket clients' addresses are resolved with: the login IP filter's (K2)
         wsCallers = new WsCallerAddresses(async () => {
             const ri = instances.find(r => r.active)
-            return ri ? loginIpFilterOf(await SettingsApi.read(ri.configMaps)).trustedProxies : []
+            return ri ? addressesOf(loginIpFilterOf(await SettingsApi.read(ri.configMaps)).trustedProxies) : []
         })
         void wsCallers.refresh()
 

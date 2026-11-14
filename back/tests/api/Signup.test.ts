@@ -464,7 +464,9 @@ test('🔴 S4: si el aviso falla, la peticion queda hecha y el proceso sigue en 
 
 // ---- login IP filter (plan: plans/login-ip-filter) ----
 // the filter is switched on AFTER the callback, so the code exists and only the dialog's endpoints decide
-const signupFilterOn: IKwirthSettings = { loginIpFilter: { enabled: true, allowed: ['10.0.0.0/8'], trustedProxies: ['127.0.0.1'] } }
+const signupFilterOn: IKwirthSettings = { loginIpFilter: {
+    enabled: true, allowed: [{ address: '10.0.0.0/8', comment: '' }], trustedProxies: [{ address: '127.0.0.1', comment: '' }]
+} }
 const OUTSIDE = { 'Content-Type': 'application/json', 'X-Forwarded-For': '203.0.113.9' }
 
 test('filtro IP: signup/info desde fuera → 403 con ELoginRefusal.IPNOTALLOWED', async () => {

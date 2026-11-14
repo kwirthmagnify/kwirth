@@ -300,7 +300,9 @@ test('el mismo redirect_uri viaja en start y en callback', async () => {
 
 // ---- login IP filter (plan: plans/login-ip-filter) ----
 // 127.0.0.1 is trusted as a proxy so X-Forwarded-For can say who the client is, as an ingress would.
-const ipFilterOn = (allowed: string[]): IKwirthSettings => ({ loginIpFilter: { enabled: true, allowed, trustedProxies: ['127.0.0.1'] } })
+const ipFilterOn = (allowed: string[]): IKwirthSettings => ({ loginIpFilter: {
+    enabled: true, allowed: allowed.map(address => ({ address, comment: '' })), trustedProxies: [{ address: '127.0.0.1', comment: '' }]
+} })
 const FROM_OUTSIDE = { 'X-Forwarded-For': '203.0.113.9' }
 const FROM_INSIDE = { 'X-Forwarded-For': '10.1.2.3' }
 
