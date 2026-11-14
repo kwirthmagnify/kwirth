@@ -2820,6 +2820,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             },
             // Who is at the other end of a WebSocket of this channel, resolved when it connected (K2, tools/WsCallerAddress)
             callerAddressOf: (webSocket: WebSocket): ICallerAddress | undefined => wsCallers?.addressOf(webSocket),
+            // The core's own version, for a channel that tells its peers (Ianus, K3)
+            kwirthVersion: runningInstance.kwirthData.version,
         }
 
         runningInstance.clusterInfo.senders = senderManager
