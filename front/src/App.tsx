@@ -1463,7 +1463,18 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 })
             }
         }
+        /*
+            🔴 Leaving the cluster leaves NOTHING of it behind (desktop: back to the context selector).
+            - The tabs are closed HERE, while this cluster's running instance is still the active one: their
+              STOP goes out with a key the back still knows. Closed later, after the next context has been
+              activated, every STOP and PING was answered 'Invalid API key'.
+            - The cluster list is emptied: the start-up effect takes the HOME cluster from it, and with the
+              previous list still there it opened the next context's Magnify against the previous home, with
+              the previous key — 'Invalid API key' and an empty Magnify. Empty, it waits for the new home.
+        */
         if (newTab.channel.requirements.exit) newTab.channelObject.exit = () => {
+            clearTabs()
+            setClusters([])
             setBackendUrl(props.backendUrl)
             setFullscreenTab(undefined)
             setLogged(false)

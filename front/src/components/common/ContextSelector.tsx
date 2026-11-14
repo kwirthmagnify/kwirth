@@ -190,7 +190,7 @@ const ContextSelector: React.FC<IContextSelectorProps> = (props:IContextSelector
                                         return filtered.length === 0
                                             ? <Typography sx={{ m: 2, color: 'text.secondary' }}>No active contexts found.</Typography>
                                             : <List>{ filtered.map(c =>
-                                                <ListItemButton key={c.cluster} onClick={() => selectLocal(c.cluster)}>
+                                                <ListItemButton key={c.name} onClick={() => selectLocal(c.name)}>
                                                     <Tooltip title={c.cluster}>
                                                         <Typography>{c.cluster.substring(0,50)+(c.cluster.length>60?'...':'')}</Typography>
                                                     </Tooltip>
