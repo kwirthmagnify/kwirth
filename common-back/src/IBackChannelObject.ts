@@ -1,4 +1,4 @@
-import { ISenderAccess, IWebhookAccess, IUserInfo, IInstanceConfig } from '@kwirthmagnify/kwirth-common'
+import { ISenderAccess, IWebhookAccess, IUserInfo, IInstanceConfig, ICallerAddress } from '@kwirthmagnify/kwirth-common'
 import { IClusterEndpoint, IRemoteChannelHandlers, IRemoteChannelHandle } from './IFederation'
 
 // The object the CORE injects into a channel's back end (storage, logging, user catalogue, install
@@ -34,4 +34,12 @@ export interface IBackChannelObject {
     // the value already parsed (the store keeps stringified JSON; this does the JSON.parse). E.g.:
     // readUserStore(userId, 'clusters', 'list') → IClusterEndpoint[]. Missing key → undefined. Read-only.
     readUserStore?(userId: string, group: string, key: string): Promise<unknown>
+    /*
+        WHO is at the other end of a WebSocket the core handed to this channel: its address as the core
+        resolved it when the socket connected, with the same trusted proxies as the login (X-Forwarded-For
+        is only believed from a trusted hop). A channel cannot see it otherwise — it gets the socket, not
+        the upgrade request. Undefined for a socket the core does not know (already closed, or not one of
+        its own). Optional: a core without it leaves the channel to say "unknown".
+    */
+    callerAddressOf?(webSocket: WebSocket): ICallerAddress | undefined
 }
