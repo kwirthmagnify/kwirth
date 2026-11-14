@@ -350,6 +350,7 @@ It covers **every way in that hands out an access key**: the user and password l
 | **Restrict login to the allowed addresses** | The switch. **Off on a new installation**: until somebody turns it on, anybody may try to log in, as always |
 | **How Kwirth sees you** | The address kwirth resolved for **you**, right now, the address of the connection, and what happened to the `X-Forwarded-For` header. Look here before saving anything |
 | **Trust my proxy** | Enabled only when your request came through a proxy whose `X-Forwarded-For` is being ignored. It adds that proxy's network to the trusted proxies (a `/16` for IPv4, a `/64` for IPv6), with the comment *proxy I'm coming through* — narrow it down if you want |
+| **Add my IP** | Adds the address shown under *How Kwirth sees you* to the allowed list. Enabled only when that address is really yours: a direct connection, or one through a proxy you already trust. When your proxy's `X-Forwarded-For` is being ignored, the address shown is the proxy's — allowing it would let in everybody behind it — so the button stays disabled and **Trust my proxy** is the one to press first |
 | **Add localhost** | Adds `127.0.0.1` **and** `::1`, commented *localhost IPv4* and *localhost IPv6*. `localhost` can resolve to either, and which one your browser uses is not something you can tell by looking |
 | **Allowed addresses** | Where a login may come from: `10.0.0.0/8`, `192.168.1.20`, `2001:db8::/32`… |
 | **Trusted proxies** | The ingress or load balancers whose `X-Forwarded-For` kwirth believes. See below |

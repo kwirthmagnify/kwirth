@@ -474,6 +474,15 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const missingLoopbacks = LOOPBACK_ENTRIES.filter(l => !hasAddress(allowedIps, l.address))
     const addLocalhost = () => setAllowedIps(prev => [...prev.filter(a => a.address.trim() !== ''), ...missingLoopbacks])
 
+    /*
+        'Add my IP' only when the address shown IS the person's: a direct connection, or one through a proxy
+        that is already trusted. With the forwarded header being ignored, the address seen is the proxy's —
+        adding it would let in everybody behind that proxy — and what is needed is 'Trust my proxy'.
+    */
+    const myIp = caller && !caller.forwardedIgnored && caller.ip !== '' ? caller.ip : undefined
+    const canAddMyIp = myIp !== undefined && !hasAddress(allowedIps, myIp)
+    const addMyIp = () => { if (myIp) setAllowedIps(prev => [...prev.filter(a => a.address.trim() !== ''), { address: myIp, comment: 'my IP' }]) }
+
     const suggestedProxy = caller ? proxySubnetOf(caller.remoteAddress) : undefined
     const canTrustProxy = caller !== undefined && caller.forwardedIgnored && suggestedProxy !== undefined && !hasAddress(trustedProxies, suggestedProxy)
     const trustProxy = () => {
@@ -918,6 +927,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                                     <Stack direction='row' spacing={1} sx={{ flexShrink: 0 }}>
                                         <Tooltip title={suggestedProxy ? `Trust the proxy you are coming through: adds ${suggestedProxy} to the trusted proxies` : 'Trust the proxy you are coming through (enabled when its X-Forwarded-For is being ignored)'}>
                                             <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={trustProxy} disabled={loading || error!=='' || !canTrustProxy}>Trust my proxy</Button></span>
+                                        </Tooltip>
+                                        <Tooltip title={myIp ? `Adds ${myIp} to the allowed addresses` : 'Adds your address to the allowed addresses (enabled when Kwirth sees your real address: directly or through a trusted proxy)'}>
+                                            <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={addMyIp} disabled={loading || error!=='' || !canAddMyIp}>Add my IP</Button></span>
                                         </Tooltip>
                                         <Tooltip title='Adds 127.0.0.1 and ::1 to the allowed addresses (localhost over IPv4 and IPv6)'>
                                             <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={addLocalhost} disabled={loading || error!=='' || missingLoopbacks.length === 0}>Add localhost</Button></span>

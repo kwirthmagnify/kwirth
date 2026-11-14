@@ -174,6 +174,26 @@ test('Login access: cada entrada de las dos listas lleva su comentario, editable
     await dismissOpenDialogs(page)   // Cancel: nothing saved
 })
 
+test('Login access: "Add my IP" anade la direccion con la que Kwirth ve al admin, una sola vez', async () => {
+    await dismissOpenDialogs(page)
+    await openLoginAccess(page)
+    // the dev browser talks to the back end directly: no forwarded header, so the address shown is its own
+    const seen = ((await sees(page).textContent()) ?? '').match(/How Kwirth sees you:\s*(\S+)/)?.[1] ?? ''
+    expect(seen).not.toBe('')
+    const fields = page.getByLabel(ALLOWED_FIELDS)
+    const already = (await fields.evaluateAll((els: Element[]) => els.map(e => (e as HTMLInputElement).value.trim()))).includes(seen)
+    test.skip(already, 'the environment already allows this address: nothing to add')
+    const addMyIp = page.getByRole('button', { name: 'Add my IP' })
+    await expect(addMyIp).toBeEnabled()
+    const before = await fields.count()
+    await addMyIp.click()
+    await expect(fields).toHaveCount(before + 1)
+    await expect(fields.last()).toHaveValue(seen)
+    await expect(page.getByLabel(`Allowed address ${before + 1} comment`, { exact: true })).toHaveValue('my IP')
+    await expect(addMyIp).toBeDisabled()
+    await dismissOpenDialogs(page)   // Cancel: nothing saved
+})
+
 test('🔴 Login access: activar con una lista que deja fuera al admin se rechaza, el dialogo sigue editable y no se guarda nada', async () => {
     await dismissOpenDialogs(page)
     await openLoginAccess(page)
