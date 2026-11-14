@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Checkbox, FormControlLabel, IconButton, ListItemText, MenuItem, Switch, TextField } from '@mui/material'
 import { Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
+import { ConfigTextArea } from './ConfigTextArea'
 
 /*
     Draws an `IConfigFieldDef[]` and nothing else: no loading, no saving, no dialog.
@@ -55,6 +56,12 @@ const ConfigFields: React.FC<IConfigFieldsProps> = (props: IConfigFieldsProps) =
                     control={<Switch size='small' checked={props.values[f.name] === true || props.values[f.name] === 'true'}
                         onChange={e => props.onChange(f.name, e.target.checked)} />} />
             )
+        }
+
+        if (f.type === 'textarea') {
+            return <ConfigTextArea key={f.name} field={f} value={String(props.values[f.name] ?? '')}
+                onChange={v => props.onChange(f.name, v)} fields={props.schema} values={props.values}
+                onReveal={props.onRevealSecret ? () => props.onRevealSecret!(f.name) : undefined} />
         }
 
         const isSecret = f.type === 'password'

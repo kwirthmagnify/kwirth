@@ -9,6 +9,7 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
+import { ConfigTextArea } from './ConfigTextArea'
 
 /*
     The manager of an extension's N NAMED CONFIGURATIONS: the list on the left, the selected one's form
@@ -175,10 +176,20 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         setShowForm(true)
     }
 
+    /*
+        A new configuration starts from the schema's DEFAULTS. It used to start empty: a select whose
+        default is 'sh' showed '—', a switch whose default is on showed off — and what was saved was
+        what was shown, not what the extension declared. The same rule as the boolean in buildPayload:
+        what is seen has to be what is saved.
+    */
     const nueva = () => {
         setEditingName(undefined)
         setOriginalName(undefined)
-        setValues({})
+        const defaults: TConfigValues = {}
+        for (const f of schema) {
+            if (!f.common && f.default !== undefined) defaults[f.name] = f.default
+        }
+        setValues(defaults)
         setShowForm(true)
     }
 
@@ -261,8 +272,12 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
             if (originalName && originalName !== nuevoNombre) {
                 await fetch(`${backendUrl}${props.basePath}/configs/${encodeURIComponent(originalName)}`, addDeleteAuthorization(accessString))
             }
-            setEditingName(nuevoNombre)
-            setOriginalName(nuevoNombre)
+            /*
+                Saving CLOSES the edit, Add and Update alike: the configuration shows up in the list, not
+                selected. It used to stay open as 'Editing: <name>' with Update and Cancel under it, as if
+                something were still pending — after saving, Cancel means nothing.
+            */
+            cerrarForm()
             await reload()
         }
         catch (err) { setError(`Save failed: ${err}`) }
@@ -306,6 +321,10 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
                     </Select>
                 </FormControl>
             )
+        }
+
+        if (f.type === 'textarea') {
+            return <ConfigTextArea key={f.name} field={f} value={String(value)} onChange={onChange} fields={schema} values={valores} />
         }
 
         const esSecreto = f.type === 'password'
