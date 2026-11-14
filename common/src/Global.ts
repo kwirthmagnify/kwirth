@@ -116,8 +116,17 @@ interface IKwirthSettings {
 */
 interface ILoginIpFilter {
     enabled: boolean
-    allowed: string[]
-    trustedProxies: string[]
+    allowed: ILoginIpEntry[]
+    trustedProxies: ILoginIpEntry[]
+}
+
+/*
+    One entry of a login IP list: an IP or CIDR (IPv4 or IPv6) and a note that says what it is. Only
+    'address' is ever checked; 'comment' is for whoever reads the list, '' when there is none.
+*/
+interface ILoginIpEntry {
+    address: string
+    comment: string
 }
 
 // Why a login was refused, as the body of the 403. Typed so the front end never decides by a message.
@@ -140,4 +149,4 @@ interface ICallerAddress {
     forwardedIgnored: boolean
 }
 
-export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig, IKwirthSettings, ILoginIpFilter, ELoginRefusal, ILoginRefusal, ICallerAddress }
+export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig, IKwirthSettings, ILoginIpFilter, ILoginIpEntry, ELoginRefusal, ILoginRefusal, ICallerAddress }
