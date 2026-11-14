@@ -102,6 +102,26 @@ PORT=3884 AUTH=kubeconfig NODE_ENV=production ANSILOG=false FORCE=desktop \
     ./src-tauri/binaries/kwirth-backend-x86_64-unknown-linux-gnu
 ```
 
+# Linux on Wayland: the window buttons
+
+With GTK on its native Wayland backend, the title bar only takes clicks while the window is maximized:
+minimize, maximize and close do nothing otherwise. So on a Wayland session the app runs GTK through
+XWayland — `GDK_BACKEND=x11`, set at the start of `run()` in `src-tauri/src/lib.rs` when nobody set it.
+
+The AppImage already did this in its launcher (`linuxdeploy-plugin-gtk`); the `.deb` starts the binary
+directly, which is why it only failed there. A `GDK_BACKEND` set by the user wins:
+`GDK_BACKEND=wayland kwirth-magnify` forces native Wayland (and brings the problem back).
+
+# Pending
+
+- **The `.deb` package name carries the version** (`kwirth-magnify-0-6-110-t`), because the build puts it
+  in `productName`. Each release is then a *different* package that writes the same files
+  (`/usr/bin/kwirth-magnify`, `/usr/bin/kwirth-backend`), so installing the next one fails with
+  *"trying to overwrite"* instead of upgrading, and the old one has to be removed by hand first.
+- **Validate the Wayland fix on the next release**: install the new `.deb` on a GNOME Wayland session, open
+  it from the applications menu and check that minimize, maximize and close work with the window not
+  maximized (fix from 2026-11-14, not yet tried on an installed package).
+
 # Tauri build
 npx @tauri-apps/cli build
 
