@@ -66,9 +66,11 @@ test('capture kwirth-settings (dark)', async ({ page }) => {
     await dialog.getByLabel('Restrict login to the allowed addresses').check()
     await dialog.getByRole('button', { name: 'Add allowed address' }).click()
     await dialog.getByLabel('Allowed address 1', { exact: true }).fill('10.0.0.0/8')
+    await dialog.getByLabel('Allowed address 1 comment', { exact: true }).fill('Office network')
     await dialog.getByRole('button', { name: 'Add localhost' }).click()
     await dialog.getByRole('button', { name: 'Add trusted proxy' }).click()
     await dialog.getByLabel('Trusted proxy 1', { exact: true }).fill('10.42.0.0/16')
+    await dialog.getByLabel('Trusted proxy 1 comment', { exact: true }).fill('Ingress controller pods')
     // the focus ring of the last field typed into would end up in the picture
     await dialog.getByRole('tab', { name: 'Login access' }).focus()
     await page.waitForTimeout(500)

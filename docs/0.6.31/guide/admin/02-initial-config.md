@@ -344,10 +344,12 @@ It covers **every way in that hands out an access key**: the user and password l
 |---|---|
 | **Restrict login to the allowed addresses** | The switch. **Off on a new installation**: until somebody turns it on, anybody may try to log in, as always |
 | **How Kwirth sees you** | The address kwirth resolved for **you**, right now, the address of the connection, and what happened to the `X-Forwarded-For` header. Look here before saving anything |
-| **Trust my proxy** | Enabled only when your request came through a proxy whose `X-Forwarded-For` is being ignored. It adds that proxy's network to the trusted proxies (a `/16` for IPv4, a `/64` for IPv6) — narrow it down if you want |
-| **Add localhost** | Adds `127.0.0.1` **and** `::1`. `localhost` can resolve to either, and which one your browser uses is not something you can tell by looking |
+| **Trust my proxy** | Enabled only when your request came through a proxy whose `X-Forwarded-For` is being ignored. It adds that proxy's network to the trusted proxies (a `/16` for IPv4, a `/64` for IPv6), with the comment *proxy I'm coming through* — narrow it down if you want |
+| **Add localhost** | Adds `127.0.0.1` **and** `::1`, commented *localhost IPv4* and *localhost IPv6*. `localhost` can resolve to either, and which one your browser uses is not something you can tell by looking |
 | **Allowed addresses** | Where a login may come from: `10.0.0.0/8`, `192.168.1.20`, `2001:db8::/32`… |
 | **Trusted proxies** | The ingress or load balancers whose `X-Forwarded-For` kwirth believes. See below |
+
+Every entry of both lists has two fields: the **address** (an IP or a CIDR) and a **comment**, free text that says what the entry is — *Office network*, *Julio's laptop*, *Ingress controller pods*. The comment is only for whoever reads the list later; kwirth never checks it. A row whose address is left blank is dropped when you save, comment and all, and an address that appears twice keeps its first row.
 
 Nothing changes until you press **OK**, and kwirth refuses to save two things:
 

@@ -145,8 +145,32 @@ test('Login access: "Add localhost" anade 127.0.0.1 y ::1 una sola vez', async (
     await addLocalhost.click()
     await expect(page.getByLabel('Allowed address 1', { exact: true })).toHaveValue('127.0.0.1')
     await expect(page.getByLabel('Allowed address 2', { exact: true })).toHaveValue('::1')
+    // each one arrives with a comment that says what it is
+    await expect(page.getByLabel('Allowed address 1 comment', { exact: true })).toHaveValue('localhost IPv4')
+    await expect(page.getByLabel('Allowed address 2 comment', { exact: true })).toHaveValue('localhost IPv6')
     // both are there: pressing it again would add nothing, so it is disabled
     await expect(addLocalhost).toBeDisabled()
+    await dismissOpenDialogs(page)   // Cancel: nothing saved
+})
+
+test('Login access: cada entrada de las dos listas lleva su comentario, editable y que no invalida nada', async () => {
+    await dismissOpenDialogs(page)
+    await openLoginAccess(page)
+    for (const label of ['Allowed address', 'Trusted proxy']) {
+        const before = await page.getByLabel(new RegExp(`^${label} \\d+$`)).count()
+        await page.getByRole('button', { name: `Add ${label.toLowerCase()}` }).click()
+        const address = page.getByLabel(`${label} ${before + 1}`, { exact: true })
+        const comment = page.getByLabel(`${label} ${before + 1} comment`, { exact: true })
+        // a new row comes with both fields, empty
+        await expect(address).toHaveValue('')
+        await expect(comment).toHaveValue('')
+        await address.fill('10.0.0.0/8')
+        // any text is a valid comment: it is never checked as an address
+        await comment.fill('office VPN / 10.x')
+        await expect(comment).toHaveValue('office VPN / 10.x')
+        await expect(address).toHaveAttribute('aria-invalid', 'false')
+    }
+    await expect(page.getByRole('button', { name: 'OK' })).toBeEnabled()
     await dismissOpenDialogs(page)   // Cancel: nothing saved
 })
 
