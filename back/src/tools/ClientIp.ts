@@ -38,6 +38,8 @@ const familyOf = (ip: string): 'ipv4' | 'ipv6' => isIP(ip) === 6 ? 'ipv6' : 'ipv
 
 // An entry of a list as it is stored: a bare address or a CIDR, already parsed. undefined = not valid.
 const parseEntry = (entry: string): { address: string, prefix?: number } | undefined => {
+    // the type says string, but this runs on every login over stored data: never throw, an unreadable entry is just not valid
+    if (typeof entry !== 'string') return undefined
     const trimmed = entry.trim()
     const slash = trimmed.indexOf('/')
     if (slash < 0) {

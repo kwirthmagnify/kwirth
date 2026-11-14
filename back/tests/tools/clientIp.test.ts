@@ -24,6 +24,15 @@ test('normalizeIp: anything that is not an address is empty', () => {
 
 // ---- entries ----
 
+test('🔴 a non-string entry (stored data with another shape) is not valid and never throws', () => {
+    const odd = [undefined, null, 42, { address: '10.0.0.1' }] as unknown as string[]
+    for (const entry of odd) assert.equal(isValidIpOrCidr(entry), false)
+    assert.deepEqual(invalidEntries(odd), odd)
+    // a list with odd entries still matches on the good ones
+    assert.equal(ipInList('10.0.0.1', [...odd, '10.0.0.0/8']), true)
+    assert.equal(ipInList('203.0.113.9', [...odd, '10.0.0.0/8']), false)
+})
+
 test('isValidIpOrCidr: addresses and CIDRs of both families', () => {
     for (const ok of ['10.0.0.1', '10.0.0.0/8', '0.0.0.0/0', '192.168.1.0/24', '10.1.1.1/32', '::1', '2001:db8::/32', '::/0', '2001:db8::1/128'])
         assert.equal(isValidIpOrCidr(ok), true, ok)

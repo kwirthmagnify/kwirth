@@ -11,11 +11,31 @@ import { clientAddressOf, invalidEntries, ipInList, isLoopback } from './ClientI
     configmap must never be able to lock the whole world out.
 */
 
+/*
+    🔴 A stored list as it is READ on every login, which must NEVER throw: a throw here is a login nobody
+    can pass, the admin included. What is stored is not trusted to have the current shape — a configmap
+    edited by hand, or a list saved before the entries carried a comment (plain strings, the format before
+    L5). A plain string is still the address it always was; anything else unreadable is dropped. The SAVE
+    path stays strict (validateLoginIpFilter): only reading is tolerant.
+*/
+const storedListOf = (value: unknown): ILoginIpEntry[] => {
+    if (!Array.isArray(value)) return []
+    const result: ILoginIpEntry[] = []
+    for (const item of value as unknown[]) {
+        if (typeof item === 'string') result.push({ address: item, comment: '' })
+        else if (typeof item === 'object' && item !== null && typeof (item as ILoginIpEntry).address === 'string') {
+            const comment = (item as ILoginIpEntry).comment
+            result.push({ address: (item as ILoginIpEntry).address, comment: typeof comment === 'string' ? comment : '' })
+        }
+    }
+    return result
+}
+
 // What is stored, with the defaults filled in: a settings object written before the filter existed has none.
 export const loginIpFilterOf = (settings: IKwirthSettings): ILoginIpFilter => ({
     enabled: settings.loginIpFilter?.enabled === true,
-    allowed: settings.loginIpFilter?.allowed ?? [],
-    trustedProxies: settings.loginIpFilter?.trustedProxies ?? []
+    allowed: storedListOf(settings.loginIpFilter?.allowed),
+    trustedProxies: storedListOf(settings.loginIpFilter?.trustedProxies)
 })
 
 export const isLoginIpFilterActive = (filter: ILoginIpFilter): boolean => filter.enabled && filter.allowed.length > 0

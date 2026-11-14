@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { IncomingMessage } from 'http'
 import { IKwirthSettings, ILoginIpEntry, ILoginIpFilter } from '@kwirthmagnify/kwirth-common'
-import { addressesOf, isLoginAllowed, isLoginIpFilterActive, loginIpFilterOf, validateLoginIpFilter } from '../../src/tools/LoginIpFilter'
+import { addressesOf, callerOf, isLoginAllowed, isLoginIpFilterActive, loginIpFilterOf, validateLoginIpFilter } from '../../src/tools/LoginIpFilter'
 
 // just what callerOf reads from a request: the socket address and the forwarded header
 const requestFrom = (remoteAddress: string, forwardedFor?: string): IncomingMessage =>
@@ -23,6 +23,45 @@ test('fresh installation: a login from anywhere is allowed', () => {
     const filter = loginIpFilterOf({})
     assert.equal(isLoginAllowed(filter, '203.0.113.9', false), true)
     assert.equal(isLoginAllowed(filter, '', false), true)
+})
+
+// ---- 🔴 reading what is stored never throws: a throw is a login nobody can pass, the admin included ----
+
+// what a configmap may hold, whatever the current type says: written before L5, or edited by hand
+const storedAs = (loginIpFilter: unknown): IKwirthSettings => ({ loginIpFilter } as unknown as IKwirthSettings)
+
+test('a list stored before the comments (plain strings) is read as the addresses it always was', () => {
+    const filter = loginIpFilterOf(storedAs({ enabled: true, allowed: ['10.0.0.0/8', '::1'], trustedProxies: ['192.168.1.1'] }))
+    assert.deepEqual(filter.allowed, ips('10.0.0.0/8', '::1'))
+    assert.deepEqual(filter.trustedProxies, ips('192.168.1.1'))
+    // and the login decides on them exactly as before
+    assert.equal(isLoginAllowed(filter, '10.1.2.3', false), true)
+    assert.equal(isLoginAllowed(filter, '::1', false), true)
+    assert.equal(isLoginAllowed(filter, '203.0.113.9', false), false)
+})
+
+test('a mixed or damaged stored list: strings and entries are kept, anything unreadable is dropped, nothing throws', () => {
+    const filter = loginIpFilterOf(storedAs({
+        enabled: true,
+        allowed: ['10.0.0.0/8', { address: '::1', comment: 'v6' }, { address: '127.0.0.1' }, null, 42, { comment: 'no address' }, { address: 7 }],
+        trustedProxies: 'not a list'
+    }))
+    assert.deepEqual(filter.allowed, [{ address: '10.0.0.0/8', comment: '' }, { address: '::1', comment: 'v6' }, { address: '127.0.0.1', comment: '' }])
+    assert.deepEqual(filter.trustedProxies, [])
+    assert.equal(isLoginAllowed(filter, '127.0.0.1', false), true)
+    assert.equal(isLoginAllowed(filter, '203.0.113.9', false), false)
+})
+
+test('stored garbage instead of a filter → off, everybody in (never a lock-out by a hand edit)', () => {
+    for (const garbage of [null, 'on', 42, [], { enabled: 'yes', allowed: ['10.0.0.0/8'] }]) {
+        const filter = loginIpFilterOf(storedAs(garbage))
+        assert.equal(isLoginAllowed(filter, '203.0.113.9', false), true, JSON.stringify(garbage))
+    }
+})
+
+test('callerOf over a trusted-proxy list stored as plain strings: still believes the proxy', () => {
+    const filter = loginIpFilterOf(storedAs({ enabled: true, allowed: ['203.0.113.0/24'], trustedProxies: ['10.42.0.0/16'] }))
+    assert.equal(callerOf(requestFrom('10.42.0.7', '203.0.113.9'), filter).ip, '203.0.113.9')
 })
 
 test('switched OFF with a list: the list does not apply', () => {

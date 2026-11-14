@@ -196,3 +196,20 @@
 > - **Validación:** e2e `kwirth-settings` +1 (11 ✔ · 2 ⏭, los dos que solo corren con la lista vacía);
 >   cabe en la fila del recuadro a 520 px. Guía: fila nueva en la tabla de la pestaña y capturas del diálogo
 >   rehechas. Métricas: 63 specs · 248 casos.
+
+### Fix · Un filtro guardado antes de L5 dejaba a todos fuera — ✅ (2026-11-14, validado en EKS y AKS)
+
+> 🔴 En EKS y AKS, tras actualizar la imagen, **nadie podía entrar, ni el admin**: `Cannot read properties of
+> undefined (reading 'trim')` en `parseEntry`. Las listas se habían guardado antes de L5 como strings sueltas;
+> el código de L5 leía `entry.address` (= `undefined`) sin comprobar la forma de lo guardado.
+>
+> - **Por qué ni apagándolo:** la IP del cliente se calcula ANTES de mirar si el filtro está activo, y detrás de
+>   un load balancer siempre llega `X-Forwarded-For`, así que se recorría `trustedProxies` igual con
+>   `enabled: false`. La vía de escape de L3 no bastaba en este caso.
+> - **Arreglo:** la LECTURA en ejecución (`loginIpFilterOf`) es tolerante y nunca lanza: una string es la
+>   dirección que siempre fue, una entrada sin `comment` vale, lo ilegible se descarta, y un filtro ilegible
+>   queda apagado. `parseEntry` devuelve "no válida" ante algo que no sea texto. El GUARDADO sigue estricto.
+> - **Regla que queda:** todo lo que se lee de lo almacenado en el camino del login trata los datos como
+>   `unknown`, no como el tipo actual: un throw ahí es un login que nadie pasa.
+> - **Validación:** +4 tests en `loginIpFilter`, +1 en `clientIp`; el usuario entra en EKS y AKS con la imagen
+>   nueva y las listas viejas sin convertir.
