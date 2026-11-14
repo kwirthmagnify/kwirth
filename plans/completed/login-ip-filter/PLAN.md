@@ -1,6 +1,6 @@
 # Filtro de IP en el login — PLAN
 
-> **Estado:** streams validados (2026-11-12) · **L1 ✅** (`kwirth-common@0.5.81` → `0.5.82` con `enabled`) · **L2 ✅** · **L3 ✅** (QA del usuario completo, que cubre también L2) · **L4 ✅** · ✅ **CERRADO el 2026-11-12** · producto en [PRD.md](PRD.md).
+> **Estado:** streams validados (2026-11-12) · **L1 ✅** (`kwirth-common@0.5.81` → `0.5.82` con `enabled`) · **L2 ✅** · **L3 ✅** (QA del usuario completo, que cubre también L2) · **L4 ✅** · ✅ **CERRADO el 2026-11-12** · ampliado el 2026-11-14 con **L5 ✅** (un comentario por entrada, `kwirth-common@0.5.85`) · producto en [PRD.md](PRD.md).
 
 ## Estado verificado del código (2026-11-12)
 
@@ -159,3 +159,24 @@
 - Guía de administración: la pestaña, los proxies de confianza (con el ejemplo del ingress), el aviso de §8
   y la vía de escape con el comando literal.
 - Changelog, métricas de tests, índice de planes. Checklist de cierre CL9.
+
+### L5 · Un comentario por entrada — ✅ cerrado (2026-11-14, QA del usuario)
+
+> Pedido después del cierre: con varias entradas, nadie recuerda qué es `10.42.0.0/16` sin una nota al lado.
+>
+> - **Tipo** (`kwirth-common@0.5.85`): `ILoginIpEntry { address, comment }`; `allowed` y `trustedProxies`
+>   pasan de `string[]` a `ILoginIpEntry[]`. `comment` es obligatorio (`''` si no hay) para que nadie mire
+>   `undefined`. **Sin migración**: el formato viejo se rechaza con un 400 y una lista guardada antes se
+>   vuelve a meter a mano.
+> - **Back** (`LoginIpFilter.ts`): `addressesOf()` saca las direcciones y es lo único que miran los checks
+>   (`isLoginAllowed`, `callerOf`, los trusted proxies del WebSocket en `index.ts`). Al guardar: recorte,
+>   fuera las filas sin dirección (con su comentario) y una dirección repetida conserva la **primera** fila.
+> - **Front**: cada fila es dirección (190 px fijos) + comentario (el resto). *Add localhost* y *Trust my
+>   proxy* llegan con su comentario. El diálogo pasa a `lg` y 520 px; de paso, *General* se reorganiza en dos
+>   tarjetas que dicen qué hace cada ajuste, cuándo se aplica y de dónde sale el valor si no se fija ahí.
+> - **Validación:** +4 tests del back (`loginIpFilter` 16 → 20, más los de `SettingsApi` con comentarios),
+>   e2e `kwirth-settings` +1, los 9 specs que abren *Kwirth settings* en verde (31 ✔ · 1 ⏭). Guía, changelog,
+>   las 7 capturas del diálogo y métricas en la CL9.
+> - **Consumidores (punto 6):** Incipit escribe en `/core/settings` solo `marketplaces` y
+>   `packageRegistries` (PUT parcial), y de `core.settings` del bundle solo lee esos dos: el filtro no le
+>   llega. No necesita tarea.
