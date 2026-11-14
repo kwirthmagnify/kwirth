@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react'
 import { Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
 import { Add, Delete, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType, ICallerAddress } from '@kwirthmagnify/kwirth-common'
+import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType, ICallerAddress, ILoginIpEntry } from '@kwirthmagnify/kwirth-common'
 /*
     'import type' and not a normal import, deliberately. CRA transpiles with Babel, which compiles file by
     file and cannot tell whether an imported name is a type or a value: with a normal import it leaves the
@@ -76,11 +76,26 @@ const isValidIpEntry = (entry: string): boolean => {
 }
 
 // localhost over IPv4 and over IPv6, for the 'Add localhost' button
-const LOOPBACK_ENTRIES = ['127.0.0.1', '::1']
+const LOOPBACK_ENTRIES: ILoginIpEntry[] = [
+    { address: '127.0.0.1', comment: 'localhost IPv4' },
+    { address: '::1', comment: 'localhost IPv6' }
+]
 
-// A blank row is not an error: it is dropped on save.
-const ipListValid = (entries: string[]): boolean => entries.every(e => e.trim() === '' || isValidIpEntry(e))
-const cleanIpList = (entries: string[]): string[] => Array.from(new Set(entries.map(e => e.trim()).filter(e => e !== '')))
+// A row with a blank address is not an error: it is dropped on save, comment and all.
+const ipListValid = (entries: ILoginIpEntry[]): boolean => entries.every(e => e.address.trim() === '' || isValidIpEntry(e.address))
+// Trimmed, without blank addresses; an address that repeats keeps its first row (and its comment).
+const cleanIpList = (entries: ILoginIpEntry[]): ILoginIpEntry[] => {
+    const seen = new Set<string>()
+    const result: ILoginIpEntry[] = []
+    for (const entry of entries) {
+        const address = entry.address.trim()
+        if (address === '' || seen.has(address)) continue
+        seen.add(address)
+        result.push({ address, comment: entry.comment.trim() })
+    }
+    return result
+}
+const hasAddress = (entries: ILoginIpEntry[], address: string): boolean => entries.some(e => e.address.trim() === address)
 
 /*
     The network the proxy we are coming through lives in, for 'Trust the proxy I'm coming through': a /16 for
@@ -184,8 +199,8 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const [registries, setRegistries] = useState<IPackageRegistryRow[]>([])
     // login access (plans/login-ip-filter): off on a fresh installation
     const [ipFilterEnabled, setIpFilterEnabled] = useState(false)
-    const [allowedIps, setAllowedIps] = useState<string[]>([])
-    const [trustedProxies, setTrustedProxies] = useState<string[]>([])
+    const [allowedIps, setAllowedIps] = useState<ILoginIpEntry[]>([])
+    const [trustedProxies, setTrustedProxies] = useState<ILoginIpEntry[]>([])
     const [caller, setCaller] = useState<ICallerAddress | undefined>(undefined)
     const [loading, setLoading] = useState(true)
     // 'error' is a LOAD error and disables the whole form: without the current values there is nothing to edit
@@ -423,17 +438,22 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
 
     /*
         One editable list of IPs/CIDRs (Login access): fixed-width rows in a box of fixed height that scrolls
-        inside, so adding entries never moves the rest of the tab.
+        inside, so adding entries never moves the rest of the tab. Each row is the address (fixed width) and
+        a comment that takes the rest.
     */
-    const ipList = (label: string, entries: string[], setEntries: React.Dispatch<React.SetStateAction<string[]>>, placeholder: string) => (
+    const ipList = (label: string, entries: ILoginIpEntry[], setEntries: React.Dispatch<React.SetStateAction<ILoginIpEntry[]>>, placeholder: string) => (
         <Box sx={{ width: '50%' }}>
-            <Box sx={{ height: 168, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }}>
+            <Box sx={{ height: 228, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }}>
                 { entries.map((entry, index) =>
                     <Stack key={index} direction='row' spacing={1} sx={{ alignItems: 'center' }}>
-                        <TextField value={entry} variant='standard' placeholder={placeholder} sx={{ width: '85%' }}
+                        <TextField value={entry.address} variant='standard' placeholder={placeholder} sx={{ width: 190, flexShrink: 0 }}
                             slotProps={{ htmlInput: { 'aria-label': `${label} ${index + 1}` } }}
-                            error={entry.trim() !== '' && !isValidIpEntry(entry)} disabled={loading || error!==''}
-                            onChange={e => setEntries(prev => prev.map((v, i) => i === index ? e.target.value : v))} />
+                            error={entry.address.trim() !== '' && !isValidIpEntry(entry.address)} disabled={loading || error!==''}
+                            onChange={e => setEntries(prev => prev.map((v, i) => i === index ? { ...v, address: e.target.value } : v))} />
+                        <TextField value={entry.comment} variant='standard' placeholder='Comment' sx={{ flexGrow: 1, minWidth: 0 }}
+                            slotProps={{ htmlInput: { 'aria-label': `${label} ${index + 1} comment` } }}
+                            disabled={loading || error!==''}
+                            onChange={e => setEntries(prev => prev.map((v, i) => i === index ? { ...v, comment: e.target.value } : v))} />
                         <Tooltip title='Remove'>
                             <span><IconButton size='small' color='error' disabled={loading || error!==''} aria-label={`Remove ${label} ${index + 1}`}
                                 onClick={() => setEntries(prev => prev.filter((_, i) => i !== index))}><Delete fontSize='small' /></IconButton></span>
@@ -442,7 +462,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 )}
                 { entries.length === 0 && <Typography variant='body2' sx={{ color: 'text.secondary', pt: 1 }}>None.</Typography> }
             </Box>
-            <Button size='small' startIcon={<Add />} onClick={() => setEntries(prev => [...prev, ''])} disabled={loading || error!==''}>Add {label.toLowerCase()}</Button>
+            <Button size='small' startIcon={<Add />} onClick={() => setEntries(prev => [...prev, { address: '', comment: '' }])} disabled={loading || error!==''}>Add {label.toLowerCase()}</Button>
         </Box>
     )
 
@@ -451,12 +471,14 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         something anybody can tell by looking: adding only 127.0.0.1 and arriving as ::1 is exactly how an
         admin testing on their own machine got "the list does not include your own address".
     */
-    const missingLoopbacks = LOOPBACK_ENTRIES.filter(l => !allowedIps.map(a => a.trim()).includes(l))
-    const addLocalhost = () => setAllowedIps(prev => [...prev.filter(a => a.trim() !== ''), ...missingLoopbacks])
+    const missingLoopbacks = LOOPBACK_ENTRIES.filter(l => !hasAddress(allowedIps, l.address))
+    const addLocalhost = () => setAllowedIps(prev => [...prev.filter(a => a.address.trim() !== ''), ...missingLoopbacks])
 
     const suggestedProxy = caller ? proxySubnetOf(caller.remoteAddress) : undefined
-    const canTrustProxy = caller !== undefined && caller.forwardedIgnored && suggestedProxy !== undefined && !trustedProxies.map(p => p.trim()).includes(suggestedProxy)
-    const trustProxy = () => { if (suggestedProxy) setTrustedProxies(prev => [...prev.filter(p => p.trim() !== ''), suggestedProxy]) }
+    const canTrustProxy = caller !== undefined && caller.forwardedIgnored && suggestedProxy !== undefined && !hasAddress(trustedProxies, suggestedProxy)
+    const trustProxy = () => {
+        if (suggestedProxy) setTrustedProxies(prev => [...prev.filter(p => p.address.trim() !== ''), { address: suggestedProxy, comment: "proxy I'm coming through" }])
+    }
 
     // the forwarded header as the core treats it NOW (with the stored trusted proxies)
     const forwardedState = !caller ? 'unknown'
@@ -663,9 +685,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
 
     return (
         <>
-            <Dialog open={true} ref={escapeRef} fullWidth maxWidth='md' disableRestoreFocus={true}>
+            <Dialog open={true} ref={escapeRef} fullWidth maxWidth='lg' disableRestoreFocus={true}>
                 <DialogTitleHelp section='guide/admin/02-initial-config?id=kwirth-settings' docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>Kwirth settings</DialogTitleHelp>
-                <DialogContent sx={{ height: 460, overflowY: 'auto' }}>
+                <DialogContent sx={{ height: 520, overflowY: 'auto' }}>
                     <Tabs value={tab} onChange={(_e, v) => setTab(v as ESettingsKwirthTab)}>
                         <Tab label='General' value={ESettingsKwirthTab.GENERAL} />
                         <Tab label='Notifications' value={ESettingsKwirthTab.NOTIFICATIONS} />
@@ -675,13 +697,46 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         <Tab label='Login access' value={ESettingsKwirthTab.LOGIN_ACCESS} />
                     </Tabs>
 
+                    {/* General: one card per setting, each saying what it does, where its value comes from
+                        and when a change applies. Fixed content: the cards have the same height whatever is
+                        typed. */}
                     <Box hidden={tab !== ESettingsKwirthTab.GENERAL}>
                         <Stack spacing={2} direction='column' sx={{ mt: 2 }}>
-                            <Typography variant='body2'>Configuration of Kwirth itself on cluster <b>{props.clusterName}</b>. These settings are stored by Kwirth and survive a restart.</Typography>
-                            <TextField value={metricsInterval} onChange={(e) => setMetricsInterval(+e.target.value)} variant='standard' label='Cluster metrics read interval (seconds)' type='number' sx={{ width: '40%' }} disabled={loading || error!==''} />
-                            {/* The previous container's log is read ONCE, at startup: changing this has no
-                                effect until the core starts again. */}
-                            <TextField value={previousLogLines} onChange={(e) => setPreviousLogLines(+e.target.value)} variant='standard' label='Previous container log lines to keep (on startup)' type='number' sx={{ width: '40%' }} disabled={loading || error!==''} helperText='Read once when kwirth starts, so a change applies from the next restart' />
+                            <Typography variant='body2'>
+                                Configuration of Kwirth itself on cluster <b>{props.clusterName}</b>. These settings are stored by Kwirth and survive a restart. A value saved here wins over the one given at deploy time.
+                            </Typography>
+                            <Stack direction='row' spacing={2}>
+                                <Box sx={{ width: '50%', height: 236, border: 1, borderColor: 'divider', borderRadius: 1, p: 2, display: 'flex', flexDirection: 'column' }}>
+                                    <Typography variant='subtitle2'>Cluster metrics</Typography>
+                                    <Typography variant='body2' sx={{ color: 'text.secondary', mt: 0.5 }}>
+                                        How often Kwirth samples the CPU and memory of the cluster's nodes and pods. Every chart and every metrics channel is fed from these samples: a shorter interval gives finer charts, at the price of more requests to the cluster.
+                                    </Typography>
+                                    <TextField value={metricsInterval} onChange={(e) => setMetricsInterval(+e.target.value)} variant='standard' label='Cluster metrics read interval (seconds)' type='number' sx={{ width: 360, mt: 2 }} disabled={loading || error!==''} />
+                                    <Box sx={{ flexGrow: 1 }} />
+                                    <Typography variant='caption' component='div' sx={{ color: 'text.secondary' }}>
+                                        <b>Applies:</b> on the next sample, no restart needed
+                                    </Typography>
+                                    <Typography variant='caption' component='div' sx={{ color: 'text.secondary' }}>
+                                        <b>When not set here:</b> Helm <code>metricsInterval</code> (<code>METRICSINTERVAL</code>), otherwise 15
+                                    </Typography>
+                                </Box>
+                                {/* The previous container's log is read ONCE, at startup: changing this has no
+                                    effect until the core starts again. */}
+                                <Box sx={{ width: '50%', height: 236, border: 1, borderColor: 'divider', borderRadius: 1, p: 2, display: 'flex', flexDirection: 'column' }}>
+                                    <Typography variant='subtitle2'>Previous container log</Typography>
+                                    <Typography variant='body2' sx={{ color: 'text.secondary', mt: 0.5 }}>
+                                        When Kwirth starts after a restart, it reads the last lines its previous container wrote: the only record of why it ended. They are shown in the About dialog and, if a sender is chosen in Notifications, sent to whoever has to know.
+                                    </Typography>
+                                    <TextField value={previousLogLines} onChange={(e) => setPreviousLogLines(+e.target.value)} variant='standard' label='Previous container log lines to keep (on startup)' type='number' sx={{ width: 360, mt: 2 }} disabled={loading || error!==''} />
+                                    <Box sx={{ flexGrow: 1 }} />
+                                    <Typography variant='caption' component='div' sx={{ color: 'text.secondary' }}>
+                                        <b>Applies:</b> from the next restart, and only when Kwirth runs inside the cluster
+                                    </Typography>
+                                    <Typography variant='caption' component='div' sx={{ color: 'text.secondary' }}>
+                                        <b>When not set here:</b> Helm <code>previousLogLines</code> (<code>PREVIOUSLOGLINES</code>), otherwise 1000
+                                    </Typography>
+                                </Box>
+                            </Stack>
                         </Stack>
                     </Box>
 
