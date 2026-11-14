@@ -4,6 +4,8 @@ This part is a **reference for every extension**, grouped by type. Each entry ex
 
 > All extensions are installed and managed the same way, from **☰ → Manage extensions → *(family)***. If you haven't seen the manager yet, read [Extending kwirth](../admin/08-extending-kwirth) first — it explains the common install / configure / enable / remove flow that every family shares.
 
+> Some configuration fields — scripts, templates — can be **drafted by an LLM** from a description in plain words. See [Generate a field with AI](ai-assist).
+
 ## Plugins (channels)
 
 The channels users work with. All are **plugins** you can install or remove, except **Magnify**, the **built-in** channel that ships with the kwirth core.

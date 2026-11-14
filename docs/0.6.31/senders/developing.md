@@ -106,6 +106,40 @@ export class MySender implements ISender {
 export default MySender
 ```
 
+### Field types
+
+`getConfigSchema()` returns `ISenderFieldDef[]` — the common `IConfigFieldDef` that senders, webhooks,
+IdP connectors, logins and providers share — and Kwirth draws the form from it.
+
+| `type` | drawn as |
+|---|---|
+| *(omitted)* / `text` | a single-line text field |
+| `number` | a numeric field |
+| `boolean` | a switch |
+| `password` | a masked field with an eye; emptied in a Kwirth export without credentials |
+| `select` | a dropdown fed by `options` (labelled by `labels`) |
+| `multiselect` | a dropdown of several values, stored as one comma-separated string |
+| `json` | today, a single-line text field |
+| `textarea` | a **multi-line**, monospaced field of fixed height that scrolls inside. Line breaks, tabs and backslashes are kept exactly as typed: use it for scripts, templates, keys |
+
+Two flags change how a field is treated:
+
+- **`secret: true`** — the value is a secret. Meant for multi-line secrets on a `textarea` (an SSH
+  private key), which a single-line `password` would break. It gets the eye, it is emptied in an export
+  without credentials, and it is **never sent to an LLM**. Like every secret in Kwirth, it is stored and
+  returned real.
+- **`aiInstructions: '…'`** — the field can be [drafted by an LLM](../guide/extensions/ai-assist.md). The
+  text is the context you give the model for **this** field: what the value is, the contract it must
+  follow, the form of the answer. The core adds the other (non-secret) fields of the form and the user's
+  request; the model answers with the value only, and it lands in the field unsaved. Honoured today on
+  `textarea` fields.
+
+```typescript
+{ name: 'script', label: 'Script', type: 'textarea', required: true,
+  aiInstructions: 'A shell script run once per message. The message body arrives on stdin. Exit 0 on success.' },
+{ name: 'sshPrivateKey', label: 'SSH private key', type: 'textarea', secret: true },
+```
+
 ### Consuming a provider from your sender
 
 A sender can subscribe to a provider — typically to take shared configuration from it, such as the

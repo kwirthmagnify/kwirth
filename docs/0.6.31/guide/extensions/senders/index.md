@@ -24,6 +24,7 @@ These deliver a message to a real destination:
 | **[email-smtp](email-smtp)** | **Email** via an SMTP server. | Host, port, encryption, user, password, from, to. |
 | **[email-resend](email-resend)** | **Email** via the **Resend** API. | API key, from, to. |
 | **[teams](teams)** | A **Microsoft Teams** channel. | Incoming webhook URL. |
+| **[script](script)** | **A script you write** in its configuration, run once per message (or per batch). The way out to anything kwirth does not know. 🔴 Runs code. | Interpreter, script (can be drafted by AI), stdin, env, timeout. |
 
 ## Delivering in batches
 
