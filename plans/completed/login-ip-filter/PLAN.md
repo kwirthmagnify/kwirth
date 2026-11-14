@@ -1,6 +1,6 @@
 # Filtro de IP en el login — PLAN
 
-> **Estado:** streams validados (2026-11-12) · **L1 ✅** (`kwirth-common@0.5.81` → `0.5.82` con `enabled`) · **L2 ✅** · **L3 ✅** (QA del usuario completo, que cubre también L2) · **L4 ✅** · ✅ **CERRADO el 2026-11-12** · ampliado el 2026-11-14 con **L5 ✅** (un comentario por entrada, `kwirth-common@0.5.85`) · producto en [PRD.md](PRD.md).
+> **Estado:** streams validados (2026-11-12) · **L1 ✅** (`kwirth-common@0.5.81` → `0.5.82` con `enabled`) · **L2 ✅** · **L3 ✅** (QA del usuario completo, que cubre también L2) · **L4 ✅** · ✅ **CERRADO el 2026-11-12** · ampliado el 2026-11-14 con **L5 ✅** (un comentario por entrada, `kwirth-common@0.5.85`) y **L6 ✅** (botón *Add my IP*) · producto en [PRD.md](PRD.md).
 
 ## Estado verificado del código (2026-11-12)
 
@@ -180,3 +180,19 @@
 > - **Consumidores (punto 6):** Incipit escribe en `/core/settings` solo `marketplaces` y
 >   `packageRegistries` (PUT parcial), y de `core.settings` del bundle solo lee esos dos: el filtro no le
 >   llega. No necesita tarea.
+
+### L6 · "Add my IP" — ✅ cerrado (2026-11-14, QA del usuario)
+
+> Pedido después de L5: si el admin entra con su propia IP, o por un proxy que ya es de confianza, añadirla
+> a la lista tiene que ser un clic.
+>
+> - **Front** (`SettingsKwirth.tsx`): botón *Add my IP* en el recuadro "How Kwirth sees you", entre *Trust my
+>   proxy* y *Add localhost*. Añade `{ address: <ip vista>, comment: 'my IP' }`.
+> - **Cuándo se habilita:** solo si la dirección mostrada es de verdad la del admin —`caller` cargado y
+>   `forwardedIgnored === false`— y aún no está en la lista. Con el `X-Forwarded-For` ignorado, la dirección
+>   vista es la del proxy y permitirla dejaría entrar a todo lo que hay detrás: primero *Trust my proxy*.
+>   Siempre visible; deshabilitado con tooltip cuando no aplica.
+> - **Sin cambios** en el back ni en `kwirth-common`.
+> - **Validación:** e2e `kwirth-settings` +1 (11 ✔ · 2 ⏭, los dos que solo corren con la lista vacía);
+>   cabe en la fila del recuadro a 520 px. Guía: fila nueva en la tabla de la pestaña y capturas del diálogo
+>   rehechas. Métricas: 63 specs · 248 casos.
