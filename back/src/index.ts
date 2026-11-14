@@ -2002,7 +2002,13 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                 }),
                 {
                     readSettings: async (includeCredentials: boolean) => {
-                        const settings = await SettingsApi.read(ri.configMaps)
+                        const stored = await SettingsApi.read(ri.configMaps)
+                        /*
+                            The login filter travels READ, like the dialog gets it: a list stored before the
+                            entries carried a comment (plain strings) would otherwise go out in a shape the
+                            import refuses, and the whole import with it.
+                        */
+                        const settings: IKwirthSettings = stored.loginIpFilter === undefined ? stored : { ...stored, loginIpFilter: loginIpFilterOf(stored) }
                         return includeCredentials ? settingsResult!.withSecrets(settings) : settings
                     },
                     /*

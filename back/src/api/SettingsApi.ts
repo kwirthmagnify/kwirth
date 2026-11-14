@@ -80,7 +80,12 @@ export class SettingsApi {
         if (incoming.metricsInterval !== undefined) merged.metricsInterval = +incoming.metricsInterval
 
         if (incoming.loginIpFilter !== undefined) {
-            const filter = validateLoginIpFilter(incoming.loginIpFilter, origin, this.apiKeyApi.isDesktop)
+            /*
+                A bundle is a FILE, possibly exported before the entries carried a comment (plain strings).
+                It is read like any stored filter (loginIpFilterOf) and then validated as strictly as the
+                PUT: refusing the old shape would refuse the whole import over a field it can read.
+            */
+            const filter = validateLoginIpFilter(loginIpFilterOf({ loginIpFilter: incoming.loginIpFilter }), origin, this.apiKeyApi.isDesktop)
             if (typeof filter === 'string') throw new Error(filter)
             merged.loginIpFilter = filter
         }
@@ -358,8 +363,13 @@ export class SettingsApi {
                         configured the stored value is undefined, and the dialog would open with
                         everything blank while the core is writing under its defaults.
                     */
+                    /*
+                        The login filter goes out READ, not raw: a list stored before the entries carried a
+                        comment (plain strings) or edited by hand must reach the dialog with the shape
+                        it renders, or the dialog breaks on open (loginIpFilterOf never throws).
+                    */
                     res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(stored), previousLogLines: SettingsApi.resolvePreviousLogLines(stored),
-                        previousLogSenderLines: SettingsApi.resolvePreviousLogSenderLines(stored), log: currentLogSettings() })
+                        previousLogSenderLines: SettingsApi.resolvePreviousLogSenderLines(stored), log: currentLogSettings(), loginIpFilter: loginIpFilterOf(stored) })
                 }
                 catch (err) {
                     logError(ELogComponent.CORE, `Error reading kwirth settings: ${err}`)
@@ -417,7 +427,7 @@ export class SettingsApi {
                     if (incoming.log !== undefined) applyLogSettings(merged.log)
                     if (this.onSettingsChanged) this.onSettingsChanged(merged)
                     const hydrated = await this.withSecrets(merged)
-                    res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(merged), log: currentLogSettings() })
+                    res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(merged), log: currentLogSettings(), loginIpFilter: loginIpFilterOf(merged) })
                 }
                 catch (err) {
                     logError(ELogComponent.CORE, `Error writing kwirth settings: ${err}`)

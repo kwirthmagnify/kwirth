@@ -655,6 +655,29 @@ test('loginIpFilter: a malformed entry or shape → 400', async () => {
     finally { await srv.stop() }
 })
 
+test('🔴 loginIpFilter: GET sends a list stored before the comments with the shape the dialog renders', async () => {
+    // plain strings, as saved before L5: the dialog read entry.address of a string and broke on open
+    const old = { loginIpFilter: { enabled: true, allowed: ['10.0.0.0/8', 7], trustedProxies: ['127.0.0.1'] } } as unknown as IKwirthSettings
+    const srv = await startServer(old)
+    try {
+        const got = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
+        assert.deepEqual(got.loginIpFilter, { enabled: true, allowed: ips('10.0.0.0/8'), trustedProxies: ips('127.0.0.1') })
+        // and a PUT that does not touch it answers it read too
+        const put1 = await (await put(srv.base, { metricsInterval: 20 })).json() as IKwirthSettings
+        assert.deepEqual(put1.loginIpFilter, { enabled: true, allowed: ips('10.0.0.0/8'), trustedProxies: ips('127.0.0.1') })
+    }
+    finally { await srv.stop() }
+})
+
+test('loginIpFilter: GET with nothing stored sends it switched off, with empty lists', async () => {
+    const srv = await startServer()
+    try {
+        const got = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
+        assert.deepEqual(got.loginIpFilter, { enabled: false, allowed: [], trustedProxies: [] })
+    }
+    finally { await srv.stop() }
+})
+
 test('loginIpFilter: a PUT that does not send it keeps the stored one', async () => {
     const stored: IKwirthSettings = { loginIpFilter: { enabled: true, allowed: [{ address: '10.0.0.0/8', comment: 'office' }], trustedProxies: [] } }
     const srv = await startServer(stored)
@@ -673,6 +696,19 @@ test('loginIpFilter: the import (writeWithSecrets) refuses a filter that locks i
     await assert.rejects(settingsApi!.writeWithSecrets({ loginIpFilter: { enabled: true, allowed: ips('10.0.0.0/8'), trustedProxies: [] } }, origin), /198\.51\.100\.7/)
     assert.equal(store.current(), undefined)
     await settingsApi!.writeWithSecrets({ loginIpFilter: { enabled: true, allowed: ips('198.51.100.0/24'), trustedProxies: [] } }, origin)
+    assert.deepEqual(store.current()?.loginIpFilter, { enabled: true, allowed: ips('198.51.100.0/24'), trustedProxies: [] })
+})
+
+test('loginIpFilter: the import reads a bundle exported before the comments (plain strings), and still guards its author', async () => {
+    const store = memConfigMaps()
+    const apiKeyApi = await ApiKeyApi.create(store.cm, 'masterx', false)
+    const settingsApi = await SettingsApi.create(store.cm, memSecrets().s, apiKeyApi!)
+    const origin = { socket: { remoteAddress: '198.51.100.7' }, headers: {} } as unknown as IncomingMessage
+    const oldShape = (allowed: string[]) => ({ loginIpFilter: { enabled: true, allowed, trustedProxies: [] } }) as unknown as IKwirthSettings
+    // the old shape that leaves the importer out is refused for THAT reason, not for its shape
+    await assert.rejects(settingsApi!.writeWithSecrets(oldShape(['10.0.0.0/8']), origin), /198\.51\.100\.7/)
+    // and one that includes them is written in the current shape
+    await settingsApi!.writeWithSecrets(oldShape(['198.51.100.0/24']), origin)
     assert.deepEqual(store.current()?.loginIpFilter, { enabled: true, allowed: ips('198.51.100.0/24'), trustedProxies: [] })
 })
 
