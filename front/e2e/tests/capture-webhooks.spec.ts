@@ -27,6 +27,8 @@ test('capture manage-webhooks + webhook-config (dark)', async ({ page }) => {
     await cfgDialog.getByRole('textbox', { name: 'Name *', exact: true }).fill(CFG)
     await cfgDialog.getByLabel(/API key/i).fill('s3cr3t')
     await cfgDialog.getByRole('button', { name: 'Add', exact: true }).click()
+    // Saving closes the edit (the config is listed, not selected): open it to see its URL.
+    await cfgDialog.getByText(CFG, { exact: true }).click()
     await cfgDialog.getByText('Webhook URL').waitFor({ timeout: 10_000 })
     await page.waitForTimeout(400)
     await cfgDialog.screenshot({ path: `${MEDIA}/webhook-config.png` })
