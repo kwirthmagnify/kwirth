@@ -42,4 +42,10 @@ export interface IBackChannelObject {
         its own). Optional: a core without it leaves the channel to say "unknown".
     */
     callerAddressOf?(webSocket: WebSocket): ICallerAddress | undefined
+    /*
+        The version of the Kwirth core this channel runs on (KwirthData.version), for a channel that has to
+        say it to others — Ianus tells its peers. Optional: a core without it leaves the channel to say
+        "unknown".
+    */
+    kwirthVersion?: string
 }
