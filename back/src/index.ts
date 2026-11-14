@@ -25,6 +25,8 @@ import { userStoreName } from './tools/UserStoreName'
 import { wsUpgradeAllowed } from './tools/WsPathGuard'
 import { pathWebsocketChannel } from './tools/WsPathDelegation'
 import { LiveKeyConnections } from './tools/LiveKeyConnections'
+import { WsCallerAddresses } from './tools/WsCallerAddress'
+import { loginIpFilterOf } from './tools/LoginIpFilter'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { buildPreviousContainerMessage, logPreviousContainerBanner, readPreviousContainerLog } from './tools/PreviousContainerLog'
 import { buildSignupMessage, signupSenderOf } from './tools/auth/SignupNotice'
@@ -64,7 +66,7 @@ import { DockerConfigMaps } from './tools/DockerConfigMaps'
 import { NodeConfigMaps } from './tools/NodeConfigMaps'
 import { NodeSecrets } from './tools/NodeSecrets'
 
-import { IUserInfo, IKwirthSettings, EExecutionEnvironment, EExtensionType, ERouteOwnerKind, IExtensionRequirement, ISignupRequest } from '@kwirthmagnify/kwirth-common'
+import { IUserInfo, IKwirthSettings, EExecutionEnvironment, EExtensionType, ERouteOwnerKind, IExtensionRequirement, ISignupRequest, ICallerAddress } from '@kwirthmagnify/kwirth-common'
 import { userInfoOf } from './tools/auth/UserInfo'
 import { EStoreKind, IEnvironmentCapabilities, detectExecutionEnvironment, resolveEnvironmentCapabilities, resolveClusterType, servesCoreLogFromMemory } from './tools/ExecutionEnvironment'
 import { resolveInstallationIdentity, defaultProbes } from './tools/InstallationIdentity'
@@ -718,6 +720,9 @@ const sendChannelSignal = (webSocket: WebSocket, level: ESignalMessageLevel, tex
     try { webSocket.send(JSON.stringify(signalMessage)) }
     catch (err) { logError(ELogComponent.CORE, `Could not send channel signal '${text}': ${err}`) }
 }
+
+// The address of each WebSocket's client, for the channels (K2). Created with the WebSocket server.
+let wsCallers: WsCallerAddresses | undefined
 
 // Which live instances were started with which access key, so deleting a key cuts them (K1, tools/LiveKeyConnections)
 const liveKeyConnections = new LiveKeyConnections()
@@ -2807,6 +2812,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                 }
                 catch { return undefined }
             },
+            // Who is at the other end of a WebSocket of this channel, resolved when it connected (K2, tools/WsCallerAddress)
+            callerAddressOf: (webSocket: WebSocket): ICallerAddress | undefined => wsCallers?.addressOf(webSocket),
         }
 
         runningInstance.clusterInfo.senders = senderManager
@@ -3319,6 +3326,13 @@ const STARTING_PAGE = `<!DOCTYPE html>
 
 const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, instances:IRunningInstance[], localProcessClientMessage:(webSocket: WebSocket, message: string, ri:IRunningInstance) => Promise<void>) => {
     try {
+        // The trusted proxies the WebSocket clients' addresses are resolved with: the login IP filter's (K2)
+        wsCallers = new WsCallerAddresses(async () => {
+            const ri = instances.find(r => r.active)
+            return ri ? loginIpFilterOf(await SettingsApi.read(ri.configMaps)).trustedProxies : []
+        })
+        void wsCallers.refresh()
+
         // create HTTP and WS servers
         logInfo(ELogComponent.CORE, 'Creating HTTP server...')
         httpServer = http.createServer(expressApp)
@@ -3380,6 +3394,8 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
             const forwardedFor = req.headers['x-forwarded-for']
             const forwardedText = Array.isArray(forwardedFor) ? forwardedFor.join(', ') : forwardedFor
             logInfo(ELogComponent.CORE, `Client connected from ${ip}${forwardedText ? ` (X-Forwarded-For: ${forwardedText})` : ''}`)
+            // And THIS one the channels may decide with: resolved with the trusted proxies (K2)
+            wsCallers?.remember(webSocket, req.socket.remoteAddress, forwardedFor)
 
             /*
                 A WebSocket under a channel's router path (<rootPath>/channel/<alias>/...) belongs to that
