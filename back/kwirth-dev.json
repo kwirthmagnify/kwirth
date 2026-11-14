@@ -4,7 +4,8 @@
         "agora": "../plugins/agora/dist",
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
-        "specula": "../plugins/specula/dist"
+        "specula": "../plugins/specula/dist",
+        "ianus": "../plugins/ianus/dist"
     },
     "providers": {
         "agent-metrics": "../providers/agent-metrics/dist",

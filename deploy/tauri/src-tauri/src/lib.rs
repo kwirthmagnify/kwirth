@@ -119,8 +119,24 @@ async fn save_file_dialog(app: AppHandle, filename: String, content: String) -> 
     }
 }
 
+/// On a Wayland session, run GTK through XWayland. With the native Wayland backend the client-side
+/// title bar only takes clicks while the window is maximized (minimize, maximize and close do nothing
+/// otherwise). The AppImage already does this in its launcher hook (linuxdeploy-plugin-gtk); the .deb
+/// starts the binary directly, so the binary has to do it. A GDK_BACKEND set by the user wins.
+#[cfg(target_os = "linux")]
+fn force_x11_on_wayland() {
+    let on_wayland = std::env::var("XDG_SESSION_TYPE").map(|t| t == "wayland").unwrap_or(false)
+        || std::env::var_os("WAYLAND_DISPLAY").is_some();
+    if on_wayland && std::env::var_os("GDK_BACKEND").is_none() {
+        std::env::set_var("GDK_BACKEND", "x11");
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    force_x11_on_wayland();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
