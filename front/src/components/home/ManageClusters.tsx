@@ -9,7 +9,7 @@ import { Cluster } from '../../model/Cluster'
 import { MsgBoxButtons, MsgBoxWaitCancel, MsgBoxYesNo } from '../../tools/MsgBox'
 import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { ENotifyLevel, readClusterInfo } from '../../tools/Global'
-import { clusterRouteResolvers, resolvedClusterUrl, unresolvedRouteMessage } from '../../tools/ClusterRouting'
+import { clusterRouters, resolvedClusterUrl, unresolvedRouteMessage } from '../../tools/ClusterRouting'
 import { IClusterRoute, KwirthData } from '@kwirthmagnify/kwirth-common'
 
 // The value of the Route select for an entry reached directly (no route).
@@ -212,18 +212,18 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                 <TextField value={url} onChange={(e) => setUrl(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='URL'></TextField>
                                 <TextField value={accessKey} onChange={(e) => setAccessKey(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='API Key'></TextField>
                                 {/*
-                                    How this core reaches the cluster: directly, or through a route that an installed
-                                    extension resolves. Always visible; disabled when there is nothing to choose.
+                                    How this core reaches the cluster: directly, or through one of its installed ROUTERS.
+                                    Always visible; disabled when there is nothing to choose.
                                 */}
                                 <Stack direction='row' spacing={1}>
-                                    <FormControl variant='standard' sx={{ width: 180 }} disabled={selectedCluster?.home || (clusterRouteResolvers().length === 0 && routeResolver === DIRECT_ROUTE)}>
+                                    <FormControl variant='standard' sx={{ width: 180 }} disabled={selectedCluster?.home || (clusterRouters().length === 0 && routeResolver === DIRECT_ROUTE)}>
                                         {/* DIRECT_ROUTE is '': without displayEmpty MUI would show it as no selection at all */}
                                         <InputLabel id='manage-clusters-route-label' shrink>Route</InputLabel>
                                         <Select labelId='manage-clusters-route-label' displayEmpty value={routeResolver} onChange={(e) => setRouteResolver(e.target.value)}>
                                             <MenuItem value={DIRECT_ROUTE}>Direct</MenuItem>
-                                            { clusterRouteResolvers().map(r => <MenuItem key={r.id} value={r.id}>{r.id}</MenuItem>) }
-                                            {/* A saved route whose resolver is gone stays selectable, so it is seen and can be changed */}
-                                            { routeResolver !== DIRECT_ROUTE && !clusterRouteResolvers().some(r => r.id === routeResolver) && <MenuItem value={routeResolver}>{routeResolver} (not installed)</MenuItem> }
+                                            { clusterRouters().map(r => <MenuItem key={r.id} value={r.id}>{r.id}</MenuItem>) }
+                                            {/* A saved route whose router is gone stays selectable, so it is seen and can be changed */}
+                                            { routeResolver !== DIRECT_ROUTE && !clusterRouters().some(r => r.id === routeResolver) && <MenuItem value={routeResolver}>{routeResolver} (not installed)</MenuItem> }
                                         </Select>
                                     </FormControl>
                                     <TextField value={routeUid} onChange={(e) => setRouteUid(e.target.value)} disabled={selectedCluster?.home || routeResolver === DIRECT_ROUTE} variant='standard' label='Cluster UID' sx={{ flexGrow: 1 }}></TextField>
