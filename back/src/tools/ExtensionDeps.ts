@@ -19,11 +19,12 @@ export interface IInstalledIndex {
     docs: IInstalledRef[]
     aitoolset: IInstalledRef[]
     dce: IInstalledRef[]
+    router: IInstalledRef[]
 }
 
 /** Every installable type with nobody in it. The base to build an index on when only one family matters. */
 export const emptyInstalledIndex = (): IInstalledIndex =>
-    ({ plugin: [], provider: [], sender: [], theme: [], homepage: [], idp: [], login: [], webhook: [], docs: [], aitoolset: [], dce: [] })
+    ({ plugin: [], provider: [], sender: [], theme: [], homepage: [], idp: [], login: [], webhook: [], docs: [], aitoolset: [], dce: [], router: [] })
 
 function semverGte(installed: string, required: string): boolean {
     const parse = (v: string) => v.split('.').map(n => parseInt(n, 10) || 0)
