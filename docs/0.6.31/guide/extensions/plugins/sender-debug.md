@@ -30,7 +30,7 @@ This channel calls the sender directly and catches whatever comes out of it: a r
 ## Getting started
 
 1. Choose **Cluster**, set **View** to `cluster`, pick the **sender-debug** channel and click **ADD**.
-2. Open the tab's **⚙️ → Start**. The setup only asks for the history size — everything else lives in the tab itself.
+2. Press **Start** in the middle of the tab — or open the tab's **⚙️ → Start**, which does the same. The setup only asks for the history size — everything else lives in the tab itself.
 3. Pick a **Sender** and one of its **Configurations**, write the message and press **SEND**.
 
 ## The message
@@ -65,6 +65,8 @@ Every row opens, and shows the two halves of the exchange:
 
 - **Sent** — the message exactly as it left, including the `origin.source` this channel stamps on everything. Knowing what the destination answered is worth little if you have to reconstruct from memory what you sent it.
 - **Answered** — what the sender returned, what it threw, or the plain statement that it returned nothing.
+
+The **copy** icon at the end of every row puts both halves on the clipboard — `Sent`, the message, a blank line, `Answered` and the answer — without opening the row; it turns into a tick for a moment to say it is done.
 
 | Verdict | What it means |
 |---|---|
