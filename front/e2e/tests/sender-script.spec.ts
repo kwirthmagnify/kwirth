@@ -116,6 +116,36 @@ test.describe('script sender: textarea and AI assistant', () => {
         await newConfig()
     })
 
+    test('🔴 the private key is EDITABLE while hidden: what is typed or pasted over the dots lands where the caret is', async () => {
+        await cfg().getByText('This Kwirth', { exact: true }).click()
+        await page.getByRole('option', { name: 'Another machine (SSH)' }).click()
+        const key = cfg().getByRole('textbox', { name: 'SSH private key', exact: true })
+        const eye = (name: 'Show' | 'Hide') => key.locator('xpath=ancestor::div[contains(@class,"MuiInputBase-root")][1]').getByRole('button', { name, exact: true })
+
+        // Typed blind, with a caret move in the middle: the caret must stay put after each re-mask.
+        await key.click()
+        await page.keyboard.type('abd')
+        await page.keyboard.press('ArrowLeft')
+        await page.keyboard.type('c')
+        await expect(key).toHaveValue('••••')
+        await page.keyboard.press('ArrowLeft')
+        await page.keyboard.press('Backspace')
+        await expect(key).toHaveValue('•••')
+        await eye('Show').click()
+        await expect(key).toHaveValue('acd')
+
+        // A whole key replacing what was there, hidden: line breaks kept, masked one dot per character.
+        await eye('Hide').click()
+        const pasted = '-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXk\n-----END OPENSSH PRIVATE KEY-----'
+        await key.fill(pasted)
+        await expect(key).toHaveValue(pasted.replace(/[^\n]/g, '•'))
+        await eye('Show').click()
+        await expect(key).toHaveValue(pasted)
+
+        await cfg().getByRole('button', { name: 'Cancel' }).click()
+        await newConfig()
+    })
+
     test('the script is a multi-line, monospaced field of FIXED height', async () => {
         const field = scriptField()
         await expect(field).toHaveJSProperty('tagName', 'TEXTAREA')
