@@ -3,7 +3,11 @@
 > Cuelga de [PRD.md](PRD.md) (validado 2026‑11‑15). Aquí, el cómo y el orden. Estado: **S1–S6 hechos** (2026‑11‑15). S1–S5 con QA en k3d (router de eco del scaffolder) y e2e
 `routers-manager.spec.ts` 7/7. **S6: `@jfvilas/kwirth-router-bridge@0.1.0` publicado**, QA k3d ↔ AKS completo.
 Guía hecha (`guide/extensions/routers/index` y `/bridge`, con capturas de `capture-routers.spec.ts`).
-Pendiente: S7 (Ianus como pluter).
+**S7 hecho** (2026‑11‑15): el core registra los **pluters** (`RouterManager.adoptPluter` / `dropPluter`, enlazado
+a los cuatro sitios donde se registra, sustituye o quita un canal: arranque, instalación en caliente, recarga en
+dev y desinstalación); `common-back` 0.6.17 documenta que el ciclo de vida de un pluter es el del canal. El plan
+del pluter de pago queda reorientado en su repo; se declara router cuando lleve tráfico.
+**Tipo `router` cerrado.**
 
 ## Backlog
 
