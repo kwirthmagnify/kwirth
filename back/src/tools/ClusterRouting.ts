@@ -1,32 +1,16 @@
-import { BackChannelData, CLUSTER_ROUTE_LOOPBACK_TICKET, EChannelMode, IClusterRouteResolver, resolveClusterRouteUrl } from '@kwirthmagnify/kwirth-common'
+import { BackChannelData, CLUSTER_ROUTE_LOOPBACK_TICKET, EChannelMode, IRouterData, resolveClusterRouteUrl } from '@kwirthmagnify/kwirth-common'
 import { ERemoteConnState, IChannel, IClusterEndpoint, IRemoteChannelHandle, IRemoteChannelHandlers } from '@kwirthmagnify/kwirth-common-back'
 import { Router } from 'express'
 
 /*
-    PROXIED cluster-list entries, back side (see ClusterRoute in common).
+    Two unrelated jobs that used to share this file:
 
-    Two jobs: deciding which channels may announce themselves as resolvers, and resolving the endpoint a
-    plugin hands to openRemoteChannel. An entry without a route never enters any of this: the endpoint
-    goes through untouched, exactly as before proxied entries existed.
+      · where a channel's own HTTP router is mounted (providesRouter + routerAlias: a STABLE url for a
+        channel, e.g. montag's). That stays here.
+      · PROXIED cluster-list entries: resolving the endpoint a plugin hands to openRemoteChannel. Since
+        plans/router-extension it resolves against the ROUTERS (RouterManager), not against channels. An
+        entry without a route never enters any of this: the endpoint goes through untouched.
 */
-
-/*
-    The resolver a channel may announce, or undefined. A resolved url points at the channel's router, so a
-    declaration is only honoured when that router is really mounted at /channel/<routerAlias> and the
-    declared id IS that alias. Anything else would send the traffic to a path nobody serves.
-*/
-export const validClusterRouteResolver = (channelId: string, declared: IClusterRouteResolver | undefined, mountedAlias: string | undefined, logWarning?: (message: string) => void): IClusterRouteResolver | undefined => {
-    if (!declared) return undefined
-    if (!mountedAlias) {
-        if (logWarning) logWarning(`Channel '${channelId}' declares a cluster route resolver but mounts no router with an alias: the resolver is ignored`)
-        return undefined
-    }
-    if (declared.id !== mountedAlias) {
-        if (logWarning) logWarning(`Channel '${channelId}' declares the cluster route resolver '${declared.id}' but its router alias is '${mountedAlias}': the resolver is ignored`)
-        return undefined
-    }
-    return declared
-}
 
 /*
     A channel's HTTP router, or undefined when it mounts none (providesRouter + router). Read without widening
@@ -45,37 +29,31 @@ export const mountedRouterAlias = (channel: object): string | undefined => {
     return channelRouterOf(channel) && typeof alias === 'string' && alias !== '' ? alias : undefined
 }
 
-// What the core announces for a channel hosted HERE: its data, with the resolver only if it is valid.
-export const announcedLocalChannelData = (channel: IChannel, logWarning?: (message: string) => void): BackChannelData => {
-    const data = channel.getChannelData()
-    return { ...data, mode: EChannelMode.LOCAL, clusterRouteResolver: validClusterRouteResolver(data.id, data.clusterRouteResolver, mountedRouterAlias(channel), logWarning) }
-}
+// What the core announces for a channel hosted HERE
+export const announcedLocalChannelData = (channel: IChannel): BackChannelData =>
+    ({ ...channel.getChannelData(), mode: EChannelMode.LOCAL })
 
-// What the core announces for a channel hosted ELSEWHERE: never a resolver, its router is not mounted here.
+// What the core announces for a channel hosted ELSEWHERE
 export const announcedRemoteChannelData = (channel: IChannel): BackChannelData =>
-    ({ ...channel.getChannelData(), mode: EChannelMode.REMOTE, clusterRouteResolver: undefined })
-
-// The resolvers of THIS core: those of its LOCAL channels (a REMOTE channel's router is not mounted here).
-export const clusterRouteResolversOf = (channels: BackChannelData[]): IClusterRouteResolver[] =>
-    channels.filter(c => c.mode !== EChannelMode.REMOTE && c.clusterRouteResolver).map(c => c.clusterRouteResolver!)
+    ({ ...channel.getChannelData(), mode: EChannelMode.REMOTE })
 
 /*
     The endpoint openRemoteChannel has to dial. Without a route, the same object. With a route, a copy whose
-    url is the resolver's endpoint on THIS core, reached through 'loopbackBaseUrl' (the back talks to itself:
+    url is the router's endpoint on THIS core, reached through 'loopbackBaseUrl' (the back talks to itself:
     it never goes out to its own public url, which some networks do not route back). Undefined when the route
     cannot be resolved — never the real url, which is precisely the one this core cannot reach.
 */
-export const resolveRemoteEndpoint = (endpoint: IClusterEndpoint, loopbackBaseUrl: string, resolvers: IClusterRouteResolver[]): IClusterEndpoint | undefined => {
+export const resolveRemoteEndpoint = (endpoint: IClusterEndpoint, loopbackBaseUrl: string, routers: IRouterData[]): IClusterEndpoint | undefined => {
     if (!endpoint.route) return endpoint
-    // Over loopback the back talks to itself: the resolver accepts this ticket only from a loopback address.
-    const url = resolveClusterRouteUrl(loopbackBaseUrl, endpoint.route, resolvers, CLUSTER_ROUTE_LOOPBACK_TICKET)
+    // Over loopback the back talks to itself: the core accepts this ticket only from a loopback address.
+    const url = resolveClusterRouteUrl(loopbackBaseUrl, endpoint.route, routers, CLUSTER_ROUTE_LOOPBACK_TICKET)
     if (!url) return undefined
     return { ...endpoint, url }
 }
 
 /*
     The handle for an endpoint whose route cannot be resolved: it reports DOWN once and does nothing else (no
-    retries: retrying would not make a missing resolver appear). DOWN is notified on the next tick, so the
+    retries: retrying would not make a missing router appear). DOWN is notified on the next tick, so the
     consumer already holds the handle when its onState runs — the same order as a real connection.
 */
 export const unresolvableRemoteChannel = (handlers: IRemoteChannelHandlers): IRemoteChannelHandle => {
