@@ -59,9 +59,8 @@
     .badge-planned { background: rgba(139,148,158,.1); color: var(--muted); border: 1px solid var(--border); }
     .badge-dev { background: rgba(45,212,191,.1); color: var(--teal); border: 1px solid rgba(45,212,191,.2); }
 
-    .arch-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; margin-top: 24px; font-family: var(--mono); font-size: 0.85rem; line-height: 1.8; color: var(--muted); white-space: pre; overflow-x: auto; }
-    .arch-box .hl { color: var(--teal); }
-    .arch-box .hl2 { color: var(--blue); }
+    .diagram { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 24px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .diagram svg { display: block; width: 100%; min-width: 760px; height: auto; }
 
     .iface-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
     .iface-row { display: flex; gap: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; }
@@ -162,14 +161,57 @@
   <p>Kwirth Mesh is built from <strong>routers</strong>, a type of extension of its own. A router lives only in the back end: it has <strong>no tab and no panel</strong>. You install it from the <strong>Routers</strong> manager, configure it in its dialog, and it writes what it does in Kwirth's log. Its one job is to <strong>carry traffic</strong> to a cluster you cannot reach.</p>
   <p>The rule of thumb against the other families: a <a href="plugins.html">plugin</a> <em>draws something you open</em>, a <a href="providers.html">provider</a> <em>produces data</em>, a <a href="dces.html">DCE</a> <em>provides objects other extensions call</em>. A router <em>carries traffic</em> to a cluster that has no direct path.</p>
 
-  <div class="arch-box">  your browser / your Kwirth's back            your Kwirth                         the other cluster
-  ─────────────────────────────────            ───────────                         ─────────────────
-  cluster-list entry: its REAL url    ┌──────────────────────────────┐
-  + route { <span class="hl">router</span>, cluster uid }     │ &lt;root&gt;/router/&lt;id&gt;/...       │   the <span class="hl">router</span>    ┌──────────┐
-  ── requests and WebSockets ───────► │  1. Kwirth <span class="hl2">authenticates</span> it  │ ────────────► │  Kwirth  │
-                                      │  2. hands it to the <span class="hl">router</span>   │  (its own way) └──────────┘
-                                      └──────────────────────────────┘
-</div>
+  <div class="diagram">
+    <svg viewBox="0 0 960 290" role="img" aria-label="Traffic for a routed cluster goes to your own Kwirth, which authenticates it and hands it to the router, which carries it to the other cluster">
+      <defs>
+        <marker id="mesh-arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#58a6ff"/></marker>
+        <marker id="mesh-arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2dd4bf"/></marker>
+      </defs>
+      <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" text-anchor="middle">
+        <!-- no direct path -->
+        <path d="M145,80 C145,22 825,22 825,80" fill="none" stroke="#ff7b72" stroke-width="1.5" stroke-dasharray="6 6" opacity=".7"/>
+        <circle cx="485" cy="37" r="10" fill="#0d1420" stroke="#ff7b72" stroke-width="1.5"/>
+        <path d="M480,32 L490,42 M490,32 L480,42" stroke="#ff7b72" stroke-width="2"/>
+        <text x="485" y="18" font-size="12" fill="#ff7b72">no direct path</text>
+
+        <!-- your browser / your back -->
+        <rect x="20" y="80" width="250" height="160" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="145" y="112" font-size="14" font-weight="700" fill="#e6edf3">Your browser</text>
+        <text x="145" y="132" font-size="12" fill="#8b949e">or your Kwirth's back end</text>
+        <text x="145" y="170" font-size="13" fill="#2dd4bf">cluster-list entry</text>
+        <text x="145" y="192" font-size="12" fill="#8b949e">its real URL</text>
+        <text x="145" y="212" font-size="12" fill="#8b949e">+ route: router · cluster uid</text>
+
+        <!-- arrow into your Kwirth -->
+        <line x1="272" y1="160" x2="352" y2="160" stroke="#58a6ff" stroke-width="2" marker-end="url(#mesh-arrow-blue)"/>
+        <text x="312" y="148" font-size="11" fill="#8b949e">requests</text>
+        <text x="312" y="180" font-size="11" fill="#8b949e">WebSockets</text>
+
+        <!-- your Kwirth -->
+        <rect x="355" y="60" width="270" height="210" rx="10" fill="#0f1929" stroke="#2dd4bf" stroke-opacity=".45"/>
+        <text x="490" y="88" font-size="14" font-weight="700" fill="#e6edf3">Your Kwirth</text>
+        <text x="490" y="108" font-size="12" fill="#58a6ff" font-family="'JetBrains Mono', 'Fira Code', monospace">/router/&lt;id&gt;/…</text>
+        <rect x="375" y="122" width="230" height="50" rx="8" fill="#111827" stroke="#1e2d40"/>
+        <text x="490" y="143" font-size="13" fill="#e6edf3">1 · <tspan fill="#58a6ff" font-weight="700">authenticates</tspan> it</text>
+        <text x="490" y="161" font-size="11" fill="#8b949e">ticket · loopback · access key</text>
+        <rect x="375" y="186" width="230" height="64" rx="8" fill="#2dd4bf" fill-opacity=".08" stroke="#2dd4bf"/>
+        <text x="490" y="211" font-size="13" fill="#e6edf3">2 · hands it to the <tspan fill="#2dd4bf" font-weight="700">router</tspan></text>
+        <text x="490" y="232" font-size="11" fill="#8b949e">with who is calling</text>
+
+        <!-- arrow out of the router -->
+        <line x1="607" y1="218" x2="707" y2="200" stroke="#2dd4bf" stroke-width="2" marker-end="url(#mesh-arrow-teal)"/>
+        <text x="660" y="190" font-size="11" fill="#8b949e">its own way</text>
+        <text x="655" y="240" font-size="11" fill="#8b949e">tunnel · bastion</text>
+
+        <!-- the other cluster -->
+        <rect x="710" y="80" width="230" height="160" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="825" y="122" font-size="14" font-weight="700" fill="#e6edf3">The other cluster</text>
+        <text x="825" y="160" font-size="12" fill="#8b949e">a Kwirth behind NAT,</text>
+        <text x="825" y="180" font-size="12" fill="#8b949e">a firewall or a DMZ</text>
+        <text x="825" y="214" font-size="12" fill="#e6edf3">authorizes with its own key</text>
+      </g>
+    </svg>
+  </div>
 
   <p style="margin-top:18px;">A router decides <strong>how</strong> the traffic travels — a tunnel, a bastion, a proxy, a link between two Kwirths. Kwirth decides <strong>who</strong> may send it. And the cluster at the other end still decides <strong>what</strong> you may do there.</p>
 
@@ -197,13 +239,43 @@
     </div>
   </div>
 
-  <div class="arch-box">   Kwirth A (behind NAT)                                   Kwirth B (reachable)
- ┌──────────────────────┐   one outbound WebSocket link   ┌──────────────────────┐
- │ <span class="hl">bridge</span>: sibling = B  ├────────────────────────────────►│ <span class="hl">bridge</span> (accepts)     │
- │                      │◄═══ <span class="hl2">A's sessions use B</span> ════════│                      │
- │                      │════ <span class="hl2">B's sessions use A</span> ═══════►│                      │
- └──────────────────────┘                                 └──────────────────────┘
-</div>
+  <div class="diagram">
+    <svg viewBox="0 0 960 250" role="img" aria-label="Bridge: Kwirth A, behind NAT, opens one outbound WebSocket link to Kwirth B; over that link A's sessions use B and B's sessions use A">
+      <defs>
+        <marker id="bridge-arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#58a6ff"/></marker>
+        <marker id="bridge-arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3fb950"/></marker>
+        <marker id="bridge-arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2dd4bf"/></marker>
+      </defs>
+      <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" text-anchor="middle">
+        <!-- the link: one outbound WebSocket, dialled by A -->
+        <rect x="300" y="96" width="360" height="72" rx="36" fill="#2dd4bf" fill-opacity=".06" stroke="#2dd4bf" stroke-opacity=".6"/>
+        <line x1="306" y1="78" x2="630" y2="78" stroke="#2dd4bf" stroke-width="2" marker-end="url(#bridge-arrow-teal)"/>
+        <text x="480" y="64" font-size="12" fill="#2dd4bf">one outbound WebSocket link — A dials B</text>
+        <text x="480" y="120" font-size="12" fill="#58a6ff">A's sessions use B</text>
+        <line x1="345" y1="128" x2="615" y2="128" stroke="#58a6ff" stroke-width="1.8" marker-end="url(#bridge-arrow-blue)"/>
+        <text x="480" y="160" font-size="12" fill="#3fb950">B's sessions use A</text>
+        <line x1="615" y1="144" x2="345" y2="144" stroke="#3fb950" stroke-width="1.8" marker-end="url(#bridge-arrow-green)"/>
+
+        <!-- NAT / firewall in front of A -->
+        <line x1="322" y1="34" x2="322" y2="232" stroke="#f5820a" stroke-width="2" stroke-dasharray="5 5"/>
+        <text x="322" y="246" font-size="11" fill="#f5820a">NAT / firewall</text>
+
+        <!-- Kwirth A -->
+        <rect x="20" y="50" width="280" height="160" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="160" y="88" font-size="14" font-weight="700" fill="#e6edf3">Kwirth A</text>
+        <text x="160" y="110" font-size="12" fill="#8b949e">behind NAT</text>
+        <rect x="50" y="140" width="220" height="44" rx="8" fill="#2dd4bf" fill-opacity=".08" stroke="#2dd4bf"/>
+        <text x="160" y="167" font-size="12" fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">bridge · sibling = B</text>
+
+        <!-- Kwirth B -->
+        <rect x="660" y="50" width="280" height="160" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="800" y="88" font-size="14" font-weight="700" fill="#e6edf3">Kwirth B</text>
+        <text x="800" y="110" font-size="12" fill="#8b949e">reachable</text>
+        <rect x="690" y="140" width="220" height="44" rx="8" fill="#2dd4bf" fill-opacity=".08" stroke="#2dd4bf"/>
+        <text x="800" y="167" font-size="12" fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">bridge · accepts</text>
+      </g>
+    </svg>
+  </div>
 
   <p style="margin-top:18px;">Install Bridge in both, give A the URL of B and an access key of B with the scope <code>bridge$peer</code>, and save: A links to B at once, without restarting either. Then each Kwirth adds the other to its cluster list with the route <strong>bridge</strong>.</p>
 
