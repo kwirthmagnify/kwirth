@@ -1,7 +1,17 @@
 # Router — PLAN
 
-> Cuelga de [PRD.md](PRD.md) (validado 2026‑11‑15). Aquí, el cómo y el orden. Estado: **S1–S5 hechos y QA validado** (2026‑11‑15, en k3d con el router de eco del scaffolder). Pendientes: el
-e2e `routers-manager.spec.ts` (escrito, sin correr), la guía (sección *Routers*), y S6 (`bridge`).
+> Cuelga de [PRD.md](PRD.md) (validado 2026‑11‑15). Aquí, el cómo y el orden. Estado: **S1–S6 hechos** (2026‑11‑15). S1–S5 con QA en k3d (router de eco del scaffolder) y e2e
+`routers-manager.spec.ts` 7/7. **S6: `@jfvilas/kwirth-router-bridge@0.1.0` publicado**, QA k3d ↔ AKS completo.
+Pendientes: la guía (sección *Routers*) y S7 (Ianus como pluter).
+
+## Backlog
+
+- **Marca del core para el tráfico que entra por un router** (visto al cerrar `bridge`). Un router entrega lo que
+  lleva al core destino por **loopback**; para el filtro de IP del login eso parece local, y pasa donde loopback
+  está permitido (Magnify desktop siempre, o loopback en la lista o en los proxies de confianza). Hoy el filtro
+  solo actúa en `POST /login` y las rutas se usan con keys, así que el hueco es estrecho (documentado en el README
+  de `bridge`). Arreglo genérico: `IRouterContext` da a cada router una marca que solo conoce el core, que la pone
+  en lo que entrega, y el core trata ese tráfico como **externo** (ni loopback ni `X-Forwarded-For`).
 
 Decisiones tomadas al hacerlos (2026‑11‑15):
 - El contrato lleva `routerRequest?(req, res, caller)` en vez de un `Router` de express: así el core le pasa quién
