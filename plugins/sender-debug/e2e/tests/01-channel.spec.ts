@@ -50,7 +50,8 @@ const historyRows = () => page.locator('.MuiPaper-root').filter({ hasText: new R
 /** The channel declares a setup, so Start opens the dialog first and the channel starts on accepting it. */
 const start = async (): Promise<void> => {
     await openTabMenu(page)
-    await page.getByText('Start', { exact: true }).click()
+    // the menu item: the not-started tab has a Start button of its own
+    await page.getByRole('menuitem', { name: 'Start', exact: true }).click()
     await expect(page.getByText('Configure Sender Debug channel')).toBeVisible()
     await page.getByRole('button', { name: 'OK' }).click()
     await page.waitForTimeout(2500)
@@ -78,14 +79,21 @@ const pickFirstConfig = async (): Promise<string> => {
     return value
 }
 
-test('the tab explains that the channel must be started', async () => {
-    await expect(page.getByText('Sender Debug not started', { exact: true })).toBeVisible()
-    await expect(page.getByText(/Start the channel .* to pick a sender/)).toBeVisible()
+test('the tab explains that the channel must be started, the same as every IRIA plugin, with a Start button', async () => {
+    const empty = page.getByTestId('channel-not-started')
+    await expect(empty.getByText('Sender Debug', { exact: true })).toBeVisible()
+    await expect(empty.getByText(/Sender Debug not started\. Start the channel to pick a sender/)).toBeVisible()
+    // its Start does what the tab menu's Start does: the setup dialog first
+    await empty.getByRole('button', { name: 'Start', exact: true }).click()
+    await expect(page.getByText('Configure Sender Debug channel')).toBeVisible()
+    await page.getByRole('button', { name: 'CANCEL' }).click()
+    await page.waitForTimeout(500)
+    await expect(empty).toBeVisible()
 })
 
 test('the setup only configures the channel, and warns that sending is real', async () => {
     await openTabMenu(page)
-    await page.getByText('Start', { exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Start', exact: true }).click()
     await expect(page.getByText('Configure Sender Debug channel')).toBeVisible()
     await expect(page.getByLabel('Max history')).toHaveValue('100')
     await expect(page.getByText(/Sending from this channel is a REAL send/)).toBeVisible()
@@ -202,6 +210,17 @@ test('a row opens and shows what was sent and what came back', async () => {
     await page.locator('button[aria-label="Collapse send"]').first().click()
     await page.waitForTimeout(300)
     await expect(page.getByText('Answered', { exact: true })).toHaveCount(0)
+})
+
+test('Copy puts on the clipboard what the row shows — what was sent and what came back — without opening it', async () => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.locator('button[aria-label="Copy send"]').first().click()
+    // copying does not toggle the row
+    await expect(page.getByText('Answered', { exact: true })).toHaveCount(0)
+    const copied = await page.evaluate(() => navigator.clipboard.readText())
+    expect(copied).toMatch(/^Sent\n\{/)
+    expect(copied).toContain('"source": "sender-debug"')
+    expect(copied).toContain('\n\nAnswered\nNothing. The sender returned void')
 })
 
 test('reloading the catalogue keeps the history', async () => {
