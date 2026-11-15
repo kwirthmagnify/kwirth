@@ -16,6 +16,9 @@ del pluter de pago queda reorientado en su repo; se declara router cuando lleve 
   router**, y por cuál (`bridge`, `ianus`…); y si su router no está instalado o no ha arrancado, que se vea ahí
   y no solo al fallar la conexión. Solo front: el dato ya está en la entrada (`cluster.route`) y en
   `KwirthData.routers`.
+  - **Y un cluster que no está accesible ahora sale en GRIS** (pedido 2026‑11‑15, QA de Ianus Fase 2): p. ej. el
+    destino quitó su rol, el router no tiene enlace, o la conexión directa falla. Hoy aparece igual que los demás
+    y el error solo se ve al elegirlo. Se hace al retocar la UX de esa select.
 
 - **Marca del core para el tráfico que entra por un router** (visto al cerrar `bridge`). Un router entrega lo que
   lleva al core destino por **loopback**; para el filtro de IP del login eso parece local, y pasa donde loopback
