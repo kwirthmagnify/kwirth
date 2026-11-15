@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Box, IconButton, InputAdornment, TextField, Tooltip, Typography } from '@mui/material'
 import { SmartToy, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { IConfigAiAssistField, IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
@@ -6,6 +6,7 @@ import { ILlm } from '@kwirthmagnify/kwirth-common-ai'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { AiAssistDialog } from './AiAssistDialog'
+import { applyMaskedEdit, maskText } from '../../tools/maskedText'
 
 /*
     A 'textarea' configuration field (IConfigFieldDef), shared by the two renderers of the configuration
@@ -14,8 +15,9 @@ import { AiAssistDialog } from './AiAssistDialog'
 
       · Multi-line, monospaced, FIXED height: the content scrolls inside and the dialog never grows.
       · 'secret': masked behind an eye. A multi-line field has no type='password', so while hidden it shows
-        one dot per character keeping the line breaks, READ-ONLY — editing what you cannot see would be
-        guessing. The eye reveals it and makes it editable. The value is real, as every secret in Kwirth.
+        one dot per character keeping the line breaks — and stays EDITABLE, like a password field: what is
+        typed or pasted over the dots lands at that place of the real value and is masked at once
+        (tools/maskedText). The eye reveals it. The value is real, as every secret in Kwirth.
       · 'aiInstructions': an AI button, ALWAYS visible and disabled (with the reason) when Kwirth has no
         LLM configured. What it drafts replaces the content without saving.
 */
@@ -64,7 +66,26 @@ const ConfigTextArea: React.FC<IConfigTextAreaProps> = (props) => {
     }, [backendUrl, accessString, f.aiInstructions])
 
     const masked = f.secret === true && !revealed
-    const shown = masked ? props.value.replace(/[^\n]/g, '•') : props.value
+    const shown = masked ? maskText(props.value) : props.value
+
+    // Re-masking what was just typed rewrites the textarea, which would throw the caret to the end: put it back.
+    const inputRef = useRef<HTMLTextAreaElement | null>(null)
+    const caretRef = useRef<number | null>(null)
+    useLayoutEffect(() => {
+        if (caretRef.current === null || !inputRef.current) return
+        inputRef.current.setSelectionRange(caretRef.current, caretRef.current)
+        caretRef.current = null
+    }, [shown])
+    const edit = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const typed = e.target.value
+        if (!masked) {
+            props.onChange(typed)
+            return
+        }
+        const caret = e.target.selectionEnd ?? typed.length
+        caretRef.current = caret
+        props.onChange(applyMaskedEdit(props.value, shown, typed, caret))
+    }
 
     const label = `${f.label}${f.required ? ' *' : ''}`
     const eye = f.secret ? (
@@ -94,8 +115,8 @@ const ConfigTextArea: React.FC<IConfigTextAreaProps> = (props) => {
                     {eye}
                 </Box>
                 <TextField size='small' fullWidth multiline rows={ROWS} value={shown} disabled={props.disabled}
-                    onChange={e => { if (!masked) props.onChange(e.target.value) }}
-                    slotProps={{ input: { readOnly: masked }, htmlInput }} />
+                    onChange={edit} inputRef={inputRef}
+                    slotProps={{ htmlInput }} />
                 {assistOpen && (
                     <AiAssistDialog llms={llms} fieldLabel={f.label}
                         base={{ fieldName: f.name, aiInstructions: f.aiInstructions, fields: assistFields(props.fields, props.values) }}
@@ -108,9 +129,9 @@ const ConfigTextArea: React.FC<IConfigTextAreaProps> = (props) => {
 
     return (
         <TextField size='small' fullWidth multiline rows={ROWS} label={label} value={shown} disabled={props.disabled}
-            onChange={e => { if (!masked) props.onChange(e.target.value) }}
+            onChange={edit} inputRef={inputRef}
             slotProps={{
-                input: { readOnly: masked, endAdornment: eye ? <InputAdornment position='end' sx={{ alignSelf: 'flex-start', mt: 1.5 }}>{eye}</InputAdornment> : undefined },
+                input: { endAdornment: eye ? <InputAdornment position='end' sx={{ alignSelf: 'flex-start', mt: 1.5 }}>{eye}</InputAdornment> : undefined },
                 htmlInput
             }} />
     )
