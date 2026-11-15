@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Checkbox, Chip, FormControl, FormControlLabel, FormHelperText, IconButton, InputLabel, MenuItem, Paper, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ISenderMessage } from '@kwirthmagnify/kwirth-common'
-import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
-import { Check, Close, DeleteSweep, Error as ErrorIcon, ExpandLess, ExpandMore, Refresh, Schedule, Send } from '@kwirthmagnify/kwirth-common-front/icons'
+import { ChannelNotStarted, IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { Check, Close, ContentCopy, DeleteSweep, Error as ErrorIcon, ExpandLess, ExpandMore, Refresh, Schedule, Send } from '@kwirthmagnify/kwirth-common-front/icons'
 import { ESenderDebugCommand, ESenderDebugKind, ESenderDebugLevel, ISenderDebugSendRequest } from '../common/SenderDebugTypes'
 import { ISenderDebugConfig } from './SenderDebugConfig'
 import { ISenderDebugData, ISenderDebugHistoryEntry } from './SenderDebugData'
@@ -22,6 +22,8 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
     // Expansion by REFERENCE to the entry, not by index: the history grows from the top and the
     // indices shift with every send, so an expanded row would end up being a different one.
     const [expanded, setExpanded] = useState<Set<ISenderDebugHistoryEntry>>(new Set())
+    // The row whose Copy was just pressed: its button shows a tick for a moment.
+    const [copied, setCopied] = useState<ISenderDebugHistoryEntry | undefined>(undefined)
 
     useEffect(() => {
         if (boxRef.current) setBoxTop(boxRef.current.getBoundingClientRect().top)
@@ -169,6 +171,20 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
         alongside the response — and why there used to be rows with the expander switched off, those of
         the senders that return nothing, which are most of them.
     */
+    // What a row's Copy puts on the clipboard: exactly what the expanded row shows, both halves.
+    const sentOf = (entry: ISenderDebugHistoryEntry): string =>
+        entry.request ? JSON.stringify(entry.request.message, null, 2) : 'Not available: this answer arrived without its request.'
+    const copy = async (entry: ISenderDebugHistoryEntry) => {
+        try {
+            await navigator.clipboard.writeText(`Sent\n${sentOf(entry)}\n\nAnswered\n${answerOf(entry)}\n`)
+            setCopied(entry)
+            setTimeout(() => setCopied(c => c === entry ? undefined : c), 1500)
+        }
+        catch (err) {
+            console.error('sender-debug: could not copy to the clipboard', err)
+        }
+    }
+
     const formatEntry = (entry: ISenderDebugHistoryEntry, index: number) => {
         const open = expanded.has(entry)
         const result = entry.result
@@ -216,6 +232,11 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                     <Typography variant='caption' sx={{
                         color: 'text.secondary'
                     }}>{result ? `${result.elapsed} ms` : ''}</Typography>
+                    <Tooltip title={copied === entry ? 'Copied' : 'Copy what was sent and answered'}>
+                        <IconButton size='small' aria-label='Copy send' onClick={(e) => { e.stopPropagation(); copy(entry) }}>
+                            {copied === entry ? <Check fontSize='small' color='success' /> : <ContentCopy fontSize='small' />}
+                        </IconButton>
+                    </Tooltip>
                 </Stack>
                 {open &&
                     <Box sx={{ px: 2, pb: 1 }}>
@@ -223,7 +244,7 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                             color: 'text.secondary'
                         }}>Sent</Typography>
                         <Box component='pre' sx={{ m: 0, mb: 1, fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                            {entry.request ? JSON.stringify(entry.request.message, null, 2) : 'Not available: this answer arrived without its request.'}
+                            {sentOf(entry)}
                         </Box>
                         <Typography variant='caption' sx={{
                             color: 'text.secondary'
@@ -238,33 +259,23 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
     }
 
     /*
-        Channel not started: a centred empty state, the same pattern as provider-debug. Both things are
-        needed to take up the height — 'flex: 1' when the parent is flex, and the measured minHeight when
-        it is not.
+        Channel not started: the shared ChannelNotStarted (icon and name, what starting gives, and a Start button), the
+        same as every IRIA plugin. The container only centres it: both things are needed to take up the height —
+        'flex: 1' when the parent is flex, and the measured minHeight when it is not.
     */
     if (!data.started) {
         return (
             <Stack
                 ref={boxRef}
-                spacing={1}
                 sx={{
                     alignItems: 'center',
                     justifyContent: 'center',
                     flex: 1,
                     width: '100%',
                     minHeight: `calc(100vh - ${boxTop}px - 8px)`,
-                    px: 4,
-                    textAlign: 'center'
+                    px: 4
                 }}>
-                <Typography variant='h6' sx={{
-                    color: 'text.secondary'
-                }}>Sender Debug not started</Typography>
-                <Typography
-                    variant='body2'
-                    sx={{
-                        color: 'text.secondary',
-                        maxWidth: 480
-                    }}>Start the channel (tab settings ⚙ → Start) to pick a sender, compose a message and see what the sender answers.</Typography>
+                <ChannelNotStarted icon={<Send color='primary' />} name='Sender Debug' hint='Sender Debug not started. Start the channel to pick a sender, compose a message and see what the sender answers.' channelObject={props.channelObject} />
             </Stack>
         );
     }
