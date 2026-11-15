@@ -8,7 +8,7 @@ import { EExtensionType, IExtensionRequirement } from '@kwirthmagnify/kwirth-com
 // 'Unknown extension type'.
 
 const empty = (): IInstalledIndex =>
-    ({ plugin: [], provider: [], sender: [], theme: [], homepage: [], idp: [], login: [], webhook: [], docs: [], aitoolset: [], dce: [] })
+    ({ plugin: [], provider: [], sender: [], theme: [], homepage: [], idp: [], login: [], webhook: [], docs: [], aitoolset: [], dce: [], router: [] })
 
 const withOne = (type: keyof IInstalledIndex, id: string, version: string): IInstalledIndex =>
     ({ ...empty(), [type]: [{ id, version }] })
