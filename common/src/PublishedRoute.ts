@@ -11,6 +11,7 @@ export enum ERouteOwnerKind {
     PROVIDER = 'provider',
     LOGIN = 'login',
     WEBHOOK = 'webhook',
+    ROUTER = 'router',
     FRONT = 'front',
     OTHER = 'other'
 }
