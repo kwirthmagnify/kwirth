@@ -102,6 +102,7 @@ kwirth-bundled.json
 !/dces/file-manager/
 !/dces/sample/
 !/dces/swagger-ui/
+!/dces/ssh/
 !/dces/manifest.json
 
 # Routers: same WILDCARD as the DCEs — a new router is born PRIVATE, and a public one is taken out by hand
