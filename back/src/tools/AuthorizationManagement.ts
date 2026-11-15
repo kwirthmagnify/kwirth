@@ -170,6 +170,32 @@ export class AuthorizationManagement {
         }
     }
 
+    /*
+        The VALID access key in an Authorization header, or undefined — silent, like isValidKey. For a
+        router's traffic: a header that is not a key of THIS core is not an error there (a request through a
+        route carries the DESTINATION's key, which the router passes along untouched).
+    */
+    public static accessKeyOfHeader = async (authorization: string | undefined, apiKeyApi: ApiKeyApi): Promise<AccessKey | undefined> => {
+        if (!authorization) return undefined
+        try {
+            const receivedStr = authorization.replaceAll('Bearer ', '').trim()
+            const received = accessKeyDeserialize(receivedStr)
+            if (received.type && received.type.startsWith('bearer:')) {
+                if (!AuthorizationManagement.validBearerKey(apiKeyApi.masterKey, received)) return undefined
+                return +received.type.split(':')[1] >= Date.now() ? received : undefined
+            }
+            let key = apiKeyApi.apiKeys.find(apiKey => accessKeySerialize(apiKey.accessKey) === receivedStr)
+            if (!key) {
+                if (!apiKeyApi.isDesktop) await apiKeyApi.refreshKeys()
+                key = apiKeyApi.apiKeys.find(apiKey => accessKeySerialize(apiKey.accessKey) === receivedStr)
+            }
+            return key && key.expire > 0 && key.expire >= Date.now() ? received : undefined
+        }
+        catch {
+            return undefined
+        }
+    }
+
     // checks whether the header's accessKey includes a particular scope ('admin', for instance) in any of
     // its resources. It must be used AFTER validKey (which guarantees the key is valid/untampered).
     public static hasScope = (req:Request, scope:string): boolean => {
