@@ -63,6 +63,7 @@ import { makeDocsDescriptor } from './components/extensions/DocsDescriptor'
 import { ExtensionManagerDialog } from './components/extensions/ExtensionManagerDialog'
 import { makeAiToolsetDescriptor } from './components/extensions/AiToolsetDescriptor'
 import { makeDceDescriptor } from './components/extensions/DceDescriptor'
+import { makeRouterDescriptor } from './components/extensions/RouterDescriptor'
 import { ensureDcesLoaded, resetDceCache } from './tools/DceLoader'
 import { loginDescriptor } from './components/extensions/LoginDescriptor'
 import { makePackDescriptor } from './components/extensions/PackDescriptor'
@@ -365,6 +366,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     const [showDocsManagerDialog, setShowDocsManagerDialog]=useState<boolean>(false)
     const [showAiToolsetManagerDialog, setShowAiToolsetManagerDialog]=useState<boolean>(false)
     const [showDceManagerDialog, setShowDceManagerDialog]=useState<boolean>(false)
+    const [showRouterManagerDialog, setShowRouterManagerDialog]=useState<boolean>(false)
     const [showLoginManagerDialog, setShowLoginManagerDialog]=useState<boolean>(false)
     const [showPackManagerDialog, setShowPackManagerDialog]=useState<boolean>(false)
     const [loginExtError, setLoginExtError]=useState<string|undefined>(undefined)
@@ -793,6 +795,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 [EExtensionType.IDP]:      `${backendUrl}/core/idps`,
                 [EExtensionType.AITOOLSET]: `${backendUrl}/core/aitoolsets`,
                 [EExtensionType.DCE]:      `${backendUrl}/core/dces`,
+                [EExtensionType.ROUTER]:   `${backendUrl}/core/routers`,
             }
             // Coming in through a login extension is a NARROW door: the user lands on a specific login's
             // page and goes straight to its channel, with no marketplace and usually with no Kwirth beyond
@@ -1064,24 +1067,32 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
     }
 
     /*
-        Proxied cluster-list entries resolve against THIS core and the resolvers its channels announce, so the
-        routing comes from the home cluster: at startup, and again every time the home is re-read (a plugin that
-        resolves routes may have loaded or gone since). Only when it CHANGES: the ticket feeds start again for
-        the current resolvers (the entries waiting for a ticket are read when it comes), and the proxied entries
-        are read again, so they follow the change (one whose ticket has not come yet just waits).
+        Proxied cluster-list entries resolve against THIS core and the ROUTERS it announces (KwirthData.routers),
+        so the routing comes from the home cluster: at startup, and again every time the home is re-read (a router
+        may have been installed or removed since). Only when it CHANGES: the session's route ticket is asked for
+        again (the entries waiting for it are read when it comes), and the proxied entries are read again, so they
+        follow the change (one whose ticket has not come yet just waits).
     */
     const applyHomeRouting = (home: Cluster) => {
         if (!home.kwirthData) return
-        if (!setClusterRouting(home.url, home.kwirthData.channels)) return
+        if (!setClusterRouting(home.url, home.kwirthData.routers)) return
         const refresh = () => setChannelMessageAction({ action: EChannelRefreshAction.REFRESH })
-        startRouteTickets(home, () => userSettingsRef.current?.keepAliveInterval || 30, (resolverId: string) => {
+        startRouteTickets(home, () => {
             for (const c of clustersRef.current) {
-                if (c.route?.resolver === resolverId && !c.enabled) readClusterInfo(c, notify).then(refresh)
+                if (c.route && !c.enabled) readClusterInfo(c, notify).then(refresh)
             }
         })
         for (const c of clustersRef.current) {
             if (c.route) readClusterInfo(c, notify).then(refresh)
         }
+    }
+
+    // The home is read again and its routing applied: after the Routers manager, a router may have come or gone
+    const refreshHomeRouting = async (): Promise<void> => {
+        const home = clustersRef.current.find(c => c.home)
+        if (!home) return
+        await readClusterInfo(home, notify)
+        applyHomeRouting(home)
     }
 
     const loadSourceCluster = async (url:string, myAccessString:string) : Promise<Cluster|undefined> => {
@@ -2436,6 +2447,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             case MenuDrawerOption.ManageAiToolsets:
                 setShowAiToolsetManagerDialog(true)
                 break
+            case MenuDrawerOption.ManageRouters:
+                setShowRouterManagerDialog(true)
+                break
             case MenuDrawerOption.ManageDces:
                 setShowDceManagerDialog(true)
                 break
@@ -3123,6 +3137,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     already running holds — hence the reload notice (plan: plans/completed/dce/PRD.md, RNF4).
                 */}
                 { showDceManagerDialog && <ExtensionManagerDialog descriptor={makeDceDescriptor()} onClose={() => { resetDceCache(); setShowDceManagerDialog(false) }} onRestartRequired={onDceReloadRequired} /> }
+                {/* Routers come and go without a restart; closing re-reads the home, so the cluster list sees the routers that are up now */}
+                { showRouterManagerDialog && <ExtensionManagerDialog descriptor={makeRouterDescriptor()} onClose={() => { setShowRouterManagerDialog(false); void refreshHomeRouting() }} onRestartRequired={onExtensionRestartRequired} /> }
                 { showLoginManagerDialog && <ExtensionManagerDialog descriptor={loginDescriptor} onClose={() => setShowLoginManagerDialog(false)} onRestartRequired={onExtensionRestartRequired} /> }
                 { showPackManagerDialog && <ExtensionManagerDialog
                     descriptor={makePackDescriptor({ onPluginLoad: loadPluginFront, onPluginUnload: unloadPluginFront, onThemeLoad: onThemeInstalled, onThemeUnload: onThemeUninstalled, onHomepageLoad: onHomepageInstalled, onHomepageUnload: onHomepageUninstalled })}
