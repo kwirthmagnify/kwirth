@@ -2,7 +2,8 @@
 
 > Cuelga de [PRD.md](PRD.md) (validado 2026‑11‑15). Aquí, el cómo y el orden. Estado: **S1–S6 hechos** (2026‑11‑15). S1–S5 con QA en k3d (router de eco del scaffolder) y e2e
 `routers-manager.spec.ts` 7/7. **S6: `@jfvilas/kwirth-router-bridge@0.1.0` publicado**, QA k3d ↔ AKS completo.
-Pendientes: la guía (sección *Routers*) y S7 (Ianus como pluter).
+Guía hecha (`guide/extensions/routers/index` y `/bridge`, con capturas de `capture-routers.spec.ts`).
+Pendiente: S7 (Ianus como pluter).
 
 ## Backlog
 
