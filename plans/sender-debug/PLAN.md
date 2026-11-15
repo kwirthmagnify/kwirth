@@ -126,11 +126,11 @@ Queda:
    sender sin salir de la pestaña.
 3. Editor propio para `origin` (hoy solo se estampa `source` y `timestamp`; un sender que etiqueta
    por `cluster`/`namespace`/`pod` no se puede probar del todo).
-4. **Botón Copy** en cada fila del historial de envíos: copia al portapapeles lo que se ve
-   desplegado (`Sent` y `Answered`). Pedido en el QA del sender `script` (2026-11-15).
-5. **Mensaje de "channel not started"** al estilo de los plugins de IRIA (mismo texto y presentación
-   que usan ellos). Pedido junto con el punto 4: se hace la próxima vez que se toque sender-debug.
-6. **CL9 completa** al terminar el stream.
+4. ~~**Botón Copy** en cada fila del historial~~ — ✅ hecho en **0.2.2** (2026-11-15): copia `Sent` y
+   `Answered` al portapapeles sin desplegar la fila; tick verde un momento. Pedido en el QA del sender `script`.
+5. ~~**Mensaje de "channel not started"** al estilo IRIA~~ — ✅ hecho en **0.2.2** (2026-11-15):
+   `ChannelNotStarted` de `kwirth-common-front` (^0.5.74), con su botón **Start**.
+6. **CL9 completa** al terminar el stream (la de 0.2.2 hecha: e2e 13 ✅, QA validado).
 
 ## Backlog
 
