@@ -10,6 +10,7 @@ import { LoginManager } from '../tools/LoginManager'
 import { DocsManager } from '../tools/DocsManager'
 import { AiToolsetManager } from '../tools/AiToolsetManager'
 import { DceManager } from '../tools/DceManager'
+import { RouterManager } from '../tools/RouterManager'
 import { WebhookManager } from '../tools/WebhookManager'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
@@ -39,6 +40,7 @@ interface IPackApiDeps {
     aiToolsetManager: AiToolsetManager
     // For the dependency check only: a member may require a DCE. Packing a DCE itself is S3 of plans/completed/dce/PLAN.md.
     dceManager: DceManager
+    routerManager: RouterManager
     apiKeyApi: ApiKeyApi
     registeredChannels: Map<string, TChannelConstructor>
     registeredProviders: Map<string, TProviderConstructor>
@@ -81,7 +83,7 @@ export class PackApi {
     }
 
     private async installFromTgz(tgzPath: string, installedFrom: string): Promise<IPackMeta> {
-        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, dceManager, registeredChannels, registeredProviders } = this.deps
+        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, dceManager, routerManager, registeredChannels, registeredProviders } = this.deps
         const extractDir = path.join(os.tmpdir(), `kwirth-pack-extract-${Date.now()}`)
         fs.mkdirSync(extractDir, { recursive: true })
         try {
@@ -106,7 +108,7 @@ export class PackApi {
             if (await packManager.isInstalled(packId)) throw new Error(`Pack '${packId}' is already installed`)
 
             // check no member extension is already installed (including dev)
-            const [installedPlugins, installedProviders, installedSenders, installedThemes, installedHomepages, installedIdps, installedLogins, installedDocs, installedWebhooks, installedAiToolsets, installedDces] = await Promise.all([
+            const [installedPlugins, installedProviders, installedSenders, installedThemes, installedHomepages, installedIdps, installedLogins, installedDocs, installedWebhooks, installedAiToolsets, installedDces, installedRouters] = await Promise.all([
                 pluginManager.listInstalled(),
                 providerManager.listInstalled(),
                 senderManager.listInstalled(),
@@ -117,7 +119,8 @@ export class PackApi {
                 docsManager.listInstalled(),
                 webhookManager.listInstalled(),
                 aiToolsetManager.listInstalled(),
-                dceManager.listInstalled()
+                dceManager.listInstalled(),
+                routerManager.listInstalled()
             ])
 
             for (const ext of extensions) {
@@ -134,6 +137,7 @@ export class PackApi {
                     case EExtensionType.WEBHOOK:   exists = installedWebhooks.some(p => p.id === ext.id); break
                     case EExtensionType.AITOOLSET: exists = installedAiToolsets.some(p => p.id === ext.id); break
                     case EExtensionType.DCE:       exists = installedDces.some(p => p.id === ext.id); break
+                    case EExtensionType.ROUTER:    exists = installedRouters.some(p => p.id === ext.id); break
                     default: throw new Error(`Unsupported extension type in pack: '${ext.extensionType}'`)
                 }
                 if (exists) throw new Error(`Cannot install pack: extension '${ext.extensionType}:${ext.id}' is already installed`)
@@ -152,7 +156,8 @@ export class PackApi {
                 webhook:  installedWebhooks.map(p => ({ id: p.id, version: p.version })),
                 docs:     installedDocs.map(p => ({ id: p.id, version: p.version })),
                 aitoolset: installedAiToolsets.map(p => ({ id: p.id, version: p.version })),
-                dce: installedDces.map(p => ({ id: p.id, version: p.version }))
+                dce: installedDces.map(p => ({ id: p.id, version: p.version })),
+                router: installedRouters.map(p => ({ id: p.id, version: p.version }))
             }
             /*
                 ⚠️ A PACK SATISFIES ITS OWN DEPENDENCIES.
@@ -220,6 +225,7 @@ export class PackApi {
                         // check above did contemplate it: a pack carrying a toolset skipped it in
                         // silence, reporting success without having installed it.
                         case EExtensionType.AITOOLSET: await aiToolsetManager.install(tmpMemberTgz, packInstalledFrom); break
+                        case EExtensionType.ROUTER:    await routerManager.install(tmpMemberTgz, packInstalledFrom); break
                     }
                     logInfo(ELogComponent.CORE, `Pack '${packId}': installed ${ext.extensionType} '${ext.id}'`)
                 }
@@ -247,7 +253,7 @@ export class PackApi {
     }
 
     private async uninstallPack(id: string): Promise<void> {
-        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, dceManager, registeredChannels, registeredProviders } = this.deps
+        const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, dceManager, routerManager, registeredChannels, registeredProviders } = this.deps
         const meta = await packManager.getPackMeta(id)
         if (!meta) throw new Error(`Pack '${id}' is not installed`)
         // The mirror image of installing: the DCEs go LAST, once the consumers that required them are
@@ -267,6 +273,7 @@ export class PackApi {
                     // Last of all, and forced: the pack is going whole, so the consumers it brought are
                     // already gone by now and there is nobody left to protect from losing its DCE.
                     case EExtensionType.AITOOLSET: await aiToolsetManager.uninstallFromPack(ext.id); break
+                    case EExtensionType.ROUTER:    await routerManager.uninstallFromPack(ext.id); break
                     case EExtensionType.DCE:       await dceManager.uninstallFromPack(ext.id); break
                 }
                 logInfo(ELogComponent.CORE, `Pack '${id}': uninstalled ${ext.extensionType} '${ext.id}'`)
