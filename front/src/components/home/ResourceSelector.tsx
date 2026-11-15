@@ -129,6 +129,21 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     // and every channel is offered again -- it is that cluster that has something to serve.
     const selectedClusterType = cluster?.kwirthData?.clusterType
 
+    /*
+        Why a cluster answered with an error, for the user: the status and, when the body says it, its reason
+        ({ error }). A routed cluster's router answers like this when it cannot carry the request (the target is
+        not reachable now, the session lacks a scope…), and the reason is what tells the user what to do.
+    */
+    const errorOf = async (response: Response): Promise<string> => {
+        let reason = ''
+        try {
+            const body: unknown = await response.json()
+            if (body && typeof body === 'object' && typeof (body as { error?: unknown }).error === 'string') reason = `: ${(body as { error: string }).error}`
+        }
+        catch { /* not JSON: the status is all there is */ }
+        return `Error accessing cluster: ${response.status}${reason}`
+    }
+
     const loadAllNamespaces = async (cluster:Cluster) => {
         /*
             Same reasoning as the 'none' view below, but for the whole installation: on a Kwirth outside
@@ -141,7 +156,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             try {
                 let response = await fetch(`${clusterBaseUrl(cluster)}/config/namespace`, addGetAuthorization(cluster.accessString))
                 if (response.status!==200) {
-                    setMsgBox(MsgBoxOkError('Resource Selector',`Error accessing cluster: ${JSON.stringify(response.status)}`, setMsgBox))
+                    setMsgBox(MsgBoxOkError('Resource Selector', await errorOf(response), setMsgBox))
                 }
                 else {
                     let data = await response.json()
@@ -159,8 +174,15 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
             fetch(`${clusterBaseUrl(cluster!)}/config/${namespace}/groups`, addGetAuthorization(cluster!.accessString)),
             fetch(`${clusterBaseUrl(cluster!)}/config/${namespace}/groups/pods`, addGetAuthorization(cluster!.accessString))
         ])
+        // an error answer is not a list: it is said, and nothing is loaded (it used to crash the page on .filter)
+        const failed = !groupsResponse.ok ? groupsResponse : !podsResponse.ok ? podsResponse : undefined
+        if (failed) {
+            setMsgBox(MsgBoxOkError('Resource Selector', await errorOf(failed), setMsgBox))
+            return
+        }
         const data = await groupsResponse.json() as IController[]
         const podMap = await podsResponse.json() as Record<string, string[]>
+        if (!Array.isArray(data) || !podMap || typeof podMap !== 'object') return
         // ReplicaSets with no pods are absent from podMap, so they get dropped from the list
         const filtered = data.filter(d => d.type !== 'ReplicaSet' || podMap[d.type+'+'+d.name])
         setAllControllers((prev) => {
@@ -191,7 +213,12 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
 
     const loadAllContainers = async (cluster: Cluster, namespace:string, pod:string) => {
         let response = await fetch(`${clusterBaseUrl(cluster)}/config/${namespace}/${pod}/containers`, addGetAuthorization(cluster.accessString))
+        if (!response.ok) {
+            setMsgBox(MsgBoxOkError('Resource Selector', await errorOf(response), setMsgBox))
+            return
+        }
         let data = await response.json()
+        if (!Array.isArray(data)) return
         setAllContainers((prev) => [...new Set([...prev, ...(data as string[]).map(c => pod+'+'+c)])])
     }
 
