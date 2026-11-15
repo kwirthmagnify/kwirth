@@ -11,6 +11,12 @@ del pluter de pago queda reorientado en su repo; se declara router cuando lleve 
 
 ## Backlog
 
+- **Indicador directo / ruteado en el selector de clusters** (pedido 2026‑11‑15). En la lista de clusters del
+  *Resource selector* (y donde se elige cluster), cada entrada muestra si se llega **directamente** o **por un
+  router**, y por cuál (`bridge`, `ianus`…); y si su router no está instalado o no ha arrancado, que se vea ahí
+  y no solo al fallar la conexión. Solo front: el dato ya está en la entrada (`cluster.route`) y en
+  `KwirthData.routers`.
+
 - **Marca del core para el tráfico que entra por un router** (visto al cerrar `bridge`). Un router entrega lo que
   lleva al core destino por **loopback**; para el filtro de IP del login eso parece local, y pasa donde loopback
   está permitido (Magnify desktop siempre, o loopback en la lista o en los proxies de confianza). Hoy el filtro
