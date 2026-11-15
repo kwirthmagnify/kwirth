@@ -1,6 +1,18 @@
 # Router — PLAN
 
-> Cuelga de [PRD.md](PRD.md) (validado 2026‑11‑15). Aquí, el cómo y el orden. Estado: **streams validados** (2026‑11‑15); en curso S1.
+> Cuelga de [PRD.md](PRD.md) (validado 2026‑11‑15). Aquí, el cómo y el orden. Estado: **streams validados** (2026‑11‑15). **S1, S2 y S3 hechos** (sin QA: no tienen UI, se prueban con S4);
+en curso S4.
+
+Decisiones tomadas al hacerlos (2026‑11‑15):
+- El contrato lleva `routerRequest?(req, res, caller)` en vez de un `Router` de express: así el core le pasa quién
+  llama en cada petición. `IRouterContext`, `ERouteCallerVia`, `IRouterStatus` y `TRouterConfig` validados.
+- **Tickets opacos en memoria** (no HMAC): una credencial en una url no debe *ser* la credencial, y una sesión la
+  sirve una réplica. 10 min; el front los renueva. Borrar una key borra sus tickets.
+- El ticket va **en el primer segmento** debajo de `/router/<id>/` (plantilla `'/{routeTicket}/…'`) y el core lo
+  quita antes de entregar. Orden: ticket → `loopback` (solo desde loopback) → access key en `Authorization`. Una
+  key que no es de este core no es un error: es la del destino, y pasa intacta.
+- Los WebSockets que un router toma con una access key se cortan al borrar la key (como K1).
+- El despachador va **antes del body parser** y con CORS.
 
 ## Orden y dependencias
 
