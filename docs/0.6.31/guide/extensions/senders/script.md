@@ -100,7 +100,8 @@ What changes compared with running inside kwirth:
 - **Windows**: OpenSSH Server runs commands with its default shell, **cmd** — kwirth writes the line that
   launches the script for it. PowerShell scripts are uploaded with a UTF-8 BOM, so accents arrive intact in
   Windows PowerShell 5.1. If the machine's default shell was changed to PowerShell, use **powershell** or
-  **pwsh** as the interpreter.
+  **pwsh** as the interpreter. ⚠️ Running on a Windows machine over SSH has not yet been validated against a
+  real Windows server: try it with your machine before relying on it.
 - 🔴 **The timeout closes the SSH channel, but it does not stop the script on the machine.** The delivery
   fails (*"…did not finish within N s on host:22 and its SSH channel was closed"*), yet an SSH server leaves
   the process running: a script that still writes output dies when it tries to, one that is waiting — a
