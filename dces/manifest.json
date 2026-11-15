@@ -1,6 +1,16 @@
 [
   {
     "extensionType": "dce",
+    "id": "ssh",
+    "name": "@kwirthmagnify/kwirth-dce-ssh",
+    "displayName": "SSH",
+    "version": "0.1.0",
+    "description": "SSH client for Kwirth extensions — connect, run a command with stdin and a timeout, upload and remove files by SFTP",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-dce-ssh/-/kwirth-dce-ssh-0.1.0.tgz",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "dce",
     "id": "swagger-ui",
     "name": "@kwirthmagnify/kwirth-dce-swagger-ui",
     "displayName": "Swagger UI",
