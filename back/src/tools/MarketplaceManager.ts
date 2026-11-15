@@ -19,7 +19,8 @@ const PUBLIC_FOLDER: Record<EExtensionType, string> = {
     [EExtensionType.DOCS]: 'docs',
     [EExtensionType.IDP]: 'idps',
     [EExtensionType.AITOOLSET]: 'aitoolsets',
-    [EExtensionType.DCE]: 'dces'
+    [EExtensionType.DCE]: 'dces',
+    [EExtensionType.ROUTER]: 'routers'
 }
 
 /*
