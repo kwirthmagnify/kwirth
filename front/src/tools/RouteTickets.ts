@@ -1,66 +1,61 @@
-import { EInstanceConfigObject, EInstanceConfigView, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, IClusterRouteTicket, IInstanceConfig, InstanceConfigScopeEnum } from '@kwirthmagnify/kwirth-common'
+import { IClusterRouteTicket } from '@kwirthmagnify/kwirth-common'
 import { Cluster } from '../model/Cluster'
-import { clusterRouteResolvers, resolverChannelId, setRouteTicket } from './ClusterRouting'
-import { RemoteConnection } from './RemoteConnection'
+import { addPostAuthorization } from './AuthorizationManagement'
+import { routersNeedTicket, setRouteTicket } from './ClusterRouting'
 
 /*
-    The route tickets (common/ClusterRoute → IClusterRouteResolver.needsTicket).
+    The session's route ticket (plans/router-extension, S3/S4): issued by the user's own core
+    (POST /core/routes/ticket) with the session's credential, and asked for again before it expires. The core
+    validates it before handing a request to a router; the router learns who is calling from it.
 
-    For each resolver that needs one, the front holds a LIVE connection to the resolver's channel on its own
-    core, started with the session's credential: the channel decides whether that user may use the route
-    and, if so, sends a ticket — and a fresh one before that one expires, over the same socket. Nothing
-    here renews anything; when the socket drops, the reconnection brings a new ticket.
-
-    It is the same managed connection the federation uses (tools/RemoteConnection), against the home cluster.
+    One ticket for every router: it says who the SESSION is, not which route it may use — that is each
+    router's to decide.
 */
 
-let feeds: RemoteConnection[] = []
+const RENEW_BEFORE_MS = 60_000      // asked for again this long before it expires
+const RETRY_MS = 15_000             // after a failure
 
-// What the channel sends, checked by its shape: anything else on that socket is not a ticket.
-const ticketOf = (msg: unknown): IClusterRouteTicket | undefined => {
-    const data = (msg as { data?: unknown })?.data as IClusterRouteTicket | undefined
-    return data && typeof data.routeTicket === 'string' && data.routeTicket !== '' && typeof data.expiresAt === 'number' ? data : undefined
+let timer: ReturnType<typeof setTimeout> | undefined
+let generation = 0                  // a stop or a restart makes the answers of the previous run worthless
+
+const ticketOf = (value: unknown): IClusterRouteTicket | undefined => {
+    const t = value as IClusterRouteTicket | undefined
+    return t && typeof t.routeTicket === 'string' && t.routeTicket !== '' && typeof t.expiresAt === 'number' ? t : undefined
 }
 
 /*
-    Starts (again) the ticket feeds against 'home', the user's own core. 'onTicket' is called with the resolver
-    id every time a ticket arrives, so that the entries waiting for it can be read.
+    Starts (again) asking 'home', the user's own core, for the ticket — only when some router needs it.
+    'onTicket' is called every time a ticket arrives, so the entries waiting for it can be read.
 */
-export const startRouteTickets = (home: Cluster, keepAliveSeconds: () => number, onTicket: (resolverId: string) => void): void => {
+export const startRouteTickets = (home: Cluster, onTicket: () => void): void => {
     stopRouteTickets()
-    for (const resolver of clusterRouteResolvers().filter(r => r.needsTicket)) {
-        const channelId = resolverChannelId(resolver.id)
-        if (!channelId) continue
-        const instanceConfig: IInstanceConfig = {
-            channel: channelId,
-            objects: EInstanceConfigObject.PODS,
-            flow: EInstanceMessageFlow.REQUEST,
-            action: EInstanceMessageAction.START,
-            instance: '',
-            scope: InstanceConfigScopeEnum.NONE,
-            accessKey: home.accessString,
-            view: EInstanceConfigView.NONE,
-            namespace: '',
-            group: '',
-            pod: '',
-            container: '',
-            type: EInstanceMessageType.SIGNAL
+    if (!routersNeedTicket()) return
+    const mine = generation
+    const ask = async (): Promise<void> => {
+        let next = RETRY_MS
+        try {
+            const response = await fetch(`${home.url}/core/routes/ticket`, addPostAuthorization(home.accessString))
+            const ticket = response.ok ? ticketOf(await response.json()) : undefined
+            if (mine !== generation) return
+            if (ticket) {
+                setRouteTicket(ticket)
+                onTicket()
+                next = Math.max(RETRY_MS, ticket.expiresAt - Date.now() - RENEW_BEFORE_MS)
+            }
+            else {
+                console.log(`Route ticket refused by ${home.url}: HTTP ${response.status}`)
+            }
         }
-        const feed = new RemoteConnection(`route-ticket:${resolver.id}`, () => home, instanceConfig, channelId, keepAliveSeconds, {
-            onMessage: (_id, msg) => {
-                const ticket = ticketOf(msg)
-                if (!ticket) return
-                setRouteTicket(resolver.id, ticket)
-                onTicket(resolver.id)
-            },
-            onState: () => { /* the entries just wait: a missing ticket is not an error to report */ }
-        })
-        feeds.push(feed)
-        feed.start()
+        catch (err) {
+            console.log(`Route ticket could not be asked for: ${err}`)
+        }
+        if (mine === generation) timer = setTimeout(() => { void ask() }, next)
     }
+    void ask()
 }
 
 export const stopRouteTickets = (): void => {
-    for (const feed of feeds) feed.close()
-    feeds = []
+    generation++
+    if (timer) clearTimeout(timer)
+    timer = undefined
 }
