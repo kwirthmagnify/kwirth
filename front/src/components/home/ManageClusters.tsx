@@ -120,12 +120,23 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             ])
 
             if (infoResponse.status !== 200 || clusterResponse.status !== 200) {
-                const status = infoResponse.status !== 200 ? infoResponse.status : clusterResponse.status
+                const failed = infoResponse.status !== 200 ? infoResponse : clusterResponse
+                const status = failed.status
+                // what the answer says about why ({ error }): through a route, the refusal may be the ROUTER's
+                // (the session lacks its scope, the target is not reachable now), not the cluster's
+                let reason = ''
+                try {
+                    const body: unknown = await failed.json()
+                    if (body && typeof body === 'object' && typeof (body as { error?: unknown }).error === 'string') reason = (body as { error: string }).error
+                }
+                catch { /* not JSON */ }
                 setMsgBox(<></>)
-                // Reached, but refused: it is the key, not the address.
-                const error = status === 401 || status === 403
-                    ? `The cluster was reached, but it refused the API key (HTTP ${status}).`
-                    : `Connection failed (HTTP ${status}). Check the ${probe.route ? 'route and cluster UID' : 'URL'} and the API key.`
+                const error = reason
+                    ? `Refused (HTTP ${status}): ${reason}`
+                    : status === 401 || status === 403
+                        // Reached, but refused: with no reason given, it is the key, not the address.
+                        ? `The cluster was reached, but it refused the API key (HTTP ${status}).`
+                        : `Connection failed (HTTP ${status}). Check the ${probe.route ? 'route and cluster UID' : 'URL'} and the API key.`
                 setTestResult({ success: false, error })
                 return
             }
