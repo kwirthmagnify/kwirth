@@ -52,7 +52,7 @@ const explainWsError = (err: unknown, url: string): string => {
     return msg
 }
 
-export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceConfig, handlers: IRemoteChannelHandlers, logError?: (message: unknown) => void, logInfo?: (message: unknown) => void): IRemoteChannelHandle {
+export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceConfig, handlers: IRemoteChannelHandlers, logError?: (message: unknown) => void, logInfo?: (message: unknown) => void, logTrace?: (message: unknown) => void): IRemoteChannelHandle {
     let ws: WebSocket | undefined
     let closed = false
     let instanceId = ''
@@ -383,7 +383,9 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
         send: (msg: IInstanceMessage) => {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 // The command must carry the instance THIS cluster assigned to its connection (not the home one's).
-                if (logInfo) logInfo(`[fedtrace] ★ SEND command to ${wsUrl}: msgtype=${(msg as { msgtype?: string }).msgtype} instanceSent=${instanceId || (msg as { instance?: string }).instance || '<EMPTY>'} (remoteAssigned=${instanceId || '<none>'}, msg.instance=${(msg as { instance?: string }).instance || '<empty>'})`)
+                // 🔴 One line PER SEND: at TRACE, never at INFO (the same rule as the receiving side above). A link
+                // that carries a tunnel sends a piece per chunk, and at INFO it buried the log (Ianus, 2026-11-15).
+                if (logTrace) logTrace(`[fedtrace] ★ SEND command to ${wsUrl}: msgtype=${(msg as { msgtype?: string }).msgtype} instanceSent=${instanceId || (msg as { instance?: string }).instance || '<EMPTY>'} (remoteAssigned=${instanceId || '<none>'}, msg.instance=${(msg as { instance?: string }).instance || '<empty>'})`)
                 // The core requires an accessKey on EVERY command (not just the START), and re-validates it.
                 // Stamp the remote endpoint's key on every send, like the front's AgoraClient.cmd does.
                 try {

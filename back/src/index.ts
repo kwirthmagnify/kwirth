@@ -2943,7 +2943,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                     logError(ELogComponent.CHANNEL, `openRemoteChannel: cluster '${endpoint.name}' is reached through the router '${endpoint.route?.resolver}', which is not installed or not started: the connection stays down`)
                     return unresolvableRemoteChannel(handlers)
                 }
-                return openRemoteChannel(resolved, config, handlers, (m) => logError(ELogComponent.CHANNEL, m), (m) => logInfo(ELogComponent.CHANNEL, m))
+                return openRemoteChannel(resolved, config, handlers, (m) => logError(ELogComponent.CHANNEL, m), (m) => logInfo(ELogComponent.CHANNEL, m), (m) => logTrace(ELogComponent.CHANNEL, m))
             },
             // Reads a user's PROFILE store (ConfigMap kwirth-store-<userId>, key '<group>-<key>') and
             // returns the value already parsed (the store keeps each value JSON-stringified). Read-only,
