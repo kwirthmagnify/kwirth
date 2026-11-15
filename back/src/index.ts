@@ -23,7 +23,6 @@ import { MarketplaceManager, seedBuiltInMarketplaces } from './tools/Marketplace
 import { routeRegistry } from './tools/RouteRegistry'
 import { userStoreName } from './tools/UserStoreName'
 import { wsUpgradeAllowed } from './tools/WsPathGuard'
-import { pathWebsocketChannel } from './tools/WsPathDelegation'
 import { LiveKeyConnections } from './tools/LiveKeyConnections'
 import { WsCallerAddresses } from './tools/WsCallerAddress'
 import { addressesOf, loginIpFilterOf } from './tools/LoginIpFilter'
@@ -36,7 +35,7 @@ import { failureOrigin } from './tools/FailureOrigin'
 import { LoginApi } from './api/LoginApi'
 
 // HTTP server & websockets
-import { WebSocketServer } from 'ws'
+import { WebSocketServer, WebSocket as WsSocket } from 'ws'
 import { ManageKwirthApi } from './api/ManageKwirthApi'
 import { AiConfigApi } from './api/AiConfigApi'
 import { AiToolsetManager } from './tools/AiToolsetManager'
@@ -45,6 +44,9 @@ import { DceManager } from './tools/DceManager'
 import { buildPluginStatuses } from './tools/PluginStatus'
 import { buildExtensionAccess } from './tools/ExtensionAccess'
 import { DceApi } from './api/DceApi'
+import { RouterManager } from './tools/RouterManager'
+import { RouterApi } from './api/RouterApi'
+import { IExtensionScope, ROUTER_PATH_SEGMENT } from '@kwirthmagnify/kwirth-common'
 import { findConsumers, IRequirer, setInstalledExtensionsSource, emptyInstalledIndex, normalizeRequires } from './tools/ExtensionDeps'
 import { accessKeyDeserialize, accessKeySerialize, parseResources, ResourceIdentifier, IInstanceConfig, ISignalMessage, IInstanceConfigResponse, IInstanceMessage, KwirthData, IRouteMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageLevel, ESignalMessageEvent, ESignalMessageReason, EInstanceConfigView, EClusterType, BackChannelData, EChannelMode, ApiKey, AccessKey, accessKeyBuild } from '@kwirthmagnify/kwirth-common'
 import { ManageClusterApi } from './api/ManageClusterApi'
@@ -118,7 +120,8 @@ import { SenderManager } from './tools/SenderManager'
 import { WebhookManager } from './tools/WebhookManager'
 import { handleInbound } from './tools/WebhookReceiver'
 import { openRemoteChannel } from './tools/RemoteChannel'
-import { announcedLocalChannelData, announcedRemoteChannelData, channelRouterOf, clusterRouteResolversOf, mountedRouterAlias, resolveRemoteEndpoint, unresolvableRemoteChannel } from './tools/ClusterRouting'
+import { announcedLocalChannelData, announcedRemoteChannelData, channelRouterOf, mountedRouterAlias, resolveRemoteEndpoint, unresolvableRemoteChannel } from './tools/ClusterRouting'
+import { RouteKeySockets, RouteTickets, authenticateRoute, routerPathOf } from './tools/RouteGate'
 import { AuthApi } from './api/AuthApi'
 import { IdpApi } from './api/IdpApi'
 import { IdpManager } from './tools/IdpManager'
@@ -314,6 +317,9 @@ let packManager: PackManager | undefined
 let docsManager: DocsManager | undefined
 let aiToolsetManager: AiToolsetManager | undefined
 let dceManager: DceManager | undefined
+let routerManager: RouterManager | undefined
+// The scopes the live routers declare: they join the channels' in the security editor and in key validation
+const routerScopes = (): IExtensionScope[] => routerManager?.scopeCatalog() ?? []
 const licenseManager = new LicenseManager()
 licenseManager.load()
 
@@ -740,6 +746,78 @@ const cutDeletedKey = (ri: IRunningInstance, keyId: string): void => {
         sendChannelSignal(use.ws, ESignalMessageLevel.ERROR, 'Access key revoked: this instance has been stopped', instanceMessage, ri.channels)
     })
     if (cut > 0) logWarning(ELogComponent.AUTH, `Access key ${keyId.substring(0, 8)}... deleted: ${cut} live instance(s) started with it have been cut`)
+    // the routers' traffic too: its tickets, and the WebSockets a router took with that key
+    routeTickets.revokeKey(keyId)
+    const routed = routeKeySockets.revoke(keyId)
+    if (routed > 0) logWarning(ELogComponent.AUTH, `Access key ${keyId.substring(0, 8)}... deleted: ${routed} router connection(s) made with it have been cut`)
+}
+
+// ── Routers: the core's door (plans/router-extension, S3) ─────────────────────────────────────────────
+const routeTickets = new RouteTickets()
+const routeKeySockets = new RouteKeySockets()
+
+const activeApiKeyApi = (): ApiKeyApi | undefined => runningInstances.find(r => r.active)?.apiKeyApi
+
+const routeKeyOf = async (authorization: string | undefined): Promise<AccessKey | undefined> => {
+    const apiKeyApi = activeApiKeyApi()
+    return apiKeyApi ? AuthorizationManagement.accessKeyOfHeader(authorization, apiKeyApi) : undefined
+}
+
+/*
+    An HTTP request under <rootPath>/router/<id>/...: authenticated here, then handed to the LIVE router
+    (looked up now, so installing or removing one needs no restart). Mounted before the body parser: a router
+    gets the request stream untouched.
+*/
+const dispatchRouterHttp = async (req: Request, res: Response): Promise<void> => {
+    const routed = routerPathOf(req.originalUrl, envRootPath)
+    const router = routed ? routerManager?.router(routed.id) : undefined
+    if (!routed || !router || !router.routerRequest) {
+        res.status(404).json({ error: routed ? `No router '${routed.id}' is installed and started here` : 'Not a router path' })
+        return
+    }
+    const auth = await authenticateRoute(router.getRouterData(), routed.rest, req.socket.remoteAddress, req.headers.authorization, routeTickets, routeKeyOf)
+    if (!auth) {
+        res.status(401).json({ error: 'A route ticket or an access key of this Kwirth is required' })
+        return
+    }
+    req.url = auth.path
+    try {
+        router.routerRequest(req, res, auth.caller)
+    }
+    catch (err) {
+        logError(ELogComponent.ROUTER, `Router '${routed.id}' failed on '${auth.path.split('?')[0]}': ${err instanceof Error ? err.message : String(err)}`)
+        if (!res.headersSent) res.status(500).json({ error: 'The router failed' })
+    }
+}
+
+/*
+    A WebSocket under <rootPath>/router/<id>/...: what arrives while it is being authenticated is held and
+    replayed once the router has it, so nothing is lost to the await.
+*/
+const handleRouterWebsocket = async (webSocket: WsSocket, req: IncomingMessage, id: string, rest: string): Promise<void> => {
+    const held: [unknown, boolean][] = []
+    const hold = (data: unknown, isBinary: boolean) => { held.push([data, isBinary]) }
+    webSocket.on('message', hold)
+    const refuse = (code: number, reason: string) => {
+        logWarning(ELogComponent.ROUTER, `WebSocket for router '${id}' refused: ${reason}`)
+        try { webSocket.close(code, reason) } catch { /* already gone */ }
+    }
+    const router = routerManager?.router(id)
+    if (!router || !router.routerWebsocket) return refuse(4404, `no router '${id}' takes WebSockets here`)
+    const auth = await authenticateRoute(router.getRouterData(), rest, req.socket.remoteAddress, req.headers.authorization, routeTickets, routeKeyOf)
+    if (!auth) return refuse(4401, 'a route ticket or an access key of this Kwirth is required')
+    req.url = auth.path
+    if (auth.caller.accessKey) routeKeySockets.remember(auth.caller.accessKey.id, webSocket as unknown as globalThis.WebSocket)
+    try {
+        router.routerWebsocket(webSocket as unknown as globalThis.WebSocket, req, auth.caller)
+    }
+    catch (err) {
+        logError(ELogComponent.ROUTER, `Router '${id}' failed to take the WebSocket: ${err instanceof Error ? err.message : String(err)}`)
+        try { webSocket.close() } catch { /* already gone */ }
+        return
+    }
+    webSocket.off('message', hold)
+    for (const [data, isBinary] of held) webSocket.emit('message', data, isBinary)
 }
 
 const sendChannelSignalAsset = (webSocket: WebSocket, level: ESignalMessageLevel, event: ESignalMessageEvent, text: string, instanceMessage: IInstanceMessage, ri:IRunningInstance, namespace:string, pod:string, container?:string) => {
@@ -1646,7 +1724,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
     try {
         const riRouter = express.Router()
 
-        let result = await ApiKeyApi.create(ri.configMaps, ri.masterKey, runningEnv.isDesktop, () => validScopeSet(registeredChannels), (keyId: string) => cutDeletedKey(ri, keyId))
+        let result = await ApiKeyApi.create(ri.configMaps, ri.masterKey, runningEnv.isDesktop, () => validScopeSet(registeredChannels, routerScopes), (keyId: string) => cutDeletedKey(ri, keyId))
         if (!result) {
             logError(ELogComponent.CORE, 'Could not get apikeyapi setting up routes')
             return false
@@ -1667,10 +1745,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         let channelStorageApi = new ChannelStorageApi(ri.configMaps, ri.secrets, apiKeyApi)
         riRouter.use(`/core/storage/channel`, channelStorageApi.router)
         recordRoute(`${envRootPath}/core/storage/channel`, ERouteOwnerKind.CORE, 'channel storage', channelStorageApi.router)
-        let userApi:UserApi = new UserApi(ri.secrets, apiKeyApi, () => validScopeSet(registeredChannels))
+        let userApi:UserApi = new UserApi(ri.secrets, apiKeyApi, () => validScopeSet(registeredChannels, routerScopes))
         riRouter.use(`/user`, userApi.router)
         recordRoute(`${envRootPath}/user`, ERouteOwnerKind.CORE, 'user', userApi.router)
-        let signupApi:SignupApi = new SignupApi(ri.secrets, apiKeyApi, () => validScopeSet(registeredChannels))
+        let signupApi:SignupApi = new SignupApi(ri.secrets, apiKeyApi, () => validScopeSet(registeredChannels, routerScopes))
         riRouter.use(`/core/signups`, signupApi.router)
         recordRoute(`${envRootPath}/core/signups`, ERouteOwnerKind.CORE, 'signup', signupApi.router)
 
@@ -1717,9 +1795,20 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         // The global catalogue of RBAC scopes (the core's built-ins + those the channels declare): the
         // security editor consumes it. Admin-gated. It lives under /core because it is cross-cutting
         // vocabulary (it belongs to neither user nor key).
+        /*
+            A route ticket for this session (plans/router-extension, S3): what the front puts in the url of a
+            proxied cluster, so the router knows who uses the route. Any valid key of this core gets one; the
+            front asks for a fresh one before it expires.
+        */
+        riRouter.post(`/core/routes/ticket`, async (req: Request, res: Response) => {
+            const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
+            if (!accessKey) return
+            res.json(routeTickets.issue(accessKey))
+        })
+        recordRoute(`${envRootPath}/core/routes/ticket`, ERouteOwnerKind.CORE, 'routes', undefined, ['POST'])
         riRouter.get(`/core/scopes`, (req: Request, res: Response) => {
             if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
-            res.json(buildScopeCatalog(registeredChannels))
+            res.json(buildScopeCatalog(registeredChannels, routerScopes()))
         })
         recordRoute(`${envRootPath}/core/scopes`, ERouteOwnerKind.CORE, 'scopes', undefined, ['GET'])
         let loginApi:LoginApi = new LoginApi(ri.secrets, ri.configMaps, ri.apiKeyApi)
@@ -1730,6 +1819,12 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             let dceApi = new DceApi(dceManager, apiKeyApi)
             riRouter.use(`/core/dces`, dceApi.router)
             recordRoute(`${envRootPath}/core/dces`, ERouteOwnerKind.CORE, 'dce', dceApi.router)
+        }
+        // The router manager is created in prepareRunningInstance(); here only its API
+        if (routerManager) {
+            const routerApi = new RouterApi(routerManager, apiKeyApi, () => announceRouters(ri))
+            riRouter.use(`/core/routers`, routerApi.router)
+            recordRoute(`${envRootPath}/core/routers`, ERouteOwnerKind.CORE, 'routers', routerApi.router)
         }
         if (!idpManager) {
             idpManager = new IdpManager(ri.secrets, ri.configMaps, registeredIdps)
@@ -1863,7 +1958,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             logInfo(ELogComponent.CORE, `Plugin '${id}' HTTP router mounted at '${mountPath}'`)
                         }
                         if (!activeRI.kwirthData.channels.some(c => c.id === id))
-                            activeRI.kwirthData.channels.push(announcedLocalChannelData(channelInstance, (m) => logWarning(ELogComponent.CORE, m)))
+                            activeRI.kwirthData.channels.push(announcedLocalChannelData(channelInstance))
                         const channelData = channelInstance.getChannelData()
                         /*
                             ⚠️ The endpoint paths below embed activeRI.id, which is a NEW uuid on every
@@ -1977,8 +2072,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             riRouter.use(`/core/logins`, loginExtensionApi.router)
             recordRoute(`${envRootPath}/core/logins`, ERouteOwnerKind.CORE, 'logins', loginExtensionApi.router)
         }
-        if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager && docsManager && webhookManager && aiToolsetManager && dceManager) {
-            let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, dceManager, apiKeyApi, registeredChannels, registeredProviders })
+        if (packManager && pluginManager && providerManager && senderManager && themeManager && homepageManager && idpManager && loginManager && docsManager && webhookManager && aiToolsetManager && dceManager && routerManager) {
+            let packApi = new PackApi({ packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, dceManager, routerManager, apiKeyApi, registeredChannels, registeredProviders })
             riRouter.use(`/core/packs`, packApi.router)
             recordRoute(`${envRootPath}/core/packs`, ERouteOwnerKind.CORE, 'packs', packApi.router)
         }
@@ -2599,6 +2694,11 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
     que uno se conecte. Construirlo dentro del flujo de una instancia funciona por casualidad, no por
     diseño. Ver plans/dce-load-order/PRD.md.
 */
+// What the front reads to resolve proxied cluster-list entries: the routers that are up right now
+const announceRouters = (runningInstance: IRunningInstance): void => {
+    runningInstance.kwirthData.routers = routerManager?.routerData() ?? []
+}
+
 const ensureDceManager = async (runningInstance:IRunningInstance) : Promise<void> => {
     if (!dceManager) {
         dceManager = new DceManager(runningInstance.configMaps, runningInstance.secrets)
@@ -2623,6 +2723,7 @@ const ensureDceManager = async (runningInstance:IRunningInstance) : Promise<void
             if (homepageManager) await add('homepage', homepageManager)
             if (idpManager) for (const m of await idpManager.listInstalledMeta()) idx.idp.push({ id: m.id, version: m.version })
             if (aiToolsetManager) await add('aitoolset', aiToolsetManager)
+            if (routerManager) await add('router', routerManager)
             return idx
         })
         /*
@@ -2643,6 +2744,7 @@ const ensureDceManager = async (runningInstance:IRunningInstance) : Promise<void
             if (homepageManager) add(EExtensionType.HOMEPAGE, await homepageManager.listInstalled())
             if (idpManager) add(EExtensionType.IDP, await idpManager.listInstalledMeta())
             if (aiToolsetManager) add(EExtensionType.AITOOLSET, await aiToolsetManager.listInstalled())
+            if (routerManager) add(EExtensionType.ROUTER, await routerManager.listInstalled())
             return findConsumers(requirers, EExtensionType.DCE, dceId)
         })
     }
@@ -2704,6 +2806,23 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             // startup or everything would end up granted to nobody — safe, but what the admin
             // configured would stop working.
             await aiToolsetManager.applyGrants()
+        }
+
+        // Routers: the core owns each one's instance, started here with its saved config (plans/router-extension)
+        if (!routerManager) {
+            routerManager = new RouterManager(runningInstance.configMaps, runningInstance.secrets, (id: string) => ({
+                clusterUid: runningInstance.clusterInfo.id ?? '',
+                clusterName: runningInstance.clusterInfo.name ?? '',
+                kwirthVersion: runningInstance.kwirthData.version,
+                loopbackUrl: `http://localhost:${envPort}${envRootPath}`,
+                logger: componentLogger(ELogComponent.ROUTER, id)
+            }))
+            routerManager.setOnChange(() => announceRouters(runningInstance))
+            await routerManager.init()
+            const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
+            if (bundledExtensionsPath) await routerManager.installBundled(bundledExtensionsPath)
+            await routerManager.loadAll()
+            routerManager.loadDevRouters()
         }
 
         if (!docsManager) {
@@ -2795,12 +2914,12 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             // manages it (START with ITS accessKey, reconnection with backoff, capture of the instance).
             // The raw WS is not exposed; the plugin uses the handle. The implementation lives in
             // tools/RemoteChannel.
-            // A PROXIED endpoint (with 'route') is dialled through the resolver's router on this very core
+            // A PROXIED endpoint (with 'route') is dialled through its ROUTER on this very core, over loopback
             // (tools/ClusterRouting); one without a route goes through untouched.
             openRemoteChannel: (endpoint, config, handlers) => {
-                const resolved = resolveRemoteEndpoint(endpoint, `http://localhost:${envPort}${envRootPath}`, clusterRouteResolversOf(runningInstance.kwirthData.channels))
+                const resolved = resolveRemoteEndpoint(endpoint, `http://localhost:${envPort}${envRootPath}`, routerManager?.routerData() ?? [])
                 if (!resolved) {
-                    logError(ELogComponent.CHANNEL, `openRemoteChannel: cluster '${endpoint.name}' is reached through the route '${endpoint.route?.resolver}', and no installed extension resolves it: the connection stays down`)
+                    logError(ELogComponent.CHANNEL, `openRemoteChannel: cluster '${endpoint.name}' is reached through the router '${endpoint.route?.resolver}', which is not installed or not started: the connection stays down`)
                     return unresolvableRemoteChannel(handlers)
                 }
                 return openRemoteChannel(resolved, config, handlers, (m) => logError(ELogComponent.CHANNEL, m), (m) => logInfo(ELogComponent.CHANNEL, m))
@@ -2820,7 +2939,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             },
             // Who is at the other end of a WebSocket of this channel, resolved when it connected (K2, tools/WsCallerAddress)
             callerAddressOf: (webSocket: WebSocket): ICallerAddress | undefined => wsCallers?.addressOf(webSocket),
-            // The core's own version, for a channel that tells its peers (Ianus, K3)
+            // The core's own version, for a channel that tells its peers (K3)
             kwirthVersion: runningInstance.kwirthData.version,
         }
 
@@ -2840,6 +2959,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             [EExtensionType.DOCS]: docsManager && (() => docsManager!.listInstalled()),
             [EExtensionType.AITOOLSET]: aiToolsetManager && (() => aiToolsetManager!.listInstalled()),
             [EExtensionType.DCE]: dceManager && (() => dceManager!.listInstalled()),
+            [EExtensionType.ROUTER]: routerManager && (() => routerManager!.listInstalled()),
             [EExtensionType.IDP]: idpManager && (() => idpManager!.listInstalledMeta())
         }))
         /*
@@ -2883,7 +3003,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         // this '.channels' object is sent to clients when they want to know something about support channels on the backend they're connected to.
         // Hosted channels are announced as LOCAL; 'single' channels not hosted here (see gate) are announced as REMOTE.
         localKwirthData.channels = [
-            ...Array.from(runningInstance.channels.values()).map(c => announcedLocalChannelData(c, (m) => logWarning(ELogComponent.CORE, m))),
+            ...Array.from(runningInstance.channels.values()).map(c => announcedLocalChannelData(c)),
             ...runningInstance.remoteChannels,
         ]
 
@@ -3406,20 +3526,12 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
             wsCallers?.remember(webSocket, req.socket.remoteAddress, forwardedFor)
 
             /*
-                A WebSocket under a channel's router path (<rootPath>/channel/<alias>/...) belongs to that
-                channel, if it claims them (tools/WsPathDelegation). It is handed over BEFORE anything is
-                attached to it, and the core forgets it. Any other path goes on exactly as before.
+                A WebSocket under <rootPath>/router/<id>/... belongs to that ROUTER (tools/RouteGate): the core
+                authenticates it and hands it over, and forgets it. Any other path goes on exactly as before.
             */
-            const activeForPath = instances.find(r => r.active)
-            const pathChannel = activeForPath ? pathWebsocketChannel(req.url, envRootPath, activeForPath.channels.values()) : undefined
-            if (pathChannel) {
-                try {
-                    pathChannel.pathWebsocketRequest!(webSocket, req)
-                }
-                catch (err) {
-                    logError(ELogComponent.CORE, `Channel '${pathChannel.getChannelData().id}' failed to take the WebSocket on '${(req.url || '').split('?')[0]}': ${err instanceof Error ? err.message : String(err)}`)
-                    try { webSocket.close() } catch { /* already gone */ }
-                }
+            const routed = routerPathOf(req.url, envRootPath)
+            if (routed) {
+                void handleRouterWebsocket(webSocket as unknown as WsSocket, req, routed.id, routed.rest)
                 return
             }
 
@@ -3857,6 +3969,11 @@ getExecutionEnvironment().then( async (exenv:EExecutionEnvironment|undefined) =>
     app.use(`${envRootPath}/webhook`, express.raw({ type: '*/*', limit: '1mb' }), webhookRouter)
     // Listed as its pattern: '/webhook/:provider/:token' — the token never travels with the route list.
     recordRoute(`${envRootPath}/webhook`, ERouteOwnerKind.WEBHOOK, 'receiver', webhookRouter)
+
+    // Routers (plans/router-extension): ONE dispatcher for all of them, before the body parser — a router gets the
+    // request untouched — and with CORS, as the rest of the API (the dev front runs on another port).
+    app.use(`${envRootPath}/${ROUTER_PATH_SEGMENT}`, cors(), (req: Request, res: Response) => { void dispatchRouterHttp(req, res) })
+    recordRoute(`${envRootPath}/${ROUTER_PATH_SEGMENT}/:id`, ERouteOwnerKind.ROUTER, 'dispatcher', undefined, ['*'])
 
     /*
         An INGEST provider needs the bytes exactly as they arrived: ndjson and msgpack are not JSON, and
