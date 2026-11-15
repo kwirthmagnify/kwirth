@@ -104,6 +104,10 @@ kwirth-bundled.json
 !/dces/swagger-ui/
 !/dces/manifest.json
 
+# Routers: same WILDCARD as the DCEs — a new router is born PRIVATE, and a public one is taken out by hand
+# with its own exception line. Only the README and the official manifest travel.
+/routers/*/
+
 # Familia SUSE (de pago): COMODIN a proposito, para que cada artefacto suse-* nuevo quede cubierto desde
 # el minuto cero y no dependa de que alguien se acuerde de anadir su linea. Duplicado en
 # .git/info/exclude y en el hook pre-commit, que son los que abortan el commit; este es el unico de los
