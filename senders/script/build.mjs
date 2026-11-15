@@ -24,7 +24,30 @@ else {
 
 fs.mkdirSync('dist', { recursive: true })
 
+/*
+    The common packages are taken from the core at runtime (global.__kwirth_back__), never bundled: one
+    function imported from kwirth-common-back (getDce, for the SSH DCE) pulled the whole package in —
+    @kubernetes/client-node included — and the bundle went from 24 KB to 15.9 MB.
+*/
+const kwirthBackGlobalsPlugin = {
+    name: 'kwirth-back-globals',
+    setup(build) {
+        const backGlobals = {
+            '@kwirthmagnify/kwirth-common': 'global.__kwirth_back__.kwirthCommon',
+            '@kwirthmagnify/kwirth-common-back': 'global.__kwirth_back__.kwirthCommonBack',
+        }
+        build.onResolve({ filter: /^@kwirthmagnify\/kwirth-common(-back)?$/ }, (args) => {
+            if (backGlobals[args.path]) return { path: args.path, namespace: 'kwirth-back-globals' }
+        })
+        build.onLoad({ filter: /.*/, namespace: 'kwirth-back-globals' }, (args) => ({
+            contents: 'module.exports = ' + backGlobals[args.path],
+            loader: 'js',
+        }))
+    },
+}
+
 await esbuild.build({
+    plugins: [kwirthBackGlobalsPlugin],
     entryPoints: ['src/back/index.ts'],
     bundle: true,
     format: 'cjs',

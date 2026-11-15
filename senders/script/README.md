@@ -84,7 +84,8 @@ interpreter and the message on stdin, removes it and disconnects.
   stdin.
 - The environment is the SSH user's, with what that machine has installed.
 - Windows: OpenSSH runs commands with its default shell, `cmd`, and the launch line is written for it.
-  PowerShell files get a UTF-8 BOM so Windows PowerShell 5.1 keeps accents.
+  PowerShell files get a UTF-8 BOM so Windows PowerShell 5.1 keeps accents. ⚠️ Not yet validated against
+  a real Windows server: try it with your machine before relying on it.
 - 🔴 The timeout closes the SSH channel but does **not** stop the script on the machine: an SSH server leaves
   it running (one that still writes dies when it tries to; one that waits goes on). Limit it inside the
   script if it must not outlive the timeout (on Linux, `timeout 25 long-command`).

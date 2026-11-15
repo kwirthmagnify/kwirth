@@ -2,9 +2,9 @@
     "id": "script",
     "name": "@kwirthmagnify/kwirth-sender-script",
     "publisher": "@kwirthmagnify",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "displayName": "Script Sender",
-    "description": "Script sender for Kwirth — runs a script written in its configuration (sh, bash, pwsh, powershell, cmd) with the message on stdin and/or environment variables",
+    "description": "Script sender for Kwirth — runs a script written in its configuration (sh, bash, pwsh, powershell, cmd), locally or on another machine over SSH, with the message on stdin and/or environment variables",
     "type": "module",
     "scripts": {
         "build": "node build.mjs",
