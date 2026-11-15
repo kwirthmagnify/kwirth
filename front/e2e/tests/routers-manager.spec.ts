@@ -100,7 +100,9 @@ test.describe('routers: the manager, the config dialog, the door and Manage clus
     })
 
     test('🔴 its config is the core\'s generic dialog: the secret masked with the eye, saved and returned REAL', async () => {
-        await dialog().getByRole('button', { name: 'Configure' }).first().click()
+        // THIS router's gear: other routers may be installed (the innermost box holding its name and a gear is its card)
+        const card = dialog().locator('div').filter({ hasText: 'E2E Echo Router' }).filter({ has: page.getByRole('button', { name: 'Configure' }) }).last()
+        await card.getByRole('button', { name: 'Configure' }).click()
         const config = page.getByRole('dialog').filter({ hasText: `Configure: E2E Echo Router` })
         await expect(config).toBeVisible({ timeout: 20000 })
         await config.getByLabel('Greeting', { exact: true }).fill('hola')
