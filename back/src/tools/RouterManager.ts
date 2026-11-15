@@ -71,6 +71,12 @@ export class RouterManager {
     private cachedIndex: IRouterMeta[] = []
     private devRouters = new Map<string, IDevRouter>()
     private live = new Map<string, ILiveRouter>()
+    /*
+        PLUTERS: plugins that are also routers (PRD R8). Their channel instance IS the router, under its channel id.
+        Their lifecycle is the CHANNEL's (startChannel / cleanup): the core does not call startRouter,
+        applyConfig or stopRouter on them, and their configuration and scopes are the plugin's own.
+    */
+    private pluters = new Map<string, IRouter>()
     private changed: () => void = () => {}
 
     /*
@@ -92,21 +98,62 @@ export class RouterManager {
 
     // The live router with this id, or undefined (not installed, failed, or being replaced). The dispatcher asks on every request.
     router(id: string): IRouter | undefined {
-        return this.live.get(id)?.instance
+        return this.live.get(id)?.instance ?? this.pluters.get(id)
     }
 
-    // What the core announces in KwirthData.routers: the routers that are up
+    /*
+        A plugin channel that is also a router, registered (or replaced) under its channel id. Refused, saying
+        why, when it declares another id — its traffic would arrive where nobody serves it — or when an
+        installed router already has that id.
+    */
+    adoptPluter(id: string, router: IRouter): boolean {
+        let declared: string
+        try {
+            declared = router.getRouterData().id
+        }
+        catch (err) {
+            logError(ELogComponent.ROUTER, `Plugin '${id}' is a router but its getRouterData failed: ${err} — not registered`)
+            return false
+        }
+        if (declared !== id) {
+            logError(ELogComponent.ROUTER, `Plugin '${id}' is a router but declares the id '${declared}': a pluter's router id must be its channel id — not registered`)
+            return false
+        }
+        if (this.live.has(id)) {
+            logError(ELogComponent.ROUTER, `Plugin '${id}' is a router, but an installed router already has the id '${id}' — the plugin is not registered as a router`)
+            return false
+        }
+        const replaced = this.pluters.has(id)
+        this.pluters.set(id, router)
+        logInfo(ELogComponent.ROUTER, `Plugin '${id}' is also a router (a pluter): ${replaced ? 'replaced' : 'registered'}`)
+        this.changed()
+        return true
+    }
+
+    // The plugin was uninstalled, or its new code is no longer a router
+    dropPluter(id: string): void {
+        if (!this.pluters.delete(id)) return
+        logInfo(ELogComponent.ROUTER, `Plugin '${id}' is no longer a router`)
+        this.changed()
+    }
+
+    isPluter(id: string): boolean {
+        return this.pluters.has(id)
+    }
+
+    // What the core announces in KwirthData.routers: the routers that are up, pluters included
     routerData(): IRouterData[] {
         const out: IRouterData[] = []
-        for (const [id, live] of this.live) {
-            if (!live.instance) continue
+        const add = (id: string, router: IRouter) => {
             try {
-                out.push(live.instance.getRouterData())
+                out.push(router.getRouterData())
             }
             catch (err) {
                 logError(ELogComponent.ROUTER, `Router '${id}' getRouterData failed: ${err}`)
             }
         }
+        for (const [id, live] of this.live) if (live.instance) add(id, live.instance)
+        for (const [id, router] of this.pluters) add(id, router)
         return out
     }
 
