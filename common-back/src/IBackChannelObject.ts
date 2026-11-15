@@ -48,4 +48,10 @@ export interface IBackChannelObject {
         "unknown".
     */
     kwirthVersion?: string
+    /*
+        This core over loopback, e.g. 'http://localhost:3883/kwirth': where a channel that carries traffic for
+        others (a pluter) delivers what arrives for THIS cluster, so the core authenticates and authorizes it as
+        always. The same value a router gets in IRouterContext.loopbackUrl. Optional: absent on an older core.
+    */
+    loopbackUrl?: string
 }
