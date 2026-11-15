@@ -1,0 +1,28 @@
+{
+    "id": "ssh",
+    "name": "@kwirthmagnify/kwirth-dce-ssh",
+    "publisher": "@kwirthmagnify",
+    "version": "0.1.0",
+    "displayName": "SSH",
+    "description": "SSH client for Kwirth extensions — connect, run a command with stdin and a timeout, upload and remove files by SFTP",
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs",
+        "watch": "node watch.mjs",
+        "test": "node tests/run.mjs"
+    },
+    "dependencies": {
+        "@kwirthmagnify/kwirth-common": "^0.5.86",
+        "@kwirthmagnify/kwirth-common-back": "^0.6.14",
+        "ssh2": "^1.17.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.12.13",
+        "@types/ssh2": "^1.15.6",
+        "c8": "^12.0.0",
+        "esbuild": "^0.28.2",
+        "typescript": "^5.4.0"
+    },
+    "requiresRestart": true,
+    "requiresExtension": []
+}
