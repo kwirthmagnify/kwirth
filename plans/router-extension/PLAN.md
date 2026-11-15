@@ -1,7 +1,7 @@
 # Router — PLAN
 
-> Cuelga de [PRD.md](PRD.md) (validado 2026‑11‑15). Aquí, el cómo y el orden. Estado: **streams validados** (2026‑11‑15). **S1, S2 y S3 hechos** (sin QA: no tienen UI, se prueban con S4);
-en curso S4.
+> Cuelga de [PRD.md](PRD.md) (validado 2026‑11‑15). Aquí, el cómo y el orden. Estado: **S1–S5 hechos y QA validado** (2026‑11‑15, en k3d con el router de eco del scaffolder). Pendientes: el
+e2e `routers-manager.spec.ts` (escrito, sin correr), la guía (sección *Routers*), y S6 (`bridge`).
 
 Decisiones tomadas al hacerlos (2026‑11‑15):
 - El contrato lleva `routerRequest?(req, res, caller)` en vez de un `Router` de express: así el core le pasa quién
