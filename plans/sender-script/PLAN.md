@@ -1,7 +1,9 @@
 # Sender Script — PLAN
 
-> Estado: **A y B CERRADOS** (2026-11-14, core `0.6.111` + `sender/script@0.1.0` publicado, ejecución en
-> local); **C pendiente** (DCE `ssh` + target `ssh`). El plan sigue vivo.
+> Estado: **V1 COMPLETO.** A y B cerrados (2026-11-14, core `0.6.111` + `sender/script@0.1.0`, ejecución en
+> local); **C cerrado** (2026-11-15, `kwirth-common@0.5.87` + `dce/ssh@0.1.0` + `sender/script@0.2.0`,
+> ejecución por SSH). El plan sigue vivo solo por **V2**: C7 (Windows con OpenSSH, sin validar contra una
+> máquina real) y el destino *Job en el mismo Kubernetes* (PRD §9).
 > Producto, decisiones y criterios de aceptación: [PRD](./PRD.md) (rev. 2). Aquí solo el *cómo* y el orden.
 > D10 (`aiInstructions`) y D12 (`secret`) validados el 2026-11-14.
 
@@ -166,7 +168,26 @@ Antes S4+S6: el DCE no tiene QA propio, solo se ve funcionar a través del sende
   vivo tras el timeout. El servidor de pruebas lo mataba (test falso): corregido para ser fiel, y contrato,
   READMEs y guías dicen ahora que el script debe limitarse solo (`timeout` en Linux). Posible mejora V2:
   un vigilante remoto que mate el árbol (p. ej. `timeout -s KILL` cuando exista), sin abrir aquí.
-- Pendiente para cerrar C: QA del usuario, Windows con OpenSSH incluido (si no hay máquina, C no se cierra).
+- 🔴 **Hallazgo 7 (del QA) — la clave oculta era de SOLO LECTURA.** Lo que se pegaba en *SSH private key*
+  sin pulsar antes el ojo se perdía. Ahora un `textarea` secreto se edita oculto, como un `password`: lo
+  tecleado o pegado sobre los puntos cae en su sitio del valor real, localizado por el **cursor tras la
+  edición** (la máscara sola no distingue qué punto se borró), y el cursor se repone tras re-enmascarar.
+  Core: `front/src/tools/maskedText.ts` + `ConfigTextArea`; Incipit: lo mismo en `TextAreaField`
+  (`applyMaskedEdit` en `IncipitSignIn`, 6 tests). e2e nuevo en `sender-script` (9 ✔).
+
+- 🔴 **Hallazgo 8 (al publicar) — `getDce` metía `kwirth-common-back` entero en el bundle.** Es el primer
+  import de VALOR del sender desde common-back: `back.js` pasó de 24 KB (0.1.0) a 15,9 MB. El `build.mjs` gana
+  el plugin `kwirth-back-globals` (common y common-back desde `global.__kwirth_back__`): 26 KB. Verificado con
+  el bundle real contra OpenSSH antes de publicar.
+
+**QA del usuario (2026-11-15):** C1–C6 ✔ contra `kwirth-qa-ssh` (contraseña, comillas en variables y stdin,
+aviso de huella una vez, huella mala/buena, clave con passphrase pegada oculta, passphrase mala, exit 3,
+timeout 2 s, `wait` off con `{ started, host }` y el final en el log).
+
+⚠️ **C7 — Windows con OpenSSH: PENDIENTE DE VALIDAR, aplazado a V2 por decisión del usuario.** El código
+(BOM PowerShell, `@set` de cmd, rutas `/C:/…`, línea de lanzamiento para cmd) está cubierto por tests
+unitarios, pero nunca se ha ejecutado contra un Windows real. La guía y el README no deben prometer más que
+eso hasta que se valide.
 
 ## 3. Orden y dependencias
 

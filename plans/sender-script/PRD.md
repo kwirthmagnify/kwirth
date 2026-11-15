@@ -270,6 +270,12 @@ así sirve a cualquier extensión con un `textarea` (plantillas de webhook, expr
 
 ## 9. Fuera de V1 (anotado)
 
+- **Validar SSH contra Windows con OpenSSH** (C7 del QA): aplazado a V2 por decisión del usuario
+  (2026-11-15). El soporte está escrito y probado en unitarios, no contra una máquina real.
+- **Tercer destino: un Job en el mismo Kubernetes.** Pedido por el usuario (2026-11-15): el script corre
+  como Job del cluster donde vive Kwirth. Necesita PRD propio; relacionado con el punto de exec en un pod
+  (el sender necesitaría acceso al cluster, que hoy `ISenderAccess` no da).
+
 - **WinRM / PowerShell Remoting** como segundo transporte remoto.
 - **Exec en un pod del cluster.** El back ya tiene `execApi`
   ([ClusterInfo.ts:116](../../back/src/model/ClusterInfo.ts#L116)), pero un sender solo recibe
