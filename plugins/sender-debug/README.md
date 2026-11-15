@@ -29,8 +29,9 @@ reached when there is real log traffic.
 
 ## Usage
 
-1. Open a **Sender Debug** tab and start the channel (tab settings ⚙ → Start). The setup only asks
-   for the history size: everything else lives in the tab.
+1. Open a **Sender Debug** tab and start the channel (the **Start** button in the middle of the tab,
+   or tab settings ⚙ → Start). The setup only asks for the history size: everything else lives in
+   the tab.
 2. Pick a **Sender** and one of its **Configurations**.
 3. Write the message and press **SEND**.
 4. The result lands in the history: delivered (with whatever the sender returned, if anything) or
@@ -72,6 +73,8 @@ Every row opens, and shows the two halves of the exchange:
   have to reconstruct from memory what you sent it.
 - **Answered** — what the sender returned, what it threw, or the plain statement that it returned
   nothing.
+
+The **copy** icon at the end of every row puts both halves on the clipboard without opening the row.
 
 | Verdict | What it means |
 |---|---|
