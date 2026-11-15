@@ -1,6 +1,6 @@
 # Router — PLAN
 
-> Cuelga de [PRD.md](PRD.md) (validado 2026‑11‑15). Aquí, el cómo y el orden. Estado: **streams para validar**.
+> Cuelga de [PRD.md](PRD.md) (validado 2026‑11‑15). Aquí, el cómo y el orden. Estado: **streams validados** (2026‑11‑15); en curso S1.
 
 ## Orden y dependencias
 
