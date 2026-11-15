@@ -45,6 +45,7 @@ import { buildPluginStatuses } from './tools/PluginStatus'
 import { buildExtensionAccess } from './tools/ExtensionAccess'
 import { DceApi } from './api/DceApi'
 import { RouterManager } from './tools/RouterManager'
+import { IRouter } from '@kwirthmagnify/kwirth-common-back'
 import { RouterApi } from './api/RouterApi'
 import { IExtensionScope, ROUTER_PATH_SEGMENT } from '@kwirthmagnify/kwirth-common'
 import { findConsumers, IRequirer, setInstalledExtensionsSource, emptyInstalledIndex, normalizeRequires } from './tools/ExtensionDeps'
@@ -1917,6 +1918,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             logWarning(ELogComponent.CORE, `Provider '${m.consumerId}' consumes '${m.providerId}', which is not installed`)
                         }
                         activeRI.channels.set(id, channelInstance)
+                        syncPluter(id, channelInstance)
                         // Hot installation: if the freshly installed plugin also produces, it is
                         // registered as a pluvider before the channel is started.
                         if (isPluvider(channelInstance)) {
@@ -2013,6 +2015,7 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     const gone = activeRI.channels.get(id)
                     if (gone) announceChannelGone(id, gone)
                     activeRI.channels.delete(id)
+                    syncPluter(id, undefined)
                     // Its routes stop being listed. (Express cannot unmount them: they stay answering until a
                     // restart, and the registry says what is PUBLISHED by an installed extension.)
                     routeRegistry.forget(ERouteOwnerKind.CHANNEL, id)
@@ -2380,6 +2383,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     // removed, and leaving it half-registered would be worse than the failed cleanup.
                     catch (err) { logError(ELogComponent.CORE, `Plugin '${id}' cleanup on uninstall failed: ${err}`) }
                     ri.channels.delete(id)
+                    syncPluter(id, undefined)
                     logInfo(ELogComponent.CORE, `Plugin '${id}' channel instance stopped and removed on uninstall`)
                 }
             }
@@ -2396,6 +2400,8 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     const newInstance = createChannelInstance(ChannelClass, ri.clusterInfo, ri.backChannelObject, id)
                     if (newInstance) {
                         ri.channels.set(id, newInstance)
+                        // the router table must point at the NEW instance (or drop it, if the new code is not a router)
+                        syncPluter(id, newInstance)
                         // The instance has just been replaced, so the pluvider registry points at the old
                         // one: it has to be redone BEFORE startChannel, or the core would go on serving
                         // what the previous code said. The why is in providers/Pluvider.ts.
@@ -2457,6 +2463,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     }
                     else {
                         runningInstance.channels.set(channelId, channelInstance!)
+                        syncPluter(channelId, channelInstance!)
                         // A channel that also produces (a pluvider) is registered here, so any other
                         // channel can subscribe to it by its composed id. A channel announced as REMOTE
                         // does not come through here: it is not instantiated in this Kwirth, so there is
@@ -2697,6 +2704,20 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 // What the front reads to resolve proxied cluster-list entries: the routers that are up right now
 const announceRouters = (runningInstance: IRunningInstance): void => {
     runningInstance.kwirthData.routers = routerManager?.routerData() ?? []
+}
+
+/*
+    A PLUTER: a plugin channel that is also a router (it implements IRouter: getRouterData is the declaration,
+    as getPluviderData is a pluvider's). Called wherever a channel is registered, replaced or removed, with the
+    instance now in place (undefined = gone), so the router table always points at the live channel.
+*/
+const isRouterChannel = (channel: unknown): channel is IRouter =>
+    typeof (channel as { getRouterData?: unknown } | undefined)?.getRouterData === 'function'
+
+const syncPluter = (channelId: string, channel: IChannel | undefined): void => {
+    if (!routerManager) return
+    if (isRouterChannel(channel)) routerManager.adoptPluter(channelId, channel)
+    else routerManager.dropPluter(channelId)
 }
 
 const ensureDceManager = async (runningInstance:IRunningInstance) : Promise<void> => {
