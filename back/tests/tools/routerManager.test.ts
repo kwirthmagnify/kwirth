@@ -152,3 +152,43 @@ test('at startup, the installed ones are loaded and started again from what was 
     assert.ok(restarted.router('bridge'))
     assert.equal(routerLog().at(-1), 'start:bridge:{"peerUrl":"x"}')
 })
+
+// A plugin channel that is also a router: only what the manager reads of it
+const pluter = (id: string) => ({
+    getRouterData: () => ({ id, pathTemplate: '/{routeTicket}/{clusterUid}', needsTicket: true }),
+    getConfigSchema: () => [],
+    startRouter: async () => {}, applyConfig: async () => {}, stopRouter: async () => {}
+})
+
+test('🔴 a PLUTER (a plugin that is also a router) is served under its channel id, announced, and dropped when it goes', async () => {
+    const { configMaps, secrets } = fakeStore()
+    const manager = new RouterManager(configMaps, secrets, context)
+    let changes = 0
+    manager.setOnChange(() => changes++)
+    await manager.init()
+    const ianus = pluter('ianus')
+    assert.equal(manager.adoptPluter('ianus', ianus), true)
+    assert.equal(manager.router('ianus'), ianus)
+    assert.deepEqual(manager.routerData().map(r => r.id), ['ianus'])
+    assert.equal(changes, 1)
+    // a hot reload replaces it: the table points at the NEW instance
+    const reloaded = pluter('ianus')
+    manager.adoptPluter('ianus', reloaded)
+    assert.equal(manager.router('ianus'), reloaded)
+    // it is a plugin: the Routers manager does not list it as an installed router
+    assert.deepEqual(await manager.listInstalled(), [])
+    manager.dropPluter('ianus')
+    assert.equal(manager.router('ianus'), undefined)
+    assert.deepEqual(manager.routerData(), [])
+})
+
+test('a pluter declaring another id, or clashing with an installed router, is not registered', async () => {
+    const { configMaps, secrets } = fakeStore()
+    const manager = new RouterManager(configMaps, secrets, context)
+    await manager.init()
+    assert.equal(manager.adoptPluter('ianus', pluter('other')), false)
+    assert.equal(manager.router('ianus'), undefined)
+    await manager.install(await makeRouterTgz('bridge', routerJs('bridge')))
+    assert.equal(manager.adoptPluter('bridge', pluter('bridge')), false, 'an installed router keeps its id')
+    assert.equal(manager.isPluter('bridge'), false)
+})
