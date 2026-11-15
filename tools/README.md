@@ -38,6 +38,7 @@ else they publish — and `@scope/plugin-<id>` is Backstage's own convention.
 | `create-kwirth-dce.mjs` | `dces/<id>/` | a dynamic core extension: objects the core instantiates once and other extensions consume by id — back, front or both |
 | `create-kwirth-sender.mjs` | `senders/<id>/` | a way out of Kwirth — back only; output or filter, optionally with batches and an HTTP transport |
 | `create-kwirth-webhook.mjs` | `webhooks/<id>/` | a way into Kwirth — back only; an external system calls its URL and it turns the payload into an event |
+| `create-kwirth-router.mjs` | `routers/<id>/` (or `--dir`) | carries the core's traffic to a cluster with no direct path — back only; generates an echo router that shows the whole `IRouter` contract |
 
 The sender one comes out **complete**: build with typecheck, a watch that writes the same `dist/package.json`
 as the build (both import `dist-meta.mjs`, so they cannot drift), a harness that passes as generated —
