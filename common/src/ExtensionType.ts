@@ -21,5 +21,9 @@ export enum EExtensionType {
     // A dynamic core extension: objects the core instantiates ONCE and hangs off a global, for other
     // extensions to consume by id. Code shared by several extensions that does not belong in the core
     // (plan: plans/completed/dce/PRD.md). It produces no data and draws nothing of its own.
-    DCE = 'dce'
+    DCE = 'dce',
+    // Carries the core's traffic to a cluster with no direct path (see ClusterRoute). Back-end only: it is
+    // configured with the core's generic dialog and speaks through the core's log. A plugin that is also
+    // one is a "pluter" (plan: plans/router-extension/PRD.md).
+    ROUTER = 'router'
 }
