@@ -19,6 +19,10 @@ del pluter de pago queda reorientado en su repo; se declara router cuando lleve 
   - **Y un cluster que no está accesible ahora sale en GRIS** (pedido 2026‑11‑15, QA de Ianus Fase 2): p. ej. el
     destino quitó su rol, el router no tiene enlace, o la conexión directa falla. Hoy aparece igual que los demás
     y el error solo se ve al elegirlo. Se hace al retocar la UX de esa select.
+  - **El gris no se refresca** (visto 2026‑11‑15, QA de Ianus): si el destino no está listo el cluster sale gris,
+    pero cuando el túnel se levanta el estado no se actualiza y sigue gris. El estado de accesibilidad tiene que
+    revisarse solo (al abrir la select o periódicamente), no quedarse con la primera respuesta. Se mira al revisitar
+    el *Resource selector*.
 
 - **Marca del core para el tráfico que entra por un router** (visto al cerrar `bridge`). Un router entrega lo que
   lleva al core destino por **loopback**; para el filtro de IP del login eso parece local, y pasa donde loopback
