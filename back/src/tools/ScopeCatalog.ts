@@ -23,7 +23,8 @@ export const CORE_BUILTIN_SCOPES: IExtensionScope[] = [
 ]
 
 /** The complete catalogue: the core's built-ins + those declared by the registered channels through getScopeCatalog(). Deduplicated. */
-export const buildScopeCatalog = (registeredChannels: Map<string, TChannelConstructor>): IExtensionScope[] => {
+// 'routerScopes': what the live routers declare (RouterManager.scopeCatalog) — a router is not a channel, but its scopes go in the same editor
+export const buildScopeCatalog = (registeredChannels: Map<string, TChannelConstructor>, routerScopes: IExtensionScope[] = []): IExtensionScope[] => {
     const seen = new Set<string>()
     const out: IExtensionScope[] = []
     const add = (s: IExtensionScope): void => { if (s?.scope && !seen.has(s.scope)) { seen.add(s.scope); out.push(s) } }
@@ -38,12 +39,13 @@ export const buildScopeCatalog = (registeredChannels: Map<string, TChannelConstr
         }
         catch { /* canal que exige contexto en el constructor o sin catálogo → se omite */ }
     }
+    routerScopes.forEach(add)
     return out
 }
 
 /** The set of valid scopes, for validating when storing users/API keys. */
-export const validScopeSet = (registeredChannels: Map<string, TChannelConstructor>): Set<string> =>
-    new Set(buildScopeCatalog(registeredChannels).map(s => s.scope))
+export const validScopeSet = (registeredChannels: Map<string, TChannelConstructor>, routerScopes: () => IExtensionScope[] = () => []): Set<string> =>
+    new Set(buildScopeCatalog(registeredChannels, routerScopes()).map(s => s.scope))
 
 /*
     Returns the UNRECOGNISED scopes present in a resources string (`scopes:ns:groups:pods:containers;…`).
