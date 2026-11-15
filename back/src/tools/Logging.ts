@@ -11,7 +11,8 @@ export enum ELogComponent {
     PROVIDER = 'prov',
     CHANNEL = 'chan',
     SENDER = 'send',
-    STORAGE = 'stor'
+    STORAGE = 'stor',
+    ROUTER = 'rout'
 }
 
 /*
@@ -40,7 +41,8 @@ const DEFAULT_LEVELS: Record<ELogComponent, ELogLevel> = {
     [ELogComponent.PROVIDER]: ELogLevel.INFO,
     [ELogComponent.CHANNEL]: ELogLevel.INFO,
     [ELogComponent.SENDER]: ELogLevel.INFO,
-    [ELogComponent.STORAGE]: ELogLevel.INFO
+    [ELogComponent.STORAGE]: ELogLevel.INFO,
+    [ELogComponent.ROUTER]: ELogLevel.INFO
 }
 
 let levels: Record<ELogComponent, ELogLevel> = { ...DEFAULT_LEVELS }
@@ -91,7 +93,8 @@ export const logComponentCatalog = (): ILogComponentInfo[] => {
         { id: ELogComponent.PROVIDER, label: 'Providers', description: 'What the producers write, each under its own id', ids: ids(ELogComponent.PROVIDER) },
         { id: ELogComponent.SENDER, label: 'Senders', description: 'Deliveries to external destinations', ids: ids(ELogComponent.SENDER) },
         { id: ELogComponent.AUTH, label: 'Authentication', description: 'Logins, IdP connectors and access keys', ids: ids(ELogComponent.AUTH) },
-        { id: ELogComponent.STORAGE, label: 'Storage', description: 'ConfigMaps, Secrets and the file store', ids: ids(ELogComponent.STORAGE) }
+        { id: ELogComponent.STORAGE, label: 'Storage', description: 'ConfigMaps, Secrets and the file store', ids: ids(ELogComponent.STORAGE) },
+        { id: ELogComponent.ROUTER, label: 'Routers', description: 'The routers carrying traffic to clusters with no direct path, each under its own id', ids: ids(ELogComponent.ROUTER) }
     ]
 }
 
