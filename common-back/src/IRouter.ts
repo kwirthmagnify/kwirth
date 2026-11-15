@@ -17,7 +17,9 @@ import { IExtension, IExtensionLogger } from './IExtension'
     Installing, updating and uninstalling a router needs no restart: the core mounts one dispatcher and
     looks the live router up on every request.
 
-    A plugin that is also a router (it has a panel of its own) is a PLUTER: it implements IChannel and this.
+    A plugin that is also a router (it has a panel of its own) is a PLUTER: it implements IChannel and this, and
+    its router id IS its channel id. Its lifecycle is the CHANNEL's (startChannel / cleanup): the core does NOT
+    call startRouter, applyConfig or stopRouter on a pluter, and its configuration and scopes are the plugin's.
     Plan: plans/router-extension/PRD.md.
 */
 
@@ -71,8 +73,9 @@ export interface IRouter extends IExtension {
 
     /*
         A WebSocket under <rootPath>/router/<id>/, already authenticated, handed over as soon as it connects.
-        From then on the socket is the router's. 'req' is the upgrade request (full path, query, headers,
-        remote address). Optional: without it, such upgrades are refused.
+        From then on the socket is the router's. 'req' is the upgrade request (headers, remote address), with
+        'req.url' set to the path BELOW /router/<id> — the route ticket removed — as for routerRequest.
+        Optional: without it, such upgrades are refused.
     */
     routerWebsocket?(webSocket: WebSocket, req: IncomingMessage, caller: IRouteCaller): void
 
