@@ -66,6 +66,10 @@ Packaged groups of **tools** an LLM can call from an AI-enabled channel. Bundled
 
 Shared **objects** kwirth instantiates **once** and other extensions consume by id: code common to several extensions that does not belong in the core — a suite's icon set, a client, a cache. A consumer declares `{ "extensionType": "dce", "id": "<id>", "minVersion": "<version>" }` in its `requiresExtension`; kwirth refuses to install it without the DCE, and refuses to remove a DCE somebody requires. Bundled: **[Sample](dces/sample)**, a shared counter to see the machinery work. → **[DCEs manual](dces/index)**
 
+## [Routers (reach a cluster with no direct path)](routers/index)
+
+Carry Kwirth's traffic to a cluster you **cannot reach directly** — behind NAT, a firewall or a DMZ. A cluster-list entry keeps the cluster's real URL plus a **route** (a router and the cluster's uid); everything Kwirth does with it goes through the router on **your own** Kwirth, which authenticates it first. Back end only, configured in the **Routers** manager, installed and removed **without a restart**. Available: **[Bridge](routers/bridge)**, two Kwirths that reach each other through one outbound link. → **[Routers manual](routers/index)**
+
 ## [Packs (extension bundles)](packs/index)
 
 A single `.tgz` that bundles multiple extensions of any type. Install one pack, get all its members at once. Members installed via a pack cannot be uninstalled individually — uninstall the pack to remove them all. → **[Packs manual](packs/index)**
