@@ -252,6 +252,13 @@
       <p>Posts colour-coded message cards to a Teams channel via an <strong>incoming webhook</strong>. Card colour follows the message severity level (red = error, orange = warning, blue = info, gray = debug).</p>
       <div class="fields"><span>webhookUrl</span><span>title</span></div>
     </div>
+    <div class="sender-card">
+      <div class="icon">&#x1F4DC;</div>
+      <span class="sender-id">script</span>
+      <h3>Script</h3>
+      <p>Runs <strong>a script you write</strong> — sh, bash, PowerShell or cmd — inside Kwirth or <strong>on another machine over SSH</strong>, with the message on stdin. For destinations Kwirth does not know: an internal API, a vendor CLI.</p>
+      <div class="fields"><span>interpreter</span><span>script</span><span>stdin</span><span>target</span></div>
+    </div>
   </div>
 
   <p class="cat-label" style="margin-top:36px;">Routing senders — intercept, filter, and dispatch</p>

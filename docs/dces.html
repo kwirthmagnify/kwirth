@@ -219,7 +219,7 @@
   </div>
 
   <h2>Available DCEs</h2>
-  <p>The first DCEs are the ones that prove the type. Suites of paid extensions carry their own — that is what the type was made for.</p>
+  <p>These are the DCEs in the public marketplace: shared clients and the libraries that left the core so that only the extensions using them load them. Suites of paid extensions carry their own — that is what the type was made for.</p>
 
   <div class="cards-grid">
     <div class="card">
@@ -227,6 +227,42 @@
       <h3>Sample</h3>
       <p>A shared counter. Two consumers calling <code>next()</code> see <code>1</code> and <code>2</code>: they hold the same instance. Two copies would each say <code>1</code>. Install it to watch the machinery work before writing your own.</p>
       <span class="badge badge-dev">for trying out</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F511;</div>
+      <h3>SSH</h3>
+      <p>An SSH client for every extension that needs to reach another machine: connect with a password or a private key, check the host key, run a command with stdin and a timeout, and upload or remove files over SFTP. Linux, and Windows with OpenSSH.</p>
+      <span class="badge badge-available">available</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F4D6;</div>
+      <h3>Swagger UI</h3>
+      <p>Swagger UI brought to the core once, so any extension with an HTTP API can serve the page to read and try its OpenAPI document — without each one bundling its own 1.5 MB copy. Its files travel inside: it works with no way out to the Internet.</p>
+      <span class="badge badge-available">available</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F310;</div>
+      <h3>Net Tools</h3>
+      <p>Network primitives on both sides: TCP reachability and DNS resolution, forward and reverse, in the back end — no binary spawned — and the icon, a latency chart and its shared history in the front end. The Net Tools plugin is its worked example.</p>
+      <span class="badge badge-available">available</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F4C1;</div>
+      <h3>File Manager</h3>
+      <p>The shared file browser component for the extensions that draw a file tree, so the core does not carry it for everyone. Front only: a file browser has no business in the back end.</p>
+      <span class="badge badge-available">available</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F578;&#xFE0F;</div>
+      <h3>XYFlow</h3>
+      <p>Two graph libraries shared across extensions: React Flow, which draws node-and-edge diagrams, and ELK, which works out where every node goes. Before it, the core carried both for everyone; the Status graph is one of its consumers.</p>
+      <span class="badge badge-available">available</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F9CA;</div>
+      <h3>Three.js</h3>
+      <p>The three.js 3D library, one shared copy for every extension that draws in three dimensions, instead of each bundling its own.</p>
+      <span class="badge badge-available">available</span>
     </div>
   </div>
 
