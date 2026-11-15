@@ -2962,6 +2962,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             callerAddressOf: (webSocket: WebSocket): ICallerAddress | undefined => wsCallers?.addressOf(webSocket),
             // The core's own version, for a channel that tells its peers (K3)
             kwirthVersion: runningInstance.kwirthData.version,
+            // This core over loopback, for a channel that delivers traffic it carries (a pluter), as a router gets it
+            loopbackUrl: `http://localhost:${envPort}${envRootPath}`,
         }
 
         runningInstance.clusterInfo.senders = senderManager
