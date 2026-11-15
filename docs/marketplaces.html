@@ -59,9 +59,13 @@
     .badge-planned { background: rgba(139,148,158,.1); color: var(--muted); border: 1px solid var(--border); }
     .badge-dev { background: rgba(45,212,191,.1); color: var(--teal); border: 1px solid rgba(45,212,191,.2); }
 
-    .arch-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; margin-top: 24px; font-family: var(--mono); font-size: 0.85rem; line-height: 1.8; color: var(--muted); white-space: pre; overflow-x: auto; }
-    .arch-box .hl { color: var(--teal); }
-    .arch-box .hl2 { color: var(--blue); }
+    .diagram { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 24px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .diagram svg { display: block; width: 100%; min-width: 760px; height: auto; }
+    .catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 20px; }
+    .catalog-item { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+    .catalog-item .count { font-size: 1.6rem; font-weight: 800; color: var(--blue); line-height: 1.1; }
+    .catalog-item .kind { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .catalog-item .list { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
 
     .iface-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
     .iface-row { display: flex; gap: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; }
@@ -160,10 +164,34 @@
   <p>A marketplace is not a server you have to run. It is <strong>one file</strong>: a manifest listing extensions — an id, a name, a version, a description and the URL of the package itself. Kwirth reads that file, shows you what is in it, and downloads a package only when you press install.</p>
   <p>Two consequences are worth knowing before you set one up.</p>
 
-  <div class="arch-box">  <span class="hl2">your marketplace</span>   ──┐
-  <span class="hl2">another one</span>       ──┼──►  first match by extension id <span class="hl">wins</span>
-  <span class="hl2">public marketplace</span> ──┘        (the public one is always last)
-</div>
+  <div class="diagram">
+    <svg viewBox="0 0 960 200" role="img" aria-label="Kwirth reads your marketplaces in order, the public one always last; for each extension id the first match wins">
+      <defs>
+        <marker id="mkt-arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2dd4bf"/></marker>
+      </defs>
+      <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" text-anchor="middle">
+        <!-- the marketplaces, in order -->
+        <g font-size="13">
+          <circle cx="40" cy="45" r="13" fill="#111827" stroke="#58a6ff"/><text x="40" y="50" font-size="12" font-weight="700" fill="#58a6ff">1</text>
+          <rect x="62" y="25" width="230" height="40" rx="8" fill="#0f1929" stroke="#1e2d40"/><text x="177" y="50" fill="#58a6ff">your marketplace</text>
+          <circle cx="40" cy="100" r="13" fill="#111827" stroke="#58a6ff"/><text x="40" y="105" font-size="12" font-weight="700" fill="#58a6ff">2</text>
+          <rect x="62" y="80" width="230" height="40" rx="8" fill="#0f1929" stroke="#1e2d40"/><text x="177" y="105" fill="#58a6ff">another one</text>
+          <circle cx="40" cy="155" r="13" fill="#111827" stroke="#8b949e"/><text x="40" y="160" font-size="12" font-weight="700" fill="#8b949e">3</text>
+          <rect x="62" y="135" width="230" height="40" rx="8" fill="#0f1929" stroke="#1e2d40" stroke-dasharray="4 3"/><text x="177" y="154" fill="#e6edf3">public marketplace</text>
+          <text x="177" y="169" font-size="10" fill="#8b949e">always last</text>
+        </g>
+
+        <!-- merged -->
+        <path d="M294,45 C360,45 360,100 410,100 M294,100 L410,100 M294,155 C360,155 360,100 410,100" fill="none" stroke="#2dd4bf" stroke-width="1.8" stroke-opacity=".8"/>
+        <line x1="410" y1="100" x2="496" y2="100" stroke="#2dd4bf" stroke-width="2" marker-end="url(#mkt-arrow-teal)"/>
+
+        <!-- the rule -->
+        <rect x="500" y="55" width="440" height="90" rx="12" fill="#2dd4bf" fill-opacity=".07" stroke="#2dd4bf"/>
+        <text x="720" y="95" font-size="15" fill="#e6edf3">first match by extension id <tspan font-weight="700" fill="#2dd4bf">wins</tspan></text>
+        <text x="720" y="120" font-size="12" fill="#8b949e">a marketplace of yours can publish its own version of anything</text>
+      </g>
+    </svg>
+  </div>
 
   <p><strong>Your marketplaces take precedence over the public one.</strong> Resolution happens per extension id: the first catalogue in your list that publishes that id is the one that serves it. So you can ship your own build of a public extension, and the clusters that trust your catalogue get yours.</p>
   <p><strong>Listing and hosting are separate.</strong> The manifest only says where a package lives; it does not hold the package. A public manifest pointing at a private registry is a perfectly normal setup — and the one we recommend, because the manifest then carries no secrets at all.</p>
@@ -173,13 +201,16 @@
   <p>It is already configured — there is nothing to add. It lives in the Kwirth repository itself, one manifest per family of extension, and it is the catalogue every Kwirth falls back to.</p>
   <p>What is in it today:</p>
 
-  <div class="arch-box">  <span class="hl2">14</span> plugins      log · metrics · alert · ops · trivy · magnify · topology · fileman
-                censor · pinocchio · mirc · news · echo · provider-debug · sender-debug
-  <span class="hl2"> 9</span> providers    events · metrics · kafka · opentelemetry · syslog · trivy · http-pull-push …
-  <span class="hl2">10</span> senders      email (SMTP / Resend) · Teams · file · console · tee · regex · timed …
-  <span class="hl2"> 6</span> AI toolsets  inventory · describe · observability · metrics · secrets · ops
-  <span class="hl2"> 6</span> themes       <span class="hl2">4</span> homepages    <span class="hl2">5</span> identity providers    <span class="hl2">3</span> logins
-</div>
+  <div class="catalog">
+    <div class="catalog-item"><div class="count">14</div><div class="kind">plugins</div><div class="list">log · metrics · alert · ops · trivy · magnify · topology · fileman · censor · pinocchio · mirc · news · echo · provider-debug · sender-debug</div></div>
+    <div class="catalog-item"><div class="count">9</div><div class="kind">providers</div><div class="list">events · metrics · kafka · opentelemetry · syslog · trivy · http-pull-push …</div></div>
+    <div class="catalog-item"><div class="count">10</div><div class="kind">senders</div><div class="list">email (SMTP / Resend) · Teams · file · console · tee · regex · timed …</div></div>
+    <div class="catalog-item"><div class="count">6</div><div class="kind">AI toolsets</div><div class="list">inventory · describe · observability · metrics · secrets · ops</div></div>
+    <div class="catalog-item"><div class="count">6</div><div class="kind">themes</div></div>
+    <div class="catalog-item"><div class="count">4</div><div class="kind">homepages</div></div>
+    <div class="catalog-item"><div class="count">5</div><div class="kind">identity providers</div></div>
+    <div class="catalog-item"><div class="count">3</div><div class="kind">logins</div></div>
+  </div>
 
   <p>Every entry keeps its <strong>older versions</strong> in the manifest too, so installing is not limited to whatever happens to be newest: the extension manager lets you pick the version, and updating is installing on top without losing the extension's configuration.</p>
 

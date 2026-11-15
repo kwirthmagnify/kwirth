@@ -59,9 +59,12 @@
     .badge-planned { background: rgba(139,148,158,.1); color: var(--muted); border: 1px solid var(--border); }
     .badge-dev { background: rgba(45,212,191,.1); color: var(--teal); border: 1px solid rgba(45,212,191,.2); }
 
-    .arch-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; margin-top: 24px; font-family: var(--mono); font-size: 0.85rem; line-height: 1.8; color: var(--muted); white-space: pre; overflow-x: auto; }
-    .arch-box .hl { color: var(--teal); }
-    .arch-box .hl2 { color: var(--blue); }
+    .diagram { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 24px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .diagram svg { display: block; width: 100%; min-width: 760px; height: auto; }
+    .formula { background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--teal); border-radius: 8px; padding: 18px 22px; margin-top: 20px; }
+    .formula .eq { font-size: 1.05rem; color: var(--text); }
+    .formula .eq strong { color: var(--teal); }
+    .formula .note { font-size: 0.9rem; color: var(--muted); margin-top: 6px; }
 
     .iface-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
     .iface-row { display: flex; gap: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; }
@@ -161,16 +164,50 @@
   <p>An <strong>AI toolset</strong> is a packaged, installable group of those tools. It is an extension like any other: an id, a version, a description, installed and removed from its own manager, hot-loaded with no pod restart.</p>
   <p>Why a group and not individual tools? Because a tool on its own has no useful boundary — <em>delete a pod</em> only makes sense next to <em>list pods</em> and <em>describe pod</em>. Toolsets are <strong>thematic</strong>, and that is what makes them governable: you hand out a theme, not a list of function names. If you ever need to govern one single tool, package a toolset containing exactly that tool — <strong>there is no such thing as a loose tool</strong> in Kwirth.</p>
 
-  <div class="arch-box">  channel (Pinocchio, Censor, yours…)
-       │
-       │  asks the model a question
-       ▼
-  <span class="hl">LLM</span> ──── "I need to look" ────► <span class="hl2">the tools it was GRANTED</span>
-       │                                    │
-       │◄─── result ────────────────────────┘
-       ▼
-  answer with real data
-</div>
+  <div class="diagram">
+    <svg viewBox="0 0 960 270" role="img" aria-label="A channel asks the model a question; the model calls only the tools it was granted, gets the result back, and answers with real data">
+      <defs>
+        <marker id="ai-arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b949e"/></marker>
+        <marker id="ai-arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#58a6ff"/></marker>
+        <marker id="ai-arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2dd4bf"/></marker>
+      </defs>
+      <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" text-anchor="middle">
+        <!-- the channel -->
+        <rect x="20" y="60" width="210" height="80" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="125" y="94" font-size="14" font-weight="700" fill="#e6edf3">AI channel</text>
+        <text x="125" y="116" font-size="12" fill="#8b949e">Pinocchio, Censor, yours…</text>
+
+        <line x1="232" y1="100" x2="316" y2="100" stroke="#8b949e" stroke-width="1.6" marker-end="url(#ai-arrow-muted)"/>
+        <text x="274" y="90" font-size="11" fill="#8b949e">asks</text>
+
+        <!-- the model -->
+        <rect x="320" y="60" width="180" height="80" rx="10" fill="#2dd4bf" fill-opacity=".08" stroke="#2dd4bf"/>
+        <text x="410" y="96" font-size="17" font-weight="700" fill="#2dd4bf">LLM</text>
+        <text x="410" y="118" font-size="11" fill="#8b949e">decides whether to call</text>
+
+        <!-- the tools -->
+        <line x1="502" y1="84" x2="616" y2="84" stroke="#58a6ff" stroke-width="1.8" marker-end="url(#ai-arrow-blue)"/>
+        <text x="559" y="74" font-size="11" fill="#e6edf3">"I need to look"</text>
+        <line x1="616" y1="118" x2="502" y2="118" stroke="#58a6ff" stroke-width="1.8" marker-end="url(#ai-arrow-blue)"/>
+        <text x="559" y="136" font-size="11" fill="#8b949e">result</text>
+
+        <rect x="620" y="20" width="320" height="160" rx="12" fill="#0f1929" stroke="#58a6ff" stroke-opacity=".6"/>
+        <text x="780" y="50" font-size="14" font-weight="700" fill="#58a6ff">the tools it was GRANTED</text>
+        <text x="780" y="72" font-size="11" fill="#8b949e">only the toolsets assigned to this channel</text>
+        <g font-size="12" fill="#e6edf3">
+          <rect x="645" y="92" width="125" height="30" rx="15" fill="#111827" stroke="#1e2d40"/><text x="707" y="112">inventory</text>
+          <rect x="790" y="92" width="125" height="30" rx="15" fill="#111827" stroke="#1e2d40"/><text x="852" y="112">describe</text>
+          <rect x="645" y="132" width="125" height="30" rx="15" fill="#111827" stroke="#1e2d40"/><text x="707" y="152">metrics</text>
+          <rect x="790" y="132" width="125" height="30" rx="15" fill="#111827" stroke="#1e2d40"/><text x="852" y="152">…</text>
+        </g>
+
+        <!-- the answer -->
+        <line x1="410" y1="142" x2="410" y2="200" stroke="#2dd4bf" stroke-width="1.8" marker-end="url(#ai-arrow-teal)"/>
+        <rect x="300" y="204" width="220" height="48" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="410" y="233" font-size="13" fill="#e6edf3">answer with <tspan font-weight="700" fill="#2dd4bf">real data</tspan></text>
+      </g>
+    </svg>
+  </div>
 
   <h2>Two axes, not one</h2>
   <p>Every tool declares two independent things beyond its name and description. Keeping them apart is how dangerous tools stop being treated as harmless:</p>
@@ -227,9 +264,10 @@
   <h2>Where tools are switched on</h2>
   <p>Installing a toolset makes it <strong>available</strong>; it does not give it to anybody. Each AI-enabled channel is assigned an <strong>ordered list</strong> of toolsets, and may switch off individual tools inside them:</p>
 
-  <div class="arch-box">  effective tools = (the assigned toolsets, in order) − (the tools switched off)
-                    with the first toolset that provides a name winning it
-</div>
+  <div class="formula">
+    <div class="eq"><strong>effective tools</strong> = the assigned toolsets, in order − the tools switched off</div>
+    <div class="note">When two toolsets provide the same tool name, the first one assigned wins it.</div>
+  </div>
 
   <p style="margin-top:18px;">So a channel with no configuration has <strong>no</strong> tools at all — an AI channel you just installed can reason and write prose, but it cannot see your cluster until you say so. That is the point: capability is granted, never assumed.</p>
 

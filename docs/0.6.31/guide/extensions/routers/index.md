@@ -9,15 +9,7 @@ firewall or a DMZ. It is a back-end extension: it has **no tab and no panel**. Y
 
 ## How it works
 
-```
-  your browser / your Kwirth's back                your Kwirth                         the other cluster
-  ─────────────────────────────────                ───────────                         ─────────────────
-  cluster-list entry: its REAL url        ┌──────────────────────────────┐
-  + route { router, cluster uid }         │ <root>/router/<id>/...       │   the router     ┌──────────┐
-  ── requests and WebSockets ───────────► │  1. Kwirth authenticates it  │ ───────────────► │  Kwirth  │
-                                          │  2. hands it to the router   │  (its own way)   └──────────┘
-                                          └──────────────────────────────┘
-```
+![How a routed cluster is reached: your Kwirth authenticates the traffic and hands it to the router, which carries it to the other cluster](../../../_media/guide/router-flow.svg)
 
 1. An entry of your **cluster list** keeps the cluster's **real URL** — that is its identity, what you see and
    what is exported — plus a **route**: which router reaches it and the target cluster's **uid**.

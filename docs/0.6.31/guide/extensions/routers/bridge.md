@@ -6,14 +6,7 @@ channels, Magnify — even when one of them is behind NAT or a firewall.
 
 Package: `@jfvilas/kwirth-router-bridge` · source: [github.com/jfvilas/kwirth/routers/bridge](https://github.com/jfvilas/kwirth/tree/master/routers/bridge) · open source.
 
-```
-   Kwirth A (behind NAT)                                      Kwirth B (reachable)
- ┌──────────────────────┐   one outbound WebSocket link   ┌──────────────────────┐
- │ bridge: sibling = B  ├────────────────────────────────►│ bridge (accepts)     │
- │                      │◄═══ A's sessions use B ════════│                      │
- │                      │════ B's sessions use A ═══════►│                      │
- └──────────────────────┘                                 └──────────────────────┘
-```
+![Bridge: Kwirth A, behind NAT, dials one outbound link to Kwirth B, and over it each one uses the other](../../../_media/guide/router-bridge.svg)
 
 ## Typical uses
 

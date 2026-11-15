@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 260" width="960" height="260" role="img" aria-label="Bridge: Kwirth A, behind NAT, opens one outbound WebSocket link to Kwirth B; over that link A's sessions use B and B's sessions use A">
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#58a6ff"/></marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3fb950"/></marker>
+    <marker id="arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2dd4bf"/></marker>
+  </defs>
+  <rect x="0" y="0" width="960" height="260" rx="12" fill="#0d1420"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" text-anchor="middle">
+    <rect x="300" y="96" width="360" height="72" rx="36" fill="#2dd4bf" fill-opacity=".06" stroke="#2dd4bf" stroke-opacity=".6"/>
+    <line x1="306" y1="78" x2="630" y2="78" stroke="#2dd4bf" stroke-width="2" marker-end="url(#arrow-teal)"/>
+    <text x="480" y="64" font-size="12" fill="#2dd4bf">one outbound WebSocket link — A dials B</text>
+    <text x="480" y="120" font-size="12" fill="#58a6ff">A's sessions use B</text>
+    <line x1="345" y1="128" x2="615" y2="128" stroke="#58a6ff" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+    <text x="480" y="160" font-size="12" fill="#3fb950">B's sessions use A</text>
+    <line x1="615" y1="144" x2="345" y2="144" stroke="#3fb950" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+
+    <line x1="322" y1="34" x2="322" y2="232" stroke="#f5820a" stroke-width="2" stroke-dasharray="5 5"/>
+    <text x="322" y="248" font-size="11" fill="#f5820a">NAT / firewall</text>
+
+    <rect x="20" y="50" width="280" height="160" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+    <text x="160" y="88" font-size="14" font-weight="700" fill="#e6edf3">Kwirth A</text>
+    <text x="160" y="110" font-size="12" fill="#8b949e">behind NAT</text>
+    <rect x="50" y="140" width="220" height="44" rx="8" fill="#2dd4bf" fill-opacity=".08" stroke="#2dd4bf"/>
+    <text x="160" y="167" font-size="12" fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">bridge · sibling = B</text>
+
+    <rect x="660" y="50" width="280" height="160" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+    <text x="800" y="88" font-size="14" font-weight="700" fill="#e6edf3">Kwirth B</text>
+    <text x="800" y="110" font-size="12" fill="#8b949e">reachable</text>
+    <rect x="690" y="140" width="220" height="44" rx="8" fill="#2dd4bf" fill-opacity=".08" stroke="#2dd4bf"/>
+    <text x="800" y="167" font-size="12" fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">bridge · accepts</text>
+  </g>
+</svg>
