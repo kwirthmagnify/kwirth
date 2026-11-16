@@ -1,6 +1,6 @@
 import { IInstanceConfig, ISignalMessage, AccessKey, accessKeyDeserialize, EClusterType, BackChannelData, IInstanceMessage, EInstanceMessageType, EInstanceMessageAction, EInstanceMessageFlow, ESignalMessageLevel, IBackChannelObject, IBackChannelRequirements, IChannel, ISenderMessage, ISenderResult, keyAllows } from '@kwirthmagnify/kwirth-common-back'
-import { IChannelInstances } from '@kwirthmagnify/kwirth-common'
-import { ESenderDebugCommand, ESenderDebugKind, ESenderDebugPayload, ISenderDebugCommandMessage, ISenderDebugMessageResponse, ISenderDebugResult, ISenderDebugSendRequest, ISenderDebugSenderInfo } from '../common/SenderDebugTypes'
+import { IChannelInstances, IConfigFieldDef, ISenderConfig } from '@kwirthmagnify/kwirth-common'
+import { ESenderDebugCommand, ESenderDebugKind, ESenderDebugPayload, ISenderDebugCommandMessage, ISenderDebugConfigRequest, ISenderDebugConfigView, ISenderDebugMessageResponse, ISenderDebugResult, ISenderDebugSendRequest, ISenderDebugSenderInfo } from '../common/SenderDebugTypes'
 
 /**
  * The only thing this channel needs from a sender. It is declared here rather than importing ISender,
@@ -42,6 +42,10 @@ interface ISenderRegistry {
     listSenders(): Array<{ id: string, configNames: string[] }>
     /** the installed ones, with their version and configurations. It is what GET /core/senders serves */
     listInstalled?(): Promise<ISenderInstalledMeta[]>
+    /** the fields a sender declares (GET /core/senders/:id/schema). It instantiates a cold sender */
+    getSchema?(senderId: string): IConfigFieldDef[]
+    /** a sender's configurations, with their real values (GET /core/senders/:id/configs) */
+    getConfigs?(senderId: string): ISenderConfig[]
 }
 
 /** What this channel uses from the clusterInfo the core injects into it. */
@@ -95,7 +99,12 @@ class SenderDebugChannel implements IChannel {
         routable: false,
         pauseable: false,       // no hay flujo que pausar: aqui solo se envia cuando se pulsa
         modifiable: false,
-        reconnectable: true,
+        /*
+            false: the instance keeps nothing worth resuming (history and form live in the front), and after a Kwirth
+            restart a RECONNECT points at an instance that no longer exists — the tab stayed a zombie. Not
+            reconnectable, the core answers a drop with a fresh START and the tab comes back with the catalogue.
+        */
+        reconnectable: false,
         metrics: false,
         sources: [EClusterType.KUBERNETES],
         endpoints: [],
@@ -219,10 +228,13 @@ class SenderDebugChannel implements IChannel {
                 await this.sendSenders(socket, instance)
                 return true
             case ESenderDebugCommand.SEND:
-                await this.executeSend(socket, instance, msg.data, false)
+                await this.executeSend(socket, instance, msg.data as ISenderDebugSendRequest | undefined, false)
                 return true
             case ESenderDebugCommand.SENDBATCH:
-                await this.executeSend(socket, instance, msg.data, true)
+                await this.executeSend(socket, instance, msg.data as ISenderDebugSendRequest | undefined, true)
+                return true
+            case ESenderDebugCommand.CONFIG:
+                this.sendConfig(socket, instance, msg.data as ISenderDebugConfigRequest | undefined)
                 return true
             default:
                 this.sendSignalMessage(webSocket, instanceMessage.action, EInstanceMessageFlow.RESPONSE, ESignalMessageLevel.ERROR, instanceMessage.instance, `Unknown command '${String(msg.command)}'`)
@@ -349,6 +361,43 @@ class SenderDebugChannel implements IChannel {
             instance: instance.instanceId,
             payloadType: ESenderDebugPayload.SENDERS,
             senders
+        }
+        socket.ws.send(JSON.stringify(msg))
+    }
+
+    /**
+     * The chosen configuration in view: the sender's fields and what this configuration holds — real values, secrets
+     * included, as every configuration in Kwirth (the tab masks them). A failure comes back as the view's 'error'
+     * rather than as a signal, so the panel can say it in place.
+     */
+    private buildConfigView = (request: ISenderDebugConfigRequest | undefined): ISenderDebugConfigView => {
+        const view: ISenderDebugConfigView = { senderId: request?.senderId ?? '', configName: request?.configName ?? '', fields: [], values: { name: request?.configName ?? '' } }
+        const registry = this.registry()
+        if (!request?.senderId || !request.configName) return { ...view, error: 'No sender or configuration selected' }
+        if (!registry || typeof registry.getSchema !== 'function' || typeof registry.getConfigs !== 'function') {
+            return { ...view, error: 'This Kwirth does not let a channel read sender configurations' }
+        }
+        try {
+            const fields = registry.getSchema(request.senderId) ?? []
+            const values = (registry.getConfigs(request.senderId) ?? []).find(c => c.name === request.configName)
+            if (!values) return { ...view, fields, error: `Sender '${request.senderId}' has no configuration '${request.configName}'` }
+            return { ...view, fields, values }
+        }
+        catch (err) {
+            return { ...view, error: `Sender '${request.senderId}' failed while reading its configuration: ${String(err)}` }
+        }
+    }
+
+    private sendConfig = (socket: ISocketEntry, instance: IInstance, request: ISenderDebugConfigRequest | undefined): void => {
+        const msg: ISenderDebugMessageResponse = {
+            msgtype: 'senderdebugmessageresponse',
+            channel: this.channelId,
+            action: EInstanceMessageAction.COMMAND,
+            flow: EInstanceMessageFlow.RESPONSE,
+            type: EInstanceMessageType.DATA,
+            instance: instance.instanceId,
+            payloadType: ESenderDebugPayload.CONFIG,
+            config: this.buildConfigView(request)
         }
         socket.ws.send(JSON.stringify(msg))
     }
