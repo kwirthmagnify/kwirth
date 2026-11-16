@@ -22,7 +22,8 @@ import {
     EInstanceMessageType,
     ENotifyLevel,
 } from '@kwirthmagnify/kwirth-common'
-import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { ChannelNotStarted, IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { AccountTree } from '@mui/icons-material'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1138,6 +1139,17 @@ export const TopologyTabContent: React.FC<IContentProps> = ({ channelObject }) =
     // ── Render ────────────────────────────────────────────────────────────────
     return (
         <Box ref={rootRef} sx={{ width: '100%', height: `calc(100vh - ${canvasTop}px)`, position: 'relative', bgcolor: '#0a0c14', overflow: 'hidden' }}>
+
+            {/* Not started: the shared not-started screen (icon and name, what starting gives, and a Start button that
+                opens the setup first, like the tab menu's Start), laid OVER the scene. The scene stays mounted
+                underneath: three.js is set up once when this box mounts, so hiding the box would leave it unbuilt
+                when the channel starts. */}
+            {!topologyData.started &&
+                <Stack sx={{ position: 'absolute', inset: 0, zIndex: 20, alignItems: 'center', justifyContent: 'center', px: 4, bgcolor: 'background.default' }}>
+                    <ChannelNotStarted icon={<AccountTree color='primary' />} name='Topology'
+                        hint='Topology not started. Start the channel to see your cluster in 3D.' channelObject={channelObject} />
+                </Stack>
+            }
 
             {/* Three.js canvas */}
             <Box

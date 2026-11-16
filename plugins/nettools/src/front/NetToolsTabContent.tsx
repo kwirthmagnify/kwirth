@@ -1,10 +1,11 @@
 import React from 'react'
 import { Box, Button, Chip, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material'
-import { IContentProps, getDce, hasDce } from '@kwirthmagnify/kwirth-common-front'
+import { ChannelNotStarted, IChannelObject, IContentProps, getDce, hasDce } from '@kwirthmagnify/kwirth-common-front'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { EDnsRecordType, INetToolsFront } from '../common/NetToolsContract'
 import { ENetToolsCommand, INetToolsReading, INetToolsRequest } from '../common/NetToolsMessages'
 import { INetToolsData } from './NetToolsChannel'
+import { NetToolsIcon } from './icons'
 
 /*
     The screen: a host name, three questions, and the answers newest first.
@@ -19,20 +20,22 @@ const RECORD_TYPES: EDnsRecordType[] = [
     EDnsRecordType.NS, EDnsRecordType.PTR, EDnsRecordType.SOA, EDnsRecordType.SRV, EDnsRecordType.TXT
 ]
 
-interface IEmptyStateProps {
-    title: string
-    detail: string
+interface INotStartedProps {
+    channelObject: IChannelObject
 }
 
 /*
-    The empty state, centred both ways.
+    Not started: the shared not-started screen (icon and name, what starting gives, and a Start button that opens
+    the setup first, like the tab menu's Start), centred both ways. The icon is the one the channel draws: the
+    DCE's when it is loaded, this plugin's own otherwise.
 
     ⚠️ The height is MEASURED, not inherited. The container the core gives a tab's content has no defined
     height, so a 'height: 100%' resolves to nothing and the message stays stuck at the top instead of
     centred. Where the box starts is measured and it is given the rest of the viewport — the same
     pattern the other channels use.
 */
-const EmptyState: React.FC<IEmptyStateProps> = ({ title, detail }) => {
+const NotStarted: React.FC<INotStartedProps> = ({ channelObject }) => {
+    const Icon = hasDce('nettools') ? getDce<INetToolsFront>('nettools').Icon : NetToolsIcon
     const ref = React.useRef<HTMLDivElement | null>(null)
     const [top, setTop] = React.useState(0)
     React.useEffect(() => {
@@ -41,22 +44,16 @@ const EmptyState: React.FC<IEmptyStateProps> = ({ title, detail }) => {
     return (
         <Stack
             ref={ref}
-            spacing={1}
             sx={{
                 alignItems: 'center',
                 justifyContent: 'center',
                 flex: 1,
                 width: '100%',
                 minHeight: `calc(100vh - ${top}px - 8px)`,
-                px: 4,
-                textAlign: 'center'
+                px: 4
             }}>
-            <Typography variant='h6' sx={{
-                color: 'text.secondary'
-            }}>{title}</Typography>
-            <Typography variant='body2' sx={{
-                color: 'text.secondary'
-            }}>{detail}</Typography>
+            <ChannelNotStarted icon={<Icon color='primary' />} name='Net Tools'
+                hint='Net Tools not started. Start the channel to resolve names and check ports from inside the cluster.' channelObject={channelObject} />
         </Stack>
     );
 }
@@ -171,8 +168,7 @@ export const NetToolsTabContent: React.FC<IContentProps> = (props) => {
     }
 
     if (!data.started) {
-        return <EmptyState title='Net tools not started'
-            detail='Start the channel (tab settings ⚙ → Start) to resolve names and check ports from inside the cluster.' />
+        return <NotStarted channelObject={props.channelObject} />
     }
 
     // The target is the only thing every question needs; the port only matters to one of them.

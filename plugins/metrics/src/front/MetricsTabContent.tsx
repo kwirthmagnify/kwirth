@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { IMetricsData, EMetricsEventSeverity } from './MetricsData'
-import { Alert, Box, Button, Snackbar, Typography } from '@mui/material'
-import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { Alert, Box, Button, Snackbar, Stack, Typography } from '@mui/material'
+import { BarChart } from '@mui/icons-material'
+import { ChannelNotStarted, IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { IMetricsConfig, IMetricViewConfig, METRICSCOLOURS, MetricsConfig } from './MetricsConfig'
 import { IMetricsInstanceConfig } from '../common/MetricsTypes'
 import { Chart, ISample } from './Chart'
@@ -201,6 +202,20 @@ const MetricsTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 ))}
             </>)
         }
+    }
+
+    /*
+        Not started: the shared not-started screen (icon and name, what starting gives, and a Start button that opens
+        the setup first, like the tab menu's Start). It used to draw an empty box, and the tab stayed blank. The box ref
+        is the charts': only one of the two is mounted at a time, and its measured top gives the height to centre in.
+    */
+    if (!metricsData?.started) {
+        return (
+            <Stack ref={metricsBoxRef} sx={{ alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%', minHeight: `calc(100vh - ${metricsBoxTop}px - 8px)`, px: 4 }}>
+                <ChannelNotStarted icon={<BarChart color='primary' />} name='Metrics'
+                    hint='Metrics not started. Start the channel to chart the metrics of the objects you selected.' channelObject={props.channelObject} />
+            </Stack>
+        )
     }
 
     return (

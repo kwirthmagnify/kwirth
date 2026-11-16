@@ -54,6 +54,7 @@ export interface ITopologyInfoResult {
 
 export interface ITopologyData {
     nodes:        Map<string, ITopologyNode>
+    started:      boolean       // the channel is running: without it the tab shows the not-started screen
     loading:      boolean
     error:        string | undefined
     lastUpdated:  number
@@ -63,6 +64,7 @@ export interface ITopologyData {
 
 export class TopologyData implements ITopologyData {
     nodes       = new Map<string, ITopologyNode>()
+    started     = false
     loading     = false
     error       = undefined
     lastUpdated = 0

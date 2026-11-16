@@ -449,6 +449,7 @@ export class TopologyChannel implements IChannel {
     startChannel(channelObject: IChannelObject): boolean {
         const data: ITopologyData = channelObject.data
         data.nodes.clear()
+        data.started = true
         data.loading = true
         data.error   = undefined
         data.lastUpdated = 0
@@ -460,6 +461,7 @@ export class TopologyChannel implements IChannel {
 
     stopChannel(channelObject: IChannelObject): boolean {
         const data: ITopologyData = channelObject.data
+        data.started = false
         data.loading = false
         return true
     }
