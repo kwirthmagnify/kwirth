@@ -40,6 +40,7 @@
         "excubitor": "../plugins/excubitor/docs/",
         "agora": "../plugins/agora/docs/",
         "specula": "../plugins/specula/docs/",
+        "ianus": "../plugins/ianus/docs/",
         "aws": "../providers/aws/docs/",
         "aws-serverless": "../aitoolsets/aws-serverless/docs/",
         "aws-serverless-ops": "../aitoolsets/aws-serverless-ops/docs/"
