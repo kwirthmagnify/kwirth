@@ -95,3 +95,13 @@ Y Magnify usa del core:
 **Backlog del plugin** (anotado en G2): el harness solo cubre el `USAGE` y los eventos (24,7 % de líneas); los
 comandos del back (listas, apply, delete, operaciones de nodo) no tienen tests. `cron-parser` arrastra luxon
 (~380 KB sin minificar) solo para la próxima ejecución de un CronJob.
+
+**Volumen del socket** (anotado 2026-11-16, QA de IRIA Ianus): con un EKS real, la sesión de Magnify pasa
+**~15 MB al abrir y más de 100 MB en menos de dos minutos** (medido en el panel de Ianus: 108 MB en 1 min 48 s,
+~450 KB por frame). Por un cluster remoto es mucho: todo eso cruza el túnel y satura el enlace (fue lo que
+destapó el keepalive del core que cortaba enlaces sanos). Mirar si Magnify reenvía objetos **completos** en cada
+cambio, o listas enteras, en vez de solo lo que cambia.
+
+**Resuelto en 0.3.4** (2026-11-16): las ventanas externas no cerraban su socket al cerrarse; cerrar o
+minimizar tardaba tras volver a montarse Magnify; las ventanas copiaban `clusterUrl` (con el ticket de ruta de
+ese momento); y la pantalla de canal sin arrancar es la estándar (`ChannelNotStarted`).
