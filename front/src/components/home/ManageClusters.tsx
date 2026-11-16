@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react'
 import { useEscapeToClose } from '../../tools/useKeyboard'
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemButton, MenuItem, Select, Stack, Switch, TextField, Typography } from '@mui/material'
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, List, ListItem, ListItemButton, MenuItem, Select, Stack, Switch, TextField, Typography } from '@mui/material'
+import { Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutlined'
 import ErrorOutline from '@mui/icons-material/ErrorOutlined'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
@@ -44,6 +45,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     const [routeResolver, setRouteResolver] = useState<string>(DIRECT_ROUTE)
     const [routeUid, setRouteUid] = useState<string>('')
     const [inUse, setInUse] = useState<boolean>(true)
+    const [keyRevealed, setKeyRevealed] = useState<boolean>(false)     // the API key is a secret: masked, with the eye
     const [msgBox, setMsgBox] = useState(<></>)
     const [refresh, setRefresh] = useState(0)
     const [testResult, setTestResult] = useState<ITestResult | null>(null)
@@ -58,6 +60,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         setRouteResolver(cluster.route?.resolver ?? DIRECT_ROUTE)
         setRouteUid(cluster.route?.clusterUid ?? '')
         setInUse(cluster.inUse !== false)
+        setKeyRevealed(false)              // another entry: its key starts masked
     }
 
     // The route being edited: none for a direct entry.
@@ -71,6 +74,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         setRouteResolver(DIRECT_ROUTE)
         setRouteUid('')
         setInUse(true)
+        setKeyRevealed(false)
     }
 
     const onClickSave = async () => {
@@ -227,7 +231,14 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                 <TextField value={name} onChange={(e) => setName(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='Name'></TextField>
                                 <TextField value={selectedCluster?.id || ''} disabled variant='standard' label='Id'></TextField>
                                 <TextField value={url} onChange={(e) => setUrl(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='URL'></TextField>
-                                <TextField value={accessKey} onChange={(e) => setAccessKey(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='API Key'></TextField>
+                                <TextField value={accessKey} onChange={(e) => setAccessKey(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='API Key'
+                                    type={keyRevealed ? 'text' : 'password'}
+                                    slotProps={{ input: { endAdornment: (
+                                        <InputAdornment position='end'>
+                                            <IconButton size='small' onClick={() => setKeyRevealed(r => !r)} title={keyRevealed ? 'Hide' : 'Show'} aria-label={keyRevealed ? 'Hide API key' : 'Show API key'}>
+                                                { keyRevealed ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' /> }
+                                            </IconButton>
+                                        </InputAdornment>) } }}></TextField>
                                 {/*
                                     How this core reaches the cluster: directly, or through one of its installed ROUTERS.
                                     Always visible; disabled when there is nothing to choose.
