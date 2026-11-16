@@ -1,4 +1,4 @@
-import { test, expect, Page, APIRequestContext } from '@playwright/test'
+import { test, expect, Page, APIRequestContext, WebSocket } from '@playwright/test'
 import { login, openMagnify } from './helpers'
 
 /**
@@ -19,6 +19,7 @@ let page: Page
 let api: APIRequestContext
 let backUrl = ''
 let authorization = ''
+let metricsSocket: WebSocket | undefined      // the socket of the external window the Metrics test opens
 
 test.beforeAll(async ({ browser, playwright }) => {
     page = await browser.newPage()
@@ -101,12 +102,33 @@ test('🔴 a channel opens inside Magnify on a pod (Metrics), in its own window 
     await page.locator('.file-item-container, [class*="file-item"]').filter({ visible: true }).first().click()
     const windowsBefore = await page.locator('.MuiDialog-root').count()
 
+    // the window opens its own socket: kept for the next test, which closes the window
+    const socket = page.waitForEvent('websocket', { timeout: 20000 })
     await page.getByRole('button', { name: 'Metrics', exact: true }).filter({ visible: true }).first().click()
     // a pod with several containers asks which one: the first offered is taken
     const containerMenu = page.getByRole('menuitem').filter({ visible: true })
     if (await containerMenu.count() > 0) await containerMenu.first().click()
 
     await expect.poll(() => page.locator('.MuiDialog-root').count(), { timeout: 20000 }).toBeGreaterThan(windowsBefore)
+    metricsSocket = await socket
     await page.waitForTimeout(3000)
     expect(errors, errors.join('\n')).toEqual([])
+})
+
+/*
+    🔴 Closing an external window closes its socket. It did not: the window left the list and its channel kept
+    streaming into nothing until the page was reloaded (seen through IRIA Ianus, whose panel lists the live
+    sessions), and every message still re-rendered the whole of Magnify.
+*/
+test('🔴 closing the channel\'s window closes its socket', async () => {
+    test.skip(!metricsSocket, 'no external window was opened (the metrics plugin is not installed)')
+    expect(metricsSocket!.isClosed()).toBe(false)
+    const windows = page.locator('.MuiDialog-root')
+    const before = await windows.count()
+    // listened BEFORE the click: the close can come before a wait set up after it, and then it never ends
+    const closed = metricsSocket!.waitForEvent('close', { timeout: 15000 })
+    await windows.last().locator('[data-testid="CloseIcon"]').last().click()
+    await closed
+    expect(metricsSocket!.isClosed()).toBe(true)
+    await expect(windows).toHaveCount(before - 1)
 })
