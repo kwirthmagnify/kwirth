@@ -2,10 +2,9 @@
 import { Box, Button, Card, CardContent, CardHeader, IconButton, ListItem, ListItemButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { IOpsData, IScopedObject, OpsData } from './OpsData'
 import { IInstanceConfig, EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigObject, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
-import { IContentProps, MsgBoxButtons, MsgBoxOk, MsgBoxYesNo } from '@kwirthmagnify/kwirth-common-front'
+import { IContentProps, JsonBlock, MsgBoxButtons, MsgBoxOk, MsgBoxYesNo } from '@kwirthmagnify/kwirth-common-front'
 import { v4 as uuid } from 'uuid'
 import { Delete, Home, MoreVert, RestartAlt, Terminal } from '@mui/icons-material'
-import { defaultStyles, JsonView } from 'react-json-view-lite'
 import { MenuObject, EMenuObjectOption } from './MenuObject'
 import { SelectTerminal } from './terminal/SelectTerminal'
 import { TerminalInstance } from './terminal/TerminalInstance'
@@ -65,7 +64,7 @@ const OpsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
 
     const onAsyncData = (data: any) => {
         if (data.event === 'describe') {
-            const content = <Box sx={{ width: '600px', height: '400px', overflow: 'auto' }}><JsonView data={data.data} style={defaultStyles} /></Box>
+            const content = <Box sx={{ width: '600px', height: '400px', overflow: 'auto' }}><JsonBlock value={data.data} /></Box>
             setMsgBox(MsgBoxOk('Object info', content, setMsgBox))
         }
     }
@@ -209,9 +208,8 @@ const OpsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const deleteSession = (key: string) => {
         let manterm = opsData.terminalManager.terminals.get(key)
         if (manterm) {
-            manterm.term.dispose()
+            opsData.terminalManager.destroyTerminal(key)     // closes its shell socket too
             if (opsData.terminalManager.onClose) opsData.terminalManager.onClose(key)
-            opsData.terminalManager.terminals.delete(key)
             opsData.selectedTerminal = undefined
             setSelectedTerminal(undefined)
             setRefresh(Math.random())
