@@ -8,6 +8,12 @@ export class Cluster {
     public url: string = ''             // ALWAYS the real url (persisted, shown). To connect: clusterBaseUrl() in tools/ClusterRouting
     public accessString: string = ''
     public route?: IClusterRoute        // set on PROXIED entries: how this core reaches a cluster it cannot reach directly
+    /*
+        The user's switch in Manage cluster list ('Enabled'). false = kept in the list but not used: not in the resource
+        selector, not given to extensions, not read. Absent = in use, so every saved entry keeps working. Not 'enabled':
+        that one is runtime state (whether the cluster answered), set by readClusterInfo.
+    */
+    public inUse?: boolean
     public home: boolean|undefined = false
     public inCluster: boolean = false
     public metricsList: Map<string,MetricDefinition> = new Map()  //+++ review if needs to be moved to metrics channel
