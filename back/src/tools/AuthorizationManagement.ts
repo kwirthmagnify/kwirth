@@ -259,7 +259,14 @@ export class AuthorizationManagement {
             // we return the higher scope from all valid scopes
             for (let sc of scopes.split(',')) {
                 let scLevel = channels.get(instanceConfigChannel)!.getChannelScopeLevel(sc)
-                if (scLevel<0) logWarning(ELogComponent.AUTH, `***************** Inexistent scope '${sc}' on channel '${instanceConfigChannel}' *****************`)
+                /*
+                    A key carries the scopes of every channel it is good for ('excubitor$polview', 'agora$read'…):
+                    one of ANOTHER channel is unknown to this one by design, and saying so for every object and
+                    every scope flooded the log. Only an unknown scope that is this channel's own, or has no
+                    channel at all, is worth a warning: that one is a typo or a channel that no longer declares it.
+                */
+                const owner = sc.includes('$') ? sc.split('$')[0] : undefined
+                if (scLevel<0 && (!owner || owner === instanceConfigChannel)) logWarning(ELogComponent.AUTH, `***************** Inexistent scope '${sc}' on channel '${instanceConfigChannel}' *****************`)
                 if (scLevel>higherScope) higherScope = scLevel
             }
         }
