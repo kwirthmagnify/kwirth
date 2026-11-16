@@ -11,6 +11,25 @@ del pluter de pago queda reorientado en su repo; se declara router cuando lleve 
 
 ## Backlog
 
+- **bridge: bucle de enlace duplicado** (visto 2026‑11‑16, QA de Ianus, log del dev): k3d y AKS se marcan el uno
+  al otro a la vez; AKS cierra uno con `4409 duplicate link: the one opened by the lower cluster uid stays` y k3d
+  vuelve a marcar a los ~11 s, una y otra vez. La regla de desempate existe pero el lado que pierde no deja de
+  marcar. Es de **bridge** (su plan: `jfvilas/kwirth/routers/bridge/docs/plan`), no del core: anotado aquí para
+  que no se pierda hasta su sesión.
+
+- ✅ **Hecho 2026‑11‑16 — el ticket de ruta caducaba dentro de las URLs de los tabs**. `channelObject.clusterUrl`
+  se calculaba una vez, al crear el tab, con el ticket de ese momento (10 min de vida): lo que un tab abría DESPUÉS
+  (una segunda shell de ops, una ventana de Magnify, el `fetch` de un diálogo, la reconexión del socket) salía
+  rechazado con 4401. Ahora es un getter (`bindClusterUrl`, front) que lee el ticket vigente; los bucles de
+  reconexión la leen en cada intento. El ticket sigue durando 10 min (alargarlo dejaba útil una URL leída en
+  los logs del ingress mientras durase la sesión). Revisadas las copias en todos los plugins: Magnify (ventanas
+  externas) e Iter (clave de caché) dejaron de copiarla. Documentado en `developing/front.md`.
+
+- ✅ **Hecho 2026‑11‑16 — el keepalive del canal remoto cortaba enlaces sanos bajo carga**. Si el pong no volvía
+  antes del siguiente tick (30 s), daba el socket por muerto; con Magnify pasando ~100 MB por un enlace de Ianus
+  el pong esperaba detrás de los datos y el enlace (y todas sus sesiones) caía cada pocos minutos. Ahora
+  cualquier mensaje recibido cuenta como señal de vida (`RemoteChannel`), con test.
+
 - **Indicador directo / ruteado en el selector de clusters** (pedido 2026‑11‑15). En la lista de clusters del
   *Resource selector* (y donde se elige cluster), cada entrada muestra si se llega **directamente** o **por un
   router**, y por cuál (`bridge`, `ianus`…); y si su router no está instalado o no ha arrancado, que se vea ahí
