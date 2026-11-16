@@ -69,6 +69,25 @@ const UNRESOLVED_ROUTE_URL_PREFIX = 'kwirth-unresolved-route://'
 export const clusterBaseUrl = (cluster: Cluster): string =>
     resolvedClusterUrl(cluster) ?? `${UNRESOLVED_ROUTE_URL_PREFIX}${encodeURIComponent(cluster.route?.resolver ?? '')}`
 
+/*
+    channelObject.clusterUrl, LIVE. It used to be the string clusterBaseUrl gave when the tab was created, and for
+    a proxied entry that string carries the session's route ticket of THAT moment, which expires in 10 minutes:
+    whatever a tab opened later through it (a second shell in Ops, a window in Magnify, a dialog's fetch, the
+    reconnection of the tab's own socket) was refused with 4401. Read now, it carries the ticket the front holds
+    NOW (renewed in the background), so every plugin gets a working url without changing a line. For an entry
+    without a route it is exactly the url it always was.
+    A value written to it is kept (pinned) instead of failing: nothing in the core writes it but this.
+*/
+export const bindClusterUrl = (target: { clusterUrl?: string }, cluster: Cluster): void => {
+    let pinned: string | undefined
+    Object.defineProperty(target, 'clusterUrl', {
+        configurable: true,
+        enumerable: true,
+        get: () => pinned ?? clusterBaseUrl(cluster),
+        set: (value: string | undefined) => { pinned = value }
+    })
+}
+
 // Why a proxied entry cannot be used, for the user.
 export const unresolvedRouteMessage = (cluster: Cluster): string =>
     routeAwaitsTicket(cluster)
