@@ -2,6 +2,5 @@ node_modules/
 src-tauri/target/
 src-tauri/gen/
 src-tauri/binaries/
-src-tauri/icons/source.png
 src-tauri/resources/kwirth-transparent.png
 src-tauri/resources/front/
