@@ -30,4 +30,8 @@ Opening a shell starts a full TTY (`/bin/sh`) inside the target container. Multi
 | F12 | Return to the Ops view (sessions stay alive) |
 | Ctrl-D / `exit` | End the current session |
 
+A session also ends when you delete it from the session list (its bin) and when you **stop the channel or
+remove the Ops tab**: the shell's connection is closed and Kwirth closes the shell's input, which ends it
+as a Ctrl-D would. A command still running in the background of that shell is not killed.
+
 The Ops plugin requires cluster-scope access to restart namespaces. For read-only operations (`describe`) a lower-privilege key is sufficient.
