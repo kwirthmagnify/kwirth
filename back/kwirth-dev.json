@@ -7,8 +7,7 @@
         "specula": "../plugins/specula/dist",
         "ianus": "../plugins/ianus/dist",
         "sender-debug": "../plugins/sender-debug/dist",
-        "provider-debug": "../plugins/provider-debug/dist",
-        "magnify": "../plugins/magnify/dist"
+        "provider-debug": "../plugins/provider-debug/dist"
     },
     "providers": {
         "agent-metrics": "../providers/agent-metrics/dist",
