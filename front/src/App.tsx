@@ -963,7 +963,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
 
     useEffect( () => {
         clustersRef.current = clusters
-        const summary = clusters.map(c => ({ name: c.name, home: !!c.home, reachable: c.home ? true : !!c.enabled, resources: clusterResources(c.accessString) }))
+        // the clusters a tab is told about: the ones the user switched off are not among them
+        const summary = clusters.filter(c => c.inUse !== false).map(c => ({ name: c.name, home: !!c.home, reachable: c.home ? true : !!c.enabled, resources: clusterResources(c.accessString) }))
         console.log(`[fedtrace][clusters] summary pushed to tabs: ${JSON.stringify(summary)} (total=${clusters.length}, home=${clusters.filter(c => c.home).length})`)
         tabs.current.forEach(tab => {
             if (tab.channel.requirements.clusterManagement) tab.channelObject.clusters = summary
@@ -1079,11 +1080,11 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         const refresh = () => setChannelMessageAction({ action: EChannelRefreshAction.REFRESH })
         startRouteTickets(home, () => {
             for (const c of clustersRef.current) {
-                if (c.route && !c.enabled) readClusterInfo(c, notify).then(refresh)
+                if (c.route && !c.enabled && c.inUse !== false) readClusterInfo(c, notify).then(refresh)
             }
         })
         for (const c of clustersRef.current) {
-            if (c.route) readClusterInfo(c, notify).then(refresh)
+            if (c.route && c.inUse !== false) readClusterInfo(c, notify).then(refresh)
         }
     }
 
@@ -1168,7 +1169,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             }
             else clustersLoadedRef.current = true
 
-            for (let cluster of clusterList) {
+            // an entry the user switched off (inUse false) is not read: nothing reaches out to a cluster nobody uses
+            for (let cluster of clusterList.filter(c => c.inUse !== false)) {
                 readClusterInfo(cluster, notify).then( () => { setChannelMessageAction({action : EChannelRefreshAction.REFRESH}) })
             }
             clusterList.push(srcCluster)
@@ -1424,7 +1426,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             }
         }
         if (newTab.channel.requirements.clusterManagement) {
-            newTab.channelObject.clusters = clustersRef.current.map(c => ({ name: c.name, home: !!c.home, reachable: c.home ? true : !!c.enabled, resources: clusterResources(c.accessString) }))
+            newTab.channelObject.clusters = clustersRef.current.filter(c => c.inUse !== false).map(c => ({ name: c.name, home: !!c.home, reachable: c.home ? true : !!c.enabled, resources: clusterResources(c.accessString) }))
             newTab.channelObject.selectedClusterName = selectedClusterName
             newTab.channelObject.openClusterManager = () => setShowManageClusters(true)
             newTab.channelObject.selectCluster = (clusterName: string) => {
@@ -2991,7 +2993,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
 
                 { !fullscreenTab && 
-                    <ResourceSelector clusters={clusters} backChannels={backChannels} onAdd={(res) => onResourceSelectorAdd(res, false, undefined)} onChangeCluster={onChangeCluster} sx={{ mt:1, ml:1 }} tabs={tabs.current} data-refresh={channelMessageAction} resourceSelected={resourceSelected} frontChannels={frontChannels} enabledChannels={user?.enabledChannels}/>
+                    <ResourceSelector clusters={clusters.filter(c => c.inUse !== false)} backChannels={backChannels} onAdd={(res) => onResourceSelectorAdd(res, false, undefined)} onChangeCluster={onChangeCluster} sx={{ mt:1, ml:1 }} tabs={tabs.current} data-refresh={channelMessageAction} resourceSelected={resourceSelected} frontChannels={frontChannels} enabledChannels={user?.enabledChannels}/>
                 }
                 
                 <Stack
