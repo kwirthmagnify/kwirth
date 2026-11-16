@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { ILogLine, ILogData, LogData } from './LogData'
 import { Box, Card, CardContent, CardHeader, InputAdornment, Stack, TextField, Typography, useTheme } from '@mui/material'
-import { IContentProps, cleanANSI } from '@kwirthmagnify/kwirth-common-front'
-import { Error, Warning } from '@mui/icons-material'
+import { ChannelNotStarted, IContentProps, cleanANSI } from '@kwirthmagnify/kwirth-common-front'
+import { Error, Subject, Warning } from '@mui/icons-material'
 import { ILogConfig, LogConfig } from './LogConfig'
 
 const LogTabContent: React.FC<IContentProps> = (props: IContentProps) => {
@@ -72,6 +72,20 @@ const LogTabContent: React.FC<IContentProps> = (props: IContentProps) => {
             const { scrollTop, scrollHeight, clientHeight } = logBoxRef.current
             setIsAtBottom(scrollHeight - scrollTop - clientHeight < 25)
         }
+    }
+
+    /*
+        Not started: the shared not-started screen (icon and name, what starting gives, and a Start button that opens
+        the setup first, like the tab menu's Start). It used to draw nothing, and the tab stayed blank. The box ref is
+        the log's: only one of the two is mounted at a time, and its measured top gives the height to centre in.
+    */
+    if (!logData.started) {
+        return (
+            <Stack ref={logBoxRef} sx={{ alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%', minHeight: `calc(100vh - ${logBoxTop}px - 8px)`, px: 4 }}>
+                <ChannelNotStarted icon={<Subject color='primary' />} name='Log'
+                    hint='Log not started. Start the channel to stream the logs of the objects you selected.' channelObject={props.channelObject} />
+            </Stack>
+        )
     }
 
     return (

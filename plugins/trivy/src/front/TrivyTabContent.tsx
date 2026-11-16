@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { Box, Button, Stack, Typography, TextField, InputAdornment, Card, ToggleButton, ToggleButtonGroup, Tooltip, useTheme } from '@mui/material'
-import { Search as SearchIcon } from '@mui/icons-material'
+import { Search as SearchIcon, VerifiedUser } from '@mui/icons-material'
 import { TReportType } from './TrivyCommon'
-import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { ChannelNotStarted, IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { IAsset, ITrivyData, TRIVY_API_AUDIT_PLURAL, TRIVY_API_EXPOSED_PLURAL, TRIVY_API_SBOM_PLURAL, TRIVY_API_VULN_PLURAL } from './TrivyData'
 import { TrivyTabContentAssetDetails } from './components/TrivyTabContentAssetDetails'
 import { getTotalIssues, TrivyTabContentAsset } from './components/TrivyTabContentAsset'
@@ -70,6 +70,20 @@ const TrivyTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     })
 
     const rescanAsset = (asset: IAsset) => { setAssetList(prev => prev.filter(a => a.namespace !== asset.namespace || a.name !== asset.name || a.container !== asset.container)) }
+
+    /*
+        Not started: the shared not-started screen (icon and name, what starting gives, and a Start button that opens
+        the setup first, like the tab menu's Start). It used to draw only an empty box, and the tab stayed blank. The
+        box ref is the asset list's: only one of the two is mounted at a time, and its measured top gives the height.
+    */
+    if (!trivyData.started) {
+        return (
+            <Stack ref={trivyBoxRef} sx={{ alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%', minHeight: `calc(100vh - ${trivyBoxTop}px - 8px)`, px: 4 }}>
+                <ChannelNotStarted icon={<VerifiedUser color='primary' />} name='Trivy'
+                    hint='Trivy not started. Start the channel to see the vulnerabilities, audits, exposed secrets and SBOMs of your workloads.' channelObject={props.channelObject} />
+            </Stack>
+        )
+    }
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 1, color: 'text.primary' }}>

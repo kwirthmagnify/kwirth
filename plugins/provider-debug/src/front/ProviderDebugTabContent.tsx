@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Card, CardContent, CardHeader, Chip, IconButton, InputAdornment, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material'
-import { IContentProps, JsonBlock } from '@kwirthmagnify/kwirth-common-front'
-import { ArrowDownward, ArrowUpward, Check, Close, ContentCopy, DeleteSweep, ExpandLess, ExpandMore, Info, Search } from '@mui/icons-material'
+import { ChannelNotStarted, IContentProps, JsonBlock } from '@kwirthmagnify/kwirth-common-front'
+import { ArrowDownward, ArrowUpward, Check, Close, ContentCopy, DataObjectOutlined, DeleteSweep, ExpandLess, ExpandMore, Info, Search } from '@mui/icons-material'
 import { IProviderDebugData } from './ProviderDebugData'
 import { IProviderDebugConfig } from './ProviderDebugConfig'
 import { IProviderDebugEvent, IProviderDebugInstanceConfig } from '../common/ProviderDebugTypes'
@@ -217,25 +217,16 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
         return (
             <Stack
                 ref={boxRef}
-                spacing={1}
                 sx={{
                     alignItems: 'center',
                     justifyContent: 'center',
                     flex: 1,
                     width: '100%',
                     minHeight: `calc(100vh - ${boxTop}px - 8px)`,
-                    px: 4,
-                    textAlign: 'center'
+                    px: 4
                 }}>
-                <Typography variant='h6' sx={{
-                    color: 'text.secondary'
-                }}>Provider Debug not started</Typography>
-                <Typography
-                    variant='body2'
-                    sx={{
-                        color: 'text.secondary',
-                        maxWidth: 480
-                    }}>Start the channel (tab settings ⚙ → Start) to subscribe to a provider and watch its raw events.</Typography>
+                <ChannelNotStarted icon={<DataObjectOutlined color='primary' />} name='Provider Debug'
+                    hint='Provider Debug not started. Start the channel to subscribe to a provider and watch its raw events.' channelObject={props.channelObject} />
             </Stack>
         );
     }

@@ -1,7 +1,7 @@
 ﻿import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
 import { IPinocchioData } from './PinocchioData'
-import { Info } from '@mui/icons-material'
+import { AutoFixHigh, Info } from '@mui/icons-material'
 import { EPinocchioCommand, IAnalysis, IConfigTrigger, IFinding, IMessage, IPinocchioConfig, IPinocchioMessage, IPlaygroundState } from './PinocchioConfig'
 import { PinocchioConfigTrigger } from './PinocchioConfigTrigger'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
@@ -11,7 +11,7 @@ import React from 'react'
 import { MenuConfig } from './MenuConfig'
 import { PinocchioImportExport } from './PinocchioImportExport'
 import { PinocchioPlayground } from './PinocchioPlayground'
-import { IChannelObject, MarkdownViewer, HelpButton as _HelpButton, DialogTitleHelp as _DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
+import { ChannelNotStarted, IChannelObject, MarkdownViewer, HelpButton as _HelpButton, DialogTitleHelp as _DialogTitleHelp } from '@kwirthmagnify/kwirth-common-front'
 import { docsUrl } from './utils'
 
 // Guards: an older host may not export these components yet. Without them, a missing export renders
@@ -395,26 +395,20 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     }
 
-    // Channel not started: an empty state CENTRED vertically (the same pattern as Agora and Iter).
-    // Before, nothing was drawn and the tab stayed blank, without telling the user to start the channel.
+    // Channel not started: the shared not-started screen (icon and name, what starting gives, and a Start button
+    // that opens the setup first, like the tab menu's Start), CENTRED vertically in the measured height.
     if (!pinocchioData.started)
         return (
             <Stack
                 ref={emptyRef}
-                spacing={1}
                 sx={{
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: `calc(100vh - ${emptyTop}px - 8px)`,
-                    px: 4,
-                    textAlign: 'center'
+                    px: 4
                 }}>
-                <Typography variant='h6' sx={{
-                    color: 'text.secondary'
-                }}>Pinocchio not started</Typography>
-                <Typography variant='body2' sx={{
-                    color: 'text.secondary'
-                }}>Start the channel (tab settings ⚙ → Start) to see the analyses.</Typography>
+                <ChannelNotStarted icon={<AutoFixHigh color='primary' />} name='Pinocchio'
+                    hint='Pinocchio not started. Start the channel to see the analyses.' channelObject={props.channelObject} />
             </Stack>
         );
 

@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, CardHeader, Chip, Collapse, Divider, FormControl, FormControlLabel, IconButton, List, ListItem, ListItemIcon, ListItemText, Menu, MenuItem, Select, Stack, Switch, Tab, Tabs, Tooltip, Typography } from '@mui/material'
 import { Add as AddIcon, ArrowDownward, ArrowUpward, Delete as DeleteIcon, DeleteSweep, Download as DownloadIcon, ExpandLess, ExpandMore, Key, Memory, MoreVert as MoreVertIcon, Settings, SmartToy, ImportExport as SwapVert } from '@mui/icons-material'
-import { cleanANSI, IContentProps, MiniGauge } from '@kwirthmagnify/kwirth-common-front'
+import { ChannelNotStarted, cleanANSI, IContentProps, MiniGauge } from '@kwirthmagnify/kwirth-common-front'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
 import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
@@ -9,6 +9,7 @@ import { ICensorData, ICensorUiState, IRunnerData, ECensorTab } from './CensorDa
 import { ECensorAssetState, ECensorCommand, ERegexOrigin } from './CensorConfig'
 import { CensorConfigDialog } from './CensorConfigDialog'
 import { CensorAddRegexDialog } from './CensorAddRegexDialog'
+import { CensorStruckText } from './icons'
 
 // The stream state is drawn on top of the inventory: a container matching the configuration stays
 // listed even when its stream is stopped, reconnecting or down
@@ -222,6 +223,21 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     }
 
     const panelHeight = `calc(100vh - ${contentTop}px - 16px)`
+
+    /*
+        Not started: the shared not-started screen (icon and name, what starting gives, and a Start button that opens
+        the setup first, like the tab menu's Start). It used to draw nothing, and the tab stayed blank. The content ref
+        is the panel's: only one of the two is mounted at a time, and its measured top gives the height to centre in.
+    */
+    if (!data.started) {
+        return (
+            <Stack ref={contentRef} sx={{ alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%', minHeight: `calc(100vh - ${contentTop}px - 8px)`, px: 4 }}>
+                <ChannelNotStarted icon={<CensorStruckText color='primary' />} name='Censor'
+                    hint='Censor not started. Start the channel to have an LLM read the logs and filter out the noise.' channelObject={props.channelObject} />
+            </Stack>
+        )
+    }
+
     return (
         <>
             {data.started &&

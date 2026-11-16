@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Avatar, Badge, Box, Chip, Divider, IconButton, List, ListItemButton, ListItemText, Stack, TextField, Typography } from '@mui/material'
-import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { ChannelNotStarted, IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { Check, DeleteSweep, DoneAll, Schedule, Send } from '@mui/icons-material'
 import { IMircData } from './MircData'
+import { MircTalkingHead } from './icons'
 import { IUiMessage } from './MircClient'
 
 const fmtTime = (iso: string): string => {
@@ -46,21 +47,12 @@ export const MircTabContent: React.FC<IContentProps> = (props: IContentProps) =>
     }, [lastIncomingMsgId])
 
     if (!client || !data.started) {
-        // Vertically-centered empty state, the same as the other channels' (Agora, Situs): containerRef-measured height
+        // The shared not-started screen (icon and name, what starting gives, and a Start button that opens the
+        // setup first, like the tab menu's Start), vertically centred in the containerRef-measured height
         return (
-            <Box ref={containerRef} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', height: `calc(100vh - ${containerTop}px - 8px)`, px: 4 }}>
-                <Typography
-                    variant='h6'
-                    sx={{
-                        color: 'text.secondary',
-                        mb: 1
-                    }}>mIRC not started</Typography>
-                <Typography
-                    variant='body2'
-                    sx={{
-                        color: 'text.secondary',
-                        maxWidth: 480
-                    }}>Start the channel (tab settings ⚙ → Start) and choose your nick to start chatting.</Typography>
+            <Box ref={containerRef} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: `calc(100vh - ${containerTop}px - 8px)`, px: 4 }}>
+                <ChannelNotStarted icon={<MircTalkingHead color='primary' />} name='mIRC'
+                    hint='mIRC not started. Start the channel and choose your nick to start chatting.' channelObject={props.channelObject} />
             </Box>
         );
     }

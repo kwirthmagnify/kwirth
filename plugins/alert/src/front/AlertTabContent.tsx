@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { IAlertData, AlertData, FiredAlert } from './AlertData'
 import { Box, Card, CardContent, CardHeader, InputAdornment, Stack, TextField, Typography, useTheme } from '@mui/material'
-import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { ChannelNotStarted, IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { Warning, Error, Info } from '@mui/icons-material'
 import { IAlertConfig, AlertConfig } from './AlertConfig'
 import { EAlertSeverity } from './AlertTypes'
@@ -61,6 +61,20 @@ const AlertTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         if (severity === EAlertSeverity.WARNING) return 'orange'
         if (severity === EAlertSeverity.ERROR) return 'red'
         return theme.palette.text.primary
+    }
+
+    /*
+        Not started: the shared not-started screen (icon and name, what starting gives, and a Start button that opens
+        the setup first, like the tab menu's Start). It used to draw nothing, and the tab stayed blank. The box ref is
+        the alert list's: only one of the two is mounted at a time, and its measured top gives the height to centre in.
+    */
+    if (!alertData.started) {
+        return (
+            <Stack ref={alertBoxRef} sx={{ alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%', minHeight: `calc(100vh - ${alertBoxTop}px - 8px)`, px: 4 }}>
+                <ChannelNotStarted icon={<Warning color='primary' />} name='Alert'
+                    hint='Alert not started. Start the channel to watch the alerts its regex and metric rules fire.' channelObject={props.channelObject} />
+            </Stack>
+        )
     }
 
     return (

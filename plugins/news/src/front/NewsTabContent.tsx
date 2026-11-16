@@ -4,7 +4,8 @@ import { Info } from '@mui/icons-material'
 import { EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
 import { INewsData, INewsItem } from './NewsData'
 import { INewsChannelConfig } from './NewsConfig'
-import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { ChannelNotStarted, IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { Newspaper } from './icons'
 
 export const NewsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const newsData: INewsData = props.channelObject.data
@@ -83,6 +84,20 @@ export const NewsTabContent: React.FC<IContentProps> = (props: IContentProps) =>
         if (props.channelObject.group) resourceParts.push(`groups: ${props.channelObject.group}`)
         if (props.channelObject.pod) resourceParts.push(`pods: ${props.channelObject.pod}`)
         if (props.channelObject.container) resourceParts.push(`containers: ${props.channelObject.container}`)
+    }
+
+    /*
+        Not started: the shared not-started screen (icon and name, what starting gives, and a Start button that opens
+        the setup first, like the tab menu's Start). It used to draw nothing, and the tab stayed blank. The box ref is
+        the news list's: only one of the two is mounted at a time, and its measured top gives the height to centre in.
+    */
+    if (!newsData.started) {
+        return (
+            <Stack ref={newsBoxRef} sx={{ alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%', minHeight: `calc(100vh - ${newsBoxTop}px - 8px)`, px: 4 }}>
+                <ChannelNotStarted icon={<Newspaper color='primary' />} name='News'
+                    hint='News not started. Start the channel to read the Kubernetes and AI news feeds.' channelObject={props.channelObject} />
+            </Stack>
+        )
     }
 
     return (

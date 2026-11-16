@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { IChannelObject, ENotifyLevel, MsgBoxOk } from '@kwirthmagnify/kwirth-common-front'
+import { ChannelNotStarted, IChannelObject, ENotifyLevel, MsgBoxOk } from '@kwirthmagnify/kwirth-common-front'
 import { EFilemanCommand, IFilemanMessage, IFilemanData } from './FilemanData'
-import { Box } from '@mui/material'
+import { Box, Stack } from '@mui/material'
+import { FolderCopy } from '@mui/icons-material'
 import { AccountTree, Edit, Info, Visibility, DataObjectOutlined } from '@kwirthmagnify/kwirth-common-front/icons'
 import { HexagonOutlined } from './icons'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
@@ -275,6 +276,20 @@ const FilemanTabContent: React.FC<IContentProps> = (props: IContentProps) => {
 
     const onFileUploadError = (response: unknown) => {
         uploadErrorReason.current = typeof response === 'string' ? response.trim() : ''
+    }
+
+    /*
+        Not started: the shared not-started screen (icon and name, what starting gives, and a Start button that opens
+        the setup first, like the tab menu's Start). It used to draw nothing, and the tab stayed blank. The box ref is
+        the file manager's: only one of the two is mounted at a time, and its measured top gives the height to centre in.
+    */
+    if (!filemanData.started) {
+        return (
+            <Stack ref={filemanBoxRef} sx={{ alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%', minHeight: `calc(100vh - ${logBoxTop}px - 8px)`, px: 4 }}>
+                <ChannelNotStarted icon={<FolderCopy color='primary' />} name='File Manager'
+                    hint='File Manager not started. Start the channel to browse, edit, upload and download the files of your containers.' channelObject={props.channelObject} />
+            </Stack>
+        )
     }
 
     return <>
