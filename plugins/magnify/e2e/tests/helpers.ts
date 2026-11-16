@@ -64,8 +64,10 @@ export async function openMagnify(page: Page): Promise<void> {
     await page.waitForTimeout(400)
     await page.getByRole('button', { name: 'ADD' }).click()
     await page.waitForTimeout(1500)
-    await openTabMenu(page)
-    await page.getByRole('menuitem', { name: 'Start' }).click()
+    // not started yet: the shared screen of common-front (ChannelNotStarted), and its own Start does what the menu does
+    const notStarted = page.getByTestId('channel-not-started')
+    await expect(notStarted).toContainText('Magnify not started')
+    await notStarted.getByRole('button', { name: 'Start' }).click()
 }
 
 /**
