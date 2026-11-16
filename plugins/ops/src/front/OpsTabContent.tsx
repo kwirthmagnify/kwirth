@@ -2,7 +2,7 @@
 import { Box, Button, Card, CardContent, CardHeader, IconButton, ListItem, ListItemButton, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { IOpsData, IScopedObject, OpsData } from './OpsData'
 import { IInstanceConfig, EInstanceMessageAction, EInstanceMessageChannel, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigObject, EInstanceConfigView } from '@kwirthmagnify/kwirth-common'
-import { IContentProps, JsonBlock, MsgBoxButtons, MsgBoxOk, MsgBoxYesNo } from '@kwirthmagnify/kwirth-common-front'
+import { ChannelNotStarted, IContentProps, JsonBlock, MsgBoxButtons, MsgBoxOk, MsgBoxYesNo } from '@kwirthmagnify/kwirth-common-front'
 import { v4 as uuid } from 'uuid'
 import { Delete, Home, MoreVert, RestartAlt, Terminal } from '@mui/icons-material'
 import { MenuObject, EMenuObjectOption } from './MenuObject'
@@ -215,6 +215,13 @@ const OpsTabContent: React.FC<IContentProps> = (props: IContentProps) => {
             setRefresh(Math.random())
         }
     }
+
+    // not started: the shared screen (icon and name, what starting gives, a Start button), centred in the measured box
+    if (!opsData.started) return (
+        <Box ref={opsBoxRef} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexGrow: 1, height: `${opsBoxHeight}px`, px: 4 }}>
+            <ChannelNotStarted icon={<Terminal color='primary' />} name='Ops' hint='Ops not started. Start the channel to open shells, restart containers and inspect objects.' channelObject={props.channelObject} />
+        </Box>
+    )
 
     if (opsConfig.launchShell) return (
         <Box ref={opsBoxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', flexGrow: 1, height: `${opsBoxHeight}px`, p: 2, gap: 2 }}>
