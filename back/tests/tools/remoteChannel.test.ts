@@ -368,3 +368,50 @@ test('a command refused for a dead instance is RESENT once the new one arrives',
     handle.close()
     wss.close()
 })
+
+/*
+    🔴 A message is a sign of life, as a pong is. Under load the remote's pong waits behind its data and misses the
+    keepalive's next tick: a healthy link was terminated as dead (seen 2026-11-16, Magnify's first ~70 MB through an
+    Ianus link, and every session on it went down). The remote here never answers a ping (autoPong off): only its
+    messages say it is alive. The keepalive's interval is mocked, so 30 s ticks take no time.
+*/
+test('keepalive: messages keep a link alive without pongs; with neither, it is terminated', { timeout: 10000 }, async (t) => {
+    t.mock.timers.enable({ apis: ['setInterval'] })
+    const wss = new WebSocketServer({ host: '127.0.0.1', port: 0, autoPong: false })
+    await new Promise<void>(r => wss.on('listening', () => r()))
+    const url = `ws://127.0.0.1:${(wss.address() as AddressInfo).port}`
+    let remote: WebSocket | undefined
+    let terminated = false
+    wss.on('connection', (sock: WebSocket) => {
+        remote = sock
+        sock.on('close', () => { terminated = true })
+    })
+    const handle = openRemoteChannel({ name: 'r', url, accessString: 'AK' }, baseConfig(), { onMessage: () => {}, onState: () => {} })
+    // cleaned up whatever happens: a failed assertion left the client reconnecting and the run never ended
+    try {
+        while (!remote) await delay(20)
+        await delay(100)                              // the client's 'open' (and its keepalive interval) has run
+
+        const say = () => remote!.send(JSON.stringify({ action: EInstanceMessageAction.NONE, flow: EInstanceMessageFlow.UNSOLICITED, type: EInstanceMessageType.DATA, channel: 'agora', instance: '' }))
+        for (let tick = 0; tick < 3; tick++) {
+            t.mock.timers.tick(30000)                 // a ping goes, no pong will come back
+            say()                                     // …but data does
+            await delay(100)
+        }
+        t.mock.timers.tick(30000)
+        await delay(200)
+        assert.equal(terminated, false, 'busy, not dead: the messages kept it alive')
+
+        // silence: neither messages nor pongs → dead at the next tick, as before
+        t.mock.timers.tick(30000)
+        await delay(100)
+        t.mock.timers.tick(30000)
+        await delay(300)
+        assert.equal(terminated, true, 'nothing at all for a whole tick: terminated')
+    }
+    finally {
+        handle.close()
+        for (const client of wss.clients) client.terminate()
+        wss.close()
+    }
+})
