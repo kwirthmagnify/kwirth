@@ -19,10 +19,17 @@ echo [tauri-build-windows] Copying front assets to resources...
 if exist src-tauri\resources\front rmdir /s /q src-tauri\resources\front
 xcopy /e /i /q ..\..\back\bundle\front src-tauri\resources\front
 
-echo [tauri-build-windows] Generating Tauri icons...
-copy ..\electron\kwirth-transparent.png src-tauri\icons\source.png
+rem The icons are regenerated only when their source changes: 'tauri icon' does not write the same bytes twice,
+rem so running it on every build left the committed icons modified after each one. source.png is committed too.
 copy ..\electron\kwirth-transparent.png src-tauri\splash\kwirth-transparent.png
-call npx @tauri-apps/cli icon src-tauri\icons\source.png
+fc /b ..\electron\kwirth-transparent.png src-tauri\icons\source.png >nul 2>&1
+if errorlevel 1 (
+    echo [tauri-build-windows] The icon source changed: generating Tauri icons...
+    copy /y ..\electron\kwirth-transparent.png src-tauri\icons\source.png
+    call npx @tauri-apps/cli icon src-tauri\icons\source.png
+) else (
+    echo [tauri-build-windows] Tauri icons up to date, not regenerated
+)
 
 echo [tauri-build-windows] Downloading bundled extensions...
 node ..\..\tools\scripts\fetch-bundled.mjs ..\..\back\kwirth-bundled-desktop.json src-tauri\resources\bundled
