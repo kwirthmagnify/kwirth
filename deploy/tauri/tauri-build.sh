@@ -37,10 +37,16 @@ echo "[tauri-build] Copying front assets..."
 rm -rf src-tauri/resources/front
 cp -r ../../back/bundle/front src-tauri/resources/front
 
-echo "[tauri-build] Generating Tauri icons from electron source..."
-cp ../electron/kwirth-transparent.png src-tauri/icons/source.png
+# The icons are regenerated only when their source changes: 'tauri icon' does not write the same bytes twice,
+# so running it on every build left the committed icons modified after each one. source.png is committed too.
 cp ../electron/kwirth-transparent.png src-tauri/splash/kwirth-transparent.png
-npx @tauri-apps/cli icon src-tauri/icons/source.png
+if cmp -s ../electron/kwirth-transparent.png src-tauri/icons/source.png; then
+    echo "[tauri-build] Tauri icons up to date, not regenerated"
+else
+    echo "[tauri-build] The icon source changed: generating Tauri icons from electron source..."
+    cp ../electron/kwirth-transparent.png src-tauri/icons/source.png
+    npx @tauri-apps/cli icon src-tauri/icons/source.png
+fi
 
 echo "[tauri-build] Downloading bundled extensions..."
 node ../../tools/scripts/fetch-bundled.mjs ../../back/kwirth-bundled-desktop.json src-tauri/resources/bundled
