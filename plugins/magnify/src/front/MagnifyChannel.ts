@@ -10,6 +10,7 @@ import { ENotifyLevel } from '@kwirthmagnify/kwirth-common-front'
 import { IFileObject } from '@jfvilas/react-file-manager'
 import { convertSizeToBytes, coresToNumber, objectEqual } from './Tools'
 import { MagnifyUserPreferences } from './components/MagnifyUserPreferences'
+import { IContentExternalData, closeContentExternal } from './components/ContentExternal'
 
 interface IMagnifyMessage extends IInstanceMessage {
     msgtype: 'magnifymessage'
@@ -327,6 +328,9 @@ class MagnifyChannel implements IChannel {
         magnifyData.started = false
         this.tasks.forEach( (id) => clearInterval(id))
         this.tasks = []
+        // the external windows (log, metrics, ops…) go with Magnify: their channels stopped, their sockets closed
+        for (const w of magnifyData.windows.filter(w => w.class === 'ContentExternal')) closeContentExternal(w.data as IContentExternalData)
+        magnifyData.windows = magnifyData.windows.filter(w => w.class !== 'ContentExternal')
         return true
     }
 
