@@ -1827,6 +1827,16 @@
   {
     "extensionType": "plugin",
     "id": "ops",
+    "version": "0.2.28",
+    "name": "Ops",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.28.tgz",
+    "description": "Ops channel plugin for Kwirth",
+    "icon": "Terminal",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "ops",
     "version": "0.2.27",
     "name": "Ops",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.27.tgz",
