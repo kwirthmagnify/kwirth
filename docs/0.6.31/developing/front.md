@@ -75,7 +75,7 @@ And the meaning of the properties is:
   - `metrics`, the channel wants access to the list of metrics available from the cluster (see Metrics channel).
   - `notifier`, if a channel wants to send notifications to the end user, this property must be enabled in order for kwirth to provide the channel with a notifier function.
   - `notifications`, the channel wants to access the kwirth notifications array (the ones sent to end user).
-  - `clusterUrl`, the channel wants to know the URL of the kwirth server, for example, for performing HTTP requests.
+  - `clusterUrl`, the channel wants to know the URL of the kwirth server, for example, for performing HTTP requests. **Read it every time you use it, never keep a copy**: for a cluster reached through a router (Ianus, bridge…) the url carries the session's route ticket, which expires in 10 minutes, and `clusterUrl` always gives the one in force *now*. A copy taken when the tab started opens nothing 10 minutes later (a second shell, a new window, a dialog's request); and never use it as a key for storage — use `clusterName`.
   - `clusterInfo`, the channel needs information about the cluster itself.
   - `accessString`, the channel will perform HTTP requests or new WebSocket requests to the kwirth server, so the Access String is needed.
   - `webSocket`, the channel will send/receive data over the WebSocket, so the WebSocket object is required.
