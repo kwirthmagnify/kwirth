@@ -1894,6 +1894,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                         // it arrives the keep-alive stays quiet, which is exactly what it checks for.
                         t.channelObject.instanceId = ''
                         t.channelStarted = false
+                        // Same as socketReconnect: channels that send through channelObject.webSocket would
+                        // otherwise keep writing to the dead socket, and what they send is lost without a word.
+                        if (t.channel.requirements.webSocket) t.channelObject.webSocket = ws
                         startTabChannel(t, restartCluster)
                         if (t.channel.socketReconnect(t.channelObject)) setChannelMessageAction({action : EChannelRefreshAction.REFRESH})
                     }
@@ -2055,6 +2058,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         clearInterval(tab.keepAliveRef)
         if (tab.reconnectRef) clearInterval(tab.reconnectRef)   // stop any in-flight reconnect retry loop
         if (tab.channelObject) stopTabChannel(tab)
+        tab.ws?.close()     // the STOP above leaves first: a socket flushes what is queued before its close frame
     }
 
     const onClickTabRemove = () => {
