@@ -1,6 +1,6 @@
 import React from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { ChannelNotStarted, IContentProps } from '@kwirthmagnify/kwirth-common-front'
 import { EMagnifyCommand, IMagnifyMessage, IMagnifyData } from './MagnifyData'
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, EInstanceConfigView, accessKeyDeserialize } from '@kwirthmagnify/kwirth-common'
@@ -1515,19 +1515,9 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     if (!magnifyData.started)
         return (
+            // the shared not-started screen (icon and name, what starting gives, a Start button); the box only centres it
             <Box ref={emptyRef} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', height: `calc(100vh - ${emptyTop}px - 8px)`, px: 4 }}>
-                <Typography
-                    variant='h6'
-                    sx={{
-                        color: 'text.secondary',
-                        mb: 1
-                    }}>Magnify not started</Typography>
-                <Typography
-                    variant='body2'
-                    sx={{
-                        color: 'text.secondary',
-                        maxWidth: 480
-                    }}>Start the channel (tab settings ⚙ → Start) to explore your cluster.</Typography>
+                <ChannelNotStarted icon={<Search color='primary' />} name='Magnify' hint='Magnify not started. Start the channel to explore your cluster.' channelObject={props.channelObject} />
             </Box>
         );
 
