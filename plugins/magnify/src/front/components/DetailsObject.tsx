@@ -1,5 +1,6 @@
 import { IFileObject } from '@jfvilas/react-file-manager'
 import { Https } from '@kwirthmagnify/kwirth-common-front/icons'
+import { JsonBlock } from '@kwirthmagnify/kwirth-common-front'
 import { LinearProgress, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextareaAutosize, TextField, Tooltip, Typography } from '@mui/material'
 import { convertBytesToSize, convertSizeToBytes } from '../Tools'
 import React from 'react'
@@ -697,7 +698,7 @@ const DetailsObject: React.FC<IMagnifyObjectDetailsProps> = (props:IMagnifyObjec
             return <>{ details }</>
         }
         else {
-            return <><pre>{JSON.stringify(props.object.data.origin,undefined, 2)}</pre></>
+            return <JsonBlock value={props.object.data.origin} />
         }
     }
     else {
