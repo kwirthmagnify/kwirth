@@ -5,7 +5,10 @@
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
         "specula": "../plugins/specula/dist",
-        "ianus": "../plugins/ianus/dist"
+        "ianus": "../plugins/ianus/dist",
+        "sender-debug": "../plugins/sender-debug/dist",
+        "provider-debug": "../plugins/provider-debug/dist",
+        "magnify": "../plugins/magnify/dist"
     },
     "providers": {
         "agent-metrics": "../providers/agent-metrics/dist",
