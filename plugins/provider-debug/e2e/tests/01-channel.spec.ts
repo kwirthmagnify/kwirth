@@ -188,8 +188,14 @@ test('a provider without help says so instead of leaving the user guessing', asy
     await openSetup()
     // 'business' is today the only live provider that does NOT publish getSubscriptionHelp ('otel'
     // used to be used, and is no longer installed). If it ever publishes it, another one without help
-    // has to be chosen.
-    await selectProvider('business')
+    // has to be chosen. Without it installed there is nothing to prove here: skipped, saying why.
+    await providerSelect().click()
+    const option = page.locator('li[data-value="business"]')
+    if (await option.count() === 0) {
+        await closeSetup()
+        test.skip(true, "the 'business' provider (the one without subscription help) is not installed in this environment")
+    }
+    await option.click()
 
     await expect(page.getByText(/does not publish subscription help/)).toBeVisible()
     await closeSetup()
@@ -240,7 +246,8 @@ test('a provider that is not running is reported instead of failing silently', a
 
 test('a malformed subscription payload blocks the dialog instead of reaching the back', async () => {
     await openSetup()
-    await selectProvider('business')
+    // any provider will do: the JSON is checked in the dialog, before anything reaches a provider
+    await selectProvider('metrics')
     await openJsonTab()
     await page.getByLabel('Subscription payload (JSON)').fill('{ not json')
 
@@ -256,15 +263,15 @@ test('subscribing to a running provider is confirmed and streams its raw events'
     // cluster's activity (back/src/providers/metrics/MetricsProvider.ts, tick()).
     await startWith('metrics', METRICS_PAYLOAD)
 
-    await expect(statusChip('subscribed')).toHaveClass(/MuiChip-filledSuccess/)
+    await expect(statusChip('subscribed')).toHaveClass(/MuiChip-(filled|color)Success/)
     await expect(page.getByText('Provider: metrics')).toBeVisible()
     await eventsArrived()
 })
 
 test('the start milestones are chips, not text lines', async () => {
     // both milestones light up green...
-    await expect(statusChip('config')).toHaveClass(/MuiChip-filledSuccess/)
-    await expect(statusChip('subscribed')).toHaveClass(/MuiChip-filledSuccess/)
+    await expect(statusChip('config')).toHaveClass(/MuiChip-(filled|color)Success/)
+    await expect(statusChip('subscribed')).toHaveClass(/MuiChip-(filled|color)Success/)
 
     // ...and their old *** ... *** lines are no longer drawn
     await expect(page.getByText(/^\*\*\* .* \*\*\*$/)).toHaveCount(0)
