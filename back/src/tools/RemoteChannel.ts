@@ -241,6 +241,12 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
         sock.on('pong', () => { awaitingPong = false })   // el remoto sigue vivo
 
         sock.on('message', (data: Buffer) => {
+            /*
+                A message is as good a sign of life as a pong. Under load the pong waits in the remote's send queue
+                behind the data (seen 2026-11-16: Magnify's first ~70 MB through an Ianus link), misses the next tick,
+                and a healthy link used to be terminated as dead — and every session it carried with it.
+            */
+            awaitingPong = false
             let msg: IInstanceMessage
             try {
                 // Buffer.toString() BEFORE parsing (ws delivers a Buffer, not a string, unlike the front end).
