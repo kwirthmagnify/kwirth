@@ -8,7 +8,7 @@ import { AccountCircle } from './icons'
 // model
 import { Cluster, IClusterInfo } from './model/Cluster'
 import { resolveRemoteChannelHost } from './tools/ChannelResolution'
-import { clusterBaseUrl, setClusterRouting } from './tools/ClusterRouting'
+import { bindClusterUrl, clusterBaseUrl, setClusterRouting } from './tools/ClusterRouting'
 import { RemoteConnection } from './tools/RemoteConnection'
 import { startRouteTickets } from './tools/RouteTickets'
 
@@ -1338,7 +1338,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         // stay the target cluster (same id).
         const channelMode = cluster.kwirthData?.channels?.find(ch => ch.id === channelId)?.mode
         const host = channelMode === EChannelMode.REMOTE ? resolveRemoteChannelHost(channelId, cluster.clusterInfo?.id ?? '', clusters) : undefined
-        if (newTab.channel.requirements.clusterUrl) newTab.channelObject.clusterUrl = clusterBaseUrl(host ?? cluster)
+        // live: read with the route ticket of the moment, not the one of when the tab was created (ClusterRouting)
+        if (newTab.channel.requirements.clusterUrl) bindClusterUrl(newTab.channelObject, host ?? cluster)
         if (newTab.channel.requirements.clusterInfo) newTab.channelObject.clusterInfo = cluster.clusterInfo
         newTab.channelObject.kwirthVersion = cluster.kwirthData?.version   // version del core, disponible para cualquier plugin (p.ej. su drawer)
         if (newTab.channel.requirements.accessString) newTab.channelObject.accessString = host?.accessString ?? cluster?.accessString
@@ -1464,7 +1465,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 newTab.reconnectRef = undefined
                 // 3. Repoint the channelObject at the target cluster
                 newTab.channelObject.clusterName = target.name
-                newTab.channelObject.clusterUrl = clusterBaseUrl(target)
+                bindClusterUrl(newTab.channelObject, target)
                 newTab.channelObject.accessString = target.accessString
                 newTab.channelObject.clusterInfo = target.clusterInfo
                 newTab.channelObject.instanceId = ''
@@ -1851,7 +1852,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             setChannelMessageAction({action : EChannelRefreshAction.REFRESH})
 
             if (tab.reconnectRef) clearInterval(tab.reconnectRef)   // never stack retry loops
-            let selfId = setInterval( (url, tab) => {
+            let selfId = setInterval( (firstUrl, tab) => {
+                // read on every try: clusterUrl is live, and a route ticket expires while the retries go on
+                const url = tab.channelObject.clusterUrl ?? firstUrl
                 console.log(`Trying to reconnect using ${url} and ${tab.channelObject.instanceId}`)
                 try {
                     let ws = new WebSocket(url)
@@ -1889,7 +1892,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             if (tab.channel.socketDisconnected(tab.channelObject)) setChannelMessageAction({action : EChannelRefreshAction.REFRESH})
 
             if (tab.reconnectRef) clearInterval(tab.reconnectRef)   // never stack retry loops
-            let restartId = setInterval( (url, t:ITabObject) => {
+            let restartId = setInterval( (firstUrl, t:ITabObject) => {
+                // read on every try: clusterUrl is live, and a route ticket expires while the retries go on
+                const url = t.channelObject.clusterUrl ?? firstUrl
                 console.log(`Trying to restart ${t.channel.channelId} using ${url}`)
                 try {
                     let ws = new WebSocket(url)
