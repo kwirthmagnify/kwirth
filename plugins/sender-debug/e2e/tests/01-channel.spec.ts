@@ -116,12 +116,24 @@ test('SEND stays disabled until a sender AND a configuration are picked', async 
     // with nothing chosen there is no sending, and the configuration cannot even be expanded
     await expect(sendButton()).toBeDisabled()
     await expect(configSelect()).toHaveAttribute('aria-disabled', 'true')
+    // the Configuration block is there from the start, disabled: nothing appears or disappears
+    await expect(page.locator('button[aria-label="Expand Configuration fields"]')).toBeDisabled()
 
     await pick(senderSelect, SAFE_SENDER)
     await expect(configSelect()).not.toHaveAttribute('aria-disabled', 'true')
     const configName = await pickFirstConfig()
     expect(configName).not.toEqual('')
     await expect(sendButton()).toBeEnabled()
+})
+
+test('the chosen configuration is in view: its fields and values, read from the core', async () => {
+    const expand = page.locator('button[aria-label="Expand Configuration fields"]')
+    await expect(expand).toBeEnabled()
+    await expand.click()
+    // it arrives from the back end (CONFIG): neither still reading nor an error
+    await expect(page.getByText('Reading the configuration…')).toHaveCount(0, { timeout: 15000 })
+    await expect(page.getByText(/has no configuration|failed while reading|does not let a channel/)).toHaveCount(0)
+    await page.locator('button[aria-label="Collapse Configuration fields"]').click()
 })
 
 test('invalid metadata blocks the send and says why', async () => {
@@ -153,14 +165,17 @@ test('the batch count only applies in batch mode, and is bounded', async () => {
     await page.getByRole('checkbox', { name: 'Batch' }).check()
     await expect(count).toBeEnabled()
 
+    // the range is in the label, always; out of it the field turns red and SEND waits
     await count.fill('0')
-    await expect(page.getByText('1 to 100')).toBeVisible()
+    await expect(count).toHaveAttribute('aria-invalid', 'true')
     await expect(sendButton()).toBeDisabled()
 
     await count.fill('200')
+    await expect(count).toHaveAttribute('aria-invalid', 'true')
     await expect(sendButton()).toBeDisabled()
 
     await count.fill('3')
+    await expect(count).toHaveAttribute('aria-invalid', 'false')
     await expect(sendButton()).toBeEnabled()
     await page.getByRole('checkbox', { name: 'Batch' }).uncheck()
     await expect(count).toBeDisabled()
@@ -179,6 +194,9 @@ test('a real send through console lands in the history as delivered', async () =
 })
 
 test('a batch through a sender without sendBatch is delivered and marked as emulated', async () => {
+    // known BEFORE sending: the chip and the checkbox already say the batch will be emulated
+    await expect(page.getByText('sendBatch: emulated', { exact: true })).toBeVisible()
+    await expect(page.getByText('Batch (emulated)', { exact: true })).toBeVisible()
     await page.getByRole('checkbox', { name: 'Batch' }).check()
     await page.getByLabel('Messages').fill('3')
     await sendButton().click()
@@ -223,10 +241,32 @@ test('Copy puts on the clipboard what the row shows — what was sent and what c
     expect(copied).toContain('\n\nAnswered\nNothing. The sender returned void')
 })
 
+test('the origin typed travels with the message — empty fields left out — and the request shows as coloured JSON', async () => {
+    // the Origin card is always open: its fields are there without unfolding anything
+    await expect(page.getByLabel('Source', { exact: true })).toHaveValue('sender-debug')
+    // the card's content is the scroll container: whatever outgrows the tab is reached by scrolling, not lost
+    const content = page.locator('.MuiCardContent-root').first()
+    expect(await content.evaluate(el => getComputedStyle(el).overflowY)).toBe('auto')
+    await page.getByLabel('Pod', { exact: true }).fill('e2e-pod')
+    await sendButton().click()
+    await expect(page.getByText(/Sends: 3/)).toBeVisible({ timeout: 30000 })
+
+    await page.locator('button[aria-label="Expand send"]').first().click()
+    const sent = page.locator('pre').filter({ hasText: '"pod": "e2e-pod"' }).first()
+    await expect(sent).toBeVisible()
+    await expect(sent).toContainText('"source": "sender-debug"')
+    await expect(sent).not.toContainText('"cluster"')
+    // coloured by type: the keys and values are spans with their own colour
+    expect(await sent.locator('span[style*="color"]').count()).toBeGreaterThan(0)
+
+    await page.locator('button[aria-label="Collapse send"]').first().click()
+    await page.getByLabel('Pod', { exact: true }).fill('')
+})
+
 test('reloading the catalogue keeps the history', async () => {
     await page.locator('button[aria-label="Reload senders"]').click()
     await page.waitForTimeout(1500)
-    await expect(page.getByText(/Sends: 2/)).toBeVisible()
+    await expect(page.getByText(/Sends: 3/)).toBeVisible()
     await expect(page.getByText(/Senders: [1-9]/)).toBeVisible()
 })
 
