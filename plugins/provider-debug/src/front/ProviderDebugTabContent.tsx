@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Card, CardContent, CardHeader, Chip, IconButton, InputAdornment, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material'
-import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { IContentProps, JsonBlock } from '@kwirthmagnify/kwirth-common-front'
 import { ArrowDownward, ArrowUpward, Check, Close, ContentCopy, DeleteSweep, ExpandLess, ExpandMore, Info, Search } from '@mui/icons-material'
 import { IProviderDebugData } from './ProviderDebugData'
 import { IProviderDebugConfig } from './ProviderDebugConfig'
-import { JsonBlock } from './JsonBlock'
 import { IProviderDebugEvent, IProviderDebugInstanceConfig } from '../common/ProviderDebugTypes'
 
 export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContentProps) => {
@@ -79,7 +78,7 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
         // screen. No animated scrolling, for the same reason as the expansion.
         setTimeout(() => {
             const card = cardRefs.current.get(target)
-            const hit = card?.querySelector('[data-pd-hit]')
+            const hit = card?.querySelector('[data-json-hit]')
             ;(hit ?? card)?.scrollIntoView({ block: 'center' })
         }, 0)
     }
@@ -198,7 +197,7 @@ export const ProviderDebugTabContent: React.FC<IContentProps> = (props: IContent
                         </IconButton>
                     </Tooltip>
                 </Stack>
-                {open && <Box sx={{ px: 2, pb: 1 }}><JsonBlock value={event.event} highlight={search} /></Box>}
+                {open && <Box sx={{ px: 2, pb: 1 }}><JsonBlock value={event.event} highlight={search} trimmedHint='Use the copy button to get the whole object.' /></Box>}
             </Paper>
         );
     }
