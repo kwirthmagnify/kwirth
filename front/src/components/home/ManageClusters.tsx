@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react'
 import { useEscapeToClose } from '../../tools/useKeyboard'
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, InputLabel, List, ListItem, ListItemButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, InputLabel, List, ListItem, ListItemButton, MenuItem, Select, Stack, Switch, TextField, Typography } from '@mui/material'
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutlined'
 import ErrorOutline from '@mui/icons-material/ErrorOutlined'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
@@ -43,6 +43,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     const [accessKey, setAccessKey] = useState<string>('')
     const [routeResolver, setRouteResolver] = useState<string>(DIRECT_ROUTE)
     const [routeUid, setRouteUid] = useState<string>('')
+    const [inUse, setInUse] = useState<boolean>(true)
     const [msgBox, setMsgBox] = useState(<></>)
     const [refresh, setRefresh] = useState(0)
     const [testResult, setTestResult] = useState<ITestResult | null>(null)
@@ -56,6 +57,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         setAccessKey(cluster.accessString)
         setRouteResolver(cluster.route?.resolver ?? DIRECT_ROUTE)
         setRouteUid(cluster.route?.clusterUid ?? '')
+        setInUse(cluster.inUse !== false)
     }
 
     // The route being edited: none for a direct entry.
@@ -68,6 +70,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         setAccessKey('')
         setRouteResolver(DIRECT_ROUTE)
         setRouteUid('')
+        setInUse(true)
     }
 
     const onClickSave = async () => {
@@ -76,9 +79,11 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             selectedCluster.name = name
             selectedCluster.url = url
             selectedCluster.route = editedRoute()
+            selectedCluster.inUse = inUse
             selectedCluster.kwirthData = undefined
             const updated = [...clusters.filter(c => c !== selectedCluster), selectedCluster]
-            await readClusterInfo(selectedCluster, props.notify)
+            // one that is not in use is not read: nothing reaches out to a cluster nobody uses
+            if (inUse) await readClusterInfo(selectedCluster, props.notify)
             setClusters(updated)
             setRefresh(Math.random())
         }
@@ -88,9 +93,10 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             c.name = name
             c.url = url
             c.route = editedRoute()
+            c.inUse = inUse
             c.kwirthData = undefined
             const updated = [...clusters, c]
-            await readClusterInfo(c, props.notify)
+            if (inUse) await readClusterInfo(c, props.notify)
             setClusters(updated)
             setRefresh(Math.random())
         }
@@ -190,7 +196,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                     <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
                         <List sx={{flexGrow:1, mr:2, width:'50vh' }}>
                             { clusters?.map(c =>
-                                <ListItemButton key={c.url} selected={c===selectedCluster} onClick={() => onClusterSelected(c)}>
+                                <ListItemButton key={c.url} selected={c===selectedCluster} onClick={() => onClusterSelected(c)} sx={{ opacity: c.inUse === false ? 0.5 : 1 }} title={c.inUse === false ? 'Not enabled: kept here, but not in the resource selector nor given to extensions' : undefined}>
                                     <ListItem>
                                       <Stack direction={'column'} sx={{width:'100%'}}>
                                           <Stack
@@ -239,6 +245,14 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                     </FormControl>
                                     <TextField value={routeUid} onChange={(e) => setRouteUid(e.target.value)} disabled={selectedCluster?.home || routeResolver === DIRECT_ROUTE} variant='standard' label='Cluster UID' sx={{ flexGrow: 1 }}></TextField>
                                 </Stack>
+                                {/*
+                                    The user's switch: an entry not enabled stays in this list, to be edited, but it is not offered in the
+                                    resource selector, not given to extensions (federation, bots) and not read. The home is always in use.
+                                */}
+                                <Box>
+                                    <FormControlLabel sx={{ ml: 0 }} disabled={selectedCluster?.home} control={<Switch checked={inUse} onChange={(e) => setInUse(e.target.checked)} />} label='Enabled' />
+                                    <Typography variant='caption' sx={{ display: 'block', color: 'text.secondary' }}>Not enabled: it stays in this list, but it is not offered in the resource selector nor given to extensions.</Typography>
+                                </Box>
                             </Stack>
                         }
                     </Stack>
