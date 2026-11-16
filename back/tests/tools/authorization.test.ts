@@ -104,6 +104,19 @@ test('el nivel se comprueba POR recurso: no se mezcla el scope de uno con el nam
     assert.equal(AuthorizationManagement.checkAkr(channels, config, 'prod', 'p', 'c'), false, 'en prod solo tiene view: no puede reiniciar')
 })
 
+test('un scope de OTRO canal no se avisa como inexistente; uno propio o sin canal, sí', (t) => {
+    // A key carries the scopes of every channel it is good for: warning about each foreign one, for every
+    // object, flooded the log (seen with 'excubitor$polview' and 'agora$read' on the channel 'ops').
+    const lines: string[] = []
+    t.mock.method(console, 'log', (...a: unknown[]) => { lines.push(a.join(' ')) })
+    const channels = fakeChannels()
+    const level = AuthorizationManagement.getScopeLevel(channels, 'log', 'view,excubitor$polview,agora$read', -1)
+    assert.equal(level, 10, 'the level is still the highest known one')
+    assert.equal(lines.filter(l => l.includes('Inexistent scope')).length, 0, 'nothing said about the foreign ones')
+    AuthorizationManagement.getScopeLevel(channels, 'log', 'log$typo,madeup', -1)
+    assert.deepEqual(lines.filter(l => l.includes('Inexistent scope')).map(l => /'([^']+)' on channel/.exec(l)?.[1]), ['log$typo', 'madeup'])
+})
+
 test('un scope que el canal no conoce no da acceso', () => {
     // getChannelScopeLevel returns -1 for the unknown. A key with a made-up scope must not slip through
     // that gap.
