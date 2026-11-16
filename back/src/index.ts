@@ -122,6 +122,7 @@ import { WebhookManager } from './tools/WebhookManager'
 import { handleInbound } from './tools/WebhookReceiver'
 import { openRemoteChannel } from './tools/RemoteChannel'
 import { announcedLocalChannelData, announcedRemoteChannelData, channelRouterOf, mountedRouterAlias, resolveRemoteEndpoint, unresolvableRemoteChannel } from './tools/ClusterRouting'
+import { userStoreValueForExtensions } from './tools/ClusterListFilter'
 import { RouteKeySockets, RouteTickets, authenticateRoute, routerPathOf } from './tools/RouteGate'
 import { AuthApi } from './api/AuthApi'
 import { IdpApi } from './api/IdpApi'
@@ -2965,7 +2966,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
                     if (!data || typeof data !== 'object') return undefined
                     const raw = data[group + '-' + key]
                     if (raw === undefined) return undefined
-                    return typeof raw === 'string' ? JSON.parse(raw) : raw
+                    // the cluster list without the entries the user switched off (tools/ClusterListFilter)
+                    return userStoreValueForExtensions(group, key, typeof raw === 'string' ? JSON.parse(raw) : raw)
                 }
                 catch { return undefined }
             },
