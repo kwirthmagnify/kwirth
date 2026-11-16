@@ -1,6 +1,6 @@
 import { EInstanceConfigScope, EInstanceMessageType, EInstanceMessageFlow, EInstanceMessageAction, ESignalMessageLevel, ISignalMessage } from '@kwirthmagnify/kwirth-common'
-import { IChannel, IChannelObject, IChannelRequirements, IChannelMessageAction, IContentProps, ISetupProps, EChannelRefreshAction } from '@kwirthmagnify/kwirth-common-front'
-import { ESenderDebugPayload, ISenderDebugMessageResponse } from '../common/SenderDebugTypes'
+import { IChannel, IChannelObject, IChannelRequirements, IChannelMessageAction, IContentProps, ISetupProps, EChannelRefreshAction, ENotifyLevel } from '@kwirthmagnify/kwirth-common-front'
+import { ESenderDebugAbandoned, ESenderDebugPayload, ISenderDebugMessageResponse } from '../common/SenderDebugTypes'
 import { ISenderDebugConfig, SenderDebugConfig, SenderDebugInstanceConfig } from './SenderDebugConfig'
 import { ISenderDebugData, SenderDebugData } from './SenderDebugData'
 import { SenderDebugSetup, SenderDebugIcon } from './SenderDebugSetup'
@@ -42,22 +42,28 @@ export class SenderDebugChannel implements IChannel {
 
         switch (msg.type) {
             case EInstanceMessageType.DATA:
-                if (msg.payloadType === ESenderDebugPayload.SENDERS) {
-                    data.senders = msg.senders ?? []
-                }
-                else {
-                    if (msg.result) {
-                        /*
-                            The row already exists: the send itself created it, with its request inside
-                            and no response. Here it is only completed. Should it not turn up — a response
-                            with no request of its own, which can only happen after a restart — it is
-                            added loose, rather than losing it.
-                        */
-                        const entry = data.history.find(e => e.request?.id === msg.result!.id)
-                        if (entry) entry.result = msg.result
-                        else data.history.unshift({ result: msg.result })
-                        while (data.history.length > config.maxHistory) data.history.pop()
-                    }
+                switch (msg.payloadType) {
+                    case ESenderDebugPayload.SENDERS:
+                        data.senders = msg.senders ?? []
+                        break
+                    case ESenderDebugPayload.CONFIG:
+                        // only the view of what is selected NOW: an answer for a previous choice arrives late and is dropped
+                        if (msg.config && msg.config.senderId === data.form.senderId && msg.config.configName === data.form.configName) data.configView = msg.config
+                        break
+                    case ESenderDebugPayload.RESULT:
+                        if (msg.result) {
+                            /*
+                                The row already exists: the send itself created it, with its request inside
+                                and no response. Here it is only completed. Should it not turn up — a response
+                                with no request of its own, which can only happen after a restart — it is
+                                added loose, rather than losing it.
+                            */
+                            const entry = data.history.find(e => e.request?.id === msg.result!.id)
+                            if (entry) entry.result = msg.result
+                            else data.history.unshift({ result: msg.result })
+                            while (data.history.length > config.maxHistory) data.history.pop()
+                        }
+                        break
                 }
                 return { action: EChannelRefreshAction.REFRESH }
             case EInstanceMessageType.SIGNAL: {
@@ -76,7 +82,23 @@ export class SenderDebugChannel implements IChannel {
                     return { action: EChannelRefreshAction.REFRESH }
                 }
 
-                if (signalMessage.text && signalMessage.level !== ESignalMessageLevel.INFO) data.signals.push(signalMessage.text)
+                /*
+                    The back end answered a COMMAND with an error — told apart by STRUCTURE, never by its text. The
+                    sends still in flight are not going to be answered (the typical case: Kwirth restarted and this
+                    tab's instance is gone), so they are flagged instead of staying 'sending…' forever. A result that
+                    does arrive later still completes its row.
+                */
+                if (signalMessage.action === EInstanceMessageAction.COMMAND && signalMessage.flow === EInstanceMessageFlow.RESPONSE && signalMessage.level === ESignalMessageLevel.ERROR) {
+                    for (const entry of data.history) {
+                        if (!entry.result && !entry.abandoned) entry.abandoned = ESenderDebugAbandoned.LOST
+                    }
+                }
+
+                // what the back end has to say goes through the core's notifications, not as lines inside the form
+                if (signalMessage.text && signalMessage.level !== undefined && signalMessage.level !== ESignalMessageLevel.INFO) {
+                    const level = signalMessage.level === ESignalMessageLevel.ERROR ? ENotifyLevel.ERROR : ENotifyLevel.WARNING
+                    channelObject.notify?.(channelObject.channelId, level, signalMessage.text)
+                }
                 return { action: EChannelRefreshAction.REFRESH }
             }
             default:
@@ -93,7 +115,6 @@ export class SenderDebugChannel implements IChannel {
 
     startChannel(channelObject: IChannelObject): boolean {
         const data: ISenderDebugData = channelObject.data
-        data.signals = []
         data.configAccepted = false
         /*
             'history' and 'form' are NOT cleared, on purpose: what was sent before and what was being
@@ -115,12 +136,23 @@ export class SenderDebugChannel implements IChannel {
         // whatever was in flight is not going to answer any more: it is flagged, instead of leaving it
         // 'sending' forever and instead of making up a result nobody gave
         for (const entry of data.history) {
-            if (!entry.result) entry.abandoned = true
+            if (!entry.result && !entry.abandoned) entry.abandoned = ESenderDebugAbandoned.STOPPED
         }
         data.started = false
         return true
     }
 
-    socketDisconnected(_channelObject: IChannelObject): boolean { return false }
+    /*
+        The socket dropped: whatever was in flight will not be answered on it. Its instance is gone too (the channel
+        is not reconnectable), so the core comes back with a fresh START by itself and the tab is usable again.
+    */
+    socketDisconnected(channelObject: IChannelObject): boolean {
+        const data: ISenderDebugData = channelObject.data
+        data.configAccepted = false
+        for (const entry of data.history) {
+            if (!entry.result && !entry.abandoned) entry.abandoned = ESenderDebugAbandoned.LOST
+        }
+        return true
+    }
     socketReconnect(_channelObject: IChannelObject): boolean { return false }
 }
