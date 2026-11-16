@@ -155,5 +155,5 @@ test('subscribing to a pluvider is confirmed, the same as to a provider', async 
         that fails for reasons unrelated to the pluvider.
     */
     await expect(page.getByText(`Provider: ${PLUVIDER}`)).toBeVisible()
-    await expect(page.locator('.MuiChip-root').filter({ hasText: /^subscribed$/ }).first()).toHaveClass(/MuiChip-filledSuccess/)
+    await expect(page.locator('.MuiChip-root').filter({ hasText: /^subscribed$/ }).first()).toHaveClass(/MuiChip-(filled|color)Success/)
 })
