@@ -17,6 +17,7 @@ export const OWNER_LABEL: Record<ERouteOwnerKind, string> = {
     [ERouteOwnerKind.WEBHOOK]: 'Webhook',
     [ERouteOwnerKind.LOGIN]: 'Login',
     [ERouteOwnerKind.FRONT]: 'Front',
+    [ERouteOwnerKind.ROUTER]: 'Router',
     [ERouteOwnerKind.OTHER]: 'Other'
 }
 
