@@ -1,9 +1,6 @@
 // @ts-ignore
 import xtermCss from 'xterm/css/xterm.css'
-// @ts-ignore
-import jsonViewCss from 'react-json-view-lite/dist/index.css'
-
-;[xtermCss as string, jsonViewCss as string].forEach(css => {
+;[xtermCss as string].forEach(css => {
     const style = document.createElement('style')
     style.textContent = css
     document.head.appendChild(style)
