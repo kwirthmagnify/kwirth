@@ -137,7 +137,14 @@ export class OpsChannel implements IChannel {
 
     pauseChannel(channelObject: IChannelObject): boolean { (channelObject.data as IOpsData).paused = true; return false }
     continueChannel(channelObject: IChannelObject): boolean { (channelObject.data as IOpsData).paused = false; return true }
-    stopChannel(channelObject: IChannelObject): boolean { const d = channelObject.data as IOpsData; d.paused = false; d.started = false; return false }
+    stopChannel(channelObject: IChannelObject): boolean {
+        const d = channelObject.data as IOpsData
+        d.paused = false
+        d.started = false
+        // the shells go with the channel: their sockets are the tab's, the core does not close them
+        d.terminalManager.closeAll()
+        return false
+    }
     socketDisconnected(_channelObject: IChannelObject): boolean { return false }
     socketReconnect(_channelObject: IChannelObject): boolean { return false }
 
