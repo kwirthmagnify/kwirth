@@ -360,7 +360,16 @@ const containerRef = useRef<HTMLDivElement>(null)
 
         if (newChannel.requirements.notifier) newContent.externalChannelObject!.notify = contentExternalData.channelObject?.notify
         if (newChannel.requirements.metrics) newContent.externalChannelObject!.metricsList = contentExternalData.channelObject?.metricsList
-        if (newChannel.requirements.clusterUrl) newContent.externalChannelObject!.clusterUrl = contentExternalData.channelObject?.clusterUrl
+        /*
+            Read through to Magnify's own channelObject, not copied: the core keeps that one live (with the route
+            ticket of the moment), and a copy would keep the ticket of when the window opened — a shell or a fetch
+            made from this window 10 minutes later was refused.
+        */
+        if (newChannel.requirements.clusterUrl) Object.defineProperty(newContent.externalChannelObject!, 'clusterUrl', {
+            configurable: true,
+            enumerable: true,
+            get: () => contentExternalData.channelObject?.clusterUrl
+        })
         if (newChannel.requirements.accessString) newContent.externalChannelObject!.accessString = contentExternalData.channelObject?.accessString
 
         newContent.ws = new WebSocket(contentExternalData.channelObject?.clusterUrl!)
