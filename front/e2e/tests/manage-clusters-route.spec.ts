@@ -51,6 +51,12 @@ test.describe('Manage clusters: route fields', () => {
         await dialog().getByLabel('Name', { exact: true }).fill('e2e-direct')
         await dialog().getByLabel('URL', { exact: true }).fill('http://e2e-direct.invalid')
         await dialog().getByLabel('API Key', { exact: true }).fill('not-a-key')
+        // the API key is a secret: masked, and the eye shows it (as every secret in Kwirth)
+        await expect(dialog().getByLabel('API Key', { exact: true })).toHaveAttribute('type', 'password')
+        await dialog().getByRole('button', { name: 'Show API key' }).click()
+        await expect(dialog().getByLabel('API Key', { exact: true })).toHaveAttribute('type', 'text')
+        await dialog().getByRole('button', { name: 'Hide API key' }).click()
+        await expect(dialog().getByLabel('API Key', { exact: true })).toHaveAttribute('type', 'password')
         await expect(action('TEST')).toBeEnabled()
         await expect(action('SAVE')).toBeEnabled()
         // leave the form empty again: nothing typed here is saved
