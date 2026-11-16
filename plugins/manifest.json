@@ -414,6 +414,23 @@
   {
     "extensionType": "plugin",
     "id": "nettools",
+    "version": "0.3.2",
+    "name": "Net Tools",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-nettools/-/kwirth-plugin-nettools-0.3.2.tgz",
+    "description": "Net tools channel for Kwirth - resolves DNS names and checks TCP ports from where Kwirth runs, and charts the round trips, through the nettools DCE",
+    "icon": "<svg viewBox='0 0 24 24'><g fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='9'/><path d='M3 12h18'/><path d='M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z'/></g></svg>",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "dce",
+        "id": "nettools",
+        "minVersion": "0.2.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "nettools",
     "version": "0.3.1",
     "name": "Net Tools",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-nettools/-/kwirth-plugin-nettools-0.3.1.tgz",
@@ -864,6 +881,28 @@
   {
     "extensionType": "plugin",
     "id": "topology",
+    "version": "0.3.5",
+    "name": "Topology",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.3.5.tgz",
+    "description": "Topology channel plugin for Kwirth - 3D visualization of Kubernetes cluster topology",
+    "icon": "AccountTree",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "dce",
+        "id": "three",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "provider",
+        "id": "events",
+        "minVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "topology",
     "version": "0.3.4",
     "name": "Topology",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-topology/-/kwirth-plugin-topology-0.3.4.tgz",
@@ -1069,6 +1108,23 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-provider-debug/-/kwirth-plugin-provider-debug-0.1.7.tgz",
     "description": "Provider debugging channel for Kwirth - subscribes to a running provider and streams its raw events",
     "icon": "DataObjectOutlined"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "metrics",
+    "version": "0.1.4",
+    "name": "Metrics",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-metrics/-/kwirth-plugin-metrics-0.1.4.tgz",
+    "description": "Metrics channel plugin for Kwirth - real-time CPU, memory, network and disk charts",
+    "icon": "BarChart",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "metrics",
+        "minVersion": "0.1.0"
+      }
+    ]
   },
   {
     "extensionType": "plugin",
