@@ -32,10 +32,11 @@ const addOpsTab = async (): Promise<void> => {
     await page.getByRole('option', { name: CHANNEL, exact: true }).click()
     await page.getByRole('button', { name: 'ADD' }).click()
     await page.waitForTimeout(1500)
-    // the Ops tab may need starting: Start opens its setup first, accepted with its defaults
+    // the Ops tab may need starting: the shared not-started screen, whose Start opens the setup first (accepted with its defaults)
     if (await page.locator('[data-testid="MoreVertIcon"]').count() === 0) {
-        await page.locator('[data-testid="SettingsIcon"]').first().click({ force: true })
-        await page.getByRole('menuitem', { name: 'Start', exact: true }).click()
+        const notStarted = page.getByTestId('channel-not-started')
+        await expect(notStarted).toContainText('Ops not started')
+        await notStarted.getByRole('button', { name: 'Start' }).click()
         const setup = page.getByRole('dialog').filter({ hasText: 'Configure Ops' })
         await expect(setup).toBeVisible()
         await setup.getByRole('button', { name: 'OK', exact: true }).click()
