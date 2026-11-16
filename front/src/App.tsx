@@ -48,7 +48,7 @@ import { Homepage } from './components/home/Homepage'
 import { DEFAULTLASTTABS, IColors, TABSELECTEDCOLORS, TABUNSELECTEDCOLORS } from './tools/Constants'
 import { createChannelInstance, getChannelIconOf, getChannelIconSafe, getIconFromKind } from '@kwirthmagnify/kwirth-common-front'
 import { clusterColor } from './tools/clusterColor'
-import { MenuNotification, INotification, IResourceSelected } from '@kwirthmagnify/kwirth-common-front'
+import { MenuNotification, INotification, IResourceSelected, MetricDefinition } from '@kwirthmagnify/kwirth-common-front'
 import { ContextSelector } from './components/common/ContextSelector'
 import { v4 as uuid } from 'uuid'
 import { About } from './components/home/About'
@@ -1137,8 +1137,16 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             if (!props.isDesktop) {
                 let response = await fetch (`${backendUrl}/store/${user?.id}/clusters/list`, addGetAuthorization(accessString))
                 if (response.status===200) {
-                    clusterList = JSON.parse (await response.json())
-                    clusterList = clusterList.filter (c => c.name !== srcCluster!.name)
+                    /*
+                        What the store gives back is plain JSON, not Clusters: a Map comes back as {}. The
+                        metrics list is runtime data (getMetricsNames fills it), so every entry starts with an
+                        EMPTY Map — a metrics channel opened on an entry whose list was never read (no
+                        Kubernetes, unreachable, a route still waiting) got {} and broke on .keys().
+                    */
+                    const stored = JSON.parse (await response.json()) as Cluster[]
+                    clusterList = stored
+                        .filter (c => c.name !== srcCluster!.name)
+                        .map (c => Object.assign(new Cluster(), c, { metricsList: new Map<string, MetricDefinition>() }))
                     clustersLoadedRef.current = true
                 }
                 /*
