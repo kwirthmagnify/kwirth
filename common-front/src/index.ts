@@ -209,6 +209,8 @@ export type { IDialogTitleHelpProps } from './DialogTitleHelp'
 export { MenuNotification } from './MenuNotification'
 export { ChannelNotStarted } from './ChannelNotStarted'
 export type { IChannelNotStartedProps } from './ChannelNotStarted'
+export { JsonBlock } from './JsonBlock'
+export type { IJsonBlockProps } from './JsonBlock'
 export type { INotification } from './MenuNotification'
 
 export interface ITabSummary {
