@@ -1,14 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Box, Button, Card, CardContent, CardHeader, Checkbox, Chip, FormControl, FormControlLabel, FormHelperText, IconButton, InputLabel, MenuItem, Paper, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
-import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ISenderMessage } from '@kwirthmagnify/kwirth-common'
-import { ChannelNotStarted, IContentProps } from '@kwirthmagnify/kwirth-common-front'
-import { Check, Close, ContentCopy, DeleteSweep, Error as ErrorIcon, ExpandLess, ExpandMore, Refresh, Schedule, Send } from '@kwirthmagnify/kwirth-common-front/icons'
-import { ESenderDebugCommand, ESenderDebugKind, ESenderDebugLevel, ISenderDebugSendRequest } from '../common/SenderDebugTypes'
+import { Box, Button, Card, CardContent, CardHeader, Checkbox, Chip, FormControl, FormControlLabel, IconButton, InputLabel, MenuItem, Paper, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ISenderMessage, isConfigFieldEnabled } from '@kwirthmagnify/kwirth-common'
+import { ChannelNotStarted, ENotifyLevel, IContentProps, JsonBlock } from '@kwirthmagnify/kwirth-common-front'
+import { Check, Close, ContentCopy, DeleteSweep, Error as ErrorIcon, ExpandLess, ExpandMore, Refresh, Schedule, Send, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
+import { ESenderDebugAbandoned, ESenderDebugCommand, ESenderDebugKind, ESenderDebugLevel, ISenderDebugConfigRequest, ISenderDebugSendRequest } from '../common/SenderDebugTypes'
 import { ISenderDebugConfig } from './SenderDebugConfig'
-import { ISenderDebugData, ISenderDebugHistoryEntry } from './SenderDebugData'
+import { ISenderDebugData, ISenderDebugHistoryEntry, ISenderDebugOriginForm } from './SenderDebugData'
 
-/** Origin stamped on everything that leaves here, so the destination knows where it came from. */
-const ORIGIN_SOURCE = 'sender-debug'
+/** A sentence shown where JSON would go (no request, a void answer, an error): the same box, without colour. */
+const PLAIN = { m: 0, fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all' } as const
+
+/** The origin fields as the form shows them, in order: the key in ISenderDebugOriginForm and its label. */
+const ORIGIN_FIELDS: Array<{ key: keyof ISenderDebugOriginForm, label: string }> = [
+    { key: 'source', label: 'Source' },
+    { key: 'cluster', label: 'Cluster' },
+    { key: 'namespace', label: 'Namespace' },
+    { key: 'pod', label: 'Pod' },
+    { key: 'container', label: 'Container' },
+    { key: 'service', label: 'Service' }
+]
 
 export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentProps) => {
     const data: ISenderDebugData = props.channelObject.data
@@ -16,6 +26,9 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
     const form = data.form
     const boxRef = useRef<HTMLDivElement | null>(null)
     const [boxTop, setBoxTop] = useState(0)
+    // The card's content is the scroll container: what the form and the history need beyond the screen scrolls here.
+    const contentRef = useRef<HTMLDivElement | null>(null)
+    const [contentTop, setContentTop] = useState(0)
     // The channel repaints when a message arrives from the back end; typing in the form, clearing or
     // expanding a row are local actions and need their own render trigger.
     const [, forceRender] = useState(0)
@@ -24,10 +37,25 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
     const [expanded, setExpanded] = useState<Set<ISenderDebugHistoryEntry>>(new Set())
     // The row whose Copy was just pressed: its button shows a tick for a moment.
     const [copied, setCopied] = useState<ISenderDebugHistoryEntry | undefined>(undefined)
+    // The folded fields of the chosen configuration, and which of its secret values are revealed.
+    const [configOpen, setConfigOpen] = useState(false)
+    const [revealed, setRevealed] = useState<Set<string>>(new Set())
 
     useEffect(() => {
         if (boxRef.current) setBoxTop(boxRef.current.getBoundingClientRect().top)
+        if (contentRef.current) setContentTop(contentRef.current.getBoundingClientRect().top)
     })
+
+    /*
+        The chosen configuration in view: asked for whenever the choice changes — also when it comes preselected from
+        the setup and the instance has just started. An answer for a previous choice is dropped by the channel.
+    */
+    useEffect(() => {
+        if (!props.channelObject.instanceId || form.senderId === '' || form.configName === '') return
+        if (data.configView?.senderId === form.senderId && data.configView.configName === form.configName) return
+        const request: ISenderDebugConfigRequest = { senderId: form.senderId, configName: form.configName }
+        sendCommand(ESenderDebugCommand.CONFIG, request)
+    }, [props.channelObject.instanceId, form.senderId, form.configName])
 
     const refresh = () => forceRender(n => n + 1)
 
@@ -44,6 +72,14 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
         // place would be offering something that does not exist.
         const names = data.senders.find(s => s.id === senderId)?.configNames ?? []
         form.configName = names.length === 1 ? names[0] : ''
+        setConfigName(form.configName)
+    }
+
+    // The view belongs to the previous choice: it goes, and the effect above asks for the new one.
+    const setConfigName = (configName: string) => {
+        form.configName = configName
+        data.configView = undefined
+        setRevealed(new Set())
         refresh()
     }
 
@@ -85,18 +121,35 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
             // cast is for that reason, and not because anything at all could arrive here.
             level: form.level as ISenderMessage['level'],
             ...(metadata ? { metadata } : {}),
-            origin: { source: ORIGIN_SOURCE, timestamp: Date.now() }
+            origin: { ...originOf(form.origin), timestamp: Date.now() }
         }
     }
 
-    const sendCommand = (command: ESenderDebugCommand, payload?: ISenderDebugSendRequest) => {
-        if (!props.channelObject.instanceId) return
+    /** The typed origin as it travels: an empty field is not sent, so the destination does not label by ''. */
+    const originOf = (origin: ISenderDebugOriginForm): Partial<ISenderDebugOriginForm> => {
+        const out: Partial<ISenderDebugOriginForm> = {}
+        for (const { key } of ORIGIN_FIELDS) {
+            const value = origin[key].trim()
+            if (value !== '') out[key] = value
+        }
+        return out
+    }
+
+    /** false when the command could not even leave: no instance, or the socket is not open */
+    const sendCommand = (command: ESenderDebugCommand, payload?: ISenderDebugSendRequest | ISenderDebugConfigRequest): boolean => {
+        if (!props.channelObject.instanceId) return false
+        /*
+            A closed socket swallows send() without a word: while Kwirth restarts and the core reconnects (about
+            10 s), whatever is written here is lost, and the row would wait forever for an answer.
+        */
+        const webSocket = props.channelObject.webSocket
+        if (!webSocket || webSocket.readyState !== WebSocket.OPEN) return false
         /*
             The accessKey goes in EVERY command: the core discards them before they reach the plugin when
             they do not carry it, and from the front end that is indistinguishable from a back end that
             does not answer.
         */
-        props.channelObject.webSocket?.send(JSON.stringify({
+        webSocket.send(JSON.stringify({
             msgtype: 'senderdebugmessage',
             channel: 'sender-debug',
             action: EInstanceMessageAction.COMMAND,
@@ -107,6 +160,7 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
             command,
             ...(payload ? { data: payload } : {})
         }))
+        return true
     }
 
     const send = () => {
@@ -124,15 +178,19 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
             soon as it leaves, and not when the sender answers — which with a slow destination can take a
             while. The response is completed by processChannelMessage, looking it up by this id.
         */
-        data.history.unshift({ request })
+        const entry: ISenderDebugHistoryEntry = { request }
+        data.history.unshift(entry)
         while (data.history.length > config.maxHistory) data.history.pop()
-        sendCommand(form.batch ? ESenderDebugCommand.SENDBATCH : ESenderDebugCommand.SEND, request)
+        if (!sendCommand(form.batch ? ESenderDebugCommand.SENDBATCH : ESenderDebugCommand.SEND, request)) {
+            // it stays in the history — what was attempted is still worth seeing — but flagged as never sent
+            entry.abandoned = ESenderDebugAbandoned.NOT_SENT
+            props.channelObject.notify?.(props.channelObject.channelId, ENotifyLevel.WARNING, 'Not sent: this tab is not connected to Kwirth right now. It reconnects by itself; send again in a few seconds.')
+        }
         refresh()
     }
 
     const clear = () => {
         data.history = []
-        data.signals = []
         setExpanded(new Set())
         refresh()
     }
@@ -144,6 +202,21 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
         return next
     })
 
+    /*
+        sendBatch() is optional on a sender. Without it a batch is still sent — one send() per message, exactly what the
+        core does for any plugin that hands that sender a batch — so batch stays available, and this says which path it takes.
+    */
+    const batchChipLabel = (): string => {
+        if (!selected) return 'sendBatch'
+        return selected.supportsBatch ? 'sendBatch: native' : 'sendBatch: emulated'
+    }
+
+    const batchTooltip = (): string => {
+        if (!selected) return 'Pick a sender to see how it takes a batch.'
+        if (selected.supportsBatch) return 'This sender implements sendBatch(): a batch reaches it as one call.'
+        return 'This sender has no sendBatch(): a batch is delivered one send() at a time, the same as the core does for any plugin.'
+    }
+
     const senderLabel = (id: string): string => {
         const sender = data.senders.find(s => s.id === id)
         return sender?.displayName ? `${id} — ${sender.displayName}` : id
@@ -151,14 +224,28 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
 
     /** What is visible on a row.s status line, without expanding it. */
     const summaryOf = (entry: ISenderDebugHistoryEntry): string => {
-        if (!entry.result) return entry.abandoned ? 'no answer — the channel was stopped' : 'sending…'
+        if (!entry.result) {
+            switch (entry.abandoned) {
+                case ESenderDebugAbandoned.STOPPED: return 'no answer — the channel was stopped'
+                case ESenderDebugAbandoned.LOST: return 'no answer — the connection to Kwirth dropped (restarted?)'
+                case ESenderDebugAbandoned.NOT_SENT: return 'not sent — this tab was not connected to Kwirth'
+                default: return 'sending…'
+            }
+        }
         if (!entry.result.ok) return entry.result.error ?? 'failed'
         return entry.result.result ? 'delivered, with a result' : 'delivered'
     }
 
     /** What the sender answered, in JSON. A notification sender returns nothing, and that is said. */
     const answerOf = (entry: ISenderDebugHistoryEntry): string => {
-        if (!entry.result) return entry.abandoned ? 'No answer: the channel was stopped before the sender replied.' : 'Waiting for the sender…'
+        if (!entry.result) {
+            switch (entry.abandoned) {
+                case ESenderDebugAbandoned.STOPPED: return 'No answer: the channel was stopped before the sender replied.'
+                case ESenderDebugAbandoned.LOST: return 'No answer: the connection to Kwirth dropped before the sender replied — most likely Kwirth restarted. Whether it was delivered is unknown. The tab reconnects by itself; send again once it is back.'
+                case ESenderDebugAbandoned.NOT_SENT: return 'Not sent: this tab was not connected to Kwirth when SEND was pressed, so nothing reached the sender. The tab reconnects by itself; send again once it is back.'
+                default: return 'Waiting for the sender…'
+            }
+        }
         if (!entry.result.ok) return entry.result.error ?? 'Failed, with no error text.'
         if (!entry.result.result) return 'Nothing. The sender returned void, which is what a pure notification sender does.'
         return JSON.stringify(entry.result.result, null, 2)
@@ -184,6 +271,107 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
             console.error('sender-debug: could not copy to the clipboard', err)
         }
     }
+
+    /*
+        A folded block of the form: always there, the chevron on the RIGHT, and the whole header opens it. Disabled (and
+        closed) while it has nothing to show — the Configuration block until a configuration is picked.
+    */
+    const foldable = (title: string, open: boolean, onToggle: () => void, disabled: boolean, content: React.ReactNode) => (
+        <Box sx={{ borderTop: 1, borderColor: 'divider', mt: 0.5 }}>
+            <Stack direction='row' onClick={() => { if (!disabled) onToggle() }} aria-label={title} role='button' aria-expanded={open && !disabled}
+                sx={{ alignItems: 'center', pt: 0.5, cursor: disabled ? 'default' : 'pointer' }}>
+                <Typography variant='body2' sx={{ flex: 1, color: disabled ? 'text.disabled' : undefined }}>{title}</Typography>
+                <IconButton size='small' disabled={disabled} aria-label={open ? `Collapse ${title}` : `Expand ${title}`} onClick={(e) => { e.stopPropagation(); onToggle() }}>
+                    {open && !disabled ? <ExpandLess fontSize='small' /> : <ExpandMore fontSize='small' />}
+                </IconButton>
+            </Stack>
+            {open && !disabled && <Box sx={{ pt: 0.5 }}>{content}</Box>}
+        </Box>
+    )
+
+    /**
+     * A titled card of the form: what goes together is drawn together. 'grow' makes it take the rest of its column, so
+     * the two columns end at the same line.
+     */
+    const section = (title: string, content: React.ReactNode, grow = false) => (
+        <Paper variant='outlined' sx={{ p: 1.5, minWidth: 0, ...(grow ? { flex: 1, display: 'flex', flexDirection: 'column' } : {}) }}>
+            <Typography variant='overline' sx={{ display: 'block', lineHeight: 1.5, mb: 1, color: 'text.secondary' }}>{title}</Typography>
+            {grow ? <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>{content}</Box> : content}
+        </Paper>
+    )
+
+    const isSecret = (type: string | undefined, secret: boolean | undefined): boolean => type === 'password' || secret === true
+
+    const toggleSecret = (name: string) => setRevealed(prev => {
+        const next = new Set(prev)
+        if (next.has(name)) next.delete(name)
+        else next.add(name)
+        return next
+    })
+
+    /** A configuration value as text: objects as JSON, absent as empty. */
+    const textOf = (value: unknown): string => {
+        if (value === undefined || value === null) return ''
+        if (typeof value === 'object') return JSON.stringify(value)
+        return String(value)
+    }
+
+    /**
+     * The chosen configuration: every field the sender declares, its type, and what this configuration holds. Secrets
+     * are the real value, masked behind the eye (CLAUDE.md). A field without a value shows its default, in italics.
+     */
+    const configPanel = (): React.ReactNode => {
+        const view = data.configView
+        if (!view) return <Typography variant='caption' sx={{ color: 'text.secondary' }}>Reading the configuration…</Typography>
+        if (view.error) return <Typography variant='caption' sx={{ color: 'error.main' }}>{view.error}</Typography>
+        if (view.fields.length === 0) return <Typography variant='caption' sx={{ color: 'text.secondary' }}>This sender declares no configuration fields.</Typography>
+        return (
+            <Stack spacing={0.5}>
+                {view.fields.map(f => {
+                    const value = view.values[f.name]
+                    const secret = isSecret(f.type, f.secret)
+                    const shown = revealed.has(f.name)
+                    const text = textOf(value)
+                    // a field another one says does not apply here (enabledWhen) is greyed, and not required, as in the core's form
+                    const applies = isConfigFieldEnabled(f, view.fields, view.values)
+                    return (
+                        <Stack key={f.name} direction='row' spacing={1} sx={{ alignItems: 'center', minHeight: 28, opacity: applies ? 1 : 0.45 }}>
+                            <Typography variant='body2' noWrap sx={{ width: 220, flexShrink: 0 }}>{f.label}{f.required && applies ? ' *' : ''}</Typography>
+                            <Typography variant='caption' noWrap sx={{ width: 80, flexShrink: 0, color: 'text.secondary', fontFamily: 'monospace' }}>{f.type ?? 'text'}</Typography>
+                            {value === undefined || value === ''
+                                ? <Typography variant='body2' sx={{ flex: 1, color: 'text.secondary', fontStyle: 'italic' }}>{f.default !== undefined ? `default: ${textOf(f.default)}` : '(empty)'}</Typography>
+                                : <Typography variant='body2' sx={{ flex: 1, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                                    {secret && !shown ? text.replace(/[^\n]/g, '•') : text}
+                                </Typography>}
+                            {/* the eye is there for every secret field, disabled while there is nothing to reveal */}
+                            <Box sx={{ width: 32, flexShrink: 0 }}>
+                                {secret &&
+                                    <IconButton size='small' disabled={text === ''} aria-label={shown ? `Hide ${f.label}` : `Show ${f.label}`} onClick={() => toggleSecret(f.name)}>
+                                        {shown ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' />}
+                                    </IconButton>
+                                }
+                            </Box>
+                        </Stack>
+                    )
+                })}
+            </Stack>
+        )
+    }
+
+    /** Where the message says it comes from. An empty field is not sent; the timestamp is the send's own moment. */
+    const originPanel = (): React.ReactNode => (
+        <Stack spacing={0.5}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1 }}>
+                {ORIGIN_FIELDS.map(({ key, label }) =>
+                    <TextField key={key} value={form.origin[key]} onChange={(e) => { form.origin[key] = e.target.value; refresh() }} size='small' label={label}
+                        slotProps={{ inputLabel: { shrink: true } }} />
+                )}
+            </Box>
+            <Typography variant='caption' sx={{ color: 'text.secondary' }}>
+                Empty fields are not sent. The timestamp is the moment of the send.
+            </Typography>
+        </Stack>
+    )
 
     const formatEntry = (entry: ISenderDebugHistoryEntry, index: number) => {
         const open = expanded.has(entry)
@@ -243,15 +431,18 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                         <Typography variant='caption' sx={{
                             color: 'text.secondary'
                         }}>Sent</Typography>
-                        <Box component='pre' sx={{ m: 0, mb: 1, fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                            {sentOf(entry)}
+                        {/* JSON coloured by type when there is an object; the plain sentences (no request, void, an error) stay plain */}
+                        <Box sx={{ mb: 1 }}>
+                            {entry.request
+                                ? <JsonBlock value={entry.request.message} />
+                                : <Box component='pre' sx={PLAIN}>{sentOf(entry)}</Box>}
                         </Box>
                         <Typography variant='caption' sx={{
                             color: 'text.secondary'
                         }}>Answered</Typography>
-                        <Box component='pre' sx={{ m: 0, fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                            {answerOf(entry)}
-                        </Box>
+                        {result?.ok && result.result
+                            ? <JsonBlock value={result.result} />
+                            : <Box component='pre' sx={PLAIN}>{answerOf(entry)}</Box>}
                     </Box>
                 }
             </Paper>
@@ -307,22 +498,25 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                         </Tooltip>
                         <Tooltip title='Clear the send history'>
                             <span>
-                                <IconButton size='small' aria-label='Clear history' onClick={clear} disabled={data.history.length === 0 && data.signals.length === 0}><DeleteSweep fontSize='small' /></IconButton>
+                                <IconButton size='small' aria-label='Clear history' onClick={clear} disabled={data.history.length === 0}><DeleteSweep fontSize='small' /></IconButton>
                             </span>
                         </Tooltip>
                     </Stack>
                 </Stack>
             } />
-            <CardContent>
-                <Stack direction='column' spacing={1.5}>
-                    <Stack direction='row' spacing={2} sx={{
-                        alignItems: 'flex-end'
-                    }}>
-                        <Stack direction='column' spacing={0.5} sx={{ minWidth: 260 }}>
-                            <Typography variant='caption' sx={{
-                                color: 'text.secondary'
-                            }}>Sender</Typography>
-                            <Select value={form.senderId} onChange={(e) => setSender(e.target.value)} displayEmpty size='small' variant='standard' inputProps={{ 'aria-label': 'Sender' }}>
+            {/*
+                The content scrolls as a whole when it does not fit: with Configuration or Origin open the form grows,
+                the history keeps its minimum, and the rest is reached by scrolling here instead of falling off the tab.
+            */}
+            <CardContent ref={contentRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', height: `calc(100vh - ${contentTop}px - 16px)` }}>
+                <Stack direction='column' spacing={1.5} sx={{ flexShrink: 0 }}>
+                    {/* two columns — WHO it goes to (destination, origin) and WHAT is sent (message) — stacked on a narrow screen */}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 2fr) minmax(0, 3fr)' }, gap: 1.5, alignItems: 'stretch' }}>
+                    <Stack spacing={1.5} sx={{ minWidth: 0 }}>
+                    {section('Destination', <Stack spacing={1}>
+                        <FormControl size='small' fullWidth>
+                            <InputLabel id='sender-debug-sender-label' shrink>Sender</InputLabel>
+                            <Select labelId='sender-debug-sender-label' label='Sender' notched value={form.senderId} onChange={(e) => setSender(e.target.value)} displayEmpty inputProps={{ 'aria-label': 'Sender' }}>
                                 <MenuItem value=''><Typography variant='body2' sx={{
                                     color: 'text.secondary'
                                 }}>(pick a sender)</Typography></MenuItem>
@@ -345,29 +539,33 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </Stack>
-                        <Stack direction='column' spacing={0.5} sx={{ minWidth: 220 }}>
-                            <Typography variant='caption' sx={{
-                                color: 'text.secondary'
-                            }}>Configuration</Typography>
-                            {/* siempre presente y deshabilitada mientras no haya sender: nunca en condicional */}
-                            <Select value={form.configName} onChange={(e) => { form.configName = e.target.value; refresh() }} displayEmpty size='small' variant='standard' disabled={!selected || configNames.length === 0} inputProps={{ 'aria-label': 'Configuration' }}>
+                        </FormControl>
+                        {/* always there, disabled while there is no sender: never conditional */}
+                        <FormControl size='small' fullWidth disabled={!selected || configNames.length === 0}>
+                            <InputLabel id='sender-debug-config-label' shrink>Configuration</InputLabel>
+                            <Select labelId='sender-debug-config-label' label='Configuration' notched value={form.configName} onChange={(e) => setConfigName(e.target.value)} displayEmpty inputProps={{ 'aria-label': 'Configuration' }}>
                                 <MenuItem value=''><Typography variant='body2' sx={{
                                     color: 'text.secondary'
                                 }}>(pick a configuration)</Typography></MenuItem>
                                 {configNames.map(name => <MenuItem key={name} value={name}>{name}</MenuItem>)}
                             </Select>
-                        </Stack>
+                        </FormControl>
                         <Stack
                             direction='row'
                             spacing={1}
                             sx={{
                                 alignItems: 'center',
-                                pb: 0.5
+                                flexWrap: 'wrap',
+                                minHeight: 24
                             }}>
-                            {selected?.supportsBatch &&
-                                <Chip label='sendBatch' size='small' variant='outlined' color='info' />
-                            }
+                            {/* always there: how a batch would travel through THIS sender is known before sending, not after */}
+                            <Tooltip title={batchTooltip()}>
+                                {/* the span: a disabled element fires no events, and the tooltip needs them */}
+                                <span>
+                                    <Chip label={batchChipLabel()} size='small' variant='outlined' disabled={!selected}
+                                        color={!selected ? 'default' : selected.supportsBatch ? 'info' : 'warning'} />
+                                </span>
+                            </Tooltip>
                             {selected && !selected.instantiated &&
                                 <Typography variant='caption' sx={{
                                     color: 'text.secondary'
@@ -379,51 +577,54 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                                 }}>This is a filter: it does not deliver anywhere, it chains.</Typography>
                             }
                         </Stack>
+                        {foldable('Configuration fields', configOpen, () => setConfigOpen(!configOpen), form.configName === '', configPanel())}
+                    </Stack>)}
+
+                    {section('Origin', originPanel(), true)}
                     </Stack>
 
-                    {/*
-                        Los tres van con el label SIEMPRE arriba (shrink) y los tres reservan su linea de
-                        ayuda, aunque este vacia: si uno deja el label dentro del campo y otro lo sube, las
-                        lineas de los campos dejan de coincidir y la fila sale escalonada. El Select va
-                        envuelto en su FormControl por lo mismo — suelto no tiene label ni sitio para la
-                        ayuda, y su subrayado cae por su cuenta.
-                    */}
-                    <Stack direction='row' spacing={2} sx={{
-                        alignItems: 'flex-start'
-                    }}>
-                        <TextField value={form.subject} onChange={(e) => { form.subject = e.target.value; refresh() }} variant='standard' label='Subject'
-                            slotProps={{ inputLabel: { shrink: true } }} helperText=' ' sx={{ flex: 1 }} />
-                        <FormControl variant='standard' sx={{ minWidth: 120 }}>
-                            <InputLabel id='sender-debug-level-label' shrink>Level</InputLabel>
-                            <Select labelId='sender-debug-level-label' value={form.level} onChange={(e) => { form.level = e.target.value as ESenderDebugLevel; refresh() }} inputProps={{ 'aria-label': 'Level' }}>
-                                <MenuItem value={ESenderDebugLevel.DEBUG}>debug</MenuItem>
-                                <MenuItem value={ESenderDebugLevel.INFO}>info</MenuItem>
-                                <MenuItem value={ESenderDebugLevel.WARNING}>warning</MenuItem>
-                                <MenuItem value={ESenderDebugLevel.ERROR}>error</MenuItem>
-                            </Select>
-                            <FormHelperText> </FormHelperText>
-                        </FormControl>
-                        <TextField value={form.to} onChange={(e) => { form.to = e.target.value; refresh() }} variant='standard' label='To' placeholder='comma separated'
-                            slotProps={{ inputLabel: { shrink: true } }} helperText='What a recipient means is up to the sender' sx={{ flex: 1 }} />
-                    </Stack>
+                    <Stack spacing={1.5} sx={{ minWidth: 0 }}>
+                    {section('Message', <Stack spacing={1.5} sx={{ flex: 1, minHeight: 0 }}>
+                        <Stack direction='row' spacing={1}>
+                            <TextField value={form.subject} onChange={(e) => { form.subject = e.target.value; refresh() }} size='small' label='Subject'
+                                slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }} />
+                            <FormControl size='small' sx={{ width: 130, flexShrink: 0 }}>
+                                <InputLabel id='sender-debug-level-label' shrink>Level</InputLabel>
+                                <Select labelId='sender-debug-level-label' label='Level' notched value={form.level} onChange={(e) => { form.level = e.target.value as ESenderDebugLevel; refresh() }} inputProps={{ 'aria-label': 'Level' }}>
+                                    <MenuItem value={ESenderDebugLevel.DEBUG}>debug</MenuItem>
+                                    <MenuItem value={ESenderDebugLevel.INFO}>info</MenuItem>
+                                    <MenuItem value={ESenderDebugLevel.WARNING}>warning</MenuItem>
+                                    <MenuItem value={ESenderDebugLevel.ERROR}>error</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Stack>
+                        <TextField value={form.to} onChange={(e) => { form.to = e.target.value; refresh() }} size='small' label='To' placeholder='comma separated — what a recipient means is up to the sender'
+                            slotProps={{ inputLabel: { shrink: true } }} fullWidth />
+                        <TextField value={form.body} onChange={(e) => { form.body = e.target.value; refresh() }} size='small' label='Body' multiline minRows={2} maxRows={4}
+                            slotProps={{ inputLabel: { shrink: true } }} fullWidth />
+                        {/* Metadata takes whatever room the column leaves (the cards end level), and scrolls inside past it */}
+                        <TextField value={form.metadata} onChange={(e) => { form.metadata = e.target.value; refresh() }} size='small' label='Metadata (JSON)' placeholder='{} — a free JSON object, empty means none' multiline minRows={1}
+                            slotProps={{ inputLabel: { shrink: true } }} error={invalidMetadata()} helperText={invalidMetadata() ? 'Not a valid JSON object' : ' '} fullWidth
+                            sx={{
+                                flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column',
+                                '& .MuiInputBase-root': { flex: 1, alignItems: 'flex-start', minHeight: 0 },
+                                '& textarea': { height: '100% !important', overflow: 'auto !important', fontFamily: 'monospace' }
+                            }} />
+                    </Stack>, true)}
 
-                    <TextField value={form.body} onChange={(e) => { form.body = e.target.value; refresh() }} variant='standard' label='Body' multiline minRows={2} maxRows={6} fullWidth />
-
-                    <TextField value={form.metadata} onChange={(e) => { form.metadata = e.target.value; refresh() }} variant='standard' label='Metadata (JSON)' placeholder='{}' multiline minRows={1} maxRows={5}
-                        error={invalidMetadata()} helperText={invalidMetadata() ? 'Not a valid JSON object' : 'Free JSON object, empty means none'} fullWidth />
-
-                    <Stack direction='row' spacing={2} sx={{
+                    {/* how it is sent, the warning, and SEND — under the message it sends */}
+                    {section('Send', <Stack direction='row' spacing={2} sx={{
                         alignItems: 'center'
                     }}>
-                        <FormControlLabel
-                            control={<Checkbox checked={form.batch} onChange={(e) => { form.batch = e.target.checked; refresh() }} slotProps={{
+                        <FormControlLabel sx={{ ml: 0, flexShrink: 0 }}
+                            control={<Checkbox size='small' checked={form.batch} onChange={(e) => { form.batch = e.target.checked; refresh() }} slotProps={{
                                 input: { 'aria-label': 'Batch' }
                             }} />}
-                            label={<Typography variant='body2'>Batch (sendBatch)</Typography>}
+                            label={<Typography variant='body2'>{selected && !selected.supportsBatch ? 'Batch (emulated)' : 'Batch (sendBatch)'}</Typography>}
                         />
-                        {/* siempre visible y deshabilitado fuera del lote: nunca render condicional */}
-                        <TextField value={form.count} onChange={(e) => { form.count = +e.target.value; refresh() }} type='number' variant='standard' label='Messages' disabled={!form.batch}
-                            error={invalidCount()} helperText={invalidCount() ? '1 to 100' : ' '} sx={{ width: 110 }} />
+                        {/* always visible, disabled outside batch mode: never conditional */}
+                        <TextField value={form.count} onChange={(e) => { form.count = +e.target.value; refresh() }} type='number' size='small' label='Messages (1 to 100)' disabled={!form.batch}
+                            error={invalidCount()} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 150, flexShrink: 0 }} />
                         <Typography
                             variant='caption'
                             sx={{
@@ -432,12 +633,10 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                             }}>
                             This sends for real: a mail leaves, a ticket is created, a chat room gets a message.
                         </Typography>
-                        <Button variant='contained' startIcon={<Send />} onClick={send} disabled={!canSend()}>SEND</Button>
+                        <Button variant='contained' startIcon={<Send />} onClick={send} disabled={!canSend()} sx={{ flexShrink: 0 }}>SEND</Button>
+                    </Stack>)}
                     </Stack>
-
-                    {data.signals.map((s, index) => <Typography key={index} variant='caption' sx={{
-                        color: 'text.secondary'
-                    }}>*** {s} ***</Typography>)}
+                    </Box>
 
                     {data.senders.length === 0 &&
                         <Stack direction='row' spacing={1} sx={{
@@ -451,7 +650,8 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
                     }
                 </Stack>
 
-                <Box ref={boxRef} sx={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', width: '100%', flexGrow: 1, mt: 1, height: `calc(100vh - ${boxTop}px - 35px)` }}>
+                {/* the history takes whatever the form leaves, never less than 240 px: below that, the content scrolls */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', width: '100%', flex: '1 0 240px', mt: 1 }}>
                     <Box sx={{ flex: 1, overflowY: 'auto', ml: 1, mr: 1 }}>
                         {data.history.map((entry, index) => formatEntry(entry, index))}
                     </Box>
