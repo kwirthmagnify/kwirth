@@ -65,6 +65,49 @@ export interface IContentExternalObject {
     termId: string|undefined
 }
 
+// The STOP of an external window's channel, or undefined when it has no channel to stop
+const stopMessageOf = (data: IContentExternalData): IInstanceConfig | undefined => {
+    const content = data.content
+    if (!content?.externalChannel || !content.externalChannelObject) return undefined
+    return {
+        channel: content.externalChannel.channelId,
+        objects: EInstanceConfigObject.PODS,
+        action: EInstanceMessageAction.STOP,
+        flow: EInstanceMessageFlow.REQUEST,
+        instance: content.externalChannelObject.instanceId,
+        accessKey: data.channelObject?.accessString!,
+        view: content.externalChannelObject.view,
+        scope: InstanceConfigScopeEnum.NONE,
+        namespace: '',
+        group: '',
+        pod: '',
+        container: '',
+        type: EInstanceMessageType.SIGNAL
+    }
+}
+
+/*
+    What closing an external window means: its channel is stopped and its socket CLOSED. Unmounting is not
+    the place for it — a window unmounts and mounts again every time it changes layer (front, top) — so the
+    one who closes the window calls this. Without it the socket stayed open, streaming into a window that
+    no longer existed, until the page was reloaded.
+*/
+export const closeContentExternal = (data: IContentExternalData): void => {
+    const content = data.content
+    if (!content?.ws) return
+    const ws = content.ws
+    const stop = stopMessageOf(data)
+    if (stop && content.externalChannelStarted && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(stop))
+    if (content.externalChannel && content.externalChannelObject) content.externalChannel.stopChannel(content.externalChannelObject)
+    ws.onmessage = null
+    ws.onerror = null
+    ws.onclose = null
+    ws.close()          // the STOP above leaves first: a socket flushes what is queued before its close frame
+    content.ws = undefined
+    content.externalChannelStarted = false
+    content.externalChannelPaused = false
+}
+
 const ContentExternal: React.FC<IContentExternalProps> = (props:IContentExternalProps) => {
     let contentExternalData:IContentExternalData = props.data
     const dialogRef = useRef<IResizableDialogHandle>(null)
@@ -457,21 +500,7 @@ const containerRef = useRef<HTMLDivElement>(null)
     const stop = () => {
         if (!contentExternalData.content || !contentExternalData.content.ws || !contentExternalData.content.externalChannel || !contentExternalData.content.externalChannelObject) return
 
-        let instanceConfig: IInstanceConfig = {
-            channel: contentExternalData.content.externalChannel.channelId,
-            objects: EInstanceConfigObject.PODS,
-            action: EInstanceMessageAction.STOP,
-            flow: EInstanceMessageFlow.REQUEST,
-            instance: contentExternalData.content.externalChannelObject.instanceId,
-            accessKey: contentExternalData.channelObject?.accessString!,
-            view: contentExternalData.content.externalChannelObject.view,
-            scope: InstanceConfigScopeEnum.NONE,
-            namespace: '',
-            group: '',
-            pod: '',
-            container: '',
-            type: EInstanceMessageType.SIGNAL
-        }
+        const instanceConfig = stopMessageOf(contentExternalData)!
         contentExternalData.content.externalChannel.stopChannel(contentExternalData.content.externalChannelObject)
         contentExternalData.content.ws.send(JSON.stringify(instanceConfig))
         contentExternalData.content.externalChannelStarted = false
