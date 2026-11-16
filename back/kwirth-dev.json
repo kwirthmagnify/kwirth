@@ -5,7 +5,6 @@
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
         "specula": "../plugins/specula/dist",
-        "ianus": "../plugins/ianus/dist",
         "sender-debug": "../plugins/sender-debug/dist",
         "provider-debug": "../plugins/provider-debug/dist"
     },
@@ -40,7 +39,6 @@
         "excubitor": "../plugins/excubitor/docs/",
         "agora": "../plugins/agora/docs/",
         "specula": "../plugins/specula/docs/",
-        "ianus": "../plugins/ianus/docs/",
         "aws": "../providers/aws/docs/",
         "aws-serverless": "../aitoolsets/aws-serverless/docs/",
         "aws-serverless-ops": "../aitoolsets/aws-serverless-ops/docs/"
