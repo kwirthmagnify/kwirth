@@ -15,7 +15,7 @@ import { objectSections } from './components/DetailsSections'
 import { CloudQueue, Edit, ExitToApp, Notifications, NotificationsActive, Search } from '@kwirthmagnify/kwirth-common-front/icons'
 import { CloudOff, EditOff, List } from './icons'
 import { MsgBoxButtons, MsgBoxOkError, MsgBoxWaitCancel, MsgBoxYesNo } from '@kwirthmagnify/kwirth-common-front'
-import { ContentExternal, IContentExternalData } from './components/ContentExternal'
+import { ContentExternal, IContentExternalData, closeContentExternal } from './components/ContentExternal'
 import { ContentDetails, IDetailsData } from './components/ContentDetails'
 import { ContentEdit, IContentEditData } from './components/ContentEdit'
 import { MenuContainers } from './components/MenuContainers'
@@ -1352,6 +1352,8 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
     const onWindowClose = (id:string) => {
         let index = magnifyData.windows.findIndex(w => w.id === id)
         if (index<0) return
+        // an external window takes its channel and its socket with it
+        if (magnifyData.windows[index].class === 'ContentExternal') closeContentExternal(magnifyData.windows[index].data as IContentExternalData)
         magnifyData.windows.splice(index, 1)
         const lastVisible = [...magnifyData.windows].reverse().find(w => w.visible)
         if (lastVisible) bringWindowToFront(lastVisible.id)
@@ -1482,20 +1484,29 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         }
     }
 
+    /*
+        A window keeps the callbacks it was created with, and those call the setTick of the Magnify that existed
+        THEN: after it mounted again (another Kwirth tab and back) they fell on an unmounted component, and
+        closing or minimizing a window waited for some other render to show. The current ones go AFTER the spread.
+    */
+    const currentCallbacks = { onClose: onWindowClose, onMinimize: onWindowMinimize, onTop: onWindowTop, onWindowChange: onWindowChange }
+
     const renderWindow = (w:IContentWindow, front:boolean, top:boolean) => {
         if (w.visible && w.atFront===front && w.atTop===top) {
             switch (w.class) {
                 case 'ContentDetails':
-                    return  <ContentDetails key={w.id} onFocus={() => bringWindowToFront(w.id)} {...w} />
+                    return  <ContentDetails key={w.id} {...w} {...currentCallbacks} onFocus={() => bringWindowToFront(w.id)} />
                 case 'ArtifactSearch':
-                    return  <ArtifactSearch key={w.id} onFocus={() => bringWindowToFront(w.id)} {...w} />
+                    return  <ArtifactSearch key={w.id} {...w} {...currentCallbacks} onFocus={() => bringWindowToFront(w.id)} />
                 case 'LogSearchPanel':
-                    return  <LogSearchPanel key={w.id} onFocus={() => bringWindowToFront(w.id)} {...w} channelObject={props.channelObject} magnifyData={magnifyData} />
+                    return  <LogSearchPanel key={w.id} {...w} {...currentCallbacks} onFocus={() => bringWindowToFront(w.id)} channelObject={props.channelObject} magnifyData={magnifyData} />
                 case 'ContentBrowse':
                 case 'ContentEdit':
-                    return  <ContentEdit key={w.id} onFocus={() => bringWindowToFront(w.id)} {...w} />
+                    return  <ContentEdit key={w.id} {...w} {...currentCallbacks} onFocus={() => bringWindowToFront(w.id)} />
                 case 'ContentExternal':
-                    return  <ContentExternal key={w.id} onFocus={() => bringWindowToFront(w.id)} {...w}/>
+                    // its data keeps the refresh it was created with too
+                    (w.data as IContentExternalData).onRefresh = onContentExternalRefresh
+                    return  <ContentExternal key={w.id} {...w} {...currentCallbacks} onFocus={() => bringWindowToFront(w.id)} />
                 default:
                     console.error('Invalid window class:', w.class)
             }
