@@ -2,6 +2,33 @@
   {
     "extensionType": "plugin",
     "id": "magnify",
+    "version": "0.3.4",
+    "name": "Magnify",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-magnify/-/kwirth-plugin-magnify-0.3.4.tgz",
+    "description": "Magnify channel plugin for Kwirth - a complete Kubernetes management tool: every artifact and event of the cluster, live, and the actions to manage them",
+    "icon": "Search",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "dce",
+        "id": "file-manager",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "provider",
+        "id": "events",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "provider",
+        "id": "metrics",
+        "minVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "magnify",
     "version": "0.3.3",
     "name": "Magnify",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-magnify/-/kwirth-plugin-magnify-0.3.3.tgz",
@@ -1823,6 +1850,16 @@
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-news/-/kwirth-plugin-news-0.2.20.tgz",
     "description": "News channel plugin for Kwirth - displays Kubernetes and AI news feeds",
     "icon": "Newspaper"
+  },
+  {
+    "extensionType": "plugin",
+    "id": "ops",
+    "version": "0.2.29",
+    "name": "Ops",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-ops/-/kwirth-plugin-ops-0.2.29.tgz",
+    "description": "Ops channel plugin for Kwirth",
+    "icon": "Terminal",
+    "website": "https://kwirthmagnify.dev"
   },
   {
     "extensionType": "plugin",
