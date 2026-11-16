@@ -259,6 +259,11 @@ interface IRunningInstance {
     backChannelObject: IBackChannelObject
     providerStorage?: IProviderStorage   // persistencia inyectada a los providers (equivalente al backChannelObject de los canales)
     active: boolean
+    /**
+     * startRunningInstance() finished: keys, routes and channels are up. 'active' is set BEFORE that (the instance is
+     * chosen first and started afterwards), so a WS message must wait for both — see createHttpServers.
+     */
+    ready: boolean
     router: any
     apiKeyApi: ApiKeyApi|undefined
 }
@@ -292,6 +297,9 @@ const envPort = +(process?.env?.PORT || '3883')
 const envBodyLimit = process.env.BODYLIMIT || '8mb'
 // How long an idle connection is kept open, in milliseconds (see createHttpServers)
 const envKeepAliveMs = +(process.env.KEEPALIVE || '65000')
+// WS messages that arrive before the running instance is active are held, checked every POLL, for at most MAX (see createHttpServers)
+const WS_HOLD_POLL_MS = 250
+const WS_HOLD_MAX_MS = 60000
 
 /*
     Provider routes that want the body RAW (the ones declaring 'rawBody').
@@ -685,6 +693,7 @@ const createRunningInstance = async (context:string|undefined, kwirthData:Kwirth
             remoteChannels: [],
             backChannelObject: {},
             active: false,
+            ready: false,
             router: undefined,
             apiKeyApi: undefined
         }
@@ -2339,6 +2348,8 @@ const startRunningInstance = async (ri:IRunningInstance, expressApp:Application)
             channel.startChannel()?.catch((err: unknown) =>
                 logError(ELogComponent.CORE, `Channel '${channelId}' failed to start — it stays down, kwirth keeps running: ${err instanceof Error ? err.message : String(err)}`))
         }
+        // from here a WS message can be served: the ones held while starting are replayed (createHttpServers)
+        ri.ready = true
     }
     catch (err) {
         logError(ELogComponent.CORE, 'Error in startRunningInstance')
@@ -3595,13 +3606,43 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
                 }
             }
 
-            webSocket.onmessage = (event) => {
-                let ri = instances.find(r => r.active)
+            /*
+                The server listens a couple of seconds BEFORE the running instance is active (measured on a dev
+                restart: the socket is accepted ~2 s before anything answers). What arrived in that window used to
+                be dropped with only a log line — typically the START a front sends the moment it reconnects
+                after a restart, which left its tab with no instance and no error at all. It is held instead, and
+                replayed IN ORDER once the instance is active; whatever arrives meanwhile queues behind it.
+            */
+            const held: string[] = []
+            let holdTimer: NodeJS.Timeout | undefined
+            let holdStartedAt = 0
+            // active is not enough: it is set before the instance has its keys and channels (IRunningInstance.ready)
+            const servingInstance = () => instances.find(r => r.active && r.ready)
+            const replayHeld = () => {
+                const ri = servingInstance()
                 if (!ri) {
-                    logWarning(ELogComponent.CORE, 'No running Instance found on WS message')
+                    if (Date.now() - holdStartedAt < WS_HOLD_MAX_MS) return
+                    logWarning(ELogComponent.CORE, `No running Instance ready after ${WS_HOLD_MAX_MS} ms: dropping ${held.length} held WS message(s)`)
+                    held.length = 0
+                }
+                else {
+                    for (const message of held.splice(0)) localProcessClientMessage(webSocket, message, ri)
+                }
+                clearInterval(holdTimer)
+                holdTimer = undefined
+            }
+
+            webSocket.onmessage = (event) => {
+                const ri = servingInstance()
+                if (ri && held.length === 0) {
+                    localProcessClientMessage(webSocket, event.data, ri)
                     return
                 }
-                localProcessClientMessage(webSocket, event.data, ri)
+                held.push(event.data)
+                if (!holdTimer) {
+                    holdStartedAt = Date.now()
+                    holdTimer = setInterval(replayHeld, WS_HOLD_POLL_MS)
+                }
             }
 
             const cleanupNonReconnectable = (reason: string) => {
@@ -3624,6 +3665,9 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
 
             webSocket.onclose = () => {
                 logInfo(ELogComponent.CORE, 'Client disconnected')
+                // nobody left to answer: what was still held goes with the socket
+                clearInterval(holdTimer)
+                held.length = 0
                 cleanupNonReconnectable('closed')
                 if (runningEnv.isDesktop) {
                     // +++ if session is desktop, we remove everything and stop everything
