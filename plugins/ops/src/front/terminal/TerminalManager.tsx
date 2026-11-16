@@ -59,11 +59,19 @@ class TerminalManager {
 
     getTerminal(id: string): ManagedTerminal | undefined { return this.terminals.get(id) }
 
+    // A terminal the user (or the tab) is done with: its shell socket is closed too, or the exec stays open on the back
     destroyTerminal(id: string): void {
         const t = this.terminals.get(id)
         if (!t) return
+        this.terminals.delete(id)          // first: its socket's onclose then finds it gone and does nothing
+        try { t.socket.close() }
+        catch { /* already closed */ }
         t.term.dispose()
-        this.terminals.delete(id)
+    }
+
+    // Every terminal, when the channel stops or the tab is closed
+    closeAll(): void {
+        for (const id of [...this.terminals.keys()]) this.destroyTerminal(id)
     }
 }
 
