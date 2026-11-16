@@ -5,8 +5,7 @@
         "excubitor": "../plugins/excubitor/dist",
         "montag": "../plugins/montag/dist",
         "specula": "../plugins/specula/dist",
-        "sender-debug": "../plugins/sender-debug/dist",
-        "provider-debug": "../plugins/provider-debug/dist"
+        "sender-debug": "../plugins/sender-debug/dist"
     },
     "providers": {
         "agent-metrics": "../providers/agent-metrics/dist",
