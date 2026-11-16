@@ -11,11 +11,11 @@ del pluter de pago queda reorientado en su repo; se declara router cuando lleve 
 
 ## Backlog
 
-- **bridge: bucle de enlace duplicado** (visto 2026‑11‑16, QA de Ianus, log del dev): k3d y AKS se marcan el uno
-  al otro a la vez; AKS cierra uno con `4409 duplicate link: the one opened by the lower cluster uid stays` y k3d
-  vuelve a marcar a los ~11 s, una y otra vez. La regla de desempate existe pero el lado que pierde no deja de
-  marcar. Es de **bridge** (su plan: `jfvilas/kwirth/routers/bridge/docs/plan`), no del core: anotado aquí para
-  que no se pierda hasta su sesión.
+- ✅ **Hecho 2026‑11‑16 — bridge: bucle de enlace duplicado** (`router/bridge@0.1.1`). No era que los dos lados se
+  marcaran: el back de dev de k3d se reiniciaba, su enlace moría sin cierre y AKS, que no hace ping a los
+  entrantes, lo daba por vivo. Al volver k3d, los dos enlaces los había abierto k3d, la regla del uid más bajo no
+  podía elegir y AKS se quedaba con el muerto, rechazando el nuevo con `4409` cada pocos segundos. Ahora el
+  enlace nuevo del mismo lado sustituye al viejo. Queda en su backlog que el receptor haga ping a sus entrantes.
 
 - ✅ **Hecho 2026‑11‑16 — el ticket de ruta caducaba dentro de las URLs de los tabs**. `channelObject.clusterUrl`
   se calculaba una vez, al crear el tab, con el ticket de ese momento (10 min de vida): lo que un tab abría DESPUÉS
