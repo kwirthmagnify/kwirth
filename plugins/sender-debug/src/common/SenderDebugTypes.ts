@@ -1,4 +1,4 @@
-import { IInstanceMessage, ISenderMessage } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, IInstanceMessage, ISenderConfig, ISenderMessage } from '@kwirthmagnify/kwirth-common'
 
 /**
  * What the front end asks the back end for. A core COMMAND, with this 'command' inside.
@@ -12,13 +12,16 @@ export enum ESenderDebugCommand {
     /** delivers ONE message through send() */
     SEND = 'send',
     /** delivers N messages through sendBatch() — the batch path, the one log destinations use */
-    SENDBATCH = 'sendbatch'
+    SENDBATCH = 'sendbatch',
+    /** returns the schema of a sender and the values of one of its configurations */
+    CONFIG = 'config'
 }
 
-/** Nature of the message the back end sends the front end: either the catalogue or a send result. */
+/** Nature of the message the back end sends the front end: the catalogue, a send result or a configuration. */
 export enum ESenderDebugPayload {
     SENDERS = 'senders',
-    RESULT = 'result'
+    RESULT = 'result',
+    CONFIG = 'config'
 }
 
 /**
@@ -43,6 +46,22 @@ export enum ESenderDebugLevel {
     INFO = 'info',
     WARNING = 'warning',
     ERROR = 'error'
+}
+
+/**
+ * Why a send in the history will never get its answer. A front-end fact, not the sender's: no result is made up,
+ * whether it arrived is unknown.
+ */
+export enum ESenderDebugAbandoned {
+    /** the channel was stopped with the send still in flight */
+    STOPPED = 'stopped',
+    /**
+     * it left, but its answer is not coming: the socket dropped with it in flight, or the back end answered the command
+     * with an error signal (this tab's instance is gone) — the typical cause of both, Kwirth restarted
+     */
+    LOST = 'lost',
+    /** it never left: the tab's socket was down when it was sent (Kwirth restarting, the core still reconnecting) */
+    NOT_SENT = 'notsent'
 }
 
 /** A sender as this channel sees it: what is installed, plus what the core knows about it right now. */
@@ -107,6 +126,26 @@ export interface ISenderDebugResult {
     elapsed: number
 }
 
+/** What the front end asks to see: one configuration of one sender. */
+export interface ISenderDebugConfigRequest {
+    senderId: string
+    configName: string
+}
+
+/**
+ * The chosen configuration in view: the fields the sender declares (getConfigSchema) and what this configuration
+ * holds. The values are the REAL ones, secrets included, as every configuration in Kwirth: the tab masks them
+ * behind the eye. Reading the schema instantiates a cold sender, the same as sending to it would.
+ */
+export interface ISenderDebugConfigView {
+    senderId: string
+    configName: string
+    fields: IConfigFieldDef[]
+    values: ISenderConfig
+    /** why it could not be read, when it could not (no registry, sender not installed, configuration gone) */
+    error?: string
+}
+
 export interface ISenderDebugMessageResponse extends IInstanceMessage {
     msgtype: 'senderdebugmessageresponse'
     payloadType: ESenderDebugPayload
@@ -114,12 +153,15 @@ export interface ISenderDebugMessageResponse extends IInstanceMessage {
     senders?: ISenderDebugSenderInfo[]
     /** present when payloadType === RESULT */
     result?: ISenderDebugResult
+    /** present when payloadType === CONFIG */
+    config?: ISenderDebugConfigView
 }
 
 export interface ISenderDebugCommandMessage extends IInstanceMessage {
     msgtype: 'senderdebugmessage'
     command: ESenderDebugCommand
-    data?: ISenderDebugSendRequest
+    /** SEND and SENDBATCH carry a send request; CONFIG, the configuration to read */
+    data?: ISenderDebugSendRequest | ISenderDebugConfigRequest
 }
 
 /**
