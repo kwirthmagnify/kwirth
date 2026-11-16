@@ -1,7 +1,8 @@
 import React from 'react'
 import { Box, Chip, IconButton, MenuItem, Select, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Tooltip, Typography } from '@mui/material'
 import { Refresh } from '@kwirthmagnify/kwirth-common-front/icons'
-import { IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { ChannelNotStarted, IContentProps } from '@kwirthmagnify/kwirth-common-front'
+import { StatusIcon } from './icons'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { EComponentColumn, EComponentHealth, EComponentKind, EStatusCommand, EStatusTab, EStatusTable, IStatusComponent } from '../common/StatusTypes'
 import { TSortValue, nextSort, sortRows } from './StatusSort'
@@ -55,7 +56,11 @@ interface IEmptyStateProps {
     centred. Where the box starts is measured and it is given the rest of the viewport — the same as the
     table does, and as the other channels do in their empty state.
 */
-const EmptyState: React.FC<IEmptyStateProps> = ({ title, detail }) => {
+interface IMeasuredCentreProps {
+    children: React.ReactNode
+}
+
+const MeasuredCentre: React.FC<IMeasuredCentreProps> = ({ children }) => {
     const ref = React.useRef<HTMLDivElement | null>(null)
     const [top, setTop] = React.useState(0)
     React.useEffect(() => {
@@ -74,13 +79,21 @@ const EmptyState: React.FC<IEmptyStateProps> = ({ title, detail }) => {
                 px: 4,
                 textAlign: 'center'
             }}>
+            {children}
+        </Stack>
+    );
+}
+
+const EmptyState: React.FC<IEmptyStateProps> = ({ title, detail }) => {
+    return (
+        <MeasuredCentre>
             <Typography variant='h6' sx={{
                 color: 'text.secondary'
             }}>{title}</Typography>
             <Typography variant='body2' sx={{
                 color: 'text.secondary'
             }}>{detail}</Typography>
-        </Stack>
+        </MeasuredCentre>
     );
 }
 
@@ -370,9 +383,15 @@ const StatusTabContent: React.FC<IContentProps> = (props) => {
         return <EmptyState title='Kwirth Status could not start'
             detail={data.signals[data.signals.length - 1]} />
     }
+    // Not started: the shared not-started screen (icon and name, what starting gives, and a Start button that
+    // opens the setup first, like the tab menu's Start), in the same measured centre as the other two states.
     if (!data.started) {
-        return <EmptyState title='Kwirth Status not started'
-            detail='Start the channel (tab settings ⚙ → Start) to see what this Kwirth has inside.' />
+        return (
+            <MeasuredCentre>
+                <ChannelNotStarted icon={<StatusIcon color='primary' />} name='Kwirth Status'
+                    hint='Kwirth Status not started. Start the channel to see what this Kwirth has inside.' channelObject={props.channelObject} />
+            </MeasuredCentre>
+        )
     }
     if (!inventory) {
         return <EmptyState title='Waiting for the first snapshot'
