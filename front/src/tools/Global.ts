@@ -39,10 +39,11 @@ export const getMetricsNames = async (cluster:Cluster) => {
     // does not start even if installed, so this call can only 404. The guard lives HERE and not at the two call sites, because
     // a third one would have to remember, and "there are metrics channels installed" is not the same
     // question as "is there anything to take metrics from".
+    // Emptied first, also when there is nothing to read: whoever opens a metrics channel gets a Map, never stale data
+    cluster.metricsList = new Map()
     if (cluster.kwirthData?.clusterType === EClusterType.NONE) return
     try {
         console.log(`Receiving metrics for cluster ${cluster.name}`)
-        cluster.metricsList=new Map()
         var response = await fetchProvider(cluster, 'metrics', '')
         var json=await response.json() as MetricDefinition[]
         json.map( jsonMetric => cluster.metricsList.set(jsonMetric.metric, jsonMetric))
