@@ -1,4 +1,7 @@
-import { ESenderDebugLevel, ISenderDebugResult, ISenderDebugSendRequest, ISenderDebugSenderInfo } from '../common/SenderDebugTypes'
+import { ESenderDebugAbandoned, ESenderDebugLevel, ISenderDebugConfigView, ISenderDebugResult, ISenderDebugSendRequest, ISenderDebugSenderInfo } from '../common/SenderDebugTypes'
+
+/** Origin stamped on everything that leaves here unless it is changed, so the destination knows where it came from. */
+export const ORIGIN_SOURCE = 'sender-debug'
 
 /**
  * One row of the history: what was ASKED to be sent and what the sender answered.
@@ -14,10 +17,10 @@ export interface ISenderDebugHistoryEntry {
     /** absent while the send is IN FLIGHT: the row is already visible, and is completed on reply */
     result?: ISenderDebugResult
     /**
-     * The channel was stopped with this send still in flight, so its reply is never going to arrive. It
-     * is a FRONT-end fact, not the sender.s: that is why no result is made up — whether it arrived is unknown.
+     * Why this send's reply is never going to arrive: the channel was stopped, or the back end lost the instance.
+     * It is a FRONT-end fact, not the sender's: that is why no result is made up — whether it arrived is unknown.
      */
-    abandoned?: boolean
+    abandoned?: ESenderDebugAbandoned
 }
 
 /**
@@ -38,6 +41,19 @@ export interface ISenderDebugForm {
     /** deliver through sendBatch() instead of through send() */
     batch: boolean
     count: number
+    /** where the message says it comes from (ISenderMessage.origin), as typed; the timestamp is the send's own */
+    origin: ISenderDebugOriginForm
+}
+
+/** The origin as typed: all text, and an empty field is not sent. */
+export interface ISenderDebugOriginForm {
+    /** 'sender-debug' by default; another value lets a sender that routes or labels by source be tested */
+    source: string
+    cluster: string
+    namespace: string
+    pod: string
+    container: string
+    service: string
 }
 
 export interface ISenderDebugData {
@@ -45,18 +61,17 @@ export interface ISenderDebugData {
     senders: ISenderDebugSenderInfo[]
     /** sends of the session, most recent first, trimmed to maxHistory */
     history: ISenderDebugHistoryEntry[]
-    /** signals still to be shown as text (registry unavailable, instance lost...) */
-    signals: string[]
     /** the core accepted the instance.s configuration (the reply to the start) */
     configAccepted: boolean
     started: boolean
     form: ISenderDebugForm
+    /** the chosen configuration in view (CONFIG); absent until it arrives, and cleared when the choice changes */
+    configView?: ISenderDebugConfigView
 }
 
 export class SenderDebugData implements ISenderDebugData {
     senders: ISenderDebugSenderInfo[] = []
     history: ISenderDebugHistoryEntry[] = []
-    signals: string[] = []
     configAccepted = false
     started = false
     form: ISenderDebugForm = {
@@ -68,6 +83,8 @@ export class SenderDebugData implements ISenderDebugData {
         level: ESenderDebugLevel.INFO,
         metadata: '',
         batch: false,
-        count: 3
+        count: 3,
+        origin: { source: ORIGIN_SOURCE, cluster: '', namespace: '', pod: '', container: '', service: '' }
     }
+    configView?: ISenderDebugConfigView = undefined
 }
