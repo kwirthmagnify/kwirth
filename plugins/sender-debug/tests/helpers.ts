@@ -2,7 +2,8 @@
 // No infrastructure is brought up: a clusterInfo with a fake sender registry is injected and the
 // WebSocket traffic is captured with MockWs.
 import { EInstanceMessageType, ISenderMessage, ISenderResult } from '@kwirthmagnify/kwirth-common-back'
-import { ESenderDebugPayload, ISenderDebugMessageResponse, ISenderDebugResult, ISenderDebugSenderInfo } from '../src/common/SenderDebugTypes'
+import { IConfigFieldDef, ISenderConfig } from '@kwirthmagnify/kwirth-common'
+import { ESenderDebugPayload, ISenderDebugConfigView, ISenderDebugMessageResponse, ISenderDebugResult, ISenderDebugSenderInfo } from '../src/common/SenderDebugTypes'
 
 // Fake WebSocket: it keeps every send() as a JSON string and offers typed views of the traffic.
 export class MockWs {
@@ -33,6 +34,12 @@ export class MockWs {
     lastResult(): ISenderDebugResult | undefined {
         const all = this.results()
         return all.length === 0 ? undefined : all[all.length - 1]
+    }
+
+    /** the last configuration view received */
+    lastConfig(): ISenderDebugConfigView | undefined {
+        const all = this.data().filter(m => m.payloadType === ESenderDebugPayload.CONFIG)
+        return all.length === 0 ? undefined : all[all.length - 1].config
     }
 
     /** texts of the signals emitted by the channel */
@@ -215,6 +222,39 @@ export class FakeRegistry {
 
     /** is it instantiated right now? (to assert the lazy effect of the first send) */
     isInstantiated(id: string): boolean { return this.instantiated.has(id) }
+
+    // ---- configuration view (CONFIG) ----
+    private schemas = new Map<string, IConfigFieldDef[]>()
+    private configs = new Map<string, ISenderConfig[]>()
+    private schemaFailure: string | undefined = undefined
+
+    /** what getSchema() and getConfigs() answer for a sender */
+    withConfigs(senderId: string, fields: IConfigFieldDef[], configs: ISenderConfig[]): FakeRegistry {
+        this.schemas.set(senderId, fields)
+        this.configs.set(senderId, configs)
+        return this
+    }
+
+    withSchemaError(message = 'boom reading schema'): FakeRegistry {
+        this.schemaFailure = message
+        return this
+    }
+
+    /** a core whose manager cannot hand a channel the configurations */
+    withoutConfigRead(): FakeRegistry {
+        delete this.getSchema
+        delete this.getConfigs
+        return this
+    }
+
+    // optional, as in the real manager seen from the plugin; reading the schema instantiates, like the core's getSender()
+    getSchema?: (senderId: string) => IConfigFieldDef[] = (senderId: string) => {
+        if (this.schemaFailure) throw new Error(this.schemaFailure)
+        if (this.senders.has(senderId)) this.instantiated.add(senderId)
+        return this.schemas.get(senderId) ?? []
+    }
+
+    getConfigs?: (senderId: string) => ISenderConfig[] = (senderId: string) => this.configs.get(senderId) ?? []
 }
 
 export const makeClusterInfo = (registry?: FakeRegistry) => ({ senders: registry })
