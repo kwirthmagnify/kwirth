@@ -1,5 +1,5 @@
-import { BlockList, isIP } from 'net'
 import { ICallerAddress } from '@kwirthmagnify/kwirth-common'
+import { buildBlockList, ipFamilyOf, normalizeIp } from '@kwirthmagnify/kwirth-common-back'
 
 /*
     Who is really on the other end of a request (plan: plans/login-ip-filter).
@@ -16,68 +16,8 @@ import { ICallerAddress } from '@kwirthmagnify/kwirth-common'
     No dependency: 'net.BlockList' (Node ≥ 15) already matches addresses and subnets, IPv4 and IPv6.
 */
 
-const IPV4_MAPPED = /^::ffff:(\d{1,3}(\.\d{1,3}){3})$/i
-const IPV4_WITH_PORT = /^(\d{1,3}(\.\d{1,3}){3}):\d+$/
-const IPV6_BRACKETED = /^\[([^\]]+)\](:\d+)?$/
-
-// One address as it may come in a socket or in a forwarded header, in its canonical form; '' if it is not one.
-export const normalizeIp = (raw: string | undefined): string => {
-    if (!raw) return ''
-    let value = raw.trim()
-    const bracketed = IPV6_BRACKETED.exec(value)
-    if (bracketed) value = bracketed[1]
-    const withPort = IPV4_WITH_PORT.exec(value)
-    if (withPort) value = withPort[1]
-    const mapped = IPV4_MAPPED.exec(value)
-    if (mapped) value = mapped[1]
-    if (isIP(value) === 0) return ''
-    return value.toLowerCase()
-}
-
-const familyOf = (ip: string): 'ipv4' | 'ipv6' => isIP(ip) === 6 ? 'ipv6' : 'ipv4'
-
-// An entry of a list as it is stored: a bare address or a CIDR, already parsed. undefined = not valid.
-const parseEntry = (entry: string): { address: string, prefix?: number } | undefined => {
-    // the type says string, but this runs on every login over stored data: never throw, an unreadable entry is just not valid
-    if (typeof entry !== 'string') return undefined
-    const trimmed = entry.trim()
-    const slash = trimmed.indexOf('/')
-    if (slash < 0) {
-        const address = normalizeIp(trimmed)
-        return address ? { address } : undefined
-    }
-    const address = normalizeIp(trimmed.substring(0, slash))
-    const prefixText = trimmed.substring(slash + 1)
-    if (!address || !/^\d{1,3}$/.test(prefixText)) return undefined
-    const prefix = Number(prefixText)
-    const max = familyOf(address) === 'ipv6' ? 128 : 32
-    return prefix <= max ? { address, prefix } : undefined
-}
-
-export const isValidIpOrCidr = (entry: string): boolean => parseEntry(entry) !== undefined
-
-// The entries of a list that are neither an address nor a CIDR, as they were written.
-export const invalidEntries = (entries: string[]): string[] => entries.filter(e => !isValidIpOrCidr(e))
-
-// Invalid entries are skipped here: what may be stored is checked when it is saved, not on every request.
-export const buildBlockList = (entries: string[]): BlockList => {
-    const list = new BlockList()
-    for (const entry of entries) {
-        const parsed = parseEntry(entry)
-        if (!parsed) continue
-        if (parsed.prefix === undefined) list.addAddress(parsed.address, familyOf(parsed.address))
-        else list.addSubnet(parsed.address, parsed.prefix, familyOf(parsed.address))
-    }
-    return list
-}
-
-export const ipInList = (ip: string, entries: string[]): boolean => {
-    const address = normalizeIp(ip)
-    if (!address || entries.length === 0) return false
-    return buildBlockList(entries).check(address, familyOf(address))
-}
-
-export const isLoopback = (ip: string): boolean => ipInList(ip, ['127.0.0.0/8', '::1'])
+// The address matching itself (normalizeIp, ipInList…) lives in kwirth-common-back (IpAddresses), shared with the
+// extensions that check where a caller comes from; this file keeps what is the core's: who the client is.
 
 /*
     The client behind a request. 'forwardedFor' is the raw header: one string, several (when it was sent
@@ -96,7 +36,7 @@ export const clientAddressOf = (remoteAddress: string | undefined, forwardedFor:
     const shown = hops.join(', ').slice(0, FORWARDED_FOR_SHOWN_MAX)
 
     const trusted = buildBlockList(trustedProxies)
-    const isTrusted = (ip: string) => ip !== '' && trustedProxies.length > 0 && trusted.check(ip, familyOf(ip))
+    const isTrusted = (ip: string) => ip !== '' && trustedProxies.length > 0 && trusted.check(ip, ipFamilyOf(ip))
     if (!isTrusted(remote)) return { ip: remote, remoteAddress: remote, forwardedIgnored: true, forwardedFor: shown }
 
     let client = remote
