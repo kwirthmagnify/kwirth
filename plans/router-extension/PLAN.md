@@ -53,9 +53,12 @@ refresca, directo / ruteado), el e2e del switch *Enabled* y el unitario intermit
   en lo que entrega, y el core trata ese tráfico como **externo** (ni loopback ni `X-Forwarded-For`).
   **Prioridad baja** (decisión del usuario, 2026‑11‑17): en el uso normal nadie hace `/login` por un túnel; solo
   lo abre alguien ya autenticado en el origen, con credenciales del destino, contra un destino que permite
-  loopback (en la lista, como proxy de confianza, o desktop). Propuesta discutida: `loopbackHeaders:
-  Record<string,string>` en `IRouterContext` y en `IBackChannelObject` (`{ 'x-kwirth-routed': <uuid por
-  arranque> }`); publica `common-back`, core, bridge e Ianus. 🔗 Se diseña junto al **login en el destino a
+  loopback (en la lista, como proxy de confianza, o desktop). Propuesta discutida: el router pone una
+  cabecera fija `x-kwirth-routed` en todo lo que entrega por loopback, y el core trata lo que llega de
+  loopback con ella como externo de IP desconocida. **No hace falta que sea secreta**: fingirla solo empeora el
+  trato de quien la pone, y quitarla no se puede porque la pone el router al entregar (corregido el
+  2026‑11‑17; la primera propuesta llevaba un uuid por arranque en `loopbackHeaders`). La cabecera, como
+  constante en `common-back`; publica `common-back`, core, bridge e Ianus. 🔗 Se diseña junto al **login en el destino a
   través de Ianus** (backlog de Ianus): el login por router legítimo, que el destino admite explícitamente.
 
 Decisiones tomadas al hacerlos (2026‑11‑15):
