@@ -84,15 +84,20 @@ export const isLoopback = (ip: string): boolean => ipInList(ip, ['127.0.0.0/8', 
     more than once) or nothing. An unreadable hop stops the walk, and the client is then the trusted hop
     right of it — the last address that somebody we trust vouched for.
 */
+// The header as it came, to be SHOWN (ICallerAddress.forwardedFor): its hops joined with ', ', capped, so a client cannot fill a table with it
+const FORWARDED_FOR_SHOWN_MAX = 512
+
 export const clientAddressOf = (remoteAddress: string | undefined, forwardedFor: string | string[] | undefined, trustedProxies: string[]): ICallerAddress => {
     const remote = normalizeIp(remoteAddress)
     const header = Array.isArray(forwardedFor) ? forwardedFor.join(',') : (forwardedFor ?? '')
     const hops = header.split(',').map(h => h.trim()).filter(h => h !== '')
     if (hops.length === 0) return { ip: remote, remoteAddress: remote, forwardedIgnored: false }
+    // shown whatever is decided below: trusted or not, it says where the caller comes from and which proxy is missing
+    const shown = hops.join(', ').slice(0, FORWARDED_FOR_SHOWN_MAX)
 
     const trusted = buildBlockList(trustedProxies)
     const isTrusted = (ip: string) => ip !== '' && trustedProxies.length > 0 && trusted.check(ip, familyOf(ip))
-    if (!isTrusted(remote)) return { ip: remote, remoteAddress: remote, forwardedIgnored: true }
+    if (!isTrusted(remote)) return { ip: remote, remoteAddress: remote, forwardedIgnored: true, forwardedFor: shown }
 
     let client = remote
     for (let i = hops.length - 1; i >= 0; i--) {
@@ -101,5 +106,5 @@ export const clientAddressOf = (remoteAddress: string | undefined, forwardedFor:
         client = hop
         if (!isTrusted(hop)) break
     }
-    return { ip: client, remoteAddress: remote, forwardedIgnored: false }
+    return { ip: client, remoteAddress: remote, forwardedIgnored: false, forwardedFor: shown }
 }
