@@ -147,6 +147,12 @@ interface ICallerAddress {
     ip: string
     remoteAddress: string
     forwardedIgnored: boolean
+    /*
+        X-Forwarded-For as it came (its hops joined with ', ', capped at 512 chars); absent when there was none.
+        DATA only, to be shown: anyone can write it, and nothing decides by it — 'ip' is what was resolved.
+        It tells where a caller really comes from, and which range to give as a trusted proxy.
+    */
+    forwardedFor?: string
 }
 
 export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig, IKwirthSettings, ILoginIpFilter, ILoginIpEntry, ELoginRefusal, ILoginRefusal, ICallerAddress }
