@@ -171,7 +171,14 @@ Abierto el 2026‑11‑17, a petición del usuario. **Sin empezar.** Tres tareas
   **S8.2 · e2e del switch *Enabled* de Manage cluster list** (`Cluster.inUse`). Desmarcarlo saca el cluster del
   selector y de lo que lee el back (`readUserStore('clusters','list')`, `back/src/tools/ClusterListFilter.ts`);
   marcarlo lo devuelve. No destructivo: el test deja el switch como lo encontró.
-- **S8.3 · `webhookReceiver`, el unitario que falla de forma intermitente**
+- ✅ **Hecho 2026‑11‑17.** No era el test: `WebhookManager.install` nombraba el tgz y el directorio de extracción
+  solo con `Date.now()`, y `node --test` corre los ficheros en paralelo; dos instalaciones en el mismo
+  milisegundo compartían ficheros y la primera en acabar borraba el directorio de la otra (`Invalid webhook
+  bundle`). Arreglo: `uniqueTempPath()` en `PackageRegistries.ts` (tiempo + UUID). Test nuevo en
+  `webhookManager.test.ts` con `Date.now()` congelado (falla sin el arreglo); suite 1031 ✅ tres veces seguidas.
+  ⚠️ **El mismo patrón está en ~55 sitios más** (Plugin, Provider, Sender, Theme, Homepage, Login, Idp, Dce,
+  Router, AiToolset, Docs, Pack, BundledExtensions): mismo fallo en producción con dos instalaciones a la vez.
+  **S8.3 · `webhookReceiver`, el unitario que falla de forma intermitente**
   (`back/tests/tools/webhookReceiver.test.ts`). Buscar el origen (tiempos, puertos o estado compartido), no
   subir timeouts.
 
