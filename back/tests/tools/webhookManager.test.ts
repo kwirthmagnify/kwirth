@@ -199,3 +199,32 @@ test('tokens + configs survive a restart (persistence)', async () => {
     assert.ok(jira, 'listWebhooks must include the installed webhook even before any delivery/instantiation')
     assert.deepEqual(jira!.configNames, ['prod'])
 })
+
+/*
+    Two installs that start in the SAME millisecond must not share their temp files. They did: the upload tgz
+    and the extraction dir were named with Date.now() only, so the second one overwrote the first one's tgz and
+    the first to finish deleted the dir the other was still reading ('Invalid webhook bundle: missing
+    package.json or back.js'). It made webhookReceiver.test fail now and then, as node --test runs the files in
+    parallel and several of them install a webhook at startup. Date.now() is frozen here so the same
+    millisecond is certain, not luck.
+*/
+test('two installs in the same millisecond do not share their temp files', async () => {
+    const realNow = Date.now
+    Date.now = () => 1_700_000_000_000
+    try {
+        const a = new WebhookManager(makeConfigMaps())
+        const b = new WebhookManager(makeConfigMaps())
+        await a.init()
+        await b.init()
+        const [metaA, metaB] = await Promise.all([
+            a.installFromBuffer(makeTestWebhookTgz('same-ms-a')),
+            b.installFromBuffer(makeTestWebhookTgz('same-ms-b')),
+        ])
+        // each one installed ITS package, not the other's
+        assert.equal(metaA.id, 'same-ms-a')
+        assert.equal(metaB.id, 'same-ms-b')
+    }
+    finally {
+        Date.now = realNow
+    }
+})
