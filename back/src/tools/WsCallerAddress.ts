@@ -6,7 +6,7 @@ import { clientAddressOf } from './ClientIp'
     never the upgrade request, so without this they cannot tell a client's address.
 
     The address is resolved ONCE, when the socket connects, the same way as the login: X-Forwarded-For is
-    only believed from a trusted proxy (the login IP filter's list). That list lives in the settings, which
+    only believed from a trusted proxy (IKwirthSettings.trustedProxies). That list lives in the settings, which
     are read asynchronously, and the question has to be answered synchronously; so the list is kept here
     and refreshed in the background when it is older than REFRESH_MS. A change of the trusted proxies
     reaches the sockets that connect after the refresh, not the ones already open.
@@ -22,7 +22,7 @@ export class WsCallerAddresses {
     private readAt = 0
     private reading = false
 
-    // readTrustedProxies: the current list (the login IP filter's 'trustedProxies'); now: injectable for the tests
+    // readTrustedProxies: the current list (IKwirthSettings.trustedProxies); now: injectable for the tests
     constructor(private readTrustedProxies: () => Promise<string[]>, private now: () => number = Date.now) {}
 
     // The socket has just connected: its address is resolved with the trusted proxies known right now
