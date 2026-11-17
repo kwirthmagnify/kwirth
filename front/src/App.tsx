@@ -43,7 +43,7 @@ import { IInstanceMessage, versionGreaterThan, InstanceConfigScopeEnum, IInstanc
 import { ITabObject, ITabSummary } from './model/ITabObject'
 
 import { TChannelConstructor, EChannelRefreshAction, IChannel, IChannelMessageAction, ISetupProps } from './channels/IChannel'
-import { getMetricsNames, ENotifyLevel, readClusterInfo, fetchProvider } from './tools/Global'
+import { getMetricsNames, ENotifyLevel, readClusterInfo, fetchProvider, recheckCluster } from './tools/Global'
 import { Homepage } from './components/home/Homepage'
 import { DEFAULTLASTTABS, IColors, TABSELECTEDCOLORS, TABUNSELECTEDCOLORS } from './tools/Constants'
 import { createChannelInstance, getChannelIconOf, getChannelIconSafe, getIconFromKind } from '@kwirthmagnify/kwirth-common-front'
@@ -1085,6 +1085,18 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         })
         for (const c of clustersRef.current) {
             if (c.route && c.inUse !== false) readClusterInfo(c, notify).then(refresh)
+        }
+    }
+
+    /*
+        The cluster selector was opened: every entry in use (the home is this Kwirth) is checked again, so a grey
+        one whose tunnel came up turns usable, and one that stopped answering turns grey (recheckCluster).
+    */
+    const recheckClusters = () => {
+        const refresh = () => setChannelMessageAction({ action: EChannelRefreshAction.REFRESH })
+        for (const c of clustersRef.current) {
+            if (c.home || c.inUse === false) continue
+            recheckCluster(c).then(changed => { if (changed) refresh() })
         }
     }
 
@@ -2993,7 +3005,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
 
                 { !fullscreenTab && 
-                    <ResourceSelector clusters={clusters.filter(c => c.inUse !== false)} backChannels={backChannels} onAdd={(res) => onResourceSelectorAdd(res, false, undefined)} onChangeCluster={onChangeCluster} sx={{ mt:1, ml:1 }} tabs={tabs.current} data-refresh={channelMessageAction} resourceSelected={resourceSelected} frontChannels={frontChannels} enabledChannels={user?.enabledChannels}/>
+                    <ResourceSelector clusters={clusters.filter(c => c.inUse !== false)} backChannels={backChannels} onAdd={(res) => onResourceSelectorAdd(res, false, undefined)} onChangeCluster={onChangeCluster} sx={{ mt:1, ml:1 }} tabs={tabs.current} data-refresh={channelMessageAction} resourceSelected={resourceSelected} frontChannels={frontChannels} enabledChannels={user?.enabledChannels} onOpenClusters={recheckClusters}/>
                 }
                 
                 <Stack
