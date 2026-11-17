@@ -25,7 +25,7 @@ import { userStoreName } from './tools/UserStoreName'
 import { wsUpgradeAllowed } from './tools/WsPathGuard'
 import { LiveKeyConnections } from './tools/LiveKeyConnections'
 import { WsCallerAddresses } from './tools/WsCallerAddress'
-import { addressesOf, loginIpFilterOf } from './tools/LoginIpFilter'
+import { addressesOf, loginIpFilterOf, trustedProxiesOf } from './tools/LoginIpFilter'
 import { configurePackageRegistries } from './tools/PackageRegistries'
 import { buildPreviousContainerMessage, logPreviousContainerBanner, readPreviousContainerLog } from './tools/PreviousContainerLog'
 import { buildSignupMessage, signupSenderOf } from './tools/auth/SignupNotice'
@@ -2116,7 +2116,11 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             entries carried a comment (plain strings) would otherwise go out in a shape the
                             import refuses, and the whole import with it.
                         */
-                        const settings: IKwirthSettings = stored.loginIpFilter === undefined ? stored : { ...stored, loginIpFilter: loginIpFilterOf(stored) }
+                        const settings: IKwirthSettings = {
+                            ...stored,
+                            ...(stored.loginIpFilter === undefined ? {} : { loginIpFilter: loginIpFilterOf(stored) }),
+                            ...(stored.trustedProxies === undefined ? {} : { trustedProxies: trustedProxiesOf(stored) })
+                        }
                         return includeCredentials ? settingsResult!.withSecrets(settings) : settings
                     },
                     /*
@@ -3493,7 +3497,7 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
         // The trusted proxies the WebSocket clients' addresses are resolved with: the login IP filter's (K2)
         wsCallers = new WsCallerAddresses(async () => {
             const ri = instances.find(r => r.active)
-            return ri ? addressesOf(loginIpFilterOf(await SettingsApi.read(ri.configMaps)).trustedProxies) : []
+            return ri ? addressesOf(trustedProxiesOf(await SettingsApi.read(ri.configMaps))) : []
         })
         void wsCallers.refresh()
 
