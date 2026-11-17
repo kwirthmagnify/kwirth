@@ -1,6 +1,7 @@
 import { IncomingMessage } from 'http'
 import { ICallerAddress, IKwirthSettings, ILoginIpEntry, ILoginIpFilter } from '@kwirthmagnify/kwirth-common'
-import { clientAddressOf, invalidEntries, ipInList, isLoopback } from './ClientIp'
+import { clientAddressOf } from './ClientIp'
+import { invalidEntries, ipInList, isLoopback } from '@kwirthmagnify/kwirth-common-back'
 
 /*
     The login IP filter (plan: plans/login-ip-filter). Pure functions: reading the settings is up to the
