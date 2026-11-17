@@ -95,7 +95,25 @@ test('X-Forwarded-For from a connection that is not in the trusted list is ignor
 
 test('behind a trusted ingress the client is the hop the ingress wrote', () => {
     const caller = clientAddressOf('10.42.1.7', '198.51.100.20', ['10.42.0.0/16'])
-    assert.deepEqual(caller, { ip: '198.51.100.20', remoteAddress: '10.42.1.7', forwardedIgnored: false })
+    assert.deepEqual(caller, { ip: '198.51.100.20', remoteAddress: '10.42.1.7', forwardedIgnored: false, forwardedFor: '198.51.100.20' })
+})
+
+// ---- forwardedFor: the header as it came, to be shown (Ianus' spoke table), never decided by ----
+
+test('forwardedFor is the header as it came, trusted or not; absent when there was none', () => {
+    assert.equal(clientAddressOf('203.0.113.9', undefined, []).forwardedFor, undefined)
+    assert.equal(clientAddressOf('203.0.113.9', '  ', []).forwardedFor, undefined)
+    // untrusted: ignored for the address, still shown (it is how you see which proxy is missing from the list)
+    const untrusted = clientAddressOf('203.0.113.9', '10.0.0.5,  198.51.100.20', [])
+    assert.equal(untrusted.ip, '203.0.113.9')
+    assert.equal(untrusted.forwardedFor, '10.0.0.5, 198.51.100.20')
+    // sent several times: one list; what cannot be read is shown as it came
+    assert.equal(clientAddressOf('10.42.1.7', ['10.0.0.5', 'garbage'], ['10.42.0.0/16']).forwardedFor, '10.0.0.5, garbage')
+})
+
+test('🔴 forwardedFor is capped: a client cannot fill a table with it', () => {
+    const long = Array.from({ length: 200 }, (_, i) => `10.0.${i % 256}.1`).join(',')
+    assert.equal(clientAddressOf('203.0.113.9', long, []).forwardedFor!.length, 512)
 })
 
 test('🔴 what the client writes on the LEFT of the header is never read', () => {
