@@ -167,7 +167,8 @@ Abierto el 2026‑11‑17, a petición del usuario. **Sin empezar.** Tres tareas
   atenuada y no sale en el selector; encendida vuelve, en gris y con `direct · not answering` (cubre S8.1); el
   switch del home no se toca. ⚠️ Visto al lanzarlo junto a `manage-clusters-route.spec.ts`: ese da por hecho
   que **no hay routers** (Route deshabilitado) y en el dev hoy están Ianus y bridge desde `dist`, así que su
-  primer caso falla. Le falta un `test.skip()` cuando el core anuncia routers (no tocado aquí).
+  primer caso falla. ✅ Arreglado el mismo día: ese caso hace `test.skip()` si `GET /core/routers` trae alguno
+  (se pregunta al back, no al campo que se prueba); los dos specs, 6 ✅ · 1 ⏭.
   **S8.2 · e2e del switch *Enabled* de Manage cluster list** (`Cluster.inUse`). Desmarcarlo saca el cluster del
   selector y de lo que lee el back (`readUserStore('clusters','list')`, `back/src/tools/ClusterListFilter.ts`);
   marcarlo lo devuelve. No destructivo: el test deja el switch como lo encontró.
