@@ -24,7 +24,24 @@ test.describe('Manage clusters: route fields', () => {
     const route = () => dialog().getByRole('combobox', { name: 'Route' })
     const uid = () => dialog().getByLabel('Cluster UID', { exact: true })
 
-    test.beforeAll(async ({ kwirth }) => {
+    /*
+        Whether this core has any router installed, asked of the back and not of the field under test. The first
+        case is about a core with NONE (Route has nothing to offer but Direct); with Ianus or bridge installed —
+        the dev loads them from dist — Route is rightly enabled, and that case does not apply: it is skipped,
+        not bent to pass. routers-manager.spec covers Route WITH a router.
+    */
+    let routersInstalled = false
+
+    test.beforeAll(async ({ kwirth, playwright }) => {
+        const api = await playwright.request.newContext({ baseURL: process.env.KWIRTH_E2E_BACK ?? 'http://localhost:3883' })
+        try {
+            const res = await api.get('/core/routers')
+            expect(res.status(), 'GET /core/routers').toBe(200)
+            routersInstalled = (await res.json() as { id: string }[]).length > 0
+        }
+        finally {
+            await api.dispose()
+        }
         page = kwirth
         await dismissOpenDialogs(page)
         await openMenu(page)
@@ -37,6 +54,7 @@ test.describe('Manage clusters: route fields', () => {
     })
 
     test('a new entry: Route is Direct and disabled (no resolvers), Cluster UID disabled', async () => {
+        test.skip(routersInstalled, 'this core has routers installed: Route has something to offer, so it is enabled')
         await action('NEW').click()
         await expect(route()).toBeVisible()
         await expect(route()).toHaveText('Direct')
