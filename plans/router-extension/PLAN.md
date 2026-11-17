@@ -8,6 +8,8 @@ a los cuatro sitios donde se registra, sustituye o quita un canal: arranque, ins
 dev y desinstalación); `common-back` 0.6.17 documenta que el ciclo de vida de un pluter es el del canal. El plan
 del pluter de pago queda reorientado en su repo; se declara router cuando lleve tráfico.
 **Tipo `router` cerrado.**
+**S8 abierto** (2026‑11‑17, sin empezar): el estado de los clusters en el Resource selector (gris que no se
+refresca, directo / ruteado), el e2e del switch *Enabled* y el unitario intermitente de `webhookReceiver`.
 
 ## Backlog
 
@@ -30,7 +32,7 @@ del pluter de pago queda reorientado en su repo; se declara router cuando lleve 
   el pong esperaba detrás de los datos y el enlace (y todas sus sesiones) caía cada pocos minutos. Ahora
   cualquier mensaje recibido cuenta como señal de vida (`RemoteChannel`), con test.
 
-- **Indicador directo / ruteado en el selector de clusters** (pedido 2026‑11‑15). En la lista de clusters del
+- **Indicador directo / ruteado en el selector de clusters** (pedido 2026‑11‑15) → **en el stream S8**. En la lista de clusters del
   *Resource selector* (y donde se elige cluster), cada entrada muestra si se llega **directamente** o **por un
   router**, y por cuál (`bridge`, `ianus`…); y si su router no está instalado o no ha arrancado, que se vea ahí
   y no solo al fallar la conexión. Solo front: el dato ya está en la entrada (`cluster.route`) y en
@@ -142,6 +144,24 @@ túnel multiplexado → consola → tests → QA con dos Kwirths (dev + uno en l
 ## S7 · Migrar el pluter de pago
 
 Se hace en su repo y su sesión, cuando `bridge` funcione.
+
+## S8 · Selector de clusters al día, y dos tests pendientes
+
+Abierto el 2026‑11‑17, a petición del usuario. **Sin empezar.** Tres tareas:
+
+- **S8.1 · El estado de los clusters en el Resource selector.** El cluster **en gris no se refresca solo**: si el
+  destino no estaba listo sale gris, y cuando el túnel se levanta sigue gris. El estado de accesibilidad se vuelve
+  a comprobar **al abrir la lista** o **cada cierto tiempo**, en vez de quedarse con la primera respuesta. Es parte
+  del punto del backlog *Indicador directo / ruteado en el selector de clusters*, que entra entero aquí:
+  - cada entrada dice si se llega **directa** o **por un router**, y por cuál (`bridge`, `ianus`…), y si ese router
+    no está instalado o no ha arrancado. Solo front: el dato está en `cluster.route` y `KwirthData.routers`;
+  - un cluster que **no responde** sale en **gris** (destino sin su rol, router sin enlace, conexión directa caída).
+- **S8.2 · e2e del switch *Enabled* de Manage cluster list** (`Cluster.inUse`). Desmarcarlo saca el cluster del
+  selector y de lo que lee el back (`readUserStore('clusters','list')`, `back/src/tools/ClusterListFilter.ts`);
+  marcarlo lo devuelve. No destructivo: el test deja el switch como lo encontró.
+- **S8.3 · `webhookReceiver`, el unitario que falla de forma intermitente**
+  (`back/tests/tools/webhookReceiver.test.ts`). Buscar el origen (tiempos, puertos o estado compartido), no
+  subir timeouts.
 
 ## Documentación
 
