@@ -58,19 +58,26 @@ test('capture kwirth-settings (dark)', async ({ page }) => {
         localhost, and the ingress pod network as trusted proxy. Only typed into the form — the dialog is
         closed with Cancel below, so none of it is saved.
     */
+    // Trusted proxies have their own tab since 2026-11-17: the ingress pod network, as the example
+    await dialog.getByRole('tab', { name: 'Trusted proxies' }).click()
+    while (await dialog.getByLabel(/^Trusted proxy \d+$/).count() > 0)
+        await dialog.getByRole('button', { name: 'Remove Trusted proxy 1', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Add trusted proxy' }).click()
+    await dialog.getByLabel('Trusted proxy 1', { exact: true }).fill('10.42.0.0/16')
+    await dialog.getByLabel('Trusted proxy 1 comment', { exact: true }).fill('Ingress controller pods')
+    await dialog.getByRole('tab', { name: 'Trusted proxies' }).focus()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: `${MEDIA}/admin-kwirth-settings-trusted-proxies.png` })
+
     await dialog.getByRole('tab', { name: 'Login access' }).click()
     // whatever this dev has stored is emptied first (in the form only), so the guide shows the example
-    for (const label of ['Allowed address', 'Trusted proxy'])
-        while (await dialog.getByLabel(new RegExp(`^${label} \\d+$`)).count() > 0)
-            await dialog.getByRole('button', { name: `Remove ${label} 1`, exact: true }).click()
+    while (await dialog.getByLabel(/^Allowed address \d+$/).count() > 0)
+        await dialog.getByRole('button', { name: 'Remove Allowed address 1', exact: true }).click()
     await dialog.getByLabel('Restrict login to the allowed addresses').check()
     await dialog.getByRole('button', { name: 'Add allowed address' }).click()
     await dialog.getByLabel('Allowed address 1', { exact: true }).fill('10.0.0.0/8')
     await dialog.getByLabel('Allowed address 1 comment', { exact: true }).fill('Office network')
     await dialog.getByRole('button', { name: 'Add localhost' }).click()
-    await dialog.getByRole('button', { name: 'Add trusted proxy' }).click()
-    await dialog.getByLabel('Trusted proxy 1', { exact: true }).fill('10.42.0.0/16')
-    await dialog.getByLabel('Trusted proxy 1 comment', { exact: true }).fill('Ingress controller pods')
     // the focus ring of the last field typed into would end up in the picture
     await dialog.getByRole('tab', { name: 'Login access' }).focus()
     await page.waitForTimeout(500)
