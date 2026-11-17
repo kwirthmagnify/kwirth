@@ -26,7 +26,8 @@ test('🔴 X-Forwarded-For from an untrusted hop is ignored, and it says so', as
     await callers.refresh()
     const ws = socket()
     callers.remember(ws, '192.168.1.1', '6.6.6.6')
-    assert.deepEqual(callers.addressOf(ws), { ip: '192.168.1.1', remoteAddress: '192.168.1.1', forwardedIgnored: true })
+    // ignored for the address, still carried as it came (to be shown: Ianus' spoke table)
+    assert.deepEqual(callers.addressOf(ws), { ip: '192.168.1.1', remoteAddress: '192.168.1.1', forwardedIgnored: true, forwardedFor: '6.6.6.6' })
 })
 
 test('behind a trusted proxy (an ingress), the client is the one the proxy vouches for', async () => {
