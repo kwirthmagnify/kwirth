@@ -723,7 +723,7 @@ test('GET /core/settings/caller: how the core sees the admin, with the STORED tr
     const srv = await startServer({ loginIpFilter: { enabled: false, allowed: [], trustedProxies: ips('127.0.0.1') } })
     try {
         const behind = await (await fetch(`${srv.base}/core/settings/caller`, { headers: { ...AUTH, 'X-Forwarded-For': '198.51.100.20' } })).json() as ICallerAddress
-        assert.deepEqual(behind, { ip: '198.51.100.20', remoteAddress: '127.0.0.1', forwardedIgnored: false })
+        assert.deepEqual(behind, { ip: '198.51.100.20', remoteAddress: '127.0.0.1', forwardedIgnored: false, forwardedFor: '198.51.100.20' })
     }
     finally { await srv.stop() }
 })
@@ -732,7 +732,7 @@ test('GET /core/settings/caller: a forwarded header from an untrusted connection
     const srv = await startServer()
     try {
         const caller = await (await fetch(`${srv.base}/core/settings/caller`, { headers: { ...AUTH, 'X-Forwarded-For': '198.51.100.20' } })).json() as ICallerAddress
-        assert.deepEqual(caller, { ip: '127.0.0.1', remoteAddress: '127.0.0.1', forwardedIgnored: true })
+        assert.deepEqual(caller, { ip: '127.0.0.1', remoteAddress: '127.0.0.1', forwardedIgnored: true, forwardedFor: '198.51.100.20' })
     }
     finally { await srv.stop() }
 })
