@@ -211,6 +211,8 @@ export { ChannelNotStarted } from './ChannelNotStarted'
 export type { IChannelNotStartedProps } from './ChannelNotStarted'
 export { JsonBlock } from './JsonBlock'
 export type { IJsonBlockProps } from './JsonBlock'
+export { SortableHeaderCell } from './SortableHeaderCell'
+export type { ISortableHeaderCellProps } from './SortableHeaderCell'
 export type { INotification } from './MenuNotification'
 
 export interface ITabSummary {
