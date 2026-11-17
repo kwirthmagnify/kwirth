@@ -6,7 +6,7 @@ import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 import { SettingsApi } from '../../src/api/SettingsApi'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
-import { accessKeySerialize, IKwirthSettings, EPackageRegistryAuthType, EManifestAuthType, ICallerAddress, ILoginIpEntry } from '@kwirthmagnify/kwirth-common'
+import { accessKeySerialize, IKwirthSettings, EPackageRegistryAuthType, EManifestAuthType, ICallerAddress, IIpAddressEntry } from '@kwirthmagnify/kwirth-common'
 import { IncomingMessage } from 'http'
 
 // configuring Kwirth (/core/settings) is admin-only: validKey + the 'admin' scope
@@ -590,22 +590,41 @@ const FROM = (ip: string) => ({ ...JSON_AUTH, 'X-Forwarded-For': ip })
 const put = (base: string, body: object, headers: Record<string, string> = JSON_AUTH) =>
     fetch(`${base}/core/settings`, { method: 'PUT', headers, body: JSON.stringify(body) })
 // a list of entries without comments: most of these checks are about the addresses
-const ips = (...addresses: string[]): ILoginIpEntry[] => addresses.map(address => ({ address, comment: '' }))
+const ips = (...addresses: string[]): IIpAddressEntry[] => addresses.map(address => ({ address, comment: '' }))
 
-test('loginIpFilter: a filter that includes its author is saved, cleaned, comments included', async () => {
+test('loginIpFilter and trustedProxies: a filter that includes its author is saved, cleaned, comments included; the proxies apart', async () => {
     const srv = await startServer()
     try {
-        const res = await put(srv.base, { loginIpFilter: {
-            enabled: true,
-            allowed: [{ address: ' 203.0.113.0/24 ', comment: ' office ' }, { address: '', comment: 'orphan' }, { address: '203.0.113.0/24', comment: 'repeat' }],
+        const res = await put(srv.base, {
+            loginIpFilter: {
+                enabled: true,
+                allowed: [{ address: ' 203.0.113.0/24 ', comment: ' office ' }, { address: '', comment: 'orphan' }, { address: '203.0.113.0/24', comment: 'repeat' }]
+            },
             trustedProxies: [{ address: '127.0.0.1', comment: 'ingress' }]
-        } }, FROM('203.0.113.9'))
+        }, FROM('203.0.113.9'))
         assert.equal(res.status, 200)
-        const expected = { enabled: true, allowed: [{ address: '203.0.113.0/24', comment: 'office' }], trustedProxies: [{ address: '127.0.0.1', comment: 'ingress' }] }
+        const expected = { enabled: true, allowed: [{ address: '203.0.113.0/24', comment: 'office' }] }
         assert.deepEqual(srv.store.current()?.loginIpFilter, expected)
-        // and the GET gives it back like any other field, comments and all
+        assert.deepEqual(srv.store.current()?.trustedProxies, [{ address: '127.0.0.1', comment: 'ingress' }])
+        // and the GET gives them back like any other field, comments and all
         const got = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
         assert.deepEqual(got.loginIpFilter, expected)
+        assert.deepEqual(got.trustedProxies, [{ address: '127.0.0.1', comment: 'ingress' }])
+    }
+    finally { await srv.stop() }
+})
+
+test('🔴 trustedProxies can be saved with the login filter OFF: a Kwirth that does not restrict its login may need them', async () => {
+    const srv = await startServer()
+    try {
+        assert.equal((await put(srv.base, { trustedProxies: [{ address: '10.42.0.0/16', comment: 'ingress' }] })).status, 200)
+        assert.deepEqual(srv.store.current()?.trustedProxies, [{ address: '10.42.0.0/16', comment: 'ingress' }])
+        assert.equal(srv.store.current()?.loginIpFilter, undefined)
+        // and a bad one is refused, nothing written
+        const bad = await put(srv.base, { trustedProxies: ips('10.0.0.0/40') })
+        assert.equal(bad.status, 400)
+        assert.match((await bad.json()).error, /trusted proxies: 10\.0\.0\.0\/40/)
+        assert.deepEqual(srv.store.current()?.trustedProxies, [{ address: '10.42.0.0/16', comment: 'ingress' }])
     }
     finally { await srv.stop() }
 })
@@ -613,7 +632,7 @@ test('loginIpFilter: a filter that includes its author is saved, cleaned, commen
 test('🔴 loginIpFilter: switching it on with a list that leaves the author out → 400, nothing written', async () => {
     const srv = await startServer({ metricsInterval: 30 })
     try {
-        const res = await put(srv.base, { loginIpFilter: { enabled: true, allowed: ips('10.0.0.0/8'), trustedProxies: ips('127.0.0.1') } }, FROM('203.0.113.9'))
+        const res = await put(srv.base, { loginIpFilter: { enabled: true, allowed: ips('10.0.0.0/8') }, trustedProxies: ips('127.0.0.1') }, FROM('203.0.113.9'))
         assert.equal(res.status, 400)
         assert.match((await res.json()).error, /203\.0\.113\.9/)
         assert.deepEqual(srv.store.current(), { metricsInterval: 30 })
@@ -625,7 +644,7 @@ test('🔴 loginIpFilter: switching it on with a list that leaves the author out
 test('loginIpFilter: switching it on with no allowed address → 400, nothing written', async () => {
     const srv = await startServer()
     try {
-        const res = await put(srv.base, { loginIpFilter: { enabled: true, allowed: [], trustedProxies: [] } })
+        const res = await put(srv.base, { loginIpFilter: { enabled: true, allowed: [] } })
         assert.equal(res.status, 400)
         assert.match((await res.json()).error, /at least one allowed address/)
         assert.equal(srv.store.current(), undefined)
@@ -636,7 +655,7 @@ test('loginIpFilter: switching it on with no allowed address → 400, nothing wr
 test('loginIpFilter: the same list switched OFF can be saved from anywhere', async () => {
     const srv = await startServer()
     try {
-        const res = await put(srv.base, { loginIpFilter: { enabled: false, allowed: ips('10.0.0.0/8'), trustedProxies: [] } }, FROM('203.0.113.9'))
+        const res = await put(srv.base, { loginIpFilter: { enabled: false, allowed: ips('10.0.0.0/8') } }, FROM('203.0.113.9'))
         assert.equal(res.status, 200)
     }
     finally { await srv.stop() }
@@ -645,11 +664,12 @@ test('loginIpFilter: the same list switched OFF can be saved from anywhere', asy
 test('loginIpFilter: a malformed entry or shape → 400', async () => {
     const srv = await startServer()
     try {
-        assert.equal((await put(srv.base, { loginIpFilter: { enabled: false, allowed: ips('office'), trustedProxies: [] } })).status, 400)
-        assert.equal((await put(srv.base, { loginIpFilter: { enabled: false, allowed: [], trustedProxies: ips('10.0.0.0/40') } })).status, 400)
-        assert.equal((await put(srv.base, { loginIpFilter: { allowed: [], trustedProxies: [] } })).status, 400)
+        assert.equal((await put(srv.base, { loginIpFilter: { enabled: false, allowed: ips('office') } })).status, 400)
+        assert.equal((await put(srv.base, { trustedProxies: ips('10.0.0.0/40') })).status, 400)
+        assert.equal((await put(srv.base, { loginIpFilter: { allowed: [] } })).status, 400)
         // the old shape, plain strings, is not a list of entries
-        assert.equal((await put(srv.base, { loginIpFilter: { enabled: false, allowed: ['10.0.0.0/8'], trustedProxies: [] } })).status, 400)
+        assert.equal((await put(srv.base, { loginIpFilter: { enabled: false, allowed: ['10.0.0.0/8'] } })).status, 400)
+        assert.equal((await put(srv.base, { trustedProxies: ['10.42.0.0/16'] })).status, 400)
         assert.equal(srv.store.current(), undefined)
     }
     finally { await srv.stop() }
@@ -657,14 +677,16 @@ test('loginIpFilter: a malformed entry or shape → 400', async () => {
 
 test('🔴 loginIpFilter: GET sends a list stored before the comments with the shape the dialog renders', async () => {
     // plain strings, as saved before L5: the dialog read entry.address of a string and broke on open
-    const old = { loginIpFilter: { enabled: true, allowed: ['10.0.0.0/8', 7], trustedProxies: ['127.0.0.1'] } } as unknown as IKwirthSettings
+    const old = { loginIpFilter: { enabled: true, allowed: ['10.0.0.0/8', 7] }, trustedProxies: ['127.0.0.1'] } as unknown as IKwirthSettings
     const srv = await startServer(old)
     try {
         const got = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
-        assert.deepEqual(got.loginIpFilter, { enabled: true, allowed: ips('10.0.0.0/8'), trustedProxies: ips('127.0.0.1') })
-        // and a PUT that does not touch it answers it read too
+        assert.deepEqual(got.loginIpFilter, { enabled: true, allowed: ips('10.0.0.0/8') })
+        assert.deepEqual(got.trustedProxies, ips('127.0.0.1'))
+        // and a PUT that does not touch them answers them read too
         const put1 = await (await put(srv.base, { metricsInterval: 20 })).json() as IKwirthSettings
-        assert.deepEqual(put1.loginIpFilter, { enabled: true, allowed: ips('10.0.0.0/8'), trustedProxies: ips('127.0.0.1') })
+        assert.deepEqual(put1.loginIpFilter, { enabled: true, allowed: ips('10.0.0.0/8') })
+        assert.deepEqual(put1.trustedProxies, ips('127.0.0.1'))
     }
     finally { await srv.stop() }
 })
@@ -673,13 +695,14 @@ test('loginIpFilter: GET with nothing stored sends it switched off, with empty l
     const srv = await startServer()
     try {
         const got = await (await fetch(`${srv.base}/core/settings`, { headers: AUTH })).json() as IKwirthSettings
-        assert.deepEqual(got.loginIpFilter, { enabled: false, allowed: [], trustedProxies: [] })
+        assert.deepEqual(got.loginIpFilter, { enabled: false, allowed: [] })
+        assert.deepEqual(got.trustedProxies, [])
     }
     finally { await srv.stop() }
 })
 
 test('loginIpFilter: a PUT that does not send it keeps the stored one', async () => {
-    const stored: IKwirthSettings = { loginIpFilter: { enabled: true, allowed: [{ address: '10.0.0.0/8', comment: 'office' }], trustedProxies: [] } }
+    const stored: IKwirthSettings = { loginIpFilter: { enabled: true, allowed: [{ address: '10.0.0.0/8', comment: 'office' }] } }
     const srv = await startServer(stored)
     try {
         assert.equal((await put(srv.base, { metricsInterval: 20 })).status, 200)
@@ -693,10 +716,20 @@ test('loginIpFilter: the import (writeWithSecrets) refuses a filter that locks i
     const apiKeyApi = await ApiKeyApi.create(store.cm, 'masterx', false)
     const settingsApi = await SettingsApi.create(store.cm, memSecrets().s, apiKeyApi!)
     const origin = { socket: { remoteAddress: '198.51.100.7' }, headers: {} } as unknown as IncomingMessage
-    await assert.rejects(settingsApi!.writeWithSecrets({ loginIpFilter: { enabled: true, allowed: ips('10.0.0.0/8'), trustedProxies: [] } }, origin), /198\.51\.100\.7/)
+    await assert.rejects(settingsApi!.writeWithSecrets({ loginIpFilter: { enabled: true, allowed: ips('10.0.0.0/8') } }, origin), /198\.51\.100\.7/)
     assert.equal(store.current(), undefined)
-    await settingsApi!.writeWithSecrets({ loginIpFilter: { enabled: true, allowed: ips('198.51.100.0/24'), trustedProxies: [] } }, origin)
-    assert.deepEqual(store.current()?.loginIpFilter, { enabled: true, allowed: ips('198.51.100.0/24'), trustedProxies: [] })
+    await settingsApi!.writeWithSecrets({ loginIpFilter: { enabled: true, allowed: ips('198.51.100.0/24') } }, origin)
+    assert.deepEqual(store.current()?.loginIpFilter, { enabled: true, allowed: ips('198.51.100.0/24') })
+})
+
+test('the import checks the login filter with the trusted proxies of the SAME bundle', async () => {
+    const store = memConfigMaps()
+    const apiKeyApi = await ApiKeyApi.create(store.cm, 'masterx', false)
+    const settingsApi = await SettingsApi.create(store.cm, memSecrets().s, apiKeyApi!)
+    // the importer is behind an ingress (10.42.1.7) that the bundle trusts: they are seen as 198.51.100.7
+    const origin = { socket: { remoteAddress: '10.42.1.7' }, headers: { 'x-forwarded-for': '198.51.100.7' } } as unknown as IncomingMessage
+    await settingsApi!.writeWithSecrets({ loginIpFilter: { enabled: true, allowed: ips('198.51.100.0/24') }, trustedProxies: ips('10.42.0.0/16') }, origin)
+    assert.deepEqual(store.current()?.trustedProxies, ips('10.42.0.0/16'))
 })
 
 test('loginIpFilter: the import reads a bundle exported before the comments (plain strings), and still guards its author', async () => {
@@ -704,12 +737,12 @@ test('loginIpFilter: the import reads a bundle exported before the comments (pla
     const apiKeyApi = await ApiKeyApi.create(store.cm, 'masterx', false)
     const settingsApi = await SettingsApi.create(store.cm, memSecrets().s, apiKeyApi!)
     const origin = { socket: { remoteAddress: '198.51.100.7' }, headers: {} } as unknown as IncomingMessage
-    const oldShape = (allowed: string[]) => ({ loginIpFilter: { enabled: true, allowed, trustedProxies: [] } }) as unknown as IKwirthSettings
+    const oldShape = (allowed: string[]) => ({ loginIpFilter: { enabled: true, allowed } }) as unknown as IKwirthSettings
     // the old shape that leaves the importer out is refused for THAT reason, not for its shape
     await assert.rejects(settingsApi!.writeWithSecrets(oldShape(['10.0.0.0/8']), origin), /198\.51\.100\.7/)
     // and one that includes them is written in the current shape
     await settingsApi!.writeWithSecrets(oldShape(['198.51.100.0/24']), origin)
-    assert.deepEqual(store.current()?.loginIpFilter, { enabled: true, allowed: ips('198.51.100.0/24'), trustedProxies: [] })
+    assert.deepEqual(store.current()?.loginIpFilter, { enabled: true, allowed: ips('198.51.100.0/24') })
 })
 
 test('readStrict tells "nothing stored" ({}) from "unreadable" (undefined)', async () => {
@@ -720,7 +753,7 @@ test('readStrict tells "nothing stored" ({}) from "unreadable" (undefined)', asy
 })
 
 test('GET /core/settings/caller: how the core sees the admin, with the STORED trusted proxies', async () => {
-    const srv = await startServer({ loginIpFilter: { enabled: false, allowed: [], trustedProxies: ips('127.0.0.1') } })
+    const srv = await startServer({ trustedProxies: ips('127.0.0.1') })
     try {
         const behind = await (await fetch(`${srv.base}/core/settings/caller`, { headers: { ...AUTH, 'X-Forwarded-For': '198.51.100.20' } })).json() as ICallerAddress
         assert.deepEqual(behind, { ip: '198.51.100.20', remoteAddress: '127.0.0.1', forwardedIgnored: false, forwardedFor: '198.51.100.20' })
