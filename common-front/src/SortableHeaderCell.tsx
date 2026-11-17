@@ -1,5 +1,6 @@
 import React, { useRef } from 'react'
-import { Box, SxProps, TableCell, TableSortLabel, Theme } from '@mui/material'
+import { Box, SxProps, TableCell, TableSortLabel, Theme, Tooltip } from '@mui/material'
+import HelpOutline from '@mui/icons-material/HelpOutlined'
 
 /*
     The header cell every table of Kwirth uses: it SORTS its table by its column (the sort is done in the
@@ -30,11 +31,16 @@ export interface ISortableHeaderCellProps {
     minWidth?: number
     sx?: SxProps<Theme>
     testId?: string
+    /*
+        What the column means, when its name is not enough: a small help icon right after the label, with
+        this as its tooltip. Hovering it neither sorts nor resizes.
+    */
+    help?: React.ReactNode
 }
 
 const DEFAULT_MIN_WIDTH = 48
 
-export const SortableHeaderCell: React.FC<ISortableHeaderCellProps> = ({ label, active, direction, onSort, width, onResize, align, disabled, minWidth, sx, testId }) => {
+export const SortableHeaderCell: React.FC<ISortableHeaderCellProps> = ({ label, active, direction, onSort, width, onResize, align, disabled, minWidth, sx, testId, help }) => {
     const drag = useRef<{ x: number, width: number } | undefined>(undefined)
     const cellRef = useRef<HTMLTableCellElement | null>(null)
     const min = minWidth ?? DEFAULT_MIN_WIDTH
@@ -60,6 +66,14 @@ export const SortableHeaderCell: React.FC<ISortableHeaderCellProps> = ({ label, 
         <TableCell ref={cellRef} align={align} sortDirection={active ? direction : false} data-testid={testId}
             sx={[{ ...(width !== undefined ? { width, minWidth: width, maxWidth: width } : { minWidth: min }), position: 'relative', whiteSpace: 'nowrap', overflow: 'hidden', color: disabled ? 'text.disabled' : undefined }, ...(Array.isArray(sx) ? sx : [sx])]}>
             <TableSortLabel active={active} direction={active ? direction : 'asc'} onClick={onSort}>{label}</TableSortLabel>
+            {help !== undefined &&
+                <Tooltip title={help}>
+                    <Box component='span' onClick={e => e.stopPropagation()} data-testid={testId ? `${testId}-help` : undefined}
+                        sx={{ display: 'inline-flex', verticalAlign: 'middle', ml: 0.5, color: 'text.secondary', cursor: 'help' }}>
+                        <HelpOutline sx={{ fontSize: 14 }} />
+                    </Box>
+                </Tooltip>
+            }
             {/*
                 The drag handle: the right edge of the header; a click on it does not sort. A thin grey line is
                 ALWAYS drawn on it, so it is plain that the column can be resized; it grows and darkens under
