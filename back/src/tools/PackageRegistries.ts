@@ -5,6 +5,7 @@ import { ISecrets } from './ISecrets'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import crypto from 'crypto'
 import https from 'https'
 import http from 'http'
 
@@ -143,6 +144,16 @@ export const downloadFile = (url: string, destPath: string, headers: THeaders = 
     restart of the process.
 */
 const CACHEABLE_FILES = ['back.js', 'front.js']
+
+/*
+    A path in the temp dir that no other install is using. A name made of Date.now() alone is SHARED by two
+    installs that start in the same millisecond — in this process or in another one with the same /tmp (the
+    back's unit tests run their files in parallel) —: the second overwrites the first one's tgz, and the first
+    to finish deletes the dir the other is still extracting into ('Invalid webhook bundle: missing package.json
+    or back.js'). The time stays in the name only to make leftovers readable.
+*/
+export const uniqueTempPath = (prefix: string, suffix: string = ''): string =>
+    path.join(os.tmpdir(), `${prefix}-${Date.now()}-${crypto.randomUUID()}${suffix}`)
 
 export const cachedExtensionFile = (kind: string, id: string, filename: string): string =>
     path.join(os.tmpdir(), `kwirth-${kind}-${id}-${filename}`)
