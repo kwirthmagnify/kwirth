@@ -187,7 +187,11 @@ Abierto el 2026‑11‑17, a petición del usuario. **Sin empezar.** Tres tareas
   bundle`). Arreglo: `uniqueTempPath()` en `PackageRegistries.ts` (tiempo + UUID). Test nuevo en
   `webhookManager.test.ts` con `Date.now()` congelado (falla sin el arreglo); suite 1031 ✅ tres veces seguidas.
   ⚠️ **El mismo patrón está en ~55 sitios más** (Plugin, Provider, Sender, Theme, Homepage, Login, Idp, Dce,
-  Router, AiToolset, Docs, Pack, BundledExtensions): mismo fallo en producción con dos instalaciones a la vez.
+  Router, AiToolset, Docs, Pack, BundledExtensions). **En la práctica solo afecta a los tests** (revisado el
+  2026‑11‑17): nada del producto instala en paralelo, las descargas de arranque llevan el id en el nombre y
+  cada pod/desktop tiene su `/tmp`; en producción haría falta que dos admins instalen en el mismo ms en el mismo
+  pod. Deuda de baja prioridad: pasar a `uniqueTempPath()` cada gestor cuando se toque, o si otro test
+  empieza a fallar igual.
   **S8.3 · `webhookReceiver`, el unitario que falla de forma intermitente**
   (`back/tests/tools/webhookReceiver.test.ts`). Buscar el origen (tiempos, puertos o estado compartido), no
   subir timeouts.
