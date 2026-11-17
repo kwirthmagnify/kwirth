@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express'
 import * as crypto from 'crypto'
 import { EAuthMethodKind, ELoginRefusal, ESignupStatus, ESsoResult, IAuthMethod, ICallerAddress, ILoginRefusal, ILoginResponse, ISignupInfo, ISignupReply, ISignupRequest, ISignupSubmit } from '@kwirthmagnify/kwirth-common'
 import { SettingsApi } from './SettingsApi'
-import { callerOf, isLoginAllowed, loginIpFilterOf } from '../tools/LoginIpFilter'
+import { callerOf, isLoginAllowed, loginIpFilterOf, trustedProxiesOf } from '../tools/LoginIpFilter'
 import { ISecrets } from '../tools/ISecrets'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { ApiKeyApi } from './ApiKeyApi'
@@ -119,7 +119,7 @@ export class AuthApi {
             return ESsoResult.UNAVAILABLE
         }
         const filter = loginIpFilterOf(settings)
-        const caller = callerOf(req, filter)
+        const caller = callerOf(req, trustedProxiesOf(settings))
         if (!isLoginAllowed(filter, caller.ip, ctx.apiKeyApi.isDesktop)) {
             logWarning(ELogComponent.AUTH, `IdP login or signup refused from ${caller.ip || 'an unknown address'}: outside the login IP allow list`)
             return ESsoResult.IPNOTALLOWED
