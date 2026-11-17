@@ -98,33 +98,39 @@ interface IKwirthSettings {
         without a restart.
     */
     loginIpFilter?: ILoginIpFilter
+    /*
+        The proxies in front of Kwirth (ingress, load balancer, gateway) whose X-Forwarded-For is believed, to know
+        the real address of WHOEVER connects: a login (loginIpFilter), a WebSocket, an extension that checks where a
+        caller comes from (IRIA Ianus' spokes). Not the login's: it was inside loginIpFilter until 2026-11-17, and that
+        tied it to a filter a Kwirth may not even use. X-Forwarded-For is believed ONLY when the connection comes from
+        one of them, and it is walked right to left skipping trusted hops: the client is the first hop that is not
+        trusted. Whatever a client writes on the left of the header is never read. Undefined or empty = believed from
+        nobody: the address is the connection's.
+    */
+    trustedProxies?: IIpAddressEntry[]
 }
 
 /*
-    Where a login may come from (plan: plans/login-ip-filter). Both lists hold IPs or CIDRs, IPv4 or IPv6.
+    Where a login may come from (plan: plans/login-ip-filter). IPs or CIDRs, IPv4 or IPv6.
 
     'enabled' is the switch, off on a fresh installation. The filter acts ONLY when it is on AND 'allowed'
     has something: an empty list lets everybody in even when switched on, so a hand edit of the configmap
     cannot lock the whole world out. Switching it off is also the way out ('kubectl edit').
 
     'allowed' is checked on every way in that issues an AccessKey (password login and change, IdP start and
-    callback, signup).
-
-    'trustedProxies' is what makes the filter impossible to dodge. X-Forwarded-For is believed ONLY when the
-    connection comes from one of them, and it is walked right to left skipping trusted hops: the client is
-    the first hop that is not trusted. Whatever a client writes on the left of the header is never read.
+    callback, signup), against the address resolved with IKwirthSettings.trustedProxies.
 */
 interface ILoginIpFilter {
     enabled: boolean
-    allowed: ILoginIpEntry[]
-    trustedProxies: ILoginIpEntry[]
+    allowed: IIpAddressEntry[]
 }
 
 /*
-    One entry of a login IP list: an IP or CIDR (IPv4 or IPv6) and a note that says what it is. Only
-    'address' is ever checked; 'comment' is for whoever reads the list, '' when there is none.
+    One entry of a list of addresses (the login's allowed ones, the trusted proxies, IRIA Ianus' Allowed from…): an
+    IP or CIDR (IPv4 or IPv6) and a note that says what it is. Only 'address' is ever checked; 'comment' is for
+    whoever reads the list, '' when there is none. It was ILoginIpEntry until 2026-11-17: it is not only the login's.
 */
-interface ILoginIpEntry {
+interface IIpAddressEntry {
     address: string
     comment: string
 }
@@ -155,4 +161,4 @@ interface ICallerAddress {
     forwardedFor?: string
 }
 
-export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig, IKwirthSettings, ILoginIpFilter, ILoginIpEntry, ELoginRefusal, ILoginRefusal, ICallerAddress }
+export { ILoginResponse, IUser, IUserInfo, IClusterMetricsConfig, IKwirthSettings, ILoginIpFilter, IIpAddressEntry, ELoginRefusal, ILoginRefusal, ICallerAddress }
