@@ -1,5 +1,5 @@
 import { IncomingMessage } from 'http'
-import { ICallerAddress, IKwirthSettings, ILoginIpEntry, ILoginIpFilter } from '@kwirthmagnify/kwirth-common'
+import { ICallerAddress, IKwirthSettings, IIpAddressEntry, ILoginIpFilter } from '@kwirthmagnify/kwirth-common'
 import { clientAddressOf } from './ClientIp'
 import { invalidEntries, ipInList, isLoopback } from '@kwirthmagnify/kwirth-common-back'
 
@@ -19,14 +19,14 @@ import { invalidEntries, ipInList, isLoopback } from '@kwirthmagnify/kwirth-comm
     L5). A plain string is still the address it always was; anything else unreadable is dropped. The SAVE
     path stays strict (validateLoginIpFilter): only reading is tolerant.
 */
-const storedListOf = (value: unknown): ILoginIpEntry[] => {
+const storedListOf = (value: unknown): IIpAddressEntry[] => {
     if (!Array.isArray(value)) return []
-    const result: ILoginIpEntry[] = []
+    const result: IIpAddressEntry[] = []
     for (const item of value as unknown[]) {
         if (typeof item === 'string') result.push({ address: item, comment: '' })
-        else if (typeof item === 'object' && item !== null && typeof (item as ILoginIpEntry).address === 'string') {
-            const comment = (item as ILoginIpEntry).comment
-            result.push({ address: (item as ILoginIpEntry).address, comment: typeof comment === 'string' ? comment : '' })
+        else if (typeof item === 'object' && item !== null && typeof (item as IIpAddressEntry).address === 'string') {
+            const comment = (item as IIpAddressEntry).comment
+            result.push({ address: (item as IIpAddressEntry).address, comment: typeof comment === 'string' ? comment : '' })
         }
     }
     return result
@@ -35,18 +35,24 @@ const storedListOf = (value: unknown): ILoginIpEntry[] => {
 // What is stored, with the defaults filled in: a settings object written before the filter existed has none.
 export const loginIpFilterOf = (settings: IKwirthSettings): ILoginIpFilter => ({
     enabled: settings.loginIpFilter?.enabled === true,
-    allowed: storedListOf(settings.loginIpFilter?.allowed),
-    trustedProxies: storedListOf(settings.loginIpFilter?.trustedProxies)
+    allowed: storedListOf(settings.loginIpFilter?.allowed)
 })
+
+/*
+    The trusted proxies as they are READ (never throws: a login, a WebSocket and IRIA Ianus' spokes all resolve
+    addresses with them). Their own setting since 2026-11-17 (IKwirthSettings.trustedProxies): they are not the
+    login's, and a Kwirth that does not restrict its login may still need them.
+*/
+export const trustedProxiesOf = (settings: IKwirthSettings): IIpAddressEntry[] => storedListOf(settings.trustedProxies)
 
 export const isLoginIpFilterActive = (filter: ILoginIpFilter): boolean => filter.enabled && filter.allowed.length > 0
 
 // The IPs/CIDRs of a list, which is all the checks look at: the comments are for people.
-export const addressesOf = (entries: ILoginIpEntry[]): string[] => entries.map(e => e.address)
+export const addressesOf = (entries: IIpAddressEntry[]): string[] => entries.map(e => e.address)
 
-// The client behind a request, believing X-Forwarded-For only from the filter's trusted proxies.
-export const callerOf = (req: IncomingMessage, filter: ILoginIpFilter): ICallerAddress =>
-    clientAddressOf(req.socket.remoteAddress, req.headers['x-forwarded-for'], addressesOf(filter.trustedProxies))
+// The client behind a request, believing X-Forwarded-For only from the trusted proxies.
+export const callerOf = (req: IncomingMessage, trustedProxies: IIpAddressEntry[]): ICallerAddress =>
+    clientAddressOf(req.socket.remoteAddress, req.headers['x-forwarded-for'], addressesOf(trustedProxies))
 
 /*
     Whether a login from 'ip' may go ahead. On the desktop the loopback is always allowed: the person in
@@ -58,13 +64,13 @@ export const isLoginAllowed = (filter: ILoginIpFilter, ip: string, isDesktop: bo
     return ipInList(ip, addressesOf(filter.allowed))
 }
 
-const isEntryArray = (value: unknown): value is ILoginIpEntry[] => Array.isArray(value) && value.every(v =>
-    typeof v === 'object' && v !== null && typeof (v as ILoginIpEntry).address === 'string' && typeof (v as ILoginIpEntry).comment === 'string')
+const isEntryArray = (value: unknown): value is IIpAddressEntry[] => Array.isArray(value) && value.every(v =>
+    typeof v === 'object' && v !== null && typeof (v as IIpAddressEntry).address === 'string' && typeof (v as IIpAddressEntry).comment === 'string')
 
 // Trimmed, without blank addresses; an address that repeats keeps its first entry (and its comment).
-const cleanList = (value: ILoginIpEntry[]): ILoginIpEntry[] => {
+const cleanList = (value: IIpAddressEntry[]): IIpAddressEntry[] => {
     const seen = new Set<string>()
-    const result: ILoginIpEntry[] = []
+    const result: IIpAddressEntry[] = []
     for (const entry of value) {
         const address = entry.address.trim()
         if (address === '' || seen.has(address)) continue
@@ -74,23 +80,28 @@ const cleanList = (value: ILoginIpEntry[]): ILoginIpEntry[] => {
     return result
 }
 
+// Checks the trusted proxies that are about to be saved and returns them cleaned, or the reason they cannot be saved
+export const validateTrustedProxies = (incoming: unknown): IIpAddressEntry[] | string => {
+    if (!isEntryArray(incoming)) return 'trustedProxies must be a list of { address, comment }'
+    const proxies = cleanList(incoming)
+    const bad = invalidEntries(addressesOf(proxies))
+    return bad.length > 0 ? `Not an IP or CIDR in the trusted proxies: ${bad.join(', ')}` : proxies
+}
+
 /*
     Checks a filter that is about to be saved and returns it cleaned, or the reason it cannot be saved.
-    'origin' is the request of whoever saves: the filter as it WILL be (its own trusted proxies included)
-    must still let them in, or saving it would lock them out on their next login. Without an origin there
-    is nobody to protect and only the shape is checked. 'incoming' is a body nobody has checked yet.
+    'origin' is the request of whoever saves: the filter as it WILL be — with the trusted proxies as they WILL be,
+    'trustedProxies' — must still let them in, or saving it would lock them out on their next login. Without an
+    origin there is nobody to protect and only the shape is checked. 'incoming' is a body nobody has checked yet.
 */
-export const validateLoginIpFilter = (incoming: unknown, origin: IncomingMessage | undefined, isDesktop: boolean): ILoginIpFilter | string => {
+export const validateLoginIpFilter = (incoming: unknown, origin: IncomingMessage | undefined, isDesktop: boolean, trustedProxies: IIpAddressEntry[]): ILoginIpFilter | string => {
     const raw = (incoming ?? {}) as Partial<Record<keyof ILoginIpFilter, unknown>>
     if (typeof raw.enabled !== 'boolean') return 'loginIpFilter.enabled must be true or false'
     if (!isEntryArray(raw.allowed)) return 'loginIpFilter.allowed must be a list of { address, comment }'
-    if (!isEntryArray(raw.trustedProxies)) return 'loginIpFilter.trustedProxies must be a list of { address, comment }'
-    const filter: ILoginIpFilter = { enabled: raw.enabled, allowed: cleanList(raw.allowed), trustedProxies: cleanList(raw.trustedProxies) }
+    const filter: ILoginIpFilter = { enabled: raw.enabled, allowed: cleanList(raw.allowed) }
 
     const badAllowed = invalidEntries(addressesOf(filter.allowed))
     if (badAllowed.length > 0) return `Not an IP or CIDR in the login allow list: ${badAllowed.join(', ')}`
-    const badProxies = invalidEntries(addressesOf(filter.trustedProxies))
-    if (badProxies.length > 0) return `Not an IP or CIDR in the trusted proxies: ${badProxies.join(', ')}`
 
     /*
         Switched on with nothing allowed is refused HERE, on save, and only here. At runtime it still lets
@@ -101,7 +112,7 @@ export const validateLoginIpFilter = (incoming: unknown, origin: IncomingMessage
     if (filter.enabled && filter.allowed.length === 0) return 'Add at least one allowed address to restrict login'
 
     if (origin) {
-        const caller = callerOf(origin, filter)
+        const caller = callerOf(origin, trustedProxies)
         if (!isLoginAllowed(filter, caller.ip, isDesktop)) return `The login allow list does not include your own address (${caller.ip || 'unknown'}): saving it would lock you out`
     }
     return filter
