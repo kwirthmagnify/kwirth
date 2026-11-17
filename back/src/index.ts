@@ -90,7 +90,7 @@ import { resolveChannelMode } from './tools/ChannelPlacement'
 // NewsChannel, PinocchioChannel, FilemanChannel and MetricsChannel removed — now loaded as plugins
 
 import { IncomingMessage } from 'http'
-import { normalizeIp } from './tools/ClientIp'
+import { normalizeIp } from '@kwirthmagnify/kwirth-common-back'
 
 import fileUpload from 'express-fileupload'
 import v8 from 'node:v8'
