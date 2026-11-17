@@ -7,7 +7,7 @@ import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
 import crypto from 'crypto'
-import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
+import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile, uniqueTempPath } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 import { IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
@@ -114,8 +114,8 @@ export class WebhookManager implements IWebhookAccess {
         const cacheFile = cachedExtensionFile('webhook', meta.id, 'front.js')
         if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, 'utf-8')
         if (!meta.installedFrom || meta.installedFrom === 'local') return undefined
-        const tmpTgz = path.join(os.tmpdir(), `kwirth-webhook-${meta.id}-frontsrc-${Date.now()}.tgz`)
-        const tmpDir = path.join(os.tmpdir(), `kwirth-webhook-${meta.id}-frontsrc-${Date.now()}`)
+        const tmpTgz = uniqueTempPath(`kwirth-webhook-${meta.id}-frontsrc`, '.tgz')
+        const tmpDir = uniqueTempPath(`kwirth-webhook-${meta.id}-frontsrc`)
         fs.mkdirSync(tmpDir, { recursive: true })
         try {
             await downloadFile(meta.installedFrom, tmpTgz, await packageHeaders(meta.installedFrom))
@@ -290,8 +290,8 @@ export class WebhookManager implements IWebhookAccess {
     }
 
     async install(tarGzUrl: string, installedFrom?: string, marketplaceId?: string, marketplaceLabel?: string, upgrade?: boolean): Promise<IWebhookMeta> {
-        const tmpTgz = path.join(os.tmpdir(), `kwirth-webhook-${Date.now()}.tgz`)
-        let tmpDir = path.join(os.tmpdir(), `kwirth-webhook-extract-${Date.now()}`)
+        const tmpTgz = uniqueTempPath('kwirth-webhook', '.tgz')
+        let tmpDir = uniqueTempPath('kwirth-webhook-extract')
         fs.mkdirSync(tmpDir, { recursive: true })
 
         const isLocalPath = tarGzUrl.startsWith('file://') || (!tarGzUrl.startsWith('http://') && !tarGzUrl.startsWith('https://'))
@@ -392,7 +392,7 @@ export class WebhookManager implements IWebhookAccess {
     }
 
     async installFromBuffer(buffer: Buffer): Promise<IWebhookMeta> {
-        const tmpTgz = path.join(os.tmpdir(), `kwirth-webhook-upload-${Date.now()}.tgz`)
+        const tmpTgz = uniqueTempPath('kwirth-webhook-upload', '.tgz')
         fs.writeFileSync(tmpTgz, buffer)
         try {
             return await this.install(tmpTgz, 'local')
@@ -472,8 +472,8 @@ export class WebhookManager implements IWebhookAccess {
             logError(ELogComponent.CORE, `Webhook '${meta.id}' back.js not stored and has no remote source`)
             return undefined
         }
-        const tmpTgz = path.join(os.tmpdir(), `kwirth-webhook-${meta.id}-src-${Date.now()}.tgz`)
-        const tmpDir = path.join(os.tmpdir(), `kwirth-webhook-${meta.id}-src-${Date.now()}`)
+        const tmpTgz = uniqueTempPath(`kwirth-webhook-${meta.id}-src`, '.tgz')
+        const tmpDir = uniqueTempPath(`kwirth-webhook-${meta.id}-src`)
         fs.mkdirSync(tmpDir, { recursive: true })
         try {
             await downloadFile(meta.installedFrom, tmpTgz, await packageHeaders(meta.installedFrom))
