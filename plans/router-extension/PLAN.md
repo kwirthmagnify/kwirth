@@ -149,7 +149,13 @@ Se hace en su repo y su sesión, cuando `bridge` funcione.
 
 Abierto el 2026‑11‑17, a petición del usuario. **Sin empezar.** Tres tareas:
 
-- **S8.1 · El estado de los clusters en el Resource selector.** El cluster **en gris no se refresca solo**: si el
+- ✅ **Hecho 2026‑11‑17, QA del usuario OK.** Al abrir la lista de clusters se vuelve a comprobar cada entrada
+  menos el home (`recheckCluster` en `front/src/tools/Global.ts`): la gris se relee entera, la que contestaba
+  solo pide `/config/info` y pasa a gris si no contesta en 5 s; sin avisos. Cada entrada dice `direct`,
+  `via <router>`, `· router not installed or not started` o `· not answering` (aria-hidden: el nombre accesible
+  de la opción sigue siendo el del cluster); el campo cerrado no lo enseña. `readClusterInfo` decide `enabled`
+  al final, así que releer no hace parpadear. Sin comprobación periódica (bastó con la de abrir).
+  **S8.1 · El estado de los clusters en el Resource selector.** El cluster **en gris no se refresca solo**: si el
   destino no estaba listo sale gris, y cuando el túnel se levanta sigue gris. El estado de accesibilidad se vuelve
   a comprobar **al abrir la lista** o **cada cierto tiempo**, en vez de quedarse con la primera respuesta. Es parte
   del punto del backlog *Indicador directo / ruteado en el selector de clusters*, que entra entero aquí:
