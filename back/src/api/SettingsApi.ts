@@ -1,6 +1,6 @@
 import express, { Request, Response} from 'express'
 import { IncomingMessage } from 'http'
-import { callerOf, loginIpFilterOf, validateLoginIpFilter } from '../tools/LoginIpFilter'
+import { callerOf, loginIpFilterOf, trustedProxiesOf, validateLoginIpFilter, validateTrustedProxies } from '../tools/LoginIpFilter'
 import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType } from '@kwirthmagnify/kwirth-common'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ApiKeyApi } from './ApiKeyApi'
@@ -79,13 +79,19 @@ export class SettingsApi {
         const merged: IKwirthSettings = { ...stored, ...incoming }
         if (incoming.metricsInterval !== undefined) merged.metricsInterval = +incoming.metricsInterval
 
+        /*
+            A bundle is a FILE, possibly exported before the entries carried a comment (plain strings). Its lists
+            are read like any stored ones (trustedProxiesOf, loginIpFilterOf) and then validated as strictly as the
+            PUT: refusing the old shape would refuse the whole import over a field it can read. The trusted
+            proxies first: the login filter is checked with them as they WILL be.
+        */
+        if (incoming.trustedProxies !== undefined) {
+            const proxies = validateTrustedProxies(trustedProxiesOf({ trustedProxies: incoming.trustedProxies }))
+            if (typeof proxies === 'string') throw new Error(proxies)
+            merged.trustedProxies = proxies
+        }
         if (incoming.loginIpFilter !== undefined) {
-            /*
-                A bundle is a FILE, possibly exported before the entries carried a comment (plain strings).
-                It is read like any stored filter (loginIpFilterOf) and then validated as strictly as the
-                PUT: refusing the old shape would refuse the whole import over a field it can read.
-            */
-            const filter = validateLoginIpFilter(loginIpFilterOf({ loginIpFilter: incoming.loginIpFilter }), origin, this.apiKeyApi.isDesktop)
+            const filter = validateLoginIpFilter(loginIpFilterOf({ loginIpFilter: incoming.loginIpFilter }), origin, this.apiKeyApi.isDesktop, trustedProxiesOf(merged))
             if (typeof filter === 'string') throw new Error(filter)
             merged.loginIpFilter = filter
         }
@@ -338,7 +344,7 @@ export class SettingsApi {
             .get( async (req:Request, res:Response) => {
                 try {
                     const stored = await SettingsApi.read(this.configMaps)
-                    res.status(200).json(callerOf(req, loginIpFilterOf(stored)))
+                    res.status(200).json(callerOf(req, trustedProxiesOf(stored)))
                 }
                 catch (err) {
                     logError(ELogComponent.CORE, `Error resolving the caller address: ${err}`)
@@ -369,7 +375,7 @@ export class SettingsApi {
                         it renders, or the dialog breaks on open (loginIpFilterOf never throws).
                     */
                     res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(stored), previousLogLines: SettingsApi.resolvePreviousLogLines(stored),
-                        previousLogSenderLines: SettingsApi.resolvePreviousLogSenderLines(stored), log: currentLogSettings(), loginIpFilter: loginIpFilterOf(stored) })
+                        previousLogSenderLines: SettingsApi.resolvePreviousLogSenderLines(stored), log: currentLogSettings(), loginIpFilter: loginIpFilterOf(stored), trustedProxies: trustedProxiesOf(stored) })
                 }
                 catch (err) {
                     logError(ELogComponent.CORE, `Error reading kwirth settings: ${err}`)
@@ -391,14 +397,17 @@ export class SettingsApi {
                         const problem = SettingsApi.validatePackageRegistries(incoming.packageRegistries)
                         if (problem) { res.status(400).json({ error: problem }); return }
                     }
-                    // checked against the request: the filter being saved must still let its author in
-                    const loginIpFilter = incoming.loginIpFilter === undefined ? undefined : validateLoginIpFilter(incoming.loginIpFilter, req, this.apiKeyApi.isDesktop)
-                    if (typeof loginIpFilter === 'string') { res.status(400).json({ error: loginIpFilter }); return }
-
                     // a merge over what is stored: a partial PUT must not delete settings it does not send
                     const stored = await SettingsApi.read(this.configMaps)
+                    const trustedProxies = incoming.trustedProxies === undefined ? trustedProxiesOf(stored) : validateTrustedProxies(incoming.trustedProxies)
+                    if (typeof trustedProxies === 'string') { res.status(400).json({ error: trustedProxies }); return }
+                    // checked against the request, with the trusted proxies as they WILL be: the filter being saved must still let its author in
+                    const loginIpFilter = incoming.loginIpFilter === undefined ? undefined : validateLoginIpFilter(incoming.loginIpFilter, req, this.apiKeyApi.isDesktop, trustedProxies)
+                    if (typeof loginIpFilter === 'string') { res.status(400).json({ error: loginIpFilter }); return }
+
                     const merged: IKwirthSettings = { ...stored, ...incoming }
                     if (incoming.metricsInterval !== undefined) merged.metricsInterval = +incoming.metricsInterval
+                    if (incoming.trustedProxies !== undefined) merged.trustedProxies = trustedProxies
                     if (loginIpFilter) merged.loginIpFilter = loginIpFilter
 
                     if (incoming.marketplaces !== undefined) {
@@ -427,7 +436,7 @@ export class SettingsApi {
                     if (incoming.log !== undefined) applyLogSettings(merged.log)
                     if (this.onSettingsChanged) this.onSettingsChanged(merged)
                     const hydrated = await this.withSecrets(merged)
-                    res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(merged), log: currentLogSettings(), loginIpFilter: loginIpFilterOf(merged) })
+                    res.status(200).json({ ...hydrated, metricsInterval: SettingsApi.resolveMetricsInterval(merged), log: currentLogSettings(), loginIpFilter: loginIpFilterOf(merged), trustedProxies: trustedProxiesOf(merged) })
                 }
                 catch (err) {
                     logError(ELogComponent.CORE, `Error writing kwirth settings: ${err}`)
