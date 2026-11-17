@@ -4,7 +4,7 @@ import crypto from 'crypto'
 import { ApiKeyApi } from './ApiKeyApi'
 import { ELoginRefusal, ICallerAddress, ILoginRefusal, IUser } from '@kwirthmagnify/kwirth-common'
 import { SettingsApi } from './SettingsApi'
-import { callerOf, isLoginAllowed, loginIpFilterOf } from '../tools/LoginIpFilter'
+import { callerOf, isLoginAllowed, loginIpFilterOf, trustedProxiesOf } from '../tools/LoginIpFilter'
 import { ISecrets } from '../tools/ISecrets'
 import { IConfigMaps } from '../tools/IConfigMap'
 import { IdentityService } from '../tools/auth/IdentityService'
@@ -88,7 +88,7 @@ export class LoginApi {
             return undefined
         }
         const filter = loginIpFilterOf(settings)
-        const caller = callerOf(req, filter)
+        const caller = callerOf(req, trustedProxiesOf(settings))
         if (!isLoginAllowed(filter, caller.ip, this.apiKeyApi.isDesktop)) {
             logWarning(ELogComponent.AUTH, `Login refused for '${req.body?.user || ''}' from ${caller.ip || 'an unknown address'}: outside the login IP allow list`)
             const refusal: ILoginRefusal = { refusal: ELoginRefusal.IPNOTALLOWED }
