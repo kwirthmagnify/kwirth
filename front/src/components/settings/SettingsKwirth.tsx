@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react'
 import { Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, MenuItem, Select, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material'
 import { Add, Delete, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType, ICallerAddress, ILoginIpEntry } from '@kwirthmagnify/kwirth-common'
+import { IKwirthSettings, IMarketplace, IPackageRegistry, EPackageRegistryAuthType, EManifestAuthType, ICallerAddress, IIpAddressEntry } from '@kwirthmagnify/kwirth-common'
 /*
     'import type' and not a normal import, deliberately. CRA transpiles with Babel, which compiles file by
     file and cannot tell whether an imported name is a type or a value: with a normal import it leaves the
@@ -41,6 +41,7 @@ enum ESettingsKwirthTab {
     LOG = 'log',
     MARKETPLACES = 'marketplaces',
     REGISTRIES = 'registries',
+    TRUSTED_PROXIES = 'trustedproxies',
     LOGIN_ACCESS = 'loginaccess'
 }
 
@@ -76,17 +77,17 @@ const isValidIpEntry = (entry: string): boolean => {
 }
 
 // localhost over IPv4 and over IPv6, for the 'Add localhost' button
-const LOOPBACK_ENTRIES: ILoginIpEntry[] = [
+const LOOPBACK_ENTRIES: IIpAddressEntry[] = [
     { address: '127.0.0.1', comment: 'localhost IPv4' },
     { address: '::1', comment: 'localhost IPv6' }
 ]
 
 // A row with a blank address is not an error: it is dropped on save, comment and all.
-const ipListValid = (entries: ILoginIpEntry[]): boolean => entries.every(e => e.address.trim() === '' || isValidIpEntry(e.address))
+const ipListValid = (entries: IIpAddressEntry[]): boolean => entries.every(e => e.address.trim() === '' || isValidIpEntry(e.address))
 // Trimmed, without blank addresses; an address that repeats keeps its first row (and its comment).
-const cleanIpList = (entries: ILoginIpEntry[]): ILoginIpEntry[] => {
+const cleanIpList = (entries: IIpAddressEntry[]): IIpAddressEntry[] => {
     const seen = new Set<string>()
-    const result: ILoginIpEntry[] = []
+    const result: IIpAddressEntry[] = []
     for (const entry of entries) {
         const address = entry.address.trim()
         if (address === '' || seen.has(address)) continue
@@ -95,7 +96,7 @@ const cleanIpList = (entries: ILoginIpEntry[]): ILoginIpEntry[] => {
     }
     return result
 }
-const hasAddress = (entries: ILoginIpEntry[], address: string): boolean => entries.some(e => e.address.trim() === address)
+const hasAddress = (entries: IIpAddressEntry[], address: string): boolean => entries.some(e => e.address.trim() === address)
 
 /*
     The network the proxy we are coming through lives in, for 'Trust the proxy I'm coming through': a /16 for
@@ -199,8 +200,8 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const [registries, setRegistries] = useState<IPackageRegistryRow[]>([])
     // login access (plans/login-ip-filter): off on a fresh installation
     const [ipFilterEnabled, setIpFilterEnabled] = useState(false)
-    const [allowedIps, setAllowedIps] = useState<ILoginIpEntry[]>([])
-    const [trustedProxies, setTrustedProxies] = useState<ILoginIpEntry[]>([])
+    const [allowedIps, setAllowedIps] = useState<IIpAddressEntry[]>([])
+    const [trustedProxies, setTrustedProxies] = useState<IIpAddressEntry[]>([])
     const [caller, setCaller] = useState<ICallerAddress | undefined>(undefined)
     const [loading, setLoading] = useState(true)
     // 'error' is a LOAD error and disables the whole form: without the current values there is nothing to edit
@@ -244,7 +245,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 setLogBufferLines(settings.log?.bufferLines ?? 5000)
                 setIpFilterEnabled(settings.loginIpFilter?.enabled === true)
                 setAllowedIps(settings.loginIpFilter?.allowed ?? [])
-                setTrustedProxies(settings.loginIpFilter?.trustedProxies ?? [])
+                setTrustedProxies(settings.trustedProxies ?? [])
                 // how the core sees whoever is here; if it fails the tab says it does not know
                 const callerResponse = await fetch(`${props.clusterUrl}/core/settings/caller`, addGetAuthorization(props.accessString))
                 if (callerResponse.ok) setCaller(await callerResponse.json() as ICallerAddress)
@@ -417,7 +418,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                 signupSenderId: signupSenderChosen ? signupSenderId : '',
                 signupSenderConfigName: signupSenderChosen ? signupSenderConfigName : '',
                 log: { levels: logLevels, ansi: logAnsi, bufferLines: logBufferLines },
-                loginIpFilter: { enabled: ipFilterEnabled, allowed: cleanIpList(allowedIps), trustedProxies: cleanIpList(trustedProxies) } })
+                loginIpFilter: { enabled: ipFilterEnabled, allowed: cleanIpList(allowedIps) }, trustedProxies: cleanIpList(trustedProxies) })
             const response = await fetch(`${props.clusterUrl}/core/settings`, addPutAuthorization(props.accessString, payload))
             if (!response.ok) {
                 const detail = await response.json().catch(() => ({}))
@@ -441,9 +442,9 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
         inside, so adding entries never moves the rest of the tab. Each row is the address (fixed width) and
         a comment that takes the rest.
     */
-    const ipList = (label: string, entries: ILoginIpEntry[], setEntries: React.Dispatch<React.SetStateAction<ILoginIpEntry[]>>, placeholder: string) => (
-        <Box sx={{ width: '50%' }}>
-            <Box sx={{ height: 228, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }}>
+    const ipList = (label: string, entries: IIpAddressEntry[], setEntries: React.Dispatch<React.SetStateAction<IIpAddressEntry[]>>, placeholder: string) => (
+        <Box sx={{ width: '100%' }}>
+            <Box sx={{ height: 236, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }}>
                 { entries.map((entry, index) =>
                     <Stack key={index} direction='row' spacing={1} sx={{ alignItems: 'center' }}>
                         <TextField value={entry.address} variant='standard' placeholder={placeholder} sx={{ width: 190, flexShrink: 0 }}
@@ -488,6 +489,27 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
     const trustProxy = () => {
         if (suggestedProxy) setTrustedProxies(prev => [...prev.filter(p => p.address.trim() !== ''), { address: suggestedProxy, comment: "proxy I'm coming through" }])
     }
+
+    /*
+        How Kwirth sees you, with the buttons of the tab it is on (Trust my proxy; Add my IP, Add localhost). The
+        same box on both tabs: what is shown is the SAVED configuration's view, and the buttons only fill the lists
+        (nothing changes until OK); each is enabled only when it would add something.
+    */
+    const callerBox = (buttons: React.ReactNode) => (
+        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, px: 1.5, py: 1 }}>
+            <Stack direction='row' spacing={2} sx={{ alignItems: 'center' }}>
+                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                    <Typography variant='body2'>
+                        <b>How Kwirth sees you:</b> {caller?.ip || 'unknown'} <Typography component='span' variant='body2' sx={{ color: 'text.secondary' }}>(connection from {caller?.remoteAddress || 'unknown'})</Typography>
+                    </Typography>
+                    <Typography variant='body2' sx={{ color: caller?.forwardedIgnored ? 'warning.main' : 'text.secondary' }}>
+                        X-Forwarded-For: {forwardedState}
+                    </Typography>
+                </Box>
+                <Stack direction='row' spacing={1} sx={{ flexShrink: 0 }}>{buttons}</Stack>
+            </Stack>
+        </Box>
+    )
 
     // the forwarded header as the core treats it NOW (with the stored trusted proxies)
     const forwardedState = !caller ? 'unknown'
@@ -703,6 +725,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         <Tab label='Log' value={ESettingsKwirthTab.LOG} />
                         <Tab label='Marketplaces' value={ESettingsKwirthTab.MARKETPLACES} />
                         <Tab label='Package registries' value={ESettingsKwirthTab.REGISTRIES} />
+                        <Tab label='Trusted proxies' value={ESettingsKwirthTab.TRUSTED_PROXIES} />
                         <Tab label='Login access' value={ESettingsKwirthTab.LOGIN_ACCESS} />
                     </Tabs>
 
@@ -898,57 +921,54 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         </Stack>
                     </Box>
 
+                    {/* Trusted proxies (plans/login-ip-filter, K2). Their own tab since 2026-11-17: they are not only
+                        the login's — they decide the real address of WHOEVER connects (an IRIA Ianus spoke's From,
+                        for instance), and sitting under "Login access" they looked like a login setting. */}
+                    <Box hidden={tab !== ESettingsKwirthTab.TRUSTED_PROXIES}>
+                        <Stack spacing={1} direction='column' sx={{ mt: 2 }}>
+                            <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                                The proxies in front of Kwirth (ingress, load balancer, gateway) whose <b>X-Forwarded-For</b> is believed, to know the
+                                real address of whoever connects. Used by the login's allowed addresses and by the extensions that check where a
+                                caller comes from (such as IRIA Ianus' spokes). Trust every proxy on the way, and nothing else.
+                            </Typography>
+                            { callerBox(
+                                <Tooltip title={suggestedProxy ? `Trust the proxy you are coming through: adds ${suggestedProxy} to the trusted proxies` : 'Trust the proxy you are coming through (enabled when its X-Forwarded-For is being ignored)'}>
+                                    <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={trustProxy} disabled={loading || error!=='' || !canTrustProxy}>Trust my proxy</Button></span>
+                                </Tooltip>
+                            ) }
+                            <Typography variant='body2' noWrap>
+                                <b>Trusted proxies</b> <Typography component='span' variant='caption' sx={{ color: 'text.secondary' }}>· IPs or CIDRs whose X-Forwarded-For is believed</Typography>
+                            </Typography>
+                            { ipList('Trusted proxy', trustedProxies, setTrustedProxies, '10.42.0.0/16') }
+                        </Stack>
+                    </Box>
+
                     {/* Login access (plans/login-ip-filter). Fixed content: the box that says how Kwirth sees
-                        you and both lists are always there; what does not apply is disabled, never hidden. */}
+                        you and the list are always there; what does not apply is disabled, never hidden. */}
                     <Box hidden={tab !== ESettingsKwirthTab.LOGIN_ACCESS}>
                         <Stack spacing={1} direction='column' sx={{ mt: 2 }}>
                             {/* The switch and what it covers, together: the explanation used to be three lines
-                                of its own, and that height belongs to the lists. */}
+                                of its own, and that height belongs to the list. */}
                             <Box>
                                 <FormControlLabel control={<Checkbox size='small' checked={ipFilterEnabled} onChange={e => setIpFilterEnabled(e.target.checked)} disabled={loading || error!==''} />}
                                     label='Restrict login to the allowed addresses' />
                                 <Typography variant='caption' component='div' sx={{ color: 'text.secondary', mt: -0.5 }}>
                                     Password login, password change, identity providers and access requests. Open sessions and API keys are not affected.
+                                    Your real address depends on the <b>Trusted proxies</b> tab.
                                 </Typography>
                             </Box>
-                            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, px: 1.5, py: 1 }}>
-                                <Stack direction='row' spacing={2} sx={{ alignItems: 'center' }}>
-                                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                                        <Typography variant='body2'>
-                                            <b>How Kwirth sees you:</b> {caller?.ip || 'unknown'} <Typography component='span' variant='body2' sx={{ color: 'text.secondary' }}>(connection from {caller?.remoteAddress || 'unknown'})</Typography>
-                                        </Typography>
-                                        <Typography variant='body2' sx={{ color: caller?.forwardedIgnored ? 'warning.main' : 'text.secondary' }}>
-                                            X-Forwarded-For: {forwardedState}
-                                        </Typography>
-                                    </Box>
-                                    {/* Both always there, each enabled only when it would add something. They only
-                                        fill the lists: nothing changes until OK, and what is shown on the left is
-                                        the SAVED configuration's view. */}
-                                    <Stack direction='row' spacing={1} sx={{ flexShrink: 0 }}>
-                                        <Tooltip title={suggestedProxy ? `Trust the proxy you are coming through: adds ${suggestedProxy} to the trusted proxies` : 'Trust the proxy you are coming through (enabled when its X-Forwarded-For is being ignored)'}>
-                                            <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={trustProxy} disabled={loading || error!=='' || !canTrustProxy}>Trust my proxy</Button></span>
-                                        </Tooltip>
-                                        <Tooltip title={myIp ? `Adds ${myIp} to the allowed addresses` : 'Adds your address to the allowed addresses (enabled when Kwirth sees your real address: directly or through a trusted proxy)'}>
-                                            <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={addMyIp} disabled={loading || error!=='' || !canAddMyIp}>Add my IP</Button></span>
-                                        </Tooltip>
-                                        <Tooltip title='Adds 127.0.0.1 and ::1 to the allowed addresses (localhost over IPv4 and IPv6)'>
-                                            <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={addLocalhost} disabled={loading || error!=='' || missingLoopbacks.length === 0}>Add localhost</Button></span>
-                                        </Tooltip>
-                                    </Stack>
-                                </Stack>
-                            </Box>
-                            <Stack direction='row' spacing={2}>
-                                <Typography variant='body2' noWrap sx={{ width: '50%' }}>
-                                    <b>Allowed addresses</b> <Typography component='span' variant='caption' sx={{ color: 'text.secondary' }}>· IPs or CIDRs a login may come from</Typography>
-                                </Typography>
-                                <Typography variant='body2' noWrap sx={{ width: '50%' }}>
-                                    <b>Trusted proxies</b> <Typography component='span' variant='caption' sx={{ color: 'text.secondary' }}>· whose X-Forwarded-For is believed</Typography>
-                                </Typography>
-                            </Stack>
-                            <Stack direction='row' spacing={2}>
-                                { ipList('Allowed address', allowedIps, setAllowedIps, '10.0.0.0/8') }
-                                { ipList('Trusted proxy', trustedProxies, setTrustedProxies, '10.42.0.0/16') }
-                            </Stack>
+                            { callerBox(<>
+                                <Tooltip title={myIp ? `Adds ${myIp} to the allowed addresses` : 'Adds your address to the allowed addresses (enabled when Kwirth sees your real address: directly or through a trusted proxy)'}>
+                                    <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={addMyIp} disabled={loading || error!=='' || !canAddMyIp}>Add my IP</Button></span>
+                                </Tooltip>
+                                <Tooltip title='Adds 127.0.0.1 and ::1 to the allowed addresses (localhost over IPv4 and IPv6)'>
+                                    <span><Button size='small' variant='outlined' sx={{ whiteSpace: 'nowrap' }} onClick={addLocalhost} disabled={loading || error!=='' || missingLoopbacks.length === 0}>Add localhost</Button></span>
+                                </Tooltip>
+                            </>) }
+                            <Typography variant='body2' noWrap>
+                                <b>Allowed addresses</b> <Typography component='span' variant='caption' sx={{ color: 'text.secondary' }}>· IPs or CIDRs a login may come from</Typography>
+                            </Typography>
+                            { ipList('Allowed address', allowedIps, setAllowedIps, '10.0.0.0/8') }
                         </Stack>
                     </Box>
 
