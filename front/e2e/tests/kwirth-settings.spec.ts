@@ -104,8 +104,15 @@ async function openLoginAccess(page: Page) {
     await expect(page.getByRole('button', { name: 'Add localhost' })).toBeVisible()
 }
 
-// the line that says how the core resolved this browser
-const sees = (page: Page) => page.locator('p', { hasText: 'How Kwirth sees you:' })
+// Trusted proxies have their own tab since 2026-11-17: they decide the real address of whoever connects, not only a login's
+async function openTrustedProxies(page: Page) {
+    await openSettings(page)
+    await page.getByRole('tab', { name: 'Trusted proxies' }).click()
+    await expect(page.getByRole('button', { name: 'Trust my proxy' })).toBeVisible()
+}
+
+// the line that says how the core resolved this browser (on the tab that is shown)
+const sees = (page: Page) => page.locator('p:visible', { hasText: 'How Kwirth sees you:' })
 
 test('Login access: la pestana dice como ve Kwirth al admin, con todo a la vista', async () => {
     await dismissOpenDialogs(page)
@@ -113,11 +120,24 @@ test('Login access: la pestana dice como ve Kwirth al admin, con todo a la vista
     // the address the core resolved for this browser: some address, never 'unknown' once loaded
     await expect(sees(page)).toBeVisible()
     await expect(sees(page)).not.toContainText('unknown')
-    await expect(page.getByText(/^X-Forwarded-For: /)).toBeVisible()
-    // nothing appears or disappears: the button and both lists are there whether they apply or not
-    await expect(page.getByRole('button', { name: 'Trust my proxy' })).toBeVisible()
+    await expect(page.getByText(/^X-Forwarded-For: /).filter({ visible: true })).toBeVisible()
+    // nothing appears or disappears: the buttons and the list are there whether they apply or not
+    await expect(page.getByRole('button', { name: 'Add my IP' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Add allowed address' })).toBeEnabled()
+    // the trusted proxies are not here: they have their own tab, and this one says so
+    await expect(page.getByRole('button', { name: 'Trust my proxy' })).toBeHidden()
+    await expect(page.getByText(/Your real address depends on the Trusted proxies tab/)).toBeVisible()
+    await dismissOpenDialogs(page)
+})
+
+test('Trusted proxies: su pestana dice como ve Kwirth al admin, para que sirven, y lleva su lista', async () => {
+    await dismissOpenDialogs(page)
+    await openTrustedProxies(page)
+    await expect(sees(page)).toBeVisible()
+    await expect(page.getByText(/such as IRIA Ianus' spokes/)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Add trusted proxy' })).toBeEnabled()
+    // the login's own buttons are not here
+    await expect(page.getByRole('button', { name: 'Add my IP' })).toBeHidden()
     await dismissOpenDialogs(page)
 })
 
@@ -153,10 +173,11 @@ test('Login access: "Add localhost" anade 127.0.0.1 y ::1 una sola vez', async (
     await dismissOpenDialogs(page)   // Cancel: nothing saved
 })
 
-test('Login access: cada entrada de las dos listas lleva su comentario, editable y que no invalida nada', async () => {
+test('Login access y Trusted proxies: cada entrada de las dos listas lleva su comentario, editable y que no invalida nada', async () => {
     await dismissOpenDialogs(page)
     await openLoginAccess(page)
-    for (const label of ['Allowed address', 'Trusted proxy']) {
+    for (const [label, tab] of [['Allowed address', 'Login access'], ['Trusted proxy', 'Trusted proxies']]) {
+        await page.getByRole('tab', { name: tab, exact: true }).click()
         const before = await page.getByLabel(new RegExp(`^${label} \\d+$`)).count()
         await page.getByRole('button', { name: `Add ${label.toLowerCase()}` }).click()
         const address = page.getByLabel(`${label} ${before + 1}`, { exact: true })
