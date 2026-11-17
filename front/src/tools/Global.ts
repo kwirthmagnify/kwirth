@@ -56,8 +56,12 @@ export const getMetricsNames = async (cluster:Cluster) => {
 }
 
 export const readClusterInfo = async (cluster: Cluster, notify: (channel:string|undefined, level:ENotifyLevel, msg:string)=> void): Promise<void> => {
+    /*
+        'enabled' = whether the cluster answered, decided at the END: an entry that is read again (the cluster
+        selector re-checks the grey ones every time it opens) does not go grey while the answer is on its way.
+    */
+    let reachable = false
     try {
-        cluster.enabled = false
         // A proxied entry whose ticket has not come yet just waits: it is read when the ticket arrives (RouteTickets).
         if (routeAwaitsTicket(cluster)) return
         // A proxied entry nobody resolves stays disabled, and says why (instead of a bare network error).
@@ -81,7 +85,7 @@ export const readClusterInfo = async (cluster: Cluster, notify: (channel:string|
                 for all clusters (Excubitor and Magnify lose their 'home' label; Agora works around it by name).
                 'home' is set in ONE place only, loadSourceCluster in App.tsx; the list entries come without it.
             */
-            cluster.enabled = true
+            reachable = true
             if (cluster.kwirthData) {
                 let metricsRequired = Array.from(cluster.kwirthData.channels).reduce( (prev, current) => { return prev || current.metrics}, false)
                 if (metricsRequired) getMetricsNames(cluster)
@@ -106,5 +110,50 @@ export const readClusterInfo = async (cluster: Cluster, notify: (channel:string|
         console.log(`Cluster ${cluster.name} not enabled`)
         notify(undefined, ENotifyLevel.WARNING, `Cluster ${cluster.name} not enabled. `+error)
     }
+    finally {
+        cluster.enabled = reachable
+    }
+}
+
+// How long a cluster that answered has to answer again before it goes grey
+const RECHECK_TIMEOUT_MS = 5000
+const rechecking: Set<Cluster> = new Set()
+
+/*
+    Whether a cluster of the list answers NOW. The cluster selector asks it of every entry each time it is
+    opened: the answer at login was the only one there was, so an entry whose tunnel came up later stayed grey
+    for the rest of the session (and one whose cluster went away stayed selectable).
+      - a grey entry is read again in full (readClusterInfo), so its data is there when it turns usable;
+      - an entry that answered is only asked for /config/info, and goes grey if it does not answer in time.
+    Quiet: the user opening a list is not the moment to notify that a cluster is down (the grey says it).
+    Returns whether 'enabled' changed. A check already on its way is not started twice.
+*/
+export const recheckCluster = async (cluster: Cluster): Promise<boolean> => {
+    if (rechecking.has(cluster)) return false
+    rechecking.add(cluster)
+    const before = cluster.enabled
+    try {
+        if (!cluster.enabled) {
+            await readClusterInfo(cluster, () => {})
+        }
+        else {
+            const base = resolvedClusterUrl(cluster)
+            let answers = false
+            if (base) {
+                try {
+                    const response = await fetch(`${base}/config/info`, { ...addGetAuthorization(cluster.accessString), signal: AbortSignal.timeout(RECHECK_TIMEOUT_MS) })
+                    answers = response.status === 200
+                }
+                catch {
+                    answers = false
+                }
+            }
+            cluster.enabled = answers
+        }
+    }
+    finally {
+        rechecking.delete(cluster)
+    }
+    return cluster.enabled !== before
 }
 
