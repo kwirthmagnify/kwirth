@@ -10,7 +10,7 @@ import { ITabObject } from '../../model/ITabObject'
 import { getIconFromKind, getChannelIconSafe, IResourceSelected } from '@kwirthmagnify/kwirth-common-front'
 import { TChannelConstructor } from '../../channels/IChannel'
 import { resolveRemoteChannelHost } from '../../tools/ChannelResolution'
-import { clusterBaseUrl } from '../../tools/ClusterRouting'
+import { clusterBaseUrl, clusterRouters } from '../../tools/ClusterRouting'
 
 // Remote channel indicator in the dropdown: an 'R' in a circle. Green = operational (its in-cluster
 // Kwirth is connected and can be delegated to); grey = not operational (no host connected, the ADD will
@@ -91,6 +91,21 @@ interface IResourceSelectorProps {
     sx: SxProps
     frontChannels?: Map<string, TChannelConstructor>
     enabledChannels?: string[]
+    onOpenClusters?: () => void     // the cluster list was opened: its entries are checked again
+}
+
+/*
+    How this Kwirth reaches a cluster of the list, written beside it: 'direct', or 'via <router>' — and if that
+    router is not installed or not started here, it says so. A grey entry adds that it does not answer now.
+    Inline and not in a tooltip, for the same reason as the channels' reasons: a disabled MenuItem gets no
+    pointer events. aria-hidden, so the option's accessible name stays the cluster's name.
+*/
+const clusterReach = (cluster: Cluster): string => {
+    const answer = cluster.enabled ? '' : ' · not answering'
+    if (!cluster.route) return `direct${answer}`
+    const router = cluster.route.resolver
+    const installed = clusterRouters().some(r => r.id === router)
+    return installed ? `via ${router}${answer}` : `via ${router} · router not installed or not started`
 }
 
 interface IController {
@@ -468,7 +483,19 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
 
                 <FormControl variant='standard' sx={{ m: 1, minWidth: 100, width:'14%' }}>
                     <InputLabel>Cluster</InputLabel>
-                    <Select value={cluster?.name} onChange={onChangeCluster}>
+                    <Select value={cluster?.name} onChange={onChangeCluster} onOpen={() => props.onOpenClusters?.()}
+                        renderValue={(name) => {
+                            // the field shows the cluster, not how it is reached: that is for the open list
+                            const selected = props.clusters?.find(c => c.name === name)
+                            if (!selected) return name
+                            return (
+                                <Stack direction='row' spacing={1} sx={{ alignItems: 'center' }}>
+                                    <span style={{ lineHeight: 0 }}>{getIcon(selected, 20)}</span>
+                                    <span>{selected.name}</span>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: clusterColor(selected.name).dot, flexShrink: 0 }} />
+                                </Stack>
+                            )
+                        }}>
                     { props.clusters?.map( (cluster) => {
                         return (
                             <MenuItem key={cluster.name} value={cluster.name} disabled={!cluster.enabled}>
@@ -478,6 +505,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                                     <span style={{ lineHeight: 0 }}>{getIcon(cluster, 20)}</span>
                                     <span>{cluster.name}</span>
                                     <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: clusterColor(cluster.name).dot, flexShrink: 0 }} />
+                                    <Typography variant='caption' aria-hidden='true' sx={{ color: 'text.secondary' }}>{clusterReach(cluster)}</Typography>
                                 </Stack>
                             </MenuItem>
                         );
