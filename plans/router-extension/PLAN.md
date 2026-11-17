@@ -162,7 +162,13 @@ Abierto el 2026‑11‑17, a petición del usuario. **Sin empezar.** Tres tareas
   - cada entrada dice si se llega **directa** o **por un router**, y por cuál (`bridge`, `ianus`…), y si ese router
     no está instalado o no ha arrancado. Solo front: el dato está en `cluster.route` y `KwirthData.routers`;
   - un cluster que **no responde** sale en **gris** (destino sin su rol, router sin enlace, conexión directa caída).
-- **S8.2 · e2e del switch *Enabled* de Manage cluster list** (`Cluster.inUse`). Desmarcarlo saca el cluster del
+- ✅ **Hecho 2026‑11‑17**: `front/e2e/tests/manage-clusters-enabled.spec.ts`, 4/4 dos veces seguidas. Trabaja
+  sobre una entrada SUYA (`e2e-enabled`, url `.invalid`) que borra al acabar: apagada sigue en la lista
+  atenuada y no sale en el selector; encendida vuelve, en gris y con `direct · not answering` (cubre S8.1); el
+  switch del home no se toca. ⚠️ Visto al lanzarlo junto a `manage-clusters-route.spec.ts`: ese da por hecho
+  que **no hay routers** (Route deshabilitado) y en el dev hoy están Ianus y bridge desde `dist`, así que su
+  primer caso falla. Le falta un `test.skip()` cuando el core anuncia routers (no tocado aquí).
+  **S8.2 · e2e del switch *Enabled* de Manage cluster list** (`Cluster.inUse`). Desmarcarlo saca el cluster del
   selector y de lo que lee el back (`readUserStore('clusters','list')`, `back/src/tools/ClusterListFilter.ts`);
   marcarlo lo devuelve. No destructivo: el test deja el switch como lo encontró.
 - **S8.3 · `webhookReceiver`, el unitario que falla de forma intermitente**
