@@ -26,7 +26,7 @@ const ROUTER_JS = `
 class EchoRouter {
     constructor(context) { this.context = context; this.config = {} }
     getRouterData() { return { id: '${ROUTER_ID}', pathTemplate: '/{routeTicket}/{clusterUid}', needsTicket: true } }
-    getConfigSchema() { return [{ name: 'greeting', label: 'Greeting', type: 'text' }, { name: 'secretToken', label: 'Secret token', type: 'password' }] }
+    getConfigSchema() { return [{ name: 'greeting', label: 'Greeting', type: 'text', required: true }, { name: 'secretToken', label: 'Secret token', type: 'password' }, { name: 'retries', label: 'Retries', type: 'number', default: 2 }] }
     getScopeCatalog() { return [{ scope: '${ROUTER_ID}$use', label: 'E2E echo · Use', description: 'e2e' }] }
     async startRouter(config) { this.config = config }
     async applyConfig(config) { this.config = config }
@@ -99,20 +99,60 @@ test.describe('routers: the manager, the config dialog, the door and Manage clus
         await expect(dialog().getByText('Started', { exact: true }).first()).toBeVisible()
     })
 
-    test('🔴 its config is the core\'s generic dialog: the secret masked with the eye, saved and returned REAL', async () => {
-        // THIS router's gear: other routers may be installed (the innermost box holding its name and a gear is its card)
+    // THIS router's config dialog: other routers may be installed (the innermost box holding its name and a gear is its card)
+    const openConfig = async () => {
         const card = dialog().locator('div').filter({ hasText: 'E2E Echo Router' }).filter({ has: page.getByRole('button', { name: 'Configure' }) }).last()
         await card.getByRole('button', { name: 'Configure' }).click()
         const config = page.getByRole('dialog').filter({ hasText: `Configure: E2E Echo Router` })
         await expect(config).toBeVisible({ timeout: 20000 })
-        await config.getByLabel('Greeting', { exact: true }).fill('hola')
+        return config
+    }
+
+    // ── The common extension config store (plans/extension-config, S2) ─────────────────────────────────
+
+    test('🔴 never configured: the config comes back with the schema defaults, and the form shows them', async () => {
+        const saved = await (await api.get(`/core/routers/${ROUTER_ID}/config`, { headers: auth })).json()
+        expect(saved).toEqual({ retries: 2 })
+        const config = await openConfig()
+        await expect(config.getByLabel('Retries', { exact: true })).toHaveValue('2')
+        await config.getByRole('button', { name: 'CANCEL' }).click()
+        await expect(config).toBeHidden({ timeout: 20000 })
+    })
+
+    test('🔴 a value that does not fit the schema is a 400 naming every field, and nothing is saved', async () => {
+        const res = await api.put(`/core/routers/${ROUTER_ID}/config`, { headers: auth, data: { retries: 'many' } })
+        expect(res.status()).toBe(400)
+        const body = await res.json() as { error: string, fields: { field: string, message: string }[] }
+        expect(body.fields.map(f => f.field)).toEqual(['greeting', 'retries'])
+        expect(body.error).toContain('Greeting')
+        expect(await (await api.get(`/core/routers/${ROUTER_ID}/config`, { headers: auth })).json()).toEqual({ retries: 2 })
+    })
+
+    test('🔴 the dialog marks the refused field, says why, stays open, and the mark goes when the field is edited', async () => {
+        const config = await openConfig()
+        const greeting = config.getByLabel(/^Greeting/)
+        await greeting.fill('')
+        await config.getByRole('button', { name: 'SAVE' }).click()
+        await expect(config.getByText(`'Greeting' is required`)).toBeVisible({ timeout: 20000 })
+        await expect(greeting).toHaveAttribute('aria-invalid', 'true')
+        await expect(config).toBeVisible()
+        await greeting.fill('typing')
+        await expect(greeting).toHaveAttribute('aria-invalid', 'false')
+        await config.getByRole('button', { name: 'CANCEL' }).click()
+        await expect(config).toBeHidden({ timeout: 20000 })
+        expect(await (await api.get(`/core/routers/${ROUTER_ID}/config`, { headers: auth })).json()).toEqual({ retries: 2 })
+    })
+
+    test('🔴 its config is the core\'s generic dialog: the secret masked with the eye, saved and returned REAL', async () => {
+        const config = await openConfig()
+        await config.getByLabel(/^Greeting/).fill('hola')
         const secret = config.getByLabel('Secret token', { exact: true })
         await secret.fill('s3cr3t')
         await expect(secret).toHaveAttribute('type', 'password')
         await config.getByRole('button', { name: 'SAVE' }).click()
         await expect(config).toBeHidden({ timeout: 20000 })
         const saved = await (await api.get(`/core/routers/${ROUTER_ID}/config`, { headers: auth })).json()
-        expect(saved).toMatchObject({ greeting: 'hola', secretToken: 's3cr3t' })
+        expect(saved).toEqual({ greeting: 'hola', secretToken: 's3cr3t', retries: 2 })
         await dismissOpenDialogs(page)
     })
 

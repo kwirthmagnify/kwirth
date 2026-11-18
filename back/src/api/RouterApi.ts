@@ -95,7 +95,9 @@ export class RouterApi {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) return void res.status(400).json({ error: 'Expected a JSON object' })
             try {
-                await this.manager.saveConfig(req.params.id, req.body as Record<string, unknown>)
+                // What does not fit the router's schema is the admin's to fix: a 400 naming every field, nothing saved
+                const errors = await this.manager.saveConfig(req.params.id, req.body as Record<string, unknown>)
+                if (errors.length > 0) return void res.status(400).json({ error: errors.map(e => e.message).join('; '), fields: errors })
                 this.onChanged()
                 res.json({ ok: true })
             }

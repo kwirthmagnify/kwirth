@@ -45,6 +45,7 @@ import { buildPluginStatuses } from './tools/PluginStatus'
 import { buildExtensionAccess } from './tools/ExtensionAccess'
 import { DceApi } from './api/DceApi'
 import { RouterManager } from './tools/RouterManager'
+import { ExtensionConfigStore } from './tools/ExtensionConfigStore'
 import { IRouter } from '@kwirthmagnify/kwirth-common-back'
 import { RouterApi } from './api/RouterApi'
 import { IExtensionScope, ROUTER_PATH_SEGMENT } from '@kwirthmagnify/kwirth-common'
@@ -2847,7 +2848,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
 
         // Routers: the core owns each one's instance, started here with its saved config (plans/router-extension)
         if (!routerManager) {
-            routerManager = new RouterManager(runningInstance.configMaps, runningInstance.secrets, (id: string) => ({
+            routerManager = new RouterManager(runningInstance.configMaps, new ExtensionConfigStore(runningInstance.secrets), (id: string) => ({
                 clusterUid: runningInstance.clusterInfo.id ?? '',
                 clusterName: runningInstance.clusterInfo.name ?? '',
                 kwirthVersion: runningInstance.kwirthData.version,

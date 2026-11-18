@@ -38,6 +38,8 @@ interface IConfigTextAreaProps {
     onReveal?: () => void | Promise<void>
     /** Greyed out by IConfigFieldDef.enabledWhen: shown, not editable, and the AI button off with it. */
     disabled?: boolean
+    /** Refused by the back end when saving (ConfigFields' invalidFields): drawn in error. */
+    error?: boolean
 }
 
 const isSecretDef = (f: IConfigFieldDef): boolean => f.type === 'password' || f.secret === true
@@ -114,7 +116,7 @@ const ConfigTextArea: React.FC<IConfigTextAreaProps> = (props) => {
                     </Tooltip>
                     {eye}
                 </Box>
-                <TextField size='small' fullWidth multiline rows={ROWS} value={shown} disabled={props.disabled}
+                <TextField size='small' fullWidth multiline rows={ROWS} value={shown} disabled={props.disabled} error={props.error}
                     onChange={edit} inputRef={inputRef}
                     slotProps={{ htmlInput }} />
                 {assistOpen && (
@@ -128,7 +130,7 @@ const ConfigTextArea: React.FC<IConfigTextAreaProps> = (props) => {
     }
 
     return (
-        <TextField size='small' fullWidth multiline rows={ROWS} label={label} value={shown} disabled={props.disabled}
+        <TextField size='small' fullWidth multiline rows={ROWS} label={label} value={shown} disabled={props.disabled} error={props.error}
             onChange={edit} inputRef={inputRef}
             slotProps={{
                 input: { endAdornment: eye ? <InputAdornment position='end' sx={{ alignSelf: 'flex-start', mt: 1.5 }}>{eye}</InputAdornment> : undefined },

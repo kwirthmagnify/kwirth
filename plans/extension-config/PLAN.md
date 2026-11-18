@@ -202,8 +202,10 @@ Antes del stream de cada familia se avisa al usuario de qué se va a perder, par
 | sender | `kwirth-sender-configs` | S6 |
 | webhook | `kwirth-webhook-configs`; los tokens se conservan (no son configuración) | S6 |
 
-Los ConfigMaps viejos quedan huérfanos en el cluster de dev. Se borran a mano; no se escribe código
-para limpiarlos.
+Los ConfigMaps y Secrets viejos quedan huérfanos en los clusters. No se escribe código para limpiarlos:
+**al acabar (S11)** se limpian a mano en cada cluster de Kubernetes donde haya un Kwirth de dev (usuario,
+2026-11-18). Primero se listan los objetos huérfanos y se confirman con el usuario, y solo después se
+borran.
 
 ## 4. Streams
 
@@ -222,7 +224,10 @@ Orden pensado para que cada stream deje el sistema funcionando y se pueda valida
 | **S9. Toolsets: diálogo** | `AiToolsetDialog` con pestañas | e2e: pestaña deshabilitada sin esquema; formulario, guardar, recargar; error de validación en el campo; concesiones como antes | S8 |
 | **S10. Documentación y scaffolder** | guía de toolsets (pestaña Settings, cómo declarar `configSchema` y leer `host.config`); capturas regeneradas; el scaffolder genera un `configSchema` de ejemplo comentado | revisión de la guía; build del scaffolder con y sin esquema | S9 |
 
-Cada stream acaba en un punto de parada para tu QA. Los e2e son no destructivos y restauran solo lo que
+| **S11. Limpieza de los clusters** | en cada cluster con un Kwirth de dev, borrar los objetos huérfanos: `kwirth-provider-*-config`, `kwirth-plugin-*-config`, `kwirth-sender-configs`, `kwirth-webhook-configs` (ConfigMaps) y `kwirth-idps` (Secret) | listado de lo huérfano confirmado con el usuario antes de borrar; después, cada familia sigue funcionando | S1-S10 |
+
+Cada stream acaba en un punto de parada para tu QA, con QA en el k3d **por familia** a medida que cada
+una pasa al helper. Los e2e son no destructivos y restauran solo lo que
 leyeron.
 
 ## 5. Decisiones del PLAN

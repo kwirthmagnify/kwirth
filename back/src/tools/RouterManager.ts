@@ -1,9 +1,9 @@
 import { EExtensionType, IExtensionScope, IRouterData, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
-import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, IConfigValidationError } from '@kwirthmagnify/kwirth-common'
 import { IExtensionRequirement, IRouter, IRouterContext, IRouterStatus, TRouterConfig, TRouterConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { IConfigMaps } from './IConfigMap'
-import { ISecrets } from './ISecrets'
-import { ELogComponent, logError, logInfo, logWarning } from './Logging'
+import { ExtensionConfigStore } from './ExtensionConfigStore'
+import { ELogComponent, logError, logInfo } from './Logging'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 import { assertInstallable } from './ExtensionInstallGuard'
 import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
@@ -24,8 +24,10 @@ import zlib from 'zlib'
     dispatcher (S3) asks this manager for the live instance on every request, so nothing is ever mounted
     in Express for a particular router.
 
-    Its config is kept in a SECRET (kwirth-router-<id>-config): it carries credentials. The core returns
-    it real to whoever may configure it, and the front shows the secret fields masked, with the eye.
+    Its config lives in the common ExtensionConfigStore (plans/extension-config): a SECRET,
+    kwirth-router-<id>-config, completed with the schema's defaults when read and validated against the
+    live router's schema when saved. The core returns it real to whoever may configure it, and the front
+    shows the secret fields masked, with the eye.
 
     A router's failures stay its own: the instance that cannot be created or started is left FAILED with
     the cause (shown in the Routers manager), and the core goes on.
@@ -65,7 +67,6 @@ interface IStoredCode {
 
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 const INDEX_KEY = 'kwirth-routers-index'
-const CONFIG_SECRET = (id: string): string => `kwirth-router-${id}-config`
 
 export class RouterManager {
     private cachedIndex: IRouterMeta[] = []
@@ -83,7 +84,7 @@ export class RouterManager {
         contextFor: what the core gives a router when it creates it (who this Kwirth is, its loopback url,
         a logger with the ROUTER component). A function: the cluster uid may not be known at construction.
     */
-    constructor(private configMaps: IConfigMaps, private secrets: ISecrets, private contextFor: (id: string) => IRouterContext) {}
+    constructor(private configMaps: IConfigMaps, private configStore: ExtensionConfigStore, private contextFor: (id: string) => IRouterContext) {}
 
     async init(): Promise<void> {
         this.cachedIndex = (await this.configMaps.read(INDEX_KEY, []) as IRouterMeta[]) || []
@@ -197,8 +198,13 @@ export class RouterManager {
     }
 
     getSchema(id: string): IConfigFieldDef[] {
+        return this.schemaOf(id, this.live.get(id)?.instance)
+    }
+
+    // The fields an instance declares; a router whose getConfigSchema throws declares none.
+    private schemaOf(id: string, instance: IRouter | undefined): IConfigFieldDef[] {
         try {
-            return this.live.get(id)?.instance?.getConfigSchema() ?? []
+            return instance?.getConfigSchema() ?? []
         }
         catch (err) {
             logError(ELogComponent.ROUTER, `Router '${id}' getConfigSchema failed: ${err}`)
@@ -206,29 +212,27 @@ export class RouterManager {
         }
     }
 
-    // ── Config (a Secret: it carries credentials; returned REAL, the front masks it) ──
+    // ── Config (the common ExtensionConfigStore: a Secret, returned REAL, the front masks it) ──
 
+    // The current values: what is saved, completed with the schema's defaults.
     async getConfig(id: string): Promise<TRouterConfig> {
-        const content = await this.secrets.read(CONFIG_SECRET(id))
-        if (!content?.['data']) return {}
-        try {
-            const parsed: unknown = JSON.parse(Buffer.from(content['data'], 'base64').toString('utf8'))
-            return parsed && typeof parsed === 'object' ? parsed as TRouterConfig : {}
-        }
-        catch {
-            logWarning(ELogComponent.ROUTER, `Router '${id}' config is not readable: it is treated as empty`)
-            return {}
-        }
+        return this.configStore.readSimple(EExtensionType.ROUTER, id, this.getSchema(id))
     }
 
-    // Saves it and applies it NOW to the live router. Throws what the router throws, for the dialog to say it.
-    async saveConfig(id: string, config: TRouterConfig): Promise<void> {
-        await this.secrets.write(CONFIG_SECRET(id), { data: Buffer.from(JSON.stringify(config), 'utf8').toString('base64') })
+    /*
+        Validates it against the live router's schema and, when it fits, saves it and applies it NOW to the
+        live router. What does not fit comes back as errors and nothing is saved. Throws what the router
+        throws when applying, for the dialog to say it.
+    */
+    async saveConfig(id: string, config: TRouterConfig): Promise<IConfigValidationError[]> {
+        const errors = await this.configStore.writeSimple(EExtensionType.ROUTER, id, this.getSchema(id), config)
+        if (errors.length > 0) return errors
         const instance = this.live.get(id)?.instance
         if (instance) {
-            await instance.applyConfig(config)
+            await instance.applyConfig(await this.getConfig(id))
             logInfo(ELogComponent.ROUTER, `Router '${id}' config saved and applied`)
         }
+        return []
     }
 
     // ── Loading ─────────────────────────────────────────────────────────────────
@@ -247,7 +251,8 @@ export class RouterManager {
             instance = new ctor(this.contextFor(id))
             const declared = instance.getRouterData().id
             if (declared !== id) throw new Error(`it declares the id '${declared}', but it is installed as '${id}'`)
-            await instance.startRouter(await this.getConfig(id))
+            // Not this.getConfig(id): the instance is not live yet, so its schema is asked to it directly.
+            await instance.startRouter(await this.configStore.readSimple(EExtensionType.ROUTER, id, this.schemaOf(id, instance)))
             this.live.set(id, { instance })
             logInfo(ELogComponent.ROUTER, `Router '${id}' started`)
         }
@@ -441,7 +446,7 @@ export class RouterManager {
         await this.deactivate(id)
         await this.configMaps.write(`kwirth-router-${id}-meta`, null)
         await this.configMaps.write(`kwirth-router-${id}-back`, null)
-        await this.secrets.delete(CONFIG_SECRET(id))
+        await this.configStore.delete(EExtensionType.ROUTER, id)
         await updateIndex<IRouterMeta>(INDEX_KEY,
             async () => (await this.configMaps.read(INDEX_KEY, []) as IRouterMeta[]) || [],
             async (list) => { await this.configMaps.write(INDEX_KEY, list) },

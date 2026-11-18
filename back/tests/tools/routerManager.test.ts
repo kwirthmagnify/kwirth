@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { RouterManager } from '../../src/tools/RouterManager'
+import { ExtensionConfigStore } from '../../src/tools/ExtensionConfigStore'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { IRouterContext } from '@kwirthmagnify/kwirth-common-back'
@@ -63,7 +64,7 @@ const routerLog = (): string[] => ((global as unknown as Record<string, string[]
 test('🔴 installed: one live instance, started with its saved config, announced and with its scopes', async () => {
     routerLog().length = 0
     const { configMaps, secrets } = fakeStore()
-    const manager = new RouterManager(configMaps, secrets, context)
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
     let changes = 0
     manager.setOnChange(() => changes++)
     await manager.init()
@@ -81,7 +82,7 @@ test('🔴 installed: one live instance, started with its saved config, announce
 test('🔴 the config is a SECRET, comes back real, and saving applies it to the live router at once', async () => {
     routerLog().length = 0
     const { configMaps, secrets, keys } = fakeStore()
-    const manager = new RouterManager(configMaps, secrets, context)
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
     await manager.init()
     await manager.install(await makeRouterTgz('bridge', routerJs('bridge')))
     await manager.saveConfig('bridge', { peerUrl: 'https://b.example', peerAccessKey: 'k|permanent|bridge$peer::::' })
@@ -95,7 +96,7 @@ test('🔴 the config is a SECRET, comes back real, and saving applies it to the
 test('an update replaces the instance hot: the old one stops, the new one starts with the same config', async () => {
     routerLog().length = 0
     const { configMaps, secrets } = fakeStore()
-    const manager = new RouterManager(configMaps, secrets, context)
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
     await manager.init()
     await manager.install(await makeRouterTgz('bridge', routerJs('bridge')))
     await manager.saveConfig('bridge', { peerUrl: 'x' })
@@ -108,7 +109,7 @@ test('an update replaces the instance hot: the old one stops, the new one starts
 
 test('a router that declares another id, or exports nothing, is left FAILED with the cause; the core goes on', async () => {
     const { configMaps, secrets } = fakeStore()
-    const manager = new RouterManager(configMaps, secrets, context)
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
     await manager.init()
     await manager.install(await makeRouterTgz('liar', routerJs('liar', 'other')))
     assert.equal(manager.router('liar'), undefined)
@@ -120,7 +121,7 @@ test('a router that declares another id, or exports nothing, is left FAILED with
 
 test('another type\'s package is refused by name', async () => {
     const { configMaps, secrets } = fakeStore()
-    const manager = new RouterManager(configMaps, secrets, context)
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
     await manager.init()
     await assert.rejects(manager.install(await makeRouterTgz('p', routerJs('p'), '1.0.0', 'plugin')), /Not a router package/)
 })
@@ -128,7 +129,7 @@ test('another type\'s package is refused by name', async () => {
 test('🔴 uninstalled: stopped, out of the table, and its config Secret removed', async () => {
     routerLog().length = 0
     const { configMaps, secrets, keys } = fakeStore()
-    const manager = new RouterManager(configMaps, secrets, context)
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
     await manager.init()
     await manager.install(await makeRouterTgz('bridge', routerJs('bridge')))
     await manager.saveConfig('bridge', { peerUrl: 'x' })
@@ -142,11 +143,11 @@ test('🔴 uninstalled: stopped, out of the table, and its config Secret removed
 test('at startup, the installed ones are loaded and started again from what was stored', async () => {
     routerLog().length = 0
     const store = fakeStore()
-    const first = new RouterManager(store.configMaps, store.secrets, context)
+    const first = new RouterManager(store.configMaps, new ExtensionConfigStore(store.secrets), context)
     await first.init()
     await first.install(await makeRouterTgz('bridge', routerJs('bridge')))
     await first.saveConfig('bridge', { peerUrl: 'x' })
-    const restarted = new RouterManager(store.configMaps, store.secrets, context)
+    const restarted = new RouterManager(store.configMaps, new ExtensionConfigStore(store.secrets), context)
     await restarted.init()
     await restarted.loadAll()
     assert.ok(restarted.router('bridge'))
@@ -162,7 +163,7 @@ const pluter = (id: string) => ({
 
 test('🔴 a PLUTER (a plugin that is also a router) is served under its channel id, announced, and dropped when it goes', async () => {
     const { configMaps, secrets } = fakeStore()
-    const manager = new RouterManager(configMaps, secrets, context)
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
     let changes = 0
     manager.setOnChange(() => changes++)
     await manager.init()
@@ -184,11 +185,63 @@ test('🔴 a PLUTER (a plugin that is also a router) is served under its channel
 
 test('a pluter declaring another id, or clashing with an installed router, is not registered', async () => {
     const { configMaps, secrets } = fakeStore()
-    const manager = new RouterManager(configMaps, secrets, context)
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
     await manager.init()
     assert.equal(manager.adoptPluter('ianus', pluter('other')), false)
     assert.equal(manager.router('ianus'), undefined)
     await manager.install(await makeRouterTgz('bridge', routerJs('bridge')))
     assert.equal(manager.adoptPluter('bridge', pluter('bridge')), false, 'an installed router keeps its id')
     assert.equal(manager.isPluter('bridge'), false)
+})
+
+// ── The common ExtensionConfigStore (plans/extension-config, S2) ──────────────────────────────────────
+
+// A router whose schema has a required field, a number with a default and a select
+const strictRouterJs = (id: string) => routerJs(id).replace(
+    /getConfigSchema\(\) \{[^\n]*\}/,
+    `getConfigSchema() { return [{ name: 'peerUrl', label: 'Peer URL', required: true }, { name: 'retries', label: 'Retries', type: 'number', default: 3 }, { name: 'mode', label: 'Mode', type: 'select', options: ['push', 'pull'], default: 'pull' }] }`
+)
+
+test('🔴 the schema defaults reach the router at start and come back from getConfig', async () => {
+    routerLog().length = 0
+    const { configMaps, secrets } = fakeStore()
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
+    await manager.init()
+    await manager.install(await makeRouterTgz('strict', strictRouterJs('strict')))
+    assert.equal(routerLog().at(-1), 'start:strict:{"retries":3,"mode":"pull"}', 'never configured: the defaults')
+    assert.deepEqual(await manager.getConfig('strict'), { retries: 3, mode: 'pull' })
+})
+
+test('🔴 a value that does not fit the schema is refused: nothing saved, nothing applied, every field named', async () => {
+    routerLog().length = 0
+    const { configMaps, secrets, keys } = fakeStore()
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
+    await manager.init()
+    await manager.install(await makeRouterTgz('strict', strictRouterJs('strict')))
+    const before = routerLog().length
+    const errors = await manager.saveConfig('strict', { retries: 'many', mode: 'sideways' })
+    assert.deepEqual(errors.map(e => e.field), ['peerUrl', 'retries', 'mode'])
+    assert.equal(keys.has('kwirth-router-strict-config'), false, 'nothing saved')
+    assert.equal(routerLog().length, before, 'nothing applied')
+})
+
+test('saving drops the fields the schema no longer declares, and applies the values with their defaults', async () => {
+    routerLog().length = 0
+    const { configMaps, secrets } = fakeStore()
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
+    await manager.init()
+    await manager.install(await makeRouterTgz('strict', strictRouterJs('strict')))
+    assert.deepEqual(await manager.saveConfig('strict', { peerUrl: 'https://p', obsolete: 'x' }), [])
+    assert.deepEqual(await manager.getConfig('strict'), { peerUrl: 'https://p', retries: 3, mode: 'pull' })
+    assert.equal(routerLog().at(-1), 'apply:strict:{"peerUrl":"https://p","retries":3,"mode":"pull"}')
+})
+
+test('a router with no live instance has no schema: its config is saved as it comes, to be able to fix it', async () => {
+    const { configMaps, secrets } = fakeStore()
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
+    await manager.init()
+    await manager.install(await makeRouterTgz('broken', 'module.exports = {}'))
+    assert.deepEqual(manager.getSchema('broken'), [])
+    assert.deepEqual(await manager.saveConfig('broken', { anything: 1 }), [])
+    assert.deepEqual(await manager.getConfig('broken'), { anything: 1 })
 })

@@ -1,4 +1,4 @@
-import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IConfigFieldDef, IConfigValidationError, applyConfigDefaults, pruneConfig, validateConfig } from '@kwirthmagnify/kwirth-common'
 import { ISecrets } from './ISecrets'
 import { ELogComponent, logWarning } from './Logging'
 
@@ -62,6 +62,44 @@ export class ExtensionConfigStore {
     /** Removes it. One that does not exist is not an error. */
     async delete(type: EExtensionType, id: string): Promise<void> {
         await this.secrets.delete(extensionConfigName(type, id))
+    }
+
+    // ── The SIMPLE shape: one configuration object per extension ──────────────────────────────────────
+    //
+    // Provider, login, router, plugin and AI toolset keep exactly that, so the whole sequence lives here
+    // once. The multiple shapes (sender, webhook, IdP) use read/write and the same kwirth-common functions,
+    // per named configuration.
+
+    /**
+     * The CURRENT values: what is stored, completed with the schema's defaults. Nothing stored (or nothing
+     * readable) gives just the defaults.
+     */
+    async readSimple(type: EExtensionType, id: string, schema: IConfigFieldDef[]): Promise<Record<string, unknown>> {
+        const stored = await this.read(type, id)
+        const values = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored as Record<string, unknown> : {}
+        return applyConfigDefaults(schema, values)
+    }
+
+    /**
+     * Drops what the schema no longer declares, validates and, when everything fits, stores it whole. The
+     * errors are returned, not thrown: an invalid value is the admin's to fix, not a failure. A write
+     * failure IS thrown.
+     *
+     * An EMPTY schema means it could not be obtained (a router with no live instance, say): then nothing is
+     * pruned nor validated, it is stored as it comes and a warning is logged. Validation must not stop an
+     * admin from configuring a broken extension in order to fix it (plan, decision P2).
+     */
+    async writeSimple(type: EExtensionType, id: string, schema: IConfigFieldDef[], values: Record<string, unknown>): Promise<IConfigValidationError[]> {
+        if (schema.length === 0) {
+            logWarning(ELogComponent.CORE, `Configuration of ${type} '${id}' saved without validation: its schema is not available`)
+            await this.write(type, id, values)
+            return []
+        }
+        const pruned = pruneConfig(schema, values)
+        const errors = validateConfig(schema, pruned)
+        if (errors.length > 0) return errors
+        await this.write(type, id, pruned)
+        return []
     }
 
     /** The ids of the extensions of `type` with a stored configuration. */

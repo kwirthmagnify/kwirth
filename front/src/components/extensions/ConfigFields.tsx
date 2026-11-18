@@ -36,6 +36,12 @@ interface IConfigFieldsProps {
         reveal back until it resolves.
     */
     onRevealSecret?: (name: string) => void | Promise<void>
+    /*
+        The fields the back end refused when saving (validateConfig, plans/extension-config): they are drawn
+        in error. Only the colour changes —no helper text underneath— so the form keeps its height; the
+        messages are the caller's to show, in the one place it already shows errors.
+    */
+    invalidFields?: string[]
 }
 
 const ConfigFields: React.FC<IConfigFieldsProps> = (props: IConfigFieldsProps) => {
@@ -59,6 +65,7 @@ const ConfigFields: React.FC<IConfigFieldsProps> = (props: IConfigFieldsProps) =
     const field = (f: IConfigFieldDef) => {
         // Greyed out, never hidden, while another field says it does not apply (IConfigFieldDef.enabledWhen).
         const disabled = !isConfigFieldEnabled(f, props.schema, typedValues)
+        const invalid = (props.invalidFields ?? []).includes(f.name)
 
         // A boolean is a switch, not a text field with 'true' inside. The value is read as a string too,
         // because a form that keeps everything as text is one of the two consumers.
@@ -72,7 +79,7 @@ const ConfigFields: React.FC<IConfigFieldsProps> = (props: IConfigFieldsProps) =
 
         if (f.type === 'textarea') {
             return <ConfigTextArea key={f.name} field={f} value={String(props.values[f.name] ?? '')}
-                onChange={v => props.onChange(f.name, v)} fields={props.schema} values={props.values} disabled={disabled}
+                onChange={v => props.onChange(f.name, v)} fields={props.schema} values={props.values} disabled={disabled} error={invalid}
                 onReveal={props.onRevealSecret ? () => props.onRevealSecret!(f.name) : undefined} />
         }
 
@@ -83,6 +90,7 @@ const ConfigFields: React.FC<IConfigFieldsProps> = (props: IConfigFieldsProps) =
             size: 'small' as const,
             fullWidth: true,
             disabled,
+            error: invalid,
             required: f.required && !disabled,
             sx: { '& .MuiOutlinedInput-root': { backgroundColor: 'transparent' } }
         }

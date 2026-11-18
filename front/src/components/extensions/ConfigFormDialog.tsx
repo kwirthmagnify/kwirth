@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Button, CircularProgress, Dialog, DialogActions, DialogContent, Stack, Typography } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, IConfigValidationError } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { ConfigFields } from './ConfigFields'
@@ -62,6 +62,12 @@ interface ITestOutcome {
     message: string
 }
 
+// The body of a refused save: a 400 from the extension config store's validation (plans/extension-config)
+interface ISaveRefusal {
+    error?: string
+    fields?: IConfigValidationError[]
+}
+
 const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
     const [schema, setSchema] = useState<IConfigFieldDef[]>(props.schema ?? [])
@@ -70,6 +76,8 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
     const [loaded, setLoaded] = useState<Record<string, string>>({})
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | undefined>()
+    // The fields the back end refused on the last save; each one leaves the list as soon as it is edited
+    const [invalidFields, setInvalidFields] = useState<string[]>([])
     const [testing, setTesting] = useState(false)
     const [testOutcome, setTestOutcome] = useState<ITestOutcome | undefined>()
 
@@ -111,17 +119,29 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
         return body
     }
 
-    const persist = async (): Promise<void> => {
+    /*
+        Saves what the form holds. A 400 carrying `fields` is the back end refusing values that do not fit
+        the schema: the fields are marked and its message shown, and the dialog stays open to fix them.
+        Returns whether it was saved.
+    */
+    const persist = async (): Promise<boolean> => {
         const res = await fetch(`${backendUrl}${props.endpoint}`, addPutAuthorization(accessString, JSON.stringify(buildBody())))
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        if (res.ok) return true
+        const refusal = await res.json().catch(() => undefined) as ISaveRefusal | undefined
+        if (res.status === 400 && refusal?.fields && refusal.fields.length > 0) {
+            setInvalidFields(refusal.fields.map(f => f.field))
+            setError(refusal.fields.map(f => f.message).join('. '))
+            return false
+        }
+        throw new Error(refusal?.error ?? `HTTP ${res.status}`)
     }
 
     const save = async () => {
         setSaving(true)
         setError(undefined)
+        setInvalidFields([])
         try {
-            await persist()
-            props.onClose()
+            if (await persist()) props.onClose()
         }
         catch (err) { setError(`Failed to save config: ${err}`) }
         finally { setSaving(false) }
@@ -174,7 +194,10 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
         An emptied number arrives as '' and stays '' — NOT as a zero. That is what keeps `buildBody`
         leaving it out instead of saving a 0 nobody typed.
     */
-    const setField = (name: string, value: unknown) => setValues(v => ({ ...v, [name]: String(value) }))
+    const setField = (name: string, value: unknown) => {
+        setValues(v => ({ ...v, [name]: String(value) }))
+        setInvalidFields(list => list.filter(n => n !== name))
+    }
 
     return (
         <Dialog open={true} maxWidth='xs' fullWidth>
@@ -188,7 +211,7 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
                         ? <Typography variant='body2' sx={{
                         color: 'text.secondary'
                     }}>{props.emptyText ?? 'Nothing to configure.'}</Typography>
-                        : <ConfigFields schema={schema} values={values} onChange={setField} />}
+                        : <ConfigFields schema={schema} values={values} onChange={setField} invalidFields={invalidFields} />}
                     {error && <Typography variant='caption' color='error'>{error}</Typography>}
                     {/* El resultado se queda a la vista hasta la siguiente prueba: es lo que se lee para corregir */}
                     {testOutcome && (
