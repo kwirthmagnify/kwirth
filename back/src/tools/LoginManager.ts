@@ -2,7 +2,8 @@ import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 import { ILoginFieldDef } from '@kwirthmagnify/kwirth-common-back'
-import { EExtensionType, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IConfigValidationError, IExtensionRequirement, applyConfigDefaults } from '@kwirthmagnify/kwirth-common'
+import { ExtensionConfigStore } from './ExtensionConfigStore'
 import { listBundledOfType } from './BundledExtensions'
 import { downloadFile, packageHeaders } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
@@ -119,7 +120,7 @@ export class LoginManager {
     private cachedIndex: ILoginMeta[] = []
     private devLogins = new Map<string, { tgzPath: string; meta: ILoginMeta }>()
 
-    constructor(configMaps: IConfigMaps) {
+    constructor(configMaps: IConfigMaps, private configStore: ExtensionConfigStore) {
         this.configMaps = configMaps
     }
 
@@ -358,25 +359,52 @@ export class LoginManager {
             async (list) => { await this.configMaps.write('kwirth-logins-index', list) },
             (list) => list.filter(m => m.id !== id))
         await this.configMaps.write(`kwirth-login-${id}`, null)
+        await this.configStore.delete(EExtensionType.LOGIN, id)
         this.cachedIndex = this.cachedIndex.filter(m => m.id !== id)
         logInfo(ELogComponent.CORE, `Login extension '${id}' uninstalled`)
     }
 
+    /*
+        A login's config is TWO things, kept apart (plans/extension-config, S4):
+
+          · what the PACKAGE carries, its login.json: layout, colours, the dialog's texts. Like the
+            background, it is the package's content, not configuration: it stays in the payload
+            (kwirth-login-<id>), it is not in any schema, and installing a new version replaces it.
+          · what the ADMIN edits, the fields of its configSchema: the common ExtensionConfigStore, a Secret
+            (kwirth-login-<id>-config), validated against that schema.
+
+        What is served is both together: what the admin saved wins, then the package's login.json, then
+        the schema's defaults. Keeping them apart is what stops a save —which drops what the schema does
+        not declare— from wiping out the page's layout.
+    */
+    private schemaOf(id: string): ILoginFieldDef[] {
+        const meta = this.devLogins.get(id)?.meta ?? this.cachedIndex.find(m => m.id === id)
+        return meta?.configSchema ?? []
+    }
+
+    // The effective config over a payload already read: defaults < the package's login.json < the admin's
+    private async effectiveConfig(id: string, packageConfig: ILoginConfig): Promise<ILoginConfig> {
+        const saved = await this.configStore.read(EExtensionType.LOGIN, id)
+        const adminConfig = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved as Record<string, unknown> : {}
+        return { ...applyConfigDefaults(this.schemaOf(id), {}), ...packageConfig, ...adminConfig } as ILoginConfig
+    }
+
     async getConfig(id: string): Promise<ILoginConfig | undefined> {
-        const data = await this.configMaps.read(`kwirth-login-${id}`) as { meta: ILoginMeta; config: ILoginConfig } | null
-        return data?.config
+        const data = await this.configMaps.read(`kwirth-login-${id}`) as ILoginPayload | null
+        return data?.config ? this.effectiveConfig(id, data.config) : undefined
     }
 
     async getConfigWithMeta(id: string): Promise<(ILoginConfig & { hasBackground: boolean; problem?: string }) | undefined> {
         const data = await this.configMaps.read(`kwirth-login-${id}`) as ILoginPayload | null
         if (!data?.config) return undefined
+        const config = await this.effectiveConfig(id, data.config)
         let hasBackground = !!data.background
         if (!hasBackground && this.isDevLogin(id)) {
             const dev = this.devLogins.get(id)
             if (dev) hasBackground = await this.tgzHasBackground(dev.tgzPath)
         }
         // the problem travels to a page served WITHOUT authentication, so it goes as a code, not as internal detail
-        return { ...data.config, hasBackground, ...(data.problem && !hasBackground ? { problem: data.problem } : {}) }
+        return { ...config, hasBackground, ...(data.problem && !hasBackground ? { problem: data.problem } : {}) }
     }
 
     private async tgzHasBackground(tgzPath: string): Promise<boolean> {
@@ -391,11 +419,16 @@ export class LoginManager {
         return found
     }
 
-    async updateConfig(id: string, partial: Partial<ILoginConfig>): Promise<void> {
-        const data = await this.configMaps.read(`kwirth-login-${id}`) as { meta: ILoginMeta; config: ILoginConfig; background?: string } | null
-        if (!data) throw new Error(`Login extension '${id}' not found`)
-        await this.configMaps.write(`kwirth-login-${id}`, { ...data, config: { ...data.config, ...partial } })
-        logInfo(ELogComponent.CORE, `Login extension '${id}' config updated`)
+    /*
+        Saves what the ADMIN edits, WHOLE (no merge with what was there): validated against the login's
+        configSchema, and what the schema does not declare is dropped. What does not fit comes back as
+        errors and nothing is saved. The package's login.json is never touched.
+    */
+    async saveConfig(id: string, config: Record<string, unknown>): Promise<IConfigValidationError[]> {
+        if (!(await this.configMaps.read(`kwirth-login-${id}`))) throw new Error(`Login extension '${id}' not found`)
+        const errors = await this.configStore.writeSimple(EExtensionType.LOGIN, id, this.schemaOf(id), config)
+        if (errors.length === 0) logInfo(ELogComponent.CORE, `Login extension '${id}' config updated`)
+        return errors
     }
 
     async getBackground(id: string): Promise<Buffer | undefined> {

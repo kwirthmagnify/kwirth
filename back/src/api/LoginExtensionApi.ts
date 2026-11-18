@@ -81,8 +81,11 @@ export class LoginExtensionApi {
 
         this.router.put('/:id/config', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+            if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) return void res.status(400).json({ error: 'Expected a JSON object' })
             try {
-                await this.loginManager.updateConfig(req.params.id, req.body)
+                // The admin's part, whole: what does not fit the login's configSchema is a 400 naming every field, nothing saved
+                const errors = await this.loginManager.saveConfig(req.params.id, req.body as Record<string, unknown>)
+                if (errors.length > 0) return void res.status(400).json({ error: errors.map(e => e.message).join('; '), fields: errors })
                 res.json({ ok: true })
             }
             catch (err) {

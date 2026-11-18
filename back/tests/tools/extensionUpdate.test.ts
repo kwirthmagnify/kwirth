@@ -6,6 +6,7 @@ import path from 'path'
 import tar from 'tar'
 import zlib from 'zlib'
 import { LoginManager } from '../../src/tools/LoginManager'
+import { fakeConfigStore } from './fakeExtensionConfigStore'
 import { SenderManager } from '../../src/tools/SenderManager'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 
@@ -56,7 +57,7 @@ const construirLogin = async (id: string, version: string, conFondo: boolean): P
 
 test('un login no se reinstala sin permiso, y con permiso se actualiza', async () => {
     const almacen = almacenFalso()
-    const manager = new LoginManager(almacen)
+    const manager = new LoginManager(almacen, fakeConfigStore())
     await manager.init()
 
     await manager.install(await construirLogin('acme', '1.0.0', true), 'test')
@@ -81,7 +82,7 @@ test('si la version nueva de un login ya no trae fondo, el fondo viejo DESAPAREC
         and go on painting a background its package no longer includes.
     */
     const almacen = almacenFalso()
-    const manager = new LoginManager(almacen)
+    const manager = new LoginManager(almacen, fakeConfigStore())
     await manager.init()
 
     await manager.install(await construirLogin('acme', '1.0.0', true), 'test')

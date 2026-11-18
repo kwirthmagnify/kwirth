@@ -2823,7 +2823,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         }
 
         if (!loginManager) {
-            loginManager = new LoginManager(runningInstance.configMaps)
+            loginManager = new LoginManager(runningInstance.configMaps, new ExtensionConfigStore(runningInstance.secrets))
             await loginManager.init()
             const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
             if (bundledExtensionsPath) await loginManager.installBundled(bundledExtensionsPath)

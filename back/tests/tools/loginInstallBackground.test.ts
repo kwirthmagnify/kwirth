@@ -5,6 +5,7 @@ import os from 'os'
 import path from 'path'
 import tar from 'tar'
 import { LoginManager, EBackgroundQuality } from '../../src/tools/LoginManager'
+import { fakeConfigStore } from './fakeExtensionConfigStore'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 
 /*
@@ -47,7 +48,7 @@ const construirLogin = async (id: string, imagenes: { std?: number, hi?: number 
 /** Installs and returns whatever was stored of the login. */
 const instalar = async (limite: number | undefined, imagenes: { std?: number, hi?: number }) => {
     const almacen = almacenFalso(limite)
-    const manager = new LoginManager(almacen)
+    const manager = new LoginManager(almacen, fakeConfigStore())
     await manager.init()
     const tgz = await construirLogin('bgtest', imagenes)
     const meta = await manager.install(tgz, 'test')
