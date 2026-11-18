@@ -34,8 +34,6 @@ interface IConfigTextAreaProps {
     /** The whole form, so the AI gets the other fields (never the secret ones) as context. */
     fields: IConfigFieldDef[]
     values: TFormValues
-    /** The eye was pressed on a hidden secret, BEFORE revealing it (ConfigFields' onRevealSecret). */
-    onReveal?: () => void | Promise<void>
     /** Greyed out by IConfigFieldDef.enabledWhen: shown, not editable, and the AI button off with it. */
     disabled?: boolean
     /** Refused by the back end when saving (ConfigFields' invalidFields): drawn in error. */
@@ -91,7 +89,7 @@ const ConfigTextArea: React.FC<IConfigTextAreaProps> = (props) => {
 
     const label = `${f.label}${f.required ? ' *' : ''}`
     const eye = f.secret ? (
-        <IconButton size='small' aria-label={revealed ? 'Hide' : 'Show'} onClick={async () => { if (!revealed && props.onReveal) await props.onReveal(); setRevealed(!revealed) }}>
+        <IconButton size='small' aria-label={revealed ? 'Hide' : 'Show'} onClick={() => setRevealed(!revealed)}>
             {revealed ? <VisibilityOff fontSize='small' /> : <Visibility fontSize='small' />}
         </IconButton>
     ) : undefined

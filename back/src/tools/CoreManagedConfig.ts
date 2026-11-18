@@ -221,8 +221,14 @@ export const idpInstances = (manager: IdpManager, connectorId: string): IExtensi
             await manager.deleteInstance(existente.id)
         }
 
+        // through the same validation as the dialog: an instance that does not fit is not applied, and says why
         for (const instancia of validas) {
-            await manager.saveInstance(instancia)
+            const errors = await manager.saveInstance(instancia)
+            if (errors.length > 0) {
+                skipped++
+                warnings.push(`IdP instance '${instancia.id}' not applied: ${errors.map(e => e.message).join('; ')}`)
+                continue
+            }
             applied++
         }
         return { applied, skipped, warnings }

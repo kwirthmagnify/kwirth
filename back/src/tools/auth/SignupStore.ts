@@ -13,7 +13,7 @@ const SIGNUP_PENDING_CAP = 50
     callback, getUsers, the pickers — can ever hand it an AccessKey, without each of them having to know
     there is such a thing as a pending user.
 
-    One key per request (writeKey/readAllKeys, like 'kwirth-idps'), and the key is base64url(email): a K8s
+    One key per request (writeKey/readAllKeys), and the key is base64url(email): a K8s
     Secret key does not admit '@'. The key is never read back — the request carries its own id.
 
     🔴 It takes NO lock: the caller holds IdentityService.lock around each read-check-write (the pending cap,

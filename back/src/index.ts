@@ -1839,12 +1839,15 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
             recordRoute(`${envRootPath}/core/routers`, ERouteOwnerKind.CORE, 'routers', routerApi.router)
         }
         if (!idpManager) {
-            idpManager = new IdpManager(ri.secrets, ri.configMaps, registeredIdps)
+            idpManager = new IdpManager(new ExtensionConfigStore(ri.secrets), ri.configMaps, registeredIdps)
             await idpManager.init()
             const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
             if (bundledExtensionsPath) await idpManager.installBundled(bundledExtensionsPath)
             await idpManager.loadAll()   // conectores instalados en runtime
-            idpManager.loadDevIdps()     // conectores en dev (kwirth-dev.json); la config del IdP se gestiona desde el front (UI)
+            idpManager.loadDevIdps()     // conectores en dev (kwirth-dev.json)
+            // instances seeded from kwirth-dev.json → idpConfigs, only those not configured yet: after the
+            // connectors, because saving one validates it against its connector's schema
+            await idpManager.loadDevIdpConfigs()
         }
         let idpApi:IdpApi = new IdpApi(idpManager, apiKeyApi)
         riRouter.use(`/core/idps`, idpApi.router)

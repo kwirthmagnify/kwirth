@@ -237,3 +237,4 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
 }
 
 export { ConfigFormDialog }
+export type { ISaveRefusal }

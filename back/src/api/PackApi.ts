@@ -266,7 +266,7 @@ export class PackApi {
                     case EExtensionType.SENDER:    await senderManager.uninstallFromPack(ext.id); break
                     case EExtensionType.THEME:     await themeManager.uninstallFromPack(ext.id); break
                     case EExtensionType.HOMEPAGE:  await homepageManager.uninstallFromPack(ext.id); break
-                    case EExtensionType.IDP:       await idpManager.uninstallFromPack(ext.id); break
+                    case EExtensionType.IDP:       await idpManager.uninstallFromPack(ext.id, deleteConfig); break
                     case EExtensionType.LOGIN:     await loginManager.uninstallFromPack(ext.id, deleteConfig); break
                     case EExtensionType.DOCS:      await docsManager.uninstallFromPack(ext.targetType ?? '', ext.id); break
                     case EExtensionType.WEBHOOK:   await webhookManager.uninstallFromPack(ext.id); break

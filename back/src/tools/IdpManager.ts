@@ -3,17 +3,20 @@ import path from 'path'
 import os from 'os'
 import zlib from 'zlib'
 import tar from 'tar'
-import { ISecrets } from './ISecrets'
 import { IConfigMaps } from './IConfigMap'
-import { ELogComponent, logError, logInfo } from './Logging'
+import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, IIdpInstanceConfig, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
-import { EExtensionType, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IConfigValidationError, IExtensionRequirement, pruneConfig, validateConfig } from '@kwirthmagnify/kwirth-common'
+import { ExtensionConfigStore } from './ExtensionConfigStore'
 import { listBundledOfType } from './BundledExtensions'
 import { downloadFile, packageHeaders } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 
-const IDPS_SECRET = 'kwirth-idps'
+// An instance's id names its Secret (kwirth-idp-<id>-config): a DNS-1123 label, which the ids in use
+// (the connector's: github, google, entraid) already are
+const isValidInstanceId = (id: unknown): id is string => typeof id === 'string' && /^[a-z0-9]([-a-z0-9]{0,40}[a-z0-9])?$/.test(id)
+
 const CONNECTORS_INDEX = 'kwirth-idp-connectors-index'
 const CONFIGMAP_SIZE_LIMIT = 800 * 1024
 
@@ -60,8 +63,10 @@ interface IIdpConnectorMeta {
 /*
     Manages the IdP connectors (the registry) and the configured instances.
     - Connectors: bundled (registerConnector at startup), dev (loadDevIdps) and installable (EPIC G).
-    - Instances: ALL of them are persisted in a single Secret 'kwirth-idps' (it holds secrets such as clientSecret).
-    A mirror of ProviderManager's pattern, but the config goes to a Secret (not a ConfigMap) and in a single document.
+    - Instances: ONE Secret per instance, `kwirth-idp-<instanceId>-config`, in the common
+      ExtensionConfigStore (plans/extension-config, S5). Per INSTANCE and not per connector because the
+      whole core finds one by its id alone (the auth routes, the OAuth state, IUser.idp), so it stays a
+      direct read; a connector's instances are found by their connectorId.
 */
 // What is known about a connector at runtime, for crossing it with its class when listing them in the UI.
 interface IConnectorRuntimeMeta {
@@ -75,15 +80,15 @@ interface IConnectorRuntimeMeta {
 }
 
 export class IdpManager {
-    private secrets: ISecrets
+    private configStore: ExtensionConfigStore
     private configMaps: IConfigMaps
     private registeredIdps: Map<string, TIdpConnectorConstructor>
     private installedConnectorIds = new Set<string>()
     // metadata per connector (version/origin/website) for the UI, crossed in listConnectors; populated in init/install/loadDevIdps
     private connectorMeta = new Map<string, IConnectorRuntimeMeta>()
 
-    constructor(secrets: ISecrets, configMaps: IConfigMaps, registeredIdps: Map<string, TIdpConnectorConstructor>) {
-        this.secrets = secrets
+    constructor(configStore: ExtensionConfigStore, configMaps: IConfigMaps, registeredIdps: Map<string, TIdpConnectorConstructor>) {
+        this.configStore = configStore
         this.configMaps = configMaps
         this.registeredIdps = registeredIdps
     }
@@ -285,17 +290,20 @@ export class IdpManager {
         }
     }
 
-    async uninstall(connectorId: string): Promise<void> {
+    // deleteConfig: the connector's instances go too only when asked (plans/extension-config, P5). Kept,
+    // they are not offered on the login while the connector is missing (AuthApi skips them), and they are
+    // back as they were on a reinstall.
+    async uninstall(connectorId: string, deleteConfig = false): Promise<void> {
         const meta = this.connectorMeta.get(connectorId)
         if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`IdP connector '${connectorId}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
-        await this._doUninstall(connectorId)
+        await this._doUninstall(connectorId, deleteConfig)
     }
 
-    async uninstallFromPack(connectorId: string): Promise<void> {
-        await this._doUninstall(connectorId)
+    async uninstallFromPack(connectorId: string, deleteConfig = false): Promise<void> {
+        await this._doUninstall(connectorId, deleteConfig)
     }
 
-    private async _doUninstall(connectorId: string): Promise<void> {
+    private async _doUninstall(connectorId: string, deleteConfig: boolean): Promise<void> {
         this.registeredIdps.delete(connectorId)
         this.installedConnectorIds.delete(connectorId)
         this.connectorMeta.delete(connectorId)
@@ -303,11 +311,13 @@ export class IdpManager {
         await this.configMaps.write(CONNECTORS_INDEX, index.filter(m => m.id !== connectorId))
         await this.configMaps.write(`kwirth-idp-connector-${connectorId}-meta`, null)
         await this.configMaps.write(`kwirth-idp-connector-${connectorId}-back`, null)
-        // deletes the instances that depended on this connector: leaving them orphaned would have the
-        // login offer them and have them fail with 'connector not available'
-        const orphans = (await this.listInstances()).filter(i => i.connectorId === connectorId)
-        for (const inst of orphans) await this.deleteInstance(inst.id)
-        logInfo(ELogComponent.AUTH, `IdP connector '${connectorId}' uninstalled${orphans.length ? ` (removed ${orphans.length} instance(s))` : ''}`)
+        let removed = 0
+        if (deleteConfig) {
+            const orphans = (await this.listInstances()).filter(i => i.connectorId === connectorId)
+            for (const inst of orphans) await this.deleteInstance(inst.id)
+            removed = orphans.length
+        }
+        logInfo(ELogComponent.AUTH, `IdP connector '${connectorId}' uninstalled${removed ? ` (removed ${removed} instance(s))` : ''}`)
     }
 
     // loads (registers) every installed connector from the configmap (at startup)
@@ -366,53 +376,82 @@ export class IdpManager {
         }
     }
 
-    // ---------------- instancias (Secret kwirth-idps) ----------------
-
-    // the 'kwirth-idps' Secret stores ONE KEY PER INSTANCE (writeKey/readAllKeys do the base64/JSON per
-    // key; the values of a K8s Secret must be strings, not objects).
-    private async readRecord(): Promise<Record<string, IIdpInstanceConfig>> {
-        try {
-            const rec = await this.secrets.readAllKeys(IDPS_SECRET)
-            return (rec && typeof rec === 'object') ? rec as Record<string, IIdpInstanceConfig> : {}
-        }
-        catch (err) {
-            return {}
-        }
-    }
+    // ---------------- instances (one Secret each, in the ExtensionConfigStore) ----------------
 
     async listInstances(): Promise<IIdpInstanceConfig[]> {
-        return Object.values(await this.readRecord())
+        const result: IIdpInstanceConfig[] = []
+        for (const id of await this.configStore.list(EExtensionType.IDP)) {
+            const inst = await this.getInstance(id)
+            if (inst) result.push(inst)
+        }
+        return result
     }
 
+    // What is stored, if it has the shape of an instance; anything else is reported and read as absent
     async getInstance(id: string): Promise<IIdpInstanceConfig | undefined> {
-        return (await this.readRecord())[id]
+        const stored = await this.configStore.read(EExtensionType.IDP, id)
+        if (stored === undefined) return undefined
+        const inst = stored as IIdpInstanceConfig
+        if (typeof stored !== 'object' || stored === null || typeof inst.connectorId !== 'string' || !inst.config || typeof inst.config !== 'object') {
+            logWarning(ELogComponent.AUTH, `IdP instance '${id}' is not readable as an instance: it is treated as absent`)
+            return undefined
+        }
+        return { ...inst, id }
     }
 
     async getEnabledInstances(): Promise<IIdpInstanceConfig[]> {
-        return Object.values(await this.readRecord()).filter(i => i.enabled)
+        return (await this.listInstances()).filter(i => i.enabled)
     }
 
-    async saveInstance(instance: IIdpInstanceConfig): Promise<void> {
-        await this.secrets.writeKey(IDPS_SECRET, instance.id, instance)
+    /*
+        Stores the instance WHOLE (no merge): what arrives is what stays. Its `config` is pruned and
+        validated against its connector's schema, as every other family's config; the errors are returned
+        and nothing is stored. With no schema (a broken connector) it is stored as it comes and a warning
+        logged — validation must not stop an admin from repairing it (plan, P2).
+
+        The id names a Kubernetes Secret, so it has to be a valid name: lower case, digits and '-'.
+    */
+    async saveInstance(instance: IIdpInstanceConfig): Promise<IConfigValidationError[]> {
+        if (!isValidInstanceId(instance.id)) return [{ field: 'id', message: `'${instance.id}' is not a valid id: lower case letters, digits and '-'` }]
+        const schema = this.getConnectorSchema(instance.connectorId)
+        let config = instance.config ?? {}
+        if (!schema || schema.length === 0) {
+            logWarning(ELogComponent.AUTH, `IdP instance '${instance.id}' saved without validation: the schema of connector '${instance.connectorId}' is not available`)
+        }
+        else {
+            config = pruneConfig(schema, config)
+            const errors = validateConfig(schema, config)
+            if (errors.length > 0) return errors
+        }
+        await this.configStore.write(EExtensionType.IDP, instance.id, { ...instance, config })
         logInfo(ELogComponent.AUTH, `IdP instance '${instance.id}' (connector '${instance.connectorId}') saved`)
+        return []
     }
 
     async deleteInstance(id: string): Promise<void> {
-        await this.secrets.writeKey(IDPS_SECRET, id, null)
+        await this.configStore.delete(EExtensionType.IDP, id)
         logInfo(ELogComponent.AUTH, `IdP instance '${id}' deleted`)
     }
 
     // ---------------- export / import ----------------
 
     async exportConfig(): Promise<Record<string, IIdpInstanceConfig>> {
-        return this.readRecord()
+        const rec: Record<string, IIdpInstanceConfig> = {}
+        for (const inst of await this.listInstances()) rec[inst.id] = inst
+        return rec
     }
 
-    async importConfig(rec: Record<string, IIdpInstanceConfig>): Promise<void> {
+    // Each one through saveInstance, so the same validation as the dialog: what does not fit is not stored
+    async importConfig(rec: Record<string, IIdpInstanceConfig>): Promise<string[]> {
+        const warnings: string[] = []
+        let applied = 0
         for (const [id, inst] of Object.entries(rec)) {
-            await this.secrets.writeKey(IDPS_SECRET, id, inst)
+            const errors = await this.saveInstance({ ...inst, id })
+            if (errors.length > 0) warnings.push(`IdP instance '${id}' not applied: ${errors.map(e => e.message).join('; ')}`)
+            else applied++
         }
-        logInfo(ELogComponent.AUTH, `Imported ${Object.keys(rec).length} IdP instance(s)`)
+        logInfo(ELogComponent.AUTH, `Imported ${applied} IdP instance(s)${warnings.length ? `, ${warnings.length} not applied` : ''}`)
+        return warnings
     }
 
     // ---------------- dev (kwirth-dev.json) ----------------
@@ -489,7 +528,11 @@ export class IdpManager {
                 // do not seed instances with no real config (missing env vars, for instance → everything empty)
                 const hasValues = Object.values(interpolated.config || {}).some(v => v !== '' && v !== null && v !== undefined)
                 if (!hasValues) continue
-                await this.saveInstance(interpolated)
+                const errors = await this.saveInstance(interpolated)
+                if (errors.length > 0) {
+                    logWarning(ELogComponent.AUTH, `[dev] IdP instance '${id}' from kwirth-dev.json not preloaded: ${errors.map(e => e.message).join('; ')}`)
+                    continue
+                }
                 logInfo(ELogComponent.AUTH, `[dev] IdP instance '${id}' preloaded from kwirth-dev.json`)
             }
         }

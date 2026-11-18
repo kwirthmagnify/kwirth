@@ -148,7 +148,7 @@ const idpFalso = (guardadas: unknown[] = [], borradas: string[] = []): IdpManage
         { name: 'clientId', label: 'Client id' },
         { name: 'clientSecret', label: 'Client secret', type: 'password' }
     ],
-    saveInstance: async (i: unknown) => { guardadas.push(i) },
+    saveInstance: async (i: unknown) => { guardadas.push(i); return [] },
     deleteInstance: async (id: string) => { borradas.push(id) }
 } as unknown as IdpManager)
 

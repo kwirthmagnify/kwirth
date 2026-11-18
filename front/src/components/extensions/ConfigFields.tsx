@@ -30,13 +30,6 @@ interface IConfigFieldsProps {
     */
     onChange: (name: string, value: unknown) => void
     /*
-        The eye was pressed on a secret that was hidden, BEFORE revealing it. It is here because the two
-        consumers mean different things by revealing: one just shows what is in the field, the other has
-        to go and fetch the real value, because what it holds is a mask. Returning a promise holds the
-        reveal back until it resolves.
-    */
-    onRevealSecret?: (name: string) => void | Promise<void>
-    /*
         The fields the back end refused when saving (validateConfig, plans/extension-config): they are drawn
         in error. Only the colour changes —no helper text underneath— so the form keeps its height; the
         messages are the caller's to show, in the one place it already shows errors.
@@ -48,10 +41,8 @@ const ConfigFields: React.FC<IConfigFieldsProps> = (props: IConfigFieldsProps) =
     // Visibility is per field and lives here: it is presentation, and no consumer has ever needed it.
     const [shown, setShown] = useState<Record<string, boolean>>({})
 
-    const toggleSecret = async (name: string) => {
-        if (!shown[name] && props.onRevealSecret) await props.onRevealSecret(name)
-        setShown(s => ({ ...s, [name]: !s[name] }))
-    }
+    // Secrets arrive REAL (CLAUDE.md): the eye only shows what is already in the field
+    const toggleSecret = (name: string) => setShown(s => ({ ...s, [name]: !s[name] }))
 
     /*
         The values as enabledWhen compares them: a boolean field kept as text by the form that stores
@@ -79,8 +70,7 @@ const ConfigFields: React.FC<IConfigFieldsProps> = (props: IConfigFieldsProps) =
 
         if (f.type === 'textarea') {
             return <ConfigTextArea key={f.name} field={f} value={String(props.values[f.name] ?? '')}
-                onChange={v => props.onChange(f.name, v)} fields={props.schema} values={props.values} disabled={disabled} error={invalid}
-                onReveal={props.onRevealSecret ? () => props.onRevealSecret!(f.name) : undefined} />
+                onChange={v => props.onChange(f.name, v)} fields={props.schema} values={props.values} disabled={disabled} error={invalid} />
         }
 
         const isSecret = f.type === 'password'

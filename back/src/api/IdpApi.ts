@@ -4,15 +4,12 @@ import { ApiKeyApi } from './ApiKeyApi'
 import { IdpManager } from '../tools/IdpManager'
 import { IIdpInstanceConfig } from '@kwirthmagnify/kwirth-common-back'
 import { ELogComponent, logError } from '../tools/Logging'
-import { secretFieldNames } from '../tools/ConfigFieldSecrets'
-
-const SECRET_MASK = '********'
 
 /*
     Management (admin) of IdP connectors and instances. Mounted at /core/idps under the running instance,
     protected by validKey (just like UserApi/ApiKeyApi; the front end hides the menu from non-admins).
-    The schema's 'password' fields are MASKED on the way out and, when saving, if they arrive masked
-    the stored value is kept (the write-only secret field pattern).
+    Secrets travel REAL both ways, like any other value (CLAUDE.md): the dialog masks them with the eye,
+    and what arrives is what is stored. Each instance is its own Secret (plans/extension-config, S5).
     Installing connectors (tgz) is EPIC G.
 */
 export class IdpApi {
@@ -81,7 +78,8 @@ export class IdpApi {
         // uninstall a connector
         this.router.delete('/:connectorId', async (req: Request, res: Response) => {
             try {
-                await this.idpManager.uninstall(req.params.connectorId)
+                // its instances go too only when asked (plans/extension-config, P5)
+                await this.idpManager.uninstall(req.params.connectorId, req.query.deleteConfig === 'true')
                 res.status(200).json({})
             }
             catch (err) {
@@ -96,8 +94,8 @@ export class IdpApi {
         })
         this.router.post('/import', async (req: Request, res: Response) => {
             try {
-                await this.idpManager.importConfig(req.body || {})
-                res.status(200).json({})
+                const warnings = await this.idpManager.importConfig(req.body || {})
+                res.status(200).json({ warnings })
             }
             catch (err) {
                 logError(ELogComponent.AUTH, `Error importing IdP config: ${err}`)
@@ -114,18 +112,17 @@ export class IdpApi {
             the root would swallow '/instances' before it was ever reached.
         */
         this.router.get('/instances', async (_req: Request, res: Response) => {
-            const instances = await this.idpManager.listInstances()
-            res.status(200).json(instances.map(i => this.mask(i)))
+            res.status(200).json(await this.idpManager.listInstances())
         })
 
-        // gets an instance (masked)
+        // gets an instance, with its secrets real: the dialog shows them masked with the eye (CLAUDE.md)
         this.router.get('/instances/:id', async (req: Request, res: Response) => {
             const inst = await this.idpManager.getInstance(req.params.id)
             if (!inst) {
                 res.status(404).json({})
                 return
             }
-            res.status(200).json(this.mask(inst))
+            res.status(200).json(inst)
         })
 
         // crear / actualizar
@@ -139,52 +136,20 @@ export class IdpApi {
         })
     }
 
-    /** undefined = the schema could not be read, which is NOT the same as 'this connector has none'. */
-    private passwordFields(connectorId: string): string[] | undefined {
-        const schema = this.idpManager.getConnectorSchema(connectorId)
-        return schema ? secretFieldNames(schema) : undefined
-    }
-
-    /*
-        Returns a copy with the password fields masked (when they have a value).
-
-        🔴 With NO schema it masks EVERYTHING. A broken or incompatible connector cannot say which of its
-        fields are secrets, and the old `?? []` turned that into 'it has no secrets' — so the answer went
-        out with the client secret in the clear. Unreadable beats leaked: the admin sees masked fields
-        and a connector that says it is broken.
-    */
-    private mask(inst: IIdpInstanceConfig): IIdpInstanceConfig {
-        const fields = this.passwordFields(inst.connectorId)
-        const config: Record<string, unknown> = { ...inst.config }
-        for (const [key, value] of Object.entries(config)) {
-            const isSecret = fields ? fields.includes(key) : typeof value === 'string'
-            if (isSecret && value !== undefined && value !== '') config[key] = SECRET_MASK
-        }
-        return { ...inst, config }
-    }
-
     private async save(req: Request, res: Response, idOverride?: string): Promise<void> {
         try {
             const incoming = req.body as IIdpInstanceConfig
+            if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
+                res.status(400).json({ error: 'the body must be an IdP instance' })
+                return
+            }
             if (idOverride) incoming.id = idOverride
-            if (!incoming || !incoming.id || !incoming.connectorId) {
+            if (!incoming.id || !incoming.connectorId) {
                 res.status(400).json({ error: 'id and connectorId are required' })
                 return
             }
-            /*
-                A merge of secrets: a field that arrives masked keeps the stored value.
-
-                It looks at EVERY key instead of asking the schema which ones are passwords: the mask is
-                a value this API itself put there, so finding it is answer enough — and with a broken
-                connector the schema cannot be read, which used to mean the mask was persisted AS the
-                secret, quietly destroying the credential.
-            */
-            const existing = await this.idpManager.getInstance(incoming.id)
-            const config: Record<string, unknown> = { ...(incoming.config || {}) }
-            for (const key of Object.keys(config)) {
-                if (config[key] === SECRET_MASK) config[key] = existing?.config?.[key] ?? ''
-            }
-            incoming.config = config
+            // persisted as it arrives, secrets included: no mask to swap back, no merge with what was stored
+            incoming.config = (incoming.config && typeof incoming.config === 'object' && !Array.isArray(incoming.config)) ? incoming.config : {}
             /*
                 The signup policy is read by the IdP callback, which has no guard around it: a value of the
                 wrong shape there throws out of an async handler and takes the core down. So it is stored
@@ -199,8 +164,12 @@ export class IdpApi {
                         : []
                 }
                 : undefined
-            await this.idpManager.saveInstance(incoming)
-            res.status(200).json(this.mask(incoming))
+            const errors = await this.idpManager.saveInstance(incoming)
+            if (errors.length > 0) {
+                res.status(400).json({ error: errors.map(e => e.message).join('; '), fields: errors })
+                return
+            }
+            res.status(200).json(await this.idpManager.getInstance(incoming.id) ?? incoming)
         }
         catch (err) {
             logError(ELogComponent.AUTH, `Error saving IdP instance: ${err}`)

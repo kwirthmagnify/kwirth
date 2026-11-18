@@ -5,8 +5,8 @@ import type { AddressInfo } from 'net'
 import { IdpApi } from '../../src/api/IdpApi'
 import { IdpManager } from '../../src/tools/IdpManager'
 import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
-import { ISecrets } from '../../src/tools/ISecrets'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
+import { fakeConfigStore } from '../tools/fakeExtensionConfigStore'
 import { accessKeySerialize } from '@kwirthmagnify/kwirth-common'
 
 class FakeConnector implements IIdpConnector {
@@ -21,16 +21,6 @@ class FakeConnector implements IIdpConnector {
     }
     buildAuthorizationUrl(): string { return 'https://idp.test/auth' }
     async handleCallback() { return { email: 'x@example.com', emailVerified: true } }
-}
-
-const memSecrets = (): ISecrets => {
-    const keys: Record<string, Record<string, any>> = {}
-    return {
-        read: async () => { throw new Error('no') },
-        write: async () => {},
-        writeKey: async (name: string, key: string, value: any) => { (keys[name] ||= {}); if (value === null) delete keys[name][key]; else keys[name][key] = value },
-        readAllKeys: async (name: string) => keys[name] ?? {}
-    }
 }
 
 // a minimal apiKeyApi with one valid permanent key (for validKey)
@@ -49,8 +39,31 @@ const NONADMIN_AUTH = { Authorization: 'Bearer ' + accessKeySerialize(nonAdminKe
 async function startServer() {
     const reg = new Map<string, TIdpConnectorConstructor>()
     const memConfigMaps: IConfigMaps = { read: async (_n, def?) => def, write: (() => {}) as any, writeKey: async () => {}, readAllKeys: async () => ({}) }
-    const idpManager = new IdpManager(memSecrets(), memConfigMaps, reg)
+    const idpManager = new IdpManager(fakeConfigStore(), memConfigMaps, reg)
     idpManager.registerConnector('fake', FakeConnector)
+    const idpApi = new IdpApi(idpManager, fakeApiKeyApi())
+    const app = express()
+    app.use(express.json())
+    app.use('/core/idps', idpApi.router)
+    const server = app.listen(0)
+    await new Promise<void>(r => server.once('listening', () => r()))
+    const port = (server.address() as AddressInfo).port
+    return { base: `http://127.0.0.1:${port}`, stop: () => new Promise<void>(r => server.close(() => r())) }
+}
+
+// a connector whose schema REQUIRES a field, for the validation on saving
+class RequiredConnector extends FakeConnector {
+    id = 'required'
+    getConfigSchema(): IIdpConfigFieldDef[] {
+        return [{ name: 'clientId', label: 'Client ID', type: 'text', required: true }]
+    }
+}
+
+async function startServerRequired() {
+    const reg = new Map<string, TIdpConnectorConstructor>()
+    const memConfigMaps: IConfigMaps = { read: async (_n, def?) => def, write: (() => {}) as any, writeKey: async () => {}, readAllKeys: async () => ({}) }
+    const idpManager = new IdpManager(fakeConfigStore(), memConfigMaps, reg)
+    idpManager.registerConnector('required', RequiredConnector)
     const idpApi = new IdpApi(idpManager, fakeApiKeyApi())
     const app = express()
     app.use(express.json())
@@ -93,35 +106,55 @@ test('GET /connectors lista tipos con schema', async () => {
     finally { await srv.stop() }
 })
 
-test('POST crea instancia y GET la devuelve con el secreto ENMASCARADO', async () => {
+// Secrets travel REAL, like any other value (CLAUDE.md): the dialog masks them with the eye
+test('🔴 POST crea instancia y GET la devuelve con el secreto REAL', async () => {
     const srv = await startServer()
     try {
         const inst = { id: 'google', connectorId: 'fake', label: 'Google', enabled: true, config: { clientId: 'cid', clientSecret: 'supersecret' } }
         const post = await fetch(`${srv.base}/core/idps/instances`, j({ method: 'POST', body: JSON.stringify(inst) }))
         assert.equal(post.status, 200)
+        assert.equal((await post.json()).config.clientSecret, 'supersecret')
 
-        const get = await fetch(`${srv.base}/core/idps/instances/google`, j())
-        const body = await get.json()
+        const body = await (await fetch(`${srv.base}/core/idps/instances/google`, j())).json()
         assert.equal(body.config.clientId, 'cid')
-        assert.equal(body.config.clientSecret, '********', 'el secreto no debe exponerse')
+        assert.equal(body.config.clientSecret, 'supersecret')
+        const list = await (await fetch(`${srv.base}/core/idps/instances`, j())).json()
+        assert.equal(list[0].config.clientSecret, 'supersecret')
     }
     finally { await srv.stop() }
 })
 
-test('PUT con secreto enmascarado CONSERVA el valor almacenado', async () => {
+test('🔴 PUT persiste lo que llega: sin merge con lo guardado', async () => {
     const srv = await startServer()
     try {
         const inst = { id: 'google', connectorId: 'fake', label: 'Google', enabled: true, config: { clientId: 'cid', clientSecret: 'supersecret' } }
         await fetch(`${srv.base}/core/idps/instances`, j({ method: 'POST', body: JSON.stringify(inst) }))
-
-        // the front end sends the masked secret back (it does not know it) when changing the label
         const upd = { ...inst, label: 'Google Nuevo', config: { clientId: 'cid', clientSecret: '********' } }
         await fetch(`${srv.base}/core/idps/instances/google`, j({ method: 'PUT', body: JSON.stringify(upd) }))
+        const body = await (await fetch(`${srv.base}/core/idps/instances/google`, j())).json()
+        assert.equal(body.label, 'Google Nuevo')
+        assert.equal(body.config.clientSecret, '********', 'what arrives is what is stored: there is no mask to swap back')
+    }
+    finally { await srv.stop() }
+})
 
-        // the export (unmasked) confirms the original secret is still there
-        const exp = await (await fetch(`${srv.base}/core/idps/export`, j())).json()
-        assert.equal(exp.google.label, 'Google Nuevo')
-        assert.equal(exp.google.config.clientSecret, 'supersecret')
+test('🔴 lo que no encaja con el esquema del conector es un 400 que nombra cada campo, y no se guarda', async () => {
+    const srv = await startServerRequired()
+    try {
+        const inst = { id: 'req', connectorId: 'required', label: 'Req', enabled: true, config: { clientId: '' } }
+        const res = await fetch(`${srv.base}/core/idps/instances`, j({ method: 'POST', body: JSON.stringify(inst) }))
+        assert.equal(res.status, 400)
+        assert.deepEqual(((await res.json()).fields as { field: string }[]).map(f => f.field), ['clientId'])
+        assert.equal((await fetch(`${srv.base}/core/idps/instances/req`, j())).status, 404)
+    }
+    finally { await srv.stop() }
+})
+
+test('un body que no es una instancia es un 400', async () => {
+    const srv = await startServer()
+    try {
+        const res = await fetch(`${srv.base}/core/idps/instances`, j({ method: 'POST', body: JSON.stringify([1, 2]) }))
+        assert.equal(res.status, 400)
     }
     finally { await srv.stop() }
 })
@@ -158,7 +191,7 @@ class BrokenSchemaConnector implements IIdpConnector {
 async function startServerBroken() {
     const reg = new Map<string, TIdpConnectorConstructor>()
     const memConfigMaps: IConfigMaps = { read: async (_n, def?) => def, write: (() => {}) as any, writeKey: async () => {}, readAllKeys: async () => ({}) }
-    const idpManager = new IdpManager(memSecrets(), memConfigMaps, reg)
+    const idpManager = new IdpManager(fakeConfigStore(), memConfigMaps, reg)
     idpManager.registerConnector('broken', BrokenSchemaConnector as unknown as TIdpConnectorConstructor)
     const idpApi = new IdpApi(idpManager, fakeApiKeyApi())
     const app = express()
@@ -182,30 +215,27 @@ test('🔴 con un conector roto el GET responde, no tumba el proceso', async () 
     finally { await srv.stop() }
 })
 
-test('🔴 con un conector roto NO se filtra el secreto: se enmascara todo', async () => {
+// With no readable schema the instance is saved unvalidated (P2), so the admin can repair it
+test('🔴 con un conector roto se guarda sin validar, y vuelve tal cual', async () => {
     const srv = await startServerBroken()
     try {
         const inst = { id: 'ent', connectorId: 'broken', label: 'Roto', enabled: true, config: { clientId: 'cid', clientSecret: 'supersecret' } }
-        await fetch(`${srv.base}/core/idps/instances`, j({ method: 'POST', body: JSON.stringify(inst) }))
+        assert.equal((await fetch(`${srv.base}/core/idps/instances`, j({ method: 'POST', body: JSON.stringify(inst) }))).status, 200)
         const body = await (await fetch(`${srv.base}/core/idps/instances/ent`, j())).json()
-        assert.equal(body.config.clientSecret, '********', 'el secreto NO puede salir en claro')
-        assert.equal(body.config.clientId, '********', 'sin schema no se sabe cual es secreto: se enmascara todo')
+        assert.deepEqual(body.config, { clientId: 'cid', clientSecret: 'supersecret' })
     }
     finally { await srv.stop() }
 })
 
-// And the mask must not be persisted AS the secret: with no schema the old merge skipped the swap-back
-// and the stored credential was quietly destroyed on the next save.
-test('🔴 con un conector roto, guardar la mascara NO destruye el secreto', async () => {
-    const srv = await startServerBroken()
+test('🔴 DELETE del conector conserva sus instancias, y con deleteConfig=true se las lleva', async () => {
+    const srv = await startServer()
     try {
-        const inst = { id: 'ent', connectorId: 'broken', label: 'Roto', enabled: true, config: { clientId: 'cid', clientSecret: 'supersecret' } }
+        const inst = { id: 'google', connectorId: 'fake', label: 'Google', enabled: true, config: { clientId: 'cid' } }
         await fetch(`${srv.base}/core/idps/instances`, j({ method: 'POST', body: JSON.stringify(inst) }))
-        const upd = { ...inst, label: 'Roto 2', config: { clientId: 'cid', clientSecret: '********' } }
-        await fetch(`${srv.base}/core/idps/instances/ent`, j({ method: 'PUT', body: JSON.stringify(upd) }))
-        const exp = await (await fetch(`${srv.base}/core/idps/export`, j())).json()
-        assert.equal(exp.ent.label, 'Roto 2')
-        assert.equal(exp.ent.config.clientSecret, 'supersecret', 'el secreto almacenado debe conservarse')
+        assert.equal((await fetch(`${srv.base}/core/idps/fake`, j({ method: 'DELETE' }))).status, 200)
+        assert.equal((await fetch(`${srv.base}/core/idps/instances/google`, j())).status, 200, 'kept without deleteConfig')
+        assert.equal((await fetch(`${srv.base}/core/idps/fake?deleteConfig=true`, j({ method: 'DELETE' }))).status, 200)
+        assert.equal((await fetch(`${srv.base}/core/idps/instances/google`, j())).status, 404)
     }
     finally { await srv.stop() }
 })

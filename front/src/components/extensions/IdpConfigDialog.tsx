@@ -1,10 +1,11 @@
 import React, { useContext, useState } from 'react'
 import { Button, CircularProgress, Dialog, DialogActions, DialogContent, FormControlLabel, Stack, Switch, TextField, Typography } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { IConfigFieldDef, IIdpSignupPolicy } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, IConfigValidationError, IIdpSignupPolicy } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
-import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
+import { addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { ConfigFields } from './ConfigFields'
+import type { ISaveRefusal } from './ConfigFormDialog'
 
 /*
     An identity provider's configuration: a connector's INSTANCE.
@@ -14,9 +15,8 @@ import { ConfigFields } from './ConfigFields'
     they are two entities in the back end, on the screen they behave like an extension and its
     configuration.
 
-    ⚠️ Secrets do not arrive with the rest: the list gives them masked and the REAL value is only asked
-    for on pressing the eye, against /core/idps/export, which is admin-only. That way a secret does not travel
-    to anybody's browser until it has to be shown.
+    Secrets arrive REAL with the rest of the instance, like any other value (CLAUDE.md): the field masks
+    them and the eye shows them. What is saved is what the form holds, whole.
 */
 
 interface IIdpInstance {
@@ -82,33 +82,20 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
     })
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | undefined>()
+    const [fieldErrors, setFieldErrors] = useState<IConfigValidationError[]>([])
     const [signupEnabled, setSignupEnabled] = useState<boolean>(props.existing?.signup?.enabled === true)
     const [signupDomains, setSignupDomains] = useState<string>(props.existing?.signup?.allowedDomains?.join(', ') ?? '')
 
-    const setCampo = (name: string, value: unknown) =>
+    // Editing a field the back end refused takes its mark and its message away
+    const setCampo = (name: string, value: unknown) => {
         setInstancia(prev => ({ ...prev, config: { ...prev.config, [name]: value } }))
-
-    /*
-        Revealing a secret fetches its REAL value from the export (admin-only): what is in the form comes
-        masked from the list, and saving the mask would leave the configuration broken without warning.
-    */
-    const revelarSecreto = async (name: string) => {
-        // Nothing is stored yet, so what is in the field IS the real value.
-        if (esNueva) return
-        try {
-            const res = await fetch(`${backendUrl}/core/idps/export`, addGetAuthorization(accessString))
-            if (res.ok) {
-                const todo = await res.json()
-                const real = todo?.[instancia.id]?.config?.[name]
-                if (real !== undefined) setCampo(name, real)
-            }
-        }
-        catch { /* si el export falla se enseña lo que haya en el campo */ }
+        setFieldErrors(list => list.filter(e => e.field !== name))
     }
 
     const guardar = async () => {
         setSaving(true)
         setError(undefined)
+        setFieldErrors([])
         try {
             const signup: IIdpSignupPolicy = { enabled: signupEnabled, allowedDomains: parseDomains(signupDomains) }
             const payload = JSON.stringify({ ...instancia, signup })
@@ -116,8 +103,13 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
                 ? await fetch(`${backendUrl}/core/idps/instances`, addPostAuthorization(accessString, payload))
                 : await fetch(`${backendUrl}/core/idps/instances/${instancia.id}`, addPutAuthorization(accessString, payload))
             if (!res.ok) {
-                const detalle = await res.json().catch(() => ({}))
-                throw new Error(detalle.error ?? `HTTP ${res.status}`)
+                const refusal = await res.json().catch(() => undefined) as ISaveRefusal | undefined
+                // What does not fit the connector's schema: marked on its field, and said why
+                if (res.status === 400 && refusal?.fields && refusal.fields.length > 0) {
+                    setFieldErrors(refusal.fields)
+                    return
+                }
+                throw new Error(refusal?.error ?? `HTTP ${res.status}`)
             }
             props.onClose()
         }
@@ -142,7 +134,7 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
                         ? <Typography variant='body2' sx={{
                         color: 'text.secondary'
                     }}>This connector has no configurable options.</Typography>
-                        : <ConfigFields schema={props.schema} values={instancia.config} onChange={setCampo} onRevealSecret={revelarSecreto} />}
+                        : <ConfigFields schema={props.schema} values={instancia.config} onChange={setCampo} invalidFields={fieldErrors.map(e => e.field)} />}
                     {/* Signup belongs to the core, not to the connector: the same two fields for every IdP. */}
                     <Typography variant='subtitle2' sx={{ pt: 1 }}>Signup</Typography>
                     <FormControlLabel label='Allow signup (people who are not users may request access)'
@@ -153,6 +145,7 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
                             ? 'Empty: anyone with an account at this provider can request access.'
                             : 'Comma-separated. The whole domain must match: subdomains are not included.'} />
                     {error && <Typography variant='caption' color='error'>{error}</Typography>}
+                    {fieldErrors.length > 0 && <Typography variant='caption' color='error' data-testid='config-field-errors'>{fieldErrors.map(e => e.message).join('. ')}</Typography>}
                 </Stack>
             </DialogContent>
             <DialogActions>

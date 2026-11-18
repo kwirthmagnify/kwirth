@@ -8,6 +8,7 @@ import { IdpManager } from '../../src/tools/IdpManager'
 import { EIdpConnectorKind, IIdpConnector, IIdpIdentity, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
+import { fakeConfigStore } from '../tools/fakeExtensionConfigStore'
 import { ESsoResult, IKwirthSettings, IUser } from '@kwirthmagnify/kwirth-common'
 import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 
@@ -38,7 +39,7 @@ const makeUser = (over: Partial<IUser>): IUser => ({
     accessKey: { id: '', type: 'volatile', resources: '' } as any, resources: 'view:default:::', ...over
 })
 
-// a single ISecrets holding kwirth-users (the seed) and kwirth-idps (managed by IdpManager)
+// the ISecrets holding kwirth-users (the seed); the IdP instances live in their own fake config store
 const memSecrets = (usersMap: any): ISecrets => {
     const keys: Record<string, Record<string, any>> = {}
     return {
@@ -87,7 +88,7 @@ async function startServer(options: IServerOptions = {}) {
                     'bob@example.com': encodeUser(makeUser({ id: 'bob@example.com', idp: 'keycloak' })) }
     const secrets = memSecrets(users)
     const reg = new Map<string, TIdpConnectorConstructor>()
-    const idpManager = new IdpManager(secrets, memConfigMaps(), reg)
+    const idpManager = new IdpManager(fakeConfigStore(), memConfigMaps(), reg)
     idpManager.registerConnector('fake', FakeConnector)
     await idpManager.saveInstance({ id: 'google', connectorId: 'fake', label: 'Login with Google', enabled: true, config: {} })
 

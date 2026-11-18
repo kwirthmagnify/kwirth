@@ -10,6 +10,7 @@ import { SignupStore, SIGNUP_PENDING_CAP } from '../../src/tools/auth/SignupStor
 import { EIdpConnectorKind, IIdpConnector, IIdpIdentity, IIdpInstanceConfig, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { ISecrets } from '../../src/tools/ISecrets'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
+import { fakeConfigStore } from '../tools/fakeExtensionConfigStore'
 import { accessKeySerialize, ELoginRefusal, ESignupStatus, ESsoResult, IIdpSignupPolicy, IKwirthSettings, ILoginRefusal, ISignupInfo, ISignupReply, ISignupRequest, IUser } from '@kwirthmagnify/kwirth-common'
 
 /*
@@ -86,7 +87,7 @@ const settingsConfigMaps = (holder: { current: IKwirthSettings | undefined }): I
 async function startServer(options: IServerOptions = {}) {
     const secrets = memSecrets({ 'alice@example.com': encodeUser({ id: 'alice@example.com', idp: 'google' }) })
     const reg = new Map<string, TIdpConnectorConstructor>()
-    const idpManager = new IdpManager(secrets, memConfigMaps(), reg)
+    const idpManager = new IdpManager(fakeConfigStore(), memConfigMaps(), reg)
     idpManager.registerConnector('fake', FakeConnector)
     const instance: IIdpInstanceConfig = { id: 'google', connectorId: 'fake', label: 'Login with Google', enabled: true, config: {}, signup: options.signup }
     await idpManager.saveInstance(instance)

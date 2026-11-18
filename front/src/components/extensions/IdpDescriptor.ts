@@ -91,6 +91,7 @@ const canUninstall = (c: IIdpConnector): IExtensionVerdict => {
 
 const makeIdpDescriptor = (deps: IIdpDescriptorDeps): IExtensionManagerDescriptor<IIdpConnector, IIdpConnectorManifestEntry> => ({
     extensionType: EExtensionType.IDP,
+    keepsConfig: true,
     title: 'Identity providers',
     noun: { singular: 'connector', plural: 'connectors' },
     helpSection: 'guide/admin/07-idp-integration?id=enabling-an-idp',
