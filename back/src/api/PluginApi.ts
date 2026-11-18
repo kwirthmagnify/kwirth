@@ -104,7 +104,7 @@ export class PluginApi {
             }
         })
 
-        // The plugin's installation config (generic JSON). The same pattern as ProviderApi.
+        // The plugin's installation config (the common ExtensionConfigStore). The same pattern as ProviderApi.
         this.router.get('/:id/config', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             res.json(await this.pluginManager.getConfig(req.params.id))
@@ -112,8 +112,11 @@ export class PluginApi {
 
         this.router.put('/:id/config', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+            if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) return void res.status(400).json({ error: 'Expected a JSON object' })
             try {
-                await this.pluginManager.saveConfig(req.params.id, req.body)
+                // What does not fit the plugin's configSchema is a 400 naming every field, nothing saved
+                const errors = await this.pluginManager.saveConfig(req.params.id, req.body as Record<string, unknown>)
+                if (errors.length > 0) return void res.status(400).json({ error: errors.map(e => e.message).join('; '), fields: errors })
                 res.json({ ok: true })
             } catch (err) {
                 res.status(500).json({ error: String(err) })

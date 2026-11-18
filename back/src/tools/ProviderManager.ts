@@ -1,6 +1,7 @@
 import { IProviderFieldDef, IExtensionRequirement } from '@kwirthmagnify/kwirth-common-back'
-import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, IConfigValidationError, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { IConfigMaps } from './IConfigMap'
+import { ExtensionConfigStore } from './ExtensionConfigStore'
 import { TProviderConstructor } from '../providers/IProvider'
 import { ELogComponent, logError, logInfo } from './Logging'
 import tar from 'tar'
@@ -49,13 +50,29 @@ interface IDevProvider {
     meta: IProviderMeta
 }
 
+/**
+ * The fields a live provider instance declares, or undefined when it declares none or getConfigSchema
+ * throws: then the cached schema stands in (ProviderManager.getConfig and friends).
+ */
+export const liveConfigSchema = (provider: { id: string, getConfigSchema?: () => IConfigFieldDef[] }): IConfigFieldDef[] | undefined => {
+    if (typeof provider.getConfigSchema !== 'function') return undefined
+    try {
+        const schema = provider.getConfigSchema()
+        return Array.isArray(schema) && schema.length > 0 ? schema : undefined
+    }
+    catch (err) {
+        logError(ELogComponent.CORE, `Provider '${provider.id}' failed to report its config schema: ${err}`)
+        return undefined
+    }
+}
+
 export class ProviderManager {
     private configMaps: IConfigMaps
     private installedIds: string[] = []
     private devProviders = new Map<string, IDevProvider>()
     private devSchemas = new Map<string, IProviderSchemaField[]>()
 
-    constructor(configMaps: IConfigMaps) {
+    constructor(configMaps: IConfigMaps, private configStore: ExtensionConfigStore) {
         this.configMaps = configMaps
     }
 
@@ -263,6 +280,28 @@ export class ProviderManager {
             */
             await this.configMaps.write(`kwirth-provider-${meta.id}-front`, frontEntry)
 
+            /*
+                🔴 The schema BEFORE the meta and the index are written: `hasSchema` travels in them, and it is
+                what puts the gear on the provider's card. It used to be worked out after both had been
+                persisted, so a provider declaring its schema with `export schema` and with no live instance
+                showed no gear, and its configuration could not be edited (plans/extension-config, S3).
+            */
+            let schema: unknown[] | null = null
+            try {
+                const { createRequire } = await import('module')
+                const localRequire = createRequire(path.join(process.cwd(), 'package.json'))
+                const schemaMod = { exports: {} as Record<string, unknown> }
+                // sourceURL: see loadBackProvider below — without it the provider's frames are anonymous
+                // and a failure born in them is charged to the core, which then exits.
+                const wrapFn = new Function('module', 'exports', 'require', '__filename', '__dirname',
+                    `${backJs}\n//# sourceURL=kwirth-provider-${meta.id}-back.js`)
+                wrapFn(schemaMod, schemaMod.exports, localRequire, `kwirth-provider-${meta.id}-back.js`, process.cwd())
+                if (Array.isArray(schemaMod.exports['schema']) && (schemaMod.exports['schema'] as unknown[]).length > 0) {
+                    schema = schemaMod.exports['schema'] as unknown[]
+                    meta.hasSchema = true
+                }
+            } catch {}
+
             await this.configMaps.write(`kwirth-provider-${meta.id}-meta`, meta)
             await this.configMaps.write(`kwirth-provider-${meta.id}-back`, meta.backStored ? { code: backCompressed, compressed: true } : null)
 
@@ -285,21 +324,6 @@ export class ProviderManager {
 
             await this.loadBackProvider(meta.id, backJs, registeredProviders)
 
-            let schema: unknown[] | null = null
-            try {
-                const { createRequire } = await import('module')
-                const localRequire = createRequire(path.join(process.cwd(), 'package.json'))
-                const schemaMod = { exports: {} as Record<string, unknown> }
-                // sourceURL: see loadBackProvider below — without it the provider's frames are anonymous
-                // and a failure born in them is charged to the core, which then exits.
-                const wrapFn = new Function('module', 'exports', 'require', '__filename', '__dirname',
-                    `${backJs}\n//# sourceURL=kwirth-provider-${meta.id}-back.js`)
-                wrapFn(schemaMod, schemaMod.exports, localRequire, `kwirth-provider-${meta.id}-back.js`, process.cwd())
-                if (Array.isArray(schemaMod.exports['schema']) && (schemaMod.exports['schema'] as unknown[]).length > 0) {
-                    schema = schemaMod.exports['schema'] as unknown[]
-                    meta.hasSchema = true
-                }
-            } catch {}
             // Outside the try and with null: should the new version no longer declare a schema, the
             // previous one's would still be there and the UI would draw a form the provider no longer
             // understands.
@@ -354,7 +378,7 @@ export class ProviderManager {
         await this.configMaps.write(`kwirth-provider-${id}-back`, null)
         await this.configMaps.write(`kwirth-provider-${id}-front`, null)
         await this.configMaps.write(`kwirth-provider-${id}-schema`, null)
-        await this.configMaps.write(`kwirth-provider-${id}-config`, null)
+        await this.configStore.delete(EExtensionType.PROVIDER, id)
 
         const cacheFile = path.join(os.tmpdir(), `kwirth-provider-${id}-back.js`)
         if (fs.existsSync(cacheFile)) fs.rmSync(cacheFile)
@@ -447,13 +471,34 @@ export class ProviderManager {
         return Array.isArray(stored) ? stored as IProviderSchemaField[] : undefined
     }
 
-    async getConfig(id: string): Promise<Record<string, unknown>> {
-        const data = await this.configMaps.read(`kwirth-provider-${id}-config`, {})
-        return (data ?? {}) as Record<string, unknown>
+    // ── Installation config (the common ExtensionConfigStore, plans/extension-config) ──
+    //
+    // Every method takes the schema the caller has at hand: the LIVE provider's when there is an instance
+    // (some generate their options hot, like a cloud's regions), and otherwise the cached one.
+
+    // The schema to apply: the live one when it has fields, the cached one otherwise, or none
+    private async schemaFor(id: string, liveSchema?: IConfigFieldDef[]): Promise<IConfigFieldDef[]> {
+        return liveSchema && liveSchema.length > 0 ? liveSchema : (await this.getSchemaAsync(id)) ?? []
     }
 
-    async saveConfig(id: string, cfg: Record<string, unknown>): Promise<void> {
-        await this.configMaps.write(`kwirth-provider-${id}-config`, cfg)
+    // The current values: what is saved, completed with the schema's defaults.
+    async getConfig(id: string, liveSchema?: IConfigFieldDef[]): Promise<Record<string, unknown>> {
+        return this.configStore.readSimple(EExtensionType.PROVIDER, id, await this.schemaFor(id, liveSchema))
+    }
+
+    /*
+        What is saved, completed with the defaults, or undefined when the admin never saved anything. This
+        is what the core configures a provider with when it creates it: a provider nobody configured is NOT
+        configured with its defaults, because with them some would start connecting on their own (user's
+        decision, 2026-11-18).
+    */
+    async getSavedConfig(id: string, liveSchema?: IConfigFieldDef[]): Promise<Record<string, unknown> | undefined> {
+        return this.configStore.readSimpleIfSaved(EExtensionType.PROVIDER, id, await this.schemaFor(id, liveSchema))
+    }
+
+    // Validates and saves it. What does not fit the schema comes back as errors and nothing is saved.
+    async saveConfig(id: string, cfg: Record<string, unknown>, liveSchema?: IConfigFieldDef[]): Promise<IConfigValidationError[]> {
+        return this.configStore.writeSimple(EExtensionType.PROVIDER, id, await this.schemaFor(id, liveSchema), cfg)
     }
 
     /*

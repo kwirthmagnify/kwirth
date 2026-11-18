@@ -5,6 +5,7 @@ import os from 'os'
 import path from 'path'
 import { SenderManager } from '../../src/tools/SenderManager'
 import { ProviderManager } from '../../src/tools/ProviderManager'
+import { fakeConfigStore } from './fakeExtensionConfigStore'
 import { WebhookManager } from '../../src/tools/WebhookManager'
 
 /*
@@ -132,7 +133,7 @@ describe('SenderManager.listInstalled', () => {
 describe('ProviderManager.listInstalled', () => {
     test('un provider que esta instalado Y en dev sale UNA vez, con los metadatos de dev', async () => {
         await withDevWorkspace('providers', ['azure'], '9.9.9-dev', async () => {
-            const manager = new ProviderManager(makeConfigMaps({ 'kwirth-providers-index': [installed('azure', '0.2.0')] }) as never)
+            const manager = new ProviderManager(makeConfigMaps({ 'kwirth-providers-index': [installed('azure', '0.2.0')] }) as never, fakeConfigStore())
             await manager.init()
             manager.loadDevProviders(new Map())
 
@@ -145,7 +146,7 @@ describe('ProviderManager.listInstalled', () => {
     test('lo instalado que NO esta en dev se conserva', async () => {
         await withDevWorkspace('providers', ['azure'], '9.9.9-dev', async () => {
             const index = [installed('azure', '0.2.0'), installed('suse-longhorn', '0.1.0')]
-            const manager = new ProviderManager(makeConfigMaps({ 'kwirth-providers-index': index }) as never)
+            const manager = new ProviderManager(makeConfigMaps({ 'kwirth-providers-index': index }) as never, fakeConfigStore())
             await manager.init()
             manager.loadDevProviders(new Map())
 

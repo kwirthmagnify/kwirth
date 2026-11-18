@@ -265,22 +265,35 @@ test('la config de instalacion de un plugin va y vuelve intacta', async () => {
     let guardada: unknown = undefined
     const manager = {
         getConfig: async () => ({ algo: 'valor' }),
-        saveConfig: async (_id: string, cfg: unknown) => { guardada = cfg }
+        saveConfig: async (_id: string, cfg: unknown) => { guardada = cfg; return [] }
     } as unknown as PluginManager
 
     const e = pluginInstallConfig(manager, 'censor')
     const exportada = await e.exportConfig!(opts(false))
     assert.deepEqual(exportada, { installConfig: { algo: 'valor' } })
 
-    await e.importConfig!(exportada)
+    const r = await e.importConfig!(exportada)
     assert.deepEqual(guardada, { algo: 'valor' })
+    assert.equal(r.applied, 1)
+})
+
+test('una config de instalacion que no encaja con el esquema no se aplica, y el aviso dice por que', async () => {
+    const manager = {
+        getConfig: async () => ({}),
+        saveConfig: async () => [{ field: 'url', message: `'URL' is required` }]
+    } as unknown as PluginManager
+
+    const r = await pluginInstallConfig(manager, 'censor').importConfig!({ installConfig: { otra: 'cosa' } })
+    assert.equal(r.applied, 0)
+    assert.equal(r.skipped, 1)
+    assert.match(r.warnings[0], /censor.*'URL' is required/)
 })
 
 test('basura en el sitio de la config de instalacion no escribe nada', async () => {
     let escribio = false
     const manager = {
         getConfig: async () => ({}),
-        saveConfig: async () => { escribio = true }
+        saveConfig: async () => { escribio = true; return [] }
     } as unknown as PluginManager
 
     const e = pluginInstallConfig(manager, 'censor')

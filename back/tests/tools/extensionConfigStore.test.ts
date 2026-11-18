@@ -2,26 +2,11 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { ExtensionConfigStore, extensionConfigName } from '../../src/tools/ExtensionConfigStore'
-import { ISecrets } from '../../src/tools/ISecrets'
+import { fakeSecrets } from './fakeExtensionConfigStore'
 
 /*
     The single store of extension installation configuration (plans/extension-config, S1).
 */
-
-// In-memory Secrets: objects by name, as the three real stores keep them. A missing one reads as the default.
-const fakeSecrets = (): ISecrets & { objects: Map<string, Record<string, unknown>> } => {
-    const objects = new Map<string, Record<string, unknown>>()
-    return {
-        objects,
-        write: async (name, content) => { objects.set(name, content as Record<string, unknown>) },
-        read: async (name, defaultValue) => objects.has(name) ? objects.get(name) : defaultValue,
-        writeKey: async () => { throw new Error('not used by the store') },
-        readAllKeys: async () => { throw new Error('not used by the store') },
-        list: async prefix => [...objects.keys()].filter(n => n.startsWith(prefix)),
-        delete: async name => { objects.delete(name) },
-        storeLimit: () => undefined
-    }
-}
 
 test('the name follows kwirth-<type>-<id>-config', () => {
     assert.equal(extensionConfigName(EExtensionType.PROVIDER, 'http-pull-push'), 'kwirth-provider-http-pull-push-config')

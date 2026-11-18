@@ -114,7 +114,7 @@ import { applyLogSettings, componentLogger, ELogComponent, logError, logInfo, lo
 import { PluginManager } from './tools/PluginManager'
 import { LicenseManager } from './tools/LicenseManager'
 import { PluginApi } from './api/PluginApi'
-import { ProviderManager } from './tools/ProviderManager'
+import { ProviderManager, liveConfigSchema } from './tools/ProviderManager'
 import { ProviderApi } from './api/ProviderApi'
 import { SenderApi } from './api/SenderApi'
 import { WebhookApi } from './api/WebhookApi'
@@ -1886,8 +1886,9 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             const providerInstance = createProviderInstance(provConstructor, activeRI.clusterInfo, activeRI.kwirthData, activeRI.providerStorage) ?? undefined
                             if (!providerInstance) return undefined
                             if (providerInstance.configure && providerManager) {
-                                const cfg = await providerManager.getConfig(provId)
-                                if (Object.keys(cfg).length > 0) providerInstance.configure(cfg)
+                                // only what the admin saved (with its defaults): a provider nobody configured is not configured
+                                const cfg = await providerManager.getSavedConfig(provId, liveConfigSchema(providerInstance))
+                                if (cfg) providerInstance.configure(cfg)
                             }
                             // not awaited (as before): marked once it has come up, and only if it did
                             Promise.resolve(providerInstance.startProvider())
@@ -2374,7 +2375,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         let requiredChannels: string[] = []
         // plugin channels — all of them: load installed plugins and add their ids to requiredChannels
         if (!pluginManager) {
-            pluginManager = new PluginManager(runningInstance.configMaps)
+            pluginManager = new PluginManager(runningInstance.configMaps, new ExtensionConfigStore(runningInstance.secrets))
             await pluginManager.init()
             const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
             if (bundledExtensionsPath) await pluginManager.installBundled(bundledExtensionsPath, registeredChannels, licenseManager)
@@ -2448,7 +2449,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
 
         // provider plugins: load installed providers and register them
         if (!providerManager) {
-            providerManager = new ProviderManager(runningInstance.configMaps)
+            providerManager = new ProviderManager(runningInstance.configMaps, new ExtensionConfigStore(runningInstance.secrets))
             await providerManager.init()
             // the ones the image or the desktop brings (they were fetched and never installed)
             const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
@@ -2558,9 +2559,9 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                 if (providerInstance) {
 
                     if (providerInstance.configure) {
-                        const cfg = await configuredProviderManager.getConfig(provId)
-                        if (Object.keys(cfg).length > 0) providerInstance.configure(cfg)
-                        else logWarning(ELogComponent.CORE, `Provider '${provId}' has no configuration in ConfigMap — configure() skipped`)
+                        const cfg = await configuredProviderManager.getSavedConfig(provId, liveConfigSchema(providerInstance))
+                        if (cfg) providerInstance.configure(cfg)
+                        else logWarning(ELogComponent.CORE, `Provider '${provId}' has no saved configuration — configure() skipped`)
                     }
                     try {
                         await providerInstance!.startProvider()
@@ -2596,8 +2597,8 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                 const tmpInstance = createProviderInstance(providerConstructor, localClusterInfo, localKwirthData, runningInstance.providerStorage)
                 if ((tmpInstance?.providesRouter && tmpInstance.router) || tmpInstance?.configRouter) {
                     if (tmpInstance.configure) {
-                        const cfg = await providerManager.getConfig(provId)
-                        if (Object.keys(cfg).length > 0) tmpInstance.configure(cfg)
+                        const cfg = await providerManager.getSavedConfig(provId, liveConfigSchema(tmpInstance))
+                        if (cfg) tmpInstance.configure(cfg)
                     }
                     localClusterInfo.providers.push(tmpInstance)
                     await tmpInstance.startProvider()

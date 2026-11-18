@@ -160,6 +160,18 @@ export class ProviderApi {
         }
     }
 
+    /*
+        The schema of a provider's config form. The LIVE provider is asked first, which is the standard route
+        (and the only one for options generated hot). When there is no instance -- a provider with no router
+        that nobody has subscribed to is never instantiated -- it falls back to the 'schema' array the core
+        extracted from its back.js on installing it. The form, the config read and the validation on saving
+        all use this one, so they cannot disagree.
+    */
+    private async schemaFor(id: string): Promise<IProviderFieldDef[] | undefined> {
+        const running = this.getRunningProviders().find(p => p.id === id)
+        return (running ? this.configSchemaOf(running) : undefined) ?? await this.providerManager.getSchemaAsync(id)
+    }
+
     private addRoutes(): void {
         this.router.get('/', async (_req: Request, res: Response) => {
             try {
@@ -282,24 +294,24 @@ export class ProviderApi {
         })
 
         this.router.get('/:id/schema', async (req: Request, res: Response) => {
-            // The LIVE provider is asked first, which is the standard route. When there is no instance
-            // -- a provider with no router that nobody has subscribed to is never instantiated -- it
-            // falls back to the 'schema' array the core extracted from its back.js on installing it.
-            const running = this.getRunningProviders().find(p => p.id === req.params.id)
-            const schema = (running ? this.configSchemaOf(running) : undefined) ?? await this.providerManager.getSchemaAsync(req.params.id)
+            const schema = await this.schemaFor(req.params.id)
             if (!schema) return void res.status(404).json({ error: 'No schema' })
             res.json(schema)
         })
 
+        // The current values, completed with the defaults of the same schema the form draws
         this.router.get('/:id/config', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
-            res.json(await this.providerManager.getConfig(req.params.id))
+            res.json(await this.providerManager.getConfig(req.params.id, await this.schemaFor(req.params.id)))
         })
 
         this.router.put('/:id/config', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+            if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) return void res.status(400).json({ error: 'Expected a JSON object' })
             try {
-                await this.providerManager.saveConfig(req.params.id, req.body)
+                // Validated against the schema the form drew: what does not fit is a 400 naming every field, nothing saved
+                const errors = await this.providerManager.saveConfig(req.params.id, req.body as Record<string, unknown>, await this.schemaFor(req.params.id))
+                if (errors.length > 0) return void res.status(400).json({ error: errors.map(e => e.message).join('; '), fields: errors })
                 res.json({ ok: true })
             } catch (err) {
                 res.status(500).json({ error: String(err) })

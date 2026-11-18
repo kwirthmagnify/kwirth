@@ -18,6 +18,7 @@ import type { AddressInfo } from 'net'
 import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 import { ProviderApi, TProviderApiEntry } from '../../src/api/ProviderApi'
 import { ProviderManager } from '../../src/tools/ProviderManager'
+import { fakeConfigStore } from '../tools/fakeExtensionConfigStore'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { IProvider } from '../../src/providers/IProvider'
 
@@ -56,7 +57,7 @@ const fakeProvider = (id: string, options: IFakeProviderOptions = {}): IProvider
 
 const listar = async (providers: IProvider[]): Promise<TProviderApiEntry[]> => {
     const configMaps = memConfigMaps()
-    const providerManager = new ProviderManager(configMaps)
+    const providerManager = new ProviderManager(configMaps, fakeConfigStore())
     await providerManager.init()
     const apiKeyApi = new ApiKeyApi(configMaps, {} as never)
     const api = new ProviderApi(providerManager, new Map(), apiKeyApi, {}, () => providers, () => new Map(), async () => ({}))

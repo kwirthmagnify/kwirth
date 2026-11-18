@@ -6,6 +6,7 @@ import path from 'path'
 import { EExtensionType, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import { PluginManager } from '../../src/tools/PluginManager'
 import { ProviderManager } from '../../src/tools/ProviderManager'
+import { fakeConfigStore } from './fakeExtensionConfigStore'
 import { SenderManager } from '../../src/tools/SenderManager'
 import { WebhookManager } from '../../src/tools/WebhookManager'
 import { ThemeManager } from '../../src/tools/ThemeManager'
@@ -60,8 +61,8 @@ interface IDevCase {
 }
 
 const CASES: Record<string, IDevCase> = {
-    plugin: { section: 'plugins', list: async () => { const m = new PluginManager(makeConfigMaps() as never); m.loadDevPlugins(new Map()); return m.listInstalled() } },
-    provider: { section: 'providers', list: async () => { const m = new ProviderManager(makeConfigMaps() as never); await m.init(); m.loadDevProviders(new Map()); return m.listInstalled() } },
+    plugin: { section: 'plugins', list: async () => { const m = new PluginManager(makeConfigMaps() as never, fakeConfigStore()); m.loadDevPlugins(new Map()); return m.listInstalled() } },
+    provider: { section: 'providers', list: async () => { const m = new ProviderManager(makeConfigMaps() as never, fakeConfigStore()); await m.init(); m.loadDevProviders(new Map()); return m.listInstalled() } },
     sender: { section: 'senders', list: async () => { const m = new SenderManager(makeConfigMaps() as never); await m.init(); m.loadDevSenders(); return m.listInstalled() } },
     webhook: { section: 'webhooks', list: async () => { const m = new WebhookManager(makeConfigMaps() as never); await m.init(); m.loadDevWebhooks(); return m.listInstalled() } },
     theme: { section: 'themes', list: async () => { const m = new ThemeManager(makeConfigMaps() as never); m.loadDevThemes(); return m.listInstalled() } },

@@ -1,5 +1,6 @@
 import { IConfigMaps } from './IConfigMap'
-import { EExtensionType, IConfigFieldDef, IExtensionRequirement, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IConfigFieldDef, IConfigValidationError, IExtensionRequirement, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { ExtensionConfigStore } from './ExtensionConfigStore'
 import { listBundledOfType, peekBundledMeta } from './BundledExtensions'
 import { TChannelConstructor } from '../channels/IChannel'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
@@ -70,7 +71,7 @@ export class PluginManager {
     */
     onPluginUninstalled?: (id: string) => void
 
-    constructor(configMaps: IConfigMaps) {
+    constructor(configMaps: IConfigMaps, private configStore: ExtensionConfigStore) {
         this.configMaps = configMaps
     }
 
@@ -376,7 +377,7 @@ export class PluginManager {
             (list) => list.filter(p => p.id !== id))
         await this.configMaps.write(`kwirth-plugin-${id}-back`, null)
         await this.configMaps.write(`kwirth-plugin-${id}-front`, null)
-        await this.configMaps.write(`kwirth-plugin-${id}-config`, null)
+        await this.configStore.delete(EExtensionType.PLUGIN, id)
 
         for (const f of [`kwirth-plugin-${id}-back.js`, `kwirth-plugin-${id}-front.js`]) {
             const p = path.join(os.tmpdir(), f)
@@ -386,17 +387,25 @@ export class PluginManager {
         logInfo(ELogComponent.CORE, `Plugin '${id}' uninstalled`)
     }
 
-    // Per-plugin installation configuration (generic JSON), persisted in a ConfigMap. The plugin manager
-    // (front end) edits it and it is consumed by the plugin's back end
-    // (IBackChannelObject.getPluginConfig) and by the front end (GET /plugins/:id/config). The same
-    // pattern as ProviderManager.get/saveConfig.
-    async getConfig(id: string): Promise<Record<string, unknown>> {
-        const data = await this.configMaps.read(`kwirth-plugin-${id}-config`, {})
-        return (data ?? {}) as Record<string, unknown>
+    /*
+        Per-plugin installation configuration, in the common ExtensionConfigStore (plans/extension-config).
+        It is consumed by the plugin's back end (IBackChannelObject.getPluginConfig) and by the front end
+        (GET /plugins/:id/config). Its schema is the `configSchema` of the plugin's package.json; while a
+        plugin declares none —none does yet— nothing is validated and it is saved as it comes.
+    */
+    private schemaOf(id: string): IConfigFieldDef[] {
+        const meta = this.devPlugins.get(id)?.meta ?? this.cachedIndex.find(p => p.id === id)
+        return meta?.configSchema ?? []
     }
 
-    async saveConfig(id: string, cfg: Record<string, unknown>): Promise<void> {
-        await this.configMaps.write(`kwirth-plugin-${id}-config`, cfg)
+    // The current values: what is saved, completed with the schema's defaults.
+    async getConfig(id: string): Promise<Record<string, unknown>> {
+        return this.configStore.readSimple(EExtensionType.PLUGIN, id, this.schemaOf(id))
+    }
+
+    // Validates and saves it. What does not fit the schema comes back as errors and nothing is saved.
+    async saveConfig(id: string, cfg: Record<string, unknown>): Promise<IConfigValidationError[]> {
+        return this.configStore.writeSimple(EExtensionType.PLUGIN, id, this.schemaOf(id), cfg)
     }
 
     async loadAll(registeredChannels: Map<string, TChannelConstructor>): Promise<void> {

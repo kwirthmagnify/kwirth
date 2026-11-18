@@ -1,5 +1,5 @@
 import { IExtension } from '@kwirthmagnify/kwirth-common-back'
-import { IExtensionImportResult, ISenderConfig, ISenderStoredConfig, IWebhookConfig } from '@kwirthmagnify/kwirth-common'
+import { IConfigValidationError, IExtensionImportResult, ISenderConfig, ISenderStoredConfig, IWebhookConfig } from '@kwirthmagnify/kwirth-common'
 import { IIdpInstanceConfig } from '@kwirthmagnify/kwirth-common-back'
 import { PluginManager } from './PluginManager'
 import { ProviderManager } from './ProviderManager'
@@ -38,16 +38,21 @@ import { secretFieldNames } from './ConfigFieldSecrets'
 const nada = (): IExtensionImportResult => ({ applied: 0, skipped: 0, warnings: [] })
 
 /*
-    A plugin's or a provider's installation configuration: generic JSON edited by its manager. The core
-    does not interpret it, so it is copied whole.
+    A plugin's or a provider's installation configuration, edited by its manager and kept in the common
+    ExtensionConfigStore. It is imported through the same validation as the dialog: what does not fit the
+    schema is not applied, and says why.
 */
+const importResultOf = (id: string, errors: IConfigValidationError[]): IExtensionImportResult =>
+    errors.length === 0
+        ? { applied: 1, skipped: 0, warnings: [] }
+        : { applied: 0, skipped: 1, warnings: [`'${id}' config not applied: ${errors.map(e => e.message).join('; ')}`] }
+
 export const pluginInstallConfig = (manager: PluginManager, id: string): IExtension => ({
     exportConfig: async () => ({ installConfig: await manager.getConfig(id) }),
     importConfig: async (data) => {
         const cfg = (data as { installConfig?: Record<string, unknown> })?.installConfig
         if (!cfg || typeof cfg !== 'object') return nada()
-        await manager.saveConfig(id, cfg)
-        return { applied: 1, skipped: 0, warnings: [] }
+        return importResultOf(id, await manager.saveConfig(id, cfg))
     }
 })
 
@@ -56,8 +61,7 @@ export const providerInstallConfig = (manager: ProviderManager, id: string): IEx
     importConfig: async (data) => {
         const cfg = (data as { installConfig?: Record<string, unknown> })?.installConfig
         if (!cfg || typeof cfg !== 'object') return nada()
-        await manager.saveConfig(id, cfg)
-        return { applied: 1, skipped: 0, warnings: [] }
+        return importResultOf(id, await manager.saveConfig(id, cfg))
     }
 })
 

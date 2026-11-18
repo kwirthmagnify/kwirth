@@ -75,9 +75,17 @@ export class ExtensionConfigStore {
      * readable) gives just the defaults.
      */
     async readSimple(type: EExtensionType, id: string, schema: IConfigFieldDef[]): Promise<Record<string, unknown>> {
+        return (await this.readSimpleIfSaved(type, id, schema)) ?? applyConfigDefaults(schema, {})
+    }
+
+    /**
+     * Like readSimple, but undefined when the admin never saved anything: for whoever must tell "never
+     * configured" apart from "configured", such as a provider that is only configured once it has been.
+     */
+    async readSimpleIfSaved(type: EExtensionType, id: string, schema: IConfigFieldDef[]): Promise<Record<string, unknown> | undefined> {
         const stored = await this.read(type, id)
-        const values = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored as Record<string, unknown> : {}
-        return applyConfigDefaults(schema, values)
+        if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return undefined
+        return applyConfigDefaults(schema, stored as Record<string, unknown>)
     }
 
     /**

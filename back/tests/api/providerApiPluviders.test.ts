@@ -10,6 +10,7 @@ import type { AddressInfo } from 'net'
 import { ApiKeyApi } from '../../src/api/ApiKeyApi'
 import { IPluviderHostInfo, ProviderApi, TProviderApiEntry } from '../../src/api/ProviderApi'
 import { ProviderManager } from '../../src/tools/ProviderManager'
+import { fakeConfigStore } from '../tools/fakeExtensionConfigStore'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { IProvider, IProviderSubscriptionHelp } from '../../src/providers/IProvider'
 import { TPluviderChannel } from '../../src/providers/Pluvider'
@@ -48,7 +49,7 @@ const fakePluvider = (description: string, help?: IProviderSubscriptionHelp, bro
 
 const serve = async (providers: IProvider[], pluviders: Map<string, TPluviderChannel>, plugins: Record<string, IPluviderHostInfo> = {}): Promise<{ list: TProviderApiEntry[], close: () => void }> => {
     const configMaps = memConfigMaps()
-    const providerManager = new ProviderManager(configMaps)
+    const providerManager = new ProviderManager(configMaps, fakeConfigStore())
     await providerManager.init()
     const apiKeyApi = new ApiKeyApi(configMaps, {} as never)
     const api = new ProviderApi(providerManager, new Map(), apiKeyApi, {}, () => providers, () => pluviders, async id => plugins[id])

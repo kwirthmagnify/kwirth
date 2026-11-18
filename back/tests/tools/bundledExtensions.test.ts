@@ -8,6 +8,7 @@ import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { listBundledOfType, peekExtensionType, peekBundledMeta } from '../../src/tools/BundledExtensions'
 import { ProviderManager, IProviderMeta } from '../../src/tools/ProviderManager'
 import { PluginManager } from '../../src/tools/PluginManager'
+import { fakeConfigStore } from './fakeExtensionConfigStore'
 import { TChannelConstructor } from '../../src/channels/IChannel'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { TProviderConstructor } from '../../src/providers/IProvider'
@@ -167,7 +168,7 @@ test('🔴 the providers a bundle brings are installed (they used to be fetched 
         await makeProviderTgz(dir, 'providers-sample', 'e2e-bundled', '1.0.0')
         await makeTgz(dir, 'plugins-other', { id: 'other', extensionType: 'plugin' })   // not its type: ignored
         const { cm, store } = storeConfigMaps()
-        const manager = new ProviderManager(cm)
+        const manager = new ProviderManager(cm, fakeConfigStore())
         await manager.init()
         const registered = new Map<string, TProviderConstructor>()
 
@@ -182,7 +183,7 @@ test('🔴 the providers a bundle brings are installed (they used to be fetched 
 test('a bundled provider already installed with the same version is left alone; a new version updates it', async () => {
     await withBundledDir(async dir => {
         const { cm, store } = storeConfigMaps()
-        const manager = new ProviderManager(cm)
+        const manager = new ProviderManager(cm, fakeConfigStore())
         await manager.init()
         const registered = new Map<string, TProviderConstructor>()
 
@@ -225,7 +226,7 @@ const makePluginTgz = async (dir: string, id: string, version: string): Promise<
 test('🔴 a bundled plugin is known by the id its package declares: a new version in the image updates it', async () => {
     await withBundledDir(async dir => {
         const { cm, store } = storeConfigMaps()
-        const manager = new PluginManager(cm)
+        const manager = new PluginManager(cm, fakeConfigStore())
         await manager.init()
 
         await makePluginTgz(dir, 'e2e-bundled-plugin', '1.0.0')
@@ -235,7 +236,7 @@ test('🔴 a bundled plugin is known by the id its package declares: a new versi
         // a new image is a new start: a fresh manager over the same stored index, with 1.1.0 in the bundle
         fs.rmSync(path.join(dir, 'plugins-e2e-bundled-plugin.tgz'))
         await makePluginTgz(dir, 'e2e-bundled-plugin', '1.1.0')
-        const restarted = new PluginManager(cm)
+        const restarted = new PluginManager(cm, fakeConfigStore())
         await restarted.init()
         await restarted.installBundled(dir, new Map<string, TChannelConstructor>())
 
@@ -259,7 +260,7 @@ test('🔴 a bundled plugin is known by the id its package declares: a new versi
 test('🔴 a bundled plugin updated from the marketplace is NOT rolled back by a restart', async () => {
     await withBundledDir(async dir => {
         const { cm, store } = storeConfigMaps()
-        const manager = new PluginManager(cm)
+        const manager = new PluginManager(cm, fakeConfigStore())
         await manager.init()
 
         await makePluginTgz(dir, 'e2e-keep-plugin', '1.0.0')
@@ -278,7 +279,7 @@ test('🔴 a bundled plugin updated from the marketplace is NOT rolled back by a
         assert.notEqual(afterUpdate[0].installedFrom, 'bundled')
 
         // the container restarts: same image (1.0.0 in the bundle), fresh manager over the stored index
-        const restarted = new PluginManager(cm)
+        const restarted = new PluginManager(cm, fakeConfigStore())
         await restarted.init()
         await restarted.installBundled(dir, new Map<string, TChannelConstructor>())
 
@@ -290,7 +291,7 @@ test('🔴 a bundled plugin updated from the marketplace is NOT rolled back by a
 test('🔴 a bundled provider updated from the marketplace is NOT rolled back by a restart', async () => {
     await withBundledDir(async dir => {
         const { cm, store } = storeConfigMaps()
-        const manager = new ProviderManager(cm)
+        const manager = new ProviderManager(cm, fakeConfigStore())
         await manager.init()
         const registered = new Map<string, TProviderConstructor>()
 
@@ -307,7 +308,7 @@ test('🔴 a bundled provider updated from the marketplace is NOT rolled back by
         assert.deepEqual(afterUpdate.map(p => [p.id, p.version]), [['e2e-keep-provider', '1.2.0']])
         assert.notEqual(afterUpdate[0].installedFrom, 'bundled')
 
-        const restarted = new ProviderManager(cm)
+        const restarted = new ProviderManager(cm, fakeConfigStore())
         await restarted.init()
         await restarted.installBundled(dir, registered)
 
