@@ -257,6 +257,32 @@ test('solo cuenta los ReplicaSets de ESE deployment, y los ordena del mas nuevo 
     assert.equal(res.revisions[0].containers[0].image, 'api:3')
 })
 
+test('every revision says which code it ran (OCI annotations of its pod template); without them, none', async () => {
+    // Without this, a regression that came in with a deploy has no "previous commit" to compare against: describe_pod
+    // only gives the source of the pod running NOW.
+    const { host } = fakeHost()
+    const rs = (revision, annotations) => ({
+        metadata: { name: `api-${revision}`, annotations: { 'deployment.kubernetes.io/revision': String(revision) }, ownerReferences: [{ kind: 'Deployment', name: 'api' }] },
+        spec: { replicas: 1, template: { metadata: { annotations }, spec: { containers: [{ name: 'app', image: 'api:latest' }] } } },
+        status: {}
+    })
+    host.k8s.appsApi.listNamespacedReplicaSet = async () => ({ items: [
+        rs(1, { 'org.opencontainers.image.source': 'https://git.example/team/api', 'org.opencontainers.image.revision': 'aaa111' }),
+        rs(2, { 'org.opencontainers.image.source': 'https://git.example/team/api', 'org.opencontainers.image.revision': 'bbb222' }),
+        rs(3, { 'kwirth.io/source-repo': 'https://git.example/team/api', 'kwirth.io/source-ref': 'ccc333' }),
+        rs(4, undefined)
+    ] })
+
+    const res = await tool('get_rollout_history').execute({ namespace: 'prod', name: 'api' }, host)
+
+    assert.deepEqual(res.revisions.map(r => r.source), [
+        undefined,                                                         // no annotations: nothing invented
+        { repo: 'https://git.example/team/api', revision: 'ccc333' },      // the kwirth.io keys back the OCI ones
+        { repo: 'https://git.example/team/api', revision: 'bbb222' },
+        { repo: 'https://git.example/team/api', revision: 'aaa111' }
+    ])
+})
+
 test('el env de cada revision lleva el valor Y de donde sale', async () => {
     // The value, so revisions can be compared; the provenance, to know which one has to be looked at
     // separately (a change inside a ConfigMap creates no revision).

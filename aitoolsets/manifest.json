@@ -34,6 +34,16 @@
     "id": "k8s-describe",
     "name": "@kwirthmagnify/kwirth-aitoolset-k8s-describe",
     "displayName": "K8s Describe",
+    "version": "0.2.1",
+    "description": "Diagnostic detail of a single object: describe and full manifests for pods, controllers, services, ingresses and namespaces; the source code each rollout revision ran",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-describe/-/kwirth-aitoolset-k8s-describe-0.2.1.tgz",
+    "website": "https://kwirthmagnify.dev"
+  },
+  {
+    "extensionType": "aitoolset",
+    "id": "k8s-describe",
+    "name": "@kwirthmagnify/kwirth-aitoolset-k8s-describe",
+    "displayName": "K8s Describe",
     "version": "0.2.0",
     "description": "Diagnostic detail of a single object: describe and full manifests for pods, controllers, services, ingresses and namespaces",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-describe/-/kwirth-aitoolset-k8s-describe-0.2.0.tgz",

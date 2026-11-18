@@ -73,6 +73,18 @@ const templateContainer = (ct: TAnyObject) => ({
 })
 
 /** Where an environment variable whose value is not set by hand comes from. */
+/*
+    Provenance of the code: standard OCI annotations, backed by kwirth.io. With this the model can go from a pod — or
+    from each rollout revision, through its pod template — to the source that built it. Absent when nobody set them.
+*/
+const sourceOf = (annotations: TAnyObject | undefined) => {
+    const ann = annotations ?? {}
+    const repo: string | undefined = ann['org.opencontainers.image.source'] ?? ann['kwirth.io/source-repo']
+    if (!repo) return undefined
+    const revision: string | undefined = ann['org.opencontainers.image.revision'] ?? ann['kwirth.io/source-ref']
+    return { repo, revision }
+}
+
 const envSource = (e: TAnyObject): string | undefined =>
     e.valueFrom?.configMapKeyRef ? `configMap:${e.valueFrom.configMapKeyRef.name}/${e.valueFrom.configMapKeyRef.key}`
         : e.valueFrom?.secretKeyRef ? `secret:${e.valueFrom.secretKeyRef.name}/${e.valueFrom.secretKeyRef.key}`
@@ -128,13 +140,7 @@ const k8sDescribe: IAiToolset = {
                         controlledBy = { kind: podOwner.kind, name: podOwner.name }   // StatefulSet/DaemonSet/Job mandan directamente
                     }
 
-                    // Provenance of the code: standard OCI annotations, backed by kwirth.io. With this the
-                    // model can go from the pod to the source that built it.
-                    const ann = pod.metadata?.annotations ?? {}
-                    const sourceRepo = ann['org.opencontainers.image.source'] ?? ann['kwirth.io/source-repo']
-                    const source = sourceRepo
-                        ? { repo: sourceRepo, revision: ann['org.opencontainers.image.revision'] ?? ann['kwirth.io/source-ref'] }
-                        : undefined
+                    const source = sourceOf(pod.metadata?.annotations)
 
                     return {
                         name, namespace,
@@ -290,7 +296,7 @@ const k8sDescribe: IAiToolset = {
         }),
         defineTool({
             name: 'get_rollout_history',
-            description: 'Returns the rollout history (revisions) of a Deployment via its ReplicaSets: per revision the image(s), replicas and pod-template summary (env with inline VALUES and their configMap/secret source, resources, command). Use to see WHAT CHANGED recently — a new image tag, a changed inline env value, a resource/command change — that may have broken the pods. Compare the newest revision against the previous one. NOTE: a change to a ConfigMap/Secret VALUE does NOT create a revision — use get_workload_config_refs for that.',
+            description: 'Returns the rollout history (revisions) of a Deployment via its ReplicaSets: per revision the image(s), replicas, pod-template summary (env with inline VALUES and their configMap/secret source, resources, command) and `source` (repo + revision of the code it ran, from the OCI annotations of its pod template, when set). Use to see WHAT CHANGED recently — a new image tag, a changed inline env value, a resource/command change, a different source revision — that may have broken the pods. Compare the newest revision against the previous one; when both have a `source`, comparing the code of their two revisions (with a source-code tool, if you have one) says which commit brought the change. NOTE: a change to a ConfigMap/Secret VALUE does NOT create a revision — use get_workload_config_refs for that.',
             effect: EToolEffect.READ,
             // Revisions carry the `env` with their values in the clear: it is READ, but it shows more than a describe.
             sensitivity: EToolSensitivity.INTERNAL,
@@ -321,6 +327,8 @@ const k8sDescribe: IAiToolset = {
                             createdAt: rs.metadata?.creationTimestamp,
                             replicas: rs.spec?.replicas ?? 0,
                             readyReplicas: rs.status?.readyReplicas ?? 0,
+                            // Which commit each revision ran: comparing two of them names the change that broke it.
+                            source: sourceOf(rs.spec?.template?.metadata?.annotations),
                             containers: (tmpl.containers ?? []).map(container),
                             serviceAccount: tmpl.serviceAccountName,
                             securityContext: tmpl.securityContext
