@@ -146,6 +146,120 @@ export const isConfigFieldEnabled = (field: IConfigFieldDef, schema: IConfigFiel
 }
 
 /*
+    DEFAULTS, PRUNING AND VALIDATION of an installation configuration (plans/extension-config).
+
+    The back end applies these three to EVERY extension family, whatever stores the configuration, so the
+    rule is one and the same for providers, logins, IdPs, routers, senders, webhooks, plugins and AI
+    toolsets. They live here, and not in the core, so that a form can run the same check before sending.
+
+    ⚠️ They are TOLERANT with what the forms send today, on purpose. A form that stores everything as text
+    sends 'true' for a switch and '5' for a number, and an emptied number field sends '' (see ConfigFields).
+    Rejecting that would break configurations that work; what is rejected is what no form can mean.
+*/
+
+/** One field that does not fit the schema. The message names the field, so it can be shown as it is. */
+export interface IConfigValidationError {
+    /** The name of the field (IConfigFieldDef.name). */
+    field: string
+    message: string
+}
+
+/** No value: absent, null or the empty string an emptied field sends. */
+const isEmptyConfigValue = (v: unknown): boolean => v === undefined || v === null || v === ''
+
+/** A boolean field kept as text ('true') reads as the boolean it means, as the forms compare it. */
+const comparableValues = (schema: IConfigFieldDef[], values: Record<string, unknown>): Record<string, unknown> => {
+    const result: Record<string, unknown> = { ...values }
+    for (const f of schema) {
+        const v = values[f.name]
+        if (f.type === 'boolean' && typeof v === 'string') result[f.name] = v === 'true'
+    }
+    return result
+}
+
+/**
+ * The values with each field that has no value filled in with its 'default'. Fields without a default stay
+ * as they are, and keys that are not in the schema are kept (pruneConfig is the one that drops them).
+ */
+export const applyConfigDefaults = (schema: IConfigFieldDef[], values: Record<string, unknown>): Record<string, unknown> => {
+    const result: Record<string, unknown> = { ...values }
+    for (const f of schema) {
+        if (f.default !== undefined && result[f.name] === undefined) result[f.name] = f.default
+    }
+    return result
+}
+
+/**
+ * The values without the keys the schema does not declare: what a previous version of the extension had
+ * and this one dropped. An empty schema means "unknown", not "no fields": the values come back untouched.
+ */
+export const pruneConfig = (schema: IConfigFieldDef[], values: Record<string, unknown>): Record<string, unknown> => {
+    if (schema.length === 0) return { ...values }
+    const result: Record<string, unknown> = {}
+    for (const f of schema) {
+        if (f.name in values) result[f.name] = values[f.name]
+    }
+    return result
+}
+
+/** Whether `value` is among `options`. indexOf and not includes: this package compiles against an ES2015 lib. */
+const isOption = (options: string[], value: string): boolean => options.indexOf(value) >= 0
+
+/** Why one value does not fit its field, or undefined when it does. The value is known not to be empty. */
+const fieldValueProblem = (f: IConfigFieldDef, v: unknown): string | undefined => {
+    switch (f.type) {
+        case 'number': {
+            const n = typeof v === 'string' ? Number(v) : v
+            return typeof n === 'number' && Number.isFinite(n) ? undefined : 'must be a number'
+        }
+        case 'boolean':
+            return typeof v === 'boolean' || v === 'true' || v === 'false' ? undefined : 'must be true or false'
+        case 'select':
+            if (typeof v !== 'string') return 'must be text'
+            return !f.options || f.options.length === 0 || isOption(f.options, v) ? undefined : `must be one of: ${f.options.join(', ')}`
+        case 'multiselect': {
+            if (typeof v !== 'string') return 'must be text'
+            const options = f.options
+            if (!options || options.length === 0) return undefined
+            const unknown = v.split(',').map(s => s.trim()).filter(s => s !== '' && !isOption(options, s))
+            return unknown.length === 0 ? undefined : `has values that are not allowed: ${unknown.join(', ')}`
+        }
+        case 'json':
+            if (typeof v !== 'string') return 'must be text'
+            try {
+                JSON.parse(v)
+                return undefined
+            }
+            catch {
+                return 'must be valid JSON'
+            }
+        default:
+            // 'text', 'password', 'textarea' and an absent type
+            return typeof v === 'string' ? undefined : 'must be text'
+    }
+}
+
+/**
+ * What does not fit the schema: a required field with no value while it is ENABLED (enabledWhen), or a
+ * value of the wrong type. An empty list means the configuration can be saved. Keys the schema does not
+ * declare are not errors: pruneConfig drops them.
+ */
+export const validateConfig = (schema: IConfigFieldDef[], values: Record<string, unknown>): IConfigValidationError[] => {
+    const errors: IConfigValidationError[] = []
+    const comparable = comparableValues(schema, values)
+    for (const f of schema) {
+        const v = values[f.name]
+        if (isEmptyConfigValue(v)) {
+            if (f.required && isConfigFieldEnabled(f, schema, comparable)) errors.push({ field: f.name, message: `'${f.label}' is required` })
+            continue
+        }
+        const problem = fieldValueProblem(f, v)
+        if (problem) errors.push({ field: f.name, message: `'${f.label}' ${problem}` })
+    }
+    return errors
+}
+
+/*
     One field of the form, as the AI assistant sees it.
 
     The front never includes 'password' nor 'secret' fields, and the back drops them AGAIN by their
