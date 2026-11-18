@@ -67,7 +67,7 @@ export class RouterApi {
         this.router.delete('/:id', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                await this.manager.uninstall(req.params.id)
+                await this.manager.uninstall(req.params.id, req.query.deleteConfig === 'true')
                 this.onChanged()
                 res.json({ ok: true })
             }

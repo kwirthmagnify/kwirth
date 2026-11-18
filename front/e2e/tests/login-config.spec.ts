@@ -11,6 +11,7 @@ import { login, clickExtensionMenuItem, dismissOpenDialogs, USER, PASS } from '.
     what the PACKAGE carries (login.json: layout, texts) stays apart from what the ADMIN edits (its
     configSchema, in a Secret). The page is served both, the admin's winning, and a save never wipes the
     package's layout.
+    Uninstalling keeps the admin's config unless the confirmation's box is ticked (P5).
 
     The login is a fixture written here (package.json with a configSchema, and a login.json) and installed
     through the API. Non-destructive: there was no such login before, and afterAll uninstalls it.
@@ -76,7 +77,8 @@ test.describe('login extension config: the package\'s part and the admin\'s part
     })
 
     test.afterAll(async () => {
-        await api?.delete(`/core/logins/${LOGIN_ID}`, { headers: auth }).catch(() => undefined)
+        // with its config: this test brought it, and a kept config would be left behind in the cluster
+        await api?.delete(`/core/logins/${LOGIN_ID}?deleteConfig=true`, { headers: auth }).catch(() => undefined)
         await page?.close()
         await api?.dispose()
     })
@@ -126,8 +128,46 @@ test.describe('login extension config: the package\'s part and the admin\'s part
         await dismissOpenDialogs(page)
     })
 
-    test('uninstalled: its config goes with it', async () => {
-        expect((await api.delete(`/core/logins/${LOGIN_ID}`, { headers: auth })).status()).toBe(200)
+    // Uninstalled from THIS login's card: the confirmation, with the box to delete its config ticked or not
+    const uninstallFromDialog = async (deleteConfig: boolean) => {
+        await clickExtensionMenuItem(page, 'Login extensions')
+        await expect(dialog()).toBeVisible({ timeout: 40000 })
+        await dialog().getByText(DISPLAY, { exact: true }).first()
+            .locator('xpath=ancestor::*[.//span[@aria-label="Uninstall"]][1]')
+            .locator('span[aria-label="Uninstall"] button').first().click()
+        const confirm = page.getByRole('dialog').filter({ hasText: /Are you sure you want to uninstall/ })
+        await expect(confirm).toBeVisible({ timeout: 20000 })
+        const box = confirm.getByLabel('Also delete its configuration')
+        await expect(box, 'the box starts unticked: keeping is what you get without thinking').not.toBeChecked()
+        if (deleteConfig) await box.check()
+        await confirm.getByRole('button', { name: 'yes' }).click()
+        await expect(confirm).toBeHidden({ timeout: 20000 })
+        await expect.poll(async () => (await api.get(configUrl)).status(), { timeout: 30000 }).toBe(404)
+        await dismissOpenDialogs(page)
+    }
+
+    const reinstall = async () => {
+        const res = await api.post('/core/logins/upload', { headers: { ...auth, 'content-type': 'application/octet-stream' }, data: fs.readFileSync(makeTgz()) })
+        expect(res.status(), await res.text()).toBe(200)
+    }
+
+    test('🔴 uninstalled from the dialog without the box: the config is kept, and a reinstall serves it again', async () => {
+        await uninstallFromDialog(false)
+        await reinstall()
+        const served = await (await api.get(configUrl)).json() as Record<string, unknown>
+        expect(served).toMatchObject({ autoUser: 'guest', autoPassword: 's3cr3t', title: 'Admin title' })
+    })
+
+    test('🔴 uninstalled with the box ticked: the config goes, and a reinstall starts from the package', async () => {
+        await uninstallFromDialog(true)
+        await reinstall()
+        const served = await (await api.get(configUrl)).json() as Record<string, unknown>
+        expect(served.autoUser).toBeUndefined()
+        expect(served).toMatchObject(LOGIN_JSON)
+    })
+
+    test('uninstalled through the API with deleteConfig: nothing of it is left', async () => {
+        expect((await api.delete(`/core/logins/${LOGIN_ID}?deleteConfig=true`, { headers: auth })).status()).toBe(200)
         expect((await api.get(configUrl)).status()).toBe(404)
     })
 })

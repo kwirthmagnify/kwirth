@@ -13,7 +13,7 @@ import { login, clickExtensionMenuItem, dismissOpenDialogs, USER, PASS } from '.
 
     The provider is a fixture written here (plain JS: a class and the 'schema' export the core caches on
     installing it) and installed through the API. Non-destructive: there was no such provider before, and
-    afterAll uninstalls it, which also removes its config.
+    afterAll uninstalls it with deleteConfig, so its config does not stay behind (a plain uninstall keeps it, P5).
 */
 
 const BACK = process.env.KWIRTH_E2E_BACK ?? 'http://localhost:3883'
@@ -86,7 +86,7 @@ test.describe('provider installation config: the common store behind the generic
     })
 
     test.afterAll(async () => {
-        await api?.delete(`/core/providers/${PROVIDER_ID}`, { headers: auth }).catch(() => undefined)
+        await api?.delete(`/core/providers/${PROVIDER_ID}?deleteConfig=true`, { headers: auth }).catch(() => undefined)
         await page?.close()
         await api?.dispose()
     })
@@ -140,8 +140,8 @@ test.describe('provider installation config: the common store behind the generic
         await dismissOpenDialogs(page)
     })
 
-    test('uninstalled: its config goes with it', async () => {
-        expect((await api.delete(`/core/providers/${PROVIDER_ID}`, { headers: auth })).status()).toBe(200)
+    test('uninstalled with deleteConfig: its config goes with it', async () => {
+        expect((await api.delete(`/core/providers/${PROVIDER_ID}?deleteConfig=true`, { headers: auth })).status()).toBe(200)
         expect(await (await api.get(configUrl, { headers: auth })).json()).toEqual({})
     })
 })

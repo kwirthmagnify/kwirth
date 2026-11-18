@@ -252,7 +252,7 @@ export class PackApi {
         }
     }
 
-    private async uninstallPack(id: string): Promise<void> {
+    private async uninstallPack(id: string, deleteConfig: boolean): Promise<void> {
         const { packManager, pluginManager, providerManager, senderManager, themeManager, homepageManager, idpManager, loginManager, docsManager, webhookManager, aiToolsetManager, dceManager, routerManager, registeredChannels, registeredProviders } = this.deps
         const meta = await packManager.getPackMeta(id)
         if (!meta) throw new Error(`Pack '${id}' is not installed`)
@@ -261,19 +261,19 @@ export class PackApi {
         for (const ext of dcesLast(meta.extensions)) {
             try {
                 switch (ext.extensionType) {
-                    case EExtensionType.PLUGIN:   await pluginManager.uninstallFromPack(ext.id, registeredChannels); break
-                    case EExtensionType.PROVIDER:  await providerManager.uninstallFromPack(ext.id, registeredProviders); break
+                    case EExtensionType.PLUGIN:   await pluginManager.uninstallFromPack(ext.id, registeredChannels, deleteConfig); break
+                    case EExtensionType.PROVIDER:  await providerManager.uninstallFromPack(ext.id, registeredProviders, deleteConfig); break
                     case EExtensionType.SENDER:    await senderManager.uninstallFromPack(ext.id); break
                     case EExtensionType.THEME:     await themeManager.uninstallFromPack(ext.id); break
                     case EExtensionType.HOMEPAGE:  await homepageManager.uninstallFromPack(ext.id); break
                     case EExtensionType.IDP:       await idpManager.uninstallFromPack(ext.id); break
-                    case EExtensionType.LOGIN:     await loginManager.uninstallFromPack(ext.id); break
+                    case EExtensionType.LOGIN:     await loginManager.uninstallFromPack(ext.id, deleteConfig); break
                     case EExtensionType.DOCS:      await docsManager.uninstallFromPack(ext.targetType ?? '', ext.id); break
                     case EExtensionType.WEBHOOK:   await webhookManager.uninstallFromPack(ext.id); break
                     // Last of all, and forced: the pack is going whole, so the consumers it brought are
                     // already gone by now and there is nobody left to protect from losing its DCE.
                     case EExtensionType.AITOOLSET: await aiToolsetManager.uninstallFromPack(ext.id); break
-                    case EExtensionType.ROUTER:    await routerManager.uninstallFromPack(ext.id); break
+                    case EExtensionType.ROUTER:    await routerManager.uninstallFromPack(ext.id, deleteConfig); break
                     case EExtensionType.DCE:       await dceManager.uninstallFromPack(ext.id); break
                 }
                 logInfo(ELogComponent.CORE, `Pack '${id}': uninstalled ${ext.extensionType} '${ext.id}'`)
@@ -337,7 +337,7 @@ export class PackApi {
         this.router.delete('/:id', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.deps.apiKeyApi))) return
             try {
-                await this.uninstallPack(req.params.id)
+                await this.uninstallPack(req.params.id, req.query.deleteConfig === 'true')
                 res.json({ ok: true })
             }
             catch (err) {

@@ -310,7 +310,8 @@ export class LoginManager {
         let index = (await this.configMaps.read('kwirth-logins-index', []) as ILoginMeta[]) || []
         for (const meta of staleDevLogins(index, declared)) {
             this.devLogins.delete(meta.id)
-            await this._doUninstall(meta.id, index)
+            // a login dropped from kwirth-dev.json keeps its admin config: putting it back finds it there
+            await this._doUninstall(meta.id, index, false)
             index = index.filter(m => m.id !== meta.id)
             logInfo(ELogComponent.CORE, `[dev] Login extension '${meta.id}' no longer in kwirth-dev.json — uninstalled`)
         }
@@ -339,27 +340,29 @@ export class LoginManager {
         }
     }
 
-    async uninstall(id: string): Promise<void> {
+    // deleteConfig: the admin's config goes too only when asked (plans/extension-config, P5); kept, it is
+    // back as it was on a reinstall
+    async uninstall(id: string, deleteConfig = false): Promise<void> {
         if (this.isDevLogin(id)) throw new Error(`Login extension '${id}' is a dev login and cannot be uninstalled`)
         const index = (await this.configMaps.read('kwirth-logins-index', []) as ILoginMeta[]) || []
         const meta = index.find(m => m.id === id)
         if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`Login extension '${id}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
-        await this._doUninstall(id, index)
+        await this._doUninstall(id, index, deleteConfig)
     }
 
-    async uninstallFromPack(id: string): Promise<void> {
+    async uninstallFromPack(id: string, deleteConfig = false): Promise<void> {
         const index = (await this.configMaps.read('kwirth-logins-index', []) as ILoginMeta[]) || []
-        await this._doUninstall(id, index)
+        await this._doUninstall(id, index, deleteConfig)
     }
 
-    private async _doUninstall(id: string, index: ILoginMeta[]): Promise<void> {
+    private async _doUninstall(id: string, index: ILoginMeta[], deleteConfig: boolean): Promise<void> {
         // re-read inside the lock: a removal must not write back a list that predates somebody else's install
         await updateIndex<ILoginMeta>('kwirth-logins-index',
             async () => (await this.configMaps.read('kwirth-logins-index', []) as ILoginMeta[]) || [],
             async (list) => { await this.configMaps.write('kwirth-logins-index', list) },
             (list) => list.filter(m => m.id !== id))
         await this.configMaps.write(`kwirth-login-${id}`, null)
-        await this.configStore.delete(EExtensionType.LOGIN, id)
+        if (deleteConfig) await this.configStore.delete(EExtensionType.LOGIN, id)
         this.cachedIndex = this.cachedIndex.filter(m => m.id !== id)
         logInfo(ELogComponent.CORE, `Login extension '${id}' uninstalled`)
     }

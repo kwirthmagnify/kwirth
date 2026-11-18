@@ -12,7 +12,8 @@ import fs from 'fs'
 
 /*
     Providers and plugins keep their installation config in the common ExtensionConfigStore
-    (plans/extension-config, S3): a Secret, defaults on reading, validation on saving, removed on uninstall.
+    (plans/extension-config, S3): a Secret, defaults on reading, validation on saving, kept on uninstall
+    unless deleteConfig is asked (P5).
 */
 
 // In-memory ConfigMaps, seeded: the managers read their index and the cached provider schema from here
@@ -84,10 +85,26 @@ test('provider: saving drops what the schema no longer declares', async () => {
     assert.equal('legacy' in (await manager.getConfig('p')), false)
 })
 
-test('🔴 provider uninstalled: its config Secret goes with it', async () => {
+test('🔴 provider uninstalled without asking: its config Secret is kept', async () => {
     const { manager, secrets } = providerManager()
     await manager.saveConfig('p', { url: 'u' })
     await manager.uninstall('p', new Map())
+    assert.equal(secrets.objects.has('kwirth-provider-p-config'), true)
+})
+
+test('🔴 provider uninstalled with deleteConfig: its config Secret goes with it', async () => {
+    const { manager, secrets } = providerManager()
+    await manager.saveConfig('p', { url: 'u' })
+    await manager.uninstall('p', new Map(), true)
+    assert.equal(secrets.objects.has('kwirth-provider-p-config'), false)
+})
+
+test('provider uninstalled by its pack: deleteConfig decides the same way', async () => {
+    const { manager, secrets } = providerManager()
+    await manager.saveConfig('p', { url: 'u' })
+    await manager.uninstallFromPack('p', new Map())
+    assert.equal(secrets.objects.has('kwirth-provider-p-config'), true)
+    await manager.uninstallFromPack('p', new Map(), true)
     assert.equal(secrets.objects.has('kwirth-provider-p-config'), false)
 })
 
@@ -139,9 +156,16 @@ test('plugin without a configSchema (all of them today): saved as it comes, noth
     assert.deepEqual(await manager.getConfig('pl'), { anything: 1 })
 })
 
-test('🔴 plugin uninstalled: its config Secret goes with it', async () => {
+test('🔴 plugin uninstalled without asking: its config Secret is kept', async () => {
     const { manager, secrets } = await pluginManager(SCHEMA)
     await manager.saveConfig('pl', { url: 'u' })
     await manager.uninstall('pl', new Map())
+    assert.equal(secrets.objects.has('kwirth-plugin-pl-config'), true)
+})
+
+test('🔴 plugin uninstalled with deleteConfig: its config Secret goes with it', async () => {
+    const { manager, secrets } = await pluginManager(SCHEMA)
+    await manager.saveConfig('pl', { url: 'u' })
+    await manager.uninstall('pl', new Map(), true)
     assert.equal(secrets.objects.has('kwirth-plugin-pl-config'), false)
 })

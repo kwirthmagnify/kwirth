@@ -60,7 +60,7 @@ export class LoginExtensionApi {
         this.router.delete('/:id', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                await this.loginManager.uninstall(req.params.id)
+                await this.loginManager.uninstall(req.params.id, req.query.deleteConfig === 'true')
                 res.json({ ok: true })
             }
             catch (err) {

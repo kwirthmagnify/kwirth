@@ -76,6 +76,7 @@ const canUninstall = (p: IInstalledPlugin): IExtensionVerdict => {
 
 const makePluginDescriptor = (deps: IPluginDescriptorDeps): IExtensionManagerDescriptor<IInstalledPlugin, IPluginManifestEntry> => ({
     extensionType: EExtensionType.PLUGIN,
+    keepsConfig: true,
     title: 'Manage channel plugins',
     noun: { singular: 'plugin', plural: 'plugins' },
     helpSection: 'guide/extensions/plugins/index?id=managing-channel-plugins',

@@ -111,9 +111,19 @@ test('saving the config of a login that is not installed is an error', async () 
     await assert.rejects(manager.saveConfig('nope', { autoUser: 'x' }), /not found/)
 })
 
-test('🔴 uninstalled: the admin\'s config Secret goes with it', async () => {
+test('🔴 uninstalled with deleteConfig: the admin\'s config Secret goes with it', async () => {
+    const { manager, secrets } = await installed()
+    await manager.saveConfig('cfg', { autoUser: 'guest' })
+    await manager.uninstall('cfg', true)
+    assert.equal(secrets.objects.has('kwirth-login-cfg-config'), false)
+})
+
+test('🔴 uninstalled without asking: the admin\'s config is kept, and a reinstall serves it again', async () => {
     const { manager, secrets } = await installed()
     await manager.saveConfig('cfg', { autoUser: 'guest' })
     await manager.uninstall('cfg')
-    assert.equal(secrets.objects.has('kwirth-login-cfg-config'), false)
+    assert.equal(secrets.objects.has('kwirth-login-cfg-config'), true)
+    assert.equal(await manager.getConfig('cfg'), undefined, 'not installed: nothing is served')
+    await manager.install(await loginTgz(), 'test')
+    assert.equal((await manager.getConfig('cfg'))?.autoUser, 'guest')
 })

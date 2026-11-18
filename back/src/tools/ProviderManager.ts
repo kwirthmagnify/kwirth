@@ -347,20 +347,22 @@ export class ProviderManager {
         }
     }
 
-    async uninstall(id: string, registeredProviders: Map<string, TProviderConstructor>): Promise<void> {
+    // deleteConfig: the admin's config goes too only when asked (plans/extension-config, P5); kept, it is
+    // back as it was on a reinstall
+    async uninstall(id: string, registeredProviders: Map<string, TProviderConstructor>, deleteConfig = false): Promise<void> {
         if (this.isDevProvider(id)) throw new Error(`Provider '${id}' is a dev provider and cannot be uninstalled`)
         const index = (await this.configMaps.read('kwirth-providers-index', []) as IProviderMeta[]) || []
         const meta = index.find(p => p.id === id)
         if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`Provider '${id}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
-        await this._doUninstall(id, registeredProviders, index)
+        await this._doUninstall(id, registeredProviders, index, deleteConfig)
     }
 
-    async uninstallFromPack(id: string, registeredProviders: Map<string, TProviderConstructor>): Promise<void> {
+    async uninstallFromPack(id: string, registeredProviders: Map<string, TProviderConstructor>, deleteConfig = false): Promise<void> {
         const index = (await this.configMaps.read('kwirth-providers-index', []) as IProviderMeta[]) || []
-        await this._doUninstall(id, registeredProviders, index)
+        await this._doUninstall(id, registeredProviders, index, deleteConfig)
     }
 
-    private async _doUninstall(id: string, registeredProviders: Map<string, TProviderConstructor>, index: IProviderMeta[]): Promise<void> {
+    private async _doUninstall(id: string, registeredProviders: Map<string, TProviderConstructor>, index: IProviderMeta[], deleteConfig: boolean): Promise<void> {
         // The /tmp cache does not carry the version in its name: unless it is deleted here,
         // reinstalling will serve the previous installation's js as long as the pod stays alive.
         dropCachedExtensionFiles('provider', id)
@@ -378,7 +380,7 @@ export class ProviderManager {
         await this.configMaps.write(`kwirth-provider-${id}-back`, null)
         await this.configMaps.write(`kwirth-provider-${id}-front`, null)
         await this.configMaps.write(`kwirth-provider-${id}-schema`, null)
-        await this.configStore.delete(EExtensionType.PROVIDER, id)
+        if (deleteConfig) await this.configStore.delete(EExtensionType.PROVIDER, id)
 
         const cacheFile = path.join(os.tmpdir(), `kwirth-provider-${id}-back.js`)
         if (fs.existsSync(cacheFile)) fs.rmSync(cacheFile)

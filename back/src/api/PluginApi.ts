@@ -69,7 +69,7 @@ export class PluginApi {
         this.router.delete('/:id', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                await this.pluginManager.uninstall(req.params.id, this.registeredChannels)
+                await this.pluginManager.uninstall(req.params.id, this.registeredChannels, req.query.deleteConfig === 'true')
                 this.callbacks.onPluginUninstalled?.(req.params.id)
                 res.json({ ok: true })
             } catch (err) {

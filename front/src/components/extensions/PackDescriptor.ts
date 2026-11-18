@@ -111,6 +111,7 @@ const forEachMember = (pack: IInstalledPack, deps: IPackDescriptorDeps, cargar: 
 
 const makePackDescriptor = (deps: IPackDescriptorDeps): IExtensionManagerDescriptor<IInstalledPack, IPackManifestEntry> => ({
     extensionType: EExtensionType.PACK,
+    keepsConfig: true,
     title: 'Manage extension packs',
     noun: { singular: 'pack', plural: 'packs' },
     helpSection: 'guide/extensions/packs/index',

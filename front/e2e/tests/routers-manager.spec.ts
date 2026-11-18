@@ -70,7 +70,8 @@ test.describe('routers: the manager, the config dialog, the door and Manage clus
     })
 
     test.afterAll(async () => {
-        await api?.delete(`/core/routers/${ROUTER_ID}`, { headers: auth }).catch(() => undefined)
+        // with its config: a plain uninstall keeps it (P5) and it would be left behind in the cluster
+        await api?.delete(`/core/routers/${ROUTER_ID}?deleteConfig=true`, { headers: auth }).catch(() => undefined)
         await page?.close()
         await api?.dispose()
     })
@@ -183,7 +184,7 @@ test.describe('routers: the manager, the config dialog, the door and Manage clus
     })
 
     test('uninstalled with NO restart: its route is gone at once', async () => {
-        expect((await api.delete(`/core/routers/${ROUTER_ID}`, { headers: auth })).status()).toBe(200)
+        expect((await api.delete(`/core/routers/${ROUTER_ID}?deleteConfig=true`, { headers: auth })).status()).toBe(200)
         const ticket = await (await api.post('/core/routes/ticket', { headers: auth })).json() as { routeTicket: string }
         expect((await api.get(`/router/${ROUTER_ID}/${ticket.routeTicket}/u1/x`)).status()).toBe(404)
     })

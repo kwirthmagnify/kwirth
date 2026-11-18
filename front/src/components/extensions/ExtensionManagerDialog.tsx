@@ -1,9 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { MsgBoxButtons, MsgBoxYesNo } from '../../tools/MsgBox'
 import { CheckCircle, Delete, Download, FolderOpen, Refresh, Settings, ViewList } from '@kwirthmagnify/kwirth-common-front/icons'
 import { Upgrade, ViewModule } from '../../icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../../tools/AuthorizationManagement'
 import { compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
@@ -157,6 +158,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
     const [configuring, setConfiguring] = useState<TInstalled | undefined>()
     const [error, setError] = useState<string | undefined>()
+    const [msgBox, setMsgBox] = useState(<></>)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Plugin selector: the plugin list is asked for ONCE for the whole dialog, not once per card.
@@ -483,12 +485,46 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         }
     }
 
-    const uninstall = async (entry: TInstalled) => {
+    /*
+        Uninstalling asks first, for every type. Where the type keeps an installation config, the box
+        offers deleting it too — unticked, like Magnify's force when deleting a pod: the safe answer is
+        the one you get by not thinking about it, and a kept config is back on a reinstall.
+    */
+    const confirmUninstall = (entry: TInstalled) => {
+        const name = d.toModel(entry).name
+        const deleteConfig = { on: false }
+        const message = <Box>
+            Are you sure you want to uninstall {d.noun.singular}<b> {name}</b>?
+            {d.uninstallTooltip && <Typography variant='body2' sx={{ mt: 1 }}>{d.uninstallTooltip}.</Typography>}
+            {/* On its own line: a FormControlLabel is inline-flex and would sit glued to the question */}
+            {d.keepsConfig && <Box sx={{ mt: 1 }}>
+                <FormControlLabel
+                    label={<Typography variant='body2'>{d.extensionType === EExtensionType.PACK ? 'Also delete the configuration of its extensions' : 'Also delete its configuration'}</Typography>}
+                    control={<Checkbox size='small' onChange={(e) => { deleteConfig.on = e.target.checked }} />} />
+                <Typography
+                    variant='caption'
+                    sx={{
+                        color: 'warning.main',
+                        display: 'block'
+                    }}>
+                    Unticked, the configuration is kept and comes back on a reinstall. Deleting it cannot be undone: a reinstall would start from the defaults.
+                </Typography>
+            </Box>}
+        </Box>
+        setMsgBox(MsgBoxYesNo(`Uninstall ${name}`, message, setMsgBox, (a) => {
+            if (a === MsgBoxButtons.Yes) uninstall(entry, deleteConfig.on)
+        }))
+    }
+
+    const uninstall = async (entry: TInstalled, deleteConfig: boolean) => {
         const key = d.keyOf(entry)
         setError(undefined)
         markBusy(setUninstallingKeys, key, true)
         try {
-            const res = await fetch(`${backendUrl}${d.endpoints.remove(entry)}`, addDeleteAuthorization(accessString))
+            const url = d.endpoints.remove(entry)
+            // only when asked: without the parameter the back end keeps the config
+            const query = deleteConfig ? `${url.indexOf('?') < 0 ? '?' : '&'}deleteConfig=true` : ''
+            const res = await fetch(`${backendUrl}${url}${query}`, addDeleteAuthorization(accessString))
             if (!res.ok) {
                 const detail = await res.json().catch(() => ({}))
                 throw new Error(detail?.error ?? `HTTP ${res.status}`)
@@ -610,7 +646,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
             tooltip: verdict.allowed ? (d.uninstallTooltip ?? 'Uninstall') : (verdict.reason ?? 'Cannot be uninstalled'),
             disabled: !verdict.allowed || uninstallingKeys.has(key),
             color: 'error',
-            onClick: () => uninstall(entry)
+            onClick: () => confirmUninstall(entry)
         })
         return actions
     }
@@ -797,6 +833,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                 maneras distintas (JSON libre, schema, CRUD con nombre, localStorage…). Va como hermano y no
                 anidado dentro del Dialog principal. */}
             {configuring && d.renderConfigDialog?.(configuring, () => { setConfiguring(undefined); loadInstalled() })}
+            {msgBox}
         </>
     );
 }

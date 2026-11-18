@@ -101,6 +101,7 @@ const HELP = 'guide/extensions/providers/index?id=managing-configuring-providers
 
 const providerDescriptor: IExtensionManagerDescriptor<IInstalledProvider, IProviderManifestEntry> = {
     extensionType: EExtensionType.PROVIDER,
+    keepsConfig: true,
     title: 'Manage providers',
     noun: { singular: 'provider', plural: 'providers' },
     helpSection: HELP,

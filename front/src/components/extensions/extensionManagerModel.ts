@@ -166,6 +166,14 @@ export interface IExtensionManagerDescriptor<TInstalled, TEntry> {
     uninstallTooltip?: string
 
     /*
+        Whether the type keeps an installation config that outlives an uninstall (plans/extension-config,
+        P5). With it, the uninstall confirmation offers "Also delete its configuration", unticked: kept,
+        the config is back as it was on a reinstall. Without it the box is not offered — on a type with
+        nothing to delete it would be an option that does nothing, which teaches people to tick it.
+    */
+    keepsConfig?: boolean
+
+    /*
         Which of the installed entries BELONG to this manager.
 
         `provider` needs it: its endpoint also returns the core's providers (events, metrics), which are

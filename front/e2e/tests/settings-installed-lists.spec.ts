@@ -85,6 +85,11 @@ test('un tema recien instalado sale en User settings sin volver a entrar', async
     const desinstalar = dialog.locator('span[aria-label="Uninstall"] button')
     await expect(desinstalar).toHaveCount(1)
     await desinstalar.click()
+    // uninstalling asks first; a theme keeps no config, so the box to delete it is not offered
+    const confirmar = page.getByRole('dialog').filter({ hasText: /Are you sure you want to uninstall/ })
+    await expect(confirmar).toBeVisible({ timeout: 20000 })
+    await expect(confirmar.getByRole('checkbox')).toHaveCount(0)
+    await confirmar.getByRole('button', { name: 'yes' }).click()
     await expect(desinstalar).toHaveCount(0, { timeout: 30000 })
     await dismissOpenDialogs(page)
 

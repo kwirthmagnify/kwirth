@@ -278,7 +278,7 @@ export class ProviderApi {
         this.router.delete('/:id', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                await this.providerManager.uninstall(req.params.id, this.registeredProviders)
+                await this.providerManager.uninstall(req.params.id, this.registeredProviders, req.query.deleteConfig === 'true')
                 this.callbacks.onProviderUninstalled?.(req.params.id)
                 res.json({ ok: true })
             } catch (err) {

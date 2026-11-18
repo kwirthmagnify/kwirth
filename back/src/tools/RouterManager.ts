@@ -431,22 +431,24 @@ export class RouterManager {
         }
     }
 
-    async uninstall(id: string): Promise<void> {
+    // deleteConfig: the admin's config goes too only when asked (plans/extension-config, P5); kept, it is
+    // back as it was on a reinstall
+    async uninstall(id: string, deleteConfig = false): Promise<void> {
         if (this.isDevRouter(id)) throw new Error(`Router '${id}' is a dev router and cannot be uninstalled`)
         const meta = this.cachedIndex.find(m => m.id === id)
         if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`Router '${id}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
-        await this.doUninstall(id)
+        await this.doUninstall(id, deleteConfig)
     }
 
-    async uninstallFromPack(id: string): Promise<void> {
-        await this.doUninstall(id)
+    async uninstallFromPack(id: string, deleteConfig = false): Promise<void> {
+        await this.doUninstall(id, deleteConfig)
     }
 
-    private async doUninstall(id: string): Promise<void> {
+    private async doUninstall(id: string, deleteConfig: boolean): Promise<void> {
         await this.deactivate(id)
         await this.configMaps.write(`kwirth-router-${id}-meta`, null)
         await this.configMaps.write(`kwirth-router-${id}-back`, null)
-        await this.configStore.delete(EExtensionType.ROUTER, id)
+        if (deleteConfig) await this.configStore.delete(EExtensionType.ROUTER, id)
         await updateIndex<IRouterMeta>(INDEX_KEY,
             async () => (await this.configMaps.read(INDEX_KEY, []) as IRouterMeta[]) || [],
             async (list) => { await this.configMaps.write(INDEX_KEY, list) },

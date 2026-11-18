@@ -111,6 +111,11 @@ test.describe('gestor generico de extensiones: packs', () => {
 
         // ── and now removing it, which is how the environment is left as it was ─────────────────────
         await desinstalar.click()
+        // uninstalling asks first; the pack's members' config goes too, because this test brought them
+        const confirmar = page.getByRole('dialog').filter({ hasText: /Are you sure you want to uninstall/ })
+        await expect(confirmar).toBeVisible({ timeout: 20000 })
+        await confirmar.getByLabel('Also delete the configuration of its extensions').check()
+        await confirmar.getByRole('button', { name: 'yes' }).click()
         await expect(desinstalar).toHaveCount(0, { timeout: 90000 })
 
         const quedan = await page.evaluate(async (ids: string[]) => {

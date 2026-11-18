@@ -345,21 +345,23 @@ export class PluginManager {
         }
     }
 
-    async uninstall(id: string, registeredChannels: Map<string, TChannelConstructor>): Promise<void> {
+    // deleteConfig: the admin's config goes too only when asked (plans/extension-config, P5); kept, it is
+    // back as it was on a reinstall
+    async uninstall(id: string, registeredChannels: Map<string, TChannelConstructor>, deleteConfig = false): Promise<void> {
         if (this.isDevPlugin(id)) throw new Error(`Plugin '${id}' is a dev plugin and cannot be uninstalled`)
         const index = (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || []
         const meta = index.find(p => p.id === id)
         if (meta?.installedFrom === 'bundled') throw new Error(`Plugin '${id}' is bundled and cannot be uninstalled`)
         if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`Plugin '${id}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
-        await this._doUninstall(id, registeredChannels, index)
+        await this._doUninstall(id, registeredChannels, index, deleteConfig)
     }
 
-    async uninstallFromPack(id: string, registeredChannels: Map<string, TChannelConstructor>): Promise<void> {
+    async uninstallFromPack(id: string, registeredChannels: Map<string, TChannelConstructor>, deleteConfig = false): Promise<void> {
         const index = (await this.configMaps.read('kwirth-plugins-index', []) as IPluginMeta[]) || []
-        await this._doUninstall(id, registeredChannels, index)
+        await this._doUninstall(id, registeredChannels, index, deleteConfig)
     }
 
-    private async _doUninstall(id: string, registeredChannels: Map<string, TChannelConstructor>, index: IPluginMeta[]): Promise<void> {
+    private async _doUninstall(id: string, registeredChannels: Map<string, TChannelConstructor>, index: IPluginMeta[], deleteConfig: boolean): Promise<void> {
         // The /tmp cache does not carry the version in its name: unless it is deleted here, reinstalling
         // will serve the previous installation's js as long as the pod stays alive.
         dropCachedExtensionFiles('plugin', id)
@@ -377,7 +379,7 @@ export class PluginManager {
             (list) => list.filter(p => p.id !== id))
         await this.configMaps.write(`kwirth-plugin-${id}-back`, null)
         await this.configMaps.write(`kwirth-plugin-${id}-front`, null)
-        await this.configStore.delete(EExtensionType.PLUGIN, id)
+        if (deleteConfig) await this.configStore.delete(EExtensionType.PLUGIN, id)
 
         for (const f of [`kwirth-plugin-${id}-back.js`, `kwirth-plugin-${id}-front.js`]) {
             const p = path.join(os.tmpdir(), f)

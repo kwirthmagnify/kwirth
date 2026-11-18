@@ -70,6 +70,7 @@ const openLoginPage = (id: string) => {
 
 const loginDescriptor: IExtensionManagerDescriptor<IInstalledLogin, ILoginManifestEntry> = {
     extensionType: EExtensionType.LOGIN,
+    keepsConfig: true,
     title: 'Manage login extensions',
     noun: { singular: 'login extension', plural: 'login extensions' },
     helpSection: 'guide/extensions/logins/index',

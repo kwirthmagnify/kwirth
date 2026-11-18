@@ -14,7 +14,7 @@ import fs from 'fs'
     Manager of the `router` type (plans/router-extension, S2). Pinned down: the core owns ONE live instance per
     router, started with its saved config and replaced hot on an update; the config is a SECRET, returned
     real and applied at once; a router that cannot start is left with its cause and tumbles nothing;
-    uninstalling stops it and removes its config.
+    uninstalling stops it, and removes its config only when asked (plans/extension-config, P5).
 */
 
 const fakeStore = (): { configMaps: IConfigMaps, secrets: ISecrets, keys: Map<string, unknown> } => {
@@ -126,7 +126,21 @@ test('another type\'s package is refused by name', async () => {
     await assert.rejects(manager.install(await makeRouterTgz('p', routerJs('p'), '1.0.0', 'plugin')), /Not a router package/)
 })
 
-test('🔴 uninstalled: stopped, out of the table, and its config Secret removed', async () => {
+test('🔴 uninstalled with deleteConfig: stopped, out of the table, and its config Secret removed', async () => {
+    routerLog().length = 0
+    const { configMaps, secrets, keys } = fakeStore()
+    const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
+    await manager.init()
+    await manager.install(await makeRouterTgz('bridge', routerJs('bridge')))
+    await manager.saveConfig('bridge', { peerUrl: 'x' })
+    await manager.uninstall('bridge', true)
+    assert.equal(manager.router('bridge'), undefined)
+    assert.equal(routerLog().at(-1), 'stop:bridge')
+    assert.equal(keys.has('kwirth-router-bridge-config'), false)
+    assert.deepEqual(await manager.listInstalled(), [])
+})
+
+test('🔴 uninstalled without asking: the config is kept, and a reinstall starts with it', async () => {
     routerLog().length = 0
     const { configMaps, secrets, keys } = fakeStore()
     const manager = new RouterManager(configMaps, new ExtensionConfigStore(secrets), context)
@@ -135,9 +149,9 @@ test('🔴 uninstalled: stopped, out of the table, and its config Secret removed
     await manager.saveConfig('bridge', { peerUrl: 'x' })
     await manager.uninstall('bridge')
     assert.equal(manager.router('bridge'), undefined)
-    assert.equal(routerLog().at(-1), 'stop:bridge')
-    assert.equal(keys.has('kwirth-router-bridge-config'), false)
-    assert.deepEqual(await manager.listInstalled(), [])
+    assert.equal(keys.has('kwirth-router-bridge-config'), true)
+    await manager.install(await makeRouterTgz('bridge', routerJs('bridge')))
+    assert.equal((await manager.getConfig('bridge')).peerUrl, 'x')
 })
 
 test('at startup, the installed ones are loaded and started again from what was stored', async () => {

@@ -217,14 +217,15 @@ Orden pensado para que cada stream deje el sistema funcionando y se pueda valida
 | **S2. Router** | `RouterManager` sobre el helper (mismo Secret); validación en `PUT` | unit + e2e del diálogo de routers: configurar, guardar, valor inválido rechazado; los tests actuales de routers sin cambios | S1 |
 | **S3. Provider y plugin** | Secret en vez de ConfigMap, defaults y validación. Provider sigue aplicando al arrancar o instalar, como hoy | unit + e2e del diálogo de un provider con contraseña (ojo, guardar, recargar) | S1 |
 | **S4. Login** | la configuración sale del payload a su Secret, sembrada desde `login.json` al instalar. `PUT` sustituye entero (fuera el merge parcial). `GET` sigue sin autenticar | e2e: editar la configuración de un login y verla aplicada en la pantalla de login | S1 |
-| **S5. IdP** | un Secret por instancia (§2.1); `idpConfigs` de `kwirth-dev.json` conectado | unit + e2e: crear instancia, login por IdP, desinstalar el conector borra sus instancias | S1 |
+| **S4b. Desinstalar conserva la configuración** | confirmación al desinstalar en todas las familias (`MsgBoxYesNo` con casilla "Also delete its configuration", desmarcada, solo en las familias con `keepsConfig`); `DELETE …?deleteConfig=true`, sin él se conserva; router, provider, plugin, login y pack (a sus miembros) | unit por familia: conserva / borra; e2e: desinstalar con y sin la casilla, reinstalar recupera la conservada | S2-S4 |
+| **S5. IdP** | un Secret por instancia (§2.1); `idpConfigs` de `kwirth-dev.json` conectado; `deleteConfig` (P5) | unit + e2e: crear instancia, login por IdP, desinstalar el conector con la casilla borra sus instancias, sin ella las conserva | S1, S4b |
 | **S6. Sender y webhook** | un Secret por extensión con su forma múltiple; campos `common` de webhook persistidos; escrituras con `await`; fuera la migración de senders | unit + e2e de `ConfigListDialog`: crear, editar, borrar configuración con nombre; campo común conservado tras recargar | S1 |
 | **S7. Export/import** | redacción en todas las familias; router y login en el bundle (si P1 = sí) | unit de `CoreManagedConfig` por familia: con y sin credenciales, ida y vuelta | S2-S6 |
-| **S8. Toolsets: contrato y core** | `configSchema`, `host.config`, `setToolsetConfig`, endpoints, ciclo de vida, `aitoolsetConfigs`, export. Publicar `kwirth-common-ai` (bbp) | unit: toolset sin esquema → `{}`; con esquema → defaults; guardar → la siguiente llamada ve el valor; desinstalar borra | S1, S7 |
+| **S8. Toolsets: contrato y core** | `configSchema`, `host.config`, `setToolsetConfig`, endpoints, ciclo de vida, `aitoolsetConfigs`, export. Publicar `kwirth-common-ai` (bbp) | unit: toolset sin esquema → `{}`; con esquema → defaults; guardar → la siguiente llamada ve el valor; desinstalar con `deleteConfig` borra configuración y concesiones, sin él las conserva (P5) | S1, S7 |
 | **S9. Toolsets: diálogo** | `AiToolsetDialog` con pestañas | e2e: pestaña deshabilitada sin esquema; formulario, guardar, recargar; error de validación en el campo; concesiones como antes | S8 |
 | **S10. Documentación y scaffolder** | guía de toolsets (pestaña Settings, cómo declarar `configSchema` y leer `host.config`); capturas regeneradas; el scaffolder genera un `configSchema` de ejemplo comentado | revisión de la guía; build del scaffolder con y sin esquema | S9 |
 
-| **S11. Limpieza de los clusters** | en cada cluster con un Kwirth de dev, borrar los objetos huérfanos: `kwirth-provider-*-config`, `kwirth-plugin-*-config`, `kwirth-sender-configs`, `kwirth-webhook-configs` (ConfigMaps) y `kwirth-idps` (Secret) | listado de lo huérfano confirmado con el usuario antes de borrar; después, cada familia sigue funcionando | S1-S10 |
+| **S11. Limpieza de los clusters** | en cada cluster con un Kwirth de dev, borrar los objetos huérfanos: `kwirth-provider-*-config`, `kwirth-plugin-*-config`, `kwirth-sender-configs`, `kwirth-webhook-configs` (ConfigMaps) y `kwirth-idps` (Secret) | listado de lo huérfano confirmado con el usuario antes de borrar; los `kwirth-<tipo>-<id>-config` de extensiones no instaladas se listan aparte como **configuración conservada** (P5), no como basura; después, cada familia sigue funcionando | S1-S10 |
 
 Cada stream acaba en un punto de parada para tu QA, con QA en el k3d **por familia** a medida que cada
 una pasa al helper. Los e2e son no destructivos y restauran solo lo que
@@ -242,6 +243,12 @@ Del usuario, 2026-11-18:
   con `setToolsetConfig`, igual que las concesiones (§2.5). Se descartaron leer el Secret en cada
   invocación (excesivo), una vez por turno, y una caché con caducidad.
 - **P4. Tipos nuevos de §2.4 validados.** Los 10 streams de §4 también, en ese orden.
+- **P5. Desinstalar conserva la configuración salvo que se pida** (S4b, usuario 2026-11-18): la
+  confirmación de desinstalar lleva la casilla "Also delete its configuration", desmarcada, como el
+  force de Magnify al borrar un pod. Solo aparece en las familias que guardan configuración (un flag
+  `keepsConfig` en el descriptor): en las demás sería una opción que no hace nada. En la API,
+  `DELETE …?deleteConfig=true`; sin el parámetro se conserva, para que un cliente que no conoce la
+  casilla no borre nada. La configuración conservada vuelve sola al reinstalar.
 
 ## 6. Fuera de este PLAN (apuntado para el backlog)
 

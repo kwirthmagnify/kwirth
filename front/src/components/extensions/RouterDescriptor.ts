@@ -67,6 +67,7 @@ const HELP = 'guide/extensions/routers/index'
 
 const makeRouterDescriptor = (): IExtensionManagerDescriptor<IRouterEntry, IRouterEntry> => ({
     extensionType: EExtensionType.ROUTER,
+    keepsConfig: true,
     title: 'Manage routers',
     noun: { singular: 'router', plural: 'routers' },
     helpSection: HELP,
