@@ -10,7 +10,7 @@ import { Cluster, IClusterInfo } from './model/Cluster'
 import { resolveRemoteChannelHost } from './tools/ChannelResolution'
 import { bindClusterUrl, clusterBaseUrl, setClusterRouting } from './tools/ClusterRouting'
 import { RemoteConnection } from './tools/RemoteConnection'
-import { startRouteTickets } from './tools/RouteTickets'
+import { renewRouteTicketNow, ROUTE_REFUSED_CLOSE_CODE, startRouteTickets } from './tools/RouteTickets'
 
 // components
 import { RenameTab } from './components/common/RenameTab'
@@ -1856,6 +1856,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
             }
             let cluster = clusters.find(c => c.name === tab!.channelObject!.clusterName)
             if (!cluster) return
+            const routed = Boolean(cluster.route)
 
             if (selectedTab.current && selectedTab.current.channel) {
                 if (selectedTab.current.channel.socketDisconnected(selectedTab.current.channelObject)) setChannelMessageAction({action : EChannelRefreshAction.REFRESH})
@@ -1874,6 +1875,9 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     let ws = new WebSocket(url)
                     tab.ws = ws
                     ws.onopen = (event) => socketReconnect(event, selfId)
+                    // refused by the route: the core no longer knows the ticket (it restarted), so a new one NOW
+                    // instead of when it was due (up to 9 minutes later); the next try carries it
+                    ws.onclose = (event) => { if (routed && event.code === ROUTE_REFUSED_CLOSE_CODE) renewRouteTicketNow() }
                 }
                 catch  {}
             }, 10000, tab.channelObject.clusterUrl ?? clusterBaseUrl(cluster), tab)   // reconnect to the delegated host too
@@ -1913,6 +1917,8 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 try {
                     let ws = new WebSocket(url)
                     t.ws = ws
+                    // refused by the route: the core no longer knows the ticket (it restarted), so a new one NOW
+                    ws.onclose = (event) => { if (restartCluster.route && event.code === ROUTE_REFUSED_CLOSE_CODE) renewRouteTicketNow() }
                     ws.onopen = () => {
                         clearInterval(restartId)
                         t.reconnectRef = undefined
