@@ -138,6 +138,7 @@ test.describe('routers: the manager, the config dialog, the door and Manage clus
         await expect(config).toBeVisible()
         await greeting.fill('typing')
         await expect(greeting).toHaveAttribute('aria-invalid', 'false')
+        await expect(config.getByText(`'Greeting' is required`), 'its message goes with its mark').toBeHidden()
         await config.getByRole('button', { name: 'CANCEL' }).click()
         await expect(config).toBeHidden({ timeout: 20000 })
         expect(await (await api.get(`/core/routers/${ROUTER_ID}/config`, { headers: auth })).json()).toEqual({ retries: 2 })

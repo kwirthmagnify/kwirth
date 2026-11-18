@@ -76,8 +76,8 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
     const [loaded, setLoaded] = useState<Record<string, string>>({})
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | undefined>()
-    // The fields the back end refused on the last save; each one leaves the list as soon as it is edited
-    const [invalidFields, setInvalidFields] = useState<string[]>([])
+    // What the back end refused on the last save, field by field: editing a field removes its mark AND its message
+    const [fieldErrors, setFieldErrors] = useState<IConfigValidationError[]>([])
     const [testing, setTesting] = useState(false)
     const [testOutcome, setTestOutcome] = useState<ITestOutcome | undefined>()
 
@@ -129,8 +129,7 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
         if (res.ok) return true
         const refusal = await res.json().catch(() => undefined) as ISaveRefusal | undefined
         if (res.status === 400 && refusal?.fields && refusal.fields.length > 0) {
-            setInvalidFields(refusal.fields.map(f => f.field))
-            setError(refusal.fields.map(f => f.message).join('. '))
+            setFieldErrors(refusal.fields)
             return false
         }
         throw new Error(refusal?.error ?? `HTTP ${res.status}`)
@@ -139,7 +138,7 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
     const save = async () => {
         setSaving(true)
         setError(undefined)
-        setInvalidFields([])
+        setFieldErrors([])
         try {
             if (await persist()) props.onClose()
         }
@@ -196,7 +195,7 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
     */
     const setField = (name: string, value: unknown) => {
         setValues(v => ({ ...v, [name]: String(value) }))
-        setInvalidFields(list => list.filter(n => n !== name))
+        setFieldErrors(list => list.filter(e => e.field !== name))
     }
 
     return (
@@ -211,8 +210,9 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
                         ? <Typography variant='body2' sx={{
                         color: 'text.secondary'
                     }}>{props.emptyText ?? 'Nothing to configure.'}</Typography>
-                        : <ConfigFields schema={schema} values={values} onChange={setField} invalidFields={invalidFields} />}
+                        : <ConfigFields schema={schema} values={values} onChange={setField} invalidFields={fieldErrors.map(e => e.field)} />}
                     {error && <Typography variant='caption' color='error'>{error}</Typography>}
+                    {fieldErrors.length > 0 && <Typography variant='caption' color='error' data-testid='config-field-errors'>{fieldErrors.map(e => e.message).join('. ')}</Typography>}
                     {/* El resultado se queda a la vista hasta la siguiente prueba: es lo que se lee para corregir */}
                     {testOutcome && (
                         <Typography variant='caption' color={testOutcome.ok ? 'success.main' : 'error'} data-testid='config-test-result'>
