@@ -89,6 +89,24 @@ test('🔴 a proxy trusted AFTER a socket connected reaches that socket too: it 
     assert.deepEqual(callers.addressOf(open), { ip: '34.255.57.205', remoteAddress: '10.0.128.207', forwardedIgnored: false, forwardedFor: '34.255.57.205' })
 })
 
+test('🔴 a failed read (startup: no instance yet) is not a fresh list: the next socket reads again, it does not wait 30 s with none', async () => {
+    const c = clock()
+    let ready = false
+    let reads = 0
+    const callers = new WsCallerAddresses(async () => { reads++; if (!ready) throw new Error('no active instance yet'); return ['10.0.128.207'] }, c.now)
+    await callers.refresh()                                     // at startup: fails
+    ready = true
+    c.advance(1_000)                                            // well within 30 s
+    const ws = socket()
+    callers.remember(ws, '10.0.128.207', '34.255.57.205')      // reads again at once
+    assert.equal(reads, 2)
+    await new Promise(r => setImmediate(r))
+    assert.equal(callers.addressOf(ws)?.ip, '34.255.57.205')
+    // and now it is fresh: no read per question
+    callers.addressOf(ws)
+    assert.equal(reads, 2)
+})
+
 test('settings that cannot be read keep the last list known', async () => {
     let fail = false
     const c = clock()
