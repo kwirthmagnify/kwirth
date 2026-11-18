@@ -3497,7 +3497,14 @@ const createHttpServers = (localKwirthData:KwirthData, expressApp:Application, i
         // The trusted proxies the WebSocket clients' addresses are resolved with: the login IP filter's (K2)
         wsCallers = new WsCallerAddresses(async () => {
             const ri = instances.find(r => r.active)
-            return ri ? addressesOf(trustedProxiesOf(await SettingsApi.read(ri.configMaps))) : []
+            /*
+                This runs BEFORE the instance is activated (launchKubernetes/launchDocker come after): no instance
+                is not an empty list, it is a list not read yet. Answering [] here made every socket of the first
+                30 s (the spokes that link the moment the hub starts) be resolved without trusted proxies, and an
+                Ianus hub showed its ingress as their From (AKS, 2026-11-18). Thrown: it is read again when asked.
+            */
+            if (!ri) throw new Error('no active instance yet: the settings cannot be read')
+            return addressesOf(trustedProxiesOf(await SettingsApi.read(ri.configMaps)))
         })
         void wsCallers.refresh()
 
