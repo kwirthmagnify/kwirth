@@ -48,13 +48,17 @@ export class WsCallerAddresses {
         return clientAddressOf(connection.remoteAddress, connection.forwardedFor, this.trustedProxies)
     }
 
-    // Reads the list now (at startup, so the first sockets are not resolved without it)
+    /*
+        Reads the list now (at startup, so the first sockets are not resolved without it). Only a list READ counts
+        as fresh: a failed read (the settings not reachable yet at startup) leaves it stale, so the next question
+        tries again instead of waiting REFRESH_MS with a list nobody read.
+    */
     async refresh(): Promise<void> {
         if (this.reading) return
         this.reading = true
-        this.readAt = this.now()
         try {
             this.trustedProxies = await this.readTrustedProxies()
+            this.readAt = this.now()
         }
         catch {
             // the last list known stays: an unreadable settings must not make every proxy untrusted at once
