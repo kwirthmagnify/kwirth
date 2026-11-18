@@ -1,5 +1,5 @@
-// K2: the address of each WebSocket's client, for the channels. Resolved when the socket connects, the same
-// way as the login: X-Forwarded-For only from a trusted proxy.
+// K2: the address of each WebSocket's client, for the channels. Resolved when it is asked, with the trusted
+// proxies as they are then, the same way as the login: X-Forwarded-For only from a trusted proxy.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -51,7 +51,7 @@ test('each socket keeps its own address; one it never saw has none', async () =>
     assert.equal(callers.addressOf(socket()), undefined)
 })
 
-test('the trusted proxies are read again when they are old, and the change reaches the NEXT sockets', async () => {
+test('the trusted proxies are read again when they are old, and the change reaches the next sockets', async () => {
     const c = clock()
     let list: string[] = []
     let reads = 0
@@ -64,14 +64,29 @@ test('the trusted proxies are read again when they are old, and the change reach
 
     list = ['10.0.0.0/8']
     c.advance(30_000)
-    const before = socket()
-    callers.remember(before, '10.0.0.9', '1.2.3.4')       // stale: it reads again, in the background
+    const ws = socket()
+    const first = callers.remember(ws, '10.0.0.9', '1.2.3.4')     // stale: it reads again, in the background
     assert.equal(reads, 2)
-    assert.equal(callers.addressOf(before)?.ip, '10.0.0.9', 'this one was resolved with the old list')
+    assert.equal(first.ip, '10.0.0.9', 'answered at once, with the list it had')
     await new Promise(r => setImmediate(r))
-    const after = socket()
-    callers.remember(after, '10.0.0.9', '1.2.3.4')
-    assert.equal(callers.addressOf(after)?.ip, '1.2.3.4', 'this one, with the new list')
+    assert.equal(callers.addressOf(ws)?.ip, '1.2.3.4', 'and with the new one as soon as it is read')
+})
+
+test('🔴 a proxy trusted AFTER a socket connected reaches that socket too: it is resolved when asked, not when it connected', async () => {
+    const c = clock()
+    let list: string[] = []
+    const callers = new WsCallerAddresses(async () => list, c.now)
+    await callers.refresh()
+    const open = socket()
+    callers.remember(open, '10.0.128.207', '34.255.57.205')
+    assert.deepEqual(callers.addressOf(open), { ip: '10.0.128.207', remoteAddress: '10.0.128.207', forwardedIgnored: true, forwardedFor: '34.255.57.205' })
+
+    // the ingress is added to the trusted proxies; the socket stays open
+    list = ['10.0.128.207']
+    c.advance(30_000)
+    callers.addressOf(open)                                 // stale: asking reads the list again
+    await new Promise(r => setImmediate(r))
+    assert.deepEqual(callers.addressOf(open), { ip: '34.255.57.205', remoteAddress: '10.0.128.207', forwardedIgnored: false, forwardedFor: '34.255.57.205' })
 })
 
 test('settings that cannot be read keep the last list known', async () => {
