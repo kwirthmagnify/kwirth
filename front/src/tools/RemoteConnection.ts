@@ -2,6 +2,7 @@ import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESi
 import { ERemoteConnState, IRemoteChannelHandlers } from '@kwirthmagnify/kwirth-common-front'
 import { Cluster } from '../model/Cluster'
 import { clusterBaseUrl } from './ClusterRouting'
+import { renewRouteTicketNow, ROUTE_REFUSED_CLOSE_CODE } from './RouteTickets'
 
 /*
     ONE managed connection from the front to a channel on some Kwirth: START with that Kwirth's key, state
@@ -193,6 +194,8 @@ export class RemoteConnection {
             // that outlives its socket keeps firing against a `readyState` that is not OPEN, and
             // every reconnect would leave one more behind.
             if (this.keepAlive) { clearInterval(this.keepAlive); this.keepAlive = undefined }
+            // refused by the route: the core no longer knows the ticket (it restarted), so a new one NOW
+            if (endpoint.route && ev.code === ROUTE_REFUSED_CLOSE_CODE) renewRouteTicketNow()
             if (this.startAck) { clearTimeout(this.startAck); this.startAck = undefined }
             this.instanceId = undefined   // la instancia muere con el socket: la nueva la asigna el próximo START
             if (this.closed || this.retry) return
