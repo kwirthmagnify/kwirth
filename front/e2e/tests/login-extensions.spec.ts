@@ -1,7 +1,51 @@
-import { test, expect } from '@playwright/test'
-import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { test, expect, APIRequestContext } from '@playwright/test'
+import { createHash } from 'crypto'
+import fs from 'fs'
+import path from 'path'
+import { login, clickExtensionMenuItem, dismissOpenDialogs, USER, PASS } from './helpers'
 
 test.use({ trace: 'off', screenshot: 'off', video: 'off' })
+
+/*
+    These tests need the public logins 'magnify' and 'anonymous'. They are not assumed to be there: the
+    ones missing are installed from the public catalogue (logins/manifest.json, so the version follows it)
+    and afterAll uninstalls exactly those, config included — the environment is left as it was found.
+*/
+const BACK = process.env.KWIRTH_E2E_BACK ?? 'http://localhost:3883'
+const NEEDED = ['magnify', 'anonymous']
+
+interface IAccessKey { id: string, type: string, resources: string }
+interface ILoginManifestEntry { extensionType: string, id: string, url: string }
+
+test.describe.configure({ mode: 'serial' })
+
+let api: APIRequestContext
+let auth: Record<string, string> = {}
+const installedHere: string[] = []
+
+test.beforeAll(async ({ playwright }) => {
+    test.setTimeout(120000)
+    api = await playwright.request.newContext({ baseURL: BACK })
+    const res = await api.post('/login', { data: { user: USER, password: createHash('sha256').update(PASS).digest('hex') } })
+    expect(res.status(), 'login against the back end').toBe(200)
+    const key = (await res.json()).accessKey as IAccessKey
+    auth = { Authorization: `Bearer ${key.id}|${key.type}|${key.resources}` }
+
+    const installed = await (await api.get('/core/logins', { headers: auth })).json() as { id: string }[]
+    const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../logins/manifest.json'), 'utf-8')) as ILoginManifestEntry[]
+    for (const id of NEEDED.filter(id => !installed.some(l => l.id === id))) {
+        const entry = manifest.find(e => e.extensionType === 'login' && e.id === id)
+        expect(entry, `'${id}' is not in the public logins catalogue`).toBeTruthy()
+        const inst = await api.post('/core/logins/install', { headers: auth, data: { url: entry!.url } })
+        expect(inst.status(), `installing '${id}': ${await inst.text()}`).toBe(200)
+        installedHere.push(id)
+    }
+})
+
+test.afterAll(async () => {
+    for (const id of installedHere) await api?.delete(`/core/logins/${id}?deleteConfig=true`, { headers: auth }).catch(() => undefined)
+    await api?.dispose()
+})
 
 // ── 1. LoginDialog opens from the menu ────────────────────────────────────────
 test('login extensions: menu item opens LoginDialog', async ({ page }) => {
@@ -213,9 +257,9 @@ test('login extensions: la tarjeta abre su pagina de login en otra pestaña', as
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
 
-    const openButtons = dialog.locator('button[aria-label="Open login page"]')
-    const count = await openButtons.count()
-    if (count === 0) test.skip(true, 'no hay ningun login instalado en esta instancia')
+    // the action's tooltip wraps its button; beforeAll made sure there are logins installed, so none is a failure
+    const openButtons = dialog.locator('span[aria-label="Open login page in new tab"] button')
+    await expect(openButtons.first(), 'no card offers to open its login page').toBeVisible({ timeout: 20000 })
 
     // the card's id: the link has to point at THAT login
     const popupPromise = context.waitForEvent('page')

@@ -124,7 +124,8 @@ test.describe('gestor generico de extensiones: idp', () => {
             domains only make sense with signup on, and an empty list WARNS, because with a public IdP it
             means anybody in the world can ask. Toggled and left with Cancel: nothing is saved.
         */
-        const allow = cfg.getByRole('checkbox', { name: /Allow signup/ })
+        // a MUI Switch is role 'switch', not 'checkbox'
+        const allow = cfg.getByRole('switch', { name: /Allow signup/ })
         const domains = cfg.getByLabel('Allowed email domains')
         await expect(allow).toBeVisible()
         if (!await allow.isChecked()) {

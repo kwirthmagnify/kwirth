@@ -144,7 +144,7 @@ test.describe('capture: signup in the admin guide (dark)', () => {
         await expect(cfg).toBeVisible({ timeout: 20000 })
 
         // the Signup section as an admin would leave it: on, limited to the organisation's domain (NOT saved)
-        const allow = cfg.getByRole('checkbox', { name: /Allow signup/ })
+        const allow = cfg.getByRole('switch', { name: /Allow signup/ })
         if (!await allow.isChecked()) await allow.click()
         await cfg.getByLabel('Allowed email domains').fill('example.com')
         await settle(page)
