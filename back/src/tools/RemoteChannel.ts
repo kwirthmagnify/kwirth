@@ -136,6 +136,15 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
     let sentWithInstance: IInstanceMessage[] = []
     let replayPending = false
 
+    // Stops an instance of OURS on the remote that a newer one replaced (see the START answer below). Same
+    // shape as the START, with the instance to stop; the remote re-validates the accessKey as on any command.
+    const stopRemoteInstance = (old: string) => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return
+        const stop: IInstanceConfig = { ...config, action: EInstanceMessageAction.STOP, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.SIGNAL, instance: old, accessKey: endpoint.accessString }
+        try { ws.send(JSON.stringify(stop)) }
+        catch (err) { if (logError) logError(`openRemoteChannel: cannot send STOP to ${wsUrl}: ${err}`) }
+    }
+
     // Sends the plain START (ITS accessKey, a protocol without a challenge) and arms the watchdog: if within
     // START_RETRY_MS we have not captured a valid instance (the START's RESPONSE), it resends. It stops as
     // soon as the instance arrives.
@@ -278,11 +287,25 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
             // to SEND commands referencing an instance valid in THAT cluster (otherwise the back end discards it).
             if (msg?.action === EInstanceMessageAction.START && msg?.flow === EInstanceMessageFlow.RESPONSE) {
                 if (msg?.instance) {
+                    /*  🔴 A START answered when we already had an instance on THIS socket is the answer to a
+                        START we re-sent (the watchdog re-sends every START_RETRY_MS until one comes back). A
+                        remote that is busy — loading, or far away — answers them all at once, and each one
+                        is an instance over there. We keep the newest and STOP the one it replaces: before
+                        this, the others stayed alive on the remote and got every broadcast over the same
+                        socket, so the consumer received everything N times (security-pro, 2026-11-19: four
+                        copies of each Agora alert and of each Excubitor snapshot).
+                        And CONNECTED is said ONCE: the consumer's on-connect work (draining queues, re-sending
+                        state) ran once per answer. */
+                    const superseded = instanceId && instanceId !== msg.instance ? instanceId : ''
                     instanceId = msg.instance
                     clearStartAck()   // instance válido → deja de reintentar el START
                     channelGone = false   // vuelve a haber canal al otro lado
                     goneProbeMs = START_RETRY_MS   // y el sondeo vuelve a su cadencia normal
-                    notifyState(ERemoteConnState.CONNECTED)   // ahora sí operativos: socket + instance
+                    if (superseded) {
+                        stopRemoteInstance(superseded)
+                        if (logInfo) logInfo(`[fedtrace] ↻ ${wsUrl} answered a re-sent START: keeping instance=${instanceId}, stopped the one it replaces (${superseded})`)
+                    }
+                    else notifyState(ERemoteConnState.CONNECTED)   // ahora sí operativos: socket + instance
                     if (logInfo) logInfo(`[fedtrace] ★ REMOTE ASSIGNED instance=${instanceId} (START RESPONSE from ${wsUrl}, text='${mAny.text ?? ''}')`)
                     /*  Ya hay instancia válida: se reenvía lo que el remoto rechazó con la anterior. Sin
                         esto, el handshake se rehacía y el mensaje se perdía — que es exactamente cómo un

@@ -224,6 +224,44 @@ test('START watchdog: keeps re-sending START until the remote assigns an instanc
     wss.close()
 })
 
+test('🔴 a remote that answers the re-sent STARTs all at once: the newest instance is kept, the others are STOPPED, CONNECTED is said once', { timeout: 12000 }, async () => {
+    // A busy remote (loading, or far away) answers every START it got in one go, and each START was an
+    // instance over there. Before the fix the others stayed alive and got every broadcast over the same
+    // socket: the consumer received everything N times (security-pro, 2026-11-19).
+    const { wss, url } = await makeServer()
+    const starts: Record<string, unknown>[] = []
+    const stops: Record<string, unknown>[] = []
+    const answered = new Promise<void>((resolve) => {
+        wss.on('connection', (sock: WebSocket) => {
+            sock.on('message', (data: Buffer) => {
+                const m = JSON.parse(data.toString())
+                if (m.action === EInstanceMessageAction.STOP) stops.push(m)
+                if (m.action !== EInstanceMessageAction.START) return
+                starts.push(m)
+                if (starts.length === 2) {   // busy until the retry: then both answers at once
+                    for (const instance of ['INST-A', 'INST-B'])
+                        sock.send(JSON.stringify({ action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.SIGNAL, channel: 'agora', instance }))
+                    resolve()
+                }
+            })
+        })
+    })
+    const states: ERemoteConnState[] = []
+    const handle = openRemoteChannel({ name: 'r', url, accessString: 'AK' }, baseConfig(), { onMessage: () => {}, onState: (s) => states.push(s) })
+    await answered
+    await delay(200)
+    assert.equal(stops.length, 1, 'the replaced instance is stopped')
+    assert.equal(stops[0]!.instance, 'INST-A')
+    assert.equal(stops[0]!.accessKey, 'AK', 'the STOP carries the remote key, like any command')
+    assert.equal(states.filter(s => s === ERemoteConnState.CONNECTED).length, 1, 'CONNECTED once, not once per answer')
+    // What goes out from now on uses the instance that was kept.
+    const sent = new Promise<Record<string, unknown>>((resolve) => wss.clients.forEach(c => c.on('message', (d: Buffer) => { const m = JSON.parse(d.toString()); if (m.msgtype === 'probe') resolve(m) })))
+    handle.send({ action: EInstanceMessageAction.COMMAND, flow: EInstanceMessageFlow.REQUEST, type: EInstanceMessageType.DATA, channel: 'agora', instance: '', msgtype: 'probe' } as IInstanceMessage & { msgtype: string })
+    assert.equal((await sent).instance, 'INST-B')
+    handle.close()
+    wss.close()
+})
+
 test('close() cancels pending retries (no reconnect) and reports DOWN', { timeout: 8000 }, async () => {
     const { wss, url } = await makeServer()
     let connectionCount = 0
