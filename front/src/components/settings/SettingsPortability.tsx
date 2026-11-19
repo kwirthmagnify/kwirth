@@ -184,7 +184,7 @@ const SettingsPortability: React.FC<ISettingsPortabilityProps> = (props: ISettin
         }
         return (
             <Box key={d.key} data-testid={`portability-diff-${d.key}`}
-                sx={{ borderLeft: 4, borderColor: chosen === undefined ? 'warning.main' : 'success.main', px: 1, py: 0.5, mb: 1, bgcolor: 'action.hover' }}>
+                sx={{ borderLeft: 4, borderColor: chosen === undefined ? 'warning.main' : 'success.main', px: 1, py: 0.5, mb: 0.5, bgcolor: 'action.hover' }}>
                 <Typography variant='body2' noWrap title={d.key}>
                     <b>{KIND_NAMES[d.kind]} {d.label}</b>
                     <Typography component='span' variant='body2' sx={{ color: 'text.secondary' }}>
@@ -220,12 +220,12 @@ const SettingsPortability: React.FC<ISettingsPortabilityProps> = (props: ISettin
                     label={<Typography variant='body2'>Include credentials</Typography>} />
                 <Typography variant='body2' noWrap title={message.text} color='error' sx={{ flex: 1, minWidth: 0 }} data-testid='portability-message'>{message.text}</Typography>
             </Stack>
-            <Box sx={{ height: 104, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }} data-testid='portability-sources'>
+            <Box sx={{ height: 92, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, px: 1 }} data-testid='portability-sources'>
                 { sources.map((s, i) =>
                     <Stack key={`${i}-${s.name}`} direction='row' spacing={1} sx={{ alignItems: 'center' }}>
                         <Typography variant='body2' sx={{ width: 28 }}><b>#{i + 1}</b></Typography>
                         <Typography variant='body2' noWrap sx={{ flex: 1, minWidth: 0 }} title={s.name}>{s.name}</Typography>
-                        <Typography variant='caption' noWrap sx={{ width: 330, color: 'text.secondary' }}>
+                        <Typography variant='caption' noWrap sx={{ width: 400, flexShrink: 0, color: 'text.secondary' }}>
                             exported {s.bundle.meta?.exportedAt ? new Date(s.bundle.meta.exportedAt).toLocaleString() : '—'} · Kwirth {s.bundle.meta?.kwirthVersion ?? '—'} · {s.bundle.meta?.includesCredentials ? 'with credentials' : 'no credentials'}
                         </Typography>
                         <IconButton size='small' aria-label={`Move ${s.name} up`} disabled={off || i === 0} onClick={() => move(i, -1)}><ArrowUpward fontSize='small' /></IconButton>
@@ -248,7 +248,7 @@ const SettingsPortability: React.FC<ISettingsPortabilityProps> = (props: ISettin
                     </IconButton></span>
                 </Tooltip>
             </Stack>
-            <Box sx={{ height: 160, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, p: 1 }}>
+            <Box sx={{ height: 166, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, p: 1 }}>
                 { analysis.differences.map(differenceRow) }
                 { analysis.differences.length === 0 && <Typography variant='body2' sx={{ color: 'text.secondary' }}>None.</Typography> }
             </Box>

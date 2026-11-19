@@ -182,6 +182,8 @@ Finally, the file declares the format it was written in, so a kwirth that is **o
 
 Sometimes what you need is not in a single file: joining two kwirths into one (the marketplaces of one, the AI models of the other, the extensions of both), building a "reference" configuration out of several exports, or completing the current configuration with what a file brings. The **Portability** tab of **☰ → kwirth Settings** does that without editing JSON by hand.
 
+![The Portability tab merging two files: the merge order, what is left to decide, and one difference decided and one pending](../../_media/guide/admin-kwirth-settings-portability.png)
+
 1. **Add files** loads one or several files exported with *Kwirth export*. A file that is not a kwirth configuration, or is written in a format this kwirth cannot read, is rejected on the spot, with the reason, and never enters the list.
 2. **Add this Kwirth** adds the current configuration of this kwirth as one more source. It is exactly its export, so the same rule holds: credentials only travel if you tick **Include credentials**, which starts unticked.
 3. The merge is **automatic**. Every element — a marketplace, a package registry, an allowed address, a log level, an AI provider or model, a loose value such as the metrics interval, a whole extension — falls into one of three cases:

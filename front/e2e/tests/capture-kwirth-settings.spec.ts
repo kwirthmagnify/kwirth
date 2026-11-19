@@ -88,6 +88,59 @@ test('capture kwirth-settings (dark)', async ({ page }) => {
 })
 
 /*
+    Kwirth settings → Portability (plans/config-merge): two made-up exports merged, one difference decided and one
+    still pending, so the picture shows the merge order, the status sentence and both states of a difference.
+    Non-destructive: merging writes nothing, and the dialog is closed with Cancel.
+*/
+const exampleBundle = (name: string, metricsInterval: number, registryUrl: string, extraMarketplace?: string) => ({
+    kind: 'kwirth-config-bundle',
+    formatVersion: 2,
+    meta: { exportedAt: name === 'dev' ? '2026-11-12T09:30:00.000Z' : '2026-11-18T16:05:00.000Z', kwirthVersion: '0.6.120', source: name, includesCredentials: false },
+    core: {
+        settings: {
+            metricsInterval,
+            marketplaces: [
+                { id: 'community', url: 'https://raw.githubusercontent.com/example/marketplace/main/manifest.json', label: 'Community', enabled: true },
+                ...(extraMarketplace ? [{ id: extraMarketplace, url: `https://gitlab.example.com/${extraMarketplace}/manifest.json`, label: extraMarketplace, enabled: true }] : [])
+            ],
+            packageRegistries: [{ id: 'company', url: registryUrl, label: 'Company registry', enabled: true }]
+        },
+        sharedAi: { providers: [{ name: 'openai', type: 'openai', key: '' }], llms: [{ id: 'gpt-4o', provider: 'openai', model: 'gpt-4o', key: '' }] }
+    },
+    extensions: [{ type: 'plugin', id: 'trivy', version: '0.2.32', coreConfig: { installConfig: { interval: 3600 } } }]
+})
+
+test('capture kwirth-settings portability (dark)', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 900 })
+    await page.addInitScript(() => { try { localStorage.setItem('kwirth.mode', 'dark') } catch { /* */ } })
+    await login(page)
+    await dismissOpenDialogs(page)
+
+    await clickMenuItem(page, 'Kwirth settings')
+    const dialog = page.getByRole('dialog').filter({ hasText: 'Kwirth settings' })
+    await expect(dialog.getByLabel('Cluster metrics read interval (seconds)')).toBeEnabled({ timeout: CARGA })
+    await dialog.getByRole('tab', { name: 'Portability' }).click()
+
+    const file = (name: string, content: unknown) => ({ name, mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(content)) })
+    await dialog.getByTestId('portability-file-input').setInputFiles([
+        file('kwirth-config-dev.json', exampleBundle('dev', 15, 'https://nexus.example.com/repository/npm-private/')),
+        file('kwirth-config-lab.json', exampleBundle('lab', 30, 'https://nexus.example.com/repository/npm-lab/', 'lab-tools'))
+    ])
+    await expect(dialog.getByTestId('portability-status')).toContainText('2 elements differ')
+    // one decided, one pending: both states of a difference in the picture
+    await dialog.getByRole('radio', { name: 'Apply kwirth-config-lab.json for metricsInterval' }).check()
+    await expect(dialog.getByTestId('portability-status')).toContainText('1 left to choose')
+
+    await page.addStyleTag({ content: '.MuiSnackbar-root { display: none !important; }' })
+    await dialog.getByRole('tab', { name: 'Portability' }).focus()
+    await page.waitForTimeout(800)
+    await page.screenshot({ path: `${MEDIA}/admin-kwirth-settings-portability.png` })
+
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await dismissOpenDialogs(page)
+})
+
+/*
     🔴 It captures 'Kwirth export', NOT a 'Kwirth portability' dialog: that single dialog was split in
     two —export and import, one menu entry each— and this spec went on looking for the old one, so it
     had been failing silently and the guide was still showing a September screenshot of a window that no
