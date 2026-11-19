@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import express from 'express'
 import { AddressInfo } from 'net'
 import { KwirthData, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
-import { MetricsProvider, IMetricsCluster } from '../../src/back/index'
+import { MetricsProvider, IMetricsCluster, counterDelta } from '../../src/back/index'
 
 /*
     The metrics provider along the real route: a fake kubelet answers fetch() (cAdvisor text and
@@ -25,6 +25,7 @@ interface IKubelet {
     txEth1: number           // and on eth1: a pod metric seen twice adds up
     usageNanoCores: number
     failNodes: string[]      // IPs whose kubelet does not answer (in cluster the kubelet is reached by IP)
+    nodeNet: Record<string, number>   // by IP: the node's cumulative network bytes in /stats/summary (rx = tx); 0 if absent
     lastOptions?: RequestInit
 }
 
@@ -42,12 +43,15 @@ const cadvisor = (k: IKubelet): string => [
     ''
 ].join('\n')
 
-const summary = (k: IKubelet) => ({
+const netOf = (k: IKubelet, url: string): number =>
+    Object.entries(k.nodeNet).find(([ip]) => url.includes(`//${ip}:`))?.[1] ?? 0
+
+const summary = (k: IKubelet, url = '') => ({
     node: {
         nodeName: NODE,
         memory: { usageBytes: 300, availableBytes: 700 },
         cpu: { usageNanoCores: k.usageNanoCores },
-        network: { interfaces: [{ txBytes: 0, rxBytes: 0, txErrors: 0, rxErrors: 0 }] }
+        network: { interfaces: [{ txBytes: netOf(k, url), rxBytes: netOf(k, url), txErrors: 0, rxErrors: 0 }] }
     },
     pods: [{}, {}]
 })
@@ -60,12 +64,12 @@ const fakeKubelet = (k: IKubelet): void => {
         k.lastOptions = options
         if (k.failNodes.some(ip => String(url).includes(`//${ip}:`))) throw new TypeError('fetch failed')
         if (String(url).endsWith('/metrics/cadvisor')) return new Response(cadvisor(k), { status: 200 })
-        if (String(url).endsWith('/stats/summary')) return new Response(JSON.stringify(summary(k)), { status: 200 })
+        if (String(url).endsWith('/stats/summary')) return new Response(JSON.stringify(summary(k, String(url))), { status: 200 })
         return new Response('', { status: 404 })
     }) as typeof fetch
 }
 
-const newKubelet = (): IKubelet => ({ cpuSeconds: 10, txEth0: 0, txEth1: 0, usageNanoCores: 2e9, failNodes: [] })
+const newKubelet = (): IKubelet => ({ cpuSeconds: 10, txEth0: 0, txEth1: 0, usageNanoCores: 2e9, failNodes: [], nodeNet: {} })
 
 const kwirthData = (over: Partial<Record<string, unknown>> = {}): KwirthData => ({
     clusterType: 'kubernetes', inCluster: true, isDesktop: false, metricsInterval: INTERVAL, ...over
@@ -346,4 +350,97 @@ test('starting the clock twice leaves ONE clock', async () => {
     provider.stopMetricsInterval()
     // one clock of 50 ms gives 4 ticks in 230 ms; two would give 8
     assert.ok(ticks <= 5, `${ticks} ticks: two clocks are running`)
+})
+
+// ── The cluster's network rate against restarts, new nodes and reboots (0.1.3, 2026-11-19) ─────────
+//
+// The cluster's tx/rx summed the CUMULATIVE counters of every node read now and subtracted only those of the
+// nodes it had read before: the first read after starting, and every node that appeared, counted all it had
+// sent since boot as one interval. In an AKS, each restart of Kwirth gave a "rate" of hundreds of Gbps, and
+// Agora learned it (z 53,733 on the cluster's network). Now each node is subtracted from ITS previous read.
+
+const MIB = 1024 * 1024
+const N2 = 'node-b'   // another IP than NODE's: nodeInfo builds the IP from the name's length
+
+test('counterDelta: no previous reading or a counter that went backwards say nothing (0); otherwise the growth', () => {
+    assert.equal(counterDelta(500, undefined), 0)
+    assert.equal(counterDelta(100, 900), 0)
+    assert.equal(counterDelta(900, 900), 0)
+    assert.equal(counterDelta(900, 100), 800)
+})
+
+test('🔴 the first read after starting gives a network rate of 0, not every node\'s counter since boot', async () => {
+    const kubelet = newKubelet()
+    kubelet.nodeNet = { [nodeInfo(NODE).ip]: 500_000 * MIB }   // half a TiB since the node booted
+    fakeKubelet(kubelet)
+    const provider = newProvider()
+    const { readings, subscriber } = recorder()
+    await provider.addSubscriber(subscriber)
+
+    await provider.tick()
+    assert.equal(readings[0].cluster.txmbps, 0)
+    assert.equal(readings[0].cluster.rxmbps, 0)
+
+    // 15 MiB more in 15 s: 1 MiB/s
+    kubelet.nodeNet[nodeInfo(NODE).ip] += 15 * MIB
+    await provider.tick()
+    assert.equal(readings[1].cluster.txmbps, 1)
+    assert.equal(readings[1].cluster.rxmbps, 1)
+})
+
+test('🔴 a node that appears adds nothing on its first read; the nodes already there keep their rate', async () => {
+    const kubelet = newKubelet()
+    kubelet.nodeNet = { [nodeInfo(NODE).ip]: 0, [nodeInfo(N2).ip]: 800_000 * MIB }
+    kubelet.failNodes = [nodeInfo(N2).ip]   // not there yet
+    fakeKubelet(kubelet)
+    const provider = newProvider(clusterInfoWith([NODE, N2]))
+    const { readings, subscriber } = recorder()
+    await provider.addSubscriber(subscriber)
+
+    await provider.tick()
+    kubelet.failNodes = []                   // it appears, with its counter since boot
+    kubelet.nodeNet[nodeInfo(NODE).ip] += 30 * MIB
+    await provider.tick()
+    assert.deepEqual(readings[1].nodes.map(n => n.name).sort(), [N2, NODE].sort())
+    assert.equal(readings[1].cluster.txmbps, 2)   // only NODE's 30 MiB in 15 s
+
+    kubelet.nodeNet[nodeInfo(NODE).ip] += 15 * MIB
+    kubelet.nodeNet[nodeInfo(N2).ip] += 15 * MIB
+    await provider.tick()
+    assert.equal(readings[2].cluster.txmbps, 2)   // now both count: 1 + 1
+})
+
+test('🔴 a node whose counter went backwards (it rebooted) adds 0, never a negative rate', async () => {
+    const kubelet = newKubelet()
+    kubelet.nodeNet = { [nodeInfo(NODE).ip]: 0, [nodeInfo(N2).ip]: 900 * MIB }
+    fakeKubelet(kubelet)
+    const provider = newProvider(clusterInfoWith([NODE, N2]))
+    const { readings, subscriber } = recorder()
+    await provider.addSubscriber(subscriber)
+
+    await provider.tick()
+    kubelet.nodeNet[nodeInfo(NODE).ip] += 15 * MIB
+    kubelet.nodeNet[nodeInfo(N2).ip] = 3 * MIB   // rebooted: starts again from 0
+    await provider.tick()
+    assert.equal(readings[1].cluster.txmbps, 1)
+    assert.equal(readings[1].cluster.rxmbps, 1)
+})
+
+test('a pod counter that went backwards (its container restarted) gives a rate of 0, not a negative one', async () => {
+    const kubelet = newKubelet()
+    kubelet.txEth0 = 9_000_000
+    fakeKubelet(kubelet)
+    const provider = newProvider()
+    await provider.startProvider()
+    provider.stopMetricsInterval()
+    const { readings, subscriber } = recorder()
+    await provider.addSubscriber(subscriber, { pod: true, container: true, machine: true })
+
+    await provider.tick()
+    kubelet.txEth0 = 1_500_000
+    kubelet.cpuSeconds = 2   // the container restarted too
+    await provider.tick()
+    const node = readings[1].nodes[0]
+    assert.equal(node.podMetricValues.get('shop/web-1/kwirth_container_transmit_mbps')?.value, 0)
+    assert.equal(node.containerMetricValues.get('shop/web-1/app/kwirth_container_cpu_percentage')?.value, 0)
 })

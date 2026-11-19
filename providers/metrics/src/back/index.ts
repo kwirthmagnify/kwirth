@@ -52,6 +52,16 @@ const describeFetchError = (err: unknown): string => {
     return parts.join(' ← ')
 }
 
+/*
+    0.1.3 · what a cumulative counter grew between two reads. Without a previous reading (the first read after
+    starting, a node or a pod that just appeared) or when it went BACKWARDS (a node rebooted, a container
+    restarted: the counter starts again from 0), nothing is known about the interval: 0. Before, the first read
+    and every new node counted their whole counter since boot as one interval — on a cluster's network, after
+    each restart of Kwirth, a "rate" of hundreds of Gbps that poisoned whoever learned from it.
+*/
+export const counterDelta = (now: number, prev: number | undefined): number =>
+    prev === undefined || now < prev ? 0 : now - prev
+
 type TMetricValues = Map<string, { value: number, timestamp: number }>
 // The labels of a cAdvisor line, by name
 type TLabels = Record<string, string>
@@ -168,8 +178,8 @@ export class MetricsProvider implements IProvider {
     public getClusterUsage = (): IMetricsClusterUsage => {
         let cpuUsed = 0, cpuNumber = this.vcpus
         let memUsed = 0, memTotal = 0
+        // bytes sent / received in the interval, node by node against ITS previous read (see counterDelta)
         let tx = 0, rx = 0
-        let prevtx = 0, prevrx = 0
         if (this.metricsList && this.lastRead) {
             try {
                 for (let lastNodeRead of this.lastRead.nodes) {
@@ -177,24 +187,15 @@ export class MetricsProvider implements IProvider {
                         memUsed += lastNodeRead.summary.memory.usageBytes
                         memTotal += lastNodeRead.summary.memory.usageBytes + lastNodeRead.summary.memory.availableBytes
                         cpuUsed += lastNodeRead.summary.cpu.usageNanoCores
-                        tx += lastNodeRead.summary.network.txBytes
-                        rx += lastNodeRead.summary.network.rxBytes
-
-                        if (this.prevRead) {
-                            let prevNodeRead = this.prevRead.nodes.find(n => n.name === lastNodeRead.name)
-                            if (prevNodeRead) {
-                                prevtx += prevNodeRead.summary.network.txBytes
-                                prevrx += prevNodeRead.summary.network.rxBytes
-                            }
-                        }
+                        const prevSummary = this.prevRead?.nodes.find(n => n.name === lastNodeRead.name)?.summary
+                        tx += counterDelta(lastNodeRead.summary.network.txBytes, prevSummary?.network.txBytes)
+                        rx += counterDelta(lastNodeRead.summary.network.rxBytes, prevSummary?.network.rxBytes)
                     }
                 }
                 if (memTotal === 0) memTotal = 1
                 if (cpuNumber === 0) cpuNumber = 1
-                let tottx = tx - prevtx
-                let totrx = rx - prevrx
-                tottx = (tottx / 1024 / 1024) / this.metricsInterval
-                totrx = (totrx / 1024 / 1024) / this.metricsInterval
+                const tottx = (tx / 1024 / 1024) / this.metricsInterval
+                const totrx = (rx / 1024 / 1024) / this.metricsInterval
                 const pods = this.lastRead.nodes.reduce((sum, n) => sum + (n.summary?.pods?.length ?? 0), 0)
                 const maxPods = Array.from(this.clusterInfo.nodes.values()).reduce((sum, n) => sum + n.maxPods, 0)
                 return {
@@ -705,20 +706,20 @@ export class MetricsProvider implements IProvider {
                     }
                     case 'container_cpu_usage_seconds_total': {
                         const prevEntry = prevNode?.containerMetricValues.get(key)
-                        const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
+                        const delta = counterDelta(entry.value, prevEntry?.value)
                         const pct = totalVcpus > 0 && interval > 0 ? (delta / interval) / totalVcpus * 100 : 0
                         containerSynthetics.push([`${prefix}kwirth_container_cpu_percentage`, { value: pct, timestamp: entry.timestamp }])
                         break
                     }
                     case 'container_fs_writes_bytes_total': {
                         const prevEntry = prevNode?.containerMetricValues.get(key)
-                        const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
+                        const delta = counterDelta(entry.value, prevEntry?.value)
                         containerSynthetics.push([`${prefix}kwirth_container_write_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp }])
                         break
                     }
                     case 'container_fs_reads_bytes_total': {
                         const prevEntry = prevNode?.containerMetricValues.get(key)
-                        const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
+                        const delta = counterDelta(entry.value, prevEntry?.value)
                         containerSynthetics.push([`${prefix}kwirth_container_read_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp }])
                         break
                     }
@@ -735,13 +736,13 @@ export class MetricsProvider implements IProvider {
                 switch (metricName) {
                     case 'container_network_transmit_bytes_total': {
                         const prevEntry = prevNode?.podMetricValues.get(key)
-                        const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
+                        const delta = counterDelta(entry.value, prevEntry?.value)
                         podSynthetics.push([`${prefix}kwirth_container_transmit_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp }])
                         break
                     }
                     case 'container_network_receive_bytes_total': {
                         const prevEntry = prevNode?.podMetricValues.get(key)
-                        const delta = prevEntry !== undefined ? entry.value - prevEntry.value : 0
+                        const delta = counterDelta(entry.value, prevEntry?.value)
                         podSynthetics.push([`${prefix}kwirth_container_receive_mbps`, { value: interval > 0 ? delta / interval / 1_000_000 : 0, timestamp: entry.timestamp }])
                         break
                     }
