@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-sender-file",
   "publisher": "@kwirthmagnify",
   "version": "0.1.15",
+  "tags": ["integration"],
   "displayName": "File Sender",
   "description": "File sender plugin for Kwirth — appends messages to a file, with configurable path, format and timestamps per named config",
   "type": "module",

@@ -3,6 +3,11 @@
     "extensionType": "provider",
     "id": "metrics",
     "version": "0.1.2",
+    "tags": [
+      "observability",
+      "metrics",
+      "kubernetes"
+    ],
     "name": "Metrics Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-metrics/-/kwirth-provider-metrics-0.1.2.tgz",
     "description": "Metrics provider for Kwirth - reads kubelet/cAdvisor metrics from every node, no Prometheus needed"
@@ -11,6 +16,11 @@
     "extensionType": "provider",
     "id": "metrics",
     "version": "0.1.1",
+    "tags": [
+      "observability",
+      "metrics",
+      "kubernetes"
+    ],
     "name": "Metrics Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-metrics/-/kwirth-provider-metrics-0.1.1.tgz",
     "description": "Metrics provider for Kwirth — reads kubelet/cAdvisor metrics from every node, no Prometheus needed"
@@ -19,6 +29,11 @@
     "extensionType": "provider",
     "id": "metrics",
     "version": "0.1.0",
+    "tags": [
+      "observability",
+      "metrics",
+      "kubernetes"
+    ],
     "name": "Metrics Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-metrics/-/kwirth-provider-metrics-0.1.0.tgz",
     "description": "Metrics provider for Kwirth — reads kubelet/cAdvisor metrics from every node, no Prometheus needed"
@@ -27,6 +42,11 @@
     "extensionType": "provider",
     "id": "events",
     "version": "0.1.1",
+    "tags": [
+      "observability",
+      "events",
+      "kubernetes"
+    ],
     "name": "Events",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-events/-/kwirth-provider-events-0.1.1.tgz",
     "description": "Events provider for Kwirth - streams Kubernetes resource changes and cluster events to the channels that subscribe"
@@ -35,6 +55,11 @@
     "extensionType": "provider",
     "id": "events",
     "version": "0.1.0",
+    "tags": [
+      "observability",
+      "events",
+      "kubernetes"
+    ],
     "name": "Events",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-events/-/kwirth-provider-events-0.1.0.tgz",
     "description": "Events provider for Kwirth — streams Kubernetes resource changes and cluster events to the channels that subscribe"
@@ -43,6 +68,10 @@
     "extensionType": "provider",
     "id": "business",
     "version": "0.3.3",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "Business Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-business/-/kwirth-provider-business-0.3.3.tgz",
     "description": "Business provider plugin for Kwirth — ingests arbitrary business events over HTTP and dispatches them to subscribers grouped by spaces and types"
@@ -51,6 +80,10 @@
     "extensionType": "provider",
     "id": "business",
     "version": "0.3.2",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "Business Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-business/-/kwirth-provider-business-0.3.2.tgz",
     "description": "Business provider plugin for Kwirth — ingests arbitrary business events over HTTP and dispatches them to subscribers grouped by spaces and types"
@@ -59,6 +92,10 @@
     "extensionType": "provider",
     "id": "kafka",
     "version": "0.3.3",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "Kafka Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-kafka/-/kwirth-provider-kafka-0.3.3.tgz",
     "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces"
@@ -67,6 +104,10 @@
     "extensionType": "provider",
     "id": "kafka",
     "version": "0.1.11",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "Kafka Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-kafka/-/kwirth-provider-kafka-0.1.11.tgz",
     "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces"
@@ -75,6 +116,10 @@
     "extensionType": "provider",
     "id": "kafka",
     "version": "0.3.2",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "Kafka Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-kafka/-/kwirth-provider-kafka-0.3.2.tgz",
     "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces"
@@ -83,6 +128,10 @@
     "extensionType": "provider",
     "id": "otel",
     "version": "0.3.3",
+    "tags": [
+      "observability",
+      "traces"
+    ],
     "name": "OpenTelemetry Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-otel/-/kwirth-provider-otel-0.3.3.tgz",
     "description": "OpenTelemetry provider plugin for Kwirth — receives OTLP/HTTP signals (traces, metrics, logs) and dispatches them grouped by spaces"
@@ -91,6 +140,10 @@
     "extensionType": "provider",
     "id": "otel",
     "version": "0.1.11",
+    "tags": [
+      "observability",
+      "traces"
+    ],
     "name": "OpenTelemetry Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-otel/-/kwirth-provider-otel-0.1.11.tgz",
     "description": "OpenTelemetry provider plugin for Kwirth — receives OTLP/HTTP signals (traces, metrics, logs) and dispatches them grouped by spaces"
@@ -99,6 +152,10 @@
     "extensionType": "provider",
     "id": "sample",
     "version": "0.3.2",
+    "tags": [
+      "development",
+      "sample"
+    ],
     "name": "Sample Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-sample/-/kwirth-provider-sample-0.3.2.tgz",
     "description": "Sample provider plugin for Kwirth — emits a periodic heartbeat event"
@@ -107,6 +164,10 @@
     "extensionType": "provider",
     "id": "sample",
     "version": "0.1.11",
+    "tags": [
+      "development",
+      "sample"
+    ],
     "name": "Sample Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-sample/-/kwirth-provider-sample-0.1.11.tgz",
     "description": "Sample provider plugin for Kwirth — emits a periodic heartbeat event"
@@ -115,6 +176,10 @@
     "extensionType": "provider",
     "id": "syslog",
     "version": "0.3.4",
+    "tags": [
+      "observability",
+      "log"
+    ],
     "name": "Syslog Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.3.4.tgz",
     "description": "Syslog receiver for Kwirth — accepts RFC 3164/5424 messages over UDP (RFC 5426) and TCP (RFC 6587) with optional relay support",
@@ -124,6 +189,10 @@
     "extensionType": "provider",
     "id": "syslog",
     "version": "0.3.3",
+    "tags": [
+      "observability",
+      "log"
+    ],
     "name": "Syslog Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.3.3.tgz",
     "description": "Syslog receiver for Kwirth — accepts RFC 3164/5424 messages over UDP (RFC 5426) and TCP (RFC 6587) with optional relay support",
@@ -133,6 +202,10 @@
     "extensionType": "provider",
     "id": "syslog",
     "version": "0.1.27",
+    "tags": [
+      "observability",
+      "log"
+    ],
     "name": "Syslog Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.1.27.tgz",
     "description": "Syslog receiver for Kwirth — accepts RFC 3164/5424 messages over UDP (RFC 5426) and TCP (RFC 6587) with optional relay support",
@@ -142,6 +215,10 @@
     "extensionType": "provider",
     "id": "syslog",
     "version": "0.3.2",
+    "tags": [
+      "observability",
+      "log"
+    ],
     "name": "Syslog Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.3.2.tgz",
     "description": "Syslog receiver for Kwirth — accepts RFC 3164/5424 messages over UDP (RFC 5426) and TCP (RFC 6587) with optional relay support",
@@ -151,6 +228,10 @@
     "extensionType": "provider",
     "id": "tick",
     "version": "0.3.2",
+    "tags": [
+      "development",
+      "sample"
+    ],
     "name": "Tick Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.3.2.tgz",
     "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
@@ -160,6 +241,10 @@
     "extensionType": "provider",
     "id": "tick",
     "version": "0.1.11",
+    "tags": [
+      "development",
+      "sample"
+    ],
     "name": "Tick Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.1.11.tgz",
     "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
@@ -169,6 +254,10 @@
     "extensionType": "provider",
     "id": "tick",
     "version": "0.1.10",
+    "tags": [
+      "development",
+      "sample"
+    ],
     "name": "Tick Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.1.10.tgz",
     "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
@@ -178,6 +267,11 @@
     "extensionType": "provider",
     "id": "trivy",
     "version": "0.4.2",
+    "tags": [
+      "security",
+      "vulnerabilities",
+      "kubernetes"
+    ],
     "name": "Trivy Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.4.2.tgz",
     "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
@@ -187,6 +281,11 @@
     "extensionType": "provider",
     "id": "trivy",
     "version": "0.4.1",
+    "tags": [
+      "security",
+      "vulnerabilities",
+      "kubernetes"
+    ],
     "name": "Trivy Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.4.1.tgz",
     "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
@@ -196,6 +295,11 @@
     "extensionType": "provider",
     "id": "trivy",
     "version": "0.4.0",
+    "tags": [
+      "security",
+      "vulnerabilities",
+      "kubernetes"
+    ],
     "name": "Trivy Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.4.0.tgz",
     "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
@@ -205,6 +309,11 @@
     "extensionType": "provider",
     "id": "validating",
     "version": "0.3.3",
+    "tags": [
+      "security",
+      "compliance",
+      "kubernetes"
+    ],
     "name": "Validating Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-validating/-/kwirth-provider-validating-0.3.3.tgz",
     "description": "Validating webhook provider for Kwirth — exposes a /validate endpoint for Kubernetes admission webhooks",
@@ -214,6 +323,11 @@
     "extensionType": "provider",
     "id": "validating",
     "version": "0.1.13",
+    "tags": [
+      "security",
+      "compliance",
+      "kubernetes"
+    ],
     "name": "Validating Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-validating/-/kwirth-provider-validating-0.1.13.tgz",
     "description": "Validating webhook provider for Kwirth — exposes a /validate endpoint for Kubernetes admission webhooks",
@@ -223,6 +337,11 @@
     "extensionType": "provider",
     "id": "validating",
     "version": "0.1.12",
+    "tags": [
+      "security",
+      "compliance",
+      "kubernetes"
+    ],
     "name": "Validating Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-validating/-/kwirth-provider-validating-0.1.12.tgz",
     "description": "Validating webhook provider for Kwirth — exposes a /validate endpoint for Kubernetes admission webhooks",
@@ -232,6 +351,10 @@
     "extensionType": "provider",
     "id": "sample",
     "version": "0.1.8",
+    "tags": [
+      "development",
+      "sample"
+    ],
     "name": "Sample Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-sample/-/kwirth-provider-sample-0.1.8.tgz",
     "description": "Sample provider plugin for Kwirth — emits a periodic heartbeat event"
@@ -240,6 +363,10 @@
     "extensionType": "provider",
     "id": "business",
     "version": "0.1.7",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "Business Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-business/-/kwirth-provider-business-0.1.7.tgz",
     "description": "Business provider plugin for Kwirth — ingests arbitrary business events over HTTP and dispatches them to subscribers grouped by spaces and types"
@@ -248,6 +375,10 @@
     "extensionType": "provider",
     "id": "otel",
     "version": "0.3.2",
+    "tags": [
+      "observability",
+      "traces"
+    ],
     "name": "OpenTelemetry Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-otel/-/kwirth-provider-otel-0.3.2.tgz",
     "description": "OpenTelemetry provider plugin for Kwirth — receives OTLP/HTTP signals (traces, metrics, logs) and dispatches them grouped by spaces"
@@ -256,6 +387,10 @@
     "extensionType": "provider",
     "id": "sample",
     "version": "0.1.10",
+    "tags": [
+      "development",
+      "sample"
+    ],
     "name": "Sample Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-sample/-/kwirth-provider-sample-0.1.10.tgz",
     "description": "Sample provider plugin for Kwirth — emits a periodic heartbeat event"
@@ -264,6 +399,10 @@
     "extensionType": "provider",
     "id": "tick",
     "version": "0.1.9",
+    "tags": [
+      "development",
+      "sample"
+    ],
     "name": "Tick Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.1.9.tgz",
     "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
@@ -273,6 +412,11 @@
     "extensionType": "provider",
     "id": "validating",
     "version": "0.3.2",
+    "tags": [
+      "security",
+      "compliance",
+      "kubernetes"
+    ],
     "name": "Validating Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-validating/-/kwirth-provider-validating-0.3.2.tgz",
     "description": "Validating webhook provider for Kwirth — exposes a /validate endpoint for Kubernetes admission webhooks",
@@ -282,6 +426,10 @@
     "extensionType": "provider",
     "id": "http-pull-push",
     "version": "0.3.4",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "HTTP Pull-Push Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-http-pull-push/-/kwirth-provider-http-pull-push-0.3.4.tgz",
     "description": "HTTP polling provider for Kwirth — pulls remote HTTP endpoints on a schedule and pushes each result to the subscribed channels",
@@ -291,6 +439,10 @@
     "extensionType": "provider",
     "id": "http-pull-push",
     "version": "0.3.3",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "HTTP Pull-Push Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-http-pull-push/-/kwirth-provider-http-pull-push-0.3.3.tgz",
     "description": "HTTP polling provider for Kwirth — pulls remote HTTP endpoints on a schedule and pushes each result to the subscribed channels",
@@ -300,6 +452,10 @@
     "extensionType": "provider",
     "id": "http-pull-push",
     "version": "0.1.3",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "HTTP Pull-Push Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-http-pull-push/-/kwirth-provider-http-pull-push-0.1.3.tgz",
     "description": "HTTP polling provider for Kwirth — pulls remote HTTP endpoints on a schedule and pushes each result to the subscribed channels",
@@ -309,6 +465,10 @@
     "extensionType": "provider",
     "id": "http-pull-push",
     "version": "0.3.2",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "HTTP Pull-Push Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-http-pull-push/-/kwirth-provider-http-pull-push-0.3.2.tgz",
     "description": "HTTP polling provider for Kwirth — pulls remote HTTP endpoints on a schedule and pushes each result to the subscribed channels",
@@ -318,6 +478,10 @@
     "extensionType": "provider",
     "id": "business",
     "version": "0.1.8",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "Business Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-business/-/kwirth-provider-business-0.1.8.tgz",
     "description": "Business provider plugin for Kwirth — ingests arbitrary business events over HTTP and dispatches them to subscribers grouped by spaces and types"
@@ -326,6 +490,10 @@
     "extensionType": "provider",
     "id": "http-pull-push",
     "version": "0.1.4",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "HTTP Pull-Push Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-http-pull-push/-/kwirth-provider-http-pull-push-0.1.4.tgz",
     "description": "HTTP polling provider for Kwirth — pulls remote HTTP endpoints on a schedule and pushes each result to the subscribed channels",
@@ -335,6 +503,10 @@
     "extensionType": "provider",
     "id": "kafka",
     "version": "0.1.12",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "Kafka Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-kafka/-/kwirth-provider-kafka-0.1.12.tgz",
     "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces"
@@ -343,6 +515,10 @@
     "extensionType": "provider",
     "id": "otel",
     "version": "0.1.12",
+    "tags": [
+      "observability",
+      "traces"
+    ],
     "name": "OpenTelemetry Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-otel/-/kwirth-provider-otel-0.1.12.tgz",
     "description": "OpenTelemetry provider plugin for Kwirth — receives OTLP/HTTP signals (traces, metrics, logs) and dispatches them grouped by spaces"
@@ -351,6 +527,10 @@
     "extensionType": "provider",
     "id": "sample",
     "version": "0.1.12",
+    "tags": [
+      "development",
+      "sample"
+    ],
     "name": "Sample Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-sample/-/kwirth-provider-sample-0.1.12.tgz",
     "description": "Sample provider plugin for Kwirth — emits a periodic heartbeat event"
@@ -359,6 +539,10 @@
     "extensionType": "provider",
     "id": "syslog",
     "version": "0.1.28",
+    "tags": [
+      "observability",
+      "log"
+    ],
     "name": "Syslog Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.1.28.tgz",
     "description": "Syslog receiver for Kwirth — accepts RFC 3164/5424 messages over UDP (RFC 5426) and TCP (RFC 6587) with optional relay support",
@@ -368,6 +552,10 @@
     "extensionType": "provider",
     "id": "tick",
     "version": "0.1.12",
+    "tags": [
+      "development",
+      "sample"
+    ],
     "name": "Tick Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.1.12.tgz",
     "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
@@ -377,6 +565,11 @@
     "extensionType": "provider",
     "id": "trivy",
     "version": "0.1.10",
+    "tags": [
+      "security",
+      "vulnerabilities",
+      "kubernetes"
+    ],
     "name": "Trivy Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.1.10.tgz",
     "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
@@ -386,6 +579,11 @@
     "extensionType": "provider",
     "id": "validating",
     "version": "0.1.14",
+    "tags": [
+      "security",
+      "compliance",
+      "kubernetes"
+    ],
     "name": "Validating Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-validating/-/kwirth-provider-validating-0.1.14.tgz",
     "description": "Validating webhook provider for Kwirth — exposes a /validate endpoint for Kubernetes admission webhooks",
@@ -395,6 +593,10 @@
     "extensionType": "provider",
     "id": "business",
     "version": "0.1.9",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "Business Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-business/-/kwirth-provider-business-0.1.9.tgz",
     "description": "Business provider plugin for Kwirth — ingests arbitrary business events over HTTP and dispatches them to subscribers grouped by spaces and types"
@@ -403,6 +605,10 @@
     "extensionType": "provider",
     "id": "http-pull-push",
     "version": "0.1.5",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "HTTP Pull-Push Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-http-pull-push/-/kwirth-provider-http-pull-push-0.1.5.tgz",
     "description": "HTTP polling provider for Kwirth — pulls remote HTTP endpoints on a schedule and pushes each result to the subscribed channels",
@@ -412,6 +618,10 @@
     "extensionType": "provider",
     "id": "kafka",
     "version": "0.1.13",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "Kafka Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-kafka/-/kwirth-provider-kafka-0.1.13.tgz",
     "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces"
@@ -420,6 +630,10 @@
     "extensionType": "provider",
     "id": "otel",
     "version": "0.1.13",
+    "tags": [
+      "observability",
+      "traces"
+    ],
     "name": "OpenTelemetry Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-otel/-/kwirth-provider-otel-0.1.13.tgz",
     "description": "OpenTelemetry provider plugin for Kwirth — receives OTLP/HTTP signals (traces, metrics, logs) and dispatches them grouped by spaces"
@@ -428,6 +642,10 @@
     "extensionType": "provider",
     "id": "sample",
     "version": "0.3.1",
+    "tags": [
+      "development",
+      "sample"
+    ],
     "name": "Sample Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-sample/-/kwirth-provider-sample-0.3.1.tgz",
     "description": "Sample provider plugin for Kwirth — emits a periodic heartbeat event"
@@ -436,6 +654,10 @@
     "extensionType": "provider",
     "id": "syslog",
     "version": "0.1.29",
+    "tags": [
+      "observability",
+      "log"
+    ],
     "name": "Syslog Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.1.29.tgz",
     "description": "Syslog receiver for Kwirth — accepts RFC 3164/5424 messages over UDP (RFC 5426) and TCP (RFC 6587) with optional relay support",
@@ -445,6 +667,10 @@
     "extensionType": "provider",
     "id": "tick",
     "version": "0.3.1",
+    "tags": [
+      "development",
+      "sample"
+    ],
     "name": "Tick Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-tick/-/kwirth-provider-tick-0.3.1.tgz",
     "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
@@ -454,6 +680,11 @@
     "extensionType": "provider",
     "id": "trivy",
     "version": "0.1.11",
+    "tags": [
+      "security",
+      "vulnerabilities",
+      "kubernetes"
+    ],
     "name": "Trivy Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.1.11.tgz",
     "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
@@ -463,6 +694,10 @@
     "extensionType": "provider",
     "id": "business",
     "version": "0.1.10",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "Business Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-business/-/kwirth-provider-business-0.1.10.tgz",
     "description": "Business provider plugin for Kwirth — ingests arbitrary business events over HTTP and dispatches them to subscribers grouped by spaces and types"
@@ -471,6 +706,10 @@
     "extensionType": "provider",
     "id": "http-pull-push",
     "version": "0.1.6",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "HTTP Pull-Push Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-http-pull-push/-/kwirth-provider-http-pull-push-0.1.6.tgz",
     "description": "HTTP polling provider for Kwirth — pulls remote HTTP endpoints on a schedule and pushes each result to the subscribed channels",
@@ -480,6 +719,10 @@
     "extensionType": "provider",
     "id": "kafka",
     "version": "0.1.14",
+    "tags": [
+      "integration",
+      "ingest"
+    ],
     "name": "Kafka Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-kafka/-/kwirth-provider-kafka-0.1.14.tgz",
     "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces"
@@ -488,6 +731,10 @@
     "extensionType": "provider",
     "id": "otel",
     "version": "0.1.14",
+    "tags": [
+      "observability",
+      "traces"
+    ],
     "name": "OpenTelemetry Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-otel/-/kwirth-provider-otel-0.1.14.tgz",
     "description": "OpenTelemetry provider plugin for Kwirth — receives OTLP/HTTP signals (traces, metrics, logs) and dispatches them grouped by spaces"
@@ -496,6 +743,10 @@
     "extensionType": "provider",
     "id": "syslog",
     "version": "0.1.30",
+    "tags": [
+      "observability",
+      "log"
+    ],
     "name": "Syslog Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-syslog/-/kwirth-provider-syslog-0.1.30.tgz",
     "description": "Syslog receiver for Kwirth — accepts RFC 3164/5424 messages over UDP (RFC 5426) and TCP (RFC 6587) with optional relay support",
@@ -505,6 +756,11 @@
     "extensionType": "provider",
     "id": "trivy",
     "version": "0.1.12",
+    "tags": [
+      "security",
+      "vulnerabilities",
+      "kubernetes"
+    ],
     "name": "Trivy Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.1.12.tgz",
     "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",
@@ -514,6 +770,11 @@
     "extensionType": "provider",
     "id": "validating",
     "version": "0.1.15",
+    "tags": [
+      "security",
+      "compliance",
+      "kubernetes"
+    ],
     "name": "Validating Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-validating/-/kwirth-provider-validating-0.1.15.tgz",
     "description": "Validating webhook provider for Kwirth — exposes a /validate endpoint for Kubernetes admission webhooks",
@@ -523,6 +784,11 @@
     "extensionType": "provider",
     "id": "trivy",
     "version": "0.3.1",
+    "tags": [
+      "security",
+      "vulnerabilities",
+      "kubernetes"
+    ],
     "name": "Trivy Provider",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-trivy/-/kwirth-provider-trivy-0.3.1.tgz",
     "description": "Trivy Operator provider for Kwirth — watches Kubernetes CRDs produced by Trivy Operator and dispatches security reports to subscribed channels",

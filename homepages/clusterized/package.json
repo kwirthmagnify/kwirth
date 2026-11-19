@@ -4,6 +4,7 @@
   "displayName": "Clusterized",
   "publisher": "@kwirthmagnify",
   "version": "0.1.12",
+  "tags": ["ui", "homepage"],
   "description": "Cluster-centric homepage for Kwirth — one card per cluster with status indicator and quick Magnify access",
   "type": "module",
   "scripts": {

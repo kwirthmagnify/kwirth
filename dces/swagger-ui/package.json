@@ -3,6 +3,7 @@
     "name": "@kwirthmagnify/kwirth-dce-swagger-ui",
     "publisher": "@kwirthmagnify",
     "version": "0.1.0",
+    "tags": ["library"],
     "displayName": "Swagger UI",
     "description": "Shared Swagger UI for Kwirth extensions: serves the page to read and try an OpenAPI document, without each extension bundling its own copy",
     "website": "https://kwirthmagnify.dev",

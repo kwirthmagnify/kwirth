@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-theme-matrix",
   "publisher": "@kwirthmagnify",
   "version": "0.1.3",
+  "tags": ["ui", "theme"],
   "displayName": "Matrix",
   "description": "Matrix digital rain theme — pure black background, phosphor-green monospace typography, matching the Matrix homepage aesthetic.",
   "type": "module",

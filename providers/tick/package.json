@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-provider-tick",
   "publisher": "@kwirthmagnify",
   "version": "0.3.2",
+  "tags": ["development", "sample"],
   "displayName": "Tick Provider",
   "description": "Periodic heartbeat provider for Kwirth — emits a tick event every 5 seconds to all subscribers",
   "website": "https://kwirthmagnify.dev",

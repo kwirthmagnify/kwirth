@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-idp-github-onprem",
   "publisher": "@kwirthmagnify",
   "version": "0.1.9",
+  "tags": ["security", "identity"],
   "displayName": "GitHub Enterprise Server",
   "description": "GitHub Enterprise Server (on-prem, OAuth2) identity provider connector for Kwirth",
   "type": "module",

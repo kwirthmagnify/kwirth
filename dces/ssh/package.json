@@ -3,6 +3,7 @@
     "name": "@kwirthmagnify/kwirth-dce-ssh",
     "publisher": "@kwirthmagnify",
     "version": "0.1.0",
+    "tags": ["library"],
     "displayName": "SSH",
     "description": "SSH client for Kwirth extensions — connect, run a command with stdin and a timeout, upload and remove files by SFTP",
     "type": "module",

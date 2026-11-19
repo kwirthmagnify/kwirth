@@ -3,6 +3,7 @@
   "displayName": "Provider Debug",
   "publisher": "@kwirthmagnify",
   "version": "0.2.2",
+  "tags": ["development", "debug"],
   "description": "Provider debugging channel for Kwirth - subscribes to a running provider and streams its raw events",
   "icon": "DataObjectOutlined",
   "type": "module",

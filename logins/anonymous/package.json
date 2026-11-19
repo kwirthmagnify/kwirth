@@ -4,6 +4,7 @@
     "publisher": "@kwirthmagnify",
     "displayName": "Anonymous",
     "version": "0.1.3",
+    "tags": ["security", "login"],
     "files": [
         "login.json",
         "background.png"

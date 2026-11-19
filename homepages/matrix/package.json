@@ -4,6 +4,7 @@
   "displayName": "Matrix",
   "publisher": "@kwirthmagnify",
   "version": "0.1.11",
+  "tags": ["ui", "homepage"],
   "description": "Matrix-style cluster overview homepage for Kwirth",
   "type": "module",
   "scripts": {

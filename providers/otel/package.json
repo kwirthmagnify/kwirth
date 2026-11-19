@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-provider-otel",
   "publisher": "@kwirthmagnify",
   "version": "0.3.3",
+  "tags": ["observability", "traces"],
   "displayName": "OpenTelemetry Provider",
   "description": "OpenTelemetry provider plugin for Kwirth — receives OTLP/HTTP signals (traces, metrics, logs) and dispatches them grouped by spaces",
   "type": "module",

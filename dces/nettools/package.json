@@ -3,6 +3,7 @@
     "name": "@kwirthmagnify/kwirth-dce-nettools",
     "publisher": "@kwirthmagnify",
     "version": "0.2.3",
+    "tags": ["library", "networking"],
     "displayName": "Net Tools",
     "description": "Network primitives shared by Kwirth extensions: TCP reachability and DNS resolution in the back end, and the icon and a shared latency chart in the front end. No binary is spawned",
     "website": "https://kwirthmagnify.dev",

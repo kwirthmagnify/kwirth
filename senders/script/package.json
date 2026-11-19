@@ -3,6 +3,7 @@
     "name": "@kwirthmagnify/kwirth-sender-script",
     "publisher": "@kwirthmagnify",
     "version": "0.2.0",
+    "tags": ["sre", "automation", "alert"],
     "displayName": "Script Sender",
     "description": "Script sender for Kwirth — runs a script written in its configuration (sh, bash, pwsh, powershell, cmd), locally or on another machine over SSH, with the message on stdin and/or environment variables",
     "type": "module",

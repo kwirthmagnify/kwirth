@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-idp-gitlab-cloud",
   "publisher": "@kwirthmagnify",
   "version": "0.1.9",
+  "tags": ["security", "identity"],
   "displayName": "GitLab Cloud",
   "description": "GitLab.com (SaaS, OIDC) identity provider connector for Kwirth",
   "type": "module",

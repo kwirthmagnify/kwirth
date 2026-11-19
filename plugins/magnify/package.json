@@ -5,6 +5,7 @@
     "extensionType": "plugin",
     "publisher": "@kwirthmagnify",
     "version": "0.3.4",
+    "tags": ["operations", "kubernetes"],
     "description": "Magnify channel plugin for Kwirth - a complete Kubernetes management tool: every artifact and event of the cluster, live, and the actions to manage them",
     "icon": "Search",
     "website": "https://kwirthmagnify.dev",

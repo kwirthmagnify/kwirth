@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-provider-validating",
   "publisher": "@kwirthmagnify",
   "version": "0.3.3",
+  "tags": ["security", "compliance", "kubernetes"],
   "displayName": "Validating Provider",
   "description": "Validating webhook provider for Kwirth — exposes a /validate endpoint for Kubernetes admission webhooks",
   "website": "https://kwirthmagnify.dev",

@@ -3,6 +3,10 @@
     "extensionType": "theme",
     "id": "avicii",
     "version": "0.1.3",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "name": "Avicii",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-avicii/-/kwirth-theme-avicii-0.1.3.tgz",
     "description": "Dark geometric theme inspired by Avicii — warm gold accents, sharp edges, Oswald typography, and triangle motifs."
@@ -11,6 +15,10 @@
     "extensionType": "theme",
     "id": "depeche-mode",
     "version": "0.1.3",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "name": "Depeche Mode",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-depeche-mode/-/kwirth-theme-depeche-mode-0.1.3.tgz",
     "description": "Depeche Mode Memento Mori theme — abyss black, blood red accent, bone parchment, condensed bold typography."
@@ -19,6 +27,10 @@
     "extensionType": "theme",
     "id": "matrix",
     "version": "0.1.3",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "name": "Matrix",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-matrix/-/kwirth-theme-matrix-0.1.3.tgz",
     "description": "Matrix digital rain theme — pure black background, phosphor-green monospace typography, matching the Matrix homepage aesthetic."
@@ -27,6 +39,10 @@
     "extensionType": "theme",
     "id": "plexus",
     "version": "0.1.4",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "name": "Plexus",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-plexus/-/kwirth-theme-plexus-0.1.4.tgz",
     "description": "Plexus corporate theme — deep navy background with signature orange accent and Inter typography."
@@ -35,6 +51,10 @@
     "extensionType": "theme",
     "id": "post-punk",
     "version": "0.1.3",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "name": "Post Punk",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-post-punk/-/kwirth-theme-post-punk-0.1.3.tgz",
     "description": "Dark monochrome theme with acid-green accents and monospace typography, inspired by the post-punk aesthetic."
@@ -43,6 +63,10 @@
     "extensionType": "theme",
     "id": "sfy",
     "version": "0.1.4",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "name": "SFY",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-sfy/-/kwirth-theme-sfy-0.1.4.tgz",
     "description": "SFY-inspired theme — sky blue primary, charcoal dark surfaces, teal-mint secondary, Lato + Montserrat typography.",
@@ -54,6 +78,10 @@
     "name": "@kwirthmagnify/kwirth-theme-sfy",
     "displayName": "SFY",
     "version": "0.1.2",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "SFY-inspired theme — sky blue primary, charcoal dark surfaces, teal-mint secondary, Lato + Montserrat typography.",
     "website": "https://sfy.com",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-sfy/-/kwirth-theme-sfy-0.1.2.tgz"
@@ -64,6 +92,10 @@
     "name": "@kwirthmagnify/kwirth-theme-sfy",
     "displayName": "SFY",
     "version": "0.1.1",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "SFY-inspired theme — sky blue primary, charcoal dark surfaces, teal-mint secondary, Lato + Montserrat typography.",
     "website": "https://sfy.com",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-sfy/-/kwirth-theme-sfy-0.1.1.tgz"
@@ -74,6 +106,10 @@
     "name": "@kwirthmagnify/kwirth-theme-sfy",
     "displayName": "SFY",
     "version": "0.1.0",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "SFY-inspired theme — sky blue primary, charcoal dark surfaces, teal-mint secondary, Lato + Montserrat typography.",
     "website": "https://sfy.com",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-sfy/-/kwirth-theme-sfy-0.1.0.tgz"
@@ -84,6 +120,10 @@
     "name": "@kwirthmagnify/kwirth-theme-plexus",
     "displayName": "Plexus",
     "version": "0.1.2",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Plexus corporate theme — deep navy background with coral accent and Lato typography.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-plexus/-/kwirth-theme-plexus-0.1.2.tgz"
   },
@@ -93,6 +133,10 @@
     "name": "@kwirthmagnify/kwirth-theme-plexus",
     "displayName": "Plexus",
     "version": "0.1.1",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Plexus corporate theme — deep navy background with coral accent and Lato typography.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-plexus/-/kwirth-theme-plexus-0.1.1.tgz"
   },
@@ -102,6 +146,10 @@
     "name": "@kwirthmagnify/kwirth-theme-plexus",
     "displayName": "Plexus",
     "version": "0.1.0",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Plexus corporate theme — deep navy background with coral accent and Lato typography.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-plexus/-/kwirth-theme-plexus-0.1.0.tgz"
   },
@@ -111,6 +159,10 @@
     "name": "@kwirthmagnify/kwirth-theme-post-punk",
     "displayName": "Post Punk",
     "version": "0.1.1",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Dark monochrome theme with acid-green accents and monospace typography, inspired by the post-punk aesthetic.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-post-punk/-/kwirth-theme-post-punk-0.1.1.tgz"
   },
@@ -120,6 +172,10 @@
     "name": "@kwirthmagnify/kwirth-theme-post-punk",
     "displayName": "Post Punk",
     "version": "0.1.0",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Dark monochrome theme with acid-green accents and monospace typography, inspired by the post-punk aesthetic.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-post-punk/-/kwirth-theme-post-punk-0.1.0.tgz"
   },
@@ -129,6 +185,10 @@
     "name": "@kwirthmagnify/kwirth-theme-avicii",
     "displayName": "Avicii",
     "version": "0.1.1",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Avicii-inspired theme — warm gold on deep black, geometric triangle motifs, sharp Oswald typography.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-avicii/-/kwirth-theme-avicii-0.1.1.tgz"
   },
@@ -138,6 +198,10 @@
     "name": "@kwirthmagnify/kwirth-theme-matrix",
     "displayName": "Matrix",
     "version": "0.1.1",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Matrix-style theme — deep black background with neon green accents and monospace typography.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-matrix/-/kwirth-theme-matrix-0.1.1.tgz"
   },
@@ -147,6 +211,10 @@
     "name": "@kwirthmagnify/kwirth-theme-depeche-mode",
     "displayName": "Depeche Mode",
     "version": "0.1.1",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Depeche Mode Memento Mori theme — abyss black, blood red accent, bone parchment, condensed bold typography.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-depeche-mode/-/kwirth-theme-depeche-mode-0.1.1.tgz"
   },
@@ -156,6 +224,10 @@
     "name": "@kwirthmagnify/kwirth-theme-sfy",
     "displayName": "SFY",
     "version": "0.1.3",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "SFY-inspired theme — sky blue primary, charcoal dark surfaces, teal-mint secondary, Lato + Montserrat typography.",
     "website": "https://sfy.com",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-sfy/-/kwirth-theme-sfy-0.1.3.tgz"
@@ -166,6 +238,10 @@
     "name": "@kwirthmagnify/kwirth-theme-plexus",
     "displayName": "Plexus",
     "version": "0.1.3",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Plexus corporate theme — deep navy background with coral accent and Lato typography.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-plexus/-/kwirth-theme-plexus-0.1.3.tgz"
   },
@@ -175,6 +251,10 @@
     "name": "@kwirthmagnify/kwirth-theme-post-punk",
     "displayName": "Post Punk",
     "version": "0.1.2",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Dark monochrome theme with acid-green accents and monospace typography, inspired by the post-punk aesthetic.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-post-punk/-/kwirth-theme-post-punk-0.1.2.tgz"
   },
@@ -184,6 +264,10 @@
     "name": "@kwirthmagnify/kwirth-theme-avicii",
     "displayName": "Avicii",
     "version": "0.1.2",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Avicii-inspired theme — warm gold on deep black, geometric triangle motifs, sharp Oswald typography.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-avicii/-/kwirth-theme-avicii-0.1.2.tgz"
   },
@@ -193,6 +277,10 @@
     "name": "@kwirthmagnify/kwirth-theme-matrix",
     "displayName": "Matrix",
     "version": "0.1.2",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Matrix-style theme — deep black background with neon green accents and monospace typography.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-matrix/-/kwirth-theme-matrix-0.1.2.tgz"
   },
@@ -202,6 +290,10 @@
     "name": "@kwirthmagnify/kwirth-theme-depeche-mode",
     "displayName": "Depeche Mode",
     "version": "0.1.2",
+    "tags": [
+      "ui",
+      "theme"
+    ],
     "description": "Depeche Mode Memento Mori theme — abyss black, blood red accent, bone parchment, condensed bold typography.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-theme-depeche-mode/-/kwirth-theme-depeche-mode-0.1.2.tgz"
   }

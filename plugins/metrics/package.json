@@ -5,6 +5,7 @@
     "extensionType": "plugin",
     "publisher": "@kwirthmagnify",
     "version": "0.1.4",
+    "tags": ["observability", "metrics", "kubernetes"],
     "description": "Metrics channel plugin for Kwirth - real-time CPU, memory, network and disk charts",
     "icon": "BarChart",
     "website": "https://kwirthmagnify.dev",

@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-aitoolset-k8s-secrets",
   "publisher": "@kwirthmagnify",
   "version": "0.1.0",
+  "tags": ["operations", "kubernetes", "ai"],
   "displayName": "K8s Config & Secrets",
   "description": "The configuration a workload actually consumes: ConfigMap data, Secret keys (values never returned) and TLS certificate details",
   "type": "module",

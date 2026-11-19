@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-sender-regex",
   "publisher": "@kwirthmagnify",
   "version": "0.1.17",
+  "tags": ["integration", "routing"],
   "displayName": "Regex Sender",
   "description": "Regex sender plugin for Kwirth — routes or drops messages based on ordered regex rules evaluated against any message field",
   "type": "module",

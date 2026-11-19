@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-provider-business",
   "publisher": "@kwirthmagnify",
   "version": "0.3.3",
+  "tags": ["integration", "ingest"],
   "displayName": "Business Provider",
   "description": "Business provider plugin for Kwirth — ingests arbitrary business events over HTTP and dispatches them to subscribers grouped by spaces and types",
   "type": "module",

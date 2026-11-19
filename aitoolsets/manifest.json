@@ -5,6 +5,11 @@
     "name": "@kwirthmagnify/kwirth-aitoolset-playground",
     "displayName": "Playground",
     "version": "0.1.0",
+    "tags": [
+      "development",
+      "sample",
+      "ai"
+    ],
     "description": "Harmless toy tools for trying out the AI toolset machinery end to end",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-playground/-/kwirth-aitoolset-playground-0.1.0.tgz",
     "website": "https://kwirthmagnify.dev"
@@ -15,6 +20,11 @@
     "name": "@kwirthmagnify/kwirth-aitoolset-k8s-inventory",
     "displayName": "K8s Inventory",
     "version": "0.2.0",
+    "tags": [
+      "operations",
+      "kubernetes",
+      "ai"
+    ],
     "description": "Read-only inventory of the Kubernetes cluster: namespaces, nodes, workloads, services and ingresses",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-inventory/-/kwirth-aitoolset-k8s-inventory-0.2.0.tgz",
     "website": "https://kwirthmagnify.dev"
@@ -25,6 +35,11 @@
     "name": "@kwirthmagnify/kwirth-aitoolset-k8s-inventory",
     "displayName": "K8s Inventory",
     "version": "0.1.0",
+    "tags": [
+      "operations",
+      "kubernetes",
+      "ai"
+    ],
     "description": "Read-only inventory of the Kubernetes cluster: namespaces, nodes, workloads, services and ingresses",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-inventory/-/kwirth-aitoolset-k8s-inventory-0.1.0.tgz",
     "website": "https://kwirthmagnify.dev"
@@ -35,6 +50,11 @@
     "name": "@kwirthmagnify/kwirth-aitoolset-k8s-describe",
     "displayName": "K8s Describe",
     "version": "0.2.1",
+    "tags": [
+      "operations",
+      "kubernetes",
+      "ai"
+    ],
     "description": "Diagnostic detail of a single object: describe and full manifests for pods, controllers, services, ingresses and namespaces; the source code each rollout revision ran",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-describe/-/kwirth-aitoolset-k8s-describe-0.2.1.tgz",
     "website": "https://kwirthmagnify.dev"
@@ -45,6 +65,11 @@
     "name": "@kwirthmagnify/kwirth-aitoolset-k8s-describe",
     "displayName": "K8s Describe",
     "version": "0.2.0",
+    "tags": [
+      "operations",
+      "kubernetes",
+      "ai"
+    ],
     "description": "Diagnostic detail of a single object: describe and full manifests for pods, controllers, services, ingresses and namespaces",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-describe/-/kwirth-aitoolset-k8s-describe-0.2.0.tgz",
     "website": "https://kwirthmagnify.dev"
@@ -55,6 +80,11 @@
     "name": "@kwirthmagnify/kwirth-aitoolset-k8s-describe",
     "displayName": "K8s Describe",
     "version": "0.1.0",
+    "tags": [
+      "operations",
+      "kubernetes",
+      "ai"
+    ],
     "description": "Diagnostic detail of a single object: describe and full manifests for pods, controllers, services and ingresses",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-describe/-/kwirth-aitoolset-k8s-describe-0.1.0.tgz",
     "website": "https://kwirthmagnify.dev"
@@ -65,6 +95,12 @@
     "name": "@kwirthmagnify/kwirth-aitoolset-k8s-observability",
     "displayName": "K8s Observability",
     "version": "0.1.0",
+    "tags": [
+      "observability",
+      "log",
+      "ai",
+      "kubernetes"
+    ],
     "description": "Recent cluster events and container logs: what happened and what the pod said",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-observability/-/kwirth-aitoolset-k8s-observability-0.1.0.tgz",
     "website": "https://kwirthmagnify.dev"
@@ -75,6 +111,11 @@
     "name": "@kwirthmagnify/kwirth-aitoolset-k8s-secrets",
     "displayName": "K8s Config & Secrets",
     "version": "0.1.0",
+    "tags": [
+      "operations",
+      "kubernetes",
+      "ai"
+    ],
     "description": "The configuration a workload actually consumes: ConfigMap data, Secret keys (values never returned) and TLS certificate details",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-secrets/-/kwirth-aitoolset-k8s-secrets-0.1.0.tgz",
     "website": "https://kwirthmagnify.dev"
@@ -85,6 +126,12 @@
     "name": "@kwirthmagnify/kwirth-aitoolset-k8s-metrics",
     "displayName": "K8s Metrics",
     "version": "0.1.0",
+    "tags": [
+      "observability",
+      "metrics",
+      "ai",
+      "kubernetes"
+    ],
     "description": "Resource usage of the cluster, its nodes, a deployment or a namespace, now and over the recent readings",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-aitoolset-k8s-metrics/-/kwirth-aitoolset-k8s-metrics-0.1.0.tgz",
     "website": "https://kwirthmagnify.dev"

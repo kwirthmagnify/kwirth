@@ -4,6 +4,7 @@
   "displayName": "Fileman",
   "publisher": "@kwirthmagnify",
   "version": "0.2.31",
+  "tags": ["operations", "kubernetes"],
   "website": "https://kwirthmagnify.dev",
   "description": "File Manager channel plugin for Kwirth",
   "icon": "FolderCopy",

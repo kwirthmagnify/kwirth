@@ -3,6 +3,7 @@
     "name": "@kwirthmagnify/kwirth-provider-events",
     "publisher": "@kwirthmagnify",
     "version": "0.1.1",
+    "tags": ["observability", "events", "kubernetes"],
     "displayName": "Events",
     "description": "Events provider for Kwirth - streams Kubernetes resource changes and cluster events to the channels that subscribe",
     "website": "https://kwirthmagnify.dev",

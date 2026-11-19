@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-sender-email-resend",
   "publisher": "@kwirthmagnify",
   "version": "0.1.15",
+  "tags": ["alert", "notifications"],
   "displayName": "Email Sender (Resend)",
   "description": "Email sender for Kwirth — sends messages via Resend (resend.dev)",
   "type": "module",

@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-provider-http-pull-push",
   "publisher": "@kwirthmagnify",
   "version": "0.3.4",
+  "tags": ["integration", "ingest"],
   "displayName": "HTTP Pull-Push Provider",
   "description": "HTTP polling provider for Kwirth — pulls remote HTTP endpoints on a schedule and pushes each result to the subscribed channels",
   "website": "https://kwirthmagnify.dev",

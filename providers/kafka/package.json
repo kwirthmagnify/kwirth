@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-provider-kafka",
   "publisher": "@kwirthmagnify",
   "version": "0.3.3",
+  "tags": ["integration", "ingest"],
   "displayName": "Kafka Provider",
   "description": "Kafka provider plugin for Kwirth — subscribes to Kafka topics and dispatches events grouped by spaces",
   "type": "module",

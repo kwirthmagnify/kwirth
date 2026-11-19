@@ -3,6 +3,7 @@
     "name": "@kwirthmagnify/kwirth-dce-sample",
     "publisher": "@kwirthmagnify",
     "version": "0.1.1",
+    "tags": ["library", "sample"],
     "displayName": "Sample DCE",
     "description": "A reference dynamic core extension: one shared counter, so two consumers can prove they hold the same instance",
     "website": "https://kwirthmagnify.dev",

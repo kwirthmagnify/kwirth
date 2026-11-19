@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-aitoolset-k8s-observability",
   "publisher": "@kwirthmagnify",
   "version": "0.1.0",
+  "tags": ["observability", "log", "ai", "kubernetes"],
   "displayName": "K8s Observability",
   "description": "Recent cluster events and container logs: what happened and what the pod said",
   "type": "module",

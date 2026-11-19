@@ -3,6 +3,7 @@
     "name": "@kwirthmagnify/kwirth-dce-xyflow",
     "publisher": "@kwirthmagnify",
     "version": "0.1.1",
+    "tags": ["library"],
     "displayName": "XYFlow",
     "description": "Shared React Flow (@xyflow/react) and ELK (elkjs) graph libraries for Kwirth extensions: consumers get both via getDce(), without each bundling its own copy",
     "website": "https://kwirthmagnify.dev",

@@ -3,6 +3,7 @@
     "name": "@kwirthmagnify/kwirth-dce-three",
     "publisher": "@kwirthmagnify",
     "version": "0.1.1",
+    "tags": ["library"],
     "displayName": "Three.js",
     "description": "Shared three.js 3D library for Kwirth extensions: consumers get the THREE namespace via getDce(), without each bundling its own copy",
     "website": "https://kwirthmagnify.dev",

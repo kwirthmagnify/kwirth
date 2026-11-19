@@ -4,6 +4,7 @@
   "displayName": "Alert",
   "publisher": "@kwirthmagnify",
   "version": "0.2.30",
+  "tags": ["observability", "alert", "kubernetes"],
   "website": "https://kwirthmagnify.dev",
   "description": "Alert channel plugin for Kwirth — regex and metric-based alerting",
   "icon": "Warning",

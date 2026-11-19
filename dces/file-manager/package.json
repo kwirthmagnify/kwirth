@@ -3,6 +3,7 @@
     "name": "@kwirthmagnify/kwirth-dce-file-manager",
     "publisher": "@kwirthmagnify",
     "version": "0.1.1",
+    "tags": ["library"],
     "displayName": "File Manager",
     "description": "Shared @jfvilas/react-file-manager for Kwirth extensions: consumers get the component and its stylesheet via getDce(), without the core carrying it",
     "website": "https://kwirthmagnify.dev",

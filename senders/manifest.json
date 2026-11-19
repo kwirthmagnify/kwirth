@@ -3,6 +3,10 @@
     "extensionType": "sender",
     "id": "composite",
     "version": "0.1.16",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Composite Sender",
     "displayName": "Composite Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-composite/-/kwirth-sender-composite-0.1.16.tgz",
@@ -12,6 +16,10 @@
     "extensionType": "sender",
     "id": "composite",
     "version": "0.1.15",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Composite Sender",
     "displayName": "Composite Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-composite/-/kwirth-sender-composite-0.1.15.tgz",
@@ -21,6 +29,10 @@
     "extensionType": "sender",
     "id": "composite",
     "version": "0.1.14",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Composite Sender",
     "displayName": "Composite Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-composite/-/kwirth-sender-composite-0.1.14.tgz",
@@ -30,6 +42,10 @@
     "extensionType": "sender",
     "id": "composite",
     "version": "0.1.13",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Composite Sender",
     "displayName": "Composite Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-composite/-/kwirth-sender-composite-0.1.13.tgz",
@@ -39,6 +55,10 @@
     "extensionType": "sender",
     "id": "console",
     "version": "0.1.15",
+    "tags": [
+      "integration",
+      "debug"
+    ],
     "name": "Console Sender",
     "displayName": "Console Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-console/-/kwirth-sender-console-0.1.15.tgz",
@@ -48,6 +68,10 @@
     "extensionType": "sender",
     "id": "console",
     "version": "0.1.12",
+    "tags": [
+      "integration",
+      "debug"
+    ],
     "name": "Console Sender",
     "displayName": "Console Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-console/-/kwirth-sender-console-0.1.12.tgz",
@@ -57,6 +81,10 @@
     "extensionType": "sender",
     "id": "email-resend",
     "version": "0.1.15",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "Email Sender (Resend)",
     "displayName": "Email Sender (Resend)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-resend/-/kwirth-sender-email-resend-0.1.15.tgz",
@@ -66,6 +94,10 @@
     "extensionType": "sender",
     "id": "email-resend",
     "version": "0.1.14",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "Email Sender (Resend)",
     "displayName": "Email Sender (Resend)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-resend/-/kwirth-sender-email-resend-0.1.14.tgz",
@@ -75,6 +107,10 @@
     "extensionType": "sender",
     "id": "email-resend",
     "version": "0.1.12",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "Email Sender (Resend)",
     "displayName": "Email Sender (Resend)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-resend/-/kwirth-sender-email-resend-0.1.12.tgz",
@@ -84,6 +120,10 @@
     "extensionType": "sender",
     "id": "email-smtp",
     "version": "0.1.14",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "Email Sender (SMTP)",
     "displayName": "Email Sender (SMTP)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-smtp/-/kwirth-sender-email-smtp-0.1.14.tgz",
@@ -93,6 +133,10 @@
     "extensionType": "sender",
     "id": "email-smtp",
     "version": "0.1.13",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "Email Sender (SMTP)",
     "displayName": "Email Sender (SMTP)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-smtp/-/kwirth-sender-email-smtp-0.1.13.tgz",
@@ -102,6 +146,10 @@
     "extensionType": "sender",
     "id": "email-smtp",
     "version": "0.1.12",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "Email Sender (SMTP)",
     "displayName": "Email Sender (SMTP)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-smtp/-/kwirth-sender-email-smtp-0.1.12.tgz",
@@ -111,6 +159,9 @@
     "extensionType": "sender",
     "id": "file",
     "version": "0.1.15",
+    "tags": [
+      "integration"
+    ],
     "name": "File Sender",
     "displayName": "File Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-file/-/kwirth-sender-file-0.1.15.tgz",
@@ -120,6 +171,9 @@
     "extensionType": "sender",
     "id": "file",
     "version": "0.1.12",
+    "tags": [
+      "integration"
+    ],
     "name": "File Sender",
     "displayName": "File Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-file/-/kwirth-sender-file-0.1.12.tgz",
@@ -129,6 +183,9 @@
     "extensionType": "sender",
     "id": "file",
     "version": "0.1.13",
+    "tags": [
+      "integration"
+    ],
     "name": "File Sender",
     "displayName": "File Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-file/-/kwirth-sender-file-0.1.13.tgz",
@@ -138,6 +195,9 @@
     "extensionType": "sender",
     "id": "file",
     "version": "0.1.14",
+    "tags": [
+      "integration"
+    ],
     "name": "File Sender",
     "displayName": "File Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-file/-/kwirth-sender-file-0.1.14.tgz",
@@ -147,6 +207,9 @@
     "extensionType": "sender",
     "id": "file",
     "version": "0.1.11",
+    "tags": [
+      "integration"
+    ],
     "name": "File Sender",
     "displayName": "File Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-file/-/kwirth-sender-file-0.1.11.tgz",
@@ -156,6 +219,10 @@
     "extensionType": "sender",
     "id": "ratelimit",
     "version": "0.1.10",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Rate Limit Sender",
     "displayName": "Rate Limit Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-ratelimit/-/kwirth-sender-ratelimit-0.1.10.tgz",
@@ -165,6 +232,10 @@
     "extensionType": "sender",
     "id": "ratelimit",
     "version": "0.1.9",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Rate Limit Sender",
     "displayName": "Rate Limit Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-ratelimit/-/kwirth-sender-ratelimit-0.1.9.tgz",
@@ -174,6 +245,10 @@
     "extensionType": "sender",
     "id": "ratelimit",
     "version": "0.1.8",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Rate Limit Sender",
     "displayName": "Rate Limit Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-ratelimit/-/kwirth-sender-ratelimit-0.1.8.tgz",
@@ -183,6 +258,10 @@
     "extensionType": "sender",
     "id": "regex",
     "version": "0.1.17",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Regex Sender",
     "displayName": "Regex Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-regex/-/kwirth-sender-regex-0.1.17.tgz",
@@ -192,6 +271,10 @@
     "extensionType": "sender",
     "id": "regex",
     "version": "0.1.16",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Regex Sender",
     "displayName": "Regex Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-regex/-/kwirth-sender-regex-0.1.16.tgz",
@@ -201,6 +284,10 @@
     "extensionType": "sender",
     "id": "regex",
     "version": "0.1.15",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Regex Sender",
     "displayName": "Regex Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-regex/-/kwirth-sender-regex-0.1.15.tgz",
@@ -210,6 +297,10 @@
     "extensionType": "sender",
     "id": "regex",
     "version": "0.1.13",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Regex Sender",
     "displayName": "Regex Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-regex/-/kwirth-sender-regex-0.1.13.tgz",
@@ -219,6 +310,11 @@
     "extensionType": "sender",
     "id": "script",
     "version": "0.2.0",
+    "tags": [
+      "sre",
+      "automation",
+      "alert"
+    ],
     "name": "Script Sender",
     "displayName": "Script Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-script/-/kwirth-sender-script-0.2.0.tgz",
@@ -235,6 +331,11 @@
     "extensionType": "sender",
     "id": "script",
     "version": "0.1.0",
+    "tags": [
+      "sre",
+      "automation",
+      "alert"
+    ],
     "name": "Script Sender",
     "displayName": "Script Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-script/-/kwirth-sender-script-0.1.0.tgz",
@@ -244,6 +345,10 @@
     "extensionType": "sender",
     "id": "teams",
     "version": "0.1.15",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "MS Teams Sender",
     "displayName": "MS Teams Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-teams/-/kwirth-sender-teams-0.1.15.tgz",
@@ -253,6 +358,10 @@
     "extensionType": "sender",
     "id": "teams",
     "version": "0.1.14",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "MS Teams Sender",
     "displayName": "MS Teams Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-teams/-/kwirth-sender-teams-0.1.14.tgz",
@@ -262,6 +371,10 @@
     "extensionType": "sender",
     "id": "teams",
     "version": "0.1.13",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "MS Teams Sender",
     "displayName": "MS Teams Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-teams/-/kwirth-sender-teams-0.1.13.tgz",
@@ -271,6 +384,10 @@
     "extensionType": "sender",
     "id": "tee",
     "version": "0.1.16",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Tee Sender",
     "displayName": "Tee Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-tee/-/kwirth-sender-tee-0.1.16.tgz",
@@ -280,6 +397,10 @@
     "extensionType": "sender",
     "id": "tee",
     "version": "0.1.15",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Tee Sender",
     "displayName": "Tee Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-tee/-/kwirth-sender-tee-0.1.15.tgz",
@@ -289,6 +410,10 @@
     "extensionType": "sender",
     "id": "tee",
     "version": "0.1.14",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Tee Sender",
     "displayName": "Tee Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-tee/-/kwirth-sender-tee-0.1.14.tgz",
@@ -298,6 +423,10 @@
     "extensionType": "sender",
     "id": "tee",
     "version": "0.1.12",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Tee Sender",
     "displayName": "Tee Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-tee/-/kwirth-sender-tee-0.1.12.tgz",
@@ -307,6 +436,10 @@
     "extensionType": "sender",
     "id": "timed",
     "version": "0.1.16",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Timed Sender",
     "displayName": "Timed Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-timed/-/kwirth-sender-timed-0.1.16.tgz",
@@ -316,6 +449,10 @@
     "extensionType": "sender",
     "id": "timed",
     "version": "0.1.15",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Timed Sender",
     "displayName": "Timed Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-timed/-/kwirth-sender-timed-0.1.15.tgz",
@@ -325,6 +462,10 @@
     "extensionType": "sender",
     "id": "timed",
     "version": "0.1.14",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Timed Sender",
     "displayName": "Timed Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-timed/-/kwirth-sender-timed-0.1.14.tgz",
@@ -334,6 +475,10 @@
     "extensionType": "sender",
     "id": "timed",
     "version": "0.1.13",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Timed Sender",
     "displayName": "Timed Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-timed/-/kwirth-sender-timed-0.1.13.tgz",
@@ -343,6 +488,10 @@
     "extensionType": "sender",
     "id": "composite",
     "version": "0.1.10",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Composite Sender",
     "displayName": "Composite Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-composite/-/kwirth-sender-composite-0.1.10.tgz",
@@ -352,6 +501,10 @@
     "extensionType": "sender",
     "id": "console",
     "version": "0.1.9",
+    "tags": [
+      "integration",
+      "debug"
+    ],
     "name": "Console Sender",
     "displayName": "Console Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-console/-/kwirth-sender-console-0.1.9.tgz",
@@ -361,6 +514,10 @@
     "extensionType": "sender",
     "id": "email-resend",
     "version": "0.1.9",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "Email Sender (Resend)",
     "displayName": "Email Sender (Resend)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-resend/-/kwirth-sender-email-resend-0.1.9.tgz",
@@ -370,6 +527,10 @@
     "extensionType": "sender",
     "id": "email-smtp",
     "version": "0.1.9",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "Email Sender (SMTP)",
     "displayName": "Email Sender (SMTP)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-smtp/-/kwirth-sender-email-smtp-0.1.9.tgz",
@@ -379,6 +540,10 @@
     "extensionType": "sender",
     "id": "ratelimit",
     "version": "0.1.4",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Rate Limit Sender",
     "displayName": "Rate Limit Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-ratelimit/-/kwirth-sender-ratelimit-0.1.4.tgz",
@@ -388,6 +553,10 @@
     "extensionType": "sender",
     "id": "regex",
     "version": "0.1.10",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Regex Sender",
     "displayName": "Regex Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-regex/-/kwirth-sender-regex-0.1.10.tgz",
@@ -397,6 +566,10 @@
     "extensionType": "sender",
     "id": "teams",
     "version": "0.1.10",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "MS Teams Sender",
     "displayName": "MS Teams Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-teams/-/kwirth-sender-teams-0.1.10.tgz",
@@ -406,6 +579,10 @@
     "extensionType": "sender",
     "id": "tee",
     "version": "0.1.9",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Tee Sender",
     "displayName": "Tee Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-tee/-/kwirth-sender-tee-0.1.9.tgz",
@@ -415,6 +592,10 @@
     "extensionType": "sender",
     "id": "timed",
     "version": "0.1.10",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Timed Sender",
     "displayName": "Timed Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-timed/-/kwirth-sender-timed-0.1.10.tgz",
@@ -424,6 +605,10 @@
     "extensionType": "sender",
     "id": "composite",
     "version": "0.1.8",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Composite Sender",
     "displayName": "Composite Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-composite/-/kwirth-sender-composite-0.1.8.tgz",
@@ -433,6 +618,10 @@
     "extensionType": "sender",
     "id": "console",
     "version": "0.1.14",
+    "tags": [
+      "integration",
+      "debug"
+    ],
     "name": "Console Sender",
     "displayName": "Console Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-console/-/kwirth-sender-console-0.1.14.tgz",
@@ -442,6 +631,10 @@
     "extensionType": "sender",
     "id": "email-resend",
     "version": "0.1.7",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "Email Sender (Resend)",
     "displayName": "Email Sender (Resend)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-resend/-/kwirth-sender-email-resend-0.1.7.tgz",
@@ -451,6 +644,10 @@
     "extensionType": "sender",
     "id": "email-smtp",
     "version": "0.1.7",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "Email Sender (SMTP)",
     "displayName": "Email Sender (SMTP)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-smtp/-/kwirth-sender-email-smtp-0.1.7.tgz",
@@ -460,6 +657,10 @@
     "extensionType": "sender",
     "id": "ratelimit",
     "version": "0.1.2",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Rate Limit Sender",
     "displayName": "Rate Limit Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-ratelimit/-/kwirth-sender-ratelimit-0.1.2.tgz",
@@ -469,6 +670,10 @@
     "extensionType": "sender",
     "id": "regex",
     "version": "0.1.8",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Regex Sender",
     "displayName": "Regex Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-regex/-/kwirth-sender-regex-0.1.8.tgz",
@@ -478,6 +683,10 @@
     "extensionType": "sender",
     "id": "teams",
     "version": "0.1.8",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "MS Teams Sender",
     "displayName": "MS Teams Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-teams/-/kwirth-sender-teams-0.1.8.tgz",
@@ -487,6 +696,10 @@
     "extensionType": "sender",
     "id": "tee",
     "version": "0.1.7",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Tee Sender",
     "displayName": "Tee Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-tee/-/kwirth-sender-tee-0.1.7.tgz",
@@ -496,6 +709,10 @@
     "extensionType": "sender",
     "id": "timed",
     "version": "0.1.8",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Timed Sender",
     "displayName": "Timed Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-timed/-/kwirth-sender-timed-0.1.8.tgz",
@@ -507,6 +724,10 @@
     "name": "@kwirthmagnify/kwirth-sender-ratelimit",
     "displayName": "Rate Limit Sender",
     "version": "0.1.1",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "description": "Rate limit filter sender for Kwirth — queues messages exceeding a configurable rate and delivers them in the next time window.",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-ratelimit/-/kwirth-sender-ratelimit-0.1.1.tgz"
   },
@@ -514,6 +735,10 @@
     "extensionType": "sender",
     "id": "composite",
     "version": "0.1.12",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Composite Sender",
     "displayName": "Composite Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-composite/-/kwirth-sender-composite-0.1.12.tgz",
@@ -523,6 +748,10 @@
     "extensionType": "sender",
     "id": "console",
     "version": "0.1.11",
+    "tags": [
+      "integration",
+      "debug"
+    ],
     "name": "Console Sender",
     "displayName": "Console Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-console/-/kwirth-sender-console-0.1.11.tgz",
@@ -532,6 +761,10 @@
     "extensionType": "sender",
     "id": "email-resend",
     "version": "0.1.11",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "Email Sender (Resend)",
     "displayName": "Email Sender (Resend)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-resend/-/kwirth-sender-email-resend-0.1.11.tgz",
@@ -541,6 +774,10 @@
     "extensionType": "sender",
     "id": "email-smtp",
     "version": "0.1.11",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "Email Sender (SMTP)",
     "displayName": "Email Sender (SMTP)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-smtp/-/kwirth-sender-email-smtp-0.1.11.tgz",
@@ -550,6 +787,9 @@
     "extensionType": "sender",
     "id": "file",
     "version": "0.1.10",
+    "tags": [
+      "integration"
+    ],
     "name": "File Sender",
     "displayName": "File Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-file/-/kwirth-sender-file-0.1.10.tgz",
@@ -559,6 +799,10 @@
     "extensionType": "sender",
     "id": "ratelimit",
     "version": "0.1.6",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Rate Limit Sender",
     "displayName": "Rate Limit Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-ratelimit/-/kwirth-sender-ratelimit-0.1.6.tgz",
@@ -568,6 +812,10 @@
     "extensionType": "sender",
     "id": "regex",
     "version": "0.1.12",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Regex Sender",
     "displayName": "Regex Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-regex/-/kwirth-sender-regex-0.1.12.tgz",
@@ -577,6 +825,10 @@
     "extensionType": "sender",
     "id": "teams",
     "version": "0.1.12",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
     "name": "MS Teams Sender",
     "displayName": "MS Teams Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-teams/-/kwirth-sender-teams-0.1.12.tgz",
@@ -586,6 +838,10 @@
     "extensionType": "sender",
     "id": "tee",
     "version": "0.1.11",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Tee Sender",
     "displayName": "Tee Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-tee/-/kwirth-sender-tee-0.1.11.tgz",
@@ -595,6 +851,10 @@
     "extensionType": "sender",
     "id": "timed",
     "version": "0.1.12",
+    "tags": [
+      "integration",
+      "routing"
+    ],
     "name": "Timed Sender",
     "displayName": "Timed Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-timed/-/kwirth-sender-timed-0.1.12.tgz",
@@ -604,6 +864,10 @@
     "extensionType": "sender",
     "id": "console",
     "version": "0.1.13",
+    "tags": [
+      "integration",
+      "debug"
+    ],
     "name": "Console Sender",
     "displayName": "Console Sender",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-console/-/kwirth-sender-console-0.1.13.tgz",

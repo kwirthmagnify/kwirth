@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-idp-github-cloud",
   "publisher": "@kwirthmagnify",
   "version": "0.1.9",
+  "tags": ["security", "identity"],
   "displayName": "GitHub Cloud",
   "description": "GitHub.com (SaaS, OAuth2) identity provider connector for Kwirth",
   "type": "module",

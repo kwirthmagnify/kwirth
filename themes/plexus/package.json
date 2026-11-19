@@ -3,6 +3,7 @@
   "name": "@kwirthmagnify/kwirth-theme-plexus",
   "publisher": "@kwirthmagnify",
   "version": "0.1.4",
+  "tags": ["ui", "theme"],
   "displayName": "Plexus",
   "description": "Plexus corporate theme — deep navy background with signature orange accent and Inter typography.",
   "type": "module",

@@ -3,6 +3,7 @@
     "name": "@kwirthmagnify/kwirth-provider-metrics",
     "publisher": "@kwirthmagnify",
     "version": "0.1.3",
+    "tags": ["observability", "metrics", "kubernetes"],
     "displayName": "Metrics",
     "description": "Metrics provider for Kwirth - reads kubelet/cAdvisor metrics from every node, no Prometheus needed",
     "website": "https://kwirthmagnify.dev",

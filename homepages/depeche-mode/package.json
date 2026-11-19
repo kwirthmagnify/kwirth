@@ -4,6 +4,7 @@
   "displayName": "Depeche Mode",
   "publisher": "@kwirthmagnify",
   "version": "0.1.7",
+  "tags": ["ui", "homepage"],
   "description": "Depeche Mode homepage — abyss black, blood red accents, bone text, condensed bold typography, ASCII metric bars and STRANGELOVE cluster launch.",
   "type": "module",
   "scripts": {

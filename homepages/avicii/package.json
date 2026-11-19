@@ -4,6 +4,7 @@
   "displayName": "Avicii",
   "publisher": "@kwirthmagnify",
   "version": "0.1.14",
+  "tags": ["ui", "homepage"],
   "description": "Avicii-inspired homepage — warm gold on black, geometric triangle motifs, sharp Oswald typography, and live cluster metrics.",
   "type": "module",
   "scripts": {
