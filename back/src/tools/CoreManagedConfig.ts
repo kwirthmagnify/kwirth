@@ -66,7 +66,7 @@ export const providerInstallConfig = (manager: ProviderManager, id: string): IEx
 })
 
 /*
-    A sender's configurations. They live in the core (`kwirth-sender-configs`), not in the sender, which
+    A sender's configurations. They live in the core (`kwirth-sender-<id>-config`), not in the sender, which
     only receives its own when using it.
 
     A sender stores TWO things: a set of named configs and, optionally, a BASE config — common fields
@@ -113,9 +113,12 @@ export const senderConfigs = (manager: SenderManager, id: string): IExtension =>
         const warnings: string[] = []
         const omitidas = (data as { omitted?: number })?.omitted
         if (omitidas) warnings.push(`${omitidas} configuration(s) were left out of the file because this sender does not declare which of its fields are secret`)
+        if (!manager.getSender(id)) return { applied: 0, skipped: storedConfig.configs.length, warnings: [...warnings, `sender '${id}' is not registered here`] }
         // setSenderStoredConfig replaces the base AND the configs in one shot: the base is not
         // recoverable from the configs alone, so a config-by-config addConfig would leave it empty.
-        manager.setSenderStoredConfig(id, storedConfig)
+        // Through the same validation as the dialog: what does not fit is not applied, and says why.
+        const errors = await manager.setSenderStoredConfig(id, storedConfig)
+        if (errors.length > 0) return { applied: 0, skipped: storedConfig.configs.length, warnings: [...warnings, `sender '${id}' configs not applied: ${errors.map(e => e.message).join('; ')}`] }
         return { applied: storedConfig.configs.length, skipped: 0, warnings }
     }
 })
@@ -154,9 +157,11 @@ export const webhookConfigs = (manager: WebhookManager, id: string): IExtension 
             nacen con tokens nuevos y hay que repegar las URL en GitLab, Jira o quien llame.
         */
         const configs = entrantes as IWebhookConfig[]
-        if (!manager.setWebhookStoredConfig(id, { configs })) {
+        if (!manager.getWebhook(id)) {
             return { applied: 0, skipped: configs.length, warnings: [...warnings, `webhook '${id}' is not registered here`] }
         }
+        const errors = await manager.setWebhookStoredConfig(id, { configs })
+        if (errors.length > 0) return { applied: 0, skipped: configs.length, warnings: [...warnings, `webhook '${id}' configs not applied: ${errors.map(e => e.message).join('; ')}`] }
         return { applied: configs.length, skipped: 0, warnings }
     }
 })

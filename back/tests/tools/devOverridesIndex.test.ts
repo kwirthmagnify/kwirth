@@ -81,7 +81,7 @@ const installed = (id: string, version: string) => ({ id, name: id, displayName:
 describe('SenderManager.listInstalled', () => {
     test('un sender que esta instalado Y en dev sale UNA vez, con los metadatos de dev', async () => {
         await withDevWorkspace('senders', ['console'], '9.9.9-dev', async () => {
-            const manager = new SenderManager(makeConfigMaps({ 'kwirth-senders-index': [installed('console', '0.2.0')] }) as never)
+            const manager = new SenderManager(makeConfigMaps({ 'kwirth-senders-index': [installed('console', '0.2.0')] }) as never, fakeConfigStore())
             await manager.init()
             manager.loadDevSenders()
 
@@ -97,7 +97,7 @@ describe('SenderManager.listInstalled', () => {
     test('lo instalado que NO esta en dev se conserva, junto a lo de dev', async () => {
         await withDevWorkspace('senders', ['console'], '9.9.9-dev', async () => {
             const index = [installed('console', '0.2.0'), installed('teams', '0.4.1')]
-            const manager = new SenderManager(makeConfigMaps({ 'kwirth-senders-index': index }) as never)
+            const manager = new SenderManager(makeConfigMaps({ 'kwirth-senders-index': index }) as never, fakeConfigStore())
             await manager.init()
             manager.loadDevSenders()
 
@@ -108,7 +108,7 @@ describe('SenderManager.listInstalled', () => {
     })
 
     test('sin nada en dev, el indice de instalados sale intacto', async () => {
-        const manager = new SenderManager(makeConfigMaps({ 'kwirth-senders-index': [installed('console', '0.2.0'), installed('jira', '0.1.0')] }) as never)
+        const manager = new SenderManager(makeConfigMaps({ 'kwirth-senders-index': [installed('console', '0.2.0'), installed('jira', '0.1.0')] }) as never, fakeConfigStore())
         await manager.init()
 
         const list = await manager.listInstalled()
@@ -118,7 +118,7 @@ describe('SenderManager.listInstalled', () => {
 
     test('un sender solo en dev sale, aunque no este en el indice', async () => {
         await withDevWorkspace('senders', ['brandnew'], '0.0.1', async () => {
-            const manager = new SenderManager(makeConfigMaps({ 'kwirth-senders-index': [] }) as never)
+            const manager = new SenderManager(makeConfigMaps({ 'kwirth-senders-index': [] }) as never, fakeConfigStore())
             await manager.init()
             manager.loadDevSenders()
 
@@ -161,7 +161,7 @@ describe('ProviderManager.listInstalled', () => {
 describe('WebhookManager.listInstalled', () => {
     test('un webhook que esta instalado Y en dev sale UNA vez, con los metadatos de dev', async () => {
         await withDevWorkspace('webhooks', ['jira'], '9.9.9-dev', async () => {
-            const manager = new WebhookManager(makeConfigMaps({ 'kwirth-webhooks-index': [installed('jira', '0.3.0')] }) as never)
+            const manager = new WebhookManager(makeConfigMaps({ 'kwirth-webhooks-index': [installed('jira', '0.3.0')] }) as never, fakeConfigStore())
             await manager.init()
             manager.loadDevWebhooks()
 
@@ -174,7 +174,7 @@ describe('WebhookManager.listInstalled', () => {
     test('lo instalado que NO esta en dev se conserva', async () => {
         await withDevWorkspace('webhooks', ['jira'], '9.9.9-dev', async () => {
             const index = [installed('jira', '0.3.0'), installed('github', '0.1.2')]
-            const manager = new WebhookManager(makeConfigMaps({ 'kwirth-webhooks-index': index }) as never)
+            const manager = new WebhookManager(makeConfigMaps({ 'kwirth-webhooks-index': index }) as never, fakeConfigStore())
             await manager.init()
             manager.loadDevWebhooks()
 

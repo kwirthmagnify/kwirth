@@ -73,6 +73,7 @@ const HELP = 'guide/extensions/webhooks/index?id=managing-configuring-webhooks'
 
 const webhookDescriptor: IExtensionManagerDescriptor<IInstalledWebhook, IWebhookManifestEntry> = {
     extensionType: EExtensionType.WEBHOOK,
+    keepsConfig: true,
     title: 'Manage webhooks',
     noun: { singular: 'webhook', plural: 'webhooks' },
     helpSection: HELP,

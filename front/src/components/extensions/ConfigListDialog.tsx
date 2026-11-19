@@ -6,10 +6,11 @@ import {
 } from '@mui/material'
 import { Add, ContentCopy, Delete, Settings, Visibility, VisibilityOff } from '@kwirthmagnify/kwirth-common-front/icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { IConfigFieldDef, isConfigFieldEnabled } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, IConfigValidationError, isConfigFieldEnabled } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { ConfigTextArea } from './ConfigTextArea'
+import type { ISaveRefusal } from './ConfigFormDialog'
 
 /*
     The manager of an extension's N NAMED CONFIGURATIONS: the list on the left, the selected one's form
@@ -85,6 +86,21 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     const [savingBase, setSavingBase] = useState(false)
     const [ayuda, setAyuda] = useState(props.helpSection)
 
+    /*
+        What the back end refused on the last save, field by field (plans/extension-config, S6): one list
+        for the configuration's form and one for the base's. The field is drawn in error and the messages
+        go in one caption; editing the field takes its mark away.
+    */
+    const [fieldErrors, setFieldErrors] = useState<IConfigValidationError[]>([])
+    const [baseErrors, setBaseErrors] = useState<IConfigValidationError[]>([])
+
+    // A refused save: a 400 with `fields` is the schema's verdict and returns them; anything else is thrown.
+    const refusedFields = async (res: Response): Promise<IConfigValidationError[]> => {
+        const refusal = await res.json().catch(() => undefined) as ISaveRefusal | undefined
+        if (res.status === 400 && refusal?.fields && refusal.fields.length > 0) return refusal.fields
+        throw new Error(refusal?.error ?? `HTTP ${res.status}`)
+    }
+
     const reload = async () => {
         setLoading(true)
         try {
@@ -132,6 +148,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     const guardarBase = async () => {
         setSavingBase(true)
         setError(undefined)
+        setBaseErrors([])
         try {
             const comunes: TConfigValues = {}
             for (const f of camposComunes) {
@@ -143,7 +160,10 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
                 else comunes[f.name] = v
             }
             const res = await fetch(`${backendUrl}${props.basePath}/configs`, addPutAuthorization(accessString, JSON.stringify({ ...comunes, configs })))
-            if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
+            if (!res.ok) {
+                setBaseErrors(await refusedFields(res))
+                return
+            }
             setBaseOpen(false)
             await reload()
         }
@@ -173,6 +193,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         setEditingName(cfg.name)
         setOriginalName(cfg.name)
         setValues({ ...cfg })
+        setFieldErrors([])
         setShowForm(true)
     }
 
@@ -190,6 +211,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
             if (!f.common && f.default !== undefined) defaults[f.name] = f.default
         }
         setValues(defaults)
+        setFieldErrors([])
         setShowForm(true)
     }
 
@@ -210,6 +232,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         setEditingName(undefined)
         setOriginalName(undefined)
         setValues({})
+        setFieldErrors([])
     }
 
     const borrar = async (name: string) => {
@@ -264,11 +287,16 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     const guardar = async () => {
         setSaving(true)
         setError(undefined)
+        setFieldErrors([])
         try {
             const payload = buildPayload()
             const nuevoNombre = payload.name as string
             const res = await fetch(`${backendUrl}${props.basePath}/configs`, addPostAuthorization(accessString, JSON.stringify(payload)))
-            if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`)
+            // refused by the schema: the form stays open with the fields marked
+            if (!res.ok) {
+                setFieldErrors(await refusedFields(res))
+                return
+            }
             // Renaming is creating under the new name and removing the old one: the back end stores by name.
             if (originalName && originalName !== nuevoNombre) {
                 await fetch(`${backendUrl}${props.basePath}/configs/${encodeURIComponent(originalName)}`, addDeleteAuthorization(accessString))
@@ -298,9 +326,18 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
     */
     const campo = (f: IConfigFieldDef, valores: TConfigValues = values, escribir?: (name: string, val: unknown) => void) => {
         const value = valores[f.name] ?? (f.type === 'boolean' ? false : '')
+        // the base's fields answer to the base's errors, the configuration's to its own
+        const errores = escribir ? baseErrors : fieldErrors
+        const invalid = errores.some(e => e.field === f.name)
         const onChange = (val: unknown) => {
-            if (escribir) escribir(f.name, val)
-            else setValues(prev => ({ ...prev, [f.name]: val }))
+            if (escribir) {
+                escribir(f.name, val)
+                setBaseErrors(list => list.filter(e => e.field !== f.name))
+            }
+            else {
+                setValues(prev => ({ ...prev, [f.name]: val }))
+                setFieldErrors(list => list.filter(e => e.field !== f.name))
+            }
         }
         // Greyed out, never hidden, while another field says it does not apply (IConfigFieldDef.enabledWhen).
         const disabled = !isConfigFieldEnabled(f, schema, valores)
@@ -308,7 +345,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         if (f.type === 'boolean') {
             return (
                 <Box key={f.name} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography variant='body2' color={disabled ? 'text.disabled' : undefined}>{f.label}</Typography>
+                    <Typography variant='body2' color={invalid ? 'error' : disabled ? 'text.disabled' : undefined}>{f.label}</Typography>
                     <Switch size='small' checked={Boolean(value)} disabled={disabled} onChange={e => onChange(e.target.checked)} />
                 </Box>
             )
@@ -316,7 +353,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
 
         if (f.type === 'select' && f.options) {
             return (
-                <FormControl key={f.name} size='small' fullWidth disabled={disabled}>
+                <FormControl key={f.name} size='small' fullWidth disabled={disabled} error={invalid}>
                     <InputLabel>{f.label}{f.required ? ' *' : ''}</InputLabel>
                     <Select label={`${f.label}${f.required ? ' *' : ''}`} value={value || ''} displayEmpty onChange={e => onChange(e.target.value)}>
                         <MenuItem value=''><em>—</em></MenuItem>
@@ -327,13 +364,13 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         }
 
         if (f.type === 'textarea') {
-            return <ConfigTextArea key={f.name} field={f} value={String(value)} onChange={onChange} fields={schema} values={valores} disabled={disabled} />
+            return <ConfigTextArea key={f.name} field={f} value={String(value)} onChange={onChange} fields={schema} values={valores} disabled={disabled} error={invalid} />
         }
 
         const esSecreto = f.type === 'password'
         const visible = revealed.has(f.name)
         return (
-            <TextField key={f.name} size='small' fullWidth disabled={disabled}
+            <TextField key={f.name} size='small' fullWidth disabled={disabled} error={invalid}
                 label={`${f.label}${f.required ? ' *' : ''}`}
                 type={f.type === 'number' ? 'number' : (esSecreto && !visible) ? 'password' : 'text'}
                 autoComplete={esSecreto ? 'new-password' : 'off'}
@@ -452,6 +489,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
                                         alignItems: 'center'
                                     }}>
                                     {error && <Typography variant='caption' color='error' sx={{ flex: 1 }}>{error}</Typography>}
+                                    {fieldErrors.length > 0 && <Typography variant='caption' color='error' sx={{ flex: 1 }} data-testid='config-field-errors'>{fieldErrors.map(e => e.message).join('. ')}</Typography>}
                                     <Button size='small' variant='contained' disabled={saving || !formValido()} onClick={guardar}>
                                         {saving ? <CircularProgress size={14} /> : editingName ? 'Update' : 'Add'}
                                     </Button>
@@ -488,6 +526,9 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
                     <DialogContent>
                         <Stack spacing={2} sx={{ mt: 1 }}>
                             {camposComunes.map(f => campo(f, base, (name, val) => setBase(prev => ({ ...prev, [name]: val }))))}
+                            {/* the base's own errors, and those of a configuration the whole document carries */}
+                            {baseErrors.length > 0 && <Typography variant='caption' color='error' data-testid='config-field-errors'>{baseErrors.map(e => e.message).join('. ')}</Typography>}
+                            {error && <Typography variant='caption' color='error'>{error}</Typography>}
                         </Stack>
                     </DialogContent>
                     <DialogActions>
@@ -496,7 +537,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
                         </Button>
                         {/* Cancelar recarga: lo tecleado y no guardado no puede quedarse en pantalla como si
                             estuviera puesto. */}
-                        <Button onClick={() => { setBaseOpen(false); reload() }}>Cancel</Button>
+                        <Button onClick={() => { setBaseOpen(false); setBaseErrors([]); reload() }}>Cancel</Button>
                     </DialogActions>
                 </Dialog>
             )}

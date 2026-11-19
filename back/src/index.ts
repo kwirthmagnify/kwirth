@@ -2796,7 +2796,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
     try {
         await ensureDceManager(runningInstance)
         if (!senderManager) {
-            senderManager = new SenderManager(runningInstance.configMaps)
+            senderManager = new SenderManager(runningInstance.configMaps, new ExtensionConfigStore(runningInstance.secrets))
             await senderManager.init()
             await senderManager.loadAll()
             senderManager.loadDevSenders()
@@ -2804,7 +2804,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             senderManager.loadDevSenderConfigs()
         }
         if (!webhookManager) {
-            webhookManager = new WebhookManager(runningInstance.configMaps, `${envRootPath}/webhook`)
+            webhookManager = new WebhookManager(runningInstance.configMaps, new ExtensionConfigStore(runningInstance.secrets), `${envRootPath}/webhook`)
             await webhookManager.init()
             await webhookManager.loadAll()
             webhookManager.loadDevWebhooks()

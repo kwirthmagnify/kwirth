@@ -37,7 +37,7 @@ const senderFalso = (schema: unknown, configs: unknown[]): SenderManager => {
     return {
         getConfigs: () => configs,
         getSenderStoredConfig: () => ({ configs }),
-        setSenderStoredConfig: (_id: string, stored: unknown) => { written = stored },
+        setSenderStoredConfig: async (_id: string, stored: unknown) => { written = stored; return [] },
         getSender: () => schema === undefined ? undefined : ({ getConfigSchema: () => schema }),
         addConfig: () => true
     } as unknown as SenderManager
@@ -103,8 +103,19 @@ test('y quien importe ese fichero se entera de que faltan', async () => {
 const webhookFalso = (configs: unknown[], escritas: unknown[]): WebhookManager => ({
     getConfigs: () => configs,
     getWebhook: () => ({ getConfigSchema: () => [{ name: 'name', label: 'Name' }, { name: 'token', label: 'Token', type: 'password' }] }),
-    setWebhookStoredConfig: (_id: string, stored: { configs: unknown[] }) => { escritas.push(...stored.configs); return true }
+    setWebhookStoredConfig: async (_id: string, stored: { configs: unknown[] }) => { escritas.push(...stored.configs); return [] }
 } as unknown as WebhookManager)
+
+test('🔴 an imported sender document that does not fit its schema is not applied, and says why', async () => {
+    const e = senderConfigs({
+        getSender: () => ({ getConfigSchema: () => SCHEMA_SMTP }),
+        setSenderStoredConfig: async () => [{ field: 'host', message: "Config 'correo': 'Host' is required" }]
+    } as unknown as SenderManager, 'email')
+    const r = await e.importConfig!({ stored: { configs: [{ name: 'correo' }] } })
+    assert.equal(r.applied, 0)
+    assert.equal(r.skipped, 1)
+    assert.ok(r.warnings.some(w => w.includes("'Host' is required")))
+})
 
 test('🔴 el import de un webhook REEMPLAZA la lista entera', async () => {
     /*
@@ -126,7 +137,7 @@ test('🔴 el import de un webhook REEMPLAZA la lista entera', async () => {
 
 test('un webhook que no esta registrado aqui no aplica nada, y lo dice', async () => {
     const e = webhookConfigs({ getConfigs: () => [], getWebhook: () => undefined,
-        setWebhookStoredConfig: () => false } as unknown as WebhookManager, 'fantasma')
+        setWebhookStoredConfig: async () => { throw new Error('must not be called') } } as unknown as WebhookManager, 'fantasma')
 
     const r = await e.importConfig!({ configs: [{ name: 'una' }] })
 

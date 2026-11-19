@@ -1,6 +1,21 @@
-import { Page } from '@playwright/test'
+import { APIRequestContext, Page } from '@playwright/test'
+import { createHash } from 'crypto'
+import fs from 'fs'
+import path from 'path'
 import { test, expect } from './fixtures'
-import { clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { clickExtensionMenuItem, dismissOpenDialogs, USER, PASS } from './helpers'
+
+/*
+    The plugin checks need at least one plugin INSTALLED from a catalogue: a dev-mounted one has no bin
+    (it cannot be uninstalled), and a developer's environment may have only those. So the public 'echo'
+    plugin is installed when there is no such plugin, and afterAll removes it — and only it.
+*/
+const BACK = process.env.KWIRTH_E2E_BACK ?? 'http://localhost:3883'
+const PLUGIN_ID = 'echo'
+
+interface IAccessKey { id: string, type: string, resources: string }
+interface IManifestEntry { id: string, url: string }
+interface IInstalledPlugin { id: string, installedFrom?: string }
 
 /*
     The UPDATE button of the installed extensions.
@@ -73,14 +88,38 @@ const parejas = (etiquetas: string[]): { papeleras: number, conUpdateDelante: nu
 
 test.describe('boton de actualizar en las extensiones instaladas', () => {
     let page: Page
+    let api: APIRequestContext
+    let auth: Record<string, string> = {}
+    let installedHere = false
 
-    test.beforeAll(async ({ kwirth }) => {
+    test.beforeAll(async ({ kwirth, playwright }) => {
+        test.setTimeout(120000)
+        api = await playwright.request.newContext({ baseURL: BACK })
+        const res = await api.post('/login', { data: { user: USER, password: createHash('sha256').update(PASS).digest('hex') } })
+        expect(res.status(), 'login against the back end').toBe(200)
+        const key = (await res.json()).accessKey as IAccessKey
+        auth = { Authorization: `Bearer ${key.id}|${key.type}|${key.resources}` }
+
+        // removable = not mounted from dev, not bundled, not brought by a pack
+        const plugins = await (await api.get('/core/plugins', { headers: auth })).json() as IInstalledPlugin[]
+        const removable = plugins.some(p => p.installedFrom !== 'dev' && p.installedFrom !== 'bundled' && !p.installedFrom?.startsWith('pack:'))
+        if (!removable && !plugins.some(p => p.id === PLUGIN_ID)) {
+            const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../plugins/manifest.json'), 'utf-8')) as IManifestEntry[]
+            const entry = manifest.find(e => e.id === PLUGIN_ID)
+            expect(entry, `'${PLUGIN_ID}' is not in the public plugins catalogue`).toBeTruthy()
+            const inst = await api.post('/core/plugins/install', { headers: auth, data: { url: entry!.url } })
+            expect(inst.status(), `installing '${PLUGIN_ID}': ${await inst.text()}`).toBe(200)
+            installedHere = true
+        }
+
         page = kwirth
         await dismissOpenDialogs(page)
     })
 
     // La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
     test.afterAll(async () => {
+        if (installedHere) await api?.delete(`/core/plugins/${PLUGIN_ID}?deleteConfig=true`, { headers: auth }).catch(() => undefined)
+        await api?.dispose()
         await dismissOpenDialogs(page).catch(() => {})
     })
 

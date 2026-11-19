@@ -4,6 +4,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { SenderManager } from '../../src/tools/SenderManager'
+import { fakeConfigStore } from './fakeExtensionConfigStore'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 
 // REGRESSION: the hot reload of dev extensions watched with fs.watch, whose 'error' event is
@@ -63,7 +64,7 @@ test('dev watcher: borrar el back.js vigilado no tumba el proceso, y al reaparec
     const previousCwd = process.cwd()
     process.chdir(root)
     try {
-        const manager = new SenderManager(emptyConfigMaps())
+        const manager = new SenderManager(emptyConfigMaps(), fakeConfigStore())
         manager.loadDevSenders()
         assert.deepEqual(manager.getDevIds(), ['devwatchtest'], 'el sender dev debe quedar registrado')
         assert.equal(manager.getSchema('devwatchtest')[0].name, 'v1')

@@ -112,7 +112,7 @@ const construirSender = async (id: string, version: string, conFront: boolean): 
 
 test('si la version nueva de un sender ya no trae front, el front viejo DESAPARECE', async () => {
     const almacen = almacenFalso()
-    const manager = new SenderManager(almacen)
+    const manager = new SenderManager(almacen, fakeConfigStore())
     await manager.init()
 
     await manager.install(await construirSender('mail', '1.0.0', true), 'test')
@@ -127,7 +127,7 @@ test('si la version nueva de un sender ya no trae front, el front viejo DESAPARE
 test('y si la nueva SI lo trae, se queda el nuevo, no el de antes', async () => {
     // the reverse of the previous one: deleting too much would be just as bad as not deleting
     const almacen = almacenFalso()
-    const manager = new SenderManager(almacen)
+    const manager = new SenderManager(almacen, fakeConfigStore())
     await manager.init()
 
     await manager.install(await construirSender('mail', '1.0.0', true), 'test')
@@ -141,7 +141,7 @@ test('y si la nueva SI lo trae, se queda el nuevo, no el de antes', async () => 
 
 test('un sender tampoco baja de version, aunque se pida el permiso', async () => {
     const almacen = almacenFalso()
-    const manager = new SenderManager(almacen)
+    const manager = new SenderManager(almacen, fakeConfigStore())
     await manager.init()
 
     await manager.install(await construirSender('mail', '2.0.0', false), 'test')

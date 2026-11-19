@@ -6,6 +6,7 @@ import path from 'path'
 import tar from 'tar'
 import { WebhookManager } from '../../src/tools/WebhookManager'
 import { handleInbound } from '../../src/tools/WebhookReceiver'
+import { fakeConfigStore } from './fakeExtensionConfigStore'
 
 interface IWebhookEvent { provider: string; configName: string; kind: string; externalId: string; status?: string; receivedAt: string; raw: unknown }
 
@@ -52,10 +53,10 @@ function makeEchoTgz(): Buffer {
 }
 
 async function setup() {
-    const mgr = new WebhookManager(makeConfigMaps(), '/w')
+    const mgr = new WebhookManager(makeConfigMaps(), fakeConfigStore(), '/w')
     await mgr.init()
     await mgr.installFromBuffer(makeEchoTgz())
-    mgr.addConfig('echo', { name: 'default', apiKey: 'sekret' })
+    await mgr.saveConfig('echo', { name: 'default', apiKey: 'sekret' })
     const token = mgr.getUrl('echo', 'default')!.split('/').pop()!
     const seen: IWebhookEvent[] = []
     mgr.subscribe('echo', 'default', { processWebhookEvent: (e) => { seen.push(e as IWebhookEvent) } })

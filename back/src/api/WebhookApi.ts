@@ -66,8 +66,9 @@ export class WebhookApi {
                 const data = req.body as Record<string, IWebhookConfig[]>
                 let count = 0
                 for (const [webhookId, configs] of Object.entries(data)) {
+                    if (!this.webhookManager.getWebhook(webhookId)) continue
                     for (const config of configs) {
-                        if (this.webhookManager.addConfig(webhookId, config)) count++
+                        if ((await this.webhookManager.saveConfig(webhookId, config)).length === 0) count++
                     }
                 }
                 logInfo(ELogComponent.CORE, `Webhook configs imported: ${count}`)
@@ -81,7 +82,8 @@ export class WebhookApi {
         this.router.delete('/:id', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                await this.webhookManager.uninstall(req.params.id)
+                // its configuration and tokens are kept unless the confirmation's box asked otherwise (plan P5)
+                await this.webhookManager.uninstall(req.params.id, req.query.deleteConfig === 'true')
                 res.json({ ok: true })
             } catch (err) {
                 res.status(500).json({ error: String(err) })
@@ -98,9 +100,10 @@ export class WebhookApi {
             try {
                 const configs = req.body as IWebhookConfig[]
                 if (!Array.isArray(configs)) return void res.status(400).json({ error: 'Expected array of configs' })
+                if (!this.webhookManager.getWebhook(req.params.id)) return void res.status(404).json({ error: `Webhook '${req.params.id}' not registered` })
                 let count = 0
                 for (const config of configs) {
-                    if (this.webhookManager.addConfig(req.params.id, config)) count++
+                    if ((await this.webhookManager.saveConfig(req.params.id, config)).length === 0) count++
                 }
                 logInfo(ELogComponent.CORE, `Webhook '${req.params.id}' configs imported: ${count}`)
                 res.json({ ok: true, count })
@@ -131,9 +134,11 @@ export class WebhookApi {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
                 const data = req.body as IWebhookStoredConfig
-                if (!data || !Array.isArray(data.configs)) return void res.status(400).json({ error: 'configs array required' })
-                const ok = this.webhookManager.setWebhookStoredConfig(req.params.id, data)
-                if (!ok) return void res.status(404).json({ error: `Webhook '${req.params.id}' not registered` })
+                if (!data || typeof data !== 'object' || !Array.isArray(data.configs)) return void res.status(400).json({ error: 'configs array required' })
+                if (!this.webhookManager.getWebhook(req.params.id)) return void res.status(404).json({ error: `Webhook '${req.params.id}' not registered` })
+                // what does not fit the webhook's schema is refused field by field, and nothing is saved
+                const errors = await this.webhookManager.setWebhookStoredConfig(req.params.id, data)
+                if (errors.length > 0) return void res.status(400).json({ error: errors.map(e => e.message).join('; '), fields: errors })
                 logInfo(ELogComponent.CORE, `Webhook '${req.params.id}' stored config updated via API`)
                 res.json({ ok: true })
             } catch (err) {
@@ -145,9 +150,10 @@ export class WebhookApi {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
                 const config = req.body as IWebhookConfig
-                if (!config?.name) return void res.status(400).json({ error: 'config.name required' })
-                const ok = this.webhookManager.addConfig(req.params.id, config)
-                if (!ok) return void res.status(404).json({ error: `Webhook '${req.params.id}' not registered` })
+                if (!config || typeof config !== 'object' || !config.name) return void res.status(400).json({ error: 'config.name required' })
+                if (!this.webhookManager.getWebhook(req.params.id)) return void res.status(404).json({ error: `Webhook '${req.params.id}' not registered` })
+                const errors = await this.webhookManager.saveConfig(req.params.id, config)
+                if (errors.length > 0) return void res.status(400).json({ error: errors.map(e => e.message).join('; '), fields: errors })
                 logInfo(ELogComponent.CORE, `Webhook '${req.params.id}' config '${config.name}' added via API`)
                 res.json({ ok: true })
             } catch (err) {
@@ -158,7 +164,7 @@ export class WebhookApi {
         this.router.delete('/:id/configs/:name', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                const ok = this.webhookManager.removeConfig(req.params.id, req.params.name)
+                const ok = await this.webhookManager.removeConfig(req.params.id, req.params.name)
                 if (!ok) return void res.status(404).json({ error: 'Config or webhook not found' })
                 logInfo(ELogComponent.CORE, `Webhook '${req.params.id}' config '${req.params.name}' removed via API`)
                 res.json({ ok: true })
@@ -180,7 +186,7 @@ export class WebhookApi {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
                 if (!this.webhookManager.getConfig(req.params.id, req.params.name)) return void res.status(404).json({ error: 'Config not found' })
-                this.webhookManager.rotateToken(req.params.id, req.params.name)
+                await this.webhookManager.rotateTokenAndSave(req.params.id, req.params.name)
                 const url = this.webhookManager.getUrl(req.params.id, req.params.name)
                 logInfo(ELogComponent.CORE, `Webhook '${req.params.id}' config '${req.params.name}' token rotated`)
                 res.json({ url })

@@ -263,13 +263,13 @@ export class PackApi {
                 switch (ext.extensionType) {
                     case EExtensionType.PLUGIN:   await pluginManager.uninstallFromPack(ext.id, registeredChannels, deleteConfig); break
                     case EExtensionType.PROVIDER:  await providerManager.uninstallFromPack(ext.id, registeredProviders, deleteConfig); break
-                    case EExtensionType.SENDER:    await senderManager.uninstallFromPack(ext.id); break
+                    case EExtensionType.SENDER:    await senderManager.uninstallFromPack(ext.id, deleteConfig); break
                     case EExtensionType.THEME:     await themeManager.uninstallFromPack(ext.id); break
                     case EExtensionType.HOMEPAGE:  await homepageManager.uninstallFromPack(ext.id); break
                     case EExtensionType.IDP:       await idpManager.uninstallFromPack(ext.id, deleteConfig); break
                     case EExtensionType.LOGIN:     await loginManager.uninstallFromPack(ext.id, deleteConfig); break
                     case EExtensionType.DOCS:      await docsManager.uninstallFromPack(ext.targetType ?? '', ext.id); break
-                    case EExtensionType.WEBHOOK:   await webhookManager.uninstallFromPack(ext.id); break
+                    case EExtensionType.WEBHOOK:   await webhookManager.uninstallFromPack(ext.id, deleteConfig); break
                     // Last of all, and forced: the pack is going whole, so the consumers it brought are
                     // already gone by now and there is nobody left to protect from losing its DCE.
                     case EExtensionType.AITOOLSET: await aiToolsetManager.uninstallFromPack(ext.id); break

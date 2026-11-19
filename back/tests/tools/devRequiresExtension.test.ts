@@ -63,8 +63,8 @@ interface IDevCase {
 const CASES: Record<string, IDevCase> = {
     plugin: { section: 'plugins', list: async () => { const m = new PluginManager(makeConfigMaps() as never, fakeConfigStore()); m.loadDevPlugins(new Map()); return m.listInstalled() } },
     provider: { section: 'providers', list: async () => { const m = new ProviderManager(makeConfigMaps() as never, fakeConfigStore()); await m.init(); m.loadDevProviders(new Map()); return m.listInstalled() } },
-    sender: { section: 'senders', list: async () => { const m = new SenderManager(makeConfigMaps() as never); await m.init(); m.loadDevSenders(); return m.listInstalled() } },
-    webhook: { section: 'webhooks', list: async () => { const m = new WebhookManager(makeConfigMaps() as never); await m.init(); m.loadDevWebhooks(); return m.listInstalled() } },
+    sender: { section: 'senders', list: async () => { const m = new SenderManager(makeConfigMaps() as never, fakeConfigStore()); await m.init(); m.loadDevSenders(); return m.listInstalled() } },
+    webhook: { section: 'webhooks', list: async () => { const m = new WebhookManager(makeConfigMaps() as never, fakeConfigStore()); await m.init(); m.loadDevWebhooks(); return m.listInstalled() } },
     theme: { section: 'themes', list: async () => { const m = new ThemeManager(makeConfigMaps() as never); m.loadDevThemes(); return m.listInstalled() } },
     homepage: { section: 'homepages', list: async () => { const m = new HomepageManager(makeConfigMaps() as never); m.loadDevHomepages(); return m.listInstalled() } }
 }

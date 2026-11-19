@@ -1,6 +1,8 @@
 import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage, ISenderResult, ISenderStoredConfig, TSenderConstructor } from '@kwirthmagnify/kwirth-common-back'
-import { IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IConfigValidationError, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import { IConfigMaps } from './IConfigMap'
+import { ExtensionConfigStore } from './ExtensionConfigStore'
+import { pruneCommon, pruneNamedConfig, validateNamedConfig, validateNamedStored } from './NamedConfigs'
 import { componentLogger, ELogComponent, IComponentLogger, logError, logInfo, logWarning } from './Logging'
 import tar from 'tar'
 import os from 'os'
@@ -53,6 +55,9 @@ interface ISenderWithLogger {
 
 export class SenderManager implements ISenderAccess {
     private configMaps: IConfigMaps
+    // Where the configurations are KEPT: one Secret per sender, its common base plus its named configs
+    // (plans/extension-config, S6). `configStore` below is what is loaded in memory from it.
+    private extensionConfigs: ExtensionConfigStore
     private registeredSenders = new Map<string, TSenderConstructor>()
     private instances = new Map<string, ISender>()
     private devSenders = new Map<string, IDevSender>()
@@ -64,8 +69,9 @@ export class SenderManager implements ISenderAccess {
     private installedMetas = new Map<string, ISenderMeta>()
     private cachedIndex: ISenderMeta[] = []
 
-    constructor(configMaps: IConfigMaps) {
+    constructor(configMaps: IConfigMaps, extensionConfigs: ExtensionConfigStore) {
         this.configMaps = configMaps
+        this.extensionConfigs = extensionConfigs
     }
 
     async init(): Promise<void> {
@@ -165,38 +171,31 @@ export class SenderManager implements ISenderAccess {
         }
     }
 
+    /*
+        The kept configurations of the senders that are here. One of a sender that is NOT installed is
+        what an uninstall kept (P5): it is left where it is, and comes back when the sender is reinstalled.
+    */
     async loadPersistedConfigs(): Promise<void> {
-        let allKeys = await this.configMaps.readAllKeys('kwirth-sender-configs')
-
-        // Migration: K8s old format stored everything under a single 'data' key
-        if (allKeys['data'] && typeof allKeys['data'] === 'object' && !Array.isArray(allKeys['data']) && !(allKeys['data'] as ISenderStoredConfig).configs) {
-            const oldData = allKeys['data'] as Record<string, unknown>
-            for (const [senderId, value] of Object.entries(oldData)) {
-                await this.configMaps.writeKey('kwirth-sender-configs', senderId, value)
-            }
-            await this.configMaps.writeKey('kwirth-sender-configs', 'data', null)
-            delete allKeys['data']
-            Object.assign(allKeys, oldData)
-            logInfo(ELogComponent.CORE, 'Migrated sender configs from single-blob to per-sender keys')
-        }
-
-        for (const [senderId, value] of Object.entries(allKeys)) {
-            let configs: ISenderConfig[]
-            let common: Record<string, unknown> = {}
-            if (Array.isArray(value)) {
-                configs = value as ISenderConfig[]
-            } else if (value && typeof value === 'object' && Array.isArray((value as ISenderStoredConfig).configs)) {
-                const { configs: storedConfigs, ...commonFields } = value as ISenderStoredConfig
-                configs = storedConfigs as ISenderConfig[]
-                common = commonFields as Record<string, unknown>
-            } else {
+        for (const id of await this.extensionConfigs.list(EExtensionType.SENDER)) {
+            if (!this.registeredSenders.has(id)) {
+                logInfo(ELogComponent.CORE, `Sender '${id}' is not installed: its kept configuration waits for a reinstall`)
                 continue
             }
-            this.commonFieldStore.set(senderId, common)
-            for (const config of configs) {
-                this.addConfigInternal(senderId, config)
-            }
+            await this.loadStoredConfig(id)
         }
+    }
+
+    // One sender's stored document into memory. It was validated when saved, so it is loaded as it is.
+    private async loadStoredConfig(id: string): Promise<void> {
+        const stored = await this.extensionConfigs.read(EExtensionType.SENDER, id)
+        if (stored === undefined) return
+        if (!stored || typeof stored !== 'object' || !Array.isArray((stored as ISenderStoredConfig).configs)) {
+            logWarning(ELogComponent.CORE, `Configuration of sender '${id}' has no list of configs: it is ignored`)
+            return
+        }
+        const { configs, ...common } = stored as ISenderStoredConfig
+        this.commonFieldStore.set(id, common)
+        for (const config of configs) this.addConfigInternal(id, config)
     }
 
     private interpolateEnvVars(obj: ISenderConfig): ISenderConfig {
@@ -400,6 +399,8 @@ export class SenderManager implements ISenderAccess {
             this.installedMetas.set(meta.id, meta)
 
             await this.loadBackSender(meta.id, backJs)
+            // What an earlier uninstall kept comes back by itself (P5). An upgrade has it in memory already.
+            if (!this.configStore.has(meta.id)) await this.loadStoredConfig(meta.id)
             logInfo(ELogComponent.CORE, `Sender '${meta.id}' v${meta.version} installed`)
             return meta
         } finally {
@@ -418,18 +419,19 @@ export class SenderManager implements ISenderAccess {
         }
     }
 
-    async uninstall(id: string): Promise<void> {
+    /** Its configuration is KEPT unless `deleteConfig` (plan P5): a reinstall finds it again. */
+    async uninstall(id: string, deleteConfig = false): Promise<void> {
         if (this.isDevSender(id)) throw new Error(`Sender '${id}' is a dev sender and cannot be uninstalled`)
         const meta = this.installedMetas.get(id)
         if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`Sender '${id}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
-        await this._doUninstall(id)
+        await this._doUninstall(id, deleteConfig)
     }
 
-    async uninstallFromPack(id: string): Promise<void> {
-        await this._doUninstall(id)
+    async uninstallFromPack(id: string, deleteConfig = false): Promise<void> {
+        await this._doUninstall(id, deleteConfig)
     }
 
-    private async _doUninstall(id: string): Promise<void> {
+    private async _doUninstall(id: string, deleteConfig: boolean): Promise<void> {
         // The /tmp cache does not carry the version in its name: unless it is deleted here,
         // reinstalling will serve the previous installation's js as long as the pod stays alive.
         dropCachedExtensionFiles('sender', id)
@@ -448,7 +450,7 @@ export class SenderManager implements ISenderAccess {
         await this.configMaps.write(`kwirth-sender-${id}-front`, null)
         this.configStore.delete(id)
         this.commonFieldStore.delete(id)
-        await this.configMaps.writeKey('kwirth-sender-configs', id, null)
+        if (deleteConfig) await this.extensionConfigs.delete(EExtensionType.SENDER, id)
         this.installedMetas.delete(id)
 
         for (const suffix of ['back.js', 'front.js']) {
@@ -580,27 +582,71 @@ export class SenderManager implements ISenderAccess {
         return true
     }
 
-    private persistSenderConfig(senderId: string): void {
-        const configs = Array.from(this.configStore.get(senderId)?.values() ?? [])
-        const common = this.commonFieldStore.get(senderId) ?? {}
+    /*
+        🔴 The document is WRITTEN FIRST and memory changed after, always awaited. It used to be the
+        other way round and fire-and-forget: a failed write was only a log line, the API answered OK and
+        the configuration vanished on the next restart.
+    */
+    private async persist(senderId: string, common: Record<string, unknown>, configs: ISenderConfig[]): Promise<void> {
+        // Nothing left —no base, no configuration— is no configuration: the Secret goes instead of
+        // staying behind empty, so deleting what one created leaves the cluster as it was.
+        if (configs.length === 0 && Object.keys(common).length === 0) {
+            await this.extensionConfigs.delete(EExtensionType.SENDER, senderId)
+            return
+        }
         const data: ISenderStoredConfig = { ...common, configs }
-        this.configMaps.writeKey('kwirth-sender-configs', senderId, data).catch((err: unknown) =>
-            logError(ELogComponent.CORE, `Failed to persist sender '${senderId}' configs: ${err}`)
-        )
+        await this.extensionConfigs.write(EExtensionType.SENDER, senderId, data)
     }
 
+    private warnUnvalidated(senderId: string): void {
+        logWarning(ELogComponent.CORE, `Configuration of sender '${senderId}' saved without validation: its schema is not available`)
+    }
+
+    /**
+     * Creates or replaces (by name) one configuration. What does not fit the sender's schema is returned
+     * and nothing is saved. A sender that is not registered, or a failed write, is THROWN.
+     */
+    async saveConfig(senderId: string, config: ISenderConfig): Promise<IConfigValidationError[]> {
+        if (!this.getSender(senderId)) throw new Error(`Sender '${senderId}' is not registered`)
+        const schema = this.getSchema(senderId)
+        const limpia = pruneNamedConfig(schema, config) as ISenderConfig
+        const errors = validateNamedConfig(schema, limpia)
+        if (errors.length > 0) return errors
+        if (schema.length === 0) this.warnUnvalidated(senderId)
+        const next = new Map(this.configStore.get(senderId) ?? [])
+        next.set(limpia.name, limpia)
+        await this.persist(senderId, this.commonFieldStore.get(senderId) ?? {}, [...next.values()])
+        this.addConfigInternal(senderId, limpia)
+        return []
+    }
+
+    /*
+        ISenderAccess.addConfig: the PUBLISHED contract extensions call, and it is synchronous — it cannot
+        be made to wait without breaking every extension built against it. So it validates here (that is
+        synchronous) and answers false when the sender is missing or the configuration does not fit; the
+        write is saveConfig's, and a failure of it is logged. The core's own callers use saveConfig.
+    */
     addConfig(senderId: string, config: ISenderConfig): boolean {
-        const ok = this.addConfigInternal(senderId, config)
-        if (ok) this.persistSenderConfig(senderId)
-        return ok
+        if (!this.getSender(senderId)) return false
+        const schema = this.getSchema(senderId)
+        const errors = validateNamedConfig(schema, pruneNamedConfig(schema, config))
+        if (errors.length > 0) {
+            logWarning(ELogComponent.CORE, `Sender '${senderId}' config '${config.name}' refused: ${errors.map(e => e.message).join('; ')}`)
+            return false
+        }
+        this.saveConfig(senderId, config).catch((err: unknown) =>
+            logError(ELogComponent.CORE, `Failed to save sender '${senderId}' config '${config.name}': ${err}`))
+        return true
     }
 
-    removeConfig(senderId: string, configName: string): boolean {
+    async removeConfig(senderId: string, configName: string): Promise<boolean> {
         const sender = this.getSender(senderId)
         if (!sender) return false
+        const next = new Map(this.configStore.get(senderId) ?? [])
+        next.delete(configName)
+        await this.persist(senderId, this.commonFieldStore.get(senderId) ?? {}, [...next.values()])
         sender.removeConfig(configName)
         this.configStore.get(senderId)?.delete(configName)
-        this.persistSenderConfig(senderId)
         return true
     }
 
@@ -610,20 +656,28 @@ export class SenderManager implements ISenderAccess {
         return { ...common, configs }
     }
 
-    setSenderStoredConfig(senderId: string, data: ISenderStoredConfig): boolean {
-        const { configs, ...common } = data
-        this.commonFieldStore.set(senderId, common as Record<string, unknown>)
+    /**
+     * Replaces the WHOLE document: the common base and every configuration. Validated as a whole —
+     * nothing is saved while anything does not fit. Not registered, or a failed write, is THROWN.
+     */
+    async setSenderStoredConfig(senderId: string, data: ISenderStoredConfig): Promise<IConfigValidationError[]> {
         const sender = this.getSender(senderId)
-        if (!sender) return false
-        for (const name of Array.from(this.configStore.get(senderId)?.keys() ?? [])) {
-            sender.removeConfig(name)
-        }
+        if (!sender) throw new Error(`Sender '${senderId}' is not registered`)
+        const schema = this.getSchema(senderId)
+        const { configs, ...rawCommon } = data
+        const common = pruneCommon(schema, rawCommon)
+        const limpias = configs.map(c => pruneNamedConfig(schema, c) as ISenderConfig)
+        const errors = validateNamedStored(schema, common, limpias)
+        if (errors.length > 0) return errors
+        if (schema.length === 0) this.warnUnvalidated(senderId)
+        await this.persist(senderId, common, limpias)
+
+        // the base changes what every configuration receives, so all of them are handed over again
+        this.commonFieldStore.set(senderId, common)
+        for (const name of Array.from(this.configStore.get(senderId)?.keys() ?? [])) sender.removeConfig(name)
         this.configStore.delete(senderId)
-        for (const config of (configs as ISenderConfig[])) {
-            this.addConfigInternal(senderId, config)
-        }
-        this.persistSenderConfig(senderId)
-        return true
+        for (const config of limpias) this.addConfigInternal(senderId, config)
+        return []
     }
 
     getSchema(senderId: string): ISenderFieldDef[] {

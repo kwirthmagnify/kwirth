@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { SenderManager } from '../../src/tools/SenderManager'
+import { fakeConfigStore } from './fakeExtensionConfigStore'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
 import { ISender, ISenderMessage } from '@kwirthmagnify/kwirth-common-back'
 
@@ -70,7 +71,7 @@ const fakeSender = (id: string, options: IFakeSenderOptions = {}): IFakeSender =
 }
 
 const withSender = async (fake: IFakeSender): Promise<SenderManager> => {
-    const manager = new SenderManager(memConfigMaps())
+    const manager = new SenderManager(memConfigMaps(), fakeConfigStore())
     await manager.init()
     // it is injected into the instance registry, which is where getSender() takes it from
     ;(manager as unknown as { instances: Map<string, ISender> }).instances.set(fake.sender.id, fake.sender)
@@ -141,7 +142,7 @@ test('en el camino de uno en uno, una linea que falla no cancela las siguientes'
 })
 
 test('un sender que no existe descarta el lote sin lanzar', async () => {
-    const manager = new SenderManager(memConfigMaps())
+    const manager = new SenderManager(memConfigMaps(), fakeConfigStore())
     await manager.init()
 
     await assert.doesNotReject(() => manager.sendBatch('no-existe', 'default', [linea('a')]))
@@ -166,7 +167,7 @@ test('una config que el sender no tiene descarta el lote sin lanzar', async () =
 */
 
 test('una instancia re-creada recupera las configuraciones del core', async () => {
-    const manager = new SenderManager(memConfigMaps())
+    const manager = new SenderManager(memConfigMaps(), fakeConfigStore())
     await manager.init()
 
     const recibidas: string[] = []
@@ -184,7 +185,7 @@ test('una instancia re-creada recupera las configuraciones del core', async () =
     ;(manager as unknown as { registeredSenders: Map<string, unknown> }).registeredSenders.set('file', FakeSender)
 
     // the core registers a configuration: it is stored in its store and reaches the instance
-    manager.addConfig('file', { name: 'montag-test' } as never)
+    assert.deepEqual(await manager.saveConfig('file', { name: 'montag-test' } as never), [])
     assert.deepEqual(recibidas, ['montag-test'])
 
     // ...and now the instance is thrown away, which is what the dev reloader does after a rebuild

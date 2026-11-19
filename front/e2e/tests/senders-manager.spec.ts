@@ -1,6 +1,49 @@
-import { Page } from '@playwright/test'
+import { APIRequestContext, Page } from '@playwright/test'
+import { createHash } from 'crypto'
+import { execFileSync } from 'child_process'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
 import { test, expect } from './fixtures'
-import { clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
+import { clickExtensionMenuItem, dismissOpenDialogs, USER, PASS } from './helpers'
+
+/*
+    What the checks need —a sender with several destinations and a BASE configuration— is not assumed from
+    the environment: a fixture sender that sends nothing anywhere is uploaded with two configurations and a
+    base, and afterAll removes it with its configuration. No real sender is touched.
+*/
+const BACK = process.env.KWIRTH_E2E_BACK ?? 'http://localhost:3883'
+const FIXTURE_ID = 'e2e-senders-manager'
+const FIXTURE_JS = `module.exports.default = class {
+    constructor() { this.id = '${FIXTURE_ID}'; this.c = new Map() }
+    getConfigSchema() { return [
+        { name: 'name', label: 'Name', required: true },
+        { name: 'host', label: 'Host', common: true },
+        { name: 'to', label: 'To' }
+    ] }
+    addConfig(c) { this.c.set(c.name, c) }
+    removeConfig(n) { this.c.delete(n) }
+    hasConfig(n) { return this.c.has(n) }
+    getConfigNames() { return [...this.c.keys()] }
+    async startSender() {}
+    async stopSender() {}
+    async send() {}
+}`
+
+// A sender that brings its OWN dialog, from the public catalogue, for the check that it opens that one
+const OWN_UI_ID = 'regex'
+
+interface IAccessKey { id: string, type: string, resources: string }
+interface IManifestEntry { id: string, url: string }
+
+const fixtureTgz = (): Buffer => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), `kwirth-e2e-${FIXTURE_ID}-`))
+    fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ id: FIXTURE_ID, name: `@e2e/kwirth-sender-${FIXTURE_ID}`, displayName: 'E2E Senders Manager', version: '0.1.0', description: 'e2e sender: sends nothing' }))
+    fs.writeFileSync(path.join(dir, 'back.js'), FIXTURE_JS)
+    const tgz = `${dir}.tgz`
+    execFileSync('tar', ['-czf', tgz, '-C', dir, '.'])
+    return fs.readFileSync(tgz)
+}
 
 /*
     Migration of the `sender` manager to the generic dialog (plan: plans/completed/extension-managers-ui/PLAN.md).
@@ -37,8 +80,32 @@ const nombreDe = (s: ISenderRef) => s.displayName || s.name || s.id
 test.describe('gestor generico de extensiones: senders', () => {
     let page: Page
     let senders: ISenderRef[] = []
+    let api: APIRequestContext
+    let auth: Record<string, string> = {}
+    let ownUiInstalledHere = false
 
-    test.beforeAll(async ({ kwirth }) => {
+    test.beforeAll(async ({ kwirth, playwright }) => {
+        test.setTimeout(120000)
+        api = await playwright.request.newContext({ baseURL: BACK })
+        const login = await api.post('/login', { data: { user: USER, password: createHash('sha256').update(PASS).digest('hex') } })
+        expect(login.status(), 'login against the back end').toBe(200)
+        const key = (await login.json()).accessKey as IAccessKey
+        auth = { Authorization: `Bearer ${key.id}|${key.type}|${key.resources}` }
+        const there = await (await api.get('/core/senders', { headers: auth })).json() as ISenderRef[]
+        expect(there.some(s => s.id === FIXTURE_ID), `'${FIXTURE_ID}' is already installed: a previous run did not clean up`).toBe(false)
+        if (!there.some(s => s.hasFront) && !there.some(s => s.id === OWN_UI_ID)) {
+            const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../senders/manifest.json'), 'utf-8')) as IManifestEntry[]
+            const entry = manifest.find(e => e.id === OWN_UI_ID)
+            expect(entry, `'${OWN_UI_ID}' is not in the public senders catalogue`).toBeTruthy()
+            const inst = await api.post('/core/senders/install', { headers: auth, data: { url: entry!.url } })
+            expect(inst.status(), `installing '${OWN_UI_ID}': ${await inst.text()}`).toBe(200)
+            ownUiInstalledHere = true
+        }
+        const up = await api.post('/core/senders/upload', { headers: { ...auth, 'content-type': 'application/octet-stream' }, data: fixtureTgz() })
+        expect(up.status(), await up.text()).toBe(200)
+        const put = await api.put(`/core/senders/${FIXTURE_ID}/configs`, { headers: auth, data: { host: 'smtp.e2e.invalid', configs: [{ name: 'qa-a', to: 'a@e2e.invalid' }, { name: 'qa-b', to: 'b@e2e.invalid' }] } })
+        expect(put.status(), await put.text()).toBe(200)
+
         page = kwirth
         await dismissOpenDialogs(page)
         // The endpoint is authenticated: the response the dialog itself asks for on opening is listened to.
@@ -51,6 +118,9 @@ test.describe('gestor generico de extensiones: senders', () => {
     // La pagina es de la CORRIDA, no de este fichero: se deja limpia, no se cierra.
     test.afterAll(async () => {
         await dismissOpenDialogs(page).catch(() => {})
+        await api?.delete(`/core/senders/${FIXTURE_ID}?deleteConfig=true`, { headers: auth }).catch(() => undefined)
+        if (ownUiInstalledHere) await api?.delete(`/core/senders/${OWN_UI_ID}?deleteConfig=true`, { headers: auth }).catch(() => undefined)
+        await api?.dispose()
     })
 
     const dialog = () => page.getByRole('dialog').filter({ hasText: DIALOG })
@@ -161,7 +231,9 @@ test.describe('gestor generico de extensiones: senders', () => {
         await gearDe(nombreDe(conFront!)).click()
         // ⚠️ .MuiDialog-root and not getByRole: with two stacked dialogs MUI marks the lower one aria-hidden.
         await expect(page.locator('.MuiDialog-root'), 'no se abrio la UI del sender').toHaveCount(2, { timeout: 30000 })
-        await expect(page.getByText(`Configure: ${nombreDe(conFront!)}`), 'se abrio la lista del core en vez de su UI').toHaveCount(0)
+        // Not by the title: a sender's own dialog may be titled 'Configure: <name>' too (regex is). The core
+        // list is told by its own empty-state line, which no sender's dialog has.
+        await expect(page.getByText('Select a config to edit or click New.'), 'se abrio la lista del core en vez de su UI').toHaveCount(0)
         await dismissOpenDialogs(page)
         await clickExtensionMenuItem(page, 'Senders')
         await dialog().waitFor({ timeout: 40000 })

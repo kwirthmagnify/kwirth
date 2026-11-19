@@ -10,8 +10,10 @@ import crypto from 'crypto'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile, uniqueTempPath } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
-import { IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, IConfigValidationError, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
 import { updateIndex } from './IndexLock'
+import { ExtensionConfigStore } from './ExtensionConfigStore'
+import { pruneCommon, pruneNamedConfig, validateNamedConfig, validateNamedStored } from './NamedConfigs'
 
 export interface IWebhookMeta {
     id: string
@@ -56,7 +58,13 @@ export class WebhookManager implements IWebhookAccess {
     private devWebhooks = new Map<string, IDevWebhook>()
     // the path watched, by id, so that fs.unwatchFile can be called on unregistering
     private devWatchers = new Map<string, string>()
+    // Where the configurations are KEPT: one Secret per webhook, its common base plus its named configs
+    // (plans/extension-config, S6). `configStore` and `commonFieldStore` are what is loaded from it.
+    private extensionConfigs: ExtensionConfigStore
     private configStore = new Map<string, Map<string, IWebhookConfig>>()
+    // The fields the schema marks `common`: one value for every configuration of the webhook. They were
+    // never persisted before S6 — the front sent them and the back dropped them.
+    private commonFieldStore = new Map<string, Record<string, unknown>>()
     private installedIds: string[] = []
     private installedMetas = new Map<string, IWebhookMeta>()
     private cachedIndex: IWebhookMeta[] = []
@@ -66,8 +74,9 @@ export class WebhookManager implements IWebhookAccess {
     // Consumers subscribed by webhookId (a provider-like model: you subscribe to a webhook and receive ITS events).
     private subscribers = new Map<string, Set<IWebhookConsumer>>()
 
-    constructor(configMaps: IConfigMaps, urlBase: string = '/webhook') {
+    constructor(configMaps: IConfigMaps, extensionConfigs: ExtensionConfigStore, urlBase: string = '/webhook') {
         this.configMaps = configMaps
+        this.extensionConfigs = extensionConfigs
         this.urlBase = urlBase
     }
 
@@ -170,20 +179,27 @@ export class WebhookManager implements IWebhookAccess {
             this.configByToken.set(token, { webhookId, configName })
         }
 
-        const allKeys = await this.configMaps.readAllKeys('kwirth-webhook-configs')
-        for (const [webhookId, value] of Object.entries(allKeys)) {
-            let configs: IWebhookConfig[]
-            if (Array.isArray(value)) {
-                configs = value as IWebhookConfig[]
-            } else if (value && typeof value === 'object' && Array.isArray((value as IWebhookStoredConfig).configs)) {
-                configs = (value as IWebhookStoredConfig).configs as IWebhookConfig[]
-            } else {
+        // A webhook that is NOT installed has a configuration an uninstall kept (P5): it waits for a reinstall.
+        for (const id of await this.extensionConfigs.list(EExtensionType.WEBHOOK)) {
+            if (!this.registeredWebhooks.has(id)) {
+                logInfo(ELogComponent.CORE, `Webhook '${id}' is not installed: its kept configuration waits for a reinstall`)
                 continue
             }
-            for (const config of configs) {
-                this.addConfigInternal(webhookId, config)
-            }
+            await this.loadStoredConfig(id)
         }
+    }
+
+    // One webhook's stored document into memory. It was validated when saved, so it is loaded as it is.
+    private async loadStoredConfig(id: string): Promise<void> {
+        const stored = await this.extensionConfigs.read(EExtensionType.WEBHOOK, id)
+        if (stored === undefined) return
+        if (!stored || typeof stored !== 'object' || !Array.isArray((stored as IWebhookStoredConfig).configs)) {
+            logWarning(ELogComponent.CORE, `Configuration of webhook '${id}' has no list of configs: it is ignored`)
+            return
+        }
+        const { configs, ...common } = stored as IWebhookStoredConfig
+        this.commonFieldStore.set(id, common)
+        for (const config of configs) this.addConfigInternal(id, config)
     }
 
     private interpolateEnvVars(obj: IWebhookConfig): IWebhookConfig {
@@ -383,6 +399,9 @@ export class WebhookManager implements IWebhookAccess {
             this.installedMetas.set(meta.id, meta)
 
             await this.loadBackWebhook(meta.id, backJs)
+            // What an earlier uninstall kept comes back by itself (P5), and with it its kept tokens: the
+            // URLs pasted at GitLab or Jira go on working. An upgrade has it in memory already.
+            if (!this.configStore.has(meta.id)) await this.loadStoredConfig(meta.id)
             logInfo(ELogComponent.CORE, `Webhook '${meta.id}' v${meta.version} installed`)
             return meta
         } finally {
@@ -401,18 +420,23 @@ export class WebhookManager implements IWebhookAccess {
         }
     }
 
-    async uninstall(id: string): Promise<void> {
+    /*
+        Its configuration is KEPT unless `deleteConfig` (plan P5), and its tokens with it: a token is the
+        URL the outside world calls, and a reinstall that minted new ones would make the admin paste every
+        URL again at GitLab, Jira… With `deleteConfig` both go.
+    */
+    async uninstall(id: string, deleteConfig = false): Promise<void> {
         if (this.isDevWebhook(id)) throw new Error(`Webhook '${id}' is a dev webhook and cannot be uninstalled`)
         const meta = this.installedMetas.get(id)
         if (meta?.installedFrom?.startsWith('pack:')) throw new Error(`Webhook '${id}' was installed by pack '${meta.installedFrom.slice(5)}' — uninstall the pack instead`)
-        await this._doUninstall(id)
+        await this._doUninstall(id, deleteConfig)
     }
 
-    async uninstallFromPack(id: string): Promise<void> {
-        await this._doUninstall(id)
+    async uninstallFromPack(id: string, deleteConfig = false): Promise<void> {
+        await this._doUninstall(id, deleteConfig)
     }
 
-    private async _doUninstall(id: string): Promise<void> {
+    private async _doUninstall(id: string, deleteConfig: boolean): Promise<void> {
         // The /tmp cache does not carry the version in its name: unless it is deleted here,
         // reinstalling will serve the previous installation's js as long as the pod stays alive.
         dropCachedExtensionFiles('webhook', id)
@@ -429,11 +453,19 @@ export class WebhookManager implements IWebhookAccess {
         await this.configMaps.write(`kwirth-webhook-${id}-meta`, null)
         await this.configMaps.write(`kwirth-webhook-${id}-back`, null)
         await this.configMaps.write(`kwirth-webhook-${id}-front`, null)
-        // Evict all configs + tokens of this webhook.
-        for (const name of Array.from(this.configStore.get(id)?.keys() ?? [])) this.evictToken(id, name)
+        // Out of memory always; out of storage — configuration AND tokens — only when asked to.
+        // A kept token resolves to nothing meanwhile: there is no configuration for it to point at.
+        if (deleteConfig) {
+            // by the token registry and not by the loaded configs: every token of this webhook goes
+            for (const key of Array.from(this.tokenByConfig.keys())) {
+                const [webhookId, configName] = this.splitKey(key)
+                if (webhookId === id) this.evictToken(webhookId, configName)
+            }
+            await this.extensionConfigs.delete(EExtensionType.WEBHOOK, id)
+            await this.persistTokens()
+        }
         this.configStore.delete(id)
-        await this.configMaps.writeKey('kwirth-webhook-configs', id, null)
-        this.persistTokens()
+        this.commonFieldStore.delete(id)
         this.installedMetas.delete(id)
 
         for (const suffix of ['back.js', 'front.js']) {
@@ -543,21 +575,25 @@ export class WebhookManager implements IWebhookAccess {
         this.tokenByConfig.delete(key)
     }
 
-    private persistTokens(): void {
+    // Awaited, like the configuration: a token that is not stored is a URL that dies on the next restart.
+    private async persistTokens(): Promise<void> {
         const data: Record<string, string> = {}
         for (const [key, token] of this.tokenByConfig) data[key] = token
-        this.configMaps.write('kwirth-webhook-tokens', data).catch((err: unknown) =>
-            logError(ELogComponent.CORE, `Failed to persist webhook tokens: ${err}`)
-        )
+        await this.configMaps.write('kwirth-webhook-tokens', data)
     }
 
-    // Resolves an incoming token → webhook/config. Undefined when the token does not exist.
+    /*
+        Resolves an incoming token → webhook/config. Undefined when the token does not exist. The config
+        comes with the webhook's COMMON fields under it, as the artifact received it in addConfig: verify()
+        reads the secret from there.
+    */
     resolve(token: string): IWebhookResolution | undefined {
         const ref = this.configByToken.get(token)
         if (!ref) return undefined
         const config = this.getConfig(ref.webhookId, ref.configName)
         if (!config) return undefined
-        return { webhookId: ref.webhookId, configName: ref.configName, config }
+        const base = this.commonFieldStore.get(ref.webhookId) ?? {}
+        return { webhookId: ref.webhookId, configName: ref.configName, config: { ...base, ...config } as IWebhookConfig }
     }
 
     // ── IWebhookAccess (inyectado en consumidores) ────────────────────────────────
@@ -606,10 +642,20 @@ export class WebhookManager implements IWebhookAccess {
         return `${this.urlBase}/${webhookId}/${token}`
     }
 
+    /** A new token (a new URL), awaited until it is stored: the API's. */
+    async rotateTokenAndSave(webhookId: string, configName: string): Promise<string> {
+        this.evictToken(webhookId, configName)
+        const token = this.ensureToken(webhookId, configName)
+        await this.persistTokens()
+        return token
+    }
+
+    // IWebhookAccess.rotateToken: the PUBLISHED contract is synchronous, so the write runs on its own and
+    // a failure of it is logged. The core's own callers use rotateTokenAndSave.
     rotateToken(webhookId: string, configName: string): string {
         this.evictToken(webhookId, configName)
         const token = this.ensureToken(webhookId, configName)
-        this.persistTokens()
+        this.persistTokens().catch((err: unknown) => logError(ELogComponent.CORE, `Failed to persist webhook tokens: ${err}`))
         return token
     }
 
@@ -622,7 +668,9 @@ export class WebhookManager implements IWebhookAccess {
             return false
         }
         const alreadyExists = this.configStore.has(webhookId) && this.configStore.get(webhookId)!.has(config.name)
-        webhook.addConfig(config)
+        // the artifact receives each configuration with the common base under it, as senders do
+        const base = this.commonFieldStore.get(webhookId) ?? {}
+        webhook.addConfig({ ...base, ...config } as IWebhookConfig)
         if (!this.configStore.has(webhookId)) this.configStore.set(webhookId, new Map())
         this.configStore.get(webhookId)!.set(config.name, { ...config })
         this.ensureToken(webhookId, config.name)
@@ -630,53 +678,92 @@ export class WebhookManager implements IWebhookAccess {
         return true
     }
 
-    private persistWebhookConfig(webhookId: string): void {
-        const configs = Array.from(this.configStore.get(webhookId)?.values() ?? [])
-        const data: IWebhookStoredConfig = { configs }
-        this.configMaps.writeKey('kwirth-webhook-configs', webhookId, data).catch((err: unknown) =>
-            logError(ELogComponent.CORE, `Failed to persist webhook '${webhookId}' configs: ${err}`)
-        )
-    }
-
-    addConfig(webhookId: string, config: IWebhookConfig): boolean {
-        const ok = this.addConfigInternal(webhookId, config)
-        if (ok) {
-            this.persistWebhookConfig(webhookId)
-            this.persistTokens()
+    /*
+        🔴 The document is WRITTEN FIRST and memory changed after, always awaited. It used to be the
+        other way round and fire-and-forget — and only `configs` was written, so the common fields the
+        front sent were lost on every restart.
+    */
+    private async persist(webhookId: string, common: Record<string, unknown>, configs: IWebhookConfig[]): Promise<void> {
+        // Nothing left —no base, no configuration— is no configuration: the Secret goes instead of
+        // staying behind empty, so deleting what one created leaves the cluster as it was.
+        if (configs.length === 0 && Object.keys(common).length === 0) {
+            await this.extensionConfigs.delete(EExtensionType.WEBHOOK, webhookId)
+            return
         }
-        return ok
+        const data: IWebhookStoredConfig = { ...common, configs }
+        await this.extensionConfigs.write(EExtensionType.WEBHOOK, webhookId, data)
     }
 
-    removeConfig(webhookId: string, configName: string): boolean {
+    private warnUnvalidated(webhookId: string): void {
+        logWarning(ELogComponent.CORE, `Configuration of webhook '${webhookId}' saved without validation: its schema is not available`)
+    }
+
+    /**
+     * Creates or replaces (by name) one configuration; a new one gets its token. What does not fit the
+     * webhook's schema is returned and nothing is saved. Not registered, or a failed write, is THROWN.
+     */
+    async saveConfig(webhookId: string, config: IWebhookConfig): Promise<IConfigValidationError[]> {
+        if (!this.getWebhook(webhookId)) throw new Error(`Webhook '${webhookId}' is not registered`)
+        const schema = this.getSchema(webhookId)
+        const limpia = pruneNamedConfig(schema, config) as IWebhookConfig
+        const errors = validateNamedConfig(schema, limpia)
+        if (errors.length > 0) return errors
+        if (schema.length === 0) this.warnUnvalidated(webhookId)
+        const next = new Map(this.configStore.get(webhookId) ?? [])
+        next.set(limpia.name, limpia)
+        await this.persist(webhookId, this.commonFieldStore.get(webhookId) ?? {}, [...next.values()])
+        this.addConfigInternal(webhookId, limpia)
+        await this.persistTokens()
+        return []
+    }
+
+    async removeConfig(webhookId: string, configName: string): Promise<boolean> {
         const webhook = this.getWebhook(webhookId)
         if (!webhook) return false
+        const next = new Map(this.configStore.get(webhookId) ?? [])
+        next.delete(configName)
+        await this.persist(webhookId, this.commonFieldStore.get(webhookId) ?? {}, [...next.values()])
         webhook.removeConfig(configName)
         this.configStore.get(webhookId)?.delete(configName)
         this.evictToken(webhookId, configName)
-        this.persistWebhookConfig(webhookId)
-        this.persistTokens()
+        await this.persistTokens()
         return true
     }
 
     getWebhookStoredConfig(webhookId: string): IWebhookStoredConfig {
+        const common = this.commonFieldStore.get(webhookId) ?? {}
         const configs = Array.from(this.configStore.get(webhookId)?.values() ?? [])
-        return { configs }
+        return { ...common, configs }
     }
 
-    setWebhookStoredConfig(webhookId: string, data: IWebhookStoredConfig): boolean {
+    /**
+     * Replaces the WHOLE document: the common base and every configuration, validated as a whole.
+     * The configurations that stay KEEP their token — saving the base must not change every URL; only the
+     * ones that leave lose it. Not registered, or a failed write, is THROWN.
+     */
+    async setWebhookStoredConfig(webhookId: string, data: IWebhookStoredConfig): Promise<IConfigValidationError[]> {
         const webhook = this.getWebhook(webhookId)
-        if (!webhook) return false
+        if (!webhook) throw new Error(`Webhook '${webhookId}' is not registered`)
+        const schema = this.getSchema(webhookId)
+        const { configs, ...rawCommon } = data
+        const common = pruneCommon(schema, rawCommon)
+        const limpias = configs.map(c => pruneNamedConfig(schema, c) as IWebhookConfig)
+        const errors = validateNamedStored(schema, common, limpias)
+        if (errors.length > 0) return errors
+        if (schema.length === 0) this.warnUnvalidated(webhookId)
+        await this.persist(webhookId, common, limpias)
+
+        // the base changes what every configuration receives, so all of them are handed over again
+        const quedan = new Set(limpias.map(c => c.name))
+        this.commonFieldStore.set(webhookId, common)
         for (const name of Array.from(this.configStore.get(webhookId)?.keys() ?? [])) {
             webhook.removeConfig(name)
-            this.evictToken(webhookId, name)
+            if (!quedan.has(name)) this.evictToken(webhookId, name)
         }
         this.configStore.delete(webhookId)
-        for (const config of (data.configs as IWebhookConfig[])) {
-            this.addConfigInternal(webhookId, config)
-        }
-        this.persistWebhookConfig(webhookId)
-        this.persistTokens()
-        return true
+        for (const config of limpias) this.addConfigInternal(webhookId, config)
+        await this.persistTokens()
+        return []
     }
 
     getSchema(webhookId: string): IWebhookFieldDef[] {

@@ -73,6 +73,7 @@ const HELP = 'guide/extensions/senders/index?id=managing-configuring-senders'
 
 const senderDescriptor: IExtensionManagerDescriptor<IInstalledSender, ISenderManifestEntry> = {
     extensionType: EExtensionType.SENDER,
+    keepsConfig: true,
     title: 'Manage senders',
     noun: { singular: 'sender', plural: 'senders' },
     helpSection: HELP,
