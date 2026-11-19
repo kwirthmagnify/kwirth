@@ -52,7 +52,7 @@ What you save here is **stored by kwirth and survives a restart**.
 
 Managing these settings requires the **`admin`** scope; without it the dialog will tell you so instead of loading.
 
-The other tabs are covered below: [Notifications](#notifications), the [log](#how-much-kwirth-writes-to-its-log), [marketplaces](#adding-your-own-marketplace), [package registries](#package-registries) and [Login access](#login-access) — where kwirth can be logged into from.
+The other tabs are covered below: [Notifications](#notifications), the [log](#how-much-kwirth-writes-to-its-log), [marketplaces](#adding-your-own-marketplace), [package registries](#package-registries), [Login access](#login-access) — where kwirth can be logged into from — and [Portability](#merging-several-configuration-files), which merges configuration files.
 
 > Both can also be set at deploy time: the interval with Helm `metricsInterval` (`METRICSINTERVAL`), the lines with Helm `previousLogLines` (`PREVIOUSLOGLINES`). Precedence is: what you save in this dialog wins; otherwise the deploy-time value; otherwise the default (15 seconds and 1000 lines). So the Helm value acts as the starting point until somebody changes it here.
 
@@ -177,6 +177,34 @@ The preview is where you check this **before** anything is written. And there is
 > If what you want is to add a configuration without touching the rest, do not use the bundle for it: open that extension's own dialog and add it there.
 
 Finally, the file declares the format it was written in, so a kwirth that is **older** than the one that produced it says it cannot read it and tells you to upgrade, instead of applying half a file it does not understand.
+
+### Merging several configuration files
+
+Sometimes what you need is not in a single file: joining two kwirths into one (the marketplaces of one, the AI models of the other, the extensions of both), building a "reference" configuration out of several exports, or completing the current configuration with what a file brings. The **Portability** tab of **☰ → kwirth Settings** does that without editing JSON by hand.
+
+1. **Add files** loads one or several files exported with *Kwirth export*. A file that is not a kwirth configuration, or is written in a format this kwirth cannot read, is rejected on the spot, with the reason, and never enters the list.
+2. **Add this Kwirth** adds the current configuration of this kwirth as one more source. It is exactly its export, so the same rule holds: credentials only travel if you tick **Include credentials**, which starts unticked.
+3. The merge is **automatic**. Every element — a marketplace, a package registry, an allowed address, a log level, an AI provider or model, a loose value such as the metrics interval, a whole extension — falls into one of three cases:
+
+| Case | What happens |
+|---|---|
+| It is in **one** source only | It goes in as it is, without asking |
+| It is in several and **identical** in all of them | It goes in once, without asking |
+| It is in several and **differs** | It is a **difference**: you choose which source it comes from |
+
+"Identical" means the whole content, field by field, not just the name: two marketplaces with the same id and a different URL are a difference. What goes in on its own is summarised above the differences table, by kind, so you know what the file will carry without opening it.
+
+Kwirth's own part is merged **element by element**, because kwirth understands it: marketplaces and package registries by their id, allowed addresses and trusted proxies by their address, log levels by component, AI providers by name and AI models by id. An **extension** is different: its configuration is opaque — only the extension understands it — so it is taken **whole** from one source. When two sources carry it differently, the row says which part differs (its version, its marketplace, kwirth's part `coreConfig` or the extension's own `config`). Nothing is transformed, the same as on import.
+
+The sources are listed in **merge order** (#1, #2…), which you change with the arrows; it is the order the elements of each list (marketplaces, models…) follow in the result. A box above the differences says in one sentence what is left to do. Each difference says **which field differs** and lists one option per source that carries it, showing only that field's value: you pick the one to apply. A row still undecided is marked in amber. Secret values are masked; the eye above the differences shows them.
+
+A file exported **with** credentials and one exported **without** them (for instance this kwirth added with *Include credentials* unticked) are the same configuration: the export without credentials blanks the secrets, and a blanked secret is not taken as a difference — the merged file keeps the value of the source that carries it.
+
+**Download merged file** stays disabled while any difference is pending: what differs is your decision, never an implicit order. The file it downloads is in the current format, says it is a merge and of which sources, and declares that it **carries credentials** if any source that contributed to it does.
+
+An AI model points at its provider by name. If the result keeps a model whose provider no source carries, the tab warns you — it is not removed, because the provider may already exist where the file is going.
+
+> Merging **applies nothing**: not even adding this kwirth as a source changes it. To use the result, import it with **☰ → Kwirth import**, with its preview — and remember that importing replaces (see *Importing REPLACES* above).
 
 ### The community marketplace, which you can remove
 

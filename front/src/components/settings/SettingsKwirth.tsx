@@ -14,6 +14,7 @@ import type { ELogLevel, ILogComponentInfo } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { useEscapeToClose } from '../../tools/useKeyboard'
+import { SettingsPortability } from './SettingsPortability'
 
 /*
     The levels of the log, as LITERALS and not as `ELogLevel.X`.
@@ -42,7 +43,8 @@ enum ESettingsKwirthTab {
     MARKETPLACES = 'marketplaces',
     REGISTRIES = 'registries',
     TRUSTED_PROXIES = 'trustedproxies',
-    LOGIN_ACCESS = 'loginaccess'
+    LOGIN_ACCESS = 'loginaccess',
+    PORTABILITY = 'portability'
 }
 
 /*
@@ -727,6 +729,7 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                         <Tab label='Package registries' value={ESettingsKwirthTab.REGISTRIES} />
                         <Tab label='Trusted proxies' value={ESettingsKwirthTab.TRUSTED_PROXIES} />
                         <Tab label='Login access' value={ESettingsKwirthTab.LOGIN_ACCESS} />
+                        <Tab label='Portability' value={ESettingsKwirthTab.PORTABILITY} />
                     </Tabs>
 
                     {/* General: one card per setting, each saying what it does, where its value comes from
@@ -970,6 +973,12 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                             </Typography>
                             { ipList('Allowed address', allowedIps, setAllowedIps, '10.0.0.0/8') }
                         </Stack>
+                    </Box>
+
+                    {/* Portability (plans/config-merge): merging configuration files. It writes nothing to this
+                        Kwirth, so it does not take part in OK. */}
+                    <Box hidden={tab !== ESettingsKwirthTab.PORTABILITY}>
+                        <SettingsPortability clusterUrl={props.clusterUrl} accessString={props.accessString} disabled={loading || error!==''} />
                     </Box>
 
                     { loading && <Stack

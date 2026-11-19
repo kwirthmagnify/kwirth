@@ -121,7 +121,7 @@ export const CONFIG_BUNDLE_KIND = 'kwirth-config-bundle'
     Version 2 (2026-10-29) splits an entry into `coreConfig` + `config`. Until then both parts travelled
     inside `config`, and in two different shapes depending on whether the extension had anything of its
     own — which is exactly what version 2 is for. Reading version 1 is still supported: see
-    `normalizeEntry` in the back end, which is where that conversion lives.
+    `normalizeEntry` below, which is where that conversion lives.
 */
 export const CONFIG_BUNDLE_FORMAT_VERSION = 2
 
@@ -131,6 +131,46 @@ export interface IConfigBundle {
     meta: IConfigBundleMeta
     core: IConfigBundleCore
     extensions: IConfigBundleEntry[]
+}
+
+/*
+    An entry's two parts, whatever format version the file was written in. It lives here, and not in the
+    back end, because the import (back) and the merge (front) both read files: two readings of format 1
+    would end up diverging.
+
+    In format 1 both travelled inside `config`, and in two shapes: `{ core, own }` when the extension had
+    something of its own, and the core's part bare when it did not. Reading that bare shape as the
+    extension's own would hand a plugin a configuration that was never its and —worse— would silently
+    drop the installation configuration of every entry exported before the extensions adopted the
+    contract. Which is exactly what used to happen.
+
+    🔴 THE FORMAT VERSION DECIDES, not the shape of the content. A format 2 entry whose only part is the
+    extension's own is indistinguishable from a bare format 1 entry by looking at it, and guessing would
+    swap the two parts round in silence. The file says which it is; that is what it is for.
+*/
+export const normalizeEntry = (entry: IConfigBundleEntry, formatVersion: number): { coreConfig?: unknown, config?: unknown } => {
+    if (formatVersion >= 2) return { coreConfig: entry.coreConfig, config: entry.config }
+    const legacy = entry.config as Record<string, unknown>
+    if (legacy && typeof legacy === 'object' && ('core' in legacy || 'own' in legacy)) {
+        return { coreConfig: legacy.core, config: legacy.own }
+    }
+    // Format 1 with no wrapper: it is the core's part, and never the extension's.
+    return { coreConfig: entry.config, config: undefined }
+}
+
+/** A bundle that is not Kwirth's, or of a format we cannot read, is rejected BEFORE anything is touched. */
+export const validateBundle = (data: unknown): string | undefined => {
+    if (!data || typeof data !== 'object') return 'not an object'
+    const b = data as Partial<IConfigBundle>
+    if (b.kind !== CONFIG_BUNDLE_KIND) return `not a Kwirth configuration bundle (kind: ${String(b.kind)})`
+    if (typeof b.formatVersion !== 'number') return 'missing formatVersion'
+    // A newer format is not guessed at: it is stated that it cannot be read, which is useful information.
+    if (b.formatVersion > CONFIG_BUNDLE_FORMAT_VERSION) {
+        return `bundle format ${b.formatVersion} is newer than supported (${CONFIG_BUNDLE_FORMAT_VERSION}); upgrade Kwirth to read it`
+    }
+    if (!Array.isArray(b.extensions)) return 'missing extensions array'
+    if (!b.core || typeof b.core !== 'object') return 'missing core section'
+    return undefined
 }
 
 /*

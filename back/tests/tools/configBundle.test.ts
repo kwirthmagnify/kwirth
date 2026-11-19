@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { IncomingMessage } from 'http'
-import { EExtensionType, EBundleEntryStatus, IConfigBundle, CONFIG_BUNDLE_KIND, CONFIG_BUNDLE_FORMAT_VERSION, CORE_SETTINGS_KEY, IExtensionImportResult } from '@kwirthmagnify/kwirth-common'
-import { ConfigBundleManager, exportStatusOf, importStatusOf, normalizeEntry, validateBundle, IExtensionRef, ICorePortableConfig } from '../../src/tools/ConfigBundleManager'
+import { EExtensionType, EBundleEntryStatus, IConfigBundle, CONFIG_BUNDLE_KIND, CONFIG_BUNDLE_FORMAT_VERSION, CORE_SETTINGS_KEY, IExtensionImportResult, normalizeEntry, validateBundle } from '@kwirthmagnify/kwirth-common'
+import { ConfigBundleManager, exportStatusOf, importStatusOf, IExtensionRef, ICorePortableConfig } from '../../src/tools/ConfigBundleManager'
 
 /*
     Configuration portability. What is pinned down here is the DIVISION OF LABOUR: the core carries and

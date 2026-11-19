@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
-import { IConfigBundle } from '@kwirthmagnify/kwirth-common'
-import { ConfigBundleManager, validateBundle } from '../tools/ConfigBundleManager'
+import { IConfigBundle, validateBundle } from '@kwirthmagnify/kwirth-common'
+import { ConfigBundleManager } from '../tools/ConfigBundleManager'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { ELogComponent, logError } from '../tools/Logging'
