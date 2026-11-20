@@ -1,5 +1,5 @@
 // IP addresses and lists (moved here from the core's ClientIp, 2026-11-17, with their tests): what the login IP
-// filter, the trusted proxies and IRIA Ianus' "allowed from" match against.
+// filter, the trusted proxies and an extension's "allowed from" match against.
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

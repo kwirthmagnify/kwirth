@@ -79,7 +79,7 @@ const pickFirstConfig = async (): Promise<string> => {
     return value
 }
 
-test('the tab explains that the channel must be started, the same as every IRIA plugin, with a Start button', async () => {
+test('the tab explains that the channel must be started, with ChannelNotStarted and a Start button', async () => {
     const empty = page.getByTestId('channel-not-started')
     await expect(empty.getByText('Sender Debug', { exact: true })).toBeVisible()
     await expect(empty.getByText(/Sender Debug not started\. Start the channel to pick a sender/)).toBeVisible()

@@ -42,7 +42,7 @@ const fakeResponse = (): IFakeResponse => {
 type THandle = (req: IHandlerRequest, res: IHandlerResponse, next: (err?: unknown) => void) => void
 
 const ASSETS = { bundleJs: 'window.SwaggerUIBundle = function () {}', css: '.swagger-ui { color: red }', version: '5.0.0' }
-const OPTIONS = { specUrl: '../openapi.json', title: 'IRIA Specula API' }
+const OPTIONS = { specUrl: '../openapi.json', title: 'Sample API' }
 
 // Runs the handler once; `next` says whether it passed the request on.
 const call = (req: IHandlerRequest): { res: IFakeResponse, passed: boolean } => {
@@ -80,7 +80,7 @@ test('the page at the mount path with a slash: the title, the spec it loads, and
     assert.equal(res.statusCode, 200)
     assert.equal(res.headers['content-type'], 'text/html; charset=utf-8')
     assert.equal(res.headers['cache-control'], 'no-store')
-    assert.match(res.body ?? '', /<title>IRIA Specula API<\/title>/)
+    assert.match(res.body ?? '', /<title>Sample API<\/title>/)
     assert.match(res.body ?? '', /url: "\.\.\/openapi\.json"/)
     assert.match(res.body ?? '', /href="swagger-ui\.css"/)
     assert.match(res.body ?? '', /src="swagger-ui-bundle\.js"/)

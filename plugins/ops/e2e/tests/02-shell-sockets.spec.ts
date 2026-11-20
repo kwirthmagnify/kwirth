@@ -4,7 +4,7 @@ import { CHANNEL, CLUSTER, login } from './helpers'
 /*
     A shell's socket (the second WebSocket, opened with '?challenge=') is closed when the shell is closed AND
     when the Ops tab is removed. Before 0.2.28 neither closed it: the exec stayed open on the back until the page
-    was reloaded (seen through IRIA Ianus, whose panel lists the live sessions).
+    was reloaded (seen through an extension whose panel lists the live sessions).
 
     ⛔ NON-DESTRUCTIVE: it opens a shell on local-path-provisioner (it has /bin/sh) and closes it, typing nothing.
 */

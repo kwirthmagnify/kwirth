@@ -166,7 +166,7 @@ test('la fachada de cluster NO deja pasar las credenciales del core', () => {
     assert.equal(JSON.stringify(host.k8s).includes('NO-DEBE-SALIR'), false)
 })
 
-// ── ECapability.PROVIDERS (plan iria/plans/aws-serverless-toolsets, S1) ──────────────────────────────────────
+// ── ECapability.PROVIDERS (S1 of the serverless toolsets plan) ──────────────────────────────────────────────
 // The toolset names the providers it needs; the host lends ONLY those, asked for on behalf of the consumer the
 // tools run for (the channel), so the core's registry and its log of operations attribute them.
 

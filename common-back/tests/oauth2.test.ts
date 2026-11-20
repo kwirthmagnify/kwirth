@@ -90,7 +90,7 @@ test('oauth2HandleCallback lanza si el token endpoint no responde 200', async ()
     pin it, exactly like it pins 'scopes' or 'issuer'.
 */
 
-const PINNED = 'https://kwirth.example.com/kwirth-iria-demo/core/auth/github-cloud/callback'
+const PINNED = 'https://kwirth.example.com/kwirth-demo/core/auth/github-cloud/callback'
 
 test('un redirectUri fijado gana sobre el derivado en la URL de autorizacion', () => {
     const u = new URL(oauth2BuildAuthorizationUrl({ ...CONFIG, redirectUri: PINNED }, AUTH_CTX, EP))

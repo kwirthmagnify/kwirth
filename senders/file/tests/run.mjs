@@ -45,8 +45,6 @@ await esbuild.build({
     sourcemap: process.env.COVERAGE ? 'inline' : false,   // COVERAGE=1 → sourcemaps to map coverage back to src/
     external: [
         'express',
-        '@iriaoperae/kwirth-common-cloud',
-        '@iriaoperae/kwirth-common-cloud/azure',
         '@kwirthmagnify/kwirth-common',
         '@kwirthmagnify/kwirth-common-back',
         '@kwirthmagnify/kwirth-common-front'

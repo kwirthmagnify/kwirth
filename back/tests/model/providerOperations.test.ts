@@ -1,5 +1,5 @@
 // The OPERATIONS of the provider contract (IProvider.getOperations / runOperation), through the handle
-// ClusterInfo hands out (plan iria/plans/aws-serverless-toolsets, D8). An operation changes the world, so it goes
+// ClusterInfo hands out (D8 of the serverless toolsets plan). An operation changes the world, so it goes
 // through the handle — never a method looked up on the provider — and the core logs who ran it.
 
 import test from 'node:test'

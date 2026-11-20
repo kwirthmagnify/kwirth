@@ -15,7 +15,7 @@ import { artifactName, tarballName, scopeOf } from '../../../tools/artifact-name
 */
 
 test('el nombre npm es @<scope>/kwirth-<type>-<id>, con el producto por delante del tipo', () => {
-    assert.equal(artifactName('@iriaoperae', 'plugin', 'excubitor'), '@iriaoperae/kwirth-plugin-excubitor')
+    assert.equal(artifactName('@acme', 'plugin', 'sample'), '@acme/kwirth-plugin-sample')
     assert.equal(artifactName('@kwirthmagnify', 'provider', 'trivy'), '@kwirthmagnify/kwirth-provider-trivy')
     assert.equal(artifactName('@jfvilas', 'login', 'asteroids'), '@jfvilas/kwirth-login-asteroids')
 })
@@ -28,25 +28,25 @@ test('🔴 el kwirth- va TAMBIEN en un scope de terceros: ahi es donde hace falt
 })
 
 test('el tarball es <scope>-kwirth-<type>-<id>-<version>.tgz, como lo haria npm pack', () => {
-    assert.equal(tarballName('@iriaoperae', 'plugin', 'excubitor', '0.2.63'), 'iriaoperae-kwirth-plugin-excubitor-0.2.63.tgz')
+    assert.equal(tarballName('@acme', 'plugin', 'sample', '0.2.63'), 'acme-kwirth-plugin-sample-0.2.63.tgz')
     assert.equal(tarballName('@kwirthmagnify', 'docs', 'cloud-config', '0.3.3'), 'kwirthmagnify-kwirth-docs-cloud-config-0.3.3.tgz')
 })
 
-test('las tres casas salen distintas: ninguna de pago hereda prefijo publico', () => {
-    const houses = ['@kwirthmagnify', '@jfvilas', '@iriaoperae']
-    const names = houses.map(h => artifactName(h, 'login', 'montag'))
+test('tres casas salen distintas: ninguna hereda el prefijo de otra', () => {
+    const houses = ['@kwirthmagnify', '@jfvilas', '@acme']
+    const names = houses.map(h => artifactName(h, 'login', 'demo'))
     assert.equal(new Set(names).size, 3)
-    assert.ok(names.includes('@iriaoperae/kwirth-login-montag'))
+    assert.ok(names.includes('@acme/kwirth-login-demo'))
 })
 
 test('un id con guiones se respeta entero', () => {
-    assert.equal(artifactName('@iriaoperae', 'dce', 'aws-auth'), '@iriaoperae/kwirth-dce-aws-auth')
-    assert.equal(tarballName('@iriaoperae', 'dce', 'aws-auth', '0.1.0'), 'iriaoperae-kwirth-dce-aws-auth-0.1.0.tgz')
+    assert.equal(artifactName('@acme', 'dce', 'cloud-auth'), '@acme/kwirth-dce-cloud-auth')
+    assert.equal(tarballName('@acme', 'dce', 'cloud-auth', '0.1.0'), 'acme-kwirth-dce-cloud-auth-0.1.0.tgz')
 })
 
 test('un publisher que no es un scope npm falla en vez de componer una cosa rara', () => {
-    // Es el valor que tenian santander y los themes: el nombre comercial, no el scope.
-    assert.throws(() => artifactName('IRIA Operae', 'theme', 'santander'), /must be an npm scope/)
+    // El nombre comercial de quien publica, no su scope: un error que de verdad se vio en themes
+    assert.throws(() => artifactName('Acme Corp', 'theme', 'brand'), /must be an npm scope/)
     assert.throws(() => scopeOf('kwirthmagnify'), /must be an npm scope/)
     assert.throws(() => scopeOf(undefined as unknown as string), /must be an npm scope/)
 })

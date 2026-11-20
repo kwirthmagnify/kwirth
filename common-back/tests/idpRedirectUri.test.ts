@@ -14,7 +14,7 @@ import { oauth2ConfigSchema } from '../src/oauth2'
 */
 
 const DERIVED = 'http://kwirth.internal:3883/core/auth/gitlab-onprem/callback'
-const PINNED = 'https://kwirth.example.com/kwirth-iria-demo/core/auth/gitlab-onprem/callback'
+const PINNED = 'https://kwirth.example.com/kwirth-demo/core/auth/gitlab-onprem/callback'
 
 test('un redirectUri fijado gana sobre el derivado', () => {
     assert.equal(resolveIdpRedirectUri({ redirectUri: PINNED }, DERIVED), PINNED)

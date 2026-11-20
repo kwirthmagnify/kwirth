@@ -117,7 +117,7 @@ test('🔴 a channel opens inside Magnify on a pod (Metrics), in its own window 
 
 /*
     🔴 Closing an external window closes its socket. It did not: the window left the list and its channel kept
-    streaming into nothing until the page was reloaded (seen through IRIA Ianus, whose panel lists the live
+    streaming into nothing until the page was reloaded (seen through an extension whose panel lists the live
     sessions), and every message still re-rendered the whole of Magnify.
 */
 test('🔴 closing the channel\'s window closes its socket', async () => {
