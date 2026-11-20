@@ -79,7 +79,6 @@ kwirth-bundled.json
 /plugins/llm-router/
 /plugins/depthcharge/
 /providers/sugarless/
-/iria/
 /icons/
 /providers/service-flow/
 /providers/flight-status/
@@ -140,7 +139,6 @@ kwirth-bundled.json
 /idps/entraid/
 /themes/santander/
 /logins/santander/
-/dces/iria-common/
 /marketplace/
 
 # El store de un Kwirth en docker: docker-launch.cmd monta la propia carpeta como CONFIGMAPPATH y
