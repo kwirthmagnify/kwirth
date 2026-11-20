@@ -48,6 +48,8 @@ kwirth-daemon-*-back.js
 kwirth-plugin-*-back.js
 
 kwirth-dev.json
+# each developer's own (and its variants: k3d, longhorn…): it lists the extensions of this machine, private ones included
+kwirth-dev.*.json
 kwirth-bundled.json
 # what fetch-bundled downloads at build time, and the copy of it build-image puts into docker/
 /deploy/tauri/src-tauri/resources/bundled/*.tgz
