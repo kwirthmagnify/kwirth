@@ -1,5 +1,5 @@
 /*
-    What an extension is FOR (plan: plans/extension-taxonomy/PRD.md).
+    What an extension is FOR (plan: plans/completed/extension-taxonomy/PRD.md).
 
     The extension TYPE says how it is built (plugin, provider, sender…); the tags say what it serves:
     the `log` plugin, the `metrics` provider and the `datadog` sender are three types and all three serve

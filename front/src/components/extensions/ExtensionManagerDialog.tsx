@@ -45,7 +45,7 @@ interface IMinimalEntry {
     requires?: IExtensionRequirement[]
     uses?: IExtensionRequirement[]
     /*
-        What it is for (plans/extension-taxonomy). Generic like the dependencies: every type's manifest
+        What it is for (plans/completed/extension-taxonomy). Generic like the dependencies: every type's manifest
         entries and installed metadata carry it, so it is painted and filtered here for all eleven.
     */
     tags?: EExtensionTag[]
@@ -122,7 +122,7 @@ const PluginMultiSelect: React.FC<{
 }
 
 /*
-    A section's filter by tags (plans/extension-taxonomy): a multi-select of the tags that section uses,
+    A section's filter by tags (plans/completed/extension-taxonomy): a multi-select of the tags that section uses,
     and a Clear.
 
     FIXED width: ticking tags must not move the row. Visible and disabled while the section carries no

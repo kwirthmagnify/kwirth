@@ -15,7 +15,7 @@ import { HomepageManager } from '../../src/tools/HomepageManager'
 import { LoginManager } from '../../src/tools/LoginManager'
 
 /*
-    An installed extension carries the `tags` of its package.json (plans/extension-taxonomy/PRD.md),
+    An installed extension carries the `tags` of its package.json (plans/completed/extension-taxonomy/PRD.md),
     exactly the way `website` and `requiresExtension` travel.
 
     The package.json is untrusted input: whatever is not in the closed catalogue (EExtensionTag) is

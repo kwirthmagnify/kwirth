@@ -15,7 +15,7 @@ import { SxProps, Theme } from '@mui/material'
 // FIXED height, not minimum: with a minimum, a card that grows stretches its whole row of the grid and
 // leaves its neighbours with dead space. They all measure the same, in both sections and across all
 // eleven types.
-// 164 since the tags line (plans/extension-taxonomy): 140 plus its 20 and its margin.
+// 164 since the tags line (plans/completed/extension-taxonomy): 140 plus its 20 and its margin.
 export const EXTENSION_CARD_HEIGHT = 164
 
 export const extensionCardSx: SxProps<Theme> = {

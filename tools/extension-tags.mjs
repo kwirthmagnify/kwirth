@@ -1,4 +1,4 @@
-/*  The extension tags for the scaffolders (plan: plans/extension-taxonomy/PRD.md).
+/*  The extension tags for the scaffolders (plan: plans/completed/extension-taxonomy/PRD.md).
  *
  *  Every extension declares in its package.json what it is FOR — `"tags": ["observability", "log"]` — and the
  *  values come from a CLOSED catalogue: the EExtensionTag enum of kwirth-common. The scaffolders are what keeps

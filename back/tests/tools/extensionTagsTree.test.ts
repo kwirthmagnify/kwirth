@@ -5,7 +5,7 @@ import fs from 'fs'
 import { isExtensionTag } from '@kwirthmagnify/kwirth-common'
 
 /*
-    Every extension in the tree carries its tags, and only catalogue ones (plans/extension-taxonomy, D6).
+    Every extension in the tree carries its tags, and only catalogue ones (plans/completed/extension-taxonomy, D6).
 
     The builds copy `tags` to dist/package.json without validating them — 60 extensions do not depend on
     kwirth-common and cannot read the catalogue — so THIS is the check that keeps the tree inside it: a

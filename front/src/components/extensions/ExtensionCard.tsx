@@ -44,7 +44,7 @@ interface IExtensionViewProps {
     inlineControl?: React.ReactNode
     actions: IExtensionAction[]
     /*
-        What it is FOR (plans/extension-taxonomy). Its own line, between the description and the bottom
+        What it is FOR (plans/completed/extension-taxonomy). Its own line, between the description and the bottom
         row: mixed with the provenance or status chips it would read as one more state. Empty for an
         extension published before tags existed, and then the line stays empty — the card does not
         shrink, all cards measure the same.

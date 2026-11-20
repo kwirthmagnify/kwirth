@@ -87,7 +87,7 @@ for (const { tool, type, dir } of TYPES) {
 }
 
 /*
-    Tags (plans/extension-taxonomy): every scaffolder asks for them, only from the catalogue, writes them
+    Tags (plans/completed/extension-taxonomy): every scaffolder asks for them, only from the catalogue, writes them
     into package.json, and its build.mjs carries them to dist/package.json — which is what the marketplace
     and the installer read. The builds do not validate them (D6), so the scaffolder is what keeps a new
     extension inside the catalogue.

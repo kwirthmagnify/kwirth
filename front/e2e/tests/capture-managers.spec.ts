@@ -195,7 +195,7 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
 })
 
 /*
-    The tags (plans/extension-taxonomy): the plugins CATALOGUE filtered by one tag, with the chips on its
+    The tags (plans/completed/extension-taxonomy): the plugins CATALOGUE filtered by one tag, with the chips on its
     cards — the guide explains the filter, so the image shows it at work and not the installed section.
 
     Same rule as above: only the public catalogue (the private marketplaces off for the capture and

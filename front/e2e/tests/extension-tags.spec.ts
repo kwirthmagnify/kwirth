@@ -2,7 +2,7 @@ import { test, expect, Page, Locator } from '@playwright/test'
 import { login, clickExtensionMenuItem, dismissOpenDialogs } from './helpers'
 
 /*
-    Extension tags in the generic manager dialog (plans/extension-taxonomy): the cards show their tags, and
+    Extension tags in the generic manager dialog (plans/completed/extension-taxonomy): the cards show their tags, and
     each section —installed and catalog— has its own tags filter, which narrows with AND: ticking
     'observability' and then 'kubernetes' leaves only what carries BOTH.
 

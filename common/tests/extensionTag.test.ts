@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { EExtensionTag, extensionTagsOf, isExtensionTag } from '../src/ExtensionTag'
 
 /*
-    The extension tags catalogue (plans/extension-taxonomy). Tags come from package.json files and manifest
+    The extension tags catalogue (plans/completed/extension-taxonomy). Tags come from package.json files and manifest
     entries — a third party's among them — so reading them must keep what is in the catalogue and nothing
     else, and never throw.
 */
