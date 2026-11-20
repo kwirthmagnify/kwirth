@@ -2,7 +2,8 @@ import { WebSocket } from 'ws'
 import { IClusterEndpoint, IRemoteChannelHandlers, IRemoteChannelHandle, ERemoteConnState } from '@kwirthmagnify/kwirth-common-back'
 import { IInstanceConfig, IInstanceMessage, EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType, ESignalMessageReason } from '@kwirthmagnify/kwirth-common'
 
-// Reconnection backoff: 1s to start, x2 on every attempt up to a 30s ceiling; it is reset when the connection opens.
+// Reconnection backoff: 1s to start, x2 on every attempt up to a 30s ceiling; it is reset when the remote assigns an
+// instance (the link works), not when the socket opens.
 const BACKOFF_INITIAL_MS = 1000
 const BACKOFF_MAX_MS = 30000
 
@@ -218,7 +219,10 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
         ws = sock
 
         sock.on('open', () => {
-            backoffMs = BACKOFF_INITIAL_MS
+            /*  🔴 The backoff is NOT reset here: an open socket is not a working link. A router in front of a
+                cluster that is down (Ianus) accepts the WebSocket and closes it at once with 1011, so resetting
+                on 'open' kept the retry at 1 s forever — six trace lines a second for as long as the cluster
+                was away (2026-11-20). It is reset when the remote assigns an instance (REMOTE ASSIGNED). */
             instanceId = ''   // socket nuevo → el instance anterior (si lo hubo) ya no vale en el back remoto
             channelGone = false   // socket nuevo: lo que supiéramos del canal remoto ya no vale, se vuelve a preguntar
             goneProbeMs = START_RETRY_MS
@@ -298,6 +302,7 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
                         state) ran once per answer. */
                     const superseded = instanceId && instanceId !== msg.instance ? instanceId : ''
                     instanceId = msg.instance
+                    backoffMs = BACKOFF_INITIAL_MS   // the link works: the next drop starts retrying from 1 s again
                     clearStartAck()   // instance válido → deja de reintentar el START
                     channelGone = false   // vuelve a haber canal al otro lado
                     goneProbeMs = START_RETRY_MS   // y el sondeo vuelve a su cadencia normal

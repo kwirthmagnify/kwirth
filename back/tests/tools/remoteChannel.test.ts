@@ -161,6 +161,23 @@ test('reconnects after an unexpected close (RECONNECTING, then a fresh connectio
     wss.close()
 })
 
+test('🔴 a socket that opens and is closed at once (a router in front of a cluster that is down) BACKS OFF: open is not a working link', { timeout: 10000 }, async () => {
+    // Ianus with the hub down (2026-11-20): it accepts the WebSocket and closes it with 1011. Resetting the
+    // backoff on 'open' kept the retry at 1 s forever. Gaps must grow: ~1 s, ~2 s, ~4 s…
+    const { wss, url } = await makeServer()
+    const at: number[] = []
+    wss.on('connection', (sock: WebSocket) => {
+        at.push(Date.now())
+        sock.once('message', () => sock.close(1011, 'Cannot connect to this cluster right now'))
+    })
+    const handle = openRemoteChannel({ name: 'r', url, accessString: 'AK' }, baseConfig(), { onMessage: () => {} })
+    await delay(3800)   // first try + retries at ~1 s and ~2 s later; a 1 s loop would have made 4+
+    handle.close()
+    wss.close()
+    assert.equal(at.length, 3, `3 connections expected in 3.8 s with a growing backoff, got ${at.length}`)
+    assert.ok(at[2] - at[1] > at[1] - at[0] + 500, `the second gap (${at[2] - at[1]} ms) must be longer than the first (${at[1] - at[0]} ms)`)
+})
+
 test('re-STARTs the flow when the remote lost our instance ("not been found for command")', { timeout: 8000 }, async () => {
     // Failure mode 1: the remote CHANNEL restarted with the socket still alive → its instance (only in the
     // pod's memory) is gone, so every command answers "not been found for command". The keepalive can't catch
