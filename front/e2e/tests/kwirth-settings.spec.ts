@@ -134,7 +134,7 @@ test('Trusted proxies: su pestana dice como ve Kwirth al admin, para que sirven,
     await dismissOpenDialogs(page)
     await openTrustedProxies(page)
     await expect(sees(page)).toBeVisible()
-    await expect(page.getByText(/such as IRIA Ianus' spokes/)).toBeVisible()
+    await expect(page.getByText(/such as a router's remote peers/)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Add trusted proxy' })).toBeEnabled()
     // the login's own buttons are not here
     await expect(page.getByRole('button', { name: 'Add my IP' })).toBeHidden()

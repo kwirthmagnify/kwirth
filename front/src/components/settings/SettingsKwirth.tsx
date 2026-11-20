@@ -925,14 +925,14 @@ const SettingsKwirth: React.FC<ISettingsKwirthProps> = (props:ISettingsKwirthPro
                     </Box>
 
                     {/* Trusted proxies (plans/login-ip-filter, K2). Their own tab since 2026-11-17: they are not only
-                        the login's — they decide the real address of WHOEVER connects (an IRIA Ianus spoke's From,
+                        the login's — they decide the real address of WHOEVER connects (a remote peer an extension checks,
                         for instance), and sitting under "Login access" they looked like a login setting. */}
                     <Box hidden={tab !== ESettingsKwirthTab.TRUSTED_PROXIES}>
                         <Stack spacing={1} direction='column' sx={{ mt: 2 }}>
                             <Typography variant='body2' sx={{ color: 'text.secondary' }}>
                                 The proxies in front of Kwirth (ingress, load balancer, gateway) whose <b>X-Forwarded-For</b> is believed, to know the
                                 real address of whoever connects. Used by the login's allowed addresses and by the extensions that check where a
-                                caller comes from (such as IRIA Ianus' spokes). Trust every proxy on the way, and nothing else.
+                                caller comes from (such as a router's remote peers). Trust every proxy on the way, and nothing else.
                             </Typography>
                             { callerBox(
                                 <Tooltip title={suggestedProxy ? `Trust the proxy you are coming through: adds ${suggestedProxy} to the trusted proxies` : 'Trust the proxy you are coming through (enabled when its X-Forwarded-For is being ignored)'}>
