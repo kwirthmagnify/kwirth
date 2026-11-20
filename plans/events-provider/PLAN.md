@@ -45,7 +45,7 @@ Nadie declara `events` como requisito: hoy lo da el core.
 | E1.3 | `providers/events` (scaffold): port con `createResourceWatcher`, `configRouter`, `getData` + `getEvents`, `clusterType`; 13 tests (6 mudados del core) | ✅ |
 | E1.4 | e2e del provider 5 + 1 (el del aviso, lanzado sin el provider: ✅), con el *push* real vía `kubectl`; plugin metrics 10/10; core 711; regresión: los 23 rojos, corregidos y en verde (de paso, el Escape de los diálogos del core, `closeOnEscape`, y fuera el stub `dce-consumer`); fila del histórico + PNG | ✅ |
 | E1.5 | CL9: QA validado (7/7; el 6 tras rehacer el Escape); guía (página nueva del provider, índice de providers sin built-in en cluster, Magnify, referencia, changelog, sidebar, captura del gestor); `provider/events@0.1.0` publicado + manifest + bundles `-readonly`/`-full`/desktop; cascada pública: `topology@0.3.2`, `censor@0.2.55`, `pinocchio@0.2.42` (+ su guía `0.2.42`, lockstep), `pack/censor@0.1.4`, todos sobre common-back 0.6.3, con su `requires` en el manifest y el README corregido donde decía que el core da los eventos | ✅ |
-- **E2** (cuando vuelva el GitLab privado `repo.plexus.services`): cascada privada + montag (abajo). **Orden
+- **E2** (cuando vuelva el GitLab privado): cascada privada + montag (abajo). **Orden
   decidido por el usuario (2026-10-13): tras cerrar E1 va antes Magnify como plugin, y E2 después.**
   ✅ **Desbloqueado** (2026-10-13, ~13:00): el GitLab privado vuelve a estar operativo. Sigue el orden: después de Magnify.
 

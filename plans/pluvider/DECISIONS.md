@@ -37,8 +37,8 @@ Bitacora de decisiones de diseno. Vive mientras se disena; alimenta el PRD. Appe
   verdad fileman, pinocchio y spectrum. Lo que los plugins valiosos exponen a su front son
   **comandos por websocket** (`processCommand`).
 - **F3 — `processCommand` no devuelve la respuesta.** Devuelve `boolean` ("lo he atendido"); el dato
-  sale fuera de banda por el socket (`webSocket.send` con su `msgtype`)
-  ([plugins/situs/src/back/index.ts:313](../../plugins/situs/src/back/index.ts#L313)). No sirve como
+  sale fuera de banda por el socket (`webSocket.send` con su `msgtype`), como hace el
+  `processCommand` de situs. No sirve como
   pull directo.
 - **F4 — Los canales ya se instancian antes de resolver providers**
   ([back/src/index.ts:1690-1725](../../back/src/index.ts#L1690-L1725)), asi que D3 encaja sin mover
@@ -83,10 +83,8 @@ Es **push**, no pull. Eso reordena el alcance:
 ### Hechos verificados nuevos
 
 - **F8 — Agora YA tiene el fan-out montado, para federación.** `alertSubscribers: Set<WebSocket>`,
-  `onAlertSubscribe(ws)` y `pushAlertToSubscribers(cluster, text, object?, reason?)`
-  ([plugins/agora/src/back/index.ts:444-460](../../plugins/agora/src/back/index.ts#L444-L460)), con
-  payload `IAgoraAlert { cluster, text, object?, reason? }` ya público en su `common`
-  ([AgoraTypes.ts:395](../../plugins/agora/src/common/AgoraTypes.ts#L395)). El pluvider es **una
+  `onAlertSubscribe(ws)` y `pushAlertToSubscribers(cluster, text, object?, reason?)` en su back, con
+  payload `IAgoraAlert { cluster, text, object?, reason? }` ya público en su `common`. El pluvider es **una
   tercera puerta en el mismo punto de emisión**: una segunda lista de destinatarios (canales
   in-process) junto a la de websockets. No es un pipeline nuevo.
 - **F9 — El consumidor no necesita contrato nuevo.** `processProviderEvent` ya está en `IChannel`:
@@ -98,11 +96,10 @@ Es **push**, no pull. Eso reordena el alcance:
 - **F10 — Por tanto el cambio en el core es mínimo**: meter la instancia del canal-pluvider en
   `clusterInfo.providers`. Con eso, `addSubscriber('agora', …)` funciona sin tocar nada más. Lo que
   sí es imprescindible es **D3** (el orden), porque los canales se suscriben dentro de
-  `startChannel()` — Agora lo hace en [agora:227-243](../../plugins/agora/src/back/index.ts#L227-L243).
+  `startChannel()`, y Agora también.
   Si los pluviders se registran antes de que arranque ningún canal, cualquier consumidor los
   encuentra.
-- **F11 — Agora es SINGLE** (`instances: EChannelInstances.SINGLE`,
-  [agora:111-115](../../plugins/agora/src/back/index.ts#L111-L115)). En desktop/docker se anuncia
+- **F11 — Agora es SINGLE** (`instances: EChannelInstances.SINGLE`). En desktop/docker se anuncia
   REMOTE y no se instancia localmente, luego **ahí no hay pluvider al que suscribirse**. La puerta
   in-process solo existe donde Agora corre de verdad (in-cluster); para el resto ya está la
   federación por websocket. Es F6 mordiendo justo en el caso principal.

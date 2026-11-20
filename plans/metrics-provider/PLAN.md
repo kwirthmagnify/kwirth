@@ -3,7 +3,7 @@
 > Estado: **VIVO** (2026-10-13). P1 entregado, con el QA validado por el usuario y publicado:
 > `provider/metrics@0.1.0`, `plugin/metrics@0.1.1`, `plugin/alert@0.2.27`, `plugin/pinocchio@0.2.41` (+ su guía
 > `0.2.41`). **Queda una sola cosa**: la parte de pago de D5 (`spectrum` y `agora`), bloqueada porque el GitLab
-> privado `repo.plexus.services` está caído (sus repos y el manifest privado viven ahí). Sin PRD a propósito (D6): migración con precedente
+> privado está caído (sus repos y el manifest privado viven ahí). Sin PRD a propósito (D6): migración con precedente
 > (`business`, [plan](../completed/business-provider/PLAN.md)). Sigue a [metrics-plugin](../completed/metrics-plugin/PLAN.md),
 > que sacó el **canal**. Append-only.
 
@@ -86,7 +86,7 @@ petición del usuario. Lo que cambia el provider:
 - El provider está registrado en `back/kwirth-dev.json` y el plugin metrics `0.1.0` instalado en el dev desde
   el marketplace público.
 - **Falta, en este orden**: (1) regresión e2e del core. Se cortó dos veces y la tercera quedó contaminada (el
-  marketplace privado `repo.plexus.services` caído, timeouts del Postgres del dev y un reinicio del back por un
+  marketplace privado caído, timeouts del Postgres del dev y un reinicio del back por un
   cambio en `kwirth-dev.json`). Relanzar con el back estable y luego `--last-failed`; lo que dependa del
   marketplace privado se cuenta como saltado mientras siga caído. (2) Fila del core en `docs/qa`. (3) Pasos del
   QA manual y **parar** (gate). (4) Resto del CL9: guía, bbpm del provider, manifest, bundles (D4), cascada de

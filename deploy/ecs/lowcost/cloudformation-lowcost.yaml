@@ -566,7 +566,7 @@ Resources:
         # identity (this very task role): which ECS services and Lambda functions run, which image,
         # which role, what is in front of them. Without it the Trivy scanner has nothing to scan:
         # ECR pull alone is not enough, someone has to say WHAT runs. Read-only, from the guide's
-        # serverless table (plugins/excubitor/docs/guide/admin/11-cloud-aws.md).
+        # serverless table (Excubitor's guide, AWS cloud page).
         - PolicyName: excubitor-inventory-read
           PolicyDocument:
             Version: '2012-10-17'
