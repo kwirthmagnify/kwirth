@@ -111,6 +111,7 @@ const distMeta = {
     // Always true for a DCE: consumers keep the previous instance until the server restarts.
     requiresRestart: true,
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
     // What npm shows on the package page: without these, nothing there says this belongs to Kwirth.
     homepage: 'https://kwirthmagnify.dev',
     repository: { type: 'git', url: 'git+https://github.com/kwirthmagnify/kwirth.git', directory: 'dces/nettools' },

@@ -1,5 +1,5 @@
 import { IProviderFieldDef, IExtensionRequirement } from '@kwirthmagnify/kwirth-common-back'
-import { IConfigFieldDef, IConfigValidationError, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { EExtensionTag, IConfigFieldDef, IConfigValidationError, extensionTagsOf, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { IConfigMaps } from './IConfigMap'
 import { ExtensionConfigStore } from './ExtensionConfigStore'
 import { TProviderConstructor } from '../providers/IProvider'
@@ -29,6 +29,7 @@ export interface IProviderMeta {
     version: string
     description: string
     website?: string
+    tags?: EExtensionTag[]
     installedFrom?: string
     // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
     // the package registry, which is another server, and with precedence by id two marketplaces can
@@ -120,6 +121,7 @@ export class ProviderManager {
             meta.version = pkg.version ?? 'dev'
             meta.description = pkg.description ?? ''
             meta.website = pkg.website
+            meta.tags = extensionTagsOf(pkg.tags)
             // Without it a dev provider required no DCE: nobody saw it as a consumer.
             meta.requiresExtension = normalizeRequires(pkg.requiresExtension)
         } catch {}
@@ -194,7 +196,7 @@ export class ProviderManager {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
                 const hasFront = fs.existsSync(path.join(dev.distPath, 'front.js'))
                 const hasSchema = this.devSchemas.has(id)
-                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: normalizeRequires(pkg.requiresExtension), hasFront, hasSchema }
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, tags: extensionTagsOf(pkg.tags), requiresExtension: normalizeRequires(pkg.requiresExtension), hasFront, hasSchema }
             } catch {
                 return dev.meta
             }
@@ -252,6 +254,8 @@ export class ProviderManager {
             // NORMALIZED: the tarball's package.json may still carry the old string form, and the
             // validator reads objects. See the note in PluginManager.
             meta.requiresExtension = normalizeRequires(meta.requiresExtension)
+            // The meta IS the tarball's package.json: its tags are untrusted input and only the catalogue's are kept
+            meta.tags = extensionTagsOf(meta.tags)
             // A provider that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertExtensionRequirements('Provider', meta.id, meta.requiresExtension, installedFrom)
             const backJs = fs.readFileSync(backPath, 'utf-8')

@@ -4,6 +4,7 @@ import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { artifactName, requirePublisher } from './artifact-name.mjs'
+import { askTags } from './extension-tags.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -25,6 +26,7 @@ prompt and takes the remaining values from the flags (or their defaults).
   --publisher <@scope>      npm scope (REQUIRED with --id)
   --description <text>      one-line description
   --website <url>           optional website
+  --tags <a,b,...>          what it is for, from the catalogue (required with --id)
   --private                 the artifact is NOT published to public npm: the final steps say what has
                             to be done by hand to keep it out of public repositories
   --into-existing           scaffold INTO a directory that already exists, keeping every file
@@ -61,6 +63,7 @@ requirePublisher(flag('publisher'), interactive)
 const publisher   = flag('publisher') ?? await ask('Publisher scope (e.g. @my-scope)', '@my-scope')
 const description = flag('description') ?? await ask('Description', `${name} for Kwirth`)
 const website     = flag('website') ?? await ask('Website URL (optional)', '')
+const tags        = await askTags(flag('tags'), interactive, ask)
 const isPrivate   = interactive ? await askYesNo('Private artifact (never published to public npm)?', 'n') : hasFlag('private')
 if (rl) rl.close()
 
@@ -109,6 +112,7 @@ write('package.json', `{
     "name": "${npmName}",
     "publisher": "${publisher}",
     "version": "0.1.0",
+    "tags": ${JSON.stringify(tags)},
     "displayName": "${name}",
     "description": "${description}",${websiteLine}
     "type": "module",
@@ -180,6 +184,7 @@ export const writeDistMeta = () => {
         ...(meta.website ? { website: meta.website } : {}),
         requiresRestart: meta.requiresRestart ?? false,
         requiresExtension: meta.requiresExtension ?? [],
+        tags: meta.tags ?? [],
     }
     fs.mkdirSync('dist', { recursive: true })
     fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))

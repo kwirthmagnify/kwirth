@@ -62,6 +62,7 @@ const distMeta = {
     // Always true for a DCE: consumers keep the previous instance until the server restarts.
     requiresRestart: true,
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
     // The same as build.mjs: the contract's types travel with the package.
     types: 'index.d.ts',
     dependencies: {

@@ -3,6 +3,7 @@ import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
 import { artifactName, requirePublisher } from './artifact-name.mjs'
+import { askTags } from './extension-tags.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -24,6 +25,7 @@ prompt and takes the remaining values from the flags (or their defaults).
   --publisher <@scope>      npm scope (default @my-scope)
   --description <text>      one-line description
   --website <url>           optional website
+  --tags <a,b,...>          what it is for, from the catalogue (required with --id)
   --sides <back,front>      which sides it brings (default both; 'back' or 'front' for one)
   --into-existing           scaffold INTO a directory that already exists, keeping every file
                             already there (each one is reported as kept, not overwritten)
@@ -52,6 +54,7 @@ requirePublisher(flag('publisher'), interactive)
 const publisher   = flag('publisher') ?? await ask('Publisher scope (e.g. @my-scope)', '@my-scope')
 const description = flag('description') ?? await ask('Description', `${name}: shared objects for Kwirth extensions`)
 const website     = flag('website') ?? await ask('Website URL (optional)', '')
+const tags        = await askTags(flag('tags'), interactive, ask)
 const sidesRaw    = flag('sides') ?? await ask('Sides it brings (back,front / back / front)', 'back,front')
 const sides       = sidesRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
 if (rl) rl.close()
@@ -105,6 +108,7 @@ write('package.json', `{
     "name": "${npmName}",
     "publisher": "${publisher}",
     "version": "0.1.0",
+    "tags": ${JSON.stringify(tags)},
     "displayName": "${name}",
     "description": "${description}",${websiteLine}
     "type": "module",
@@ -300,6 +304,7 @@ const distMeta = {
     // Always true for a DCE: consumers keep the previous instance until the server restarts.
     requiresRestart: true,
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))`
 

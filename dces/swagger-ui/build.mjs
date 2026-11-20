@@ -94,6 +94,7 @@ const distMeta = {
     // Always true for a DCE: consumers keep the previous instance until the server restarts.
     requiresRestart: true,
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
     /*
         The contract travels with the package, so a consumer types getDce<ISwaggerUi>() by depending on the
         PUBLISHED version (or declaring it locally), never on a file: link into this repo. It names express's

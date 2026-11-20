@@ -3,6 +3,7 @@ import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
 import { artifactName, requirePublisher } from './artifact-name.mjs'
+import { askTags } from './extension-tags.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -24,6 +25,7 @@ prompt and takes the remaining values from the flags (or their defaults).
   --publisher <@scope>      npm scope (default @my-scope)
   --description <text>      one-line description
   --website <url>           optional website
+  --tags <a,b,...>          what it is for, from the catalogue (required with --id; 'ai' is added)
   --capabilities <list>     what the host must lend: k8s,metrics,events,repos,providers (comma
                             separated, empty for a toolset that needs nothing)
   --providers <list>        with the 'providers' capability: the ids of the providers the tools reach
@@ -65,6 +67,11 @@ requirePublisher(flag('publisher'), interactive)
 const publisher   = flag('publisher') ?? await ask('Publisher scope (e.g. @my-scope)', '@my-scope')
 const description = flag('description') ?? await ask('Description', `${name} tools for Kwirth`)
 const website     = flag('website') ?? await ask('Website URL (optional)', '')
+/*
+    An AI toolset always carries `ai` (rule D5: every extension that uses AI does), so it is added if the
+    answer left it out — it is not a choice here.
+*/
+const tags        = [...new Set([...await askTags(flag('tags'), interactive, ask), 'ai'])]
 
 if (interactive) {
     console.log('\nCapabilities are what the host LENDS to your tools, and kwirth provisions only')
@@ -172,6 +179,7 @@ write('package.json', `{
     "name": "${npmName}",
     "publisher": "${publisher}",
     "version": "0.1.0",
+    "tags": ${JSON.stringify(tags)},
     "displayName": "${name}",
     "description": "${description}",${websiteLine}
     "type": "module",
@@ -287,6 +295,7 @@ const distMeta = {
     ...(meta.publishConfig ? { publishConfig: meta.publishConfig } : {}),
     requiresRestart: meta.requiresRestart ?? false,
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')

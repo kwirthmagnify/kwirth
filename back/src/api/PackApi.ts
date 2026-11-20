@@ -14,7 +14,7 @@ import { RouterManager } from '../tools/RouterManager'
 import { WebhookManager } from '../tools/WebhookManager'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
-import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { EExtensionType, extensionTagsOf } from '@kwirthmagnify/kwirth-common'
 import { ELogComponent, logError, logInfo } from '../tools/Logging'
 import { TChannelConstructor } from '../channels/IChannel'
 import { TProviderConstructor } from '../providers/IProvider'
@@ -240,6 +240,7 @@ export class PackApi {
                 version: pkg.version ?? '0.0.0',
                 description: pkg.description ?? '',
                 website: pkg.website,
+                tags: extensionTagsOf(pkg.tags),
                 installedFrom,
                 extensions,
                 requiresRestart: packRequiresRestart

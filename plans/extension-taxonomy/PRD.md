@@ -23,11 +23,12 @@ dicen para qué sirve (`observability`, `log`, `kubernetes`, `ai`, `game`, `arca
 
 | # | decisión | elegido |
 |---|---|---|
-| D1 | Valores | **Catálogo cerrado** en `common`: un enum con todos los tags. Un tag fuera del catálogo **no se publica** (falla el build). Añadir uno = subir `common`. Así no conviven `log` y `logs` (2026-11-19) |
+| D1 | Valores | **Catálogo cerrado** en `common`: un enum con todos los tags. Añadir uno = subir `common`. Así no conviven `log` y `logs` (2026-11-19). El build **no** los valida (ver D6) |
 | D2 | Uso en la UI | **Filtro** por tags en el catálogo del marketplace, y **chips** con los tags en las tarjetas, del catálogo y de las instaladas (2026-11-19) |
 | D3 | Alcance | **Todas** las extensiones existentes, públicas, de jfvilas y de pago, más el soporte para las nuevas (scaffolders, builds, watchers). Las de pago, con su propio ciclo de publicación (2026-11-19) |
 | D4 | Modelo | **Tags**, no área + categoría: una extensión sirve a varias cosas a la vez (agora es operations, observability, sre y devops) y un único área la obligaba a elegir. Sustituye al área/categoría de la primera versión de este PRD (2026-11-19) |
 | D5 | Reglas de asignación | Lleva **`ai`** toda extensión que usa IA; lleva **`kubernetes`** toda la que sirve para hacer cosas en Kubernetes (2026-11-19) |
+| D6 | Validación | `build.mjs` y `watch.mjs` **copian** los tags al `dist/package.json` y **no los validan**: 60 de las extensiones no dependen de `kwirth-common` y no pueden leer el catálogo. El catálogo lo garantizan el **scaffolder** (solo ofrece los del catálogo), un **test del core** que recorre los `package.json` y manifests del árbol, y el **core**, que descarta al leerlos los que no están en el catálogo (2026-11-20) |
 
 ## Dónde viajan
 
@@ -35,19 +36,19 @@ Igual que `description`, `icon` o `requiresExtension` hoy — el mismo camino, s
 
 1. **`package.json` de la extensión**: `tags: string[]`. Es la fuente.
 2. **`build.mjs` y `watch.mjs`** de cada extensión: copian `tags` al `dist/package.json` (hoy copian los campos
-   uno a uno, así que hay que añadirlo en los **212** scripts) y **validan** contra el catálogo: un tag que no
-   existe, o una lista vacía, aborta el build.
+   uno a uno, así que hay que añadirlo en todos los scripts). No validan (D6).
 3. **Manifest** del tipo (público), el de jfvilas y el privado (`marketplace/manifest.json`): `tags` en cada
    entrada, junto a `requires`. El **bbpm** lo sincroniza desde el `package.json`, como ya hace con `requires`.
 4. **Back**: los **once** managers leen `tags` del `package.json` al instalar y lo dan con el resto de la
    metadata de la instalada; `IMarketplaceEntry` lo lleva para el catálogo.
 5. **Front**: filtro y chips (D2).
 6. **Scaffolders** (`tools/create-kwirth-*.mjs`, diez): piden los tags (de los del catálogo) y los escriben en el
-   `package.json`, y sus plantillas de `build.mjs`/`watch.mjs` ya los copian y validan.
+   `package.json`, y sus plantillas de `build.mjs`/`watch.mjs` ya los copian.
 
 ## Reglas
 
-- **Obligatorios para publicar**: al menos un tag, todos del catálogo. Ninguna versión nueva sale sin ellos.
+- **Obligatorios**: al menos un tag, todos del catálogo. El scaffolder no deja crear una extensión sin ellos y el
+  test del core falla si alguna del árbol no los lleva o lleva uno fuera del catálogo.
 - **Lo ya publicado no se rompe**: una entrada de manifest o una instalada sin tags se muestra sin chips y solo
   aparece con el filtro vacío. Ni el core ni el instalador los exigen.
 - `docs` hereda los tags de la extensión que documenta (`targetType` + `id`), y un **pack** los del **plugin que

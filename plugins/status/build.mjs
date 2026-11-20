@@ -115,6 +115,7 @@ const distMeta = { type: 'commonjs', extensionType: 'plugin',
     ...(meta.website ? { website: meta.website } : {}),
     requiresRestart: meta.requiresRestart ?? false,
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
     // What npm shows on the package page: without these, nothing there says this belongs to Kwirth.
     homepage: 'https://kwirthmagnify.dev',
     repository: { type: 'git', url: 'git+https://github.com/kwirthmagnify/kwirth.git', directory: 'plugins/status' },

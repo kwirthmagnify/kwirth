@@ -1,4 +1,5 @@
 import { EExtensionType } from './ExtensionType'
+import { EExtensionTag } from './ExtensionTag'
 
 // How READING THE MANIFEST is authenticated. A marketplace serves manifests ONLY; where the packages
 // are downloaded from is said by each entry's url, and their credentials live apart, in IPackageRegistry.
@@ -69,4 +70,9 @@ export interface IMarketplaceEntry {
     requires?: IExtensionRequirement[]
     /** Optional dependencies: taken advantage of if present, but not required to install. */
     uses?: IExtensionRequirement[]
+    /*
+        What it is FOR (see ExtensionTag). Absent on entries published before tags existed. Read it with
+        extensionTagsOf: a third party's manifest may carry anything here.
+    */
+    tags?: EExtensionTag[]
 }

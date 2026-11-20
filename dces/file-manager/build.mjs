@@ -97,6 +97,7 @@ const distMeta = {
     // Always true for a DCE: consumers keep the previous instance until the server restarts.
     requiresRestart: true,
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
     /*
         The contract travels with the package, so a consumer types getDce<IFileManagerDce>() by
         depending on the PUBLISHED version, never on a file: link into this repo. It names the file

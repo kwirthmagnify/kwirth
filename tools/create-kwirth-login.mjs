@@ -3,6 +3,7 @@ import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
 import { artifactName, requirePublisher } from './artifact-name.mjs'
+import { askTags } from './extension-tags.mjs'
 
 /*
     Scaffold of a LOGIN extension.
@@ -35,6 +36,7 @@ prompt and takes the remaining values from the flags (or their defaults).
   --description <text>
   --title <text>            heading shown on the login page
   --website <url>
+  --tags <a,b,...>          what it is for, from the catalogue (required with --id)
   --help                    this text
 `)
     process.exit(0)
@@ -63,6 +65,7 @@ requirePublisher(flag('publisher'), interactive)
 const publisher   = flag('publisher') ?? await ask('Publisher name (e.g. @my-scope)', '@my-scope')
 const title       = flag('title') ?? await ask('Title shown on the page', displayName)
 const website     = flag('website') ?? await ask('Website URL (optional)', '')
+const tags        = await askTags(flag('tags'), interactive, ask)
 if (rl) rl.close()
 
 if (!id || !/^[a-z][a-z0-9-]*$/.test(id)) {
@@ -88,6 +91,7 @@ write('package.json', `{
     "publisher": "${publisher}",
     "displayName": "${displayName}",
     "version": "0.1.0",
+    "tags": ${JSON.stringify(tags)},
     "files": [
         "login.json",
         "background.png",

@@ -37,12 +37,31 @@ const TYPES: { tool: string; type: string; dir: string }[] = [
     { tool: 'aitoolset', type: 'aitoolset', dir: 'aitoolsets' },
     { tool: 'plugin', type: 'plugin', dir: 'plugins' },
     { tool: 'login', type: 'login', dir: 'logins' },
+    { tool: 'sender', type: 'sender', dir: 'senders' },
+    { tool: 'webhook', type: 'webhook', dir: 'webhooks' },
+    { tool: 'router', type: 'router', dir: 'routers' },
 ]
 
-const scaffold = (tool: string, cwd: string, extra: string[] = []): void => {
-    execFileSync(process.execPath, [toolOf(tool), '--id', 'probe', '--publisher', '@acme', ...extra], {
+/** The tags every scaffold in this file is given, unless a test says otherwise. */
+const PROBE_TAGS = 'observability,log'
+
+const scaffold = (tool: string, cwd: string, extra: string[] = [], tags: string[] = ['--tags', PROBE_TAGS]): void => {
+    execFileSync(process.execPath, [toolOf(tool), '--id', 'probe', '--publisher', '@acme', ...tags, ...extra], {
         cwd, stdio: 'pipe',
     })
+}
+
+/** Runs a scaffold that must FAIL, and returns what it said on stderr. */
+const scaffoldFails = (tool: string, cwd: string, args: string[]): string => {
+    let stderr = ''
+    assert.throws(
+        () => execFileSync(process.execPath, [toolOf(tool), '--id', 'probe', '--publisher', '@acme', ...args], { cwd, stdio: 'pipe' }),
+        (err: unknown) => {
+            stderr = String((err as { stderr?: Buffer }).stderr ?? '')
+            return true
+        },
+    )
+    return stderr
 }
 
 const withTemp = (body: (dir: string) => void): void => {
@@ -66,6 +85,46 @@ for (const { tool, type, dir } of TYPES) {
         })
     })
 }
+
+/*
+    Tags (plans/extension-taxonomy): every scaffolder asks for them, only from the catalogue, writes them
+    into package.json, and its build.mjs carries them to dist/package.json — which is what the marketplace
+    and the installer read. The builds do not validate them (D6), so the scaffolder is what keeps a new
+    extension inside the catalogue.
+*/
+for (const { tool, dir } of TYPES) {
+    test(`create-kwirth-${tool} escribe los tags en package.json`, () => {
+        withTemp(tmp => {
+            scaffold(tool, tmp)
+            const pkg = JSON.parse(fs.readFileSync(path.join(tmp, dir, 'probe', 'package.json'), 'utf-8'))
+            const expected = tool === 'aitoolset' ? ['observability', 'log', 'ai'] : ['observability', 'log']
+            assert.deepEqual(pkg.tags, expected)
+        })
+    })
+
+    test(`create-kwirth-${tool} FALLA sin --tags o con un tag fuera del catálogo, sin generar nada`, () => {
+        withTemp(tmp => {
+            assert.match(scaffoldFails(tool, tmp, []), /--tags is required/)
+            assert.match(scaffoldFails(tool, tmp, ['--tags', 'observability,logs']), /not in the catalogue: logs/)
+            assert.match(scaffoldFails(tool, tmp, ['--tags', '']), /--tags/)
+            assert.ok(!fs.existsSync(path.join(tmp, dir)), 'no debe dejar nada generado cuando falla')
+        })
+    })
+}
+
+test('el build generado lleva los tags a dist/package.json', () => {
+    withTemp(tmp => {
+        scaffold('login', tmp)
+        // login's build copies package.json whole; the others build dist/package.json field by field and
+        // must name `tags`. Sender and webhook write it from dist-meta.mjs, shared by build and watch.
+        for (const { tool, dir } of TYPES.filter(t => t.tool !== 'login')) {
+            scaffold(tool, tmp)
+            const shared = path.join(tmp, dir, 'probe', 'dist-meta.mjs')
+            const writer = fs.existsSync(shared) ? shared : path.join(tmp, dir, 'probe', 'build.mjs')
+            assert.match(fs.readFileSync(writer, 'utf-8'), /tags: meta\.tags \?\? \[\]/, `${tool}: ${path.basename(writer)} does not carry tags`)
+        }
+    })
+})
 
 test('🔴 nuestro scope NO aparece en lo que genera un tercero, salvo como dependencia', () => {
     withTemp(tmp => {

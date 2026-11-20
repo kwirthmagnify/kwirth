@@ -8,7 +8,7 @@ import zlib from 'zlib'
 import { cachedExtensionFile, downloadFile, dropCachedExtensionFiles, packageHeaders, readTarballFile } from './PackageRegistries'
 import { assertInstallable } from './ExtensionInstallGuard'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
-import { IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
+import { EExtensionTag, IExtensionRequirement, extensionTagsOf } from '@kwirthmagnify/kwirth-common'
 import { updateIndex } from './IndexLock'
 
 export interface IHomepageMeta {
@@ -18,6 +18,7 @@ export interface IHomepageMeta {
     version: string
     description: string
     website?: string
+    tags?: EExtensionTag[]
     installedFrom?: string
     // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
     // the package registry, which is another server, and with precedence by id two marketplaces can
@@ -91,6 +92,7 @@ export class HomepageManager {
             meta.version = pkg.version ?? 'dev'
             meta.description = pkg.description ?? ''
             meta.website = pkg.website
+            meta.tags = extensionTagsOf(pkg.tags)
             // Without it a dev homepage required no DCE: nobody saw it as a consumer.
             meta.requiresExtension = normalizeRequires(pkg.requiresExtension)
         } catch {}
@@ -104,7 +106,7 @@ export class HomepageManager {
         const devMetas = Array.from(this.devHomepages.entries()).map(([id, dev]) => {
             try {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
-                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, requiresExtension: normalizeRequires(pkg.requiresExtension) }
+                return { ...dev.meta, name: pkg.name ?? id, displayName: pkg.displayName ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', website: pkg.website, tags: extensionTagsOf(pkg.tags), requiresExtension: normalizeRequires(pkg.requiresExtension) }
             } catch { return dev.meta }
         })
         const devIds = new Set(devMetas.map(m => m.id))
@@ -149,6 +151,7 @@ export class HomepageManager {
                 requiresRestart: pkg.requiresRestart ?? false,
                 requiresExtension: normalizeRequires(pkg.requiresExtension),
                 website: pkg.website,
+                tags: extensionTagsOf(pkg.tags),
                 installedFrom: installedFrom ?? tarGzUrl,
                 marketplaceId,
                 marketplaceLabel,

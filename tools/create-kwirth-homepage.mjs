@@ -3,6 +3,7 @@ import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
 import { artifactName, requirePublisher } from './artifact-name.mjs'
+import { askTags } from './extension-tags.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -23,6 +24,7 @@ prompt and takes the remaining values from the flags (or their defaults).
   --publisher <@scope>
   --description <text>
   --website <url>
+  --tags <a,b,...>          what it is for, from the catalogue (required with --id)
   --help                    this text
 `)
     process.exit(0)
@@ -51,6 +53,7 @@ const description = flag('description') ?? await ask('Description', `${displayNa
 requirePublisher(flag('publisher'), interactive)
 const publisher   = flag('publisher') ?? await ask('Publisher name (e.g. @my-scope)', '@my-scope')
 const website     = flag('website') ?? await ask('Website URL (optional)', '')
+const tags        = await askTags(flag('tags'), interactive, ask)
 if (rl) rl.close()
 
 if (!id || !/^[a-z][a-z0-9-]*$/.test(id)) {
@@ -78,6 +81,7 @@ write('package.json', `{
     "extensionType": "homepage",
     "publisher": "${publisher}",
     "version": "0.1.0",
+    "tags": ${JSON.stringify(tags)},
     "description": "${description}",${websiteLine}
     "requiresRestart": false,
     "requiresExtension": [],
@@ -188,6 +192,7 @@ const distMeta = {
     ...(meta.website ? { website: meta.website } : {}),
     requiresRestart: meta.requiresRestart ?? false,
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')

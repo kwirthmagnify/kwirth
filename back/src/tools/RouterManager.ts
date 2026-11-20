@@ -1,4 +1,4 @@
-import { EExtensionType, IExtensionScope, IRouterData, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { EExtensionTag, EExtensionType, IExtensionScope, IRouterData, extensionTagsOf, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { IConfigFieldDef, IConfigValidationError } from '@kwirthmagnify/kwirth-common'
 import { IExtensionRequirement, IRouter, IRouterContext, IRouterStatus, TRouterConfig, TRouterConstructor } from '@kwirthmagnify/kwirth-common-back'
 import { IConfigMaps } from './IConfigMap'
@@ -41,6 +41,7 @@ export interface IRouterMeta {
     version: string
     description: string
     website?: string
+    tags?: EExtensionTag[]
     installedFrom?: string
     marketplaceId?: string
     marketplaceLabel?: string
@@ -375,6 +376,7 @@ export class RouterManager {
                 version: pkg.version,
                 description: pkg.description ?? '',
                 website: pkg.website,
+                tags: extensionTagsOf(pkg.tags),
                 installedFrom: installedFrom ?? tarGzUrl,
                 marketplaceId,
                 marketplaceLabel,
@@ -508,6 +510,7 @@ export class RouterManager {
             meta.version = pkg.version ?? 'dev'
             meta.description = pkg.description ?? ''
             meta.website = pkg.website
+            meta.tags = extensionTagsOf(pkg.tags)
             meta.requiresExtension = normalizeRequires(pkg.requiresExtension)
         }
         catch { /* the meta stays minimal */ }

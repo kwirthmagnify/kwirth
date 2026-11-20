@@ -68,7 +68,7 @@ await esbuild.build({
 console.log('Built dist/front.js')
 
 const meta = JSON.parse(fs.readFileSync('package.json', 'utf-8'))
-const distMeta = { type: 'commonjs', extensionType: 'sender', id: meta.id, name: meta.name, displayName: meta.displayName, version: meta.version, description: meta.description, requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? [] }
+const distMeta = { type: 'commonjs', extensionType: 'sender', id: meta.id, name: meta.name, displayName: meta.displayName, version: meta.version, description: meta.description, requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? [], tags: meta.tags ?? [] }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
 

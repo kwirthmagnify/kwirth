@@ -6,6 +6,7 @@ import { extensionCardSx, extensionCardDescriptionSx, extensionCardDescriptionOn
 import { IExtensionAction, IExtensionCardModel } from './extensionManagerModel'
 import { resolveExtensionIcon } from './extensionIcon'
 import { TruncatedText } from './TruncatedText'
+import { EExtensionTag } from '@kwirthmagnify/kwirth-common'
 
 /*
     The TWO views of an extension —card and row— in a single place, for all eleven types and both
@@ -42,7 +43,32 @@ interface IExtensionViewProps {
     /** A control of the type's own (a Select, a switch…), just before the buttons. */
     inlineControl?: React.ReactNode
     actions: IExtensionAction[]
+    /*
+        What it is FOR (plans/extension-taxonomy). Its own line, between the description and the bottom
+        row: mixed with the provenance or status chips it would read as one more state. Empty for an
+        extension published before tags existed, and then the line stays empty — the card does not
+        shrink, all cards measure the same.
+    */
+    tags?: EExtensionTag[]
 }
+
+/** The height of the tags line. Fixed, like the card: one line, whatever does not fit is cut. */
+const TAGS_ROW_HEIGHT = 20
+
+// compactChip, like every other chip on the card: all of them measure the same (checked by e2e).
+const tagChipSx = compactChip
+
+/*
+    The tags as small chips on ONE line. What does not fit is clipped, and the whole list is in the
+    tooltip: agora carries six and a card has room for four or five.
+*/
+const TagChips: React.FC<{ tags?: EExtensionTag[], sx?: object }> = ({ tags, sx }) => (
+    <Tooltip title={tags?.length ? tags.join(' · ') : ''} disableInteractive>
+        <Box data-testid='extension-tags' sx={{ display: 'flex', gap: 0.5, overflow: 'hidden', height: TAGS_ROW_HEIGHT, alignItems: 'center', ...sx }}>
+            {(tags ?? []).map(t => <Chip key={t} label={t} size='small' variant='outlined' sx={{ ...tagChipSx, flexShrink: 0 }} />)}
+        </Box>
+    </Tooltip>
+)
 
 /*
     The title row's height. Its tallest control sets it, which is the website button (30px), and it is
@@ -92,7 +118,7 @@ const ActionButtons: React.FC<{ actions: IExtensionAction[] }> = ({ actions }) =
 </>)
 
 /** Card view. Fixed height (extensionCardSx): one that grows stretches its whole row of the grid. */
-const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, versions, onVersionChange, chips, statusChips, inlineControl, actions }) => {
+const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, versions, onVersionChange, chips, statusChips, inlineControl, actions, tags }) => {
     const theme = useTheme()
     return (
         <Box sx={{ ...extensionCardSx, background: gradientFor(model.name, theme.palette.mode === 'dark') }}>
@@ -139,6 +165,7 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
                     {model.subtitle && <TruncatedText text={model.subtitle} variant='caption' color='text.disabled' sx={{ ...ONE_LINE_SX, mt: 0.25 }} />}
                 </Box>
             </Stack>
+            <TagChips tags={tags} sx={{ mt: 0.5 }} />
             <Stack
                 direction='row'
                 spacing={0.5}
@@ -165,12 +192,16 @@ const ExtensionCard: React.FC<IExtensionViewProps> = ({ model, fallbackIcon, ver
 */
 const extensionRowCells = (
     key: string,
-    { model, fallbackIcon, versions, onVersionChange, chips, statusChips, inlineControl, actions }: IExtensionViewProps
+    { model, fallbackIcon, versions, onVersionChange, chips, statusChips, inlineControl, actions, tags }: IExtensionViewProps
 ): React.ReactNode[] => [
     <Box key={`${key}-icon`} sx={{ color: 'text.secondary', display: 'flex', py: 1 }}>{model.icon ?? resolveExtensionIcon(model.iconName, fallbackIcon)}</Box>,
+    // The tags go under the name, like the subtitle: a column of their own would widen every row for an
+    // extension with six of them.
     <Box key={`${key}-name`} sx={{ py: 1, minWidth: 0 }}>
         <TruncatedText text={model.name} variant='body2' fontWeight='bold' sx={ONE_LINE_SX} />
         {model.subtitle && <TruncatedText text={model.subtitle} variant='caption' color='text.disabled' sx={ONE_LINE_SX} />}
+        {/* Always drawn, empty or not: rows with and without tags measure the same. */}
+        <TagChips tags={tags} sx={{ mt: 0.25 }} />
     </Box>,
     <Box key={`${key}-mkp`} sx={{ justifySelf: 'end', py: 1, display: 'flex', alignItems: 'center' }}>
         <MarketplaceSourceIcon label={model.marketplaceLabel} installedFrom={model.installedFrom} />

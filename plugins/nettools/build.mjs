@@ -140,6 +140,7 @@ fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
     // This is what makes the core refuse to install it without its DCE, and refuse to remove the DCE
     // while it is installed (plan: plans/completed/dce/PRD.md, RF5, RF8, RF9).
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
     // What npm shows on the package page: without these, nothing there says this belongs to Kwirth.
     homepage: 'https://kwirthmagnify.dev',
     repository: { type: 'git', url: 'git+https://github.com/kwirthmagnify/kwirth.git', directory: 'plugins/nettools' },

@@ -36,6 +36,7 @@ fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
     ...(meta.publishConfig ? { publishConfig: meta.publishConfig } : {}),
     requiresRestart: meta.requiresRestart ?? false,
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
 }, null, 2))
 
 const ctx = await esbuild.context({

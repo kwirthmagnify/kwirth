@@ -4,6 +4,7 @@
     "publisher": "@kwirthmagnify",
     "displayName": "Template",
     "version": "0.0.1",
+    "tags": ["security", "login"],
     "files": [
         "login.json",
         "background.png"

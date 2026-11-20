@@ -1,4 +1,5 @@
 import type { IExtensionRequirement } from './Marketplace'
+import type { EExtensionTag } from './ExtensionTag'
 
 /*
     The `dce` type's shared vocabulary (plan: plans/completed/dce/PRD.md).
@@ -70,6 +71,8 @@ export interface IDceMeta {
     /** Always true (PRD RNF3): consumers keep the previous instance until the server restarts. */
     requiresRestart?: boolean
     requiresExtension?: IExtensionRequirement[]
+    /** What it is for (see ExtensionTag). */
+    tags?: EExtensionTag[]
     /**
      * Size in bytes of the back.js the core loaded — what this DCE weighs in the server's memory. Measured
      * when the code is loaded, not stored on install: absent when the DCE has no back end or it has not

@@ -1,5 +1,5 @@
 import { IConfigMaps } from './IConfigMap'
-import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { EExtensionTag, EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { ELogComponent, logInfo } from './Logging'
 
 const PACKS_CM = 'kwirth-packs'
@@ -19,6 +19,7 @@ export interface IPackMeta {
     version: string
     description: string
     website?: string
+    tags?: EExtensionTag[]
     installedFrom?: string
     extensions: IPackExtensionRef[]
     requiresRestart?: boolean

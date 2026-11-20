@@ -3,6 +3,7 @@ import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
 import { artifactName, requirePublisher } from './artifact-name.mjs'
+import { askTags } from './extension-tags.mjs'
 
 // Non-interactive mode: as soon as --id arrives nothing is asked, useful for CI and for repeating a scaffold.
 const argv = process.argv.slice(2)
@@ -24,6 +25,7 @@ prompt and takes the remaining values from the flags (or their defaults).
   --description <text>    
   --icon <MUI name>
   --website <url>
+  --tags <a,b,...>          what it is for, from the catalogue (required with --id)
   --dce <[@scope/]id[:version],…>
                             DCEs this plugin consumes. It leaves the dependency declared and the
                             build ready to resolve them against the registry (default version 0.1.0).
@@ -56,6 +58,7 @@ const publisher   = flag('publisher') ?? await ask('Publisher name (e.g. @my-sco
 const description = flag('description') ?? await ask('Description', `${name} channel plugin for Kwirth`)
 const icon        = flag('icon') ?? await ask('MUI icon name', 'Extension')
 const website     = flag('website') ?? await ask('Website URL (optional)', '')
+const tags        = await askTags(flag('tags'), interactive, ask)
 /*
     The DCEs this plugin consumes (plan: plans/completed/dce/PRD.md).
 
@@ -130,6 +133,7 @@ write('package.json', `{
     "extensionType": "plugin",
     "publisher": "${publisher}",
     "version": "1.0.0",
+    "tags": ${JSON.stringify(tags)},
     "description": "${description}",
     "icon": "${icon}",${websiteLine}
     "requiresRestart": false,
@@ -338,6 +342,7 @@ const distMeta = {
     ...(meta.website ? { website: meta.website } : {}),
     requiresRestart: meta.requiresRestart ?? false,
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
 }
 fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
 console.log('Wrote dist/package.json')
@@ -416,7 +421,7 @@ fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({
     id: meta.id, name: \`\${meta.publisher}/kwirth-plugin-\${meta.id}\`, displayName: meta.displayName,
     version: meta.version, description: meta.description, icon: meta.icon,
     ...(meta.website ? { website: meta.website } : {}),
-    requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? []
+    requiresRestart: meta.requiresRestart ?? false, requiresExtension: meta.requiresExtension ?? [], tags: meta.tags ?? []
 }, null, 2))
 
 const frontCtx = await esbuild.context({

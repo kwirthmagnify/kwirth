@@ -137,6 +137,7 @@ export const writeDistMeta = () => {
         ...(meta.website ? { website: meta.website } : {}),
         requiresRestart: meta.requiresRestart ?? false,
         requiresExtension: meta.requiresExtension ?? [],
+        tags: meta.tags ?? [],
     }
     fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify(distMeta, null, 2))
     // The package page on npm is this README: publishing without it leaves a page that says nothing.

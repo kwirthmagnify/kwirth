@@ -1,4 +1,4 @@
-import { DCE_REGISTRY, EDceState, EExtensionType, IDceAccess, IDceConsumer, IDceMeta, IDceRegistryEntry, TDceRegistry } from '@kwirthmagnify/kwirth-common'
+import { DCE_REGISTRY, EDceState, EExtensionType, extensionTagsOf, IDceAccess, IDceConsumer, IDceMeta, IDceRegistryEntry, TDceRegistry } from '@kwirthmagnify/kwirth-common'
 import { IDceBack, IDceBackHost, IDceStore } from '@kwirthmagnify/kwirth-common-back'
 import { IConfigMaps } from './IConfigMap'
 import { ISecrets } from './ISecrets'
@@ -309,7 +309,8 @@ export class DceManager implements IDceAccess {
                 hasFront,
                 // Forced, whatever the package says (PRD RNF3): consumers keep the previous instance.
                 requiresRestart: true,
-                requiresExtension: normalizeRequires(pkg.requiresExtension)
+                requiresExtension: normalizeRequires(pkg.requiresExtension),
+                tags: extensionTagsOf(pkg.tags)
             }
             if (!meta.id) throw new Error('Invalid DCE bundle: package.json has no id')
             // A DCE that requires another extension is not installed without it.

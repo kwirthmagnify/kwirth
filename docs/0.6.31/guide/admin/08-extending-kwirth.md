@@ -47,6 +47,14 @@ Every family uses the same manager UI, so once you learn one you know them all:
 | **Settings ⚙** | Opens whatever *that* extension declares: a typed form, a list of named configurations, a free JSON editor, or a UI the extension brings itself. **The gear is greyed out when the extension has nothing to configure** — and its tooltip says so, instead of opening an empty dialog. |
 | **Install *(family)*** | Add a new one: paste a package **URL** and download it, or **BROWSE…** for a local package file. |
 | **Available *(family)*** | A browsable catalog of extensions you can install with one click. Already-installed ones are marked as such. |
+| **Tags** | The small chips under the description say what an extension is **for** — `observability`, `log`, `kubernetes`, `ai`, `game`… — whatever its type. An extension carries as many as apply. |
+| **Tags filter** | Next to the catalog's filter box: tick one or more tags to narrow the **Available** list. Ticking several shows only what carries **all** of them — `ai` + `kubernetes` is what uses AI on Kubernetes. It only offers the tags that catalog actually uses; **Clear** gives you the whole catalog back. |
+
+![The plugins catalog filtered by the observability tag](../../_media/guide/admin-extension-tags.png)
+
+> **Where tags come from.** Each extension declares them, from a fixed list kept by kwirth, so the same idea is
+> always spelled the same way. Documentation shows the tags of the extension it documents, and a pack those of
+> the plugin it brings. An extension published before tags existed simply shows none.
 
 > **When an extension needs another one.** Some extensions declare what they **require** (for example a plugin
 > that only works with a given provider) and what they merely **use**. The manager resolves those against what

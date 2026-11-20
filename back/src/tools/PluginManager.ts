@@ -1,5 +1,5 @@
 import { IConfigMaps } from './IConfigMap'
-import { EExtensionType, IConfigFieldDef, IConfigValidationError, IExtensionRequirement, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { EExtensionTag, EExtensionType, IConfigFieldDef, IConfigValidationError, IExtensionRequirement, extensionTagsOf, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { ExtensionConfigStore } from './ExtensionConfigStore'
 import { listBundledOfType, peekBundledMeta } from './BundledExtensions'
 import { TChannelConstructor } from '../channels/IChannel'
@@ -25,6 +25,7 @@ export interface IPluginMeta {
     description: string
     icon?: string
     website?: string
+    tags?: EExtensionTag[]
     installedFrom?: string
     // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
     // the package registry, which is another server, and with precedence by id two marketplaces can
@@ -136,6 +137,7 @@ export class PluginManager {
             meta.description = pkg.description ?? ''
             meta.icon = pkg.icon
             meta.website = pkg.website
+            meta.tags = extensionTagsOf(pkg.tags)
             // Without it a dev plugin required no DCE: nobody saw it as a consumer, and the DCE it uses
             // could be uninstalled from under it.
             meta.requiresExtension = normalizeRequires(pkg.requiresExtension)
@@ -219,7 +221,7 @@ export class PluginManager {
         const devMetas = Array.from(this.devPlugins.entries()).map(([id, dev]) => {
             try {
                 const pkg = JSON.parse(fs.readFileSync(path.join(dev.distPath, 'package.json'), 'utf-8'))
-                return { ...dev.meta, name: pkg.name ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', icon: pkg.icon, website: pkg.website, requiresExtension: normalizeRequires(pkg.requiresExtension) }
+                return { ...dev.meta, name: pkg.name ?? id, version: pkg.version ?? 'dev', description: pkg.description ?? '', icon: pkg.icon, website: pkg.website, tags: extensionTagsOf(pkg.tags), requiresExtension: normalizeRequires(pkg.requiresExtension) }
             } catch {
                 return dev.meta
             }
@@ -287,6 +289,8 @@ export class PluginManager {
                 that points at the extension when the fault is here.
             */
             meta.requiresExtension = normalizeRequires(meta.requiresExtension)
+            // The meta IS the tarball's package.json: its tags are untrusted input and only the catalogue's are kept
+            meta.tags = extensionTagsOf(meta.tags)
             // A plugin that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertExtensionRequirements('Plugin', meta.id, meta.requiresExtension, installedFrom)
             const backJs = fs.readFileSync(backPath, 'utf-8')

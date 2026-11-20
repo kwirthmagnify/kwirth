@@ -68,6 +68,7 @@ fs.writeFileSync(path.join('dist', 'package.json'), JSON.stringify({ type: 'comm
     ...(meta.website ? { website: meta.website } : {}),
     requiresRestart: meta.requiresRestart ?? false,
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
 }, null, 2))
 
 const frontCtx = await esbuild.context({

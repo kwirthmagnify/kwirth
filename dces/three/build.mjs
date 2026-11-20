@@ -89,6 +89,7 @@ const distMeta = {
     // Always true for a DCE: consumers keep the previous instance until the server restarts.
     requiresRestart: true,
     requiresExtension: meta.requiresExtension ?? [],
+    tags: meta.tags ?? [],
     homepage: 'https://kwirthmagnify.dev',
     repository: { type: 'git', url: 'git+https://github.com/kwirthmagnify/kwirth.git', directory: 'dces/three' },
     keywords: ['kwirth', 'kubernetes', 'dce', 'three', 'three.js', '3d'],

@@ -3,6 +3,7 @@ import { createInterface } from 'readline/promises'
 import fs from 'fs'
 import path from 'path'
 import { artifactName, requirePublisher } from './artifact-name.mjs'
+import { askTags } from './extension-tags.mjs'
 
 /*
     Scaffolder of a ROUTER (plans/router-extension, S5): a back-only extension that carries the core's traffic
@@ -30,6 +31,7 @@ prompt and takes the remaining values from the flags (or their defaults).
   --publisher <@scope>      npm scope (required with --id)
   --description <text>      one-line description
   --website <url>           optional website
+  --tags <a,b,...>          what it is for, from the catalogue (required with --id)
   --dir <path>              where to create it (default routers/<id>)
   --into-existing           scaffold INTO a directory that already exists, keeping every file already there
   --help                    this text
@@ -57,6 +59,7 @@ requirePublisher(flag('publisher'), interactive)
 const publisher   = flag('publisher') ?? await ask('Publisher scope (e.g. @my-scope)', '@my-scope')
 const description = flag('description') ?? await ask('Description', `${name} for Kwirth`)
 const website     = flag('website') ?? await ask('Website URL (optional)', '')
+const tags        = await askTags(flag('tags'), interactive, ask)
 if (rl) rl.close()
 
 if (!id || !/^[a-z][a-z0-9-]*$/.test(id)) {
@@ -97,6 +100,7 @@ write('package.json', JSON.stringify({
     extensionType: 'router',
     publisher,
     version: '0.1.0',
+    tags,
     description,
     ...(website ? { website } : {}),
     requiresRestart: false,
@@ -180,6 +184,7 @@ const writeDistMeta = () => {
         ...(meta.website ? { website: meta.website } : {}),
         requiresRestart: false,
         requiresExtension: meta.requiresExtension ?? [],
+        tags: meta.tags ?? [],
     }, null, 2))
 }
 `

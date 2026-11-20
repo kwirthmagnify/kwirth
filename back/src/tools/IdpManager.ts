@@ -6,7 +6,7 @@ import tar from 'tar'
 import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { EIdpConnectorKind, IIdpConnector, IIdpConfigFieldDef, IIdpInstanceConfig, TIdpConnectorConstructor } from '@kwirthmagnify/kwirth-common-back'
-import { EExtensionType, IConfigValidationError, IExtensionRequirement, pruneConfig, validateConfig } from '@kwirthmagnify/kwirth-common'
+import { EExtensionTag, EExtensionType, IConfigValidationError, IExtensionRequirement, extensionTagsOf, pruneConfig, validateConfig } from '@kwirthmagnify/kwirth-common'
 import { ExtensionConfigStore } from './ExtensionConfigStore'
 import { listBundledOfType } from './BundledExtensions'
 import { downloadFile, packageHeaders } from './PackageRegistries'
@@ -35,6 +35,7 @@ interface IIdpConnectorInfo {
     marketplaceId?: string
     marketplaceLabel?: string
     website?: string
+    tags?: EExtensionTag[]
     description?: string
     // It is needed in the LIST, not only when installing: on uninstalling one has to be able to warn
     // that the connector stays hooked in until the core is restarted.
@@ -49,6 +50,7 @@ interface IIdpConnectorMeta {
     version: string
     description?: string
     website?: string
+    tags?: EExtensionTag[]
     installedFrom?: string
     // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
     // the package registry, which is another server, and with precedence by id two marketplaces can
@@ -76,6 +78,7 @@ interface IConnectorRuntimeMeta {
     marketplaceId?: string
     marketplaceLabel?: string
     website?: string
+    tags?: EExtensionTag[]
     description?: string
 }
 
@@ -138,6 +141,7 @@ export class IdpManager {
                     marketplaceId: m?.marketplaceId,
                     marketplaceLabel: m?.marketplaceLabel,
                     website: m?.website,
+                    tags: m?.tags,
                     description: m?.description,
                     requiresRestart: m?.requiresRestart
                 })
@@ -174,7 +178,7 @@ export class IdpManager {
         const index = (await this.configMaps.read(CONNECTORS_INDEX, []) as IIdpConnectorMeta[]) || []
         for (const m of index) {
             this.installedConnectorIds.add(m.id)
-            this.connectorMeta.set(m.id, { version: m.version, requiresRestart: m.requiresRestart, installedFrom: m.installedFrom, marketplaceId: m.marketplaceId, marketplaceLabel: m.marketplaceLabel, website: m.website, description: m.description })
+            this.connectorMeta.set(m.id, { version: m.version, requiresRestart: m.requiresRestart, installedFrom: m.installedFrom, marketplaceId: m.marketplaceId, marketplaceLabel: m.marketplaceLabel, website: m.website, tags: m.tags, description: m.description })
         }
     }
 
@@ -217,6 +221,7 @@ export class IdpManager {
                 version: pkg.version,
                 description: pkg.description,
                 website: pkg.website,
+                tags: extensionTagsOf(pkg.tags),
                 installedFrom: installedFrom ?? tarGzUrl,
                 marketplaceId,
                 marketplaceLabel,
@@ -252,7 +257,7 @@ export class IdpManager {
             else index.push(meta)
             await this.configMaps.write(CONNECTORS_INDEX, index)
             this.installedConnectorIds.add(meta.id)
-            this.connectorMeta.set(meta.id, { version: meta.version, requiresRestart: meta.requiresRestart, installedFrom: meta.installedFrom, marketplaceId: meta.marketplaceId, marketplaceLabel: meta.marketplaceLabel, website: meta.website, description: meta.description })
+            this.connectorMeta.set(meta.id, { version: meta.version, requiresRestart: meta.requiresRestart, installedFrom: meta.installedFrom, marketplaceId: meta.marketplaceId, marketplaceLabel: meta.marketplaceLabel, website: meta.website, tags: meta.tags, description: meta.description })
 
             this.loadBackConnector(meta.id, backJs)
             logInfo(ELogComponent.AUTH, `IdP connector '${meta.id}' v${meta.version} installed`)
@@ -484,7 +489,7 @@ export class IdpManager {
                 this.reloadDevConnector(id, path.join(abs, 'back.js'))
                 try {
                     const pkg = JSON.parse(fs.readFileSync(path.join(abs, 'package.json'), 'utf-8'))
-                    this.connectorMeta.set(id, { version: pkg.version, website: pkg.website, description: pkg.description, installedFrom: 'dev' })
+                    this.connectorMeta.set(id, { version: pkg.version, website: pkg.website, tags: extensionTagsOf(pkg.tags), description: pkg.description, installedFrom: 'dev' })
                 }
                 catch { this.connectorMeta.set(id, { installedFrom: 'dev' }) }
             }

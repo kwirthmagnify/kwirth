@@ -6,7 +6,7 @@ import { assertInstallable } from './ExtensionInstallGuard'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
 import { listBundledOfType } from './BundledExtensions'
-import { EExtensionType, IExtensionRequirement } from '@kwirthmagnify/kwirth-common'
+import { EExtensionTag, EExtensionType, IExtensionRequirement, extensionTagsOf } from '@kwirthmagnify/kwirth-common'
 import tar from 'tar'
 import os from 'os'
 import path from 'path'
@@ -27,6 +27,7 @@ export interface IAiToolsetMeta {
     version: string
     description: string
     website?: string
+    tags?: EExtensionTag[]
     installedFrom?: string
     // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
     // the package registry, which is another server, and with precedence by id two marketplaces can serve the same
@@ -350,6 +351,8 @@ export class AiToolsetManager {
             // NORMALIZED: the tarball's package.json may still carry the old string form, and the
             // validator reads objects. See the note in PluginManager.
             meta.requiresExtension = normalizeRequires(meta.requiresExtension)
+            // The meta IS the tarball's package.json: its tags are untrusted input and only the catalogue's are kept
+            meta.tags = extensionTagsOf(meta.tags)
             // A toolset that requires an extension is not installed without it (plans/completed/dce/PRD.md, RF8).
             await assertExtensionRequirements('AI toolset', meta.id, meta.requiresExtension, installedFrom)
 

@@ -193,3 +193,57 @@ test('capture manager dialogs (dark, solo catalogo publico)', async ({ page }) =
     const restored = (await readSettings(page, s)).marketplaces ?? []
     expect(JSON.stringify(restored)).toBe(JSON.stringify(original))
 })
+
+/*
+    The tags (plans/extension-taxonomy): the plugins CATALOGUE filtered by one tag, with the chips on its
+    cards — the guide explains the filter, so the image shows it at work and not the installed section.
+
+    Same rule as above: only the public catalogue (the private marketplaces off for the capture and
+    restored after), and the dialog is scrolled down to the catalogue so the installed section, where the
+    development environment's paid extensions live, stays out of the frame.
+*/
+const TAGS_FILE = 'admin-extension-tags.png'
+const TAGS_SHOWN = 'observability'
+
+test('capture extension tags filter (dark, solo catalogo publico)', async ({ page }) => {
+    test.skip(!pedida(TAGS_FILE), `CAPTURE_ONLY does not ask for ${TAGS_FILE}`)
+    await page.setViewportSize({ width: 1600, height: 900 })
+    await page.addInitScript(() => { try { localStorage.setItem('kwirth.mode', 'dark') } catch { /* */ } })
+    const s = await captureSession(page)
+
+    const original = (await readSettings(page, s)).marketplaces ?? []
+    const privatesOff = (original as Record<string, unknown>[]).map(m => ({ ...m, enabled: false }))
+
+    try {
+        if (privatesOff.length) await writeMarketplaces(page, s, privatesOff)
+        await clickExtensionMenuItem(page, 'Plugins')
+        const dialog = page.getByRole('dialog').filter({ hasText: /Manage channel plugins/i })
+        await dialog.waitFor({ timeout: 10000 })
+        const available = dialog.getByTestId('extensions-available')
+        await available.getByTestId('extension-tags').first().waitFor({ timeout: 60000 })
+
+        // Ticked through the dropdown, as a user would, and closed by its backdrop (Escape depends on focus).
+        await dialog.getByRole('combobox', { name: 'Filter by tags' }).click()
+        await page.getByRole('option', { name: TAGS_SHOWN, exact: true }).click()
+        await page.locator('.MuiPopover-root .MuiBackdrop-root').click()
+        await expect(dialog.getByRole('combobox', { name: 'Filter by tags' })).toContainText(TAGS_SHOWN)
+
+        // Down to the catalogue: its header, the filter and the cards are what the image is about.
+        await dialog.locator('.MuiDialogContent-root').evaluate(el => { el.scrollTop = el.scrollHeight })
+        // The focus stays on the dropdown after it closes, and its tooltip then covers a card.
+        // Blurring is not enough: the tooltip opened on focus stays up, so it is taken out of the DOM.
+        await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+        await page.mouse.move(0, 0)
+        await page.waitForTimeout(1200)
+        await page.evaluate(() => document.querySelectorAll('.MuiTooltip-popper').forEach(el => el.remove()))
+        await page.evaluate(relabelCustomers, RELABEL)
+        await dialog.screenshot({ path: `${MEDIA}/${TAGS_FILE}` })
+        await dismissOpenDialogs(page)
+    }
+    finally {
+        if (privatesOff.length) await writeMarketplaces(page, s, original)
+    }
+
+    const restored = (await readSettings(page, s)).marketplaces ?? []
+    expect(JSON.stringify(restored)).toBe(JSON.stringify(original))
+})

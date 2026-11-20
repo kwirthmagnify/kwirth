@@ -4,7 +4,7 @@ import { MsgBoxButtons, MsgBoxYesNo } from '../../tools/MsgBox'
 import { CheckCircle, Delete, Download, FolderOpen, Refresh, Settings, ViewList } from '@kwirthmagnify/kwirth-common-front/icons'
 import { Upgrade, ViewModule } from '../../icons'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { EExtensionType, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
+import { EExtensionTag, EExtensionType, extensionTagsOf, versionGreaterThan } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization } from '../../tools/AuthorizationManagement'
 import { compactChip, PUBLIC_MARKETPLACE_LABEL } from './MarketplaceBadge'
@@ -44,6 +44,11 @@ interface IMinimalEntry {
     */
     requires?: IExtensionRequirement[]
     uses?: IExtensionRequirement[]
+    /*
+        What it is for (plans/extension-taxonomy). Generic like the dependencies: every type's manifest
+        entries and installed metadata carry it, so it is painted and filtered here for all eleven.
+    */
+    tags?: EExtensionTag[]
 }
 
 interface IExtensionManagerDialogProps<TInstalled extends IMinimalEntry, TEntry extends IMinimalEntry> {
@@ -154,6 +159,8 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const [customUrl, setCustomUrl] = useState('')
     const [installedFilter, setInstalledFilter] = useState('')
     const [availableFilter, setAvailableFilter] = useState('')
+    // Catalogue filter by tags. Starts EMPTY = no filter; every tag ticked narrows (AND, see tagsMatch).
+    const [tagFilter, setTagFilter] = useState<EExtensionTag[]>([])
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
     const [configuring, setConfiguring] = useState<TInstalled | undefined>()
@@ -402,6 +409,30 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
         const f = filter.toLowerCase()
         return d.keyOf(entry).toLowerCase().includes(f) || d.toModel(entry).name.toLowerCase().includes(f)
     }
+
+    /*
+        An entry's tags. Read with extensionTagsOf: a third party's manifest may carry anything, and only
+        catalogue tags are painted or filtered by.
+
+        Something installed with no tags of its own takes them from its catalogue entry. That covers what
+        declares none by design —documentation inherits them from what it documents, a pack from the plugin
+        it brings, and the manifest already carries them for both— and what was installed before tags
+        existed.
+    */
+    const tagsOf = (entry: TInstalled | TEntry): EExtensionTag[] => {
+        const own = extensionTagsOf(entry.tags)
+        return own.length > 0 ? own : extensionTagsOf(grouped[d.keyOf(entry)]?.[0]?.tags)
+    }
+
+    // Every ticked tag must be there: 'ai' + 'kubernetes' is what uses AI on Kubernetes (PRD rule).
+    const tagsMatch = (entry: TInstalled | TEntry): boolean => {
+        if (tagFilter.length === 0) return true
+        const tags = tagsOf(entry)
+        return tagFilter.every(t => tags.includes(t))
+    }
+
+    // The filter offers only the tags this catalogue USES: the other forty would each give an empty list.
+    const catalogueTags = [...new Set(available.flatMap(e => extensionTagsOf(e.tags)))].sort()
 
     // ── install / uninstall ─────────────────────────────────────────────────────
     /*
@@ -703,7 +734,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     // Alphabetical by the name the card paints, so an update (reload of the list) keeps every card in place.
     const byName = (a: TInstalled | TEntry, b: TInstalled | TEntry) => d.toModel(a).name.localeCompare(d.toModel(b).name, undefined, { sensitivity: 'base' })
     const shownInstalled = installed.filter(e => matches(e, installedFilter)).sort(byName)
-    const shownKeys = Object.keys(grouped).filter(k => matches(grouped[k][0], availableFilter)).sort((a, b) => byName(grouped[a][0], grouped[b][0]))
+    const shownKeys = Object.keys(grouped).filter(k => matches(grouped[k][0], availableFilter) && tagsMatch(grouped[k][0])).sort((a, b) => byName(grouped[a][0], grouped[b][0]))
 
     return (
         <>
@@ -734,14 +765,14 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                                     {shownInstalled.map(entry => (
                                         <ExtensionCard key={d.keyOf(entry)} model={d.toModel(entry)} fallbackIcon={<TypeIcon fontSize='small' />}
                                             chips={originChips(entry)} statusChips={installedStatusChips(entry)} inlineControl={pluginControl(entry)}
-                                            actions={installedActions(entry)} />
+                                            actions={installedActions(entry)} tags={tagsOf(entry)} />
                                     ))}
                                   </Box>
                                 : <Box sx={listGridSx}>
                                     {shownInstalled.flatMap((entry, i, arr) => {
                                         const key = d.keyOf(entry)
                                         return [
-                                            ...extensionRowCells(key, { model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />, chips: originChips(entry), statusChips: installedStatusChips(entry), inlineControl: pluginControl(entry), actions: installedActions(entry) }),
+                                            ...extensionRowCells(key, { model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />, chips: originChips(entry), statusChips: installedStatusChips(entry), inlineControl: pluginControl(entry), actions: installedActions(entry), tags: tagsOf(entry) }),
                                             ...(i < arr.length - 1 ? [separator(key)] : [])
                                         ]
                                     })}
@@ -780,6 +811,32 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                             }}>
                             <Typography variant='subtitle2'>Available {d.noun.plural}</Typography>
                             <TextField size='small' placeholder='Filter…' value={availableFilter} onChange={e => setAvailableFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
+                            {/* Tags filter. FIXED width: ticking tags must not move the row. Visible and
+                                disabled while the catalogue carries no tags, never hidden. */}
+                            <Tooltip title={tagFilter.length ? `Showing what carries ALL of: ${tagFilter.join(', ')}` : 'Filter by tags: ticking several shows what carries all of them'} disableInteractive>
+                                <Select multiple size='small' displayEmpty value={tagFilter} disabled={catalogueTags.length === 0}
+                                    inputProps={{ 'aria-label': 'Filter by tags' }}
+                                    onChange={e => setTagFilter(e.target.value as EExtensionTag[])}
+                                    renderValue={sel => (sel as EExtensionTag[]).length === 0
+                                        ? <em style={{ opacity: 0.6 }}>All tags</em>
+                                        : (sel as EExtensionTag[]).join(' + ')}
+                                    sx={{
+                                        height: 30, fontSize: '0.75rem', width: 200, minWidth: 200, maxWidth: 200, flexShrink: 0,
+                                        '& .MuiSelect-select': { py: 0, px: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+                                    }}>
+                                    {catalogueTags.map(t => (
+                                        <MenuItem key={t} value={t} sx={{ fontSize: '0.75rem', py: 0.25 }}>
+                                            <Checkbox size='small' checked={tagFilter.includes(t)} sx={{ p: 0.5 }} />
+                                            {t}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </Tooltip>
+                            <Tooltip title='Clear tags filter'>
+                                <span>
+                                    <Button size='small' variant='text' disabled={tagFilter.length === 0} onClick={() => setTagFilter([])} sx={{ minWidth: 0, fontSize: '0.7rem' }}>Clear</Button>
+                                </span>
+                            </Tooltip>
                             <Tooltip title='Refresh catalog'>
                                 <span>
                                     <IconButton size='small' aria-label='Refresh catalog' sx={{ width: 30, height: 30 }} onClick={() => fetchManifest(true)} disabled={loadingManifest}>
@@ -794,18 +851,18 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                             color: 'text.secondary'
                         }}>No {d.noun.plural} available.</Typography>
                             : viewMode === 'card'
-                                ? <Box sx={cardGridSx}>
+                                ? <Box sx={cardGridSx} data-testid='extensions-available'>
                                     {shownKeys.map(key => {
                                         const entry = selectedEntry(key)
                                         return (
                                             <ExtensionCard key={key} model={d.toModel(entry)} fallbackIcon={<TypeIcon fontSize='small' />}
                                                 versions={grouped[key].map(e => e.version ?? '')}
                                                 onVersionChange={v => setSelectedVersions(prev => ({ ...prev, [key]: v }))}
-                                                statusChips={availableStatusChips(key, entry)} actions={availableActions(key, entry)} />
+                                                statusChips={availableStatusChips(key, entry)} actions={availableActions(key, entry)} tags={tagsOf(entry)} />
                                         )
                                     })}
                                   </Box>
-                                : <Box sx={listGridSx}>
+                                : <Box sx={listGridSx} data-testid='extensions-available'>
                                     {shownKeys.flatMap((key, i, arr) => {
                                         const entry = selectedEntry(key)
                                         return [
@@ -813,7 +870,8 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                                                 model: d.toModel(entry), fallbackIcon: <TypeIcon fontSize='small' />,
                                                 versions: grouped[key].map(e => e.version ?? ''),
                                                 onVersionChange: v => setSelectedVersions(prev => ({ ...prev, [key]: v })),
-                                                statusChips: availableStatusChips(key, entry), actions: availableActions(key, entry)
+                                                statusChips: availableStatusChips(key, entry), actions: availableActions(key, entry),
+                                                tags: tagsOf(entry)
                                             }),
                                             ...(i < arr.length - 1 ? [separator(key)] : [])
                                         ]

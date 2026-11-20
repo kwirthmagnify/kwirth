@@ -2,7 +2,7 @@ import { IConfigMaps } from './IConfigMap'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 import { ILoginFieldDef } from '@kwirthmagnify/kwirth-common-back'
-import { EExtensionType, IConfigValidationError, IExtensionRequirement, applyConfigDefaults } from '@kwirthmagnify/kwirth-common'
+import { EExtensionTag, EExtensionType, IConfigValidationError, IExtensionRequirement, applyConfigDefaults, extensionTagsOf } from '@kwirthmagnify/kwirth-common'
 import { ExtensionConfigStore } from './ExtensionConfigStore'
 import { listBundledOfType } from './BundledExtensions'
 import { downloadFile, packageHeaders } from './PackageRegistries'
@@ -21,6 +21,7 @@ export interface ILoginMeta {
     version: string
     description: string
     website?: string
+    tags?: EExtensionTag[]
     installedFrom?: string
     // Which marketplace it came from. It is STORED on install, not deduced: the tarball's url points at
     // the package registry, which is another server, and with precedence by id two marketplaces can
@@ -173,6 +174,7 @@ export class LoginManager {
                 version: pkg.version,
                 description: pkg.description ?? '',
                 website: pkg.website,
+                tags: extensionTagsOf(pkg.tags),
                 installedFrom: installedFrom ?? tarGzUrl,
                 marketplaceId,
                 marketplaceLabel,
