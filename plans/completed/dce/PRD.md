@@ -111,8 +111,8 @@ Tres piezas:
 
 ### Cómo bundlea el consumidor
 
-El plugin de esbuild que hoy resuelve `@kwirthmagnify/kwirth-common*` contra `__kwirth_back__`
-([plugins/agora/build.mjs:30](../../../plugins/agora/build.mjs#L30)) se generaliza: recibe un mapa de
+El plugin de esbuild que hoy resuelve `@kwirthmagnify/kwirth-common*` contra `__kwirth_back__` (el que
+llevan los `build.mjs` de los plugins) se generaliza: recibe un mapa de
 **paquete npm → entrada del registro**. El consumidor instala el paquete de la DCE solo por sus
 **tipos**, y en runtime la importación se resuelve contra `__kwirth_dce__['<id>']`. Es el mismo
 patrón que ya evita los 15 MB de `client-node` en cada plugin, aplicado a código de terceros.

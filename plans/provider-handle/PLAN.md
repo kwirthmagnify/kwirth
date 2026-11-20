@@ -21,8 +21,8 @@ hacer nada raro, porque se le ha dado justo eso. De ahí:
 
 1. **El registro de aristas es opcional.** `ClusterInfo.getSubscriptions()` solo ve a quien pasa por
    `clusterInfo.addSubscriber()`. Hoy **tres consumidores no pasan**:
-   `plugins/sugarless/src/back/index.ts:197`, `plugins/situs/src/back/index.ts:610` y
-   `plugins/provider-debug/src/back/index.ts:255` (éste a propósito, con su proxy).
+   dos plugins privados y `plugins/provider-debug/src/back/index.ts:255` (éste a propósito, con su
+   proxy).
    Y no lo hacen por capricho: `startChannel()` se llama **una vez por canal, no por pestaña**, así
    que quien quiera una suscripción por instancia tiene que fabricarse un `IProviderSubscriber`
    propio — lo explica bien el comentario de `IInstance` en sugarless.

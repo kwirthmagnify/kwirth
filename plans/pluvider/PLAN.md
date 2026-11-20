@@ -171,13 +171,11 @@ correcto.
 
 ### S2.1 / S2.2 — Agora se declara pluvider, engancha su fan-out y publica su ayuda — *código escrito, checks técnicos verdes*
 
-> **Entregado (2026-09-18)**: `AgoraChannel implements IChannel, IPluvider`
-> ([plugins/agora/src/back/index.ts](../../plugins/agora/src/back/index.ts)). Segunda lista de
+> **Entregado (2026-09-18)**: `AgoraChannel implements IChannel, IPluvider`, en su back. Segunda lista de
 > destinatarios (`pluviderSubscribers`) en el **mismo** `pushAlertToSubscribers`, con la misma
 > `IAgoraAlert`. Sin filtro en el MVP (D17), y `getSubscriptionHelp()` explicando qué se recibe, que
 > el tipo es `IAgoraAlert` y que Agora es SINGLE.
-> `tsc --noEmit` limpio y **suite de Agora 220/220** (9 tests nuevos en
-> [plugins/agora/tests/back/pluvider.test.ts](../../plugins/agora/tests/back/pluvider.test.ts)).
+> `tsc --noEmit` limpio y **suite de Agora 220/220** (9 tests nuevos del pluvider).
 > Regresión de federación verde: `ALERT_SUBSCRIBE`, el push al socket remoto y el drop al desconectar
 > siguen pasando.
 >
@@ -212,13 +210,10 @@ correcto.
 ### S2.1 (original) — Agora se declara pluvider y engancha su fan-out
 
 - Agora **ya tiene** el punto de emisión y la lista de suscriptores: `alertSubscribers`,
-  `onAlertSubscribe`, `pushAlertToSubscribers`
-  ([agora:444-460](../../plugins/agora/src/back/index.ts#L444-L460)) (F8). Se añade la **segunda lista
+  `onAlertSubscribe`, `pushAlertToSubscribers` (F8). Se añade la **segunda lista
   de destinatarios** (canales in-process) en ese mismo punto. No se toca la producción de alertas.
-- El payload es `IAgoraAlert`, ya público en su `common`
-  ([AgoraTypes.ts:395](../../plugins/agora/src/common/AgoraTypes.ts#L395)) (D9).
-- Agora se suscribe a sus propios providers dentro de `startChannel()`
-  ([agora:227-243](../../plugins/agora/src/back/index.ts#L227-L243)); hay que comprobar que con el
+- El payload es `IAgoraAlert`, ya público en su `common` (D9).
+- Agora se suscribe a sus propios providers dentro de `startChannel()`; hay que comprobar que con el
   orden de S1.3 su producción de alertas sigue viva al arrancar en la fase anterior (riesgo del PRD
   §10, primera fila).
 
@@ -374,8 +369,7 @@ solo describe pantallas.
 > **Alcance recortado por el usuario (2026-09-18)**: **Censor se queda fuera**. Solo Montag, y lo que
 > publica son sus **issues**.
 >
-> **Entregado**: `MontagChannel implements IPluvider`
-> ([plugins/montag/src/back/index.ts](../../plugins/montag/src/back/index.ts)), con el tipo público
+> **Entregado**: `MontagChannel implements IPluvider`, en su back, con el tipo público
 > `IMontagIssueEvent` en su `common` (runnerKey, text, explanation, tags y **timestamp**, que en la
 > pestaña Issues se pierde). La entrega se engancha en el **mismo bucle** que ya repartía cada issue al
 > front y, si el runner tiene sender, al sender: es una tercera puerta, no un pipeline nuevo.
@@ -385,8 +379,7 @@ solo describe pantallas.
 > tiene su lista, re-suscribirse la **reemplaza**, y lo que llega se **sanea** (viene de otro plugin).
 > Por eso el evento lleva `configName` suelto además de `runnerKey`: filtrar no debe obligar a parsear
 > una cadena.
-> `tsc --noEmit` limpio y **suite de Montag 65/65** (16 nuevos en
-> [tests/back/MontagPluvider.test.ts](../../plugins/montag/tests/back/MontagPluvider.test.ts)).
+> `tsc --noEmit` limpio y **suite de Montag 65/65** (16 nuevos del pluvider).
 >
 > **Hallazgo de funcionamiento, a raíz de una pregunta del usuario**: los issues solo fluyen mientras
 > una sesión **analiza**, y la sesión que abre el tab de Montag es **efímera** — `removeConnection` la
@@ -394,8 +387,7 @@ solo describe pantallas.
 > aplica a esa sesión efímera. Para consumo desatendido hace falta una **sesión con nombre**
 > (`ephemeral: false`), que además se restaura al arrancar el canal. Recogido en `getSubscriptionHelp()`
 > y en la guía, porque es la causa número uno de "me he suscrito y no llega nada".
-> **Guía**: [admin/06-issues-for-other-plugins.md](../../plugins/montag/docs/guide/admin/06-issues-for-other-plugins.md)
-> y su entrada en el sidebar. ⚠️ **Falta regenerar `montag.tgz`** — y hay que decidir antes si eso
+> **Guía**: una página nueva de administración en la guía de Montag, con su entrada en el sidebar. ⚠️ **Falta regenerar `montag.tgz`** — y hay que decidir antes si eso
 > arrastra bump de versión del plugin.
 >
 > **Confirmación de diseño**: Montag declara `providesRouter = true` y tiene router propio. Es
@@ -423,8 +415,8 @@ antes de diseñar F1.**
 
 **1 · No hay punto de emisión que reutilizar.** El argumento que abarata F2 es F8: *Agora ya tiene el
 fan-out montado para federación, así que el pluvider es una tercera puerta en el mismo punto de
-emisión*. En `iter` **eso no existe**: solo mantiene websockets hacia sus propios fronts
-([iter/src/back/index.ts:47](../../plugins/iter/src/back/index.ts#L47)). El punto de emisión hay que
+emisión*. En `iter` **eso no existe**: solo mantiene websockets hacia sus propios fronts. El punto de
+emisión hay que
 construirlo.
 
 **2 · Emite estado, no eventos.** Agora, Censor y Montag empujan **sucesos** (una alerta, una línea
@@ -437,7 +429,7 @@ siguiente edición del mapa — que puede ser semanas.
 suscribirse + delta al promocionar versión**, y eso es push puro, dentro del MVP. Hay precedente
 directo en el core: `EventsProvider.addSubscriber(c, { kinds, syncInstances })`, donde
 `syncInstances` significa exactamente *"mándame el estado actual al suscribirme"* — y el propio
-`iter` **ya lo usa como consumidor** ([iter:77](../../plugins/iter/src/back/index.ts#L77)).
+`iter` **ya lo usa como consumidor**.
 
 **Consecuencia para F1**, y es el motivo de anotar esto ahora y no cuando toque: el contrato de
 `S1.1` debe dejar sitio a que un pluvider **entregue estado inicial en `addSubscriber`**, no solo a
@@ -598,13 +590,12 @@ rojo solo aparece al medir. Decisión del usuario: dejarlo así y anotar el arre
 - Core: la página del concepto se **completó** con lo que faltaba (se escribió antes de que existieran
   los filtros): la tabla de payloads de los dos productores, por qué lista vacía = todo, sanear lo que
   llega, que lo que el administrador tenga activado manda, y **construir la ayuda con estado vivo**.
-- `plugins/montag/docs/guide/admin/06-issues-for-other-plugins.md` (nueva).
-- `plugins/agora/docs/guide/admin/10-alerts-for-other-plugins.md` (nueva), con su entrada de sidebar.
+- Montag y Agora, una página nueva cada uno en su guía de administración (en sus repos).
 
 ### Puntos 7-9 — commit, tag y push
 
-⚠️ **Agora y Montag no se pueden commitear en este repo**: `plugins/agora/` y `plugins/montag/` están
-excluidos en `.gitignore` y en `.git/info/exclude` (guardarraíl anti-fuga). Su código, sus tests, sus
+⚠️ **Agora y Montag no se pueden commitear en este repo**: sus carpetas están excluidas en `.gitignore` y
+en `.git/info/exclude` (guardarraíl anti-fuga). Su código, sus tests, sus
 guías, sus métricas y el `BACKLOG.md` de otra sesión van por su repo privado + Nexus + manifest.
 **Sin bump de versión no hay tag**: ninguna de las tres extensiones ha cambiado de versión en este
 cierre.
