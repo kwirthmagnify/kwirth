@@ -101,7 +101,7 @@ interface IKwirthSettings {
     /*
         The proxies in front of Kwirth (ingress, load balancer, gateway) whose X-Forwarded-For is believed, to know
         the real address of WHOEVER connects: a login (loginIpFilter), a WebSocket, an extension that checks where a
-        caller comes from (IRIA Ianus' spokes). Not the login's: it was inside loginIpFilter until 2026-11-17, and that
+        caller comes from. Not the login's: it was inside loginIpFilter until 2026-11-17, and that
         tied it to a filter a Kwirth may not even use. X-Forwarded-For is believed ONLY when the connection comes from
         one of them, and it is walked right to left skipping trusted hops: the client is the first hop that is not
         trusted. Whatever a client writes on the left of the header is never read. Undefined or empty = believed from
@@ -126,7 +126,7 @@ interface ILoginIpFilter {
 }
 
 /*
-    One entry of a list of addresses (the login's allowed ones, the trusted proxies, IRIA Ianus' Allowed from…): an
+    One entry of a list of addresses (the login's allowed ones, the trusted proxies, an extension's own…): an
     IP or CIDR (IPv4 or IPv6) and a note that says what it is. Only 'address' is ever checked; 'comment' is for
     whoever reads the list, '' when there is none. It was ILoginIpEntry until 2026-11-17: it is not only the login's.
 */

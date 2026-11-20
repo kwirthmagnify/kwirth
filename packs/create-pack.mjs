@@ -83,7 +83,7 @@ for (let i = 0; i < rawArgs.length; i++) {
     if (a === '--description') { opts.description  = rawArgs[++i]; continue }
     if (a === '--website')     { opts.website      = rawArgs[++i]; continue }
     if (a === '--output')      { opts.output       = rawArgs[++i]; continue }
-    // El scope npm del pack. Por defecto el público; un pack de artefactos de pago usa `@iriaoperae`.
+    // El scope npm del pack. Por defecto el público; un pack de artefactos privados usa el scope de su casa.
     if (a === '--publisher')   { opts.publisher    = rawArgs[++i]; continue }
     if (!packId) { packId = a; continue }
     inputTgzs.push(a)
@@ -192,9 +192,9 @@ for (const rawPath of inputTgzs) {
         shape every artifact now carries on its own.
 
         The incoming name is not good enough, because each artifact used to build it its own way and a
-        single pack ended up holding three styles side by side: 'iriaoperae-kwirth-provider-cloud-config-
-        0.4.0.tgz' (from `npm pack`), 'excubitor.tgz' (the guides, written by each build-docs-tgz.mjs
-        with no scope and no version) and 'kwirth-login-excubitor.tgz' (no version). Opening a pack and
+        single pack ended up holding three styles side by side: 'acme-kwirth-provider-sample-
+        0.4.0.tgz' (from `npm pack`), 'sample.tgz' (the guides, written by each build-docs-tgz.mjs
+        with no scope and no version) and 'kwirth-login-sample.tgz' (no version). Opening a pack and
         not being able to tell which version each piece is, is precisely what you go to look at when
         something does not add up.
 

@@ -39,7 +39,7 @@ export const loginIpFilterOf = (settings: IKwirthSettings): ILoginIpFilter => ({
 })
 
 /*
-    The trusted proxies as they are READ (never throws: a login, a WebSocket and IRIA Ianus' spokes all resolve
+    The trusted proxies as they are READ (never throws: a login, a WebSocket and an extension's own callers all resolve
     addresses with them). Their own setting since 2026-11-17 (IKwirthSettings.trustedProxies): they are not the
     login's, and a Kwirth that does not restrict its login may still need them.
 */

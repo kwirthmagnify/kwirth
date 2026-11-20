@@ -2,8 +2,8 @@ import { BlockList, isIP } from 'net'
 
 /*
     IP addresses and lists of them (addresses and CIDRs, IPv4 and IPv6): what the core's login IP filter and its
-    trusted proxies use, and what an extension uses to check where a caller comes from (IRIA Ianus: where a spoke
-    may link from). Moved here from the core's ClientIp (2026-11-17) so that both use the SAME code — a second copy
+    trusted proxies use, and what an extension uses to check where a caller comes from (where a remote
+    peer may link from). Moved here from the core's ClientIp (2026-11-17) so that both use the SAME code — a second copy
     of a security check is one that drifts.
 
     No dependency: 'net.BlockList' (Node ≥ 15) already matches addresses and subnets, IPv4 and IPv6.

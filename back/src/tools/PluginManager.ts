@@ -17,7 +17,7 @@ import { updateIndex } from './IndexLock'
 
 export interface IPluginMeta {
     id: string
-    /** The PACKAGE's name: scope and all, '@iriaoperae/kwirth-plugin-montag'. */
+    /** The PACKAGE's name: scope and all, '@acme/kwirth-plugin-sample'. */
     name: string
     /** The HUMAN name, which is the one that gets shown. */
     displayName?: string

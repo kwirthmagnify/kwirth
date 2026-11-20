@@ -451,7 +451,7 @@ export const SenderDebugTabContent: React.FC<IContentProps> = (props: IContentPr
 
     /*
         Channel not started: the shared ChannelNotStarted (icon and name, what starting gives, and a Start button), the
-        same as every IRIA plugin. The container only centres it: both things are needed to take up the height —
+        same as other plugins. The container only centres it: both things are needed to take up the height —
         'flex: 1' when the parent is flex, and the measured minHeight when it is not.
     */
     if (!data.started) {

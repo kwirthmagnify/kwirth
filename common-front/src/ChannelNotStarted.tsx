@@ -15,10 +15,10 @@ import type { IChannelObject } from './index'
 */
 export interface IChannelNotStartedProps {
     icon: React.ReactNode            // the extension's icon, as it wants it shown
-    name: string                     // 'IRIA Agora'
-    hint: string                     // the second line: 'Agora not started. Start the channel to see the rooms.'
+    name: string                     // the channel's display name: 'Sample'
+    hint: string                     // the second line: 'Sample not started. Start the channel to see its data.'
     channelObject: IChannelObject    // its startChannel is what the button calls
-    startIcon?: React.ReactNode      // the button's icon; absent = Material PlayArrow (IRIA passes its Feather Play)
+    startIcon?: React.ReactNode      // the button's icon; absent = Material PlayArrow (an extension may pass its own)
 }
 
 const ChannelNotStarted: React.FC<IChannelNotStartedProps> = ({ icon, name, hint, channelObject, startIcon }) => {

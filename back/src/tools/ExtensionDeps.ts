@@ -111,7 +111,7 @@ export const consumersBrokenByMajor = (consumers: IDceConsumer[], newVersion: st
     return consumers.filter(c => majorOf(c.requirement.minVersion) < newMajor)
 }
 
-/** 'plugin excubitor (dce:iria-icons:1.0.0), homepage iria (dce:iria-icons:1.2.0)' */
+/** 'plugin sample (dce:shared-icons:1.0.0), homepage portal (dce:shared-icons:1.2.0)' */
 export const describeConsumers = (consumers: IDceConsumer[]): string =>
     consumers.map(c => `${c.type} '${c.id}' (${c.requirement.extensionType}:${c.requirement.id}:${c.requirement.minVersion})`).join(', ')
 
