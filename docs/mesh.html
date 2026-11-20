@@ -137,7 +137,7 @@
     <div class="nav-item"><a href="/">Home</a><div class="nav-dropdown"><a href="/#features">Features</a><a href="/#install">Quick Install</a><a href="/#architecture">Architecture</a><a href="/#extensibility">Extensibility</a><a href="/#about">About</a></div></div>
     <div class="nav-item"><a href="getting-started.html">Getting Started</a><div class="nav-dropdown"><a href="getting-started.html#prerequisites">Prerequisites</a><a href="getting-started.html#installation">Installation</a><a href="getting-started.html#first-login">First Login</a><a href="getting-started.html#connect-your-first-cluster">Connect a cluster</a><a href="getting-started.html#open-your-first-channel">Open a channel</a></div></div>
     <div class="nav-item"><a href="/#extensibility">Extensions</a><div class="nav-dropdown"><a href="plugins.html">Plugins</a><a href="providers.html">Providers</a><a href="aitoolsets.html">AI toolsets</a><a href="dces.html">DCEs</a><a href="integration.html#senders">Senders</a><a href="integration.html#webhooks">Webhooks</a><a href="ui.html#themes">Themes</a><a href="ui.html#homepages">Homepages</a><a href="packages.html#packs">Packs</a><a href="packages.html#documentation-packages">Documentation packages</a></div></div>
-    <div class="nav-item"><a href="mesh.html" class="active">Kwirth Mesh</a><div class="nav-dropdown"><a href="mesh.html#what-is-kwirth-mesh">What is Kwirth Mesh?</a><a href="mesh.html#how-it-works">How it works</a><a href="mesh.html#available-routers">Available routers</a><a href="mesh.html#security">Security</a><a href="mesh.html#build-your-own-router">Build your own</a></div></div>
+    <div class="nav-item"><a href="mesh.html" class="active">Kwirth Mesh</a><div class="nav-dropdown"><a href="mesh.html#three-ways-to-federate">Three ways to federate</a><a href="mesh.html#front-end">From the front end</a><a href="mesh.html#bridge">Bridge</a><a href="mesh.html#hub-and-spoke">Hub &amp; spoke (IRIA Ianus)</a><a href="mesh.html#what-is-kwirth-mesh">Routers</a><a href="mesh.html#security">Security</a><a href="mesh.html#build-your-own-router">Build your own</a></div></div>
     <div class="nav-item"><a href="roadmap.html">Roadmap</a><div class="nav-dropdown"><a href="roadmap.html#core">Core Platform</a><a href="roadmap.html#log">Log Channel</a><a href="roadmap.html#magnify">Magnify</a><a href="roadmap.html#ai">AI Analysis</a><a href="roadmap.html#data-providers">Data Providers</a><a href="roadmap.html#alerts">Alerts &amp; Metrics</a></div></div>
     <div class="nav-item"><a href="security.html">Security</a><div class="nav-dropdown"><a href="idps.html">Identity providers</a><a href="logins.html">Logins</a><a href="security.html#security-model">Security model</a><a href="security.html#authentication">Authentication</a><a href="security.html#single-sign-on-idp">Single Sign-On</a><a href="security.html#access-control-api-keys">API keys</a><a href="security.html#learn-more">Learn more</a></div></div>
     <div class="nav-item"><a href="marketplaces.html">Marketplaces</a><div class="nav-dropdown"><a href="marketplaces.html#how-a-marketplace-works">How they work</a><a href="marketplaces.html#the-public-marketplace">Public marketplace</a><a href="marketplaces.html#private-marketplaces">Private marketplaces</a></div></div>
@@ -154,10 +154,105 @@
   <div class="page-hero">
     <div class="section-tag">Routers</div>
     <h1>Kwirth <span class="accent">Mesh</span></h1>
-    <p class="lead">Some clusters cannot be reached directly: a Kwirth behind NAT, behind a firewall, in a DMZ, on a laptop. <strong>Kwirth Mesh</strong> reaches them anyway. A <strong>router</strong> carries Kwirth's traffic to a cluster that has no direct path, and that cluster shows up in your cluster list like any other — tabs, live channels and Magnify included.</p>
+    <p class="lead">One Kwirth, many clusters. Kwirth federates the clusters you work with into a single cluster list — tabs, live channels and Magnify included — and it can do it in <strong>three ways</strong>, depending on how far apart your networks are: from your <strong>browser</strong>, from Kwirth to Kwirth with a <strong>bridge</strong>, or through a <strong>hub</strong> that every Kwirth dials out to.</p>
   </div>
 
-  <h2>What is Kwirth Mesh?</h2>
+  <h2>Three ways to federate</h2>
+  <p>Whichever way a cluster is reached, it shows up in your cluster list like any other, and the Kwirth at the other end still <strong>authenticates and authorizes you with its own access key</strong>. What changes is <strong>who has to reach whom</strong>.</p>
+
+  <div class="cards-grid">
+    <div class="card">
+      <div class="icon">&#x1F5A5;&#xFE0F;</div>
+      <h3>1 · From the front end</h3>
+      <p>Add the cluster to <strong>your profile</strong> — a name, the URL of its Kwirth and an access key — and your browser talks to that Kwirth <strong>directly</strong>. Nothing to install: it is how Kwirth works out of the box. It needs your browser to reach every Kwirth, so it is the way for a <strong>flat network</strong>: a VPN, an office, clusters with an ingress.</p>
+      <p><a href="#front-end">How it works &#x2192;</a></p>
+      <span class="badge badge-available">built in · open source</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F309;</div>
+      <h3>2 · Back to back: Bridge</h3>
+      <p>Two Kwirths linked by <strong>one outbound connection</strong>: only one of them has to reach the other, and from then on each sees the other in its cluster list. Your browser talks to your own Kwirth, and the <strong>Bridge router</strong> carries the traffic. For a Kwirth behind NAT or a firewall that can still dial out: a laptop and the cloud, a lab and the office.</p>
+      <p><a href="#bridge">How Bridge works &#x2192;</a></p>
+      <span class="badge badge-available">router · open source</span>
+    </div>
+    <div class="card">
+      <div class="icon">&#x1F578;&#xFE0F;</div>
+      <h3>3 · Hub &amp; spoke: IRIA Ianus</h3>
+      <p>Many Kwirths in many networks, all of them dialling <strong>out</strong> to one <strong>hub</strong>, the only piece that has to be exposed. A cluster can stay <code>ClusterIP</code>-only, with no ingress and no load balancer, and still be reached from anywhere the hub is. For <strong>corporate networks</strong>: DMZs, segmented sites, many clusters.</p>
+      <p><a href="#hub-and-spoke">How it works &#x2192;</a> · <a href="https://www.plexus.es" target="_blank" rel="noopener">IRIA Ianus at Plexus &#x2192;</a></p>
+      <span class="badge badge-planned">IRIA Operae · commercial</span>
+    </div>
+  </div>
+
+  <div class="table-wrap" style="margin-top:28px;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+      <thead>
+        <tr style="text-align:left; color:var(--text); border-bottom:1px solid var(--border);">
+          <th style="padding:10px 12px;"></th>
+          <th style="padding:10px 12px;">From the front end</th>
+          <th style="padding:10px 12px;">Bridge</th>
+          <th style="padding:10px 12px;">Hub &amp; spoke (Ianus)</th>
+        </tr>
+      </thead>
+      <tbody style="color:var(--muted);">
+        <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 12px; color:var(--text);">Who connects</td><td style="padding:10px 12px;">your browser, to every Kwirth</td><td style="padding:10px 12px;">one Kwirth, to the other</td><td style="padding:10px 12px;">every Kwirth, out to the hub</td></tr>
+        <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 12px; color:var(--text);">What must be reachable</td><td style="padding:10px 12px;">every Kwirth, from your browser</td><td style="padding:10px 12px;">one of the two Kwirths</td><td style="padding:10px 12px;">only the hub</td></tr>
+        <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 12px; color:var(--text);">Clusters</td><td style="padding:10px 12px;">any number</td><td style="padding:10px 12px;">pairs of Kwirths</td><td style="padding:10px 12px;">any number, through one hub</td></tr>
+        <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 12px; color:var(--text);">Install</td><td style="padding:10px 12px;">nothing</td><td style="padding:10px 12px;">the Bridge router, in both</td><td style="padding:10px 12px;">the Ianus plugin, in hub and spokes</td></tr>
+        <tr><td style="padding:10px 12px; color:var(--text);">License</td><td style="padding:10px 12px;">open source</td><td style="padding:10px 12px;">open source</td><td style="padding:10px 12px;">commercial — IRIA Operae, by Plexus</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p style="margin-top:18px;">The rule behind the line: <strong>what works on a flat network is free</strong> — federation from the front end and Kwirth to Kwirth. What solves the <strong>corporate network</strong> — one exposed hub in front of many unreachable clusters — is IRIA Ianus.</p>
+
+  <h2 id="front-end">1 · From the front end</h2>
+  <p><span class="badge badge-available" style="margin:0 0 12px;">built in · open source</span></p>
+  <p>The simplest way, and the one Kwirth has always had. Every Kwirth you log into lists its own cluster first; to that list you add <strong>other Kwirths</strong>, each with a name, the URL of its Kwirth and an <strong>access key of that Kwirth</strong>. The list lives in <strong>your profile</strong>, so it is yours: each user federates the clusters they work with.</p>
+  <p>When you pick one of those clusters, <strong>your browser</strong> talks to its Kwirth directly — API calls, live channels, Magnify — with the key you gave the entry, and that Kwirth decides what you may do. Nothing is installed and no Kwirth needs to know about the others. The price is that <strong>your browser must reach every Kwirth</strong>: it is the way for a flat network — a VPN, an office, clusters with an ingress.</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 960 300" role="img" aria-label="Federation from the front end: your browser keeps a cluster list in your profile and talks directly to each Kwirth with that Kwirth's own access key">
+      <defs>
+        <marker id="front-arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#58a6ff"/></marker>
+      </defs>
+      <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" text-anchor="middle">
+        <!-- the browser, with the profile's cluster list -->
+        <rect x="20" y="40" width="300" height="220" rx="10" fill="#0f1929" stroke="#2dd4bf" stroke-opacity=".45"/>
+        <text x="170" y="74" font-size="14" font-weight="700" fill="#e6edf3">Your browser</text>
+        <text x="170" y="96" font-size="12" fill="#8b949e">your profile's cluster list</text>
+        <rect x="45" y="112" width="250" height="34" rx="6" fill="#111827" stroke="#1e2d40"/>
+        <text x="170" y="134" font-size="12" fill="#e6edf3">production · <tspan fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">key of A</tspan></text>
+        <rect x="45" y="154" width="250" height="34" rx="6" fill="#111827" stroke="#1e2d40"/>
+        <text x="170" y="176" font-size="12" fill="#e6edf3">staging · <tspan fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">key of B</tspan></text>
+        <rect x="45" y="196" width="250" height="34" rx="6" fill="#111827" stroke="#1e2d40"/>
+        <text x="170" y="218" font-size="12" fill="#e6edf3">lab · <tspan fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">key of C</tspan></text>
+
+        <!-- direct connections -->
+        <line x1="297" y1="129" x2="636" y2="68" stroke="#58a6ff" stroke-width="2" marker-end="url(#front-arrow-blue)"/>
+        <line x1="297" y1="171" x2="636" y2="150" stroke="#58a6ff" stroke-width="2" marker-end="url(#front-arrow-blue)"/>
+        <line x1="297" y1="213" x2="636" y2="232" stroke="#58a6ff" stroke-width="2" marker-end="url(#front-arrow-blue)"/>
+        <text x="470" y="58" font-size="11" fill="#8b949e">directly, from the browser</text>
+        <text x="470" y="282" font-size="11" fill="#8b949e">every Kwirth must be reachable from where you are</text>
+
+        <!-- the Kwirths -->
+        <rect x="640" y="36" width="300" height="64" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="790" y="64" font-size="13" font-weight="700" fill="#e6edf3">Kwirth A · production</text>
+        <text x="790" y="84" font-size="11" fill="#8b949e">authorizes with its own key</text>
+        <rect x="640" y="118" width="300" height="64" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="790" y="146" font-size="13" font-weight="700" fill="#e6edf3">Kwirth B · staging</text>
+        <text x="790" y="166" font-size="11" fill="#8b949e">authorizes with its own key</text>
+        <rect x="640" y="200" width="300" height="64" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="790" y="228" font-size="13" font-weight="700" fill="#e6edf3">Kwirth C · lab</text>
+        <text x="790" y="248" font-size="11" fill="#8b949e">authorizes with its own key</text>
+      </g>
+    </svg>
+  </div>
+
+  <p style="margin-top:18px;"><strong>Setting it up.</strong> In the Kwirth you want to add, create an access key for you. Then, in yours, open <strong>Manage clusters</strong>, add the cluster with its name, URL and that key, and pick it from the cluster selector. See <a href="documentation/#/0.6.31/guide/admin/06-cluster-management?id=add-a-remote-cluster">Cluster management</a>.</p>
+
+  <h2 id="what-is-kwirth-mesh">Under the hood: routers</h2>
+  <p>Federating from the front end needs nothing more: your browser reaches each Kwirth. The other two ways are for the clusters your browser <strong>cannot</strong> reach — a Kwirth behind NAT, behind a firewall, in a DMZ, on a laptop — and both work the same way underneath.</p>
   <p>Kwirth Mesh is built from <strong>routers</strong>, a type of extension of its own. A router lives only in the back end: it has <strong>no tab and no panel</strong>. You install it from the <strong>Routers</strong> manager, configure it in its dialog, and it writes what it does in Kwirth's log. Its one job is to <strong>carry traffic</strong> to a cluster you cannot reach.</p>
   <p>The rule of thumb against the other families: a <a href="plugins.html">plugin</a> <em>draws something you open</em>, a <a href="providers.html">provider</a> <em>produces data</em>, a <a href="dces.html">DCE</a> <em>provides objects other extensions call</em>. A router <em>carries traffic</em> to a cluster that has no direct path.</p>
 
@@ -227,17 +322,10 @@
     <div class="iface-row"><div class="iface-name">status and log</div><div class="iface-desc">Each router's card says how it is right now — <strong>Started</strong>, <strong>Error</strong> or <strong>Failed</strong>, with the reason — and everything it does goes to Kwirth's log under the <strong>Routers</strong> component.</div></div>
   </div>
 
-  <h2>Available routers</h2>
-  <p>The first router is the one that proves the type, and it is open source. Routers for other paths — a bastion, a corporate proxy, a hub of many clusters — use the same contract.</p>
-
-  <div class="cards-grid">
-    <div class="card">
-      <div class="icon">&#x1F309;</div>
-      <h3>Bridge</h3>
-      <p>Two Kwirths that reach each other through <strong>one outbound link</strong>. Only one of them needs to reach the other: with that single link, each sees the other in its cluster list, even when one is behind NAT or a firewall. Magnify desktop and a cluster's Kwirth, a lab and the cloud, home and office.</p>
-      <span class="badge badge-available">available · open source</span>
-    </div>
-  </div>
+  <h2 id="bridge">2 · Back to back: Bridge</h2>
+  <p><span class="badge badge-available" style="margin:0 0 12px;">router · open source</span></p>
+  <p><strong>Bridge</strong> links two Kwirths through <strong>one outbound connection</strong>, a WebSocket that one of them dials to the other. Only that one has to reach the other: Kwirth A may sit behind NAT or a firewall, as long as it can get out to Kwirth B. Once the link is up it carries traffic <strong>both ways</strong> — A's sessions use B's clusters and B's sessions use A's — so each Kwirth sees the other in its cluster list.</p>
+  <p>Your browser only ever talks to <strong>your own</strong> Kwirth; the router takes the traffic from there, over the link, to the other one. The other Kwirth still decides what you may do, with the access key of its own you gave the entry. For a pair of networks: Magnify desktop and a cluster's Kwirth, a lab and the cloud, home and office.</p>
 
   <div class="diagram">
     <svg viewBox="0 0 960 250" role="img" aria-label="Bridge: Kwirth A, behind NAT, opens one outbound WebSocket link to Kwirth B; over that link A's sessions use B and B's sessions use A">
@@ -277,7 +365,64 @@
     </svg>
   </div>
 
-  <p style="margin-top:18px;">Install Bridge in both, give A the URL of B and an access key of B with the scope <code>bridge$peer</code>, and save: A links to B at once, without restarting either. Then each Kwirth adds the other to its cluster list with the route <strong>bridge</strong>.</p>
+  <p style="margin-top:18px;"><strong>Setting it up.</strong> Install Bridge in both, give A the URL of B and an access key of B with the scope <code>bridge$peer</code>, and save: A links to B at once, without restarting either. Then each Kwirth adds the other to its cluster list with the route <strong>bridge</strong>.</p>
+
+  <h2 id="hub-and-spoke">3 · Hub &amp; spoke: IRIA Ianus</h2>
+  <p><span class="badge badge-planned" style="margin:0 0 12px;">IRIA Operae · commercial</span></p>
+  <p>When there are many clusters in many networks — DMZs, segmented sites, clusters that must stay <code>ClusterIP</code>-only — linking them in pairs does not scale, and opening a way in to each one is exactly what the network will not allow. <strong>IRIA Ianus</strong> puts a <strong>hub</strong> in the middle: every Kwirth hangs from it through a link it dials <strong>out</strong>, so nothing has to be opened on the way in. A cluster only needs outbound HTTPS to its hub, and the hub is the <strong>only</strong> piece that has to be exposed.</p>
+  <p>From any Kwirth hanging from the hub you reach every cluster hanging from it, and they show up in your cluster list like any other. Ianus is a plugin that is also a router: a panel to set up the hub and the links, and the router that carries the traffic.</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 960 300" role="img" aria-label="Hub and spoke with IRIA Ianus: your Kwirth and the clusters' Kwirths all dial out to one hub, the only exposed piece; through it your Kwirth reaches clusters that have no way in">
+      <defs>
+        <marker id="hub-arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2dd4bf"/></marker>
+        <marker id="hub-arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#58a6ff"/></marker>
+      </defs>
+      <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" text-anchor="middle">
+        <!-- your Kwirth (origin) -->
+        <rect x="20" y="105" width="220" height="100" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="130" y="140" font-size="14" font-weight="700" fill="#e6edf3">Your Kwirth</text>
+        <text x="130" y="162" font-size="12" fill="#8b949e">a laptop, an office</text>
+        <text x="130" y="184" font-size="12" fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">ianus · origin</text>
+
+        <!-- the hub -->
+        <rect x="370" y="95" width="220" height="120" rx="10" fill="#2dd4bf" fill-opacity=".08" stroke="#2dd4bf"/>
+        <text x="480" y="132" font-size="14" font-weight="700" fill="#e6edf3">Hub</text>
+        <text x="480" y="154" font-size="12" fill="#8b949e">the only one exposed</text>
+        <text x="480" y="174" font-size="12" fill="#8b949e">public URL · TLS</text>
+        <text x="480" y="198" font-size="12" fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">ianus · hub</text>
+
+        <!-- links: everybody dials out to the hub -->
+        <line x1="242" y1="155" x2="366" y2="155" stroke="#2dd4bf" stroke-width="2" marker-end="url(#hub-arrow-teal)"/>
+        <text x="304" y="143" font-size="11" fill="#8b949e">dials out</text>
+        <line x1="716" y1="62" x2="594" y2="122" stroke="#2dd4bf" stroke-width="2" marker-end="url(#hub-arrow-teal)"/>
+        <line x1="716" y1="155" x2="594" y2="155" stroke="#2dd4bf" stroke-width="2" marker-end="url(#hub-arrow-teal)"/>
+        <line x1="716" y1="248" x2="594" y2="188" stroke="#2dd4bf" stroke-width="2" marker-end="url(#hub-arrow-teal)"/>
+        <text x="655" y="290" font-size="11" fill="#8b949e">they dial out too</text>
+
+        <!-- your sessions travel through the hub -->
+        <path d="M130,230 C130,280 480,280 480,222" fill="none" stroke="#58a6ff" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#hub-arrow-blue)"/>
+        <text x="300" y="292" font-size="11" fill="#58a6ff">your sessions, through the hub</text>
+
+        <!-- firewall in front of the clusters -->
+        <line x1="700" y1="20" x2="700" y2="280" stroke="#f5820a" stroke-width="2" stroke-dasharray="5 5"/>
+        <text x="700" y="14" font-size="11" fill="#f5820a">no way in</text>
+
+        <!-- the clusters (targets) -->
+        <rect x="720" y="30" width="220" height="64" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="830" y="58" font-size="13" font-weight="700" fill="#e6edf3">Cluster · DMZ</text>
+        <text x="830" y="78" font-size="11" fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">ianus · target</text>
+        <rect x="720" y="123" width="220" height="64" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="830" y="151" font-size="13" font-weight="700" fill="#e6edf3">Cluster · ClusterIP only</text>
+        <text x="830" y="171" font-size="11" fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">ianus · target</text>
+        <rect x="720" y="216" width="220" height="64" rx="10" fill="#0f1929" stroke="#1e2d40"/>
+        <text x="830" y="244" font-size="13" font-weight="700" fill="#e6edf3">Cluster · another site</text>
+        <text x="830" y="264" font-size="11" fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">ianus · target</text>
+      </g>
+    </svg>
+  </div>
+
+  <p style="margin-top:18px;"><strong>Setting it up.</strong> Each Kwirth takes one or more <strong>roles</strong> — <strong>hub</strong>, <strong>origin</strong> (reaches clusters through a hub) or <strong>target</strong> (is reached through a hub) — and each link is authorized with an ordinary Kwirth access key created on the hub: revoking a link is deleting its key. IRIA Ianus is part of <strong>IRIA Operae</strong>, the commercial line Plexus builds on Kwirth: <a href="https://www.plexus.es" target="_blank" rel="noopener">ask Plexus about it</a>.</p>
 
   <h2>Security</h2>
   <p>Kwirth <strong>authenticates</strong> everything that goes into a router, before the router sees a byte, and tells the router who is calling. There are exactly three ways in:</p>
@@ -324,6 +469,7 @@ cd dist &amp;&amp; npm pack        # install the .tgz from the Routers manager</
     <p>The full reference — routed cluster-list entries, the Routers manager, Bridge step by step and the router contract — is in the documentation.</p>
     <a class="btn-primary" href="documentation/#/0.6.31/guide/extensions/routers/index">Routers docs &#x2192;</a>
     <a class="btn-secondary" href="https://github.com/jfvilas/kwirth/tree/master/routers/bridge" target="_blank" rel="noopener">Bridge source</a>
+    <a class="btn-secondary" href="https://www.plexus.es" target="_blank" rel="noopener">IRIA Ianus at Plexus</a>
   </div>
 </div>
 
