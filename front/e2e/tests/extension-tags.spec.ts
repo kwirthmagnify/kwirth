@@ -110,6 +110,29 @@ test('the catalog cards carry tags, and the catalog tags filter narrows with AND
     await checkSection(available, CATALOG_FILTER)
 })
 
+test('each tags filter is as tall as the text filter beside it', async () => {
+    // Same row, same height: a taller dropdown next to the text box looked misaligned (QA 2026-11-20).
+    const height = (l: Locator) => l.evaluate(el => Math.round((el.closest('.MuiInputBase-root') ?? el).getBoundingClientRect().height))
+    const textFilters = dialog().getByPlaceholder('Filter…')
+    for (const [i, label] of [INSTALLED_FILTER, CATALOG_FILTER].entries()) {
+        const text = await height(textFilters.nth(i))
+        const select = await height(page.getByRole('combobox', { name: label }))
+        expect(select, `${label}: ${select}px against the text filter's ${text}px`).toBe(text)
+    }
+})
+
+test('with a tags filter open, its tooltip does not cover the list', async () => {
+    // QA 2026-11-20: the tooltip drew over the open list and hid its first options.
+    const filter = page.getByRole('combobox', { name: CATALOG_FILTER })
+    await filter.hover()
+    await expect(page.locator('.MuiTooltip-popper')).toHaveCount(1)
+    await filter.click()
+    await expect(page.getByRole('option').first()).toBeVisible()
+    await page.waitForTimeout(500)
+    await expect(page.locator('.MuiTooltip-popper')).toHaveCount(0)
+    await page.locator('.MuiPopover-root .MuiBackdrop-root').click()
+})
+
 test('the installed section has its own tags filter, and it does not touch the catalog', async () => {
     const installed = dialog().getByTestId('extensions-installed')
     const available = dialog().getByTestId('extensions-available')

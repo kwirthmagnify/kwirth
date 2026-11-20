@@ -134,17 +134,23 @@ const TagFilter: React.FC<{
     options: EExtensionTag[]
     value: EExtensionTag[]
     onChange: (tags: EExtensionTag[]) => void
-}> = ({ label, options, value, onChange }) => (<>
-    <Tooltip title={value.length ? `Showing what carries ALL of: ${value.join(', ')}` : 'Filter by tags: ticking several shows what carries all of them'} disableInteractive>
+}> = ({ label, options, value, onChange }) => {
+    // While the dropdown is open there is NO tooltip: it drew over the list and hid the first options.
+    const [open, setOpen] = useState(false)
+    return (<>
+    <Tooltip title={open ? '' : value.length ? `Showing what carries ALL of: ${value.join(', ')}` : 'Filter by tags: ticking several shows what carries all of them'} disableInteractive>
         <Select multiple size='small' displayEmpty value={value} disabled={options.length === 0}
+            open={open} onOpen={() => setOpen(true)} onClose={() => setOpen(false)}
             inputProps={{ 'aria-label': label }}
             onChange={e => onChange(e.target.value as EExtensionTag[])}
             renderValue={sel => (sel as EExtensionTag[]).length === 0
                 ? <em style={{ opacity: 0.6 }}>All tags</em>
                 : (sel as EExtensionTag[]).join(' + ')}
+            // No height of its own: the same padding and font as the text filter beside it (4px 8px,
+            // 0.75rem), so both measure the same by construction. A fixed 30 left it 5px taller.
             sx={{
-                height: 30, fontSize: '0.75rem', width: 200, minWidth: 200, maxWidth: 200, flexShrink: 0,
-                '& .MuiSelect-select': { py: 0, px: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+                fontSize: '0.75rem', width: 200, minWidth: 200, maxWidth: 200, flexShrink: 0,
+                '& .MuiSelect-select': { py: '4px', px: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
             }}>
             {options.map(t => (
                 <MenuItem key={t} value={t} sx={{ fontSize: '0.75rem', py: 0.25 }}>
@@ -159,9 +165,10 @@ const TagFilter: React.FC<{
             <Button size='small' variant='text' aria-label={`Clear: ${label}`} disabled={value.length === 0} onClick={() => onChange([])} sx={{ minWidth: 0, fontSize: '0.7rem' }}>Clear</Button>
         </span>
     </Tooltip>
-</>)
+    </>)
+}
 
-const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends IMinimalEntry>(
+const ExtensionManagerDialog =<TInstalled extends IMinimalEntry, TEntry extends IMinimalEntry>(
     props: IExtensionManagerDialogProps<TInstalled, TEntry>
 ) => {
     const { descriptor: d } = props
