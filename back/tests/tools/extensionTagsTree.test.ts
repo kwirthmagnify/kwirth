@@ -30,7 +30,7 @@ const tagsProblem = (tags: unknown): string | undefined => {
 
 /*
     The package.json of every extension: <type>/<id>/package.json, plus the login and the theme a plugin
-    brings inside (plugins/iter/login, plugins/iter/theme). Only those with an `id` are extensions — the
+    brings inside (plugins/<id>/login, plugins/<id>/theme). Only those with an `id` are extensions — the
     rest are helpers (an agent's build, a scan runner).
 */
 const extensionPackages = (): string[] => {

@@ -107,8 +107,8 @@ node tools/gen-coverage-chart.mjs <path/to/docs/qa/test-metrics-history.md> <pat
 - A chart with no usable number is **skipped with a warning**, not an error: santander has `N/A (sin código)`
   for coverage, entraid has manual-only e2e, pinocchio has no harness. A row missing one series **breaks the
   line** there instead of inventing a value.
-- Playwright (Chromium) is resolved from any plugin's `e2e/node_modules` (agora/excubitor/iter/montag) — no
-  new dependency. If none is installed, run `cd plugins/agora/e2e && npm i` first.
+- Playwright (Chromium) is resolved from an e2e install of this repo (`front/e2e`, or the e2e of magnify, ops
+  or sender-debug) — no new dependency. If none is installed, run `cd front/e2e && npm i` first.
 
 Regenerate every artefact's charts at once (from the repo root — add `logins/*` and `idps/*` for those):
 

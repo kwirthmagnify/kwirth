@@ -28,9 +28,9 @@ import url from 'url'
 const here = path.dirname(url.fileURLToPath(import.meta.url))   // <repo>/tools
 const repo = path.dirname(here)
 
-// ── resolve Playwright's chromium from any plugin e2e install (the tool has no node_modules of its own) ──
+// ── resolve Playwright's chromium from any e2e install of this repo (the tool has no node_modules of its own) ──
 let chromium
-for (const e2e of ['plugins/agora/e2e', 'plugins/excubitor/e2e', 'plugins/iter/e2e', 'plugins/montag/e2e']) {
+for (const e2e of ['front/e2e', 'plugins/magnify/e2e', 'plugins/ops/e2e', 'plugins/sender-debug/e2e']) {
     const pkg = path.join(repo, e2e, 'node_modules/@playwright/test/package.json')
     if (existsSync(pkg)) {
         const req = createRequire(path.join(repo, e2e, 'index.js'))
@@ -39,7 +39,7 @@ for (const e2e of ['plugins/agora/e2e', 'plugins/excubitor/e2e', 'plugins/iter/e
     }
 }
 if (!chromium) {
-    console.error('Playwright not found. Install e2e deps in a plugin (e.g. `cd plugins/agora/e2e && npm i`).')
+    console.error('Playwright not found. Install the e2e deps first (e.g. `cd front/e2e && npm i`).')
     process.exit(1)
 }
 

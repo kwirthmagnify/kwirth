@@ -1,6 +1,6 @@
 /*  El único sitio del que sale el nombre de un artefacto de Kwirth.
  *
- *  Formato (PRD iria/plans/artifact-naming/PRD.md):
+ *  Formato:
  *
  *      paquete npm   @<scope>/kwirth-<type>-<id>              @iriaoperae/kwirth-plugin-excubitor
  *      tarball       <scope>-kwirth-<type>-<id>-<version>.tgz iriaoperae-kwirth-plugin-excubitor-0.2.63.tgz
