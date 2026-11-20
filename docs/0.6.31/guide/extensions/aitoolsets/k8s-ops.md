@@ -1,7 +1,7 @@
-# IRIA K8s Ops (AI toolset)
+# K8s Ops (AI toolset)
 
 > **Type:** AI toolset<br>
-> **Package:** `@iriaoperae/kwirth-aitoolset-k8s-ops`<br>
+> **Package:** `kwirth-aitoolset-k8s-ops`, from a private marketplace<br>
 > **Tools:** 8<br>
 > **Needs from the host:** cluster access (`K8S`)
 

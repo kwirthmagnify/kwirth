@@ -1,7 +1,7 @@
-# IRIA Source Repos (AI toolset)
+# Source Repos (AI toolset)
 
 > **Type:** AI toolset<br>
-> **Package:** `@iriaoperae/kwirth-aitoolset-source-repos`<br>
+> **Package:** `kwirth-aitoolset-source-repos`, from a private marketplace<br>
 > **Tools:** 5<br>
 > **Needs from the host:** source repository credentials (`REPOS`)
 
