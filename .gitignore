@@ -74,6 +74,8 @@ kwirth-bundled.json
 /plugins/galaga/
 /plugins/webamp/
 /plugins/vllm/
+/plugins/llm-router/
+/plugins/depthcharge/
 /providers/sugarless/
 /iria/
 /icons/
@@ -122,6 +124,10 @@ kwirth-bundled.json
 /aitoolsets/source-repos/
 /aitoolsets/aws-serverless/
 /aitoolsets/aws-serverless-ops/
+/aitoolsets/azure-compute/
+/aitoolsets/azure-compute-ops/
+/aitoolsets/aws-compute/
+/aitoolsets/aws-compute-ops/
 /senders/jira/
 /senders/gitlab-issues/
 /webhooks/jira/
@@ -132,6 +138,7 @@ kwirth-bundled.json
 /idps/entraid/
 /themes/santander/
 /logins/santander/
+/dces/iria-common/
 /marketplace/
 
 # El store de un Kwirth en docker: docker-launch.cmd monta la propia carpeta como CONFIGMAPPATH y

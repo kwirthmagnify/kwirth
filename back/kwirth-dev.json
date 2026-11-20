@@ -6,12 +6,14 @@
         "montag": "../plugins/montag/dist",
         "specula": "../plugins/specula/dist",
         "sender-debug": "../plugins/sender-debug/dist",
-        "ianus": "../plugins/ianus/dist"
+        "ianus": "../plugins/ianus/dist",
+        "llm-router": "../plugins/llm-router/dist"
     },
     "routers": {
         "bridge": "../../jfvilas/kwirth/routers/bridge/dist"
     },
     "providers": {
+        "metrics": "../providers/metrics/dist",
         "agent-metrics": "../providers/agent-metrics/dist",
         "cloud-config": "../providers/cloud-config/dist",
         "aws": "../providers/aws/dist",
@@ -33,7 +35,11 @@
     },
     "aitoolsets": {
         "aws-serverless": "../aitoolsets/aws-serverless/dist",
-        "aws-serverless-ops": "../aitoolsets/aws-serverless-ops/dist"
+        "aws-serverless-ops": "../aitoolsets/aws-serverless-ops/dist",
+        "azure-compute": "../aitoolsets/azure-compute/dist",
+        "azure-compute-ops": "../aitoolsets/azure-compute-ops/dist",
+        "aws-compute": "../aitoolsets/aws-compute/dist",
+        "aws-compute-ops": "../aitoolsets/aws-compute-ops/dist"
     },
     "dces": {
         "swagger-ui": "../dces/swagger-ui/dist"
@@ -44,6 +50,11 @@
         "specula": "../plugins/specula/docs/",
         "aws": "../providers/aws/docs/",
         "aws-serverless": "../aitoolsets/aws-serverless/docs/",
-        "aws-serverless-ops": "../aitoolsets/aws-serverless-ops/docs/"
+        "aws-serverless-ops": "../aitoolsets/aws-serverless-ops/docs/",
+        "azure": "../providers/azure/docs/",
+        "azure-compute": "../aitoolsets/azure-compute/docs/",
+        "azure-compute-ops": "../aitoolsets/azure-compute-ops/docs/",
+        "aws-compute": "../aitoolsets/aws-compute/docs/",
+        "aws-compute-ops": "../aitoolsets/aws-compute-ops/docs/"
     }
 }
