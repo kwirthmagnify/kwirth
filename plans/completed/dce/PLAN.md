@@ -2,7 +2,7 @@
 
 > **ESTADO — CERRADO** (2026-09-29). Los tres streams públicos entregados y validados: S1 (el tipo en el
 > back), S2 (el front y su gestor) y S3 (packs, scaffold y guía). **S4 no bloquea**: la primera DCE real
-> es `iria-icons`, de pago, y vive en el índice privado — valida el tipo, no lo termina.
+> es una de pago, con su plan privado — valida el tipo, no lo termina.
 >
 > Cuelga de [PRD.md](PRD.md), que manda en el **qué** y el **por qué**. Documento **append-only**: lo que
 > se decide no se borra, se marca. Si algo de aquí contradice lo que ves en el producto, gana el producto.
@@ -152,7 +152,7 @@ Lo planeado era:
 
 ### S4 — La primera DCE real · PRIVADO
 
-Los iconos de IRIA como DCE de pago. Su plan vive en el **índice privado** y nada de él entra aquí.
+Unos iconos de pago como DCE. Su plan es **privado** y nada de él entra aquí.
 Este plan se puede cerrar sin S4: S4 es quien lo valida, no quien lo termina.
 
 ## Decisiones
@@ -169,7 +169,7 @@ Este plan se puede cerrar sin S4: S4 es quien lo valida, no quien lo termina.
 
 | fecha | decisión |
 |---|---|
-| 2026-09-29 | Nace el plan. Tres streams públicos (back, front, packs+guía) y uno privado (iria-icons). |
+| 2026-09-29 | Nace el plan. Tres streams públicos (back, front, packs+guía) y uno privado (unos iconos de pago). |
 | 2026-09-29 | Se descubre que `requiresExtension` solo lo valida `PackApi`; RF8 lo lleva a los managers en S1. |
 | 2026-09-29 | **Dónde arranca la DCE.** La primera versión la creaba en `setUpRoutes()`, junto a los IdP, creyendo que era lo primero. El orden real es `prepareRunningInstance()` → `startRunningInstance()` → `setUpRoutes()`: senders, webhooks, toolsets y providers cargaban ANTES que la DCE (RF6 roto) y el resolutor de consumidores se cableaba con `dceManager` sin crear, así que desinstalar una DCE en uso devolvía 200. Lo destapó el e2e de RF9, no el harness: el harness no arranca el core. Ahora es lo primero de `prepareRunningInstance()`, y el resolutor se cablea allí mismo con una closure que lee los managers en cada llamada. |
 | 2026-09-29 | S1 cerrado. El tgz de `dces/sample` no se publica hasta S2: sin diálogo no hay desde dónde instalarlo. |

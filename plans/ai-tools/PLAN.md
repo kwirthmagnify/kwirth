@@ -247,7 +247,7 @@ Los ocho toolsets se publican como **paquetes**, cada uno con su versión, su ha
 Kwirth se comporta igual que hoy y mueren `toolInfoList`, `selectAgentToolNames()` y los cuatro lambdas
 `trace`.
 
-**Hecho, los ocho.** Seis públicos en npm y **dos privados** en el Nexus (`@iriaoperae`), por decisión del
+**Hecho, los ocho.** Seis públicos en npm y **dos privados** en un registro privado, por decisión del
 usuario: `k8s-ops` porque son las ocho de escritura, y `source-repos` porque lee código fuente.
 
 | Toolset | Tools | Registro |
@@ -257,8 +257,8 @@ usuario: `k8s-ops` porque son las ocho de escritura, y `source-repos` porque lee
 | `k8s-observability` 0.1.0 | 3 | npm público |
 | `k8s-metrics` 0.1.0 | 7 | npm público |
 | `k8s-secrets` 0.1.0 | 3 | npm público |
-| `k8s-ops` 0.1.0 | 8 | 🔒 Nexus `@iriaoperae` |
-| `source-repos` 0.1.0 | 1 | 🔒 Nexus `@iriaoperae` |
+| `k8s-ops` 0.1.0 | 8 | 🔒 registro privado |
+| `source-repos` 0.1.0 | 1 | 🔒 registro privado |
 | `playground` 0.1.0 | 2 | npm público |
 
 **Pinocchio es el primer cliente**: mueren en su back `toolInfoList`, el catálogo `tools` y los cuatro
@@ -640,7 +640,7 @@ rejillas distintas y sus columnas no tienen por que coincidir.
 ### Agora era el ÚNICO consumidor
 
 Verificado con `rg --no-ignore` sobre plugins, providers, senders, webhooks, logins, themes, homepages,
-irq, iria y marketplace — incluidos los de pago, que `.gitignore` deja fuera de una búsqueda normal.
+y las carpetas privadas — incluidos los de pago, que `.gitignore` deja fuera de una búsqueda normal.
 Censor, montag, situs, iter y excubitor solo usan lo que se queda (`buildModel`, `loadModels`,
 `generateText`, `generateVision`, `zodFromExample`).
 

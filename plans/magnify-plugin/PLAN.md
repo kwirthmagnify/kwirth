@@ -96,7 +96,7 @@ Y Magnify usa del core:
 comandos del back (listas, apply, delete, operaciones de nodo) no tienen tests. `cron-parser` arrastra luxon
 (~380 KB sin minificar) solo para la próxima ejecución de un CronJob.
 
-✅ **Cerrado 2026-11-17** (validado por el usuario: el volumen es correcto). **Volumen del socket** (anotado 2026-11-16, QA de IRIA Ianus): con un EKS real, la sesión de Magnify pasa
+✅ **Cerrado 2026-11-17** (validado por el usuario: el volumen es correcto). **Volumen del socket** (anotado 2026-11-16, QA de un router remoto): con un EKS real, la sesión de Magnify pasa
 **~15 MB al abrir y más de 100 MB en menos de dos minutos** (medido en el panel de Ianus: 108 MB en 1 min 48 s,
 ~450 KB por frame). Por un cluster remoto es mucho: todo eso cruza el túnel y satura el enlace (fue lo que
 destapó el keepalive del core que cortaba enlaces sanos). Mirar si Magnify reenvía objetos **completos** en cada

@@ -81,9 +81,9 @@ Un JSON, legible y editable a mano. Nombre de trabajo: `kwirth-config.json`.
   "extensions": [
     {
       "type": "plugin",
-      "id": "excubitor",
+      "id": "sample",
       "version": "0.9.2",
-      "marketplace": "IRIA private",
+      "marketplace": "Private",
       "coreConfig": { ... },     <- lo que guarda el CORE sobre ella
       "config":     { ... }      <- lo que guarda ELLA; los dos opacos
     }
@@ -241,11 +241,11 @@ Tres arreglos, en `kwirth-common@0.5.77`:
 **+14 tests** en `configBundle` (850 en el core) y **−5** de `combine`, retirados porque esa función ya
 no existe. En e2e, **+2 casos** en `kwirth-portability.spec.ts`.
 
-🔴 **Y el e2e se repartió.** El spec transversal que probaba los siete juntos vivía en `iria/`, fuera
+🔴 **Y el e2e se repartió.** El spec transversal que probaba los siete juntos vivía en un repo privado, fuera
 del ciclo de todos: portabilidad es del **core y es OSS**, así que el mecanismo —formato, dos campos,
 aviso de lo parcial— se fija en `front/e2e/tests/kwirth-portability.spec.ts`, en el repo público, y lo
 que mete cada artefacto en su parte se comprueba en **el repo de cada artefacto**, para que caiga en SU
-cierre. `iria/e2e/` borrada.
+cierre. Aquel spec, borrado.
 
 🔴 **El spec del core hacía login en cada test**: diez arranques de la aplicación, 15,7 minutos por
 corrida, y la lentitud *era* el fallo — la mitad de los rojos eran `openMenu` agotando su timeout en

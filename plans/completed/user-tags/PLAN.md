@@ -27,7 +27,7 @@
       dan permisos, cómo se editan, que cada extensión documenta los suyos. Recapturadas `admin-user-security`,
       `admin-user-idp` y `admin-signup-request`. **CL9**.
 
-**Primer consumidor:** IRIA Agora (S4b de su plan de métricas serverless), que elige fragmentos del system prompt del
+**Primer consumidor:** un plugin de pago, que elige fragmentos del system prompt del
 bot por los tags `agora:*` del usuario que lo menciona.
 
 **Queda para V2** (PRD §5): mapear grupos del IdP a tags, catálogo de tags declarado por las extensiones, tags en otras

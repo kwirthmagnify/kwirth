@@ -7,7 +7,7 @@
 ## 1. El problema
 
 Hay código que **varias extensiones necesitan y que no pertenece al core**. El ejemplo que lo destapó
-son los iconos de IRIA: los usan varios plugins de la suite, pero son de pago y el core es open source,
+son unos iconos de pago: los usan varios plugins de una suite, pero son de pago y el core es open source,
 así que no pueden vivir en `common-front`. Hoy cada extensión que los necesita los **bundlea**, con
 tres consecuencias:
 
@@ -51,7 +51,7 @@ La regla de reparto respecto a lo que ya existe:
 
 | # | Perfil | Qué quiere |
 |---|---|---|
-| CU1 | Quien mantiene una **suite** de extensiones (IRIA) | Un sitio para lo común de la suite que no sea el core, y publicarlo una vez |
+| CU1 | Quien mantiene una **suite** de extensiones | Un sitio para lo común de la suite que no sea el core, y publicarlo una vez |
 | CU2 | Quien escribe una extensión que necesita un **objeto compartido** (un cliente, un registro, una caché) | Pedirlo por id y recibir **la misma instancia** que todos los demás |
 | CU3 | Quien escribe una extensión **de pago** con código que no puede ir al repo público | Un artefacto privado que se instala como cualquier otro: Nexus y manifest privado |
 | CU4 | Quien opera Kwirth | Ver qué DCE hay instaladas, quién las usa, y no poder romper un consumidor desinstalando lo que usa |
@@ -60,7 +60,7 @@ La regla de reparto respecto a lo que ya existe:
 
 ```
    +-----------------------+        +-----------------------+
-   |  DCE  iria-icons      |        |  DCE  <otra>          |
+   |  DCE  shared-icons    |        |  DCE  <otra>          |
    |  back.js  ·  front.js |        |  back.js  ·  front.js |
    +-----------+-----------+        +-----------+-----------+
                | create(host)                   | create(host)
@@ -140,7 +140,7 @@ patrón que ya evita los 15 MB de `client-node` en cada plugin, aplicado a códi
 
 | # | Requisito |
 |---|---|
-| RNF1 | El tipo es del **core**, público y open source. Las DCE de pago van al Nexus privado y al manifest privado, scope `@iriaoperae`, y sus planes al índice privado |
+| RNF1 | El tipo es del **core**, público y open source. Las DCE de pago van a un registro y un manifest privados, con su propio scope, y sus planes a su repo privado |
 | RNF2 | Una DCE cuyo `create()` reviente **no tumba el core**: se marca fallida, se loguea, y sus consumidores fallan en `getDce()` con la causa |
 | RNF3 | Actualizar una DCE en el back exige **reinicio** (`requiresRestart: true` obligatorio en V1): los consumidores conservan referencias a la instancia vieja y no hay forma segura de sustituirla en caliente |
 | RNF4 | Actualizar una DCE en el front exige **recarga de página**, por el mismo motivo |
@@ -179,5 +179,4 @@ Para el backlog del PLAN, no para aquí:
 - **Configuración** de una DCE: diálogo, `configRouter`, secretos con ojo (V2).
 - **Sustitución en caliente** de una instancia, con notificación a los consumidores. Hoy es reinicio.
 - **Control de acceso**: que una DCE declare qué consumidores admite.
-- **La primera DCE real**: los iconos de IRIA como artefacto de pago. Es el caso que valida el tipo,
-  pero su plan es privado y vive en el índice privado.
+- **La primera DCE real**: unos iconos de pago. Es el caso que valida el tipo, pero su plan es privado.

@@ -237,7 +237,7 @@ coincidencia de `No currently active cluster`, `localhost:8080` o `Cannot get a 
   reiniciar. Arreglo probable: reemplazar la entrada en vez de saltarla.
 
 - Las entradas de **docs** en el manifest privado se llaman `Kwirth <X> — Guide`, pero el criterio de los
-  artefactos de pago es `IRIA <Producto> — Guide`. Visto al clonar las entradas de spectrum, sugarless y
+  artefactos de pago es `<Suite> <Producto> — Guide`. Visto al clonar las entradas de spectrum, sugarless y
   asteroids; **no se tocó** para no cambiar naming publicado de paso.
 
 ## Publicaciones hechas

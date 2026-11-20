@@ -117,7 +117,7 @@ Cada stream cierra su CL9.
     🔴 El clasificador del modo automático **denegó `npm publish` público** a los subagentes (*Create Public
     Surface*) y luego también a la sesión; los 25 que quedaron preparados los publicó el usuario aprobándolo en
     modo manual. Los agentes no intentaron saltárselo.
-  - **De pago** (Nexus `@iriaoperae`): 22 (+ docs en lockstep), cada una con commit y tag en su repo privado;
+  - **De pago** (registro privado): 22 (+ docs en lockstep), cada una con commit y tag en su repo privado;
     manifest privado commit `7c0dbfc`. **excubitor** se publicó (0.2.65 + docs) pero el usuario lo cierra en otra
     sesión: sin entrada en el manifest privado y con su pack sin publicar.
   - **jfvilas** (npm `@jfvilas`): 10 + `v16map`/`flightmap` 0.1.3, que llegaron por un PR mientras tanto.

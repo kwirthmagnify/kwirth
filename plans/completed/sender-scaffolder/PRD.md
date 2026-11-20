@@ -37,7 +37,7 @@ Lo que hoy se copia a mano de un sender a otro, y lo que se ha perdido por el ca
 | CU2 | Quien escribe un sender de **log** (Datadog, Graylog, Elastic, Loki) | Además, `sendBatch` y un mapeo puro separado del transporte |
 | CU3 | Quien escribe un sender contra una **API HTTP** | El transporte con timeout y errores legibles, y un doble local para no disparar envíos reales en los tests |
 | CU4 | Quien escribe un **filtro** (regex, ratelimit) | `senderType = 'filter'` y `evalFilter` |
-| CU5 | Un tercero, con su propio scope | Lo mismo, sin nada de Kwirth ni de IRIA cableado dentro |
+| CU5 | Un tercero, con su propio scope | Lo mismo, sin nada de Kwirth ni de otra suite cableado dentro |
 
 ## 4. Objetivos y no-objetivos
 

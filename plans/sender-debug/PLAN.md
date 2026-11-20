@@ -128,7 +128,7 @@ Queda:
    por `cluster`/`namespace`/`pod` no se puede probar del todo).
 4. ~~**Botón Copy** en cada fila del historial~~ — ✅ hecho en **0.2.2** (2026-11-15): copia `Sent` y
    `Answered` al portapapeles sin desplegar la fila; tick verde un momento. Pedido en el QA del sender `script`.
-5. ~~**Mensaje de "channel not started"** al estilo IRIA~~ — ✅ hecho en **0.2.2** (2026-11-15):
+5. ~~**Mensaje de "channel not started"** con `ChannelNotStarted`~~ — ✅ hecho en **0.2.2** (2026-11-15):
    `ChannelNotStarted` de `kwirth-common-front` (^0.5.74), con su botón **Start**.
 6. **CL9 completa** al terminar el stream (la de 0.2.2 hecha: e2e 13 ✅, QA validado).
 

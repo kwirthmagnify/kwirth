@@ -27,7 +27,7 @@ nada a mano; y el webhook `otrs` nace de él sin copiar un solo fichero de otro 
 | # | Perfil | Qué quiere |
 |---|---|---|
 | CU1 | Quien integra un sistema externo que llama a Kwirth (GitLab, Jira, OTRS…) | Un webhook que compila, con tests y métricas, para empezar directamente por `verify()` y `parse()` |
-| CU2 | Un tercero, con su propio scope | Lo mismo, sin nada de Kwirth ni de IRIA cableado dentro |
+| CU2 | Un tercero, con su propio scope | Lo mismo, sin nada de Kwirth ni de otra suite cableado dentro |
 
 ## 4. Objetivos y no-objetivos
 

@@ -2,7 +2,7 @@
 
 ## Status (2026-11-16) — BACKLOG, not started
 
-Raised in the QA of IRIA Incipit 0.5.x in the lab: uploading a **newer** build of an installed plugin with
+Raised in the QA of a paid plugin in the lab: uploading a **newer** build of an installed plugin with
 **Browse** (install from a local file) is refused with `Plugin '<id>' is already installed`, and nothing in the
 dialog says how to get it in. The only way today is to uninstall it and upload it again.
 
