@@ -2,7 +2,9 @@
     Audit of the icons barrel (common-front/src/kwirthicons.ts): which icons there are and where they are used.
 
     The WHOLE working copy is swept, private repos included, because the paid ones live inside (gitignored
-    but present) and they consume the barrel too.
+    but present) and they consume the barrel too: an icon a private extension uses must not be removed.
+    But this file is PUBLIC: a file that is not tracked by this repo is never named, it is counted as
+    "a private extension" (its path is the private repo's layout, which does not belong here).
 
     There are FOUR ways of consuming an icon, and only the first shows up when reading imports:
 
@@ -20,8 +22,13 @@
 import { readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'fs'
 import { join, extname, relative, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { execFileSync } from 'child_process'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+// what this public repo tracks: anything else (a private extension's repo inside it) is not named
+const tracked = new Set(execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).split('\n'))
+const PRIVATE = 'a private extension'
 const icons = [...readFileSync(join(root, 'common-front/src/kwirthicons.ts'), 'utf8')
     .matchAll(/export \{ default as (\w+) \}/g)].map(m => m[1])
 
@@ -54,7 +61,8 @@ const uso = new Map(icons.map(i => [i, { code: new Set(), byName: new Set() }]))
 for (const f of files) {
     let t
     try { t = readFileSync(f, 'utf8') } catch { continue }
-    const rel = relative(root, f).replace(/\\/g, '/')
+    const path = relative(root, f).replace(/\\/g, '/')
+    const rel = tracked.has(path) ? path : PRIVATE
 
     if (f.endsWith('.json')) {
         for (const m of t.matchAll(NAME_IN_JSON)) uso.get(m[1])?.byName.add(rel)
@@ -95,7 +103,8 @@ const dibujo = (nombre) => {
 }
 
 let md = `# Iconos del barrel kwirthicons\n\n`
-md += `${icons.length} iconos, cruzados contra ${files.length} ficheros del working copy (repos privados incluidos).\n`
+md += `${icons.length} iconos, cruzados contra ${files.length} ficheros del working copy (repos privados incluidos,\n`
+md += `sin nombrarlos: cuentan como *${PRIVATE}*).\n`
 md += `Regenerar con \`node tools/icons-audit.mjs\`.\n\n`
 md += `Se cuentan las cuatro formas de consumir un icono: import del barrel de kwirth (por paquete o relativo\n`
 md += `dentro de common-front), import de @mui, y cita **por nombre** (\`"icon": "X"\` en un manifest o\n`
@@ -116,6 +125,7 @@ for (const f of filas) {
     The project is the artefact's root directory: plugins/censor, senders/tee, front, common-front…
 */
 const proyectoDe = (rel) => {
+    if (rel.startsWith(PRIVATE)) return PRIVATE
     const p = rel.split('/')
     if (['plugins', 'providers', 'senders', 'homepages', 'idps', 'webhooks', 'logins'].includes(p[0]) && p[1]) return `${p[0]}/${p[1]}`
     return p[0]
