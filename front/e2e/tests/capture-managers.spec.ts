@@ -223,10 +223,10 @@ test('capture extension tags filter (dark, solo catalogo publico)', async ({ pag
         await available.getByTestId('extension-tags').first().waitFor({ timeout: 60000 })
 
         // Ticked through the dropdown, as a user would, and closed by its backdrop (Escape depends on focus).
-        await dialog.getByRole('combobox', { name: 'Filter by tags' }).click()
+        await dialog.getByRole('combobox', { name: 'Filter catalog by tags' }).click()
         await page.getByRole('option', { name: TAGS_SHOWN, exact: true }).click()
         await page.locator('.MuiPopover-root .MuiBackdrop-root').click()
-        await expect(dialog.getByRole('combobox', { name: 'Filter by tags' })).toContainText(TAGS_SHOWN)
+        await expect(dialog.getByRole('combobox', { name: 'Filter catalog by tags' })).toContainText(TAGS_SHOWN)
 
         // Down to the catalogue: its header, the filter and the cards are what the image is about.
         await dialog.locator('.MuiDialogContent-root').evaluate(el => { el.scrollTop = el.scrollHeight })

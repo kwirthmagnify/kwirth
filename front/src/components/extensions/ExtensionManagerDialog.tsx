@@ -121,6 +121,46 @@ const PluginMultiSelect: React.FC<{
     )
 }
 
+/*
+    A section's filter by tags (plans/extension-taxonomy): a multi-select of the tags that section uses,
+    and a Clear.
+
+    FIXED width: ticking tags must not move the row. Visible and disabled while the section carries no
+    tags, never hidden. Outside the dialog for the same reason as PluginMultiSelect: defined inside, every
+    render would remount it and close the dropdown.
+*/
+const TagFilter: React.FC<{
+    label: string
+    options: EExtensionTag[]
+    value: EExtensionTag[]
+    onChange: (tags: EExtensionTag[]) => void
+}> = ({ label, options, value, onChange }) => (<>
+    <Tooltip title={value.length ? `Showing what carries ALL of: ${value.join(', ')}` : 'Filter by tags: ticking several shows what carries all of them'} disableInteractive>
+        <Select multiple size='small' displayEmpty value={value} disabled={options.length === 0}
+            inputProps={{ 'aria-label': label }}
+            onChange={e => onChange(e.target.value as EExtensionTag[])}
+            renderValue={sel => (sel as EExtensionTag[]).length === 0
+                ? <em style={{ opacity: 0.6 }}>All tags</em>
+                : (sel as EExtensionTag[]).join(' + ')}
+            sx={{
+                height: 30, fontSize: '0.75rem', width: 200, minWidth: 200, maxWidth: 200, flexShrink: 0,
+                '& .MuiSelect-select': { py: 0, px: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+            }}>
+            {options.map(t => (
+                <MenuItem key={t} value={t} sx={{ fontSize: '0.75rem', py: 0.25 }}>
+                    <Checkbox size='small' checked={value.includes(t)} sx={{ p: 0.5 }} />
+                    {t}
+                </MenuItem>
+            ))}
+        </Select>
+    </Tooltip>
+    <Tooltip title='Clear tags filter'>
+        <span>
+            <Button size='small' variant='text' aria-label={`Clear: ${label}`} disabled={value.length === 0} onClick={() => onChange([])} sx={{ minWidth: 0, fontSize: '0.7rem' }}>Clear</Button>
+        </span>
+    </Tooltip>
+</>)
+
 const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends IMinimalEntry>(
     props: IExtensionManagerDialogProps<TInstalled, TEntry>
 ) => {
@@ -159,8 +199,12 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     const [customUrl, setCustomUrl] = useState('')
     const [installedFilter, setInstalledFilter] = useState('')
     const [availableFilter, setAvailableFilter] = useState('')
-    // Catalogue filter by tags. Starts EMPTY = no filter; every tag ticked narrows (AND, see tagsMatch).
+    /*
+        Filters by tags, one per section, independent like the text filters. They start EMPTY = no filter;
+        every tag ticked narrows (AND, see tagsMatch).
+    */
     const [tagFilter, setTagFilter] = useState<EExtensionTag[]>([])
+    const [installedTagFilter, setInstalledTagFilter] = useState<EExtensionTag[]>([])
     const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({})
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
     const [configuring, setConfiguring] = useState<TInstalled | undefined>()
@@ -425,14 +469,15 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
     }
 
     // Every ticked tag must be there: 'ai' + 'kubernetes' is what uses AI on Kubernetes (PRD rule).
-    const tagsMatch = (entry: TInstalled | TEntry): boolean => {
-        if (tagFilter.length === 0) return true
+    const tagsMatch = (entry: TInstalled | TEntry, filter: EExtensionTag[]): boolean => {
+        if (filter.length === 0) return true
         const tags = tagsOf(entry)
-        return tagFilter.every(t => tags.includes(t))
+        return filter.every(t => tags.includes(t))
     }
 
-    // The filter offers only the tags this catalogue USES: the other forty would each give an empty list.
+    // Each filter offers only the tags its section USES: the other forty would each give an empty list.
     const catalogueTags = [...new Set(available.flatMap(e => extensionTagsOf(e.tags)))].sort()
+    const installedTags = [...new Set(installed.flatMap(e => tagsOf(e)))].sort()
 
     // ── install / uninstall ─────────────────────────────────────────────────────
     /*
@@ -733,8 +778,8 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
 
     // Alphabetical by the name the card paints, so an update (reload of the list) keeps every card in place.
     const byName = (a: TInstalled | TEntry, b: TInstalled | TEntry) => d.toModel(a).name.localeCompare(d.toModel(b).name, undefined, { sensitivity: 'base' })
-    const shownInstalled = installed.filter(e => matches(e, installedFilter)).sort(byName)
-    const shownKeys = Object.keys(grouped).filter(k => matches(grouped[k][0], availableFilter) && tagsMatch(grouped[k][0])).sort((a, b) => byName(grouped[a][0], grouped[b][0]))
+    const shownInstalled = installed.filter(e => matches(e, installedFilter) && tagsMatch(e, installedTagFilter)).sort(byName)
+    const shownKeys = Object.keys(grouped).filter(k => matches(grouped[k][0], availableFilter) && tagsMatch(grouped[k][0], tagFilter)).sort((a, b) => byName(grouped[a][0], grouped[b][0]))
 
     return (
         <>
@@ -753,6 +798,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                         }}>
                             <Typography variant='subtitle2'>Installed {d.noun.plural}</Typography>
                             <TextField size='small' placeholder='Filter…' value={installedFilter} onChange={e => setInstalledFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
+                            <TagFilter label='Filter installed by tags' options={installedTags} value={installedTagFilter} onChange={setInstalledTagFilter} />
                             <ViewToggle />
                         </Stack>
 
@@ -761,14 +807,14 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                             color: 'text.secondary'
                         }}>No {d.noun.plural} installed.</Typography>
                             : viewMode === 'card'
-                                ? <Box sx={cardGridSx}>
+                                ? <Box sx={cardGridSx} data-testid='extensions-installed'>
                                     {shownInstalled.map(entry => (
                                         <ExtensionCard key={d.keyOf(entry)} model={d.toModel(entry)} fallbackIcon={<TypeIcon fontSize='small' />}
                                             chips={originChips(entry)} statusChips={installedStatusChips(entry)} inlineControl={pluginControl(entry)}
                                             actions={installedActions(entry)} tags={tagsOf(entry)} />
                                     ))}
                                   </Box>
-                                : <Box sx={listGridSx}>
+                                : <Box sx={listGridSx} data-testid='extensions-installed'>
                                     {shownInstalled.flatMap((entry, i, arr) => {
                                         const key = d.keyOf(entry)
                                         return [
@@ -811,32 +857,7 @@ const ExtensionManagerDialog = <TInstalled extends IMinimalEntry, TEntry extends
                             }}>
                             <Typography variant='subtitle2'>Available {d.noun.plural}</Typography>
                             <TextField size='small' placeholder='Filter…' value={availableFilter} onChange={e => setAvailableFilter(e.target.value)} sx={{ flex: 1 }} slotProps={{ htmlInput: { style: { padding: '4px 8px', fontSize: '0.75rem' } } }} />
-                            {/* Tags filter. FIXED width: ticking tags must not move the row. Visible and
-                                disabled while the catalogue carries no tags, never hidden. */}
-                            <Tooltip title={tagFilter.length ? `Showing what carries ALL of: ${tagFilter.join(', ')}` : 'Filter by tags: ticking several shows what carries all of them'} disableInteractive>
-                                <Select multiple size='small' displayEmpty value={tagFilter} disabled={catalogueTags.length === 0}
-                                    inputProps={{ 'aria-label': 'Filter by tags' }}
-                                    onChange={e => setTagFilter(e.target.value as EExtensionTag[])}
-                                    renderValue={sel => (sel as EExtensionTag[]).length === 0
-                                        ? <em style={{ opacity: 0.6 }}>All tags</em>
-                                        : (sel as EExtensionTag[]).join(' + ')}
-                                    sx={{
-                                        height: 30, fontSize: '0.75rem', width: 200, minWidth: 200, maxWidth: 200, flexShrink: 0,
-                                        '& .MuiSelect-select': { py: 0, px: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
-                                    }}>
-                                    {catalogueTags.map(t => (
-                                        <MenuItem key={t} value={t} sx={{ fontSize: '0.75rem', py: 0.25 }}>
-                                            <Checkbox size='small' checked={tagFilter.includes(t)} sx={{ p: 0.5 }} />
-                                            {t}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </Tooltip>
-                            <Tooltip title='Clear tags filter'>
-                                <span>
-                                    <Button size='small' variant='text' disabled={tagFilter.length === 0} onClick={() => setTagFilter([])} sx={{ minWidth: 0, fontSize: '0.7rem' }}>Clear</Button>
-                                </span>
-                            </Tooltip>
+                            <TagFilter label='Filter catalog by tags' options={catalogueTags} value={tagFilter} onChange={setTagFilter} />
                             <Tooltip title='Refresh catalog'>
                                 <span>
                                     <IconButton size='small' aria-label='Refresh catalog' sx={{ width: 30, height: 30 }} onClick={() => fetchManifest(true)} disabled={loadingManifest}>

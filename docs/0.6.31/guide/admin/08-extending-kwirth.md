@@ -48,7 +48,7 @@ Every family uses the same manager UI, so once you learn one you know them all:
 | **Install *(family)*** | Add a new one: paste a package **URL** and download it, or **BROWSE…** for a local package file. |
 | **Available *(family)*** | A browsable catalog of extensions you can install with one click. Already-installed ones are marked as such. |
 | **Tags** | The small chips under the description say what an extension is **for** — `observability`, `log`, `kubernetes`, `ai`, `game`… — whatever its type. An extension carries as many as apply. |
-| **Tags filter** | Next to the catalog's filter box: tick one or more tags to narrow the **Available** list. Ticking several shows only what carries **all** of them — `ai` + `kubernetes` is what uses AI on Kubernetes. It only offers the tags that catalog actually uses; **Clear** gives you the whole catalog back. |
+| **Tags filter** | Next to each filter box, one for **Installed** and one for **Available**, each on its own: tick one or more tags to narrow that list. Ticking several shows only what carries **all** of them — `ai` + `kubernetes` is what uses AI on Kubernetes. It only offers the tags that list actually uses; **Clear** gives you the whole list back. |
 
 ![The plugins catalog filtered by the observability tag](../../_media/guide/admin-extension-tags.png)
 
