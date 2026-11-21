@@ -4,7 +4,7 @@ import {
     TableCell, TableContainer, TableHead, TableRow, Tabs, Tooltip, Typography
 } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { IConfigFieldDef, IConfigValidationError } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, IConfigValidationError, isConfigFieldEnabled } from '@kwirthmagnify/kwirth-common'
 import { EToolEffect, IAiToolInfo, IAiToolsetInfo, IToolsetGrant, TAiToolsetConfig } from '@kwirthmagnify/kwirth-common-ai'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
@@ -141,6 +141,12 @@ const AiToolsetDialog: React.FC<IAiToolsetDialogProps> = (props: IAiToolsetDialo
         setFieldErrors(prev => prev.filter(e => e.field !== name))
     }
 
+    // The required settings left empty (only the enabled ones count): while there are any, Save is disabled, as in ConfigListDialog
+    const missingRequired = (): IConfigFieldDef[] => schema.filter(f => f.required && isConfigFieldEnabled(f, schema, settings)).filter(f => {
+        const v = settings[f.name]
+        return v === undefined || v === null || (typeof v === 'string' && v.trim() === '')
+    })
+
     // An emptied number is '' in the form: it means 'no value', and is not sent
     const settingsBody = (): TAiToolsetConfig =>
         Object.fromEntries(Object.entries(settings).filter(([name, v]) => !(v === '' && schema.find(f => f.name === name)?.type === 'number')))
@@ -200,6 +206,7 @@ const AiToolsetDialog: React.FC<IAiToolsetDialogProps> = (props: IAiToolsetDialo
     const pluginCellSx = { width: PLUGIN_COL_WIDTH, minWidth: PLUGIN_COL_WIDTH, maxWidth: PLUGIN_COL_WIDTH, position: 'sticky', left: 0, zIndex: 1, bgcolor: 'background.paper' } as const
 
     const noSettings = !loading && schema.length === 0
+    const missing = missingRequired()
     // The settings tab: disabled with the reason when there are none (its tooltip has to reach a disabled tab)
     const settingsLabel = noSettings
         // describeChild: the reason DESCRIBES the tab, its name stays 'Settings'
@@ -279,7 +286,9 @@ const AiToolsetDialog: React.FC<IAiToolsetDialogProps> = (props: IAiToolsetDialo
                 { error && <Typography color='error' variant='body2' sx={{ mt: 1 }}>{error}</Typography> }
             </DialogContent>
             <DialogActions>
-                <Button variant='contained' disabled={saving || loading} onClick={save}>{saving ? <CircularProgress size={14} /> : 'Save'}</Button>
+                <Tooltip title={missing.length > 0 ? `Required settings missing: ${missing.map(f => f.label).join(', ')}` : ''}>
+                    <span><Button variant='contained' disabled={saving || loading || missing.length > 0} onClick={save}>{saving ? <CircularProgress size={14} /> : 'Save'}</Button></span>
+                </Tooltip>
                 <Button onClick={props.onClose}>Cancel</Button>
             </DialogActions>
         </Dialog>

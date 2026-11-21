@@ -112,16 +112,40 @@ test.describe('AI toolset dialog: Grants and Settings tabs', () => {
         await dlg.getByRole('button', { name: 'Cancel' }).click()
     })
 
-    test('🔴 a required field emptied is marked, the tab says so, the dialog stays open and nothing is saved', async () => {
+    test('🔴 a required field emptied DISABLES Save, and its tooltip says which one; filled, it is enabled again', async () => {
         const dlg = await open(WITH)
         await dlg.getByRole('tab', { name: 'Settings' }).click()
+        const save = dlg.getByRole('button', { name: 'Save' })
+        await expect(save).toBeEnabled()
         await dlg.getByLabel(/^Namespace/).fill('')
-        await dlg.getByRole('button', { name: 'Save' }).click()
-        await expect(dlg.getByTestId('config-field-errors')).toContainText("'Namespace' is required")
-        await expect(dlg.getByRole('tab', { name: /^Settings \(errors\)/ })).toBeVisible()
-        await expect(dlg).toBeVisible()
-        expect(await settingsOf()).toEqual({ namespace: 'default', mode: 'plan' })
+        await expect(save).toBeDisabled()
+        await save.locator('xpath=..').hover()
+        await expect(page.getByRole('tooltip')).toHaveText('Required settings missing: Namespace')
+        await dlg.getByLabel(/^Namespace/).fill('back')
+        await expect(save).toBeEnabled()
         await dlg.getByRole('button', { name: 'Cancel' }).click()
+        expect(await settingsOf()).toEqual({ namespace: 'default', mode: 'plan' })
+    })
+
+    test('🔴 what the back end refuses is marked, the tab says so, the dialog stays open', async () => {
+        // a refusal the form cannot foresee (a value the schema does not allow), simulated on the wire
+        await page.route(`**/core/aitoolsets/${WITH.id}/config`, async route => route.request().method() === 'PUT'
+            ? route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: "'Mode' must be one of: plan, apply", fields: [{ field: 'mode', message: "'Mode' must be one of: plan, apply" }] }) })
+            : route.continue())
+        try {
+            const dlg = await open(WITH)
+            await dlg.getByRole('tab', { name: 'Settings' }).click()
+            await dlg.getByLabel(/^Namespace/).fill('refused')
+            await dlg.getByRole('button', { name: 'Save' }).click()
+            await expect(dlg.getByTestId('config-field-errors')).toContainText("'Mode' must be one of")
+            await expect(dlg.getByRole('tab', { name: /^Settings \(errors\)/ })).toBeVisible()
+            await expect(dlg).toBeVisible()
+            await dlg.getByRole('button', { name: 'Cancel' }).click()
+        }
+        finally {
+            await page.unroute(`**/core/aitoolsets/${WITH.id}/config`)
+        }
+        expect(await settingsOf()).toEqual({ namespace: 'default', mode: 'plan' })
     })
 
     test('Cancel discards what was typed', async () => {
