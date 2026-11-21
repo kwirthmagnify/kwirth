@@ -143,7 +143,7 @@ test('solo se provisiona lo declarado en requires', () => {
     const ctx = fakeContext()
 
     const solo = buildToolHost([], ctx)
-    assert.deepEqual(Object.keys(solo), ['trace'])   // trace SIEMPRE, y nada mas
+    assert.deepEqual(Object.keys(solo), ['trace', 'config'])   // trace y config SIEMPRE (no son capacidades), y nada mas
 
     const k8s = buildToolHost([ECapability.K8S], ctx)
     assert.ok(k8s.k8s)
@@ -152,7 +152,7 @@ test('solo se provisiona lo declarado en requires', () => {
     assert.equal(k8s.repos, undefined)
 
     const todo = buildToolHost([ECapability.K8S, ECapability.METRICS, ECapability.EVENTS, ECapability.REPOS], ctx)
-    assert.deepEqual(Object.keys(todo).sort(), ['events', 'k8s', 'metrics', 'repos', 'trace'])
+    assert.deepEqual(Object.keys(todo).sort(), ['config', 'events', 'k8s', 'metrics', 'repos', 'trace'])
 })
 
 test('la fachada de cluster NO deja pasar las credenciales del core', () => {
@@ -223,4 +223,53 @@ test('invocar por referencia construye el host del toolset que la trae', async (
 
 test('invocar una referencia que no existe falla con el ref completo', async () => {
     await assert.rejects(() => invokeToolRef('no-existe/nada', {}, fakeContext()), /no-existe\/nada/)
+})
+
+// ── settings: host.config (plans/extension-config, S8) ───────────────────────────────────────────────
+
+test('🔴 a toolset with no settings gives its tools config = {}, always present', async () => {
+    let visto
+    registerToolset({ ...fakeToolset('cfg-none', []), requires: [], tools: [{ ...fakeTool('peek'), execute: async (args, host) => { visto = host } }] })
+    await invokeToolRef('cfg-none/peek', {}, fakeContext())
+    assert.deepEqual(visto.config, {})
+    unregisterToolset('cfg-none')
+})
+
+test('🔴 what the core sets reaches the NEXT invocation, without registering it again', async () => {
+    const vistos = []
+    registerToolset({ ...fakeToolset('cfg-live', []), requires: [], tools: [{ ...fakeTool('peek'), execute: async (args, host) => { vistos.push(host.config) } }] })
+    back.setToolsetConfig('cfg-live', { namespace: 'apps', dryRun: true })
+    await invokeToolRef('cfg-live/peek', {}, fakeContext())
+    back.setToolsetConfig('cfg-live', { namespace: 'prod', dryRun: false })
+    await invokeToolRef('cfg-live/peek', {}, fakeContext())
+    assert.deepEqual(vistos, [{ namespace: 'apps', dryRun: true }, { namespace: 'prod', dryRun: false }])
+    unregisterToolset('cfg-live')
+})
+
+test('a tool cannot change the settings the next one sees: it receives a copy', async () => {
+    registerToolset({ ...fakeToolset('cfg-copy', []), requires: [], tools: [{ ...fakeTool('mess'), execute: async (args, host) => { host.config.namespace = 'hacked' } }] })
+    back.setToolsetConfig('cfg-copy', { namespace: 'apps' })
+    await invokeToolRef('cfg-copy/mess', {}, fakeContext())
+    assert.deepEqual(back.getToolsetConfig('cfg-copy'), { namespace: 'apps' })
+    unregisterToolset('cfg-copy')
+})
+
+test('undefined removes the settings, and so does unregistering the toolset', () => {
+    registerToolset(fakeToolset('cfg-gone', []))
+    back.setToolsetConfig('cfg-gone', { a: 1 })
+    back.setToolsetConfig('cfg-gone', undefined)
+    assert.deepEqual(back.getToolsetConfig('cfg-gone'), {})
+    back.setToolsetConfig('cfg-gone', { a: 1 })
+    unregisterToolset('cfg-gone')
+    assert.deepEqual(back.getToolsetConfig('cfg-gone'), {})
+})
+
+test('the descriptor sent to the front carries the configSchema, and none when not declared', () => {
+    const schema = [{ name: 'namespace', label: 'Namespace', default: 'default' }]
+    registerToolset({ ...fakeToolset('cfg-schema', []), configSchema: schema })
+    registerToolset(fakeToolset('cfg-noschema', []))
+    assert.deepEqual(listToolsetInfos().find(t => t.id === 'cfg-schema').configSchema, schema)
+    assert.equal('configSchema' in listToolsetInfos().find(t => t.id === 'cfg-noschema'), false)
+    unregisterToolset('cfg-schema')
+    unregisterToolset('cfg-noschema')
 })

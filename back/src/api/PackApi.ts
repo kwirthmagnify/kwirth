@@ -273,7 +273,7 @@ export class PackApi {
                     case EExtensionType.WEBHOOK:   await webhookManager.uninstallFromPack(ext.id, deleteConfig); break
                     // Last of all, and forced: the pack is going whole, so the consumers it brought are
                     // already gone by now and there is nobody left to protect from losing its DCE.
-                    case EExtensionType.AITOOLSET: await aiToolsetManager.uninstallFromPack(ext.id); break
+                    case EExtensionType.AITOOLSET: await aiToolsetManager.uninstallFromPack(ext.id, deleteConfig); break
                     case EExtensionType.ROUTER:    await routerManager.uninstallFromPack(ext.id, deleteConfig); break
                     case EExtensionType.DCE:       await dceManager.uninstallFromPack(ext.id); break
                 }

@@ -1,3 +1,5 @@
+import type { IConfigFieldDef } from '@kwirthmagnify/kwirth-common'
+
 export const STORAGE_KEY_PROVIDERS = 'kwirth-ai-providers'
 export const STORAGE_KEY_LLMS = 'kwirth-ai-llms'
 export const PROVIDERS_AVAILABLE = ['google', 'openai', 'openrouter', 'mistral', 'groq', 'deepseek', 'anthropic', 'openai-compat']
@@ -204,8 +206,17 @@ export interface IAiToolsetInfo {
     requires: ECapability[]
     /** With ECapability.PROVIDERS: the ids of the providers it needs (e.g. ['aws']). The host lends ONLY these. */
     providers?: string[]
+    /*
+        The toolset's SETTINGS, as the admin fills them in (plans/extension-config, R7): one configuration per
+        installed toolset, global to the installation. Absent or empty = the toolset has no settings. What
+        is saved reaches every tool as `host.config`.
+    */
+    configSchema?: IConfigFieldDef[]
     tools: IAiToolInfo[]
 }
+
+/** A toolset's settings: what its `configSchema` describes, the defaults applied. Like `TRouterConfig`. */
+export type TAiToolsetConfig = Record<string, unknown>
 
 /*
     What the admin grants a plugin inside ONE toolset (plan: plans/ai-tool-grants/PLAN.md, T1).

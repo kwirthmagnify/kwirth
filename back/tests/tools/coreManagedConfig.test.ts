@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { senderConfigs, webhookConfigs, idpInstances, toolsetGrants, pluginInstallConfig, providerInstallConfig, routerInstallConfig, loginInstallConfig } from '../../src/tools/CoreManagedConfig'
+import { senderConfigs, webhookConfigs, idpInstances, toolsetCoreConfig, pluginInstallConfig, providerInstallConfig, routerInstallConfig, loginInstallConfig } from '../../src/tools/CoreManagedConfig'
 import { ProviderManager } from '../../src/tools/ProviderManager'
 import { RouterManager } from '../../src/tools/RouterManager'
 import { LoginManager } from '../../src/tools/LoginManager'
@@ -282,10 +282,11 @@ test('una concesion a un plugin que no esta instalado aqui se avisa', async () =
     const fantasma = { pluginId: 'fantasma', allTools: true, tools: [] }
     const manager = {
         listGrants: async () => ({ 'k8s-ops': [agora, fantasma] }),
-        setGrants: async () => [agora]
+        setGrants: async () => [agora],
+        getSavedConfig: async () => undefined
     } as unknown as AiToolsetManager
 
-    const e = toolsetGrants(manager, 'k8s-ops')
+    const e = toolsetCoreConfig(manager, 'k8s-ops')
     assert.deepEqual(await e.exportConfig!(opts(false)), { grants: [agora, fantasma] })
 
     const r = await e.importConfig!({ grants: [agora, fantasma] })
@@ -301,7 +302,7 @@ test('importar una concesion en formato antiguo se salta y se avisa', async () =
         setGrants: async (_id: string, g: unknown[]) => { recibido = g; return g }
     } as unknown as AiToolsetManager
 
-    const r = await toolsetGrants(manager, 'k8s-ops').importConfig!({ grants: ['agora', { pluginId: 'p', allTools: true, tools: [] }] })
+    const r = await toolsetCoreConfig(manager, 'k8s-ops').importConfig!({ grants: ['agora', { pluginId: 'p', allTools: true, tools: [] }] })
     assert.deepEqual(recibido, [{ pluginId: 'p', allTools: true, tools: [] }])
     assert.equal(r.applied, 1)
     assert.equal(r.skipped, 1)
@@ -319,11 +320,50 @@ test('importar tools que el toolset de destino no tiene las quita y avisa, sin t
         setGrants: async (_id: string, g: unknown[]) => { recibido = g; return g }
     } as unknown as AiToolsetManager
 
-    const r = await toolsetGrants(manager, 'cmc-toolset').importConfig!({ grants: [{ pluginId: 'p', allTools: false, tools: ['ping', 'nueva'] }] })
+    const r = await toolsetCoreConfig(manager, 'cmc-toolset').importConfig!({ grants: [{ pluginId: 'p', allTools: false, tools: ['ping', 'nueva'] }] })
     assert.deepEqual(recibido, [{ pluginId: 'p', allTools: false, tools: ['ping'] }])
     assert.equal(r.applied, 1)
     assert.ok(r.warnings.some(w => w.includes('nueva')))
     unregisterToolset('cmc-toolset')
+})
+
+// ─── toolset settings beside its grants (S8) ───────────────────────────────────
+
+const toolsetFake = (saved: Record<string, unknown> | undefined, schema: unknown[], written: unknown[] = []): AiToolsetManager => ({
+    listGrants: async () => ({}),
+    setGrants: async (_id: string, g: unknown[]) => g,
+    getSavedConfig: async () => saved,
+    getConfigSchema: () => schema,
+    saveConfig: async (_id: string, c: unknown) => { written.push(c); return [] }
+} as unknown as AiToolsetManager)
+
+const TOOLSET_SCHEMA = [{ name: 'namespace', label: 'Namespace' }, { name: 'token', label: 'Token', type: 'password' }]
+
+test('🔴 a toolset exports its settings beside its grants: secrets emptied without credentials, real with them', async () => {
+    const e = toolsetCoreConfig(toolsetFake({ namespace: 'apps', token: 't-real' }, TOOLSET_SCHEMA), 'k8s-deploy')
+    assert.deepEqual(await e.exportConfig!(opts(false)), { grants: [], config: { namespace: 'apps', token: '' } })
+    assert.deepEqual(await e.exportConfig!(opts(true)), { grants: [], config: { namespace: 'apps', token: 't-real' } })
+})
+
+test('a toolset with no saved settings exports only its grants, as before', async () => {
+    assert.deepEqual(await toolsetCoreConfig(toolsetFake(undefined, TOOLSET_SCHEMA), 'k8s-ops').exportConfig!(opts(true)), { grants: [] })
+})
+
+test('🔴 importing puts grants AND settings back; a file with only grants (before S8) leaves the settings alone', async () => {
+    const written: unknown[] = []
+    const e = toolsetCoreConfig(toolsetFake(undefined, TOOLSET_SCHEMA, written), 'k8s-deploy')
+    const r = await e.importConfig!({ grants: [{ pluginId: 'p', allTools: true, tools: [] }], config: { namespace: 'apps', token: 't' } })
+    assert.deepEqual(written, [{ namespace: 'apps', token: 't' }])
+    assert.equal(r.applied, 2)
+    await e.importConfig!({ grants: [] })
+    assert.equal(written.length, 1, 'no settings in the file, none written')
+})
+
+test('a toolset with no schema: its settings do not travel without credentials, and the import says why', async () => {
+    const exportado = await toolsetCoreConfig(toolsetFake({ a: 1 }, []), 'x').exportConfig!(opts(false))
+    assert.deepEqual(exportado, { grants: [], configOmitted: 1 })
+    const r = await toolsetCoreConfig(toolsetFake(undefined, TOOLSET_SCHEMA), 'x').importConfig!(exportado)
+    assert.ok(r.warnings.some(w => w.includes('does not declare which of its fields are secret')))
 })
 
 // ─── config de instalacion ─────────────────────────────────────────────────────

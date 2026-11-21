@@ -2840,7 +2840,7 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
         }
 
         if (!aiToolsetManager) {
-            aiToolsetManager = new AiToolsetManager(runningInstance.configMaps)
+            aiToolsetManager = new AiToolsetManager(runningInstance.configMaps, new ExtensionConfigStore(runningInstance.secrets))
             await aiToolsetManager.init()
             const bundledExtensionsPath = process.env.BUNDLED_EXTENSIONS_PATH
             if (bundledExtensionsPath) await aiToolsetManager.installBundled(bundledExtensionsPath)
@@ -2850,6 +2850,8 @@ const prepareRunningInstance = async (localKwirthData:KwirthData, runningInstanc
             // startup or everything would end up granted to nobody — safe, but what the admin
             // configured would stop working.
             await aiToolsetManager.applyGrants()
+            // and their settings, for the same reason (the dev ones get theirs when installed)
+            await aiToolsetManager.applyConfigs()
         }
 
         // Routers: the core owns each one's instance, started here with its saved config (plans/router-extension)

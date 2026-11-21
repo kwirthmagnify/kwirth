@@ -1,4 +1,4 @@
-import { ILlm, ILlmModel, ILlmProvider, ECapability, EToolEffect, EToolSensitivity, EUsagePeriod, EUsageUnit, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, IToolsetGrant, IUsageAmounts, IUsageLimits, IUsageWindows, parseToolRef, toolRef } from './index'
+import { ILlm, ILlmModel, ILlmProvider, ECapability, EToolEffect, EToolSensitivity, EUsagePeriod, EUsageUnit, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, IToolsetGrant, IUsageAmounts, IUsageLimits, IUsageWindows, TAiToolsetConfig, parseToolRef, toolRef } from './index'
 // TYPES ONLY: the compiler erases them, so common-ai does not drag the Kubernetes client (~6.6 MB) into
 // any bundle. That is why @kubernetes/client-node is an optional peer and not a dependency.
 import type { AppsV1Api, CoreV1Api, CustomObjectsApi, NetworkingV1Api } from '@kubernetes/client-node'
@@ -941,6 +941,13 @@ export interface IProvidersCapability {
 export interface IToolHost {
     /** Records the invocation. NOT a capability: it is always lent, and never declared. */
     trace: (toolName: string, args: Record<string, unknown>) => void
+    /*
+        The toolset's settings (its `configSchema`, the defaults applied), read on EVERY invocation: what the
+        admin saves applies from the next call, with no restart. Like `trace`, always lent and not a
+        capability — declaring the schema is the declaration. `{}` when the toolset declares none.
+        ⚠️ It is the TOOL that applies it: a setting is not a security control of the core, the grant is.
+    */
+    config: TAiToolsetConfig
     k8s?: IK8sCapability
     metrics?: IMetricsCapability
     events?: IEventsCapability
@@ -1026,6 +1033,23 @@ export const setToolsetGrants = (toolsetId: string, grants: IToolsetGrant[]): vo
     toolsetGrants.set(toolsetId, byPlugin)
 }
 
+/*
+    Each toolset's SETTINGS (plans/extension-config, P3), with the same pattern as the grants: in memory,
+    loaded and kept up to date by the core, which owns the Secret they are saved in. No invocation reads
+    the Secret: a tool gets `host.config` from here. With several replicas a save applies from the next
+    call in the replica that saved, as the grants do.
+*/
+const toolsetConfigs = new Map<string, TAiToolsetConfig>()
+
+/** Sets a toolset's settings (the defaults already applied); `undefined` removes them. Called by the core. */
+export const setToolsetConfig = (toolsetId: string, config: TAiToolsetConfig | undefined): void => {
+    if (config === undefined) toolsetConfigs.delete(toolsetId)
+    else toolsetConfigs.set(toolsetId, { ...config })
+}
+
+/** A toolset's settings as its tools receive them: a copy, `{}` when it has none. */
+export const getToolsetConfig = (toolsetId: string): TAiToolsetConfig => ({ ...(toolsetConfigs.get(toolsetId) ?? {}) })
+
 /** A toolset's grant, as it lives in the registry. Empty = nobody, which is the default state. */
 export const getToolsetGrants = (toolsetId: string): IToolsetGrant[] =>
     [...(toolsetGrants.get(toolsetId)?.values() ?? [])].map(g => ({ ...g, tools: [...g.tools] }))
@@ -1060,8 +1084,9 @@ export const registerToolset = (toolset: IAiToolset, builtIn = false): void => {
 export const unregisterToolset = (id: string): boolean => {
     if (builtInToolsetIds.has(id)) return false
     // The grant goes with the toolset: leaving it orphaned would make reinstalling resurrect permissions
-    // nobody has granted again.
+    // nobody has granted again. The settings too: the core hands them back when it registers it again.
     toolsetGrants.delete(id)
+    toolsetConfigs.delete(id)
     return toolsetRegistry.delete(id)
 }
 
@@ -1078,6 +1103,7 @@ export const listToolsetInfos = (): IAiToolsetInfo[] =>
         description: t.description,
         requires: t.requires,
         ...(t.providers ? { providers: t.providers } : {}),
+        ...(t.configSchema ? { configSchema: t.configSchema } : {}),
         tools: t.tools.map(x => ({ name: x.name, description: x.description, effect: x.effect, sensitivity: x.sensitivity }))
     }))
 
@@ -1088,8 +1114,8 @@ export const listToolsetInfos = (): IAiToolsetInfo[] =>
  * if every site assembled its own object, one of them being too generous would be enough for the
  * declaration to stop meaning anything.
  */
-export const buildToolHost = (requires: ECapability[], context: IToolContext, providers?: string[]): IToolHost => {
-    const host: IToolHost = { trace: context.trace }
+export const buildToolHost = (requires: ECapability[], context: IToolContext, providers?: string[], config: TAiToolsetConfig = {}): IToolHost => {
+    const host: IToolHost = { trace: context.trace, config }
     const ci = context.clusterInfo
     // No cluster means no cluster capability, even when declared: better that the tool receives
     // 'undefined' and says so, than handing it a half-built facade that fails from the inside.
@@ -1134,7 +1160,7 @@ export const buildToolHost = (requires: ECapability[], context: IToolContext, pr
 export const invokeToolRef = async (ref: string, args: Record<string, unknown>, context: IToolContext): Promise<unknown> => {
     const resolved = resolveToolRef(ref)
     if (!resolved) throw new Error(`[common-ai] unknown tool '${ref}'`)
-    return resolved.tool.execute(args, buildToolHost(resolved.toolset.requires, context, resolved.toolset.providers))
+    return resolved.tool.execute(args, buildToolHost(resolved.toolset.requires, context, resolved.toolset.providers, getToolsetConfig(resolved.toolset.id)))
 }
 
 /** Resolves a qualified reference '<toolset>/<tool>' against the registry. */
@@ -1327,7 +1353,7 @@ export const buildAgentTools = (
                     return denial
                 }
 
-                const host = buildToolHost(getToolset(e.toolsetId)?.requires ?? [], context, getToolset(e.toolsetId)?.providers)
+                const host = buildToolHost(getToolset(e.toolsetId)?.requires ?? [], context, getToolset(e.toolsetId)?.providers, getToolsetConfig(e.toolsetId))
                 try {
                     // runWithToolContext also wraps the tools written against the OLD contract (the ones
                     // that read ctx()). That is what lets the 43 be migrated package by package in S3,

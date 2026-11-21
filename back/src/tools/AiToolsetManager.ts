@@ -1,12 +1,14 @@
-import { IAiToolset, registerToolset, unregisterToolset, isBuiltInToolsetId, getToolset, setToolsetGrants } from '@kwirthmagnify/kwirth-common-ai/back'
-import { IToolsetGrant } from '@kwirthmagnify/kwirth-common-ai'
+import { IAiToolset, registerToolset, unregisterToolset, isBuiltInToolsetId, getToolset, listToolsets, setToolsetGrants, setToolsetConfig } from '@kwirthmagnify/kwirth-common-ai/back'
+import { IToolsetGrant, TAiToolsetConfig } from '@kwirthmagnify/kwirth-common-ai'
 import { IConfigMaps } from './IConfigMap'
+import { ExtensionConfigStore } from './ExtensionConfigStore'
+import { IdpManager } from './IdpManager'
 import { ELogComponent, logError, logInfo, logWarning } from './Logging'
 import { assertInstallable } from './ExtensionInstallGuard'
 import { assertExtensionRequirements, normalizeRequires } from './ExtensionDeps'
 import { downloadFile, packageHeaders, readTarballFile } from './PackageRegistries'
 import { listBundledOfType } from './BundledExtensions'
-import { EExtensionTag, EExtensionType, IExtensionRequirement, extensionTagsOf } from '@kwirthmagnify/kwirth-common'
+import { EExtensionTag, EExtensionType, IConfigFieldDef, IConfigValidationError, IExtensionRequirement, applyConfigDefaults, extensionTagsOf } from '@kwirthmagnify/kwirth-common'
 import tar from 'tar'
 import os from 'os'
 import path from 'path'
@@ -106,13 +108,97 @@ export class AiToolsetManager {
     private configMaps: IConfigMaps
     private cachedIndex: IAiToolsetMeta[] = []
     private devToolsets = new Map<string, IDevAiToolset>()
+    // kwirth-dev.json `aitoolsetConfigs`: in memory only, it wins over what is saved and is never persisted
+    private devConfigs = new Map<string, TAiToolsetConfig>()
 
-    constructor(configMaps: IConfigMaps) {
+    constructor(configMaps: IConfigMaps, private configStore: ExtensionConfigStore) {
         this.configMaps = configMaps
     }
 
     async init(): Promise<void> {
         this.cachedIndex = (await this.configMaps.read(INDEX_KEY, []) as IAiToolsetMeta[]) || []
+        this.loadDevConfigs()
+    }
+
+    // ── Settings (plans/extension-config, S8: one Secret per toolset, kwirth-aitoolset-<id>-config) ──
+
+    // What the REGISTERED toolset declares; none when it is not registered or declares nothing
+    getConfigSchema(id: string): IConfigFieldDef[] {
+        return getToolset(id)?.configSchema ?? []
+    }
+
+    // The current values: the kwirth-dev.json ones if any, otherwise what is saved — the defaults under both
+    async getConfig(id: string): Promise<TAiToolsetConfig> {
+        const schema = this.getConfigSchema(id)
+        const dev = this.devConfigs.get(id)
+        if (dev) return applyConfigDefaults(schema, dev)
+        return this.configStore.readSimple(EExtensionType.AITOOLSET, id, schema)
+    }
+
+    // ONLY what the admin saved, undefined when nothing was (the export)
+    async getSavedConfig(id: string): Promise<TAiToolsetConfig | undefined> {
+        return this.configStore.readSimpleIfSaved(EExtensionType.AITOOLSET, id, this.getConfigSchema(id))
+    }
+
+    /*
+        Validates and saves, and the toolset's tools get it from their NEXT invocation. What does not fit
+        the schema comes back as errors and nothing is saved; a write that fails is thrown.
+    */
+    async saveConfig(id: string, config: Record<string, unknown>): Promise<IConfigValidationError[]> {
+        if (!getToolset(id)) throw new Error(`AI toolset '${id}' is not registered`)
+        const errors = await this.configStore.writeSimple(EExtensionType.AITOOLSET, id, this.getConfigSchema(id), config)
+        if (errors.length > 0) return errors
+        await this.pushConfig(id)
+        if (this.devConfigs.has(id)) logWarning(ELogComponent.CORE, `AI toolset '${id}' settings saved, but kwirth-dev.json aitoolsetConfigs wins while it is there`)
+        else logInfo(ELogComponent.CORE, `AI toolset '${id}' settings saved`)
+        return []
+    }
+
+    /*
+        Hands the toolset's settings to the registry, where every invocation reads them (P3). A toolset
+        that declares no schema has none: its tools get `{}`. A read that fails leaves the toolset with
+        none rather than stopping the load of the rest.
+    */
+    private async pushConfig(id: string): Promise<void> {
+        if (!getToolset(id)) return
+        if (this.getConfigSchema(id).length === 0) {
+            setToolsetConfig(id, undefined)
+            return
+        }
+        try {
+            setToolsetConfig(id, await this.getConfig(id))
+        }
+        catch (err) {
+            logWarning(ELogComponent.CORE, `AI toolset '${id}': its settings could not be read and it runs without them: ${err}`)
+            setToolsetConfig(id, undefined)
+        }
+    }
+
+    /**
+     * Hands every registered toolset's settings to the registry. Called at startup AFTER loading them,
+     * like applyGrants: the registry is memory.
+     */
+    async applyConfigs(): Promise<void> {
+        for (const toolset of listToolsets()) await this.pushConfig(toolset.id)
+    }
+
+    private loadDevConfigs(): void {
+        const devConfigPath = path.resolve(process.cwd(), 'kwirth-dev.json')
+        if (!fs.existsSync(devConfigPath)) return
+        try {
+            const configs: unknown = JSON.parse(fs.readFileSync(devConfigPath, 'utf-8')).aitoolsetConfigs ?? {}
+            for (const [id, config] of Object.entries(configs as Record<string, unknown>)) {
+                if (!config || typeof config !== 'object' || Array.isArray(config)) {
+                    logWarning(ELogComponent.CORE, `[dev] aitoolsetConfigs '${id}' is not an object — ignored`)
+                    continue
+                }
+                this.devConfigs.set(id, IdpManager.interpolateEnvDeep(config) as TAiToolsetConfig)
+                logInfo(ELogComponent.CORE, `[dev] AI toolset '${id}' settings taken from kwirth-dev.json (not persisted)`)
+            }
+        }
+        catch (err) {
+            logError(ELogComponent.CORE, `Failed to load kwirth-dev.json (aitoolsetConfigs): ${err}`)
+        }
     }
 
     // ── Concesiones ─────────────────────────────────────────────────────────────
@@ -402,6 +488,8 @@ export class AiToolsetManager {
             // which installing does not touch) while the runtime answers NOT GRANTED and the bot is left
             // without tools until the next startup.
             await this.restoreGrants(meta.id)
+            // and its settings: the saved ones (an update keeps them; a reinstall finds the kept ones, P5)
+            await this.pushConfig(meta.id)
 
             logInfo(ELogComponent.CORE, `AI toolset '${meta.id}' v${meta.version} installed`)
             return meta
@@ -426,17 +514,26 @@ export class AiToolsetManager {
         }
     }
 
-    async uninstall(id: string): Promise<void> {
-        if (isBuiltInToolsetId(id)) throw new Error(`AI toolset '${id}' is built-in and cannot be uninstalled`)
-
-        // The STORED grant too: unregisterToolset clears the registry's one (memory), but were the
-        // persisted one to survive, reinstalling the toolset would resurrect permissions nobody granted again.
+    /*
+        What a toolset leaves behind when it goes (P5): its settings AND its grants. Kept unless asked —
+        the confirmation's 'Also delete its configuration' box — and then a reinstall finds both again.
+        With the box, both go: a reinstall then grants nothing to nobody, as a first install.
+    */
+    private async deleteKept(id: string): Promise<void> {
         const grants = await this.listGrants()
         if (grants[id]) {
             delete grants[id]
             await this.configMaps.write(GRANTS_KEY, grants)
         }
+        await this.configStore.delete(EExtensionType.AITOOLSET, id)
+    }
 
+    async uninstall(id: string, deleteConfig = false): Promise<void> {
+        if (isBuiltInToolsetId(id)) throw new Error(`AI toolset '${id}' is built-in and cannot be uninstalled`)
+
+        if (deleteConfig) await this.deleteKept(id)
+
+        // the registry's grant and settings go with it (memory); the stored ones are what was decided above
         unregisterToolset(id)
         await this.configMaps.write(`kwirth-aitoolset-${id}-meta`, null)
         await this.configMaps.write(`kwirth-aitoolset-${id}-back`, null)
@@ -458,12 +555,8 @@ export class AiToolsetManager {
      * A reserved built-in id could never have been installed from a pack in the first place, so the
      * guard has nothing to protect here.
      */
-    async uninstallFromPack(id: string): Promise<void> {
-        const grants = await this.listGrants()
-        if (grants[id]) {
-            delete grants[id]
-            await this.configMaps.write(GRANTS_KEY, grants)
-        }
+    async uninstallFromPack(id: string, deleteConfig = false): Promise<void> {
+        if (deleteConfig) await this.deleteKept(id)
         unregisterToolset(id)
         await this.configMaps.write(`kwirth-aitoolset-${id}-meta`, null)
         await this.configMaps.write(`kwirth-aitoolset-${id}-back`, null)

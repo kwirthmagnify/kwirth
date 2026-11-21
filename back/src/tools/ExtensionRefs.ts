@@ -11,7 +11,7 @@ import { DceManager } from './DceManager'
 import { IdpManager } from './IdpManager'
 import { RouterManager } from './RouterManager'
 import { LoginManager } from './LoginManager'
-import { pluginInstallConfig, providerInstallConfig, routerInstallConfig, loginInstallConfig, senderConfigs, webhookConfigs, idpInstances, toolsetGrants } from './CoreManagedConfig'
+import { pluginInstallConfig, providerInstallConfig, routerInstallConfig, loginInstallConfig, senderConfigs, webhookConfigs, idpInstances, toolsetCoreConfig } from './CoreManagedConfig'
 
 /*
     Who is installed, and who gets asked for their configuration.
@@ -136,7 +136,7 @@ export const buildExtensionRefs = async (src: IExtensionRefSources): Promise<IEx
 
     // Toolsets: what travels is their grants. There is no object to ask here either: they are back end only.
     for (const meta of await src.aiToolsetManager.listInstalled()) {
-        añadir(EExtensionType.AITOOLSET, meta as IMetaLike, toolsetGrants(src.aiToolsetManager, meta.id))
+        añadir(EExtensionType.AITOOLSET, meta as IMetaLike, toolsetCoreConfig(src.aiToolsetManager, meta.id))
     }
 
     // DCEs: listed, with nothing to export. A DCE has no configuration in V1 (plan: plans/completed/dce/PRD.md,

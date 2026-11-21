@@ -508,3 +508,13 @@ test('sin solicitante tampoco se filtra por tool', () => {
 
     limpiar('gt-pintar')
 })
+
+test('🔴 the agent path lends the toolset settings too, as invokeToolRef does', async () => {
+    let visto
+    registerToolset({ ...fakeToolset('agent-cfg'), tools: [fakeTool('peek', { execute: async (args, host) => { visto = host.config; return 'ok' } })] })
+    back.setToolsetConfig('agent-cfg', { region: 'eu' })
+    const tools = buildAgentTools({ activeToolsets: ['agent-cfg'], disabledTools: [] }, fakeContext())
+    await tools.peek.execute({}, {})
+    assert.deepEqual(visto, { region: 'eu' })
+    limpiar('agent-cfg')
+})

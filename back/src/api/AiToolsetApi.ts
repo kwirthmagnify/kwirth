@@ -78,6 +78,36 @@ export class AiToolsetApi {
             catch (err) { res.status(400).json({ error: String(err) }) }
         })
 
+        /*
+            The toolset's SETTINGS (plans/extension-config, S8), with the same guard as its grants: they
+            change what its tools do, so it is an admin act. GET gives the current values, secrets REAL
+            (the front masks them, with the eye); PUT validates against the toolset's configSchema — a 400
+            naming every field and nothing saved — and the tools get it from their next invocation.
+        */
+        this.router.get('/:id/config', async (req: Request, res: Response) => {
+            if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+            if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
+            if (!getToolset(req.params.id)) return void res.status(404).json({ error: `AI toolset '${req.params.id}' is not registered` })
+            try { res.json(await this.manager.getConfig(req.params.id)) }
+            catch (err) { res.status(500).json({ error: String(err) }) }
+        })
+
+        this.router.put('/:id/config', async (req: Request, res: Response) => {
+            if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
+            if (!AuthorizationManagement.hasScope(req, 'admin')) { res.status(403).json({ error: 'admin scope required' }); return }
+            if (!getToolset(req.params.id)) return void res.status(404).json({ error: `AI toolset '${req.params.id}' is not registered` })
+            if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) return void res.status(400).json({ error: 'Expected a JSON object' })
+            try {
+                const errors = await this.manager.saveConfig(req.params.id, req.body as Record<string, unknown>)
+                if (errors.length > 0) return void res.status(400).json({ error: errors.map(e => e.message).join('; '), fields: errors })
+                res.json({ ok: true })
+            }
+            catch (err) {
+                logError(ELogComponent.CORE, `AI toolset '${req.params.id}' settings error: ${err}`)
+                res.status(500).json({ error: String(err) })
+            }
+        })
+
         this.router.post('/install', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
@@ -112,7 +142,8 @@ export class AiToolsetApi {
         this.router.delete('/:id', async (req: Request, res: Response) => {
             if (!(await AuthorizationManagement.validKey(req, res, this.apiKeyApi))) return
             try {
-                await this.manager.uninstall(req.params.id)
+                // P5: its settings and grants are kept unless asked
+                await this.manager.uninstall(req.params.id, req.query.deleteConfig === 'true')
                 res.json({ ok: true })
             }
             catch (err) {

@@ -7,6 +7,7 @@ import { SenderManager } from './SenderManager'
 import { WebhookManager } from './WebhookManager'
 import { AiToolsetManager, isToolsetGrant, unknownGrantTools } from './AiToolsetManager'
 import { getToolset } from '@kwirthmagnify/kwirth-common-ai/back'
+import { IToolsetGrant } from '@kwirthmagnify/kwirth-common-ai'
 import { IdpManager } from './IdpManager'
 import { RouterManager } from './RouterManager'
 import { LoginManager } from './LoginManager'
@@ -280,7 +281,40 @@ export const idpInstances = (manager: IdpManager, connectorId: string): IExtensi
     `setGrants` would refuse them, and losing every grant over one tool is worse than losing that tool.
     An entry in the old format ([pluginId, ...]) is not converted: it is skipped and reported.
 */
-export const toolsetGrants = (manager: AiToolsetManager, id: string): IExtension => ({
+/*
+    And its SETTINGS (plans/extension-config, S8), beside the grants as `config`: the same rules as any
+    other one configuration (`installConfig` above) — only what was saved, secrets emptied without
+    credentials, `configOmitted` when the schema is not known. A file written before carries only the
+    grants and is read as it is.
+*/
+export const toolsetCoreConfig = (manager: AiToolsetManager, id: string): IExtension => {
+    const settings = installConfig(id, () => manager.getSavedConfig(id), async () => manager.getConfigSchema(id), cfg => manager.saveConfig(id, cfg))
+    const grantsPart = toolsetGrantsPart(manager, id)
+    return {
+        exportConfig: async (options) => {
+            const grants = await grantsPart.exportConfig!(options) as { grants: IToolsetGrant[] }
+            const cfg = await settings.exportConfig!(options) as { installConfig?: Record<string, unknown>, omitted?: number } | undefined
+            return {
+                ...grants,
+                ...(cfg?.installConfig ? { config: cfg.installConfig } : {}),
+                ...(cfg?.omitted ? { configOmitted: cfg.omitted } : {})
+            }
+        },
+        importConfig: async (data) => {
+            const incoming = (data ?? {}) as { config?: unknown, configOmitted?: number }
+            const results = [await grantsPart.importConfig!(data)]
+            if (incoming.config !== undefined) results.push(await settings.importConfig!({ installConfig: incoming.config }))
+            else if (incoming.configOmitted) results.push(await settings.importConfig!({ omitted: incoming.configOmitted }))
+            return {
+                applied: results.reduce((n, r) => n + r.applied, 0),
+                skipped: results.reduce((n, r) => n + r.skipped, 0),
+                warnings: results.flatMap(r => r.warnings)
+            }
+        }
+    }
+}
+
+const toolsetGrantsPart = (manager: AiToolsetManager, id: string): IExtension => ({
     exportConfig: async () => ({ grants: (await manager.listGrants())[id] ?? [] }),
     importConfig: async (data) => {
         const entrantes = (data as { grants?: unknown })?.grants

@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { AiToolsetManager, staleDevAiToolsets, IAiToolsetMeta } from '../../src/tools/AiToolsetManager'
 import { IConfigMaps } from '../../src/tools/IConfigMap'
+import { fakeConfigStore } from './fakeExtensionConfigStore'
 import { registerToolset, getToolset, listToolsets, isToolsetGrantedTo, getToolsetGrants } from '@kwirthmagnify/kwirth-common-ai/back'
 import { EToolEffect, EToolSensitivity, ECapability } from '@kwirthmagnify/kwirth-common-ai'
 import tar from 'tar'
@@ -80,7 +81,7 @@ test('sin nada declarado se podan todos los dev, y solo los dev', () => {
 
 test('instalar registra el toolset y lo deja en el indice', async () => {
     const cm = fakeConfigMaps()
-    const mgr = new AiToolsetManager(cm)
+    const mgr = new AiToolsetManager(cm, fakeConfigStore())
     await mgr.init()
 
     const tgz = await makeToolsetTgz('test-install')
@@ -98,7 +99,7 @@ test('instalar registra el toolset y lo deja en el indice', async () => {
 
 test('un id reservado por un built-in se rechaza ANTES de tocar el indice', async () => {
     const cm = fakeConfigMaps()
-    const mgr = new AiToolsetManager(cm)
+    const mgr = new AiToolsetManager(cm, fakeConfigStore())
     await mgr.init()
 
     registerToolset({
@@ -114,7 +115,7 @@ test('un id reservado por un built-in se rechaza ANTES de tocar el indice', asyn
 })
 
 test('un built-in no se puede desinstalar', async () => {
-    const mgr = new AiToolsetManager(fakeConfigMaps())
+    const mgr = new AiToolsetManager(fakeConfigMaps(), fakeConfigStore())
     await mgr.init()
     await assert.rejects(() => mgr.uninstall('test-reserved'), /built-in/)
     assert.ok(getToolset('test-reserved'))
@@ -122,7 +123,7 @@ test('un built-in no se puede desinstalar', async () => {
 
 test('si el id del paquete y el del toolset exportado no coinciden, no se registra', async () => {
     const cm = fakeConfigMaps()
-    const mgr = new AiToolsetManager(cm)
+    const mgr = new AiToolsetManager(cm, fakeConfigStore())
     await mgr.init()
 
     // package.json says 'test-mismatch', the module exports a different id
@@ -141,7 +142,7 @@ test('si el id del paquete y el del toolset exportado no coinciden, no se regist
 
 test('reinstalar encima reemplaza en vez de chocar con el registro', async () => {
     const cm = fakeConfigMaps()
-    const mgr = new AiToolsetManager(cm)
+    const mgr = new AiToolsetManager(cm, fakeConfigStore())
     await mgr.init()
 
     const tgz = await makeToolsetTgz('test-reinstall')
@@ -163,7 +164,7 @@ test('reinstalar encima reemplaza en vez de chocar con el registro', async () =>
 
 test('instalar por primera vez no concede el toolset a nadie', async () => {
     // Installing leaves it AVAILABLE, not granted: installing `k8s-ops` must not give write access by accident.
-    const mgr = new AiToolsetManager(fakeConfigMaps())
+    const mgr = new AiToolsetManager(fakeConfigMaps(), fakeConfigStore())
     await mgr.init()
     const tgz = await makeToolsetTgz('test-nogrants')
     await mgr.install(tgz, 'local')
@@ -180,7 +181,7 @@ test('reinstalar NO revoca la concesion que el admin ya dio', async () => {
     // every startup — revoked it silently, and the two halves contradicted each other: the card kept
     // saying who it was granted to (what is persisted, which installing does not touch) while the runtime
     // answered NOT GRANTED.
-    const mgr = new AiToolsetManager(fakeConfigMaps())
+    const mgr = new AiToolsetManager(fakeConfigMaps(), fakeConfigStore())
     await mgr.init()
 
     const tgz = await makeToolsetTgz('test-grants')
@@ -198,27 +199,47 @@ test('reinstalar NO revoca la concesion que el admin ya dio', async () => {
     fs.rmSync(tgz, { force: true })
 })
 
-test('desinstalar SI se lleva la concesion, y tambien la guardada', async () => {
-    // The other half of the rule: reinstalling keeps, uninstalling revokes. Leaving it orphaned would make
-    // reinstalling resurrect permissions nobody granted again.
-    const mgr = new AiToolsetManager(fakeConfigMaps())
+test('desinstalar CON deleteConfig se lleva la concesion, y tambien la guardada', async () => {
+    // Asked for (the box ticked, P5): nothing is left for a reinstall to resurrect.
+    const mgr = new AiToolsetManager(fakeConfigMaps(), fakeConfigStore())
     await mgr.init()
 
     const tgz = await makeToolsetTgz('test-grants-gone')
     await mgr.install(tgz, 'local')
     await mgr.setGrants('test-grants-gone', [{ pluginId: 'agora', allTools: true, tools: [] }])
-    await mgr.uninstall('test-grants-gone')
+    await mgr.uninstall('test-grants-gone', true)
 
     assert.equal(isToolsetGrantedTo('test-grants-gone', 'agora'), false)
     assert.equal((await mgr.listGrants())['test-grants-gone'], undefined)
 
+    await mgr.install(tgz, 'local')
+    assert.equal(isToolsetGrantedTo('test-grants-gone', 'agora'), false, 'a reinstall grants nothing to nobody')
+    await mgr.uninstall('test-grants-gone', true)
+    fs.rmSync(tgz, { force: true })
+})
+
+test('🔴 desinstalar SIN deleteConfig conserva la concesion guardada (P5), y reinstalar la devuelve', async () => {
+    const mgr = new AiToolsetManager(fakeConfigMaps(), fakeConfigStore())
+    await mgr.init()
+
+    const tgz = await makeToolsetTgz('test-grants-kept')
+    await mgr.install(tgz, 'local')
+    await mgr.setGrants('test-grants-kept', [{ pluginId: 'agora', allTools: true, tools: [] }])
+    await mgr.uninstall('test-grants-kept')
+
+    assert.equal(isToolsetGrantedTo('test-grants-kept', 'agora'), false, 'not granted while it is not installed')
+    assert.ok((await mgr.listGrants())['test-grants-kept'], 'kept in the store')
+
+    await mgr.install(tgz, 'local')
+    assert.equal(isToolsetGrantedTo('test-grants-kept', 'agora'), true, 'the reinstall finds it')
+    await mgr.uninstall('test-grants-kept', true)
     fs.rmSync(tgz, { force: true })
 })
 
 // ── grant per tool (plans/ai-tool-grants, T2) ────────────────────────────────────────────────────────
 
 test('conceder una tool que el toolset no tiene se RECHAZA y no se guarda nada', async () => {
-    const mgr = new AiToolsetManager(fakeConfigMaps())
+    const mgr = new AiToolsetManager(fakeConfigMaps(), fakeConfigStore())
     await mgr.init()
     const tgz = await makeToolsetTgz('test-grant-unknown')
     await mgr.install(tgz, 'local')
@@ -235,7 +256,7 @@ test('conceder una tool que el toolset no tiene se RECHAZA y no se guarda nada',
 })
 
 test('con All la lista no se valida: se conserva para cuando se apague', async () => {
-    const mgr = new AiToolsetManager(fakeConfigMaps())
+    const mgr = new AiToolsetManager(fakeConfigMaps(), fakeConfigStore())
     await mgr.init()
     const tgz = await makeToolsetTgz('test-grant-all')
     await mgr.install(tgz, 'local')
@@ -248,7 +269,7 @@ test('con All la lista no se valida: se conserva para cuando se apague', async (
 })
 
 test('un plugin sin nada concedido SE GUARDA (auditoria) pero no concede', async () => {
-    const mgr = new AiToolsetManager(fakeConfigMaps())
+    const mgr = new AiToolsetManager(fakeConfigMaps(), fakeConfigStore())
     await mgr.init()
     const tgz = await makeToolsetTgz('test-grant-none')
     await mgr.install(tgz, 'local')
@@ -262,7 +283,7 @@ test('un plugin sin nada concedido SE GUARDA (auditoria) pero no concede', async
 })
 
 test('plugins y tools repetidos se deduplican al guardar', async () => {
-    const mgr = new AiToolsetManager(fakeConfigMaps())
+    const mgr = new AiToolsetManager(fakeConfigMaps(), fakeConfigStore())
     await mgr.init()
     const tgz = await makeToolsetTgz('test-grant-dedup')
     await mgr.install(tgz, 'local')
@@ -302,7 +323,7 @@ test('instalar desde una CARPETA funciona y NO borra la carpeta', async () => {
             requires: [], tools: [{ name: 'ping', description: 'p', effect: 'read', sensitivity: 'public', inputSchema: {}, execute: async () => 'pong' }] }
     `)
 
-    const mgr = new AiToolsetManager(fakeConfigMaps())
+    const mgr = new AiToolsetManager(fakeConfigMaps(), fakeConfigStore())
     await mgr.init()
     const meta = await mgr.install(dir, 'dev')
 

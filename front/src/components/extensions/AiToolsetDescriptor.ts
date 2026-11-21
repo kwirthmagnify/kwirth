@@ -54,6 +54,8 @@ const canUninstall = (e: IAiToolsetEntry): IExtensionVerdict => {
 
 const makeAiToolsetDescriptor = (): IExtensionManagerDescriptor<IAiToolsetEntry, IAiToolsetEntry> => ({
     extensionType: EExtensionType.AITOOLSET,
+    // its settings AND its grants are kept on uninstall unless the box is ticked (P5)
+    keepsConfig: true,
     title: 'Manage AI toolsets',
     noun: { singular: 'AI toolset', plural: 'AI toolsets' },
     // The type's guide already exists (CL9 2026-09-16), so the dialog carries its help button (rule 7).
