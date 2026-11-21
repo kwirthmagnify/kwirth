@@ -238,3 +238,21 @@ Del usuario, 2026-11-18:
 1. **IdP**: hoy sus instancias tienen identidad propia (se referencian desde la configuración de login y
    SSO). Si se guardan como forma múltiple en `kwirth-idp-<connector>-config` o cada instancia en su
    propio Secret, lo decide el PLAN tras leer cómo se referencian (usuario, 2026-11-18).
+
+## Adenda (pendiente, fuera de este PRD): settings de un toolset por plugin
+
+Planteado por el usuario el 2026-11-21, durante el QA de S10: *"si en Agora quiero limitar unos namespaces y en
+Montag otros"*. Con D2 no se puede: la configuración de un toolset es **una por instalación**, igual para
+todos los plugins a los que se concede. Se acordó **no meterlo aquí** y retomarlo con `k8s-deploy`, que es
+quien lo va a necesitar. Dos niveles, en este orden:
+
+1. **Override por plugin en la concesión** (barato, comportamiento). Cada fila de la pestaña Grants lleva un
+   override opcional con los campos del `configSchema`. En ejecución, `host.config` = configuración del
+   toolset ⊕ override del plugin que llama (el core ya lo sabe: `IToolContext.consumer`, y `buildAgentTools`
+   resuelve con el solicitante). Sin override, hereda la global: lo hecho en S8/S9 sigue valiendo. Viaja en el
+   export con las concesiones.
+2. **Límite de verdad, si hace falta** (caro). El override sigue siendo algo que **aplica la tool**, no un
+   control de seguridad. Si un plugin NO debe poder tocar ciertos namespaces, el límite lo pone el core: una
+   fachada `host.k8s` acotada a los namespaces de la concesión, que rechace lo que salga de ellos (hoy la tool
+   recibe los clientes de la API tal cual). La alternativa, RBAC de la cuenta de servicio, vale para todos los
+   plugins por igual.
