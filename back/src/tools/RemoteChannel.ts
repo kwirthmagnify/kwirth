@@ -346,6 +346,17 @@ export function openRemoteChannel(endpoint: IClusterEndpoint, config: IInstanceC
             // only lives in the pod's memory) → it answers "not been found for command". We redo the handshake
             // over the SAME socket in order to get a fresh one (the keepalive does not catch it: the socket is
             // still open).
+            /*  🔴 Only a refusal that can mean OUR instance is gone (QA 2026-11-20, a plugin's back-to-back link
+                through a router): the answer to one of our own housekeeping STOPs ("that superseded instance is not here")
+                and any refusal while there is no current instance (we are already re-STARTing) are not news.
+                Re-STARTing on them made more STARTs → more instances → more STOPs → more refusals: the link
+                flapped between handshaking and connected every few seconds. */
+            else if (msg?.flow === EInstanceMessageFlow.RESPONSE && isInstanceUnknown && mAny.action === EInstanceMessageAction.STOP) {
+                if (logTrace) logTrace(`[fedtrace] ${wsUrl} answered a housekeeping STOP: ${mAny.text ?? ''}`)
+            }
+            else if (msg?.flow === EInstanceMessageFlow.RESPONSE && isInstanceUnknown && !instanceId) {
+                if (logTrace) logTrace(`[fedtrace] ${wsUrl} refused a message while re-STARTing (no instance yet): ignored`)
+            }
             else if (msg?.flow === EInstanceMessageFlow.RESPONSE && isInstanceUnknown) {
                 /*  🔴 Y se REENVÍA lo que se mandó con esa instancia. Antes solo se rehacía el handshake y
                     el mensaje rechazado desaparecía — con el llamante ya informado de `delivered`, porque

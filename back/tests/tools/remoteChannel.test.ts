@@ -178,6 +178,33 @@ test('🔴 a socket that opens and is closed at once (a router in front of a clu
     assert.ok(at[2] - at[1] > at[1] - at[0] + 500, `the second gap (${at[2] - at[1]} ms) must be longer than the first (${at[1] - at[0]} ms)`)
 })
 
+test('🔴 the answer to our own housekeeping STOP is NOT "our instance is lost" — no re-START loop', { timeout: 8000 }, async () => {
+    // QA 2026-11-20 (a plugin's link through a router): the transport STOPs the instances a re-sent START superseded; a
+    // remote that no longer has one answers INSTANCE_UNKNOWN to that STOP. Treating it as a lost instance
+    // re-STARTed → more instances → more STOPs → the link flapped every few seconds.
+    const { wss, url } = await makeServer()
+    let starts = 0
+    let serverSock: WebSocket | undefined
+    wss.on('connection', (sock: WebSocket) => {
+        serverSock = sock
+        sock.on('message', (data: Buffer) => {
+            const m = JSON.parse(data.toString())
+            if (m.action === EInstanceMessageAction.START) {
+                starts++
+                sock.send(JSON.stringify({ action: EInstanceMessageAction.START, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.SIGNAL, channel: 'agora', instance: `INST-${starts}` }))
+            }
+        })
+    })
+    const handle = openRemoteChannel({ name: 'r', url, accessString: 'AK' }, baseConfig(), { onMessage: () => {}, onState: () => {} })
+    await delay(120)
+    assert.equal(starts, 1)
+    serverSock!.send(JSON.stringify({ action: EInstanceMessageAction.STOP, flow: EInstanceMessageFlow.RESPONSE, type: EInstanceMessageType.SIGNAL, channel: 'agora', instance: 'INST-0', reason: ESignalMessageReason.INSTANCE_UNKNOWN, text: 'instance not found' }))
+    await delay(300)
+    assert.equal(starts, 1, 'a refused housekeeping STOP must not re-START the flow')
+    handle.close()
+    wss.close()
+})
+
 test('re-STARTs the flow when the remote lost our instance ("not been found for command")', { timeout: 8000 }, async () => {
     // Failure mode 1: the remote CHANNEL restarted with the socket still alive → its instance (only in the
     // pod's memory) is gone, so every command answers "not been found for command". The keepalive can't catch
