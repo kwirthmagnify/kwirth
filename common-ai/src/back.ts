@@ -645,7 +645,7 @@ export const generateText = ((options: Parameters<typeof sdkGenerateText>[0]) =>
     ends (the SDK reports it with the last chunk). The whole call cannot go through runWithUsageGuard —
     the guard's promise resolves when the call finishes, but the caller needs the result object
     IMMEDIATELY to consume textStream; awaiting the guard would deliver it only after the stream is over.
-    A failed stream records nothing, exactly like a failed generateText. First consumer: the vllm channel,
+    A failed stream records nothing, exactly like a failed generateText. First consumer: the llm-router channel (then vllm),
     which re-streams what the model it routed to produces.
 */
 export const streamText = (async (options: Parameters<typeof sdkStreamText>[0]) => {

@@ -2348,7 +2348,7 @@ const startRunningInstance = async (ri:IRunningInstance, expressApp:Application)
                 que, con --unhandled-rejections=strict, MATA EL PROCESO con todos los demás canales y
                 todos sus usuarios dentro.
 
-                Pasó el 2026-10-25: con Postgres todavía arrancando, el `startChannel` de vllm —que
+                Pasó el 2026-10-25: con Postgres todavía arrancando, el `startChannel` de llm-router (entonces vllm) —que
                 provisiona su base— rechazó, y el core se cayó. En el log no aparecía ni el nombre del
                 canal: la traza era de knex y tarn, así que `failureOrigin` tampoco podía atribuirlo a
                 una extensión y el core lo trató como fallo propio. Ahora el canal se queda sin
@@ -3928,7 +3928,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
     The AI SDK's warnings (an unsupported setting, a parameter the provider ignores…) go to Kwirth's
     log, not to the console: on the console they are outside the log level, the colouring and the
     buffer the settings govern, so whoever reads the logs where the rest of them are never sees them.
-    Anything that reaches a model — the core itself, a plugin like vllm — logs through here.
+    Anything that reaches a model — the core itself, a plugin like llm-router — logs through here.
 */
 ;(globalThis as { AI_SDK_LOG_WARNINGS?: unknown }).AI_SDK_LOG_WARNINGS = (options: { warnings: { message?: string, type?: string }[], provider?: string, model?: string }) => {
     for (const warning of options.warnings ?? []) {

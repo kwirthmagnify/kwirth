@@ -237,7 +237,7 @@ const kwirthGlobalsPlugin = {
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
             /*
                 🔴 Everything the core publishes on window.__kwirth__ goes HERE, used or not: a
-                package that is NOT on this map gets BUNDLED. vllm shipped a 1 MB front.js without
+                package that is NOT on this map gets BUNDLED. llm-router (then vllm) shipped a 1 MB front.js without
                 noticing, because importing recharts dragged in d3 and 382 lodash modules; with it
                 mapped, the same bundle is 59 KB. If you use another library from the runtime barrel
                 (codemirror, the file manager…), add it here too.
@@ -369,7 +369,7 @@ const kwirthGlobalsPlugin = {
             '@kwirthmagnify/kwirth-common-front': 'window.__kwirth__.kwirthCommonFront',
             /*
                 🔴 Everything the core publishes on window.__kwirth__ goes HERE, used or not: a
-                package that is NOT on this map gets BUNDLED. vllm shipped a 1 MB front.js without
+                package that is NOT on this map gets BUNDLED. llm-router (then vllm) shipped a 1 MB front.js without
                 noticing, because importing recharts dragged in d3 and 382 lodash modules; with it
                 mapped, the same bundle is 59 KB. If you use another library from the runtime barrel
                 (codemirror, the file manager…), add it here too.
