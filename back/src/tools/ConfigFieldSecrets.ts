@@ -13,3 +13,15 @@ export const isSecretFieldDef = (field: Pick<IConfigFieldDef, 'type' | 'secret'>
 
 /** The names of a schema's secret fields. */
 export const secretFieldNames = (schema: IConfigFieldDef[]): string[] => schema.filter(isSecretFieldDef).map(f => f.name)
+
+/*
+    A copy of `values` with every secret field the schema declares EMPTIED (not removed: whoever imports
+    the file sees the field is there and has to be filled in). The Kwirth export without credentials, for
+    every family, goes through here.
+*/
+export const redactSecretFields = <T extends object>(schema: IConfigFieldDef[], values: T): T => {
+    const secretos = secretFieldNames(schema)
+    const copia = { ...values } as Record<string, unknown>
+    for (const campo of secretos) if (campo in copia) copia[campo] = ''
+    return copia as T
+}

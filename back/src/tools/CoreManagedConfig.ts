@@ -1,5 +1,5 @@
 import { IExtension } from '@kwirthmagnify/kwirth-common-back'
-import { IConfigValidationError, IExtensionImportResult, ISenderConfig, ISenderStoredConfig, IWebhookConfig } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, IConfigValidationError, IExtensionImportResult, ISenderStoredConfig, IWebhookConfig, IWebhookStoredConfig } from '@kwirthmagnify/kwirth-common'
 import { IIdpInstanceConfig } from '@kwirthmagnify/kwirth-common-back'
 import { PluginManager } from './PluginManager'
 import { ProviderManager } from './ProviderManager'
@@ -8,7 +8,9 @@ import { WebhookManager } from './WebhookManager'
 import { AiToolsetManager, isToolsetGrant, unknownGrantTools } from './AiToolsetManager'
 import { getToolset } from '@kwirthmagnify/kwirth-common-ai/back'
 import { IdpManager } from './IdpManager'
-import { secretFieldNames } from './ConfigFieldSecrets'
+import { RouterManager } from './RouterManager'
+import { LoginManager } from './LoginManager'
+import { redactSecretFields } from './ConfigFieldSecrets'
 
 /*
     The configuration the core stores ABOUT an extension, presented as one more `IExtension`.
@@ -37,33 +39,65 @@ import { secretFieldNames } from './ConfigFieldSecrets'
 
 const nada = (): IExtensionImportResult => ({ applied: 0, skipped: 0, warnings: [] })
 
-/*
-    A plugin's or a provider's installation configuration, edited by its manager and kept in the common
-    ExtensionConfigStore. It is imported through the same validation as the dialog: what does not fit the
-    schema is not applied, and says why.
-*/
 const importResultOf = (id: string, errors: IConfigValidationError[]): IExtensionImportResult =>
     errors.length === 0
         ? { applied: 1, skipped: 0, warnings: [] }
         : { applied: 0, skipped: 1, warnings: [`'${id}' config not applied: ${errors.map(e => e.message).join('; ')}`] }
 
-export const pluginInstallConfig = (manager: PluginManager, id: string): IExtension => ({
-    exportConfig: async () => ({ installConfig: await manager.getConfig(id) }),
+const notDeclaredSecrets = (count: number, what: string): string =>
+    `${count} ${what} left out of the file because this extension does not declare which of its fields are secret`
+
+/*
+    The ONE configuration of a plugin, a provider, a router or a login: an object per extension in the
+    common ExtensionConfigStore (plans/extension-config, S7). The four travel the same way, as
+    `installConfig`:
+
+      · Only what the admin SAVED. Nothing saved, nothing travels: exporting the defaults would, on import,
+        configure a provider nobody configured — and some start connecting with them.
+      · Without credentials, the secret fields the schema declares are EMPTIED. With no schema it is not
+        known which they are, so the values do not travel at all (`omitted`) and the import says so.
+      · Imported through the same validation as the dialog: what does not fit is not applied, and says why.
+*/
+const installConfig = (
+    id: string,
+    savedConfig: () => Promise<Record<string, unknown> | undefined>,
+    schemaOf: () => Promise<IConfigFieldDef[]>,
+    save: (cfg: Record<string, unknown>) => Promise<IConfigValidationError[]>
+): IExtension => ({
+    exportConfig: async (options) => {
+        const saved = await savedConfig()
+        if (!saved || Object.keys(saved).length === 0) return undefined
+        if (options.includeCredentials) return { installConfig: saved }
+        const schema = await schemaOf()
+        if (schema.length === 0) return { omitted: 1 }
+        return { installConfig: redactSecretFields(schema, saved) }
+    },
     importConfig: async (data) => {
-        const cfg = (data as { installConfig?: Record<string, unknown> })?.installConfig
-        if (!cfg || typeof cfg !== 'object') return nada()
-        return importResultOf(id, await manager.saveConfig(id, cfg))
+        if ((data as { omitted?: number })?.omitted) return { applied: 0, skipped: 1, warnings: [`'${id}': ${notDeclaredSecrets(1, 'configuration was')}`] }
+        const cfg = (data as { installConfig?: unknown })?.installConfig
+        if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) return nada()
+        try {
+            return importResultOf(id, await save(cfg as Record<string, unknown>))
+        }
+        catch (err) {
+            // a login that is not here, a router that refuses the config when applying it
+            return { applied: 0, skipped: 1, warnings: [`'${id}' config not applied: ${err instanceof Error ? err.message : err}`] }
+        }
     }
 })
 
-export const providerInstallConfig = (manager: ProviderManager, id: string): IExtension => ({
-    exportConfig: async () => ({ installConfig: await manager.getConfig(id) }),
-    importConfig: async (data) => {
-        const cfg = (data as { installConfig?: Record<string, unknown> })?.installConfig
-        if (!cfg || typeof cfg !== 'object') return nada()
-        return importResultOf(id, await manager.saveConfig(id, cfg))
-    }
-})
+export const pluginInstallConfig = (manager: PluginManager, id: string): IExtension =>
+    installConfig(id, () => manager.getSavedConfig(id), async () => manager.getConfigSchema(id), cfg => manager.saveConfig(id, cfg))
+
+export const providerInstallConfig = (manager: ProviderManager, id: string): IExtension =>
+    installConfig(id, () => manager.getSavedConfig(id), async () => (await manager.getSchemaAsync(id)) ?? [], cfg => manager.saveConfig(id, cfg))
+
+export const routerInstallConfig = (manager: RouterManager, id: string): IExtension =>
+    installConfig(id, () => manager.getSavedConfig(id), async () => manager.getSchema(id), cfg => manager.saveConfig(id, cfg))
+
+// The fields the ADMIN edited: the package's login.json and the background image come with the login itself
+export const loginInstallConfig = (manager: LoginManager, id: string): IExtension =>
+    installConfig(id, () => manager.getSavedConfig(id), async () => manager.getConfigSchema(id), cfg => manager.saveConfig(id, cfg))
 
 /*
     A sender's configurations. They live in the core (`kwirth-sender-<id>-config`), not in the sender, which
@@ -80,6 +114,12 @@ export const providerInstallConfig = (manager: ProviderManager, id: string): IEx
     emptied by schema; if the sender publishes no schema, the whole configuration is left out rather than
     risk writing a password into a file that ends up in somebody's downloads folder.
 */
+// A named-configs document ({ ...base, configs }) with the secrets emptied in the base AND in every config
+const redactStored = <T extends { configs: object[] }>(schema: IConfigFieldDef[], stored: T): T => {
+    const { configs, ...base } = stored
+    return { ...redactSecretFields(schema, base), configs: configs.map(c => redactSecretFields(schema, c)) } as T
+}
+
 export const senderConfigs = (manager: SenderManager, id: string): IExtension => ({
     exportConfig: async (options) => {
         const stored = manager.getSenderStoredConfig(id)
@@ -89,21 +129,7 @@ export const senderConfigs = (manager: SenderManager, id: string): IExtension =>
         if (!schema) {
             return { stored: { configs: [] }, omitted: stored.configs.length }
         }
-        const secretos = secretFieldNames(schema)
-        // Strip secrets from BOTH the base fields and each named config.
-        const { configs, ...common } = stored
-        const cleanCommon: Record<string, unknown> = {}
-        for (const [k, v] of Object.entries(common)) cleanCommon[k] = secretos.includes(k) ? '' : v
-        return {
-            stored: {
-                ...cleanCommon,
-                configs: configs.map(c => {
-                    const limpio = { ...c } as ISenderConfig & Record<string, unknown>
-                    for (const campo of secretos) if (campo in limpio) limpio[campo] = ''
-                    return limpio
-                })
-            }
-        }
+        return { stored: redactStored(schema, stored) }
     },
     importConfig: async (data) => {
         const stored = (data as { stored?: unknown })?.stored
@@ -112,7 +138,7 @@ export const senderConfigs = (manager: SenderManager, id: string): IExtension =>
         if (!Array.isArray(storedConfig.configs)) return nada()
         const warnings: string[] = []
         const omitidas = (data as { omitted?: number })?.omitted
-        if (omitidas) warnings.push(`${omitidas} configuration(s) were left out of the file because this sender does not declare which of its fields are secret`)
+        if (omitidas) warnings.push(notDeclaredSecrets(omitidas, 'configuration(s) were'))
         if (!manager.getSender(id)) return { applied: 0, skipped: storedConfig.configs.length, warnings: [...warnings, `sender '${id}' is not registered here`] }
         // setSenderStoredConfig replaces the base AND the configs in one shot: the base is not
         // recoverable from the configs alone, so a config-by-config addConfig would leave it empty.
@@ -123,29 +149,35 @@ export const senderConfigs = (manager: SenderManager, id: string): IExtension =>
     }
 })
 
-/** The same for a webhook, with the same care over the secrets. */
+/*
+    The same for a webhook, with the same care over the secrets: its base and its configurations travel
+    together as `stored`, like a sender's (S7; the base used to be lost on the way).
+
+    A file written before carries the configurations bare, as `configs`, and is still read: it is a file
+    somebody already has, not a second way of exporting.
+*/
+const incomingWebhookStored = (data: unknown): IWebhookStoredConfig | undefined => {
+    const stored = (data as { stored?: unknown })?.stored
+    if (stored && typeof stored === 'object' && Array.isArray((stored as IWebhookStoredConfig).configs)) return stored as IWebhookStoredConfig
+    const configs = (data as { configs?: unknown })?.configs
+    return Array.isArray(configs) ? { configs: configs as IWebhookConfig[] } : undefined
+}
+
 export const webhookConfigs = (manager: WebhookManager, id: string): IExtension => ({
     exportConfig: async (options) => {
-        const configs = manager.getConfigs(id)
-        if (options.includeCredentials) return { configs }
+        const stored = manager.getWebhookStoredConfig(id)
+        if (options.includeCredentials) return { stored }
 
         const schema = manager.getWebhook(id)?.getConfigSchema?.()
-        if (!schema) return { configs: [], omitted: configs.length }
-        const secretos = secretFieldNames(schema)
-        return {
-            configs: configs.map(c => {
-                const limpio = { ...c } as IWebhookConfig & Record<string, unknown>
-                for (const campo of secretos) if (campo in limpio) limpio[campo] = ''
-                return limpio
-            })
-        }
+        if (!schema) return { stored: { configs: [] }, omitted: stored.configs.length }
+        return { stored: redactStored(schema, stored) }
     },
     importConfig: async (data) => {
-        const entrantes = (data as { configs?: unknown })?.configs
-        if (!Array.isArray(entrantes)) return nada()
+        const stored = incomingWebhookStored(data)
+        if (!stored) return nada()
         const warnings: string[] = []
         const omitidas = (data as { omitted?: number })?.omitted
-        if (omitidas) warnings.push(`${omitidas} configuration(s) were left out of the file because this webhook does not declare which of its fields are secret`)
+        if (omitidas) warnings.push(notDeclaredSecrets(omitidas, 'configuration(s) were'))
         /*
             🔴 REEMPLAZA, no añade. Lo que queda despues de importar es EXACTAMENTE lo que traia el
             fichero: las configuraciones que el destino tuviera de mas desaparecen. Es la regla de todo
@@ -156,11 +188,11 @@ export const webhookConfigs = (manager: WebhookManager, id: string): IExtension 
             que le llaman desde fuera. Es la consecuencia de traerse otra configuracion: las que entran
             nacen con tokens nuevos y hay que repegar las URL en GitLab, Jira o quien llame.
         */
-        const configs = entrantes as IWebhookConfig[]
+        const configs = stored.configs
         if (!manager.getWebhook(id)) {
             return { applied: 0, skipped: configs.length, warnings: [...warnings, `webhook '${id}' is not registered here`] }
         }
-        const errors = await manager.setWebhookStoredConfig(id, { configs })
+        const errors = await manager.setWebhookStoredConfig(id, stored)
         if (errors.length > 0) return { applied: 0, skipped: configs.length, warnings: [...warnings, `webhook '${id}' configs not applied: ${errors.map(e => e.message).join('; ')}`] }
         return { applied: configs.length, skipped: 0, warnings }
     }
@@ -181,12 +213,8 @@ export const idpInstances = (manager: IdpManager, connectorId: string): IExtensi
         if (options.includeCredentials) return { instances: mias }
 
         const schema = manager.getConnectorSchema(connectorId)
-        const secretos = secretFieldNames(schema ?? [])
         return {
-            instances: mias.map(i => ({
-                ...i,
-                config: Object.fromEntries(Object.entries(i.config).map(([k, v]) => [k, secretos.includes(k) ? '' : v]))
-            })),
+            instances: mias.map(i => ({ ...i, config: redactSecretFields(schema ?? [], i.config) })),
             // With no schema it is not known what to empty, so it is warned about rather than assumed.
             schemaKnown: schema !== undefined
         }

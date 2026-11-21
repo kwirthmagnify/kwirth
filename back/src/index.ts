@@ -2110,6 +2110,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     aiToolsetManager: aiToolsetManager!,
                     dceManager: dceManager!,
                     idpManager: idpManager!,
+                    routerManager: routerManager!,
+                    loginManager: loginManager!,
                     channels: ri.channels,
                     providers: ri.clusterInfo.providers
                 }),

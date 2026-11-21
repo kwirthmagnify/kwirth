@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import fs from 'fs'
+import path from 'path'
 import { login, dismissOpenDialogs } from './helpers'
 
 /*
@@ -16,6 +18,20 @@ import { login, dismissOpenDialogs } from './helpers'
 interface ISession { auth: string; backend: string }
 
 interface IExportableEntry { type: string; id: string; displayName: string; status: string }
+
+interface IManifestEntry { id: string; version: string; url: string; requires?: { extensionType: string; id: string }[] }
+
+// the highest version of an id in a public catalogue (<repo>/<family>/manifest.json)
+const latest = (family: string, id: string): IManifestEntry | undefined => {
+    const num = (v: string) => v.split('.').map(Number)
+    return (JSON.parse(fs.readFileSync(path.resolve(__dirname, `../../../${family}/manifest.json`), 'utf-8')) as IManifestEntry[])
+        .filter(e => e.id === id)
+        .sort((a, b) => {
+            const [x, y] = [num(a.version), num(b.version)]
+            for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return y[i] - x[i]
+            return 0
+        })[0]
+}
 
 interface IBundle {
     kind: string
@@ -71,12 +87,42 @@ test.describe('portabilidad de configuracion', () => {
     let page: import('@playwright/test').Page
     let s: ISession
 
+    // what THIS file installed, to remove exactly that (and nothing the developer had)
+    const installedHere: { family: 'plugins' | 'providers', id: string }[] = []
+
     test.beforeAll(async ({ browser }) => {
+        test.setTimeout(180000)
         page = await browser.newPage()
         s = await captureSession(page)
+
+        /*
+            censor is the plugin that implements the contract. When the dev lacks it, it is installed from
+            the public catalogue with the providers it requires, and afterAll uninstalls exactly those.
+        */
+        const plugins = (await api(page, s, '/core/plugins')).body as { id: string }[]
+        if (!plugins.some(p => p.id === 'censor')) {
+            const entry = latest('plugins', 'censor')
+            expect(entry, "'censor' is not in the public plugins catalogue").toBeTruthy()
+            const providers = (await api(page, s, '/core/providers')).body as { id: string }[]
+            for (const req of entry!.requires ?? []) {
+                if (req.extensionType !== 'provider' || providers.some(p => p.id === req.id)) continue
+                const prov = latest('providers', req.id)
+                expect(prov, `provider '${req.id}' (required by censor) is not in the public catalogue`).toBeTruthy()
+                expect((await api(page, s, '/core/providers/install', { method: 'POST', body: { url: prov!.url } })).status, `installing provider '${req.id}'`).toBe(200)
+                installedHere.push({ family: 'providers', id: req.id })
+            }
+            expect((await api(page, s, '/core/plugins/install', { method: 'POST', body: { url: entry!.url } })).status, 'installing censor').toBe(200)
+            installedHere.push({ family: 'plugins', id: 'censor' })
+            await expect.poll(async () => ((await api(page, s, '/core/config-bundle/exportable')).body as IExportableEntry[] | null)
+                ?.find(e => `${e.type}/${e.id}` === CENSOR)?.status, { timeout: 60000 }).toBe('available')
+        }
     })
 
-    test.afterAll(async () => { await page?.close() })
+    test.afterAll(async () => {
+        // the plugin first, then the providers it required
+        for (const x of [...installedHere].reverse()) await api(page, s, `/core/${x.family}/${x.id}?deleteConfig=true`, { method: 'DELETE', body: {} }).catch(() => undefined)
+        await page?.close()
+    })
 
     test('lo exportable se lista con el estado de cada entrada', async () => {
         const r = await api(page, s, '/core/config-bundle/exportable')

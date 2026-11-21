@@ -394,6 +394,20 @@ export class LoginManager {
         return { ...applyConfigDefaults(this.schemaOf(id), {}), ...packageConfig, ...adminConfig } as ILoginConfig
     }
 
+    getConfigSchema(id: string): ILoginFieldDef[] {
+        return this.schemaOf(id)
+    }
+
+    /*
+        ONLY what the admin saved, undefined when nothing was (the export). Neither the defaults nor the
+        package's login.json: both come with the login itself, and exporting them would turn them into
+        admin values that, imported, would win over a newer login.json.
+    */
+    async getSavedConfig(id: string): Promise<Record<string, unknown> | undefined> {
+        const saved = await this.configStore.read(EExtensionType.LOGIN, id)
+        return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved as Record<string, unknown> : undefined
+    }
+
     async getConfig(id: string): Promise<ILoginConfig | undefined> {
         const data = await this.configMaps.read(`kwirth-login-${id}`) as ILoginPayload | null
         return data?.config ? this.effectiveConfig(id, data.config) : undefined

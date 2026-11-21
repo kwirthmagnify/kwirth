@@ -409,6 +409,15 @@ export class PluginManager {
         return this.configStore.readSimple(EExtensionType.PLUGIN, id, this.schemaOf(id))
     }
 
+    // What the admin saved, with the defaults under it; undefined when nothing was ever saved (the export)
+    async getSavedConfig(id: string): Promise<Record<string, unknown> | undefined> {
+        return this.configStore.readSimpleIfSaved(EExtensionType.PLUGIN, id, this.schemaOf(id))
+    }
+
+    getConfigSchema(id: string): IConfigFieldDef[] {
+        return this.schemaOf(id)
+    }
+
     // Validates and saves it. What does not fit the schema comes back as errors and nothing is saved.
     async saveConfig(id: string, cfg: Record<string, unknown>): Promise<IConfigValidationError[]> {
         return this.configStore.writeSimple(EExtensionType.PLUGIN, id, this.schemaOf(id), cfg)

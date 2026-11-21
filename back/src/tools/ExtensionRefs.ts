@@ -9,7 +9,9 @@ import { WebhookManager } from './WebhookManager'
 import { AiToolsetManager } from './AiToolsetManager'
 import { DceManager } from './DceManager'
 import { IdpManager } from './IdpManager'
-import { pluginInstallConfig, providerInstallConfig, senderConfigs, webhookConfigs, idpInstances, toolsetGrants } from './CoreManagedConfig'
+import { RouterManager } from './RouterManager'
+import { LoginManager } from './LoginManager'
+import { pluginInstallConfig, providerInstallConfig, routerInstallConfig, loginInstallConfig, senderConfigs, webhookConfigs, idpInstances, toolsetGrants } from './CoreManagedConfig'
 
 /*
     Who is installed, and who gets asked for their configuration.
@@ -48,6 +50,8 @@ export interface IExtensionRefSources {
     aiToolsetManager: AiToolsetManager
     dceManager: DceManager
     idpManager: IdpManager
+    routerManager: RouterManager
+    loginManager: LoginManager
     /*
         The LIVE channels. There is not one per installed plugin: only the required ones are
         instantiated, and never those announced as REMOTE. A plugin with no channel here still exports
@@ -90,6 +94,14 @@ export const buildExtensionRefs = async (src: IExtensionRefSources): Promise<IEx
     for (const meta of await src.providerManager.listInstalled()) {
         añadir(EExtensionType.PROVIDER, meta as IMetaLike,
             providerInstallConfig(src.providerManager, meta.id), src.providers.find(p => p.id === meta.id), true)
+    }
+
+    // Routers and logins: their one configuration, stored by the core like a plugin's (S7: they used not to travel)
+    for (const meta of await src.routerManager.listInstalled()) {
+        añadir(EExtensionType.ROUTER, meta as IMetaLike, routerInstallConfig(src.routerManager, meta.id))
+    }
+    for (const meta of await src.loginManager.listInstalled()) {
+        añadir(EExtensionType.LOGIN, meta as IMetaLike, loginInstallConfig(src.loginManager, meta.id))
     }
 
     /*

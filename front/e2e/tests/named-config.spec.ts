@@ -211,6 +211,30 @@ test.describe('named configurations (sender, webhook): one Secret, the base kept
             await closeConfig(cfg)
         })
 
+        /*
+            ☰ Kwirth export (S7): the base travels WITH the configs —a webhook's used to be lost— and without
+            credentials every secret is emptied, in the base and in each config. Only THIS fixture is
+            exported and imported: it is given back exactly what it handed over.
+        */
+        test(`🔴 ${fx.family}: the Kwirth export carries base and configs, secrets emptied without credentials; importing gives the same document back`, async () => {
+            const key = `${fx.family.replace(/s$/, '')}/${fx.id}`
+            const antes = await storedOf(fx)
+            expect(antes.password, 'the base has a password to hide').toBeTruthy()
+
+            const sinCredenciales = await (await api.get(`/core/config-bundle/export?include=${key}`, { headers: auth })).json()
+            expect(sinCredenciales.extensions[0].coreConfig.stored).toEqual({ ...antes, password: '' })
+
+            const conCredenciales = await (await api.get(`/core/config-bundle/export?include=${key}&credentials=true`, { headers: auth })).json()
+            expect(conCredenciales.extensions[0].coreConfig.stored, 'the password travels REAL when asked').toEqual(antes)
+
+            const res = await api.post('/core/config-bundle/import', { headers: auth, data: { bundle: conCredenciales, include: [key] } })
+            expect(res.status(), await res.text()).toBe(200)
+            const informe = await res.json() as { entries: { error?: string, result?: { applied: number, warnings: string[] } }[] }
+            expect(informe.entries[0].error).toBeUndefined()
+            expect(informe.entries[0].result?.warnings).toEqual([])
+            expect(await storedOf(fx), 'the same document, base included').toEqual(antes)
+        })
+
         test(`🔴 ${fx.family}: uninstalled without the box, everything is kept and a reinstall finds it`, async () => {
             const urlBefore = fx.family === 'webhooks'
                 ? (await (await api.get(`/core/webhooks/${fx.id}/configs/qa-one/url`, { headers: auth })).json()).url as string

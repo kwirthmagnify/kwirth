@@ -1,6 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { senderConfigs, webhookConfigs, idpInstances, toolsetGrants, pluginInstallConfig } from '../../src/tools/CoreManagedConfig'
+import { senderConfigs, webhookConfigs, idpInstances, toolsetGrants, pluginInstallConfig, providerInstallConfig, routerInstallConfig, loginInstallConfig } from '../../src/tools/CoreManagedConfig'
+import { ProviderManager } from '../../src/tools/ProviderManager'
+import { RouterManager } from '../../src/tools/RouterManager'
+import { LoginManager } from '../../src/tools/LoginManager'
 import { SenderManager } from '../../src/tools/SenderManager'
 import { WebhookManager } from '../../src/tools/WebhookManager'
 import { IdpManager } from '../../src/tools/IdpManager'
@@ -100,11 +103,64 @@ test('y quien importe ese fichero se entera de que faltan', async () => {
 
 // ─── webhooks: the same, and they REPLACE ──────────────────────────────────────
 
-const webhookFalso = (configs: unknown[], escritas: unknown[]): WebhookManager => ({
+const SCHEMA_WEBHOOK = [
+    { name: 'name', label: 'Name' },
+    { name: 'region', label: 'Region', common: true },
+    { name: 'apiKey', label: 'API key', type: 'password', common: true },
+    { name: 'token', label: 'Token', type: 'password' }
+]
+
+const webhookFalso = (configs: unknown[], escritas: unknown[], base: Record<string, unknown> = {}, documentos: unknown[] = []): WebhookManager => ({
     getConfigs: () => configs,
-    getWebhook: () => ({ getConfigSchema: () => [{ name: 'name', label: 'Name' }, { name: 'token', label: 'Token', type: 'password' }] }),
-    setWebhookStoredConfig: async (_id: string, stored: { configs: unknown[] }) => { escritas.push(...stored.configs); return [] }
+    getWebhookStoredConfig: () => ({ ...base, configs }),
+    getWebhook: () => ({ getConfigSchema: () => SCHEMA_WEBHOOK }),
+    setWebhookStoredConfig: async (_id: string, stored: { configs: unknown[] }) => { escritas.push(...stored.configs); documentos.push(stored); return [] }
 } as unknown as WebhookManager)
+
+test('🔴 a webhook exports its BASE with its configs (it used to be lost), and the import puts both back', async () => {
+    const base = { region: 'eu', apiKey: 'k-real' }
+    const documentos: unknown[] = []
+    const e = webhookConfigs(webhookFalso([{ name: 'jira', token: 't-real' }], [], base, documentos), 'jira')
+
+    const conCredenciales = await e.exportConfig!(opts(true))
+    assert.deepEqual(conCredenciales, { stored: { region: 'eu', apiKey: 'k-real', configs: [{ name: 'jira', token: 't-real' }] } })
+
+    const r = await e.importConfig!(conCredenciales)
+    assert.deepEqual(documentos, [{ region: 'eu', apiKey: 'k-real', configs: [{ name: 'jira', token: 't-real' }] }])
+    assert.equal(r.applied, 1)
+})
+
+test('🔴 without credentials a webhook empties the secrets of its base AND of each config', async () => {
+    const e = webhookConfigs(webhookFalso([{ name: 'jira', token: 't-real' }], [], { region: 'eu', apiKey: 'k-real' }), 'jira')
+    assert.deepEqual(await e.exportConfig!(opts(false)), { stored: { region: 'eu', apiKey: '', configs: [{ name: 'jira', token: '' }] } })
+})
+
+test('a webhook file written before S7 (bare configs, no base) is still imported', async () => {
+    const documentos: unknown[] = []
+    const e = webhookConfigs(webhookFalso([], [], {}, documentos), 'jira')
+    const r = await e.importConfig!({ configs: [{ name: 'vieja' }] })
+    assert.deepEqual(documentos, [{ configs: [{ name: 'vieja' }] }])
+    assert.equal(r.applied, 1)
+})
+
+test('a webhook with no schema exports none of its values, and the import says why', async () => {
+    const e = webhookConfigs({ getWebhookStoredConfig: () => ({ apiKey: 'k', configs: [{ name: 'a' }] }), getWebhook: () => ({}) } as unknown as WebhookManager, 'jira')
+    const exportado = await e.exportConfig!(opts(false))
+    assert.deepEqual(exportado, { stored: { configs: [] }, omitted: 1 })
+    const r = await webhookConfigs(webhookFalso([], []), 'jira').importConfig!(exportado)
+    assert.ok(r.warnings.some(w => w.includes('does not declare which of its fields are secret')))
+})
+
+test('a sender base loses its secrets too when exported without credentials', async () => {
+    const e = senderConfigs({
+        getSenderStoredConfig: () => ({ host: 'smtp', password: 'base-pw', configs: [CONFIG_SMTP] }),
+        getSender: () => ({ getConfigSchema: () => SCHEMA_SMTP })
+    } as unknown as SenderManager, 'email')
+    const r = await e.exportConfig!(opts(false)) as { stored: Record<string, unknown> & { configs: Record<string, unknown>[] } }
+    assert.equal(r.stored.password, '')
+    assert.equal(r.stored.host, 'smtp')
+    assert.equal(r.stored.configs[0].password, '')
+})
 
 test('🔴 an imported sender document that does not fit its schema is not applied, and says why', async () => {
     const e = senderConfigs({
@@ -272,43 +328,96 @@ test('importar tools que el toolset de destino no tiene las quita y avisa, sin t
 
 // ─── config de instalacion ─────────────────────────────────────────────────────
 
-test('la config de instalacion de un plugin va y vuelve intacta', async () => {
-    let guardada: unknown = undefined
-    const manager = {
-        getConfig: async () => ({ algo: 'valor' }),
-        saveConfig: async (_id: string, cfg: unknown) => { guardada = cfg; return [] }
-    } as unknown as PluginManager
+/*
+    Plugin, provider, router and login: ONE configuration each, the same rules for the four (S7). Before
+    it, provider and plugin went out with their passwords in clear without credentials, and routers and
+    logins did not travel at all.
+*/
 
-    const e = pluginInstallConfig(manager, 'censor')
-    const exportada = await e.exportConfig!(opts(false))
-    assert.deepEqual(exportada, { installConfig: { algo: 'valor' } })
+const SCHEMA_INSTALL = [
+    { name: 'url', label: 'URL' },
+    { name: 'password', label: 'Password', type: 'password' },
+    { name: 'key', label: 'Key', type: 'textarea', secret: true }
+]
+const SAVED_INSTALL = { url: 'https://x', password: 'pw-real', key: 'k-real' }
 
-    const r = await e.importConfig!(exportada)
-    assert.deepEqual(guardada, { algo: 'valor' })
-    assert.equal(r.applied, 1)
-})
+interface IInstallFake {
+    saved: Record<string, unknown> | undefined
+    schema: unknown[]
+    written: unknown[]
+    answer: () => Promise<unknown[]>
+}
 
-test('una config de instalacion que no encaja con el esquema no se aplica, y el aviso dice por que', async () => {
-    const manager = {
-        getConfig: async () => ({}),
-        saveConfig: async () => [{ field: 'url', message: `'URL' is required` }]
-    } as unknown as PluginManager
+// Each family's manager, faked with the methods its adapter uses: the shape differs, the rules do not.
+const FAMILIES: { family: string, adapter: (f: IInstallFake) => ReturnType<typeof pluginInstallConfig> }[] = [
+    { family: 'plugin', adapter: f => pluginInstallConfig({
+        getSavedConfig: async () => f.saved, getConfigSchema: () => f.schema,
+        saveConfig: async (_id: string, c: unknown) => { f.written.push(c); return f.answer() } } as unknown as PluginManager, 'p') },
+    { family: 'provider', adapter: f => providerInstallConfig({
+        getSavedConfig: async () => f.saved, getSchemaAsync: async () => f.schema.length ? f.schema : undefined,
+        saveConfig: async (_id: string, c: unknown) => { f.written.push(c); return f.answer() } } as unknown as ProviderManager, 'p') },
+    { family: 'router', adapter: f => routerInstallConfig({
+        getSavedConfig: async () => f.saved, getSchema: () => f.schema,
+        saveConfig: async (_id: string, c: unknown) => { f.written.push(c); return f.answer() } } as unknown as RouterManager, 'p') },
+    { family: 'login', adapter: f => loginInstallConfig({
+        getSavedConfig: async () => f.saved, getConfigSchema: () => f.schema,
+        saveConfig: async (_id: string, c: unknown) => { f.written.push(c); return f.answer() } } as unknown as LoginManager, 'p') }
+]
 
-    const r = await pluginInstallConfig(manager, 'censor').importConfig!({ installConfig: { otra: 'cosa' } })
-    assert.equal(r.applied, 0)
-    assert.equal(r.skipped, 1)
-    assert.match(r.warnings[0], /censor.*'URL' is required/)
-})
+const fake = (over: Partial<IInstallFake> = {}): IInstallFake =>
+    ({ saved: SAVED_INSTALL, schema: SCHEMA_INSTALL, written: [], answer: async () => [], ...over })
 
-test('basura en el sitio de la config de instalacion no escribe nada', async () => {
-    let escribio = false
-    const manager = {
-        getConfig: async () => ({}),
-        saveConfig: async () => { escribio = true; return [] }
-    } as unknown as PluginManager
+for (const { family, adapter } of FAMILIES) {
+    test(`🔴 ${family}: with credentials the config travels whole, and comes back the same`, async () => {
+        const f = fake()
+        const e = adapter(f)
+        const exportado = await e.exportConfig!(opts(true))
+        assert.deepEqual(exportado, { installConfig: SAVED_INSTALL })
+        const r = await e.importConfig!(exportado)
+        assert.deepEqual(f.written, [SAVED_INSTALL])
+        assert.equal(r.applied, 1)
+    })
 
-    const e = pluginInstallConfig(manager, 'censor')
-    const r = await e.importConfig!({ installConfig: 'esto no es un objeto' })
-    assert.equal(escribio, false)
-    assert.equal(r.applied, 0)
-})
+    test(`🔴 ${family}: without credentials every secret field is EMPTIED (password and secret textarea), the rest intact`, async () => {
+        const exportado = await adapter(fake()).exportConfig!(opts(false))
+        assert.deepEqual(exportado, { installConfig: { url: 'https://x', password: '', key: '' } })
+    })
+
+    test(`${family}: nothing saved, nothing travels — not even the defaults`, async () => {
+        assert.equal(await adapter(fake({ saved: undefined })).exportConfig!(opts(true)), undefined)
+        assert.equal(await adapter(fake({ saved: {} })).exportConfig!(opts(false)), undefined)
+    })
+
+    test(`🔴 ${family}: with no schema the values do not travel without credentials, and the import says why`, async () => {
+        const exportado = await adapter(fake({ schema: [] })).exportConfig!(opts(false))
+        assert.deepEqual(exportado, { omitted: 1 })
+        const f = fake()
+        const r = await adapter(f).importConfig!(exportado)
+        assert.deepEqual(f.written, [], 'nothing written')
+        assert.equal(r.skipped, 1)
+        assert.match(r.warnings[0], /does not declare which of its fields are secret/)
+    })
+
+    test(`${family}: an imported config that does not fit is not applied, and the warning says why`, async () => {
+        const f = fake({ answer: async () => [{ field: 'url', message: `'URL' is required` }] })
+        const r = await adapter(f).importConfig!({ installConfig: { otra: 'cosa' } })
+        assert.equal(r.applied, 0)
+        assert.equal(r.skipped, 1)
+        assert.match(r.warnings[0], /'p'.*'URL' is required/)
+    })
+
+    test(`${family}: a save that THROWS (a login not here, a router refusing it) is a warning, not a broken import`, async () => {
+        const f = fake({ answer: async () => { throw new Error("Login extension 'p' not found") } })
+        const r = await adapter(f).importConfig!({ installConfig: { url: 'u' } })
+        assert.equal(r.applied, 0)
+        assert.match(r.warnings[0], /not found/)
+    })
+
+    test(`${family}: rubbish where the config goes writes nothing`, async () => {
+        const f = fake()
+        for (const basura of [{ installConfig: 'no es un objeto' }, { installConfig: [1, 2] }, null, 'x']) {
+            assert.equal((await adapter(f).importConfig!(basura)).applied, 0)
+        }
+        assert.deepEqual(f.written, [])
+    })
+}

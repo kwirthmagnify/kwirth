@@ -220,6 +220,11 @@ export class RouterManager {
         return this.configStore.readSimple(EExtensionType.ROUTER, id, this.getSchema(id))
     }
 
+    // What the admin saved, with the defaults under it; undefined when nothing was ever saved (the export)
+    async getSavedConfig(id: string): Promise<TRouterConfig | undefined> {
+        return this.configStore.readSimpleIfSaved(EExtensionType.ROUTER, id, this.getSchema(id))
+    }
+
     /*
         Validates it against the live router's schema and, when it fits, saves it and applies it NOW to the
         live router. What does not fit comes back as errors and nothing is saved. Throws what the router
