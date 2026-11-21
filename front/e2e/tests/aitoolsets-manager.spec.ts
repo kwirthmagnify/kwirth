@@ -127,8 +127,11 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
 
     test('el engranaje abre la concesion: plugins por tools, con All y el effect de cada tool', async () => {
         await dialog().locator('span[aria-label="Configure"] button').first().click()
-        const grant = page.getByRole('dialog').filter({ hasText: /^Grant: / })
+        const grant = page.getByRole('dialog').filter({ hasText: /^AI toolset: / })
         await expect(grant).toBeVisible({ timeout: 20000 })
+        // it opens on the Grants tab, and Settings is always there (disabled when the toolset declares none)
+        await expect(grant.getByRole('tab', { name: 'Grants' })).toHaveAttribute('aria-selected', 'true')
+        await expect(grant.getByRole('tab', { name: /^Settings/ })).toBeVisible()
 
         await expect(grant.getByRole('columnheader', { name: 'Plugin' })).toBeVisible()
         await expect(grant.getByRole('columnheader', { name: 'All', exact: true })).toBeVisible()
@@ -146,7 +149,7 @@ test.describe('gestor generico de extensiones: aitoolsets', () => {
 
     test('con All encendido las casillas de ese plugin quedan marcadas y bloqueadas (sin guardar)', async () => {
         await dialog().locator('span[aria-label="Configure"] button').first().click()
-        const grant = page.getByRole('dialog').filter({ hasText: /^Grant: / })
+        const grant = page.getByRole('dialog').filter({ hasText: /^AI toolset: / })
         await expect(grant).toBeVisible({ timeout: 20000 })
 
         // The first plugin row, whichever it is

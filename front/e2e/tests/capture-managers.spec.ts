@@ -91,7 +91,7 @@ async function captureGrant(page: Page, manager: Locator): Promise<void> {
     const gears = manager.locator('span[aria-label="Configure"] button')
     expect(await gears.count(), `'${GRANT_TOOLSET}' no esta instalado: no hay toolset publico que capturar`).toBe(1)
     await gears.first().click()
-    const grant = page.getByRole('dialog').filter({ hasText: /^Grant: / })
+    const grant = page.getByRole('dialog').filter({ hasText: /^AI toolset: / })
     await grant.waitFor({ timeout: 20000 })
     await expect(grant.getByRole('columnheader', { name: 'All', exact: true })).toBeVisible()
     await page.evaluate(keepPublicRows, PUBLIC_PLUGINS)

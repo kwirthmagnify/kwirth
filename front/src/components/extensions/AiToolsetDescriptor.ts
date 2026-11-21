@@ -2,7 +2,7 @@ import React from 'react'
 import { Construction } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
 import { EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IExtensionVerdict } from './extensionManagerModel'
-import { AiToolsetGrantDialog } from './AiToolsetGrantDialog'
+import { AiToolsetDialog } from './AiToolsetDialog'
 
 /*
     The `aitoolset` type's descriptor (plan: plans/ai-tools/PLAN.md) and the generic manager's FIRST
@@ -11,7 +11,7 @@ import { AiToolsetGrantDialog } from './AiToolsetGrantDialog'
 
     The two sections, the filter, card/list, the version Select, installing from catalogue/URL/file, the
     provenance and the gear are all put there by ExtensionManagerDialog; the grant dialog behind the gear
-    is this type's own (AiToolsetGrantDialog).
+    is this type's own (AiToolsetDialog: grants and settings).
 */
 
 interface IAiToolsetEntry {
@@ -83,9 +83,9 @@ const makeAiToolsetDescriptor = (): IExtensionManagerDescriptor<IAiToolsetEntry,
 
         ⚠️ By default nobody uses it: installing leaves the toolset available, not granted.
     */
-    renderConfigDialog: (e, onClose) => React.createElement(AiToolsetGrantDialog, {
+    renderConfigDialog: (e, onClose) => React.createElement(AiToolsetDialog, {
         toolsetId: e.id,
-        title: `Grant: ${e.displayName || e.name || e.id}`,
+        title: `AI toolset: ${e.displayName || e.name || e.id}`,
         helpSection: HELP_SECTION,
         onClose
     }),
