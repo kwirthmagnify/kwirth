@@ -129,19 +129,44 @@ test.describe('routers: the manager, the config dialog, the door and Manage clus
         expect(await (await api.get(`/core/routers/${ROUTER_ID}/config`, { headers: auth })).json()).toEqual({ retries: 2 })
     })
 
-    test('🔴 the dialog marks the refused field, says why, stays open, and the mark goes when the field is edited', async () => {
+    test('🔴 a required field emptied DISABLES Save, and its tooltip says which', async () => {
         const config = await openConfig()
         const greeting = config.getByLabel(/^Greeting/)
+        const save = config.getByRole('button', { name: 'SAVE' })
         await greeting.fill('')
-        await config.getByRole('button', { name: 'SAVE' }).click()
-        await expect(config.getByText(`'Greeting' is required`)).toBeVisible({ timeout: 20000 })
-        await expect(greeting).toHaveAttribute('aria-invalid', 'true')
-        await expect(config).toBeVisible()
+        await expect(save).toBeDisabled()
+        await save.locator('xpath=..').hover()
+        await expect(page.getByRole('tooltip')).toHaveText('Required fields missing: Greeting')
         await greeting.fill('typing')
-        await expect(greeting).toHaveAttribute('aria-invalid', 'false')
-        await expect(config.getByText(`'Greeting' is required`), 'its message goes with its mark').toBeHidden()
+        await expect(save).toBeEnabled()
         await config.getByRole('button', { name: 'CANCEL' }).click()
         await expect(config).toBeHidden({ timeout: 20000 })
+        expect(await (await api.get(`/core/routers/${ROUTER_ID}/config`, { headers: auth })).json()).toEqual({ retries: 2 })
+    })
+
+    test('🔴 the dialog marks what the back end refuses, says why, stays open, and the mark goes when the field is edited', async () => {
+        // a refusal the form cannot foresee, simulated on the wire
+        const url = `**/core/routers/${ROUTER_ID}/config`
+        await page.route(url, async route => route.request().method() === 'PUT'
+            ? route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: "'Greeting' is not valid", fields: [{ field: 'greeting', message: "'Greeting' is not valid" }] }) })
+            : route.continue())
+        try {
+            const config = await openConfig()
+            const greeting = config.getByLabel(/^Greeting/)
+            await greeting.fill('bad')
+            await config.getByRole('button', { name: 'SAVE' }).click()
+            await expect(config.getByText(`'Greeting' is not valid`)).toBeVisible({ timeout: 20000 })
+            await expect(greeting).toHaveAttribute('aria-invalid', 'true')
+            await expect(config).toBeVisible()
+            await greeting.fill('better')
+            await expect(greeting).toHaveAttribute('aria-invalid', 'false')
+            await expect(config.getByText(`'Greeting' is not valid`), 'its message goes with its mark').toBeHidden()
+            await config.getByRole('button', { name: 'CANCEL' }).click()
+            await expect(config).toBeHidden({ timeout: 20000 })
+        }
+        finally {
+            await page.unroute(url)
+        }
         expect(await (await api.get(`/core/routers/${ROUTER_ID}/config`, { headers: auth })).json()).toEqual({ retries: 2 })
     })
 

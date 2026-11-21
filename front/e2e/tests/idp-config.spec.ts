@@ -114,19 +114,45 @@ test.describe('IdP instance config: one Secret per instance, real secrets, kept 
         await install()
     })
 
-    test('🔴 the dialog marks the fields its connector refuses and says why; editing one clears it', async () => {
+    test('🔴 required fields empty DISABLE Save, and its tooltip says which; filled, it is enabled', async () => {
         const config = await openConfig()
-        await config.getByRole('button', { name: 'Save' }).click()
-        const errors = config.getByTestId('config-field-errors')
-        await expect(errors).toContainText(`'Client ID' is required`, { timeout: 20000 })
-        await expect(errors).toContainText(`'Client secret' is required`)
-        const clientId = config.getByLabel(/^Client ID/)
-        await expect(clientId).toHaveAttribute('aria-invalid', 'true')
-        await clientId.fill('typing')
-        await expect(errors).not.toContainText(`'Client ID' is required`)
-        await expect(clientId).toHaveAttribute('aria-invalid', 'false')
+        const save = config.getByRole('button', { name: 'Save' })
+        await expect(save).toBeDisabled()
+        await save.locator('xpath=..').hover()
+        await expect(page.getByRole('tooltip')).toHaveText('Required fields missing: Client ID, Client secret')
+        await config.getByLabel(/^Client ID/).fill('typing')
+        await expect(save).toBeDisabled()
+        await config.getByLabel(/^Client secret/).fill('typing')
+        await expect(save).toBeEnabled()
         await config.getByRole('button', { name: 'Cancel' }).click()
         await expect(config).toBeHidden({ timeout: 20000 })
+        expect((await api.get(instanceUrl, { headers: auth })).status(), 'nothing was saved').toBe(404)
+        await dismissOpenDialogs(page)
+    })
+
+    test('🔴 what the connector refuses is marked on its field and said; editing it clears the mark', async () => {
+        // a refusal the form cannot foresee, simulated on the wire
+        // a NEW instance is POSTed to the collection, an existing one PUT to its own url: both are caught
+        await page.route('**/core/idps/instances**', async route => route.request().method() === 'PUT' || route.request().method() === 'POST'
+            ? route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: "'Client ID' is not valid", fields: [{ field: 'clientId', message: "'Client ID' is not valid" }] }) })
+            : route.continue())
+        try {
+            const config = await openConfig()
+            await config.getByLabel(/^Client ID/).fill('bad')
+            await config.getByLabel(/^Client secret/).fill('x')
+            await config.getByRole('button', { name: 'Save' }).click()
+            const errors = config.getByTestId('config-field-errors')
+            await expect(errors).toContainText(`'Client ID' is not valid`, { timeout: 20000 })
+            const clientId = config.getByLabel(/^Client ID/)
+            await expect(clientId).toHaveAttribute('aria-invalid', 'true')
+            await clientId.fill('better')
+            await expect(clientId).toHaveAttribute('aria-invalid', 'false')
+            await config.getByRole('button', { name: 'Cancel' }).click()
+            await expect(config).toBeHidden({ timeout: 20000 })
+        }
+        finally {
+            await page.unroute('**/core/idps/instances**')
+        }
         expect((await api.get(instanceUrl, { headers: auth })).status(), 'nothing was saved').toBe(404)
         await dismissOpenDialogs(page)
     })

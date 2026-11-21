@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Button, CircularProgress, Dialog, DialogActions, DialogContent, Stack, Typography } from '@mui/material'
+import { Button, CircularProgress, Dialog, DialogActions, DialogContent, Stack, Tooltip, Typography } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { IConfigFieldDef, IConfigValidationError } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, IConfigValidationError, isConfigFieldEnabled } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { ConfigFields } from './ConfigFields'
@@ -198,6 +198,14 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
         setFieldErrors(list => list.filter(e => e.field !== name))
     }
 
+    /*
+        The required fields left empty (only the enabled ones count): while there are any, Save is disabled
+        and its tooltip says which — as in ConfigListDialog and AiToolsetDialog. What the back end refuses
+        for any other reason is still marked on its field.
+    */
+    const typedValues: Record<string, unknown> = Object.fromEntries(schema.map(f => [f.name, f.type === 'boolean' ? values[f.name] === 'true' : values[f.name]]))
+    const missing = schema.filter(f => f.required && isConfigFieldEnabled(f, schema, typedValues) && (values[f.name] ?? '').trim() === '')
+
     return (
         <Dialog open={true} maxWidth='xs' fullWidth>
             {props.helpSection
@@ -229,7 +237,10 @@ const ConfigFormDialog: React.FC<IConfigFormDialogProps> = (props: IConfigFormDi
                     </Button>
                 )}
                 <Typography sx={{ flexGrow: 1 }} />
-                <Button onClick={save} disabled={saving || testing || schema.length === 0}>{saving ? <CircularProgress size={16} /> : 'SAVE'}</Button>
+                {/* describeChild: the reason DESCRIBES the button, its name stays 'SAVE' */}
+                <Tooltip describeChild title={missing.length > 0 ? `Required fields missing: ${missing.map(f => f.label).join(', ')}` : ''}>
+                    <span><Button onClick={save} disabled={saving || testing || schema.length === 0 || missing.length > 0}>{saving ? <CircularProgress size={16} /> : 'SAVE'}</Button></span>
+                </Tooltip>
                 <Button onClick={props.onClose}>CANCEL</Button>
             </DialogActions>
         </Dialog>

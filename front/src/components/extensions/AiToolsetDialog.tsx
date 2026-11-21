@@ -286,7 +286,8 @@ const AiToolsetDialog: React.FC<IAiToolsetDialogProps> = (props: IAiToolsetDialo
                 { error && <Typography color='error' variant='body2' sx={{ mt: 1 }}>{error}</Typography> }
             </DialogContent>
             <DialogActions>
-                <Tooltip title={missing.length > 0 ? `Required settings missing: ${missing.map(f => f.label).join(', ')}` : ''}>
+                {/* describeChild: the reason DESCRIBES the button, its name stays 'Save' */}
+                <Tooltip describeChild title={missing.length > 0 ? `Required settings missing: ${missing.map(f => f.label).join(', ')}` : ''}>
                     <span><Button variant='contained' disabled={saving || loading || missing.length > 0} onClick={save}>{saving ? <CircularProgress size={14} /> : 'Save'}</Button></span>
                 </Tooltip>
                 <Button onClick={props.onClose}>Cancel</Button>

@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react'
-import { Button, CircularProgress, Dialog, DialogActions, DialogContent, FormControlLabel, Stack, Switch, TextField, Typography } from '@mui/material'
+import { Button, CircularProgress, Dialog, DialogActions, DialogContent, FormControlLabel, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { IConfigFieldDef, IConfigValidationError, IIdpSignupPolicy } from '@kwirthmagnify/kwirth-common'
+import { IConfigFieldDef, IConfigValidationError, IIdpSignupPolicy, isConfigFieldEnabled } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
 import { ConfigFields } from './ConfigFields'
@@ -92,6 +92,12 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
         setFieldErrors(list => list.filter(e => e.field !== name))
     }
 
+    // The required fields left empty (only the enabled ones count): Save is disabled and says which, as in every config dialog
+    const missing = props.schema.filter(f => f.required && isConfigFieldEnabled(f, props.schema, instancia.config)).filter(f => {
+        const v = instancia.config[f.name]
+        return v === undefined || v === null || (typeof v === 'string' && v.trim() === '')
+    })
+
     const guardar = async () => {
         setSaving(true)
         setError(undefined)
@@ -149,7 +155,10 @@ const IdpConfigDialog: React.FC<IIdpConfigDialogProps> = (props: IIdpConfigDialo
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button variant='contained' disabled={saving} onClick={guardar}>{saving ? <CircularProgress size={14} /> : 'Save'}</Button>
+                {/* describeChild: the reason DESCRIBES the button, its name stays 'Save' */}
+                <Tooltip describeChild title={missing.length > 0 ? `Required fields missing: ${missing.map(f => f.label).join(', ')}` : ''}>
+                    <span><Button variant='contained' disabled={saving || missing.length > 0} onClick={guardar}>{saving ? <CircularProgress size={14} /> : 'Save'}</Button></span>
+                </Tooltip>
                 <Button onClick={props.onClose}>Cancel</Button>
             </DialogActions>
         </Dialog>

@@ -115,16 +115,39 @@ test.describe('provider installation config: the common store behind the generic
         expect(await (await api.get(configUrl, { headers: auth })).json()).toEqual({ pollSeconds: 30 })
     })
 
-    test('🔴 the dialog marks the refused field and stays open', async () => {
+    test('🔴 a required field empty DISABLES Save, and its tooltip says which', async () => {
         const config = await openConfig()
-        await config.getByRole('button', { name: 'SAVE' }).click()
-        await expect(config.getByText(`'Endpoint' is required`)).toBeVisible({ timeout: 20000 })
-        await expect(config.getByLabel(/^Endpoint/)).toHaveAttribute('aria-invalid', 'true')
+        const save = config.getByRole('button', { name: 'SAVE' })
+        await expect(save).toBeDisabled()
+        await save.locator('xpath=..').hover()
+        await expect(page.getByRole('tooltip')).toHaveText('Required fields missing: Endpoint')
         await config.getByLabel(/^Endpoint/).fill('typing')
-        await expect(config.getByLabel(/^Endpoint/)).toHaveAttribute('aria-invalid', 'false')
-        await expect(config.getByText(`'Endpoint' is required`), 'its message goes with its mark').toBeHidden()
+        await expect(save).toBeEnabled()
         await config.getByRole('button', { name: 'CANCEL' }).click()
         await expect(config).toBeHidden({ timeout: 20000 })
+        await dismissOpenDialogs(page)
+    })
+
+    test('🔴 the dialog marks what the back end refuses and stays open', async () => {
+        // a refusal the form cannot foresee, simulated on the wire
+        await page.route(`**${configUrl}`, async route => route.request().method() === 'PUT'
+            ? route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: "'Endpoint' is not valid", fields: [{ field: 'endpoint', message: "'Endpoint' is not valid" }] }) })
+            : route.continue())
+        try {
+            const config = await openConfig()
+            await config.getByLabel(/^Endpoint/).fill('bad')
+            await config.getByRole('button', { name: 'SAVE' }).click()
+            await expect(config.getByText(`'Endpoint' is not valid`)).toBeVisible({ timeout: 20000 })
+            await expect(config.getByLabel(/^Endpoint/)).toHaveAttribute('aria-invalid', 'true')
+            await config.getByLabel(/^Endpoint/).fill('better')
+            await expect(config.getByLabel(/^Endpoint/)).toHaveAttribute('aria-invalid', 'false')
+            await expect(config.getByText(`'Endpoint' is not valid`), 'its message goes with its mark').toBeHidden()
+            await config.getByRole('button', { name: 'CANCEL' }).click()
+            await expect(config).toBeHidden({ timeout: 20000 })
+        }
+        finally {
+            await page.unroute(`**${configUrl}`)
+        }
         await dismissOpenDialogs(page)
     })
 
