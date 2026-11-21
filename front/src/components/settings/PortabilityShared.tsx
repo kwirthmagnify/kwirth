@@ -39,6 +39,7 @@ export const groupOf = (type: EExtensionType): string => {
         case EExtensionType.THEME: return 'Themes'
         case EExtensionType.HOMEPAGE: return 'Homepages'
         case EExtensionType.LOGIN: return 'Logins'
+        case EExtensionType.ROUTER: return 'Routers'
         case EExtensionType.DOCS: return 'Documentation'
         case EExtensionType.PACK: return 'Packs'
         default: return 'Extensions'
