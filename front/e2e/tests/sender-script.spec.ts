@@ -67,6 +67,7 @@ test.describe('script sender: textarea and AI assistant', () => {
         if (created) {
             const row = cfg().getByText(NAME, { exact: true }).locator('xpath=ancestor::*[.//button[@aria-label="Delete"]][1]')
             await row.getByRole('button', { name: 'Delete' }).click().catch(() => {})
+            await page.getByRole('dialog').filter({ hasText: `delete config '${NAME}'` }).getByRole('button', { name: 'yes', exact: true }).click().catch(() => {})
             await expect(cfg().getByText(NAME, { exact: true })).toHaveCount(0).catch(() => {})
         }
         await dismissOpenDialogs(page).catch(() => {})

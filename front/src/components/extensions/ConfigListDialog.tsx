@@ -9,6 +9,7 @@ import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
 import { IConfigFieldDef, IConfigValidationError, isConfigFieldEnabled } from '@kwirthmagnify/kwirth-common'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { addDeleteAuthorization, addGetAuthorization, addPostAuthorization, addPutAuthorization } from '../../tools/AuthorizationManagement'
+import { MsgBoxButtons, MsgBoxYesNo } from '../../tools/MsgBox'
 import { ConfigTextArea } from './ConfigTextArea'
 import type { ISaveRefusal } from './ConfigFormDialog'
 
@@ -64,6 +65,7 @@ interface IConfigListDialogProps {
 const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDialogProps) => {
     const { accessString, backendUrl } = useContext(SessionContext) as SessionContextType
 
+    const [msgBox, setMsgBox] = useState(<></>)
     const [schema, setSchema] = useState<IConfigFieldDef[]>([])
     const [configs, setConfigs] = useState<TConfigValues[]>([])
     const [loading, setLoading] = useState(false)
@@ -233,6 +235,11 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
         setOriginalName(undefined)
         setValues({})
         setFieldErrors([])
+    }
+
+    // A configuration goes for good (and a webhook's URL with it): asked first, like every other delete.
+    const pedirBorrado = (name: string) => {
+        setMsgBox(MsgBoxYesNo('Delete config', `Are you sure you want to delete config '${name}'?`, setMsgBox, (a: MsgBoxButtons) => a === MsgBoxButtons.Yes ? borrar(name) : {}))
     }
 
     const borrar = async (name: string) => {
@@ -439,7 +446,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
                                             </Box>
                                             <Tooltip title='Delete'>
                                                 <span>
-                                                    <IconButton size='small' color='error' aria-label='Delete' disabled={deleting === cfg.name} onClick={() => borrar(cfg.name)}>
+                                                    <IconButton size='small' color='error' aria-label='Delete' disabled={deleting === cfg.name} onClick={() => pedirBorrado(cfg.name)}>
                                                         {deleting === cfg.name ? <CircularProgress size={12} /> : <Delete sx={{ fontSize: 14 }} />}
                                                     </IconButton>
                                                 </span>
@@ -542,6 +549,7 @@ const ConfigListDialog: React.FC<IConfigListDialogProps> = (props: IConfigListDi
                 </Dialog>
             )}
 
+            {msgBox}
         </>
     );
 }
