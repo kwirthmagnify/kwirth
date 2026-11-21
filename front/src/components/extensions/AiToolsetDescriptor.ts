@@ -86,7 +86,6 @@ const makeAiToolsetDescriptor = (): IExtensionManagerDescriptor<IAiToolsetEntry,
     renderConfigDialog: (e, onClose) => React.createElement(AiToolsetDialog, {
         toolsetId: e.id,
         title: `AI toolset: ${e.displayName || e.name || e.id}`,
-        helpSection: HELP_SECTION,
         onClose
     }),
 

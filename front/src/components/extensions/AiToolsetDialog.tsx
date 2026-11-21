@@ -41,8 +41,13 @@ enum EAiToolsetDialogTab {
 interface IAiToolsetDialogProps {
     toolsetId: string
     title: string
-    helpSection: string
     onClose: () => void
+}
+
+// The help follows the tab: each one opens the guide where THAT tab is explained
+const HELP_SECTIONS: Record<EAiToolsetDialogTab, string> = {
+    [EAiToolsetDialogTab.GRANTS]: 'guide/extensions/aitoolsets/index?id=the-grants-tab',
+    [EAiToolsetDialogTab.SETTINGS]: 'guide/extensions/aitoolsets/index?id=settings-how-the-toolset-behaves-here'
 }
 
 const PLUGIN_COL_WIDTH = 220
@@ -215,7 +220,7 @@ const AiToolsetDialog: React.FC<IAiToolsetDialogProps> = (props: IAiToolsetDialo
 
     return (
         <Dialog open={true} maxWidth={false} sx={{ '& .MuiDialog-paper': { width: '960px', height: '600px' } }}>
-            <DialogTitleHelp section={props.helpSection} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>{props.title}</DialogTitleHelp>
+            <DialogTitleHelp section={HELP_SECTIONS[tab]} docsUrl={docsUrl(backendUrl, 'core', 'kwirth')}>{props.title}</DialogTitleHelp>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <Tabs value={tab} onChange={(_e, v) => setTab(v as EAiToolsetDialogTab)} sx={{ mb: 1, minHeight: 40 }}>
                     <Tab value={EAiToolsetDialogTab.GRANTS} label='Grants' sx={{ minHeight: 40 }} />

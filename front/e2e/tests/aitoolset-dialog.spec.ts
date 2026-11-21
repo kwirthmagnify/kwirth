@@ -103,6 +103,22 @@ test.describe('AI toolset dialog: Grants and Settings tabs', () => {
         await expect(dlg).toHaveCount(0)
     })
 
+    test('the help follows the tab: Grants opens its section of the guide, Settings its own', async () => {
+        await page.evaluate(() => {
+            const w = window as unknown as { __helpOpens: string[] }
+            w.__helpOpens = []
+            window.open = ((url?: string | URL) => { w.__helpOpens.push(String(url ?? '')); return null }) as typeof window.open
+        })
+        const opened = () => page.evaluate(() => (window as unknown as { __helpOpens: string[] }).__helpOpens)
+        const dlg = await open(WITH)
+        await dlg.getByRole('button', { name: 'help' }).click()
+        await expect.poll(async () => (await opened()).at(-1) ?? '').toContain('aitoolsets/index?id=the-grants-tab')
+        await dlg.getByRole('tab', { name: 'Settings' }).click()
+        await dlg.getByRole('button', { name: 'help' }).click()
+        await expect.poll(async () => (await opened()).at(-1) ?? '').toContain('aitoolsets/index?id=settings-how-the-toolset-behaves-here')
+        await dlg.getByRole('button', { name: 'Cancel' }).click()
+    })
+
     test('🔴 with settings: the tab draws the schema with its defaults', async () => {
         const dlg = await open(WITH)
         await expect(dlg.getByRole('tab', { name: 'Grants' })).toHaveAttribute('aria-selected', 'true')
