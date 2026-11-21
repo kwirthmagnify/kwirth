@@ -58,11 +58,17 @@ the core, and the extension never even sees it:
 
 | What | Who keeps it |
 |---|---|
-| A sender's or webhook's **send configurations** | the core |
+| A sender's or webhook's **named configurations**, and its shared **base configuration** | the core |
 | An identity provider's **configured instances** | the core |
-| An AI toolset's **grants** | the core |
-| A plugin's or provider's **installation configuration** | the core |
+| An AI toolset's **grants** and its **settings** | the core |
+| A plugin's, provider's, router's or login's **configuration** — what you edit from its ⚙ | the core |
 | Anything the extension stores on its own | the extension |
+
+Of the core's part, **only what was saved** travels. An extension nobody ever configured carries nothing,
+not even its defaults: importing defaults would *configure* it at the destination, and some extensions —
+a cloud provider, for instance — start connecting as soon as they are configured. A login carries only what
+the admin edited, not the defaults that come inside its package, so a newer package at the destination is
+not overridden by the old one's values.
 
 A sender cannot list its own configurations, and an IdP connector cannot enumerate its instances — one
 connector can have several, and each instance points at the connector, not the other way round. So the
@@ -74,7 +80,7 @@ database, in their own store — join in too, and then both halves travel togeth
 
 ## Exporting
 
-**Settings → Kwirth → Export.** You get one list with everything that can travel, all ticked:
+**☰ → Kwirth export.** You get one list with everything that can travel, all ticked:
 
 - **Settings** — metrics interval, marketplaces, package registries. These carry **what is on the form
   right now**, including changes you have not accepted yet.
@@ -110,13 +116,20 @@ The **Include credentials** box is **unticked by default**, and that is on purpo
 somebody's downloads folder.
 
 - **Unticked** — secret fields travel **empty**, not missing. The destination can therefore tell you
-  which ones need filling in.
+  which ones need filling in. This applies to every family alike — plugins, providers, routers, logins,
+  senders and webhooks (their base configuration and each named one), IdP instances and AI toolset
+  settings. What counts as secret is what the extension declares as such (a password, or a field marked
+  secret). An extension that declares nothing about its fields cannot say which of them is a password, so
+  its values **do not travel at all** without credentials, and importing the file says so.
+- ⚠️ **Importing a file exported without credentials writes those fields empty.** What is in the file is
+  what gets saved: an empty password does not mean *"keep the one you have"*. To re-import onto the same
+  kwirth without losing secrets, export **with** credentials.
 - **Ticked** — tokens and passwords are written in clear text. The file declares in its metadata that it
   carries them, so whoever opens it later knows what they are holding. Treat it as a secret.
 
 ## Importing
 
-**Settings → Kwirth → Import**, pick the file, and before anything is touched kwirth shows you **what
+**☰ → Kwirth import**, pick the file, and before anything is touched kwirth shows you **what
 each line would do**:
 
 | Status | What happens |

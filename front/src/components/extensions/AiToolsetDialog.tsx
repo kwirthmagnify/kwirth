@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import {
-    Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, Switch, Tab, Table, TableBody,
+    Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, Stack, Switch, Tab, Table, TableBody,
     TableCell, TableContainer, TableHead, TableRow, Tabs, Tooltip, Typography
 } from '@mui/material'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
@@ -277,10 +277,11 @@ const AiToolsetDialog: React.FC<IAiToolsetDialogProps> = (props: IAiToolsetDialo
 
                 {/* SETTINGS: a column of fixed width that scrolls inside */}
                 <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', display: loading || tab !== EAiToolsetDialogTab.SETTINGS ? 'none' : 'block' }}>
-                    <Box sx={{ width: SETTINGS_COL_WIDTH, maxWidth: '100%', pt: 1 }}>
+                    {/* a Stack, as in ConfigFormDialog: ConfigFields hands its fields loose and the spacing is the caller's */}
+                    <Stack spacing={2} sx={{ width: SETTINGS_COL_WIDTH, maxWidth: '100%', pt: 1 }}>
                         <ConfigFields schema={schema} values={settings} onChange={setSetting} invalidFields={fieldErrors.map(e => e.field)} />
                         { fieldErrors.length > 0 && <Typography variant='caption' color='error' data-testid='config-field-errors'>{fieldErrors.map(e => e.message).join('. ')}</Typography> }
-                    </Box>
+                    </Stack>
                 </Box>
 
                 { error && <Typography color='error' variant='body2' sx={{ mt: 1 }}>{error}</Typography> }

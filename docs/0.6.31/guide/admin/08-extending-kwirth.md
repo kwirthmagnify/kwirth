@@ -66,7 +66,11 @@ Every family uses the same manager UI, so once you learn one you know them all:
 ## Install, configure, remove
 
 1. **Install** — from **Available** click an item, or paste its URL / **BROWSE…** a file under **Install**.
-2. **Configure** — click **⚙ Settings** on the card. What opens depends on what the extension declares: a **typed form** (one set of fields), a **list of named configurations** (several destinations, several accounts — with a shared *base configuration* when the extension has settings common to all of them, and export/import to carry them to another kwirth), a **JSON editor**, or a **UI the extension provides itself**. If the gear is **greyed out**, that extension has nothing to configure — it is not a failure. Configuration (including secrets, shown masked behind an eye toggle) is stored in Kubernetes secrets/configmaps.
+2. **Configure** — click **⚙ Settings** on the card. What opens depends on what the extension declares: a **typed form** (one set of fields), a **list of named configurations** (several destinations, several accounts — with a shared *base configuration* when the extension has settings common to all of them), a **JSON editor**, or a **UI the extension provides itself**. If the gear is **greyed out**, that extension has nothing to configure — it is not a failure.
+
+   Wherever it is edited, an extension's configuration is kept in **one Kubernetes Secret per extension**, named `kwirth-<type>-<id>-config` — all of it, not only the passwords, because any field can turn out to be a credential. Secrets come back into the form as they are, masked behind an **eye** toggle, so you can check them without typing them again. To carry configuration to another kwirth, use **☰ Kwirth export** (see [Initial configuration](02-initial-config)).
+
+   **What is saved is checked first.** Every form is checked against what the extension declares: while a **required** field is empty, **Save** stays greyed out and its tooltip names the fields that are missing; anything else the extension refuses — a value outside its list, text where a number goes — is marked in **red** on its field, with the reason underneath, and the dialog stays open. Nothing is stored until it fits.
 
    Two things you will meet in that typed form:
 
@@ -84,7 +88,11 @@ Every family uses the same manager UI, so once you learn one you know them all:
      still counts.
 3. **Enable / disable** — many extensions have an enabled toggle in their settings; disabled ones stay installed but inactive.
 4. **Update** — click the **⬆** icon on the card when it offers a newer version. See below: it is not a reinstall, and it keeps your configuration.
-5. **Remove** — click the delete icon on the card.
+5. **Remove** — click the delete icon on the card. For the families that keep a configuration — plugins, providers, routers, logins, identity providers, senders, webhooks and AI toolsets — the confirmation carries a box, **Also delete its configuration**, **unticked**:
+   - **Unticked** (the default): the extension goes, but its configuration Secret **stays**. Installing the same extension again later picks it up exactly as it was — a sender with its destinations, a webhook with the **same URLs** (nothing to paste again at the system that calls it), an AI toolset with its settings and its grants.
+   - **Ticked**: the configuration is deleted with it, and a later install starts from scratch. Tick it when you are removing an extension for good.
+
+   A pack's confirmation carries the same box, and it applies to every member the pack removes. The families with nothing to keep (themes, homepages, documentation, DCEs) do not show it.
 
 > **Channels are plugins.** Installing a plugin is exactly how you add or remove the channels users see in the [resource selector](../user/04-selecting-resources). Install the Log plugin and the **Log** channel appears; remove it and it's gone.
 

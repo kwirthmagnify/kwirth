@@ -56,7 +56,8 @@ execute: async (args, host) => {
 
 | Declared | The tool receives |
 |---|---|
-| *(nothing)* | `host.trace` only |
+| *(nothing)* | `host.trace` and `host.config` only |
+| `configSchema` (not a capability) | `host.config` — the toolset's **settings** as the admin saved them, defaults applied; `{}` when it declares none. See [Settings](#settings-how-the-toolset-behaves-here) |
 | `ECapability.K8S` | `host.k8s` — cluster name, flavour, vCPUs, memory, the node map, and the `CoreV1Api`, `AppsV1Api` and `NetworkingV1Api` clients |
 | `ECapability.METRICS` | `host.metrics` — the metric samples kwirth keeps in memory |
 | `ECapability.EVENTS` | `host.events` — the recent cluster-event buffer |
@@ -103,7 +104,7 @@ the common flow. Three details are specific to this family:
 |---|---|
 | **tools chip** | How many tools the toolset actually **brought into the running core**, not how many its package claims. A toolset whose code failed to load shows **no** chip rather than an inflated number. |
 | **plugins chip** | How many plugins are granted **at least one** of its tools — `No plugin` when nobody is. A plugin whose grant was emptied does not count. |
-| **⚙ settings** | Opens the toolset's **grant**: which plugins may use it, and which of its tools each one (see [Granting](#granting-installing-is-not-giving)). It is the only decision taken here. *Which* of the granted toolsets a channel actually uses, in what order, and which tools it switches off, is decided per channel. |
+| **⚙ settings** | Opens the toolset's dialog, **AI toolset: *name***, with two tabs: **Grants** — which plugins may use it, and which of its tools each one (see [Granting](#granting-installing-is-not-giving)) — and **Settings** — how the toolset behaves in this installation (see [Settings](#settings-how-the-toolset-behaves-here)). *Which* of the granted toolsets a channel actually uses, in what order, and which tools it switches off, is decided per channel. |
 
 Installing from a URL or a local file works exactly as in the other families: paste the package URL and click
 ⬇, or use **Browse…** to upload a `.tgz`.
@@ -126,10 +127,11 @@ the fact rather than failing silently.
 > to answer in seconds, and here you answer it by looking at **who has been granted `k8s-ops`** — one line,
 > one dialog. That is why the grants are held per toolset and not scattered across each channel's settings.
 
-### The grant dialog
+### The Grants tab
 
 ![AI toolset grant](../../../_media/guide/aitoolset-grant.png)
-*One row per installed plugin, one column per tool of the toolset, each with its effect (`read` / `write`).*
+*The toolset's dialog opens on **Grants**: one row per installed plugin, one column per tool of the toolset,
+each with its effect (`read` / `write`).*
 
 For each plugin you choose one of two ways of granting:
 
@@ -148,7 +150,8 @@ in the same toolset, and the grant tells them apart.
   can still be taken away.
 - If a new version of the toolset drops or renames a tool that was granted, it appears in a column of its own,
   struck through and marked *removed*: it is ignored while it is there, and saving removes it from the grant.
-- Nothing is applied until **Save**; **Cancel** leaves the grant as it was.
+- Nothing is applied until **Save**; **Cancel** leaves the grant as it was. Save and Cancel cover **both**
+  tabs: one Save stores what changed in Grants and in Settings, one Cancel discards both.
 
 Three consequences worth knowing before you grant:
 
@@ -158,16 +161,54 @@ Three consequences worth knowing before you grant:
   upgrade is usually a plugin whose grants nobody has set.
 - **Revoking is immediate and needs no restart.** Take the grant away and the next bot run is offered fewer
   tools. Nothing is cached behind your back.
-- **Updating a toolset keeps its grants; uninstalling clears them.** Installing a newer version of a toolset
-  —or rebuilding one you are developing— leaves untouched who may use it: the grant belongs to the toolset
-  *id*, not to the version you happened to install. Only a plugin granted with **All** picks up the tools
-  the new version adds. Uninstalling is the opposite and does clear it, so that installing something again
-  later never resurrects permissions nobody re-granted.
+- **Updating a toolset keeps its grants.** Installing a newer version of a toolset —or rebuilding one you
+  are developing— leaves untouched who may use it: the grant belongs to the toolset *id*, not to the version
+  you happened to install. Only a plugin granted with **All** picks up the tools the new version adds.
+- **Uninstalling keeps them too, unless you ask.** The uninstall confirmation carries the box **Also delete
+  its configuration**, unticked. Left unticked, the toolset's grants **and** its settings are kept: while it
+  is not installed nobody can use it, and installing it again brings both back exactly as they were. Ticked,
+  both are deleted, and a later install starts as a first one — granted to nobody, settings at their
+  defaults. Tick it when you are removing a toolset for good, so that installing it again some day does not
+  hand its tools back to the plugins that had them.
 
 > ⚠️ **Upgrading from a Kwirth with whole-toolset grants.** Grants used to be *toolset → plugins*, with no
 > choice of tools. That format is **not** migrated: after the upgrade every toolset reads **No plugin** and
 > AI channels have no tools until you grant them again in this dialog. The core logs a warning for each
 > grant it discarded.
+
+## Settings: how the toolset behaves here
+
+Some toolsets need to know something about **this installation** before their tools are useful — which
+namespace they may deploy to, whether they only plan or also apply, a token for a service they call. That
+is the toolset's **settings**: **one** configuration per installed toolset, global to the whole Kwirth, the
+same for every plugin it is granted to.
+
+![AI toolset settings](../../../_media/guide/aitoolset-settings.png)
+*The **Settings** tab draws the fields the toolset declares, with their defaults until you save anything.*
+
+- **What you see is what the toolset declares.** The form is built from the toolset's own list of settings,
+  with the same kinds of field as every other configuration in Kwirth — text, numbers, switches, lists,
+  passwords. A toolset that declares none shows the tab **greyed out**, and hovering it says *"This
+  toolset declares no settings"*.
+- **Never saved means the defaults.** Until you save, the tools work with the defaults the toolset declares,
+  and the form shows them.
+- **Passwords and tokens come back as they are**, masked: the eye shows the value already saved, so you
+  can check it without typing it again.
+- **Required fields.** While one is empty, **Save** stays greyed out and its tooltip names the fields that
+  are missing. Anything else the toolset refuses is marked in red on its field, the tab reads
+  **Settings (errors)**, and the dialog stays open so you can fix it. Nothing is stored until it fits.
+- **It applies at once.** The tools read their settings on **every** call: what you save is in force from
+  the next one, without restarting anything.
+
+> ⚠️ **Settings are not a security control.** They tell a well-behaved toolset how to behave, and it is the
+> toolset that applies them. What does not depend on how a toolset was written is the **grant**: if a plugin
+> must not change your cluster, do not grant it the tools that do — do not rely on a setting saying
+> *"plan only"*.
+
+The settings are kept in **one Secret per toolset** (`kwirth-aitoolset-<id>-config`), the way every other
+extension keeps its configuration. They travel in **☰ Kwirth export** next to the toolset's grants, with the
+passwords emptied unless you include credentials. Uninstalling keeps them unless you tick **Also delete its
+configuration** (see [above](#granting-installing-is-not-giving)).
 
 ## Where tools are switched on
 
@@ -276,6 +317,48 @@ export default myToolset
 The `description` of each tool is not decoration: it is what the **model** reads to decide whether to call the
 tool, so write it for the model, not for a developer.
 
+### Settings: `configSchema` and `host.config`
+
+A toolset that needs settings declares them in `configSchema`, with the same field definitions
+(`IConfigFieldDef`) every Kwirth extension uses, and each tool reads them from `host.config`:
+
+```ts
+const myToolset: IAiToolset = {
+    id: 'my-deployer',
+    // ...
+    requires: [ECapability.K8S],
+    configSchema: [
+        { name: 'namespace', label: 'Target namespace', required: true, default: 'apps' },
+        { name: 'mode', label: 'Mode', type: 'select', options: ['plan', 'apply'], default: 'plan' },
+        { name: 'registryToken', label: 'Registry token', type: 'password' }
+    ],
+    tools: [
+        defineTool({
+            name: 'deploy',
+            description: 'Deploys an image to the configured namespace.',
+            effect: EToolEffect.WRITE,
+            sensitivity: EToolSensitivity.INTERNAL,
+            inputSchema: z.object({ image: z.string() }),
+            execute: async (args, host) => {
+                const namespace = String(host.config.namespace)     // what the admin saved, or the default
+                if (host.config.mode !== 'apply') return { plan: `would deploy ${args.image} to ${namespace}` }
+                // ... apply it
+            }
+        })
+    ]
+}
+```
+
+- `host.config` is **always there**: the saved values with the defaults applied, or `{}` when the toolset
+  declares no `configSchema`. Like `trace`, it is not a capability and needs no `requires`.
+- It is read on **every** call, so the tool must not cache it: what the admin saves applies from the next one.
+- Each call gets its **own copy**: a tool that changes it changes nothing for the next one.
+- What does not fit the schema is refused when saving, so a tool can rely on required fields being there.
+  Still, read them defensively: a newer toolset version may add a field that an older saved configuration
+  does not have yet — that is what `default` is for.
+- Mark secrets as `type: 'password'` (or `secret: true` on a multi-line field): the dialog masks them and
+  ☰ Kwirth export empties them unless credentials are included.
+
 Common packages (`kwirth-common`, `kwirth-common-ai`, `zod`) must **not** be bundled — the core serves them
 through its back global, so that the toolset uses exactly the same registry and the same `zod` as kwirth
 itself.
@@ -294,6 +377,17 @@ Point `kwirth-dev.json` at the build folder, as with any other extension:
 
 A toolset loaded this way shows a **`dev`** badge, cannot be uninstalled from the manager (the file governs it,
 not the dialog), and disappears when you remove it from `kwirth-dev.json` and restart the core.
+
+Its settings can be given in the same file, with `${VAR}` replaced from the environment. They live in memory
+only, **win over** whatever was saved from the dialog, and are never written anywhere:
+
+```json
+{
+    "aitoolsetConfigs": {
+        "my-deployer": { "namespace": "dev-apps", "mode": "apply", "registryToken": "${REGISTRY_TOKEN}" }
+    }
+}
+```
 
 ## Available toolsets
 

@@ -188,7 +188,7 @@ write('package.json', `{
         "test": "node --test tests/*.test.mjs"
     },
     "dependencies": {
-        "@kwirthmagnify/kwirth-common-ai": "^0.5.80"
+        "@kwirthmagnify/kwirth-common-ai": "^0.5.81"
     },
     "devDependencies": {
 ${devDeps}
@@ -432,6 +432,20 @@ const ${camelId}: IAiToolset = {
     displayName: '${name}',
     description: '${description}',
     requires: [${requires}],${usesProviders ? `\n    // The ONLY providers the host lends to these tools (ECapability.PROVIDERS).\n    providers: [${providerIds.map(p => `'${p}'`).join(', ')}],` : ''}
+    /*
+        SETTINGS (optional): what the admin fills in from the toolset's Settings tab — one configuration per
+        installation, global to it. Uncomment and adapt: every tool then reads the values as \`host.config\`
+        (the saved ones, defaults applied) on EVERY call, so a change applies from the next one. Without a
+        configSchema, \`host.config\` is \`{}\` and the Settings tab shows greyed out.
+        Mark secrets as type 'password' (or secret: true): masked in the dialog, emptied by a credential-free export.
+        ⚠️ A setting is not a security control: the tool applies it. What protects the cluster is the GRANT.
+
+    configSchema: [
+        { name: 'namespace', label: 'Namespace', required: true, default: 'default' },
+        { name: 'mode', label: 'Mode', type: 'select', options: ['plan', 'apply'], default: 'plan' },
+        { name: 'token', label: 'API token', type: 'password' }
+    ],
+    */
     tools: [
         defineTool({
             name: '${toolName}',
@@ -442,6 +456,7 @@ const ${camelId}: IAiToolset = {
             sensitivity: ${sensRef},
             inputSchema: ${ej.schema},
             execute: async (${argsFirma}, host) => {
+                // With a configSchema: const namespace = String(host.config.namespace)  — read it here, never cache it
 ${ej.cuerpo}
             }
         })
@@ -467,33 +482,33 @@ const fakeHost = () => {
         appsApi: {},
         networkApi: {}
     }
-    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), k8s } }
+    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), config: {}, k8s } }
 }`,
     metrics: `const fakeHost = () => {
     const traced = []
     const metrics = { samples: [{ timestamp: 1, values: {} }, { timestamp: 2, values: {} }] }
-    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), metrics } }
+    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), config: {}, metrics } }
 }`,
     events: `const fakeHost = () => {
     const traced = []
     const events = { recent: Array.from({ length: 30 }, (_, i) => ({ type: 'ADDED', obj: { kind: 'Event', n: i } })) }
-    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), events } }
+    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), config: {}, events } }
 }`,
     repos: `const fakeHost = () => {
     const traced = []
     const repos = { creds: [{ host: 'github.com', type: 'github', token: 'ghp_x' }] }
-    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), repos } }
+    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), config: {}, repos } }
 }`,
     providers: `/** Lends ONLY the provider the toolset names, like the real host: any other id is undefined. */
 const fakeHost = () => {
     const traced = []
     const handle = { id: '${providerIds[0] ?? ''}', getOperations: () => [{ name: 'restart', description: 'Restarts it', args: { usage: 'what to restart', example: {} } }] }
     const providers = { get: (id) => id === handle.id ? handle : undefined }
-    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), providers } }
+    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), config: {}, providers } }
 }`,
     none: `const fakeHost = () => {
     const traced = []
-    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }) } }
+    return { traced, host: { trace: (t, a) => traced.push({ tool: t, args: a }), config: {} } }
 }`
 }
 
@@ -517,7 +532,7 @@ const sinCapability = primary === 'none' ? '' : `
 test('sin la capability provisionada, la tool lo dice', async () => {
     // The host lends ONLY what was declared: a tool that does not check its own blows up with an opaque TypeError.
     await assert.rejects(
-        () => tool.execute(${llamada}, { trace: () => {} }),
+        () => tool.execute(${llamada}, { trace: () => {}, config: {} }),
         /${primary === 'repos' ? 'source repository credentials' : primary === 'k8s' ? 'cluster access' : primary === 'providers' ? 'needs the provider' : primary}/
     )
 })

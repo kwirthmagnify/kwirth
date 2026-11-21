@@ -1,5 +1,7 @@
 import { test, expect, Page, Locator } from '@playwright/test'
-import { readFileSync } from 'fs'
+import { readFileSync, mkdtempSync, writeFileSync } from 'fs'
+import { execFileSync } from 'child_process'
+import os from 'os'
 import path from 'path'
 import { login, clickExtensionMenuItem, dismissOpenDialogs, GUIDE_MEDIA, capturePedida } from './helpers'
 
@@ -246,4 +248,64 @@ test('capture extension tags filter (dark, solo catalogo publico)', async ({ pag
 
     const restored = (await readSettings(page, s)).marketplaces ?? []
     expect(JSON.stringify(restored)).toBe(JSON.stringify(original))
+})
+
+/*
+    The AI toolset's SETTINGS tab (plans/extension-config, S9). No published toolset declares settings yet,
+    so a neutral one written here —the guide's own example, 'My Deployer'— is uploaded, shot with sample
+    values (nothing saved: Cancel) and uninstalled with its configuration. The environment is left as found.
+*/
+const SETTINGS_FILE = 'aitoolset-settings.png'
+const SETTINGS_ID = 'my-deployer'
+
+const settingsToolsetTgz = (): string => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'kwirth-capture-ts-'))
+    writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ id: SETTINGS_ID, name: '@acme/kwirth-aitoolset-my-deployer', displayName: 'My Deployer', version: '0.1.0', description: 'Deploys images to the configured namespace', extensionType: 'aitoolset' }))
+    writeFileSync(path.join(dir, 'back.js'), `module.exports.default = {
+        id: '${SETTINGS_ID}', version: '0.1.0', displayName: 'My Deployer', description: 'Deploys images to the configured namespace', requires: [],
+        configSchema: [
+            { name: 'namespace', label: 'Target namespace', required: true, default: 'apps' },
+            { name: 'mode', label: 'Mode', type: 'select', options: ['plan', 'apply'], default: 'plan' },
+            { name: 'registryToken', label: 'Registry token', type: 'password' }
+        ],
+        tools: [{ name: 'deploy', description: 'Deploys an image', effect: 'write', sensitivity: 'internal', inputSchema: {}, execute: async () => ({}) }]
+    }`)
+    const tgz = `${dir}.tgz`
+    execFileSync('tar', ['-czf', tgz, '-C', dir, '.'])
+    return readFileSync(tgz).toString('base64')
+}
+
+test('capture AI toolset settings tab (dark)', async ({ page }) => {
+    test.skip(!pedida(SETTINGS_FILE), 'not asked for')
+    await page.setViewportSize({ width: 1600, height: 900 })
+    await page.addInitScript(() => { try { localStorage.setItem('kwirth.mode', 'dark') } catch { /* */ } })
+    const s = await captureSession(page)
+    const installed = await page.evaluate(async ([b, a]) => (await (await fetch(`${b}/core/aitoolsets`, { headers: { Authorization: a } })).json() as { id: string }[]).map(t => t.id), [s.backend, s.auth])
+    expect(installed, `'${SETTINGS_ID}' must not be installed before`).not.toContain(SETTINGS_ID)
+    const up = await page.evaluate(async ([b, a, data]) => {
+        const bytes = Uint8Array.from(atob(data), c => c.charCodeAt(0))
+        return (await fetch(`${b}/core/aitoolsets/upload`, { method: 'POST', headers: { Authorization: a, 'Content-Type': 'application/octet-stream' }, body: bytes })).status
+    }, [s.backend, s.auth, settingsToolsetTgz()])
+    expect(up).toBe(200)
+    try {
+        await clickExtensionMenuItem(page, 'AI toolsets')
+        const manager = page.getByRole('dialog').filter({ hasText: /Manage AI toolsets/i })
+        await manager.waitFor({ timeout: 20000 })
+        await manager.getByPlaceholder('Filter…').first().fill('My Deployer')
+        await page.waitForTimeout(400)
+        await manager.locator('span[aria-label="Configure"] button').first().click()
+        const dlg = page.getByRole('dialog').filter({ hasText: 'AI toolset: My Deployer' })
+        await dlg.waitFor({ timeout: 20000 })
+        await dlg.getByRole('tab', { name: 'Settings', exact: true }).click()
+        await dlg.getByLabel(/^Target namespace/).fill('payments')
+        await dlg.getByLabel(/^Registry token/).fill('example-token')
+        await page.mouse.move(0, 0)
+        await page.waitForTimeout(800)
+        await dlg.screenshot({ path: `${MEDIA}/${SETTINGS_FILE}` })
+        await dlg.getByRole('button', { name: 'Cancel' }).click()
+        await dismissOpenDialogs(page)
+    }
+    finally {
+        await page.evaluate(async ([b, a, id]) => { await fetch(`${b}/core/aitoolsets/${id}?deleteConfig=true`, { method: 'DELETE', headers: { Authorization: a } }) }, [s.backend, s.auth, SETTINGS_ID])
+    }
 })
