@@ -78,6 +78,7 @@ kwirth-bundled.json
 /plugins/vllm/
 /plugins/llm-router/
 /plugins/depthcharge/
+/plugins/sdsf/
 /providers/sugarless/
 /icons/
 /providers/service-flow/
