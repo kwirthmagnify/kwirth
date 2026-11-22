@@ -264,6 +264,105 @@ test('undefined removes the settings, and so does unregistering the toolset', ()
     assert.deepEqual(back.getToolsetConfig('cfg-gone'), {})
 })
 
+// ── EXEC (plans/toolset-exec, E1) ────────────────────────────────────────────────────────────────────
+
+/*
+    A fake of @kubernetes/client-node's Exec: like the real one, it writes the output to the streams it is
+    given, reads the stdin stream, calls the status callback, and resolves a socket whose 'close' comes last.
+    `behave` decides what the remote command does.
+*/
+const fakeExecApi = (behave) => {
+    const calls = []
+    return {
+        calls,
+        exec: async (ns, pod, container, command, stdout, stderr, stdin, tty, onStatus) => {
+            if (behave.refuse) throw Object.assign(new Error('forbidden'), { code: 403 })
+            let input = ''
+            if (stdin) for await (const chunk of stdin) input += chunk.toString()
+            calls.push({ ns, pod, container, command, tty, input })
+            const listeners = []
+            const socket = { on: (ev, fn) => { if (ev === 'close') listeners.push(fn) }, close: () => listeners.forEach(f => f()) }
+            if (!behave.hang) {
+                setImmediate(() => {
+                    if (behave.stdout) stdout.write(behave.stdout(input))
+                    if (behave.stderr) stderr.write(behave.stderr)
+                    onStatus(behave.exitCode ? { status: 'Failure', reason: 'NonZeroExitCode', details: { causes: [{ reason: 'ExitCode', message: String(behave.exitCode) }] } } : { status: 'Success' })
+                    listeners.forEach(f => f())
+                })
+            }
+            return socket
+        }
+    }
+}
+
+const execContext = (execApi, traced = []) => fakeContext({ clusterInfo: { ...fakeContext().clusterInfo, execApi }, trace: (t, a) => traced.push({ t, a }), consumer: 'agora' })
+
+test('🔴 EXEC: not declared, no host.exec — declared but no execApi, none either', () => {
+    assert.equal(buildToolHost([ECapability.K8S], execContext(fakeExecApi({}))).exec, undefined)
+    assert.equal(buildToolHost([ECapability.EXEC], fakeContext()).exec, undefined)
+    assert.equal(typeof buildToolHost([ECapability.EXEC], execContext(fakeExecApi({}))).exec.run, 'function')
+})
+
+test('🔴 EXEC: runs the array command with its stdin, and returns output and exit code', async () => {
+    const api = fakeExecApi({ stdout: (input) => `got:${input}` })
+    const host = buildToolHost([ECapability.EXEC], execContext(api))
+    const r = await host.exec.run('demo', 'web-1', 'nginx', ['sh', '-c', 'cat > "$1"', 'sh', '/tmp/x'], { stdin: 'hello' })
+    assert.deepEqual(r, { exitCode: 0, stdout: 'got:hello', stderr: '', truncated: false, timedOut: false })
+    assert.deepEqual(api.calls[0], { ns: 'demo', pod: 'web-1', container: 'nginx', command: ['sh', '-c', 'cat > "$1"', 'sh', '/tmp/x'], tty: false, input: 'hello' })
+})
+
+test('EXEC: a non-zero exit code comes back as the command\'s own, with its stderr', async () => {
+    const host = buildToolHost([ECapability.EXEC], execContext(fakeExecApi({ stderr: 'sh: not found', exitCode: 127 })))
+    const r = await host.exec.run('demo', 'p', 'c', ['nope'])
+    assert.equal(r.exitCode, 127)
+    assert.equal(r.stderr, 'sh: not found')
+})
+
+test('🔴 EXEC: a failure that is not an exit code (no such binary, distroless) keeps the API\'s reason in stderr', async () => {
+    const api = {
+        exec: async (ns, pod, c, cmd, stdout, stderr, stdin, tty, onStatus) => {
+            const listeners = []
+            setImmediate(() => { onStatus({ status: 'Failure', reason: 'InternalError', message: 'exec: "nope": executable file not found in $PATH' }); listeners.forEach(f => f()) })
+            return { on: (ev, fn) => listeners.push(fn), close: () => {} }
+        }
+    }
+    const r = await buildToolHost([ECapability.EXEC], execContext(api)).exec.run('demo', 'p', 'c', ['nope'])
+    assert.equal(r.exitCode, 1)
+    assert.match(r.stderr, /executable file not found/)
+})
+
+test('🔴 EXEC: output past the core\'s cap (1 MB, stdout + stderr) is cut and said', async () => {
+    const big = 'x'.repeat(back.EXEC_MAX_OUTPUT_BYTES + 10)
+    const host = buildToolHost([ECapability.EXEC], execContext(fakeExecApi({ stdout: () => big, stderr: 'more' })))
+    const r = await host.exec.run('demo', 'p', 'c', ['cat', 'big'])
+    assert.equal(r.truncated, true)
+    assert.equal(r.stdout.length + r.stderr.length, back.EXEC_MAX_OUTPUT_BYTES)
+})
+
+test('🔴 EXEC: a command that hangs is cut at its timeout, capped by the core at 120 s', async () => {
+    const host = buildToolHost([ECapability.EXEC], execContext(fakeExecApi({ hang: true })))
+    const started = Date.now()
+    const r = await host.exec.run('demo', 'p', 'c', ['sleep', '999'], { timeoutSeconds: 1 })
+    assert.equal(r.timedOut, true)
+    assert.equal(r.exitCode, -1)
+    assert.ok(Date.now() - started < 3000)
+    assert.equal(back.EXEC_MAX_TIMEOUT_SECONDS, 120)
+    assert.equal(back.EXEC_DEFAULT_TIMEOUT_SECONDS, 30)
+})
+
+test('🔴 EXEC: an API refusal (403, no pods/exec) is THROWN with its code, for the tool to say it', async () => {
+    const host = buildToolHost([ECapability.EXEC], execContext(fakeExecApi({ refuse: true })))
+    await assert.rejects(host.exec.run('demo', 'p', 'c', ['ls']), (err) => err.code === 403)
+})
+
+test('🔴 EXEC: every run is traced with pod, container, command and consumer — never the stdin', async () => {
+    const traced = []
+    const host = buildToolHost([ECapability.EXEC], execContext(fakeExecApi({}), traced))
+    await host.exec.run('demo', 'web-1', 'nginx', ['sh', '-c', 'cat > "$1"', 'sh', '/etc/app.conf'], { stdin: 'password=s3cr3t' })
+    assert.deepEqual(traced, [{ t: 'exec', a: { namespace: 'demo', pod: 'web-1', container: 'nginx', command: ['sh', '-c', 'cat > "$1"', 'sh', '/etc/app.conf'], stdinBytes: 15, consumer: 'agora' } }])
+    assert.equal(JSON.stringify(traced).includes('s3cr3t'), false)
+})
+
 test('the descriptor sent to the front carries the configSchema, and none when not declared', () => {
     const schema = [{ name: 'namespace', label: 'Namespace', default: 'default' }]
     registerToolset({ ...fakeToolset('cfg-schema', []), configSchema: schema })

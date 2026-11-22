@@ -1,7 +1,8 @@
 import { ILlm, ILlmModel, ILlmProvider, ECapability, EToolEffect, EToolSensitivity, EUsagePeriod, EUsageUnit, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, IToolsetGrant, IUsageAmounts, IUsageLimits, IUsageWindows, TAiToolsetConfig, parseToolRef, toolRef } from './index'
 // TYPES ONLY: the compiler erases them, so common-ai does not drag the Kubernetes client (~6.6 MB) into
 // any bundle. That is why @kubernetes/client-node is an optional peer and not a dependency.
-import type { AppsV1Api, CoreV1Api, CustomObjectsApi, NetworkingV1Api } from '@kubernetes/client-node'
+import type { AppsV1Api, CoreV1Api, CustomObjectsApi, Exec, NetworkingV1Api, V1Status } from '@kubernetes/client-node'
+import { Readable, Writable } from 'stream'
 // TYPES ONLY as well: the provider handle a toolset with ECapability.PROVIDERS receives. Erased on compile, so no
 // runtime dependency on common-back; the toolsets that use it depend on common-back themselves.
 import type { IProviderHandle } from '@kwirthmagnify/kwirth-common-back'
@@ -934,6 +935,36 @@ export interface IProvidersCapability {
     get(providerId: string): IProviderHandle | undefined
 }
 
+/*
+    ECapability.EXEC (plans/toolset-exec): run a command inside a pod's container, what `kubectl exec` does.
+    🔴 The most powerful capability ever lent to a toolset: it can run ANYTHING in any container the core's
+    ServiceAccount reaches. The core limits time and size, not intent; the control is the grant.
+*/
+export interface IExecOptions {
+    /** Text fed to the command's stdin (never traced: only its size) */
+    stdin?: string
+    /** 30 by default; the core caps it at 120 */
+    timeoutSeconds?: number
+}
+
+export interface IExecResult {
+    /** 0 on success; the command's own code otherwise; -1 when it is not known (timed out, no status) */
+    exitCode: number
+    stdout: string
+    stderr: string
+    /** stdout + stderr went over the core's cap (1 MB) and were cut */
+    truncated: boolean
+    timedOut: boolean
+}
+
+export interface IExecCapability {
+    /**
+     * Runs `command` (an ARRAY, no implicit shell: whoever wants `sh -c` asks for it) in that container.
+     * An API refusal (a 403 without `pods/exec`) is THROWN as it comes, with its `code`, for the tool to say it.
+     */
+    run(namespace: string, pod: string, container: string, command: string[], options?: IExecOptions): Promise<IExecResult>
+}
+
 /**
  * What a tool receives when it runs. Only the capabilities its toolset declared come filled in:
  * a `requires: []` receives nothing but `trace`.
@@ -953,6 +984,7 @@ export interface IToolHost {
     events?: IEventsCapability
     repos?: IReposCapability
     providers?: IProvidersCapability
+    exec?: IExecCapability
 }
 
 /** An executable tool: what travels to the front end (IAiToolInfo) plus what it takes to invoke it. */
@@ -1107,6 +1139,87 @@ export const listToolsetInfos = (): IAiToolsetInfo[] =>
         tools: t.tools.map(x => ({ name: x.name, description: x.description, effect: x.effect, sensitivity: x.sensitivity }))
     }))
 
+// The core's limits on an exec (plans/toolset-exec, R4): the toolset cannot go past them
+export const EXEC_DEFAULT_TIMEOUT_SECONDS = 30
+export const EXEC_MAX_TIMEOUT_SECONDS = 120
+export const EXEC_MAX_OUTPUT_BYTES = 1024 * 1024
+
+// The code the command exited with, from the API server's Status: Success → 0, NonZeroExitCode → its ExitCode cause
+const exitCodeOf = (status: V1Status | undefined): number => {
+    if (!status) return -1
+    if (status.status === 'Success') return 0
+    const cause = status.details?.causes?.find(c => c.reason === 'ExitCode')?.message
+    const code = cause !== undefined ? Number(cause) : NaN
+    return Number.isFinite(code) ? code : 1
+}
+
+/*
+    The EXEC facade over the core's own Exec client (ClusterInfo.execApi, the one fileman uses): an array
+    command, its stdin, and its output and exit code back — within the core's time and size limits. Each run
+    is traced with the consumer it ran for; the stdin never is, only its size.
+*/
+const execFacade = (execApi: Exec, context: IToolContext): IExecCapability => ({
+    run: async (namespace, pod, container, command, options = {}) => {
+        const stdinText = options.stdin
+        context.trace('exec', { namespace, pod, container, command, stdinBytes: stdinText !== undefined ? Buffer.byteLength(stdinText, 'utf8') : 0, consumer: context.consumer })
+        const seconds = Math.min(Math.max(options.timeoutSeconds ?? EXEC_DEFAULT_TIMEOUT_SECONDS, 1), EXEC_MAX_TIMEOUT_SECONDS)
+
+        let stdout = Buffer.alloc(0)
+        let stderr = Buffer.alloc(0)
+        let truncated = false
+        // stdout and stderr share ONE budget: what goes over it is dropped, and said
+        const sink = (toStdout: boolean) => new Writable({
+            write(chunk: Buffer | string, _encoding, callback) {
+                const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+                const room = EXEC_MAX_OUTPUT_BYTES - stdout.length - stderr.length
+                if (data.length > room) truncated = true
+                const kept = data.subarray(0, Math.max(room, 0))
+                if (toStdout) stdout = Buffer.concat([stdout, kept])
+                else stderr = Buffer.concat([stderr, kept])
+                callback()
+            }
+        })
+        const stdin = stdinText !== undefined ? Readable.from([Buffer.from(stdinText, 'utf8')]) : null
+
+        return new Promise<IExecResult>((resolve, reject) => {
+            let status: V1Status | undefined
+            let settled = false
+            let socket: { close: () => void } | undefined
+            const finish = (timedOut: boolean) => {
+                if (settled) return
+                settled = true
+                clearTimeout(timer)
+                /*
+                    A failure that is not the command's own exit code (the binary does not exist, a distroless
+                    image without `sh`) comes only in the Status message: it goes to stderr when the command
+                    wrote nothing, or the tool could not say why.
+                */
+                const hasExitCode = status?.details?.causes?.some(c => c.reason === 'ExitCode') ?? false
+                const ownStderr = stderr.toString('utf8')
+                const statusMessage = status && status.status !== 'Success' && !hasExitCode && ownStderr === '' ? (status.message ?? '') : ''
+                resolve({ exitCode: timedOut ? -1 : exitCodeOf(status), stdout: stdout.toString('utf8'), stderr: ownStderr || statusMessage, truncated, timedOut })
+            }
+            // settled as timed out BEFORE closing: the close would otherwise resolve it as a normal end
+            const timer = setTimeout(() => {
+                finish(true)
+                try { socket?.close() } catch { /* already closing */ }
+            }, seconds * 1000)
+            execApi.exec(namespace, pod, container, command, sink(true), sink(false), stdin, false, (s: V1Status) => { status = s })
+                .then(ws => {
+                    socket = ws
+                    // the output arrives before the status, and the status before the close: the close ends it
+                    ws.on('close', () => finish(false))
+                })
+                .catch(err => {
+                    if (settled) return
+                    settled = true
+                    clearTimeout(timer)
+                    reject(err)
+                })
+        })
+    }
+})
+
 /**
  * Builds a toolset's host from the core context, provisioning ONLY what was declared.
  *
@@ -1147,6 +1260,8 @@ export const buildToolHost = (requires: ECapability[], context: IToolContext, pr
                 declared.has(providerId) ? (ci.getProvider(providerId, context.consumer) as IProviderHandle | undefined) : undefined
         }
     }
+    // EXEC only when declared AND the host has the core's Exec client: otherwise `undefined`, and the tool says so
+    if (requires.includes(ECapability.EXEC) && ci?.execApi) host.exec = execFacade(ci.execApi as Exec, context)
     return host
 }
 

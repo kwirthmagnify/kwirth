@@ -171,7 +171,8 @@ export enum ECapability {
     METRICS = 'metrics',        // metrics, current and historical
     EVENTS = 'events',          // cluster event buffer
     REPOS = 'repos',            // source repository credentials
-    PROVIDERS = 'providers'     // handles of the providers the toolset names in `providers` (reads and operations)
+    PROVIDERS = 'providers',    // handles of the providers the toolset names in `providers` (reads and operations)
+    EXEC = 'exec'               // 🔴 run a command inside a pod's container (plans/toolset-exec): the most powerful one
 }
 
 /** Separator of a qualified reference to a tool: '<toolset>/<tool>'. */

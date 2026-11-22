@@ -1,6 +1,12 @@
 # Toolsets: la capacidad `EXEC` — PLAN
 
-> **ESTADO — 📝 PROPUESTO** (2026-11-22). Producto en el [PRD](PRD.md) (validado).
+> **ESTADO — 🚧 EN CURSO** (2026-11-22). PLAN y tipos de §2 validados por el usuario. **E1 hecho**:
+> `kwirth-common-ai@0.5.82` publicada (fachada probada también contra el `Exec` real del k3d en un pod
+> propio). Producto en el [PRD](PRD.md).
+>
+> Añadido en E1 sobre el plan: un fallo que no es exit code del comando (binario inexistente, imagen
+> distroless sin `sh`) solo viene en el mensaje del `Status`, y la fachada lo pasa a `stderr` cuando el comando
+> no escribió nada; si no, la tool no podría decir por qué.
 
 ## 1. Dónde vive
 
