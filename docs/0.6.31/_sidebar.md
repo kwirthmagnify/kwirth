@@ -102,6 +102,7 @@
       * [K8s Metrics](/0.6.31/guide/extensions/aitoolsets/k8s-metrics)
       * [K8s Config & Secrets](/0.6.31/guide/extensions/aitoolsets/k8s-secrets)
       * [K8s Ops](/0.6.31/guide/extensions/aitoolsets/k8s-ops)
+      * [K8s Deploy](/0.6.31/guide/extensions/aitoolsets/k8s-deploy)
       * [Source Repos](/0.6.31/guide/extensions/aitoolsets/source-repos)
       * [Playground](/0.6.31/guide/extensions/aitoolsets/playground)
     * [DCEs](/0.6.31/guide/extensions/dces/index)
