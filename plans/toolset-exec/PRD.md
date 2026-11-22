@@ -1,6 +1,7 @@
 # Toolsets: la capacidad `EXEC` — PRD
 
-> **ESTADO — 📝 BORRADOR** (2026-11-22), pendiente de validar. Documento de PRODUCTO; el cómo irá en el PLAN.
+> **ESTADO — ✅ VALIDADO** (2026-11-22), con los límites de R4 tal cual. Documento de PRODUCTO; el cómo va en
+> el PLAN.
 
 ## Resumen
 
