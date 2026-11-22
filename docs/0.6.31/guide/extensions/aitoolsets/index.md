@@ -410,6 +410,7 @@ Each one has its own page, with the full list of its tools and the effect and se
 | **[K8s Config & Secrets](k8s-secrets)** (`k8s-secrets`) | 3 | `K8S` | The configuration a workload really consumes: ConfigMap data, Secret keys (never values) and TLS certificate details. |
 | **[K8s Ops](k8s-ops)** (`k8s-ops`) | 8 | `K8S` | 🔴 **The write operations**: scale, restart, delete a pod, manage nodes. Every tool here changes the cluster. |
 | **[K8s Deploy](k8s-deploy)** (`k8s-deploy`) | 9 | `K8S` | 🔴 **Creates, changes and deletes workloads**: deployments, services, configmaps (and mounts them) and namespaces, each with a server-side `dryRun`. Settings: protected namespaces. |
+| **[K8s Files](k8s-files)** (`k8s-files`) | 2 | `K8S` + 🔴 `EXEC` | Reads and writes text files inside the containers of a deployment, saying whether the change lasts (a PVC) or not (an emptyDir, the container's layer). Settings: protected namespaces. |
 | **[Source Repos](source-repos)** (`source-repos`) | 5 | `REPOS` | Reads a source file from GitHub or GitLab at a given revision, to inspect the code actually running; compares two revisions, to say what went in with a deploy; and finds the code without guessing where it is — repository tree, text search and per-file history. |
 | **[Playground](playground)** (`playground`) | 2 | *(nothing)* | Two harmless toy tools (`times_two`, `father_of`). Install it to watch the machinery work end to end before writing your own. |
 
