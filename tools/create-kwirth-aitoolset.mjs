@@ -26,8 +26,9 @@ prompt and takes the remaining values from the flags (or their defaults).
   --description <text>      one-line description
   --website <url>           optional website
   --tags <a,b,...>          what it is for, from the catalogue (required with --id; 'ai' is added)
-  --capabilities <list>     what the host must lend: k8s,metrics,events,repos,providers (comma
-                            separated, empty for a toolset that needs nothing)
+  --capabilities <list>     what the host must lend: k8s,metrics,events,repos,providers,exec (comma
+                            separated, empty for a toolset that needs nothing). 'exec' (run inside a
+                            container) needs 'k8s' too, and is the most powerful one: grant it with care
   --providers <list>        with the 'providers' capability: the ids of the providers the tools reach
                             (comma separated, e.g. aws). The host lends ONLY these
   --tool <snake_case>       name of the first tool (default depends on the capability)
@@ -44,7 +45,7 @@ prompt and takes the remaining values from the flags (or their defaults).
     process.exit(0)
 }
 
-const CAPS = ['k8s', 'metrics', 'events', 'repos', 'providers']
+const CAPS = ['k8s', 'metrics', 'events', 'repos', 'providers', 'exec']
 
 const interactive = !flag('id')
 const rl = interactive ? createInterface({ input: process.stdin, output: process.stdout }) : undefined
@@ -90,7 +91,8 @@ const caps = capsRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
 const providersRaw = flag('providers') ?? (caps.includes('providers') ? await ask('Provider ids the tools reach (comma separated, e.g. aws)') : '')
 const providerIds = providersRaw.split(',').map(s => s.trim()).filter(Boolean)
 
-const primary = caps[0] ?? 'none'
+// 'exec' is never the primary: it adds running inside a container to a k8s toolset, it has no first tool of its own
+const primary = caps.find(c => c !== 'exec') ?? 'none'
 const defaultTool = { k8s: 'list_namespaces', metrics: 'get_latest_usage', events: 'get_recent_events', repos: 'list_repo_hosts', providers: 'list_provider_operations', none: 'echo_back' }[primary]
 
 const toolName    = flag('tool') ?? await ask('Name of the first tool (snake_case)', defaultTool)
@@ -112,6 +114,10 @@ if (!id || !/^[a-z][a-z0-9-]*$/.test(id)) {
 const malas = caps.filter(c => !CAPS.includes(c))
 if (malas.length) {
     console.error(`Error: Unknown capability '${malas.join(', ')}' (expected ${CAPS.join(', ')})`)
+    process.exit(1)
+}
+if (caps.includes('exec') && !caps.includes('k8s')) {
+    console.error("Error: The 'exec' capability needs 'k8s' too (--capabilities k8s,exec): it runs inside a pod's container, which is found through the cluster")
     process.exit(1)
 }
 if (caps.includes('providers') && providerIds.length === 0) {
@@ -188,7 +194,7 @@ write('package.json', `{
         "test": "node --test tests/*.test.mjs"
     },
     "dependencies": {
-        "@kwirthmagnify/kwirth-common-ai": "^0.5.81"
+        "@kwirthmagnify/kwirth-common-ai": "^0.5.82"
     },
     "devDependencies": {
 ${devDeps}
@@ -659,7 +665,7 @@ if (wantsVerify) {
 // ─── README.md ─────────────────────────────────────────────────────────────
 
 const capsTabla = caps.length
-    ? caps.map(c => `| \`${c.toUpperCase()}\` | ${{ k8s: 'cluster identity, node map and the core/apps/networking clients', metrics: 'the metric samples the core keeps in memory', events: 'the cluster event buffer', repos: 'source repository credentials (GitHub / GitLab)', providers: `the handles of the providers named in \`providers\` (${providerIds.map(p => `\`${p}\``).join(', ')}): their reads (\`getData\`) and operations` }[c]} |`).join('\n')
+    ? caps.map(c => `| \`${c.toUpperCase()}\` | ${{ k8s: 'cluster identity, node map and the core/apps/networking clients', metrics: 'the metric samples the core keeps in memory', events: 'the cluster event buffer', repos: 'source repository credentials (GitHub / GitLab)', providers: `the handles of the providers named in \`providers\` (${providerIds.map(p => `\`${p}\``).join(', ')}): their reads (\`getData\`) and operations`, exec: '🔴 `host.exec.run`: a command inside a pod\'s container — anything, in any container the core reaches (bounded in time and output, never in intent). Grant it with care' }[c]} |`).join('\n')
     : '| *(none)* | only `trace()`, which is lent to every tool and is never declared |'
 
 write('README.md', `# ${name}
