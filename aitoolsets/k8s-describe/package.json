@@ -3,7 +3,11 @@
   "name": "@kwirthmagnify/kwirth-aitoolset-k8s-describe",
   "publisher": "@kwirthmagnify",
   "version": "0.2.1",
-  "tags": ["operations", "kubernetes", "ai"],
+  "tags": [
+    "operations",
+    "kubernetes",
+    "ai"
+  ],
   "displayName": "K8s Describe",
   "description": "Diagnostic detail of a single object: describe and full manifests for pods, controllers, services, ingresses and namespaces",
   "type": "module",
@@ -15,7 +19,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-ai": "^0.5.64"
+    "@kwirthmagnify/kwirth-common-ai": "^0.5.81"
   },
   "devDependencies": {
     "@kubernetes/client-node": "^1.4.0",

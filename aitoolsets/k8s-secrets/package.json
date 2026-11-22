@@ -3,7 +3,11 @@
   "name": "@kwirthmagnify/kwirth-aitoolset-k8s-secrets",
   "publisher": "@kwirthmagnify",
   "version": "0.1.0",
-  "tags": ["operations", "kubernetes", "ai"],
+  "tags": [
+    "operations",
+    "kubernetes",
+    "ai"
+  ],
   "displayName": "K8s Config & Secrets",
   "description": "The configuration a workload actually consumes: ConfigMap data, Secret keys (values never returned) and TLS certificate details",
   "type": "module",
@@ -15,7 +19,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-ai": "^0.5.64"
+    "@kwirthmagnify/kwirth-common-ai": "^0.5.81"
   },
   "devDependencies": {
     "@kubernetes/client-node": "^1.4.0",

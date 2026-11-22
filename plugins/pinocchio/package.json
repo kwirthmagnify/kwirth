@@ -4,7 +4,12 @@
   "displayName": "Pinocchio",
   "publisher": "@kwirthmagnify",
   "version": "0.3.3",
-  "tags": ["sre", "incidents", "ai", "kubernetes"],
+  "tags": [
+    "sre",
+    "incidents",
+    "ai",
+    "kubernetes"
+  ],
   "website": "https://kwirthmagnify.dev",
   "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
   "icon": "AutoFixHigh",
@@ -16,7 +21,7 @@
   },
   "dependencies": {
     "@kwirthmagnify/kwirth-common": "^0.5.76",
-    "@kwirthmagnify/kwirth-common-ai": "^0.5.79",
+    "@kwirthmagnify/kwirth-common-ai": "^0.5.81",
     "@kwirthmagnify/kwirth-common-back": "^0.6.18",
     "@kwirthmagnify/kwirth-common-front": "^0.5.75",
     "nunjucks": "^3.2.4"

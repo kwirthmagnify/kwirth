@@ -3,7 +3,11 @@
   "name": "@kwirthmagnify/kwirth-aitoolset-playground",
   "publisher": "@kwirthmagnify",
   "version": "0.1.0",
-  "tags": ["development", "sample", "ai"],
+  "tags": [
+    "development",
+    "sample",
+    "ai"
+  ],
   "displayName": "Playground",
   "description": "Harmless toy tools for trying out the AI toolset machinery end to end",
   "type": "module",
@@ -14,7 +18,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@kwirthmagnify/kwirth-common-ai": "^0.5.64"
+    "@kwirthmagnify/kwirth-common-ai": "^0.5.81"
   },
   "devDependencies": {
     "@types/node": "^20.12.13",
