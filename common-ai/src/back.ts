@@ -1154,14 +1154,29 @@ const exitCodeOf = (status: V1Status | undefined): number => {
 }
 
 /*
+    The consumer by its NAME, for a trace. It is the channel object itself (Agora's, for instance): circular,
+    and never to be serialized — tracing it whole broke the trace's JSON.stringify and, with it, the exec.
+*/
+const consumerName = (consumer: unknown): string | undefined => {
+    if (typeof consumer === 'string') return consumer
+    if (!consumer || typeof consumer !== 'object') return undefined
+    const id = Reflect.get(consumer, 'channelId') ?? Reflect.get(consumer, 'id')
+    return typeof id === 'string' ? id : consumer.constructor?.name
+}
+
+/*
     The EXEC facade over the core's own Exec client (ClusterInfo.execApi, the one fileman uses): an array
     command, its stdin, and its output and exit code back — within the core's time and size limits. Each run
-    is traced with the consumer it ran for; the stdin never is, only its size.
+    is traced with the consumer it ran for (by name); the stdin never is, only its size.
 */
 const execFacade = (execApi: Exec, context: IToolContext): IExecCapability => ({
     run: async (namespace, pod, container, command, options = {}) => {
         const stdinText = options.stdin
-        context.trace('exec', { namespace, pod, container, command, stdinBytes: stdinText !== undefined ? Buffer.byteLength(stdinText, 'utf8') : 0, consumer: context.consumer })
+        // A trace that fails (a consumer's logger) must never stop the run it describes
+        try {
+            context.trace('exec', { namespace, pod, container, command, stdinBytes: stdinText !== undefined ? Buffer.byteLength(stdinText, 'utf8') : 0, consumer: consumerName(context.consumer) })
+        }
+        catch { /* the trace is the consumer's; the exec goes on */ }
         const seconds = Math.min(Math.max(options.timeoutSeconds ?? EXEC_DEFAULT_TIMEOUT_SECONDS, 1), EXEC_MAX_TIMEOUT_SECONDS)
 
         let stdout = Buffer.alloc(0)

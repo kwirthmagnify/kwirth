@@ -363,6 +363,22 @@ test('🔴 EXEC: every run is traced with pod, container, command and consumer �
     assert.equal(JSON.stringify(traced).includes('s3cr3t'), false)
 })
 
+test('🔴 EXEC: the consumer is traced by its NAME — a channel object is circular and must not be serialized', async () => {
+    const channel = { channelId: 'agora' }
+    channel.self = channel                       // circular, like a real channel
+    const traced = []
+    const ctx = { ...execContext(fakeExecApi({ stdout: () => 'ok' })), consumer: channel, trace: (t, a) => traced.push(JSON.stringify(a)) }
+    const r = await buildToolHost([ECapability.EXEC], ctx).exec.run('demo', 'p', 'c', ['true'])
+    assert.equal(r.exitCode, 0)
+    assert.match(traced[0], /"consumer":"agora"/)
+})
+
+test('🔴 EXEC: a trace that THROWS does not stop the run', async () => {
+    const ctx = { ...execContext(fakeExecApi({ stdout: () => 'ran' })), trace: () => { throw new Error('logger down') } }
+    const r = await buildToolHost([ECapability.EXEC], ctx).exec.run('demo', 'p', 'c', ['true'])
+    assert.equal(r.stdout, 'ran')
+})
+
 test('the descriptor sent to the front carries the configSchema, and none when not declared', () => {
     const schema = [{ name: 'namespace', label: 'Namespace', default: 'default' }]
     registerToolset({ ...fakeToolset('cfg-schema', []), configSchema: schema })
