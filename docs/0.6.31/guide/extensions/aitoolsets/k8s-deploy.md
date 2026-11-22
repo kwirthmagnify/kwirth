@@ -2,7 +2,7 @@
 
 > **Type:** AI toolset<br>
 > **Package:** `kwirth-aitoolset-k8s-deploy`, from a private marketplace<br>
-> **Tools:** 7<br>
+> **Tools:** 9<br>
 > **Needs from the host:** cluster access (`K8S`)<br>
 > **Settings:** yes — *Protected namespaces*
 
@@ -27,6 +27,17 @@ plugin **K8s Deploy** denies it creating and deleting, whatever it may do with K
 | `set_env` | **write** | public | Adds or changes environment variables of one container, leaving every other variable and container as they are. Plain values only. |
 | `create_configmap` | **write** | public | Creates a ConfigMap, or **replaces it whole** if it exists. |
 | `delete_deployment` | **write** | public | Deletes a deployment and its pods. With `alsoService`, also the Services in front of it that **this toolset** created. |
+| `mount_configmap` | **write** | public | Mounts an existing ConfigMap, **read-only**, at a path of one container of a deployment — for instance its `index.html` over nginx's web root. With `subPath`, a single key as a single file. Refuses a path already in use, and a ConfigMap that does not exist. |
+| `unmount_configmap` | **write** | public | Removes a ConfigMap mounted at a path, and its volume when nothing else mounts it. Only ConfigMaps: it never unmounts a PVC or any other volume. |
+
+`create_configmap` and `mount_configmap` together cover *"serve this content"* without leaving the
+conversation: create (or replace) the ConfigMap, mount it once, and later changes are a new
+`create_configmap`. Mounting or unmounting changes the pod template, so the deployment's pods are
+**recreated** (a rollout) — the answer says so.
+
+**Images without a tag.** `create_deployment` and `set_image` accept any image, but one with neither a tag
+nor a digest (`nginx`) resolves to `latest`, which changes over time and can be slow to pull: the answer
+carries a **warning** asking for an explicit tag. It does not block it.
 
 ## Rehearse first: `dryRun`
 
@@ -82,7 +93,7 @@ deleted as a side effect, even if it selects the same pods; the answer reports i
 
 ## What its answers reveal
 
-All seven are **`public`**: none returns the object the API server answers, because an existing deployment
+All nine are **`public`**: none returns the object the API server answers, because an existing deployment
 may carry credentials in clear in its environment. They return a **summary** of what they touched — names,
 image, replicas, ports, and the **keys** of environment variables and ConfigMap data, never their values. The
 invocation trace does not carry those values either.
@@ -117,8 +128,9 @@ invocation.
   be granting "create anything".
 - Deleting namespaces, StatefulSets / DaemonSets / Jobs / Ingresses / Secrets / volumes, environment variables
   from Secrets, rollback, and waiting for a rollout to finish (ask the read toolsets for its state).
-- Mounting a ConfigMap as a volume: `create_configmap` creates it, but no tool mounts it into a deployment
-  yet.
+- Mounting a Secret or a PVC: `mount_configmap` mounts ConfigMaps only.
+- Editing a file inside a running container: that needs to execute in the container, and goes in a toolset
+  of its own.
 
 ---
 
