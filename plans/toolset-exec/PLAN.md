@@ -1,6 +1,8 @@
 # Toolsets: la capacidad `EXEC` — PLAN
 
-> **ESTADO — 🚧 EN CURSO** (2026-11-22). PLAN y tipos de §2 validados por el usuario. **E1 hecho**:
+> **ESTADO — 🚧 EN CURSO** (2026-11-22). PLAN y tipos de §2 validados por el usuario. **E2 hecho** (pendiente
+> de QA): `GET /core/aitoolsets` devuelve `capabilities` (no `requires`: en los gestores esa palabra son las
+> dependencias entre extensiones) y la tarjeta muestra un chip rojo `exec`. **E1 hecho**:
 > `kwirth-common-ai@0.5.82` publicada (fachada probada también contra el `Exec` real del k3d en un pod
 > propio). Producto en el [PRD](PRD.md).
 >

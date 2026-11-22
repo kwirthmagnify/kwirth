@@ -63,6 +63,14 @@ execute: async (args, host) => {
 | `ECapability.EVENTS` | `host.events` — the recent cluster-event buffer |
 | `ECapability.REPOS` | `host.repos` — source repository credentials |
 | `ECapability.PROVIDERS` | `host.providers.get(id)` — the handle of a provider the toolset **names** in `providers: [...]`: its reads (`getData`) and its operations (`getOperations`, `runOperation`). A provider it does not name is `undefined` |
+| `ECapability.EXEC` | `host.exec.run(namespace, pod, container, command, { stdin, timeoutSeconds })` — runs a command inside a pod's container (what `kubectl exec` does) and returns `{ exitCode, stdout, stderr, truncated, timedOut }`. The command is an **array**, with no implicit shell |
+
+> 🔴 **`EXEC` is the most powerful capability a toolset can declare.** With it, a tool can run **anything** in
+> **any** container kwirth's ServiceAccount reaches, whatever its author meant. kwirth bounds each run —30 s by
+> default and 120 s at most, 1 MB of output between stdout and stderr, every run traced with the pod, the
+> command and the channel it ran for (never its stdin)— but it does not bound *what* runs: there is no list of
+> allowed commands. The control is the **grant**. A toolset that declares it shows a red **exec** chip on its
+> card in the manager, so you see it before granting it. It needs `pods/exec` on kwirth's ServiceAccount.
 
 The Kubernetes clients are **the ones kwirth itself uses** — the same authenticated instances, not new
 connections. What a toolset does *not* get is equally deliberate: the other API clients kwirth holds, the

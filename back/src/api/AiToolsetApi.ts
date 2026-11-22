@@ -35,7 +35,9 @@ export class AiToolsetApi {
                 const metas = await this.manager.listInstalled()
                 // grantCount, also from the registry: the plugins that are granted at least one tool — what
                 // is really in force, not what is stored (an obsolete entry or one granting nothing do not count).
-                res.json(metas.map(m => ({ ...m, toolCount: getToolset(m.id)?.tools.length, grantCount: getToolsetGrants(m.id).length })))
+                // capabilities, also from the registry: what the LOADED toolset declares it needs from the host (the
+                // card warns about EXEC). Not `requires`: in every manager that word means dependencies between extensions.
+                res.json(metas.map(m => ({ ...m, toolCount: getToolset(m.id)?.tools.length, grantCount: getToolsetGrants(m.id).length, capabilities: getToolset(m.id)?.requires })))
             }
             catch (err) {
                 res.status(500).json({ error: String(err) })

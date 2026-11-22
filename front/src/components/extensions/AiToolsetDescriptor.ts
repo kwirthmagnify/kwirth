@@ -1,6 +1,7 @@
 import React from 'react'
 import { Construction } from '@kwirthmagnify/kwirth-common-front/icons'
 import { EExtensionType } from '@kwirthmagnify/kwirth-common'
+import { ECapability } from '@kwirthmagnify/kwirth-common-ai'
 import { EManagerSection, IExtensionManagerDescriptor, IExtensionCardModel, IExtensionChip, IExtensionVerdict } from './extensionManagerModel'
 import { AiToolsetDialog } from './AiToolsetDialog'
 
@@ -30,6 +31,11 @@ interface IAiToolsetEntry {
     toolCount?: number
     /** Installed only: how many plugins are granted at least one of its tools. */
     grantCount?: number
+    /**
+     * Installed only: what the loaded toolset declares it needs from the host (the card warns about EXEC).
+     * Not `requires`: in every manager that word means dependencies between extensions.
+     */
+    capabilities?: ECapability[]
 }
 
 const HELP_SECTION = 'guide/extensions/aitoolsets/index?id=the-ai-toolsets-manager'
@@ -94,6 +100,13 @@ const makeAiToolsetDescriptor = (): IExtensionManagerDescriptor<IAiToolsetEntry,
         const chips: IExtensionChip[] = []
         if (e.toolCount !== undefined) chips.push({ label: `${e.toolCount} tool${e.toolCount > 1 ? 's' : ''}`, variant: 'outlined' })
         if (e.grantCount !== undefined) chips.push({ label: e.grantCount ? `${e.grantCount} plugin${e.grantCount > 1 ? 's' : ''}` : 'No plugin', variant: 'outlined' })
+        /*
+            EXEC is the one capability worth a warning on the card (plans/toolset-exec, R1): with it a toolset can
+            run ANYTHING inside any container Kwirth reaches. The admin sees it before granting it.
+        */
+        if (e.capabilities?.includes(ECapability.EXEC)) {
+            chips.push({ label: 'exec', color: 'error', variant: 'outlined', tooltip: 'Runs commands inside containers (EXEC): it can run anything in any container Kwirth reaches. Grant it with care.' })
+        }
         return chips
     }
 })
