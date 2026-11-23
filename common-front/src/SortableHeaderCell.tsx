@@ -62,9 +62,14 @@ export const SortableHeaderCell: React.FC<ISortableHeaderCellProps> = ({ label, 
         window.addEventListener('mouseup', up)
     }
 
+    /*
+        `sticky`, not `relative`: the resize handle needs a positioned cell, and `relative` overrode the `sticky` a
+        `<Table stickyHeader>` gives its header cells, so no header stayed on top while its table scrolled.
+        Without an inset (a table without stickyHeader) sticky behaves as relative; with it, MUI's `top: 0` applies.
+    */
     return (
         <TableCell ref={cellRef} align={align} sortDirection={active ? direction : false} data-testid={testId}
-            sx={[{ ...(width !== undefined ? { width, minWidth: width, maxWidth: width } : { minWidth: min }), position: 'relative', whiteSpace: 'nowrap', overflow: 'hidden', color: disabled ? 'text.disabled' : undefined }, ...(Array.isArray(sx) ? sx : [sx])]}>
+            sx={[{ ...(width !== undefined ? { width, minWidth: width, maxWidth: width } : { minWidth: min }), position: 'sticky', whiteSpace: 'nowrap', overflow: 'hidden', color: disabled ? 'text.disabled' : undefined }, ...(Array.isArray(sx) ? sx : [sx])]}>
             <TableSortLabel active={active} direction={active ? direction : 'asc'} onClick={onSort}>{label}</TableSortLabel>
             {help !== undefined &&
                 <Tooltip title={help}>

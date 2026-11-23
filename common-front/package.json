@@ -1,9 +1,10 @@
 {
   "name": "@kwirthmagnify/kwirth-common-front",
-  "version": "0.5.79",
+  "version": "0.5.84",
   "description": "Frontend channel interfaces for Kwirth plugins and channels",
   "scripts": {
-    "build": "del .\\dist\\* /s /q && tsc"
+    "build": "del .\\dist\\* /s /q && tsc",
+    "test": "node --test tests/*.test.mjs"
   },
   "publishConfig": {
     "access": "public",

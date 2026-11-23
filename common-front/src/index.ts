@@ -213,6 +213,12 @@ export { JsonBlock } from './JsonBlock'
 export type { IJsonBlockProps } from './JsonBlock'
 export { SortableHeaderCell } from './SortableHeaderCell'
 export type { ISortableHeaderCellProps } from './SortableHeaderCell'
+// the line above a table: title, row count and text filter (0.5.81)
+export { TableToolbar, TABLE_TOOLBAR_HEIGHT, filterRows, rowCountLabel } from './TableToolbar'
+export type { ITableToolbarProps } from './TableToolbar'
+// a Select whose list starts with a text filter, optionally taking what was typed as a value (0.5.84)
+export { FilterableSelect, filterSelectOptions } from './FilterableSelect'
+export type { IFilterableSelectOption, IFilterableSelectProps } from './FilterableSelect'
 export type { INotification } from './MenuNotification'
 
 export interface ITabSummary {
