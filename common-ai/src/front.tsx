@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import {
     Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
     FormControl, FormControlLabel, IconButton, InputAdornment, InputLabel, List, ListItemButton,
-    MenuItem, Select, Stack, Switch, TextField, Typography
+    MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography
 } from '@mui/material'
 /*
     DEEP IMPORTS ON PURPOSE, this is not an oversight.
@@ -16,7 +16,9 @@ import {
 */
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
-import { EUsageUnit, ILlm, ILlmModel, ILlmProvider, IUsageAmounts, IUsageLimits, IUsageTotals, IUsageWindows } from './index'
+import DeleteIcon from '@mui/icons-material/Delete'
+import { FilterableSelect } from '@kwirthmagnify/kwirth-common-front'
+import { EUsageUnit, ILlm, ILlmModel, ILlmProvider, ILlmTestResult, IUsageAmounts, IUsageLimits, IUsageTotals, IUsageWindows } from './index'
 
 /*
     🔴 These dialogs HAVE NO Import/Export of their own, and that is deliberate — do not add them back.
@@ -202,6 +204,19 @@ interface IAiConfigLlmProps {
     /* What each model with its own key has spent, by llm id. Optional: an older core does not send it. */
     usage?: Record<string, IUsageTotals>
     usageDurable?: boolean
+    /*
+        Tests the model as it is typed in the form: one short call, made by the back (the front has neither
+        the keys nor the network). Without it, the Test button is there but disabled, saying so.
+    */
+    onTest?: (llm: ILlm) => Promise<ILlmTestResult>
+}
+
+// what the test line says: the answer, how long it took and what it spent — or what the provider said
+const llmTestText = (r: ILlmTestResult): string => {
+    const secs = `${(r.ms / 1000).toFixed(1)} s`
+    if (!r.ok) return `✗ ${r.error ?? 'The call failed'}`
+    const tokens = r.inputTokens !== undefined || r.outputTokens !== undefined ? ` (${r.inputTokens ?? '?'} in / ${r.outputTokens ?? '?'} out tokens)` : ''
+    return `✓ Answered in ${secs} — "${r.text ?? ''}"${tokens}`
 }
 
 const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
@@ -220,6 +235,8 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
     // was free, and no provider default could ever be reached.
     const [inputCostPerMillion, setInputCostPerMillion] = useState<number | ''>('')
     const [outputCostPerMillion, setOutputCostPerMillion] = useState<number | ''>('')
+    const [testing, setTesting] = useState(false)
+    const [testResult, setTestResult] = useState<ILlmTestResult | undefined>(undefined)
 
     // Re-syncs state when the models arrive asynchronously (same race fix as AiConfigProvider): on open,
     // the parent mounts the dialog with props.llms empty and requests them over WS; without this, the list
@@ -247,6 +264,7 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
             setOutputCostPerMillion(l.outputCostPerMillion ?? '')
             setLimits(l.limits ?? {})
             setSelectedIndex(index)
+            setTestResult(undefined)
         }
     }
 
@@ -254,17 +272,36 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
         setSelectedIndex(null); setId(''); setProvider(''); setModel('')
         setTemperature(0); setUseProviderKey(false); setKey(''); setInputCostPerMillion(''); setOutputCostPerMillion('')
         setLimits({})
+        setTestResult(undefined)
     }
 
-    const onAdd = () => {
+    // the model as the form has it now: what Add/Update stores, and what Test tries
+    const formLlm = (): ILlm => ({ id, provider, model, temperature, useProviderKey, key,
         // Prices and limits travel ALWAYS, borrowed key or not, and a field left empty is left out so the
         // back end falls back to the provider's. Writing a 0 for an empty price would persist 'free', and
         // dropping the limits on a borrowed key cost the admin the only way of cutting one model short
         // before the shared budget ran out.
-        const llm: ILlm = { id, provider, model, temperature, useProviderKey, key,
-            ...(inputCostPerMillion === '' ? {} : { inputCostPerMillion }),
-            ...(outputCostPerMillion === '' ? {} : { outputCostPerMillion }),
-            limits }
+        ...(inputCostPerMillion === '' ? {} : { inputCostPerMillion }),
+        ...(outputCostPerMillion === '' ? {} : { outputCostPerMillion }),
+        limits })
+
+    const onTest = async () => {
+        if (!props.onTest) return
+        setTesting(true)
+        setTestResult(undefined)
+        try {
+            setTestResult(await props.onTest(formLlm()))
+        }
+        catch (err) {
+            setTestResult({ ok: false, ms: 0, error: err instanceof Error ? err.message : String(err) })
+        }
+        finally {
+            setTesting(false)
+        }
+    }
+
+    const onAdd = () => {
+        const llm = formLlm()
         const updated = [...llms]
         if (selectedIndex !== null) updated[selectedIndex] = llm
         else updated.push(llm)
@@ -272,10 +309,11 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
         onNew()
     }
 
-    const onRemove = () => {
-        if (selectedIndex === null) return
-        setLlms(llms.filter((_, i) => i !== selectedIndex))
-        onNew()
+    // the bin of a row of the list: it removes THAT one (nothing is stored until OK; Cancel undoes it)
+    const onRemoveAt = (index: number) => {
+        setLlms(llms.filter((_, i) => i !== index))
+        if (selectedIndex === index) onNew()
+        else if (selectedIndex !== null && selectedIndex > index) setSelectedIndex(selectedIndex - 1)
     }
 
     /*
@@ -296,12 +334,16 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                         <List sx={{ flexGrow: 1, mr: 2, width: '100%' }}>
                             {llms.map((llm, index) => (
                                 <ListItemButton key={index} selected={selectedIndex === index} onClick={() => onLlmSelected(index)}>
-                                    <Stack direction='column'>
-                                        <Typography sx={{ fontWeight: selectedIndex === index ? 'bold' : 'normal' }}>{llm.id}</Typography>
-                                        <Typography color='darkgray' sx={{
+                                    <Stack direction='column' sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography noWrap sx={{ fontWeight: selectedIndex === index ? 'bold' : 'normal' }}>{llm.id}</Typography>
+                                        <Typography noWrap color='darkgray' sx={{
                                             fontSize: 12
                                         }}>{llm.provider}</Typography>
                                     </Stack>
+                                    <IconButton size='small' edge='end' title={`Remove ${llm.id}`} data-testid={`ai-llm-remove-${index}`}
+                                        onClick={e => { e.stopPropagation(); onRemoveAt(index) }}>
+                                        <DeleteIcon fontSize='small' />
+                                    </IconButton>
                                 </ListItemButton>
                             ))}
                         </List>
@@ -327,20 +369,18 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                                 <InputLabel>Provider</InputLabel>
                                 <Select value={provider} onChange={e => { setProvider(e.target.value); setModel('') }} variant='standard' fullWidth>
                                     {props.providers.map(p => (
-                                        <MenuItem key={p.name} value={p.name} disabled={!p.models?.length}>{p.name}</MenuItem>
+                                        // a provider whose list could not be read is still usable: its model id is typed
+                                        <MenuItem key={p.name} value={p.name}>{p.name}</MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
+                            {/* Hundreds of models in some providers: the list is filtered. And the list is a help,
+                                not the whole truth — an Azure deployment has the name its owner gave it, and
+                                Azure lists its base models — so what is typed can be used as it is. */}
                             {props.providers.find(p => p.name === provider)?.models.length
                                 ? (
-                                    <FormControl variant='standard' sx={{ width: '100%' }}>
-                                        <InputLabel>Model</InputLabel>
-                                        <Select value={model} onChange={e => setModel(e.target.value)} variant='standard' fullWidth displayEmpty>
-                                            {props.providers.find(p => p.name === provider)?.models.map((m, i) => (
-                                                <MenuItem key={i} value={m.id}>{m.name}</MenuItem>
-                                            ))}
-                                        </Select>
-                                    </FormControl>
+                                    <FilterableSelect label='Model' value={model} onChange={setModel} variant='standard' fullWidth allowCustom
+                                        options={(props.providers.find(p => p.name === provider)?.models ?? []).map(m => ({ value: m.id, label: m.name }))} />
                                 )
                                 : (
                                     <TextField value={model} onChange={e => setModel(e.target.value)} label='Model ID' placeholder='e.g. claude-sonnet-4-5, glm-5.2' variant='standard' fullWidth />
@@ -427,13 +467,28 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                         </Stack>
                         </Stack>
                     </Stack>
-                    <Stack direction='row' spacing={1} sx={{ pt: 2 }}>
-                        <Button variant='outlined' size='small' onClick={onNew}>New</Button>
-                        <Typography sx={{
-                            flex: 1
-                        }} />
-                        <Button color='error' onClick={onRemove} disabled={selectedIndex === null}>Remove</Button>
-                        <Button variant='contained' onClick={onAdd} disabled={!id || !model}>{selectedIndex !== null ? 'Update' : 'Add'}</Button>
+                    {/* ONE row, ONE look: every button outlined and of the same size (Remove only takes the error
+                        colour). The test's result lives in the row itself, in the gap between Test and Remove. */}
+                    <Stack direction='row' spacing={1} sx={{ pt: 2, alignItems: 'center' }}>
+                        <Button variant='outlined' onClick={onNew}>New</Button>
+                        {/* Always there: disabled, with the reason, where the dialog's owner cannot test */}
+                        <Tooltip title={props.onTest ? 'One short call to this model, as typed here — it is counted like any other' : 'Testing a model is not available here: use Settings → AI'}>
+                            <span>
+                                <Button variant='outlined' onClick={onTest} disabled={!props.onTest || !provider || !model || testing}
+                                    startIcon={testing ? <CircularProgress size={14} /> : undefined} data-testid='ai-llm-test'>
+                                    {testing ? 'Testing…' : 'Test'}
+                                </Button>
+                            </span>
+                        </Tooltip>
+                        {/* The gap, and the result laid ABSOLUTELY inside it: a long error is cut with an ellipsis (the
+                            whole of it in the tooltip) and never widens the dialog nor moves the buttons. */}
+                        <Box sx={{ flex: 1, alignSelf: 'stretch', position: 'relative', minWidth: 0 }}>
+                            <Typography variant='caption' noWrap title={testResult ? llmTestText(testResult) : undefined} data-testid='ai-llm-test-result'
+                                sx={{ position: 'absolute', left: 8, right: 8, top: '50%', transform: 'translateY(-50%)', color: testResult ? (testResult.ok ? 'success.main' : 'error.main') : 'text.secondary' }}>
+                                {testResult ? llmTestText(testResult) : ''}
+                            </Typography>
+                        </Box>
+                        <Button variant='outlined' onClick={onAdd} disabled={!id || !model}>{selectedIndex !== null ? 'Update' : 'Add'}</Button>
                     </Stack>
                 </Box>
             </DialogContent>
@@ -524,10 +579,11 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
         onNew()
     }
 
-    const onRemove = () => {
-        if (selectedIndex === null) return
-        setProviders(providers.filter((_, i) => i !== selectedIndex))
-        onNew()
+    // the bin of a row of the list: it removes THAT one (nothing is stored until OK; Cancel undoes it)
+    const onRemoveAt = (index: number) => {
+        setProviders(providers.filter((_, i) => i !== index))
+        if (selectedIndex === index) onNew()
+        else if (selectedIndex !== null && selectedIndex > index) setSelectedIndex(selectedIndex - 1)
     }
 
     const onLoadModels = async () => {
@@ -561,12 +617,16 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                         <List sx={{ mr: 1 }}>
                             {providers.map((p, index) => (
                                 <ListItemButton key={index} selected={selectedIndex === index} onClick={() => onProviderSelected(p, index)}>
-                                    <Stack direction='column'>
-                                        <Typography sx={{ fontWeight: selectedIndex === index ? 'bold' : 'normal' }}>{p.name}</Typography>
-                                        <Typography color='darkgray' sx={{
+                                    <Stack direction='column' sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography noWrap sx={{ fontWeight: selectedIndex === index ? 'bold' : 'normal' }}>{p.name}</Typography>
+                                        <Typography noWrap color='darkgray' sx={{
                                             fontSize: 11
                                         }}>{p.models?.length || 0} models loaded</Typography>
                                     </Stack>
+                                    <IconButton size='small' edge='end' title={`Remove ${p.name}`} data-testid={`ai-provider-remove-${index}`}
+                                        onClick={e => { e.stopPropagation(); onRemoveAt(index) }}>
+                                        <DeleteIcon fontSize='small' />
+                                    </IconButton>
                                 </ListItemButton>
                             ))}
                         </List>
@@ -670,8 +730,8 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                         <Typography sx={{
                             flex: 1
                         }} />
-                        <Button variant='text' color='error' onClick={onRemove} disabled={selectedIndex === null}>Remove</Button>
-                        <Button variant='contained' onClick={onAdd} disabled={!providerName.trim() || !providerType}>{selectedIndex !== null ? 'Update' : 'Add'}</Button>
+                        {/* the same look as the models dialog: every button of the row outlined; removing is the bin of each row */}
+                        <Button variant='outlined' onClick={onAdd} disabled={!providerName.trim() || !providerType}>{selectedIndex !== null ? 'Update' : 'Add'}</Button>
                     </Stack>
                 </Box>
             </DialogContent>

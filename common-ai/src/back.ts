@@ -1,4 +1,4 @@
-import { ILlm, ILlmModel, ILlmProvider, ECapability, EToolEffect, EToolSensitivity, EUsagePeriod, EUsageUnit, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, IToolsetGrant, IUsageAmounts, IUsageLimits, IUsageWindows, TAiToolsetConfig, parseToolRef, toolRef } from './index'
+import { ILlm, ILlmModel, ILlmProvider, ILlmTestResult, ECapability, EToolEffect, EToolSensitivity, EUsagePeriod, EUsageUnit, IAiToolInfo, IAiToolsetInfo, IToolsetConfig, IToolsetGrant, IUsageAmounts, IUsageLimits, IUsageWindows, TAiToolsetConfig, parseToolRef, toolRef } from './index'
 // TYPES ONLY: the compiler erases them, so common-ai does not drag the Kubernetes client (~6.6 MB) into
 // any bundle. That is why @kubernetes/client-node is an optional peer and not a dependency.
 import type { AppsV1Api, CoreV1Api, CustomObjectsApi, Exec, NetworkingV1Api, V1Status } from '@kubernetes/client-node'
@@ -658,6 +658,31 @@ export const streamText = (async (options: Parameters<typeof sdkStreamText>[0]) 
         .catch(() => { /* a failed stream has no usage to record */ })
     return result
 }) as unknown as typeof sdkStreamText
+
+const LLM_TEST_PROMPT = 'Reply with the single word OK.'
+const LLM_TEST_TIMEOUT_MS = 60_000
+
+/*
+    The Test button of the AI models dialog: one short call to `llm` as it is typed in the form — saved or
+    not — with the providers it may use. Never throws: a failure is a result, with what the provider said
+    (a wrong model id, a deployment that does not exist, a key refused…), because that is what the admin
+    needs to read. It goes through the COUNTED generateText: a test is spent like any other call.
+
+    No limit on the output tokens: a reasoning model spends tokens before answering, and with a tight limit
+    it would answer nothing and the test would look broken.
+*/
+export const testLlm = async (llm: ILlm, providers: ILlmProvider[]): Promise<ILlmTestResult> => {
+    const started = Date.now()
+    const model = buildModel(llm, providers)
+    if (!model) return { ok: false, ms: 0, error: `LLM '${llm.id}' cannot be used: its provider '${llm.provider}' is missing or of an unknown type` }
+    try {
+        const result = await generateText({ model, prompt: LLM_TEST_PROMPT, temperature: llm.temperature, abortSignal: AbortSignal.timeout(LLM_TEST_TIMEOUT_MS) })
+        return { ok: true, ms: Date.now() - started, text: result.text.trim(), inputTokens: result.usage?.inputTokens, outputTokens: result.usage?.outputTokens }
+    }
+    catch (err) {
+        return { ok: false, ms: Date.now() - started, error: err instanceof Error ? err.message : String(err) }
+    }
+}
 
 export { Output, stepCountIs, tool } from 'ai'
 export type { LanguageModel, ToolSet } from 'ai'

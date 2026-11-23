@@ -22,6 +22,20 @@ It ships in three entry points:
 One adapter per supported SDK: Google, OpenAI, OpenRouter, Mistral, Groq, DeepSeek, Anthropic, and
 `openai-compat` for any OpenAI-compatible endpoint (Huawei MaaS, vLLM, LM Studio…).
 
+An **Azure OpenAI / AI Foundry** resource is an `openai-compat` provider:
+
+- **Endpoint**: `https://<resource>.openai.azure.com/openai/v1`.
+- **Key**: the resource's key.
+- Each model's id is the **deployment name**.
+
+Azure lists only its base models, so the *Model* field of the models dialog takes whatever is typed in its filter (`Use "<text>"`).
+
+## Testing a model
+
+The models dialog has a **Test** button. It makes one short call to the model as it is typed in the form, whether saved or not. It then shows the answer, how long the call took and the tokens spent, or the provider's error. The call goes through the counted `generateText`, so it is spent like any other.
+
+The dialog does not make the call itself. Its owner passes `onTest`, which sends the model to its back and answers with `testLlm(llm, providers)` from `/back`. Without `onTest`, the button is shown disabled.
+
 ## Costs and usage limits
 
 Each provider declares **default prices per million tokens**, and each model may override them — within

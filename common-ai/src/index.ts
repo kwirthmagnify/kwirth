@@ -119,6 +119,22 @@ export interface ILlm {
     data?: unknown
 }
 
+/*
+    What the Test button of the AI models dialog shows: one short call to the model, as it is typed in the
+    form (saved or not). It goes through the counted generateText, so it is spent like any other call.
+*/
+export interface ILlmTestResult {
+    ok: boolean
+    // how long the call took
+    ms: number
+    // what the model answered (ok)
+    text?: string
+    // what the provider said (not ok)
+    error?: string
+    inputTokens?: number
+    outputTokens?: number
+}
+
 export const STORAGE_KEY_AGENTS = 'kwirth-ai-agents'
 
 // An AI agent (bot) is config, not code: a row over the existing engine (buildModel + tools + runAgent).
