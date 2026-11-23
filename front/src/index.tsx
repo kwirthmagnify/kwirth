@@ -19,6 +19,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import { SnackbarProvider } from 'notistack'
 import { BrowserRouter } from 'react-router-dom'
+import { installScopedStorage } from './tools/ScopedStorage'
 // @ts-ignore
 import './index.css'
 
@@ -96,6 +97,8 @@ if (rootPath.endsWith('/front')) rootPath=rootPath.substring(0,rootPath.length-6
 console.log(`Environment: ${process.env.NODE_ENV}`)
 console.log(`Front running in desktop mode: ${isDesktop}`)
 console.log(`Root path: '${rootPath}'`)
+// Before anything reads it: a Kwirth under a path keeps its localStorage apart from the others on the same domain
+installScopedStorage(rootPath)
 let backendUrl = 'http://localhost:3883'
 if (process.env.NODE_ENV==='production') backendUrl=window.location.protocol+'//'+window.location.host
 backendUrl = backendUrl + rootPath

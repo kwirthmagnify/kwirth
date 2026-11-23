@@ -49,6 +49,7 @@
     "start-wsl": "WATCHPACK_POLLING=true react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:unit": "node --test tests/*.test.ts",
     "eject": "react-scripts eject",
     "pack": ".\\node_modules\\.bin\\esbuild src\\index.tsx --bundle --outfile=packed\\static\\out.js --loader:.svg=dataurl --define:process.env.NODE_ENV='development'",
     "minify": ".\\node_modules\\.bin\\esbuild src\\index.tsx --bundle --outfile=packed\\static\\out.js --loader:.svg=dataurl --minify --define:process.env.NODE_ENV='development'",
