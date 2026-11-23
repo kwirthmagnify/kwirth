@@ -77,6 +77,14 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         setKeyRevealed(false)
     }
 
+    /*
+        Saving leaves the saved entry SELECTED, with what was saved in the form.
+
+        🔴 It used to clear the form but keep the entry selected: the list showed it highlighted, the form
+        showed nothing, and whatever was typed next —looking like a new cluster— OVERWROTE that entry on the
+        next save. And an edited entry was taken out and appended at the END, so the list reordered itself
+        on every save. Now it stays where it was.
+    */
     const onClickSave = async () => {
         if (selectedCluster) {
             selectedCluster.accessString = accessKey
@@ -85,10 +93,9 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             selectedCluster.route = editedRoute()
             selectedCluster.inUse = inUse
             selectedCluster.kwirthData = undefined
-            const updated = [...clusters.filter(c => c !== selectedCluster), selectedCluster]
             // one that is not in use is not read: nothing reaches out to a cluster nobody uses
             if (inUse) await readClusterInfo(selectedCluster, props.notify)
-            setClusters(updated)
+            setClusters(clusters.map(c => c === selectedCluster ? selectedCluster : c))
             setRefresh(Math.random())
         }
         else {
@@ -99,12 +106,12 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             c.route = editedRoute()
             c.inUse = inUse
             c.kwirthData = undefined
-            const updated = [...clusters, c]
             if (inUse) await readClusterInfo(c, props.notify)
-            setClusters(updated)
+            setClusters([...clusters, c])
             setRefresh(Math.random())
+            // the new one becomes the selected one: a second SAVE edits it instead of adding it again
+            setSelectedCluster(c)
         }
-        clearForm()
     }
 
     const onClickTest = async () => {
@@ -199,8 +206,10 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                 <DialogContent data-refresh={refresh}>
                     <Stack sx={{ display: 'flex', flexDirection: 'row' }}>
                         <List sx={{flexGrow:1, mr:2, width:'50vh' }}>
-                            { clusters?.map(c =>
-                                <ListItemButton key={c.url} selected={c===selectedCluster} onClick={() => onClusterSelected(c)} sx={{ opacity: c.inUse === false ? 0.5 : 1 }} title={c.inUse === false ? 'Not enabled: kept here, but not in the resource selector nor given to extensions' : undefined}>
+                            {/* key by POSITION, not by url: two entries may share a url, and with the url as key React
+                                mixed their rows up — duplicated rows, a click landing on the wrong one */}
+                            { clusters?.map((c, index) =>
+                                <ListItemButton key={`${index}-${c.url}`} selected={c===selectedCluster} onClick={() => onClusterSelected(c)} sx={{ opacity: c.inUse === false ? 0.5 : 1 }} title={c.inUse === false ? 'Not enabled: kept here, but not in the resource selector nor given to extensions' : undefined}>
                                     <ListItem>
                                       <Stack direction={'column'} sx={{width:'100%'}}>
                                           <Stack
