@@ -146,6 +146,11 @@ interface KwirthData {
 interface IBackChannelRequirements {
     storage: boolean
     providers: string[]
+    /*  Providers the channel USES when they are installed, and runs without when they are not: the core starts them
+        like the required ones if they are here, and says nothing when they are missing — neither at startup nor when
+        the plugin is installed. For a provider that only exists where there is Kubernetes (`trivy`, `events`): Kwirth
+        also runs without a cluster (Docker, ECS…), where declaring it in `providers` showed every install in red. */
+    optionalProviders?: string[]
     instances?: EChannelInstances   // default MULTI; SINGLE = one back per cluster (home = in-cluster)
 }
 

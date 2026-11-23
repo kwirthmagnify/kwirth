@@ -1912,11 +1912,18 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             }
                             mountProviderConfigRouter(riRouter, providerInstance, activeRI.apiKeyApi)
                         }
-                        for (const provId of channelInstance.requirements.providers) {
+                        /*  The required ones, and the ones it only USES (`optionalProviders`): both are started if they are
+                            here. A missing required one is an error; a missing optional one is said quietly — the plugin
+                            runs without it by design (Excubitor without `trivy` on a Kwirth with no Kubernetes), and an
+                            ERROR there made every such install look broken. */
+                        const optional = new Set(channelInstance.requirements.optionalProviders ?? [])
+                        for (const provId of [...channelInstance.requirements.providers, ...optional]) {
                             let providerInstance = activeRI.clusterInfo.providers.find(p => p.id === provId)
                             if (!providerInstance) {
                                 if (registeredProviders.has(provId)) {
                                     providerInstance = await hotCreateProvider(provId, `for plugin '${id}'`)
+                                } else if (optional.has(provId)) {
+                                    logInfo(ELogComponent.CORE, `Optional provider '${provId}' is not installed here — plugin '${id}' runs without it`)
                                 } else {
                                     logError(ELogComponent.CORE, `Required provider '${provId}' not registered (needed by plugin '${id}')`)
                                 }
@@ -2511,7 +2518,8 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
         let requiredProviders = []
         const notRequiredProviders = []
         for (let provId of registeredProviders.keys()) {
-            let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.requirements.providers.includes(provId)}, false)
+            // Started too when only USED (`optionalProviders`): optional means "runs without it", not "does not need it here".
+            let required = Array.from(runningInstance.channels.values()).reduce( (prev, current) => { return prev || current.requirements.providers.includes(provId) || (current.requirements.optionalProviders ?? []).includes(provId)}, false)
             if (required) requiredProviders.push(provId)
             else notRequiredProviders.push(provId)
         }

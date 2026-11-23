@@ -106,6 +106,27 @@ processProviderEvent = (providerId: string, obj: any): void => {
 }
 ```
 
+### Required, or only used
+
+`providers` are the ones your channel **needs**: the core starts them for you, and if one is not installed it
+says so — as an **error** when your plugin is installed, as a warning at every start. Put a provider in
+**`optionalProviders`** (kwirth-common ≥ 0.5.97) when your channel **uses** it if it is there and works without
+it otherwise:
+
+```ts
+readonly requirements: IBackChannelRequirements = {
+    storage: false,
+    providers: ['cloud-config'],                  // needed
+    optionalProviders: ['trivy', 'events']        // used when installed
+}
+```
+
+The core starts an optional provider exactly like a required one when it is installed, and says nothing when it
+is not. It is the right place for anything that only exists where there is Kubernetes (`trivy`, `events`…):
+Kwirth also runs without a cluster (Docker, ECS…), and declaring them as required there showed every install in
+red. Subscribing is the same in both cases — `addSubscriber` to a provider that is not there only logs a warning
+— so tell your users in the UI what they are missing, rather than leaving a quiet screen that looks clean.
+
 ### Subscribing once per instance: the handle
 
 `addSubscriber` subscribes **the channel**, and a channel is one object no matter how many tabs it is
