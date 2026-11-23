@@ -121,6 +121,35 @@ interface IChannelObject {
 
 As you may see, `metricsList`, `accessString`, `webSocket` and some others are optional — they depend on the above mentioned `requirements` object.
 
+## Tables
+
+Every table in Kwirth behaves the same way, and `@kwirthmagnify/kwirth-common-front` gives you the parts:
+
+| Export | What it does |
+|---|---|
+| `SortableHeaderCell` | A header cell that **sorts** its table by its column and can be **resized** by dragging its right edge. In a `<Table stickyHeader>`, the header **stays on top** while the rows scroll |
+| `TableToolbar` | The line above the table: its **title**, its **row count** (`12 rows`, or `3 of 12 rows` while filtering) and a **text filter** |
+| `filterRows(rows, filter, texts)` | Keeps the rows any of whose texts contains the filter, ignoring case and the spaces around it |
+| `rowCountLabel(shown, total)` | The count's text, if you need it somewhere else |
+
+Your component still owns the rows, the sort, the column widths and the filter text. The components only draw and report.
+
+Each table is built in the same order:
+
+1. **Keep the filter text and pass it to `TableToolbar`**, along with how many rows the table has (`total`) and how many are on screen (`shown`).
+2. **Filter the rows with `filterRows`, then sort them.** `texts(row)` returns what the row's cells **show**: labels and formatted values, not enum values or epoch numbers. That way, typing what the user reads finds it.
+3. **Draw the header with one `SortableHeaderCell` per column.** Keep the widths in your state and leave **one** column without a width, so the table fills its container.
+4. **Put the table in a box with a bounded height and `overflow: auto`.** In a flex column that means `flex: 1` and `minHeight: 0`, and somewhere above it, an ancestor with a real height. Without it the table grows with its rows, the page scrolls instead of the table, and the header never sticks.
+5. **Always render an empty-state line under the table** that says why there is nothing: no data, or nothing that matches the filter. It is always there, so nothing below it moves.
+
+When a table keeps only its last rows, tell the user what it does not hold. Pass the real total in the toolbar's **`detail`** (common-front 0.5.83), and it is shown after the count: `200 rows · 3,412 in all`.
+
+A view with **two tables** gives each its own toolbar and its own `flex: 1` scroll box. They share the height, and each one scrolls on its own.
+
+The package README has a complete, copyable example: [kwirth-common-front on npm](https://www.npmjs.com/package/@kwirthmagnify/kwirth-common-front).
+
+> **Version.** A plugin does not bundle common-front: it uses the copy the core's front carries (`window.__kwirth__.kwirthCommonFront`). `TableToolbar`, `filterRows` and `rowCountLabel` exist from **common-front 0.5.81**. A plugin that uses them needs a Kwirth whose front was built with that version or later.
+
 ## Sample implementation
 
 For a simple implementation of a front channel, please review [echo Front Channel](https://github.com/kwirthmagnify/kwirth/tree/master/front/src/channels/echo) on GitHub. This is a reference implementation that you can use as a starter pack for channel development.
