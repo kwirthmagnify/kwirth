@@ -3218,6 +3218,12 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                     llms={aiLlms}
                     usage={aiUsage.llms}
                     usageDurable={aiUsage.durable}
+                    // the back makes the call: the front has neither the providers' keys nor their network
+                    onTest={async (llm) => {
+                        const r = await fetch(`${backendUrl}/core/aiconfig/testllm`, addPostAuthorization(accessString, JSON.stringify(llm)))
+                        if (!r.ok) return { ok: false, ms: 0, error: `Kwirth answered ${r.status}` }
+                        return await r.json()
+                    }}
                     onClose={(updated) => {
                         setShowAiModels(false)
                         if (updated) fetch(`${backendUrl}/core/aiconfig/llms`, addPostAuthorization(accessString, JSON.stringify(updated))).catch(console.error)

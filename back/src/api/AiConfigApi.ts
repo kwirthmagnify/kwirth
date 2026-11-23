@@ -4,7 +4,7 @@ import { IConfigMaps } from '../tools/IConfigMap'
 import { ApiKeyApi } from './ApiKeyApi'
 import { AuthorizationManagement } from '../tools/AuthorizationManagement'
 import { STORAGE_KEY_PROVIDERS, STORAGE_KEY_LLMS, ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
-import { EUsageScope, getUsageService, loadModels, usageSubjectForKey, buildModel, generateText, UsageLimitError } from '@kwirthmagnify/kwirth-common-ai/back'
+import { EUsageScope, getUsageService, loadModels, usageSubjectForKey, buildModel, generateText, UsageLimitError, testLlm } from '@kwirthmagnify/kwirth-common-ai/back'
 import { IConfigAiAssistRequest, IConfigAiAssistResponse } from '@kwirthmagnify/kwirth-common'
 import { ELogComponent, logError, logInfo, logWarning } from '../tools/Logging'
 import { buildAiAssistPrompt, stripFences, validateAiAssistRequest } from '../tools/AiAssist'
@@ -70,6 +70,22 @@ export class AiConfigApi {
                 console.error('AiConfigApi: error loading models', err)
                 res.status(500).json([])
             }
+        })
+
+        /*
+            POST /testllm — the Test button of Settings → AI → AI models: one short call to the model as it is
+            typed in the dialog, saved or not, with the providers SAVED here. Always 200 with the result: a
+            failure (a wrong model id, a deployment that does not exist…) is what the admin has to read.
+        */
+        this.router.post('/testllm', authMiddleware, async (req: Request, res: Response) => {
+            const llm = req.body as ILlm | undefined
+            if (!llm || typeof llm.provider !== 'string' || typeof llm.model !== 'string' || llm.model === '') {
+                res.status(400).json({ error: 'An LLM with a provider and a model is needed' })
+                return
+            }
+            const result = await testLlm(llm, await this.readProviders())
+            if (!result.ok) logWarning(ELogComponent.CORE, `AiConfigApi: testing LLM '${llm.id}' (${llm.provider} / ${llm.model}) failed: ${result.error}`)
+            res.status(200).json(result)
         })
 
         this.router.post('/assist', authMiddleware, (req: Request, res: Response) => this.assist(req, res))
