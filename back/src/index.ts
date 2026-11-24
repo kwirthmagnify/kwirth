@@ -122,7 +122,7 @@ import { SenderManager } from './tools/SenderManager'
 import { WebhookManager } from './tools/WebhookManager'
 import { handleInbound } from './tools/WebhookReceiver'
 import { openRemoteChannel } from './tools/RemoteChannel'
-import { announcedLocalChannelData, announcedRemoteChannelData, channelRouterOf, mountedRouterAlias, resolveRemoteEndpoint, unresolvableRemoteChannel } from './tools/ClusterRouting'
+import { announcedLocalChannelData, announcedRemoteChannelData, channelRouterOf, mountChannelRouter, mountedRouterAlias, resolveRemoteEndpoint, swapChannelRouter, unmountChannelRouters, unresolvableRemoteChannel } from './tools/ClusterRouting'
 import { userStoreValueForExtensions } from './tools/ClusterListFilter'
 import { RouteKeySockets, RouteTickets, authenticateRoute, routerPathOf } from './tools/RouteGate'
 import { AuthApi } from './api/AuthApi'
@@ -1977,9 +1977,10 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                         if (hotRouter) {
                             const alias = mountedRouterAlias(channelInstance)
                             const mountPath = alias ? `${envRootPath}/channel/${alias}` : `${envRootPath}/${activeRI.id}/channel/${id}`
-                            expressApp.use(mountPath, hotRouter)
+                            // a reload swaps the router answering there: express cannot unmount the old instance's
+                            const replaced = mountChannelRouter(expressApp, mountPath, id, hotRouter)
                             recordRoute(mountPath, ERouteOwnerKind.CHANNEL, id, hotRouter)
-                            logInfo(ELogComponent.CORE, `Plugin '${id}' HTTP router mounted at '${mountPath}'`)
+                            logInfo(ELogComponent.CORE, `Plugin '${id}' HTTP router ${replaced ? 'replaced' : 'mounted'} at '${mountPath}'`)
                         }
                         if (!activeRI.kwirthData.channels.some(c => c.id === id))
                             activeRI.kwirthData.channels.push(announcedLocalChannelData(channelInstance))
@@ -2003,22 +2004,23 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                                     next()
                                 })
                                 .get(async (req: Request, res: Response) => {
-                                    if (endpoint.methods.includes('GET')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res, endpoint.requiresAccessKey)
+                                    if (endpoint.methods.includes('GET')) processHttpChannelRequest(activeRI.channels.get(id) ?? channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                                     else res.status(405).send()
                                 })
                                 .post(async (req: Request, res: Response) => {
-                                    if (endpoint.methods.includes('POST')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res, endpoint.requiresAccessKey)
+                                    if (endpoint.methods.includes('POST')) processHttpChannelRequest(activeRI.channels.get(id) ?? channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                                     else res.status(405).send()
                                 })
                                 .put(async (req: Request, res: Response) => {
-                                    if (endpoint.methods.includes('PUT')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res, endpoint.requiresAccessKey)
+                                    if (endpoint.methods.includes('PUT')) processHttpChannelRequest(activeRI.channels.get(id) ?? channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                                     else res.status(405).send()
                                 })
                                 .delete(async (req: Request, res: Response) => {
-                                    if (endpoint.methods.includes('DELETE')) processHttpChannelRequest(channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res, endpoint.requiresAccessKey)
+                                    if (endpoint.methods.includes('DELETE')) processHttpChannelRequest(activeRI.channels.get(id) ?? channelInstance, endpoint.name, activeRI.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                                     else res.status(405).send()
                                 })
-                            expressApp.use(`${envRootPath}/${activeRI.id}/channel/${channelData.id}/${endpoint.name}`, router)
+                            // the same as the router above: on a reload, the new instance answers the endpoint
+                            mountChannelRouter(expressApp, `${envRootPath}/${activeRI.id}/channel/${channelData.id}/${endpoint.name}`, id, router)
                             // Its router is a catch-all ('*'): the endpoint is listed by its path and the methods it declares.
                             recordRoute(`${envRootPath}/${activeRI.id}/channel/${channelData.id}/${endpoint.name}`, ERouteOwnerKind.CHANNEL, id, undefined, endpoint.methods)
                             logInfo(ELogComponent.CORE, `Plugin '${id}' HTTP endpoint registered: ${channelData.id}/${endpoint.name}`)
@@ -2038,9 +2040,9 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                     if (gone) announceChannelGone(id, gone)
                     activeRI.channels.delete(id)
                     syncPluter(id, undefined)
-                    // Its routes stop being listed. (Express cannot unmount them: they stay answering until a
-                    // restart, and the registry says what is PUBLISHED by an installed extension.)
+                    // Its routes stop being listed, and stop answering: their dispatchers find nothing and go on to a 404
                     routeRegistry.forget(ERouteOwnerKind.CHANNEL, id)
+                    unmountChannelRouters(id)
                     // Symmetric to registration: if the plugin was producing, its production is stopped
                     // before taking it out of the registry. Subscribers stop receiving, which is what
                     // should happen — their plugin is gone.
@@ -2268,6 +2270,7 @@ const startChannelEndpoints = (ri:IRunningInstance, expressApp:Application) => {
         if (channelData.endpoints.length>0) {
             for (let endpoint of channelData.endpoints) {
                 mountedEndpoints.push(`${channelData.id}/${endpoint.name}`)
+                // each request goes to the channel's CURRENT instance: a hot reload replaces it in ri.channels
                 const router = express.Router()
                 router.route('*')
                     .all( async (req:Request,res:Response, next) => {
@@ -2278,31 +2281,31 @@ const startChannelEndpoints = (ri:IRunningInstance, expressApp:Application) => {
                     })
                     .get( async (req:Request, res:Response) => {
                         if (endpoint.methods.includes('GET')) {
-                            processHttpChannelRequest(channel, endpoint.name, ri.apiKeyApi!, req, res, endpoint.requiresAccessKey)
+                            processHttpChannelRequest(ri.channels.get(channelData.id) ?? channel, endpoint.name, ri.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                         }
                         else
                             res.status(405).send()
                     })
                     .post( async (req:Request, res:Response) => {
                         if (endpoint.methods.includes('POST')) {
-                            processHttpChannelRequest(channel, endpoint.name, ri.apiKeyApi!, req, res, endpoint.requiresAccessKey)
+                            processHttpChannelRequest(ri.channels.get(channelData.id) ?? channel, endpoint.name, ri.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                         }
                         else
                             res.status(405).send()
                     })
                     .put( async (req:Request, res:Response) => {
                         if (endpoint.methods.includes('PUT'))
-                            processHttpChannelRequest(channel, endpoint.name, ri.apiKeyApi!, req, res, endpoint.requiresAccessKey)
+                            processHttpChannelRequest(ri.channels.get(channelData.id) ?? channel, endpoint.name, ri.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                         else
                             res.status(405).send()
                     })
                     .delete( async (req:Request, res:Response) => {
                         if (endpoint.methods.includes('DELETE'))
-                            processHttpChannelRequest(channel, endpoint.name, ri.apiKeyApi!, req, res, endpoint.requiresAccessKey)
+                            processHttpChannelRequest(ri.channels.get(channelData.id) ?? channel, endpoint.name, ri.apiKeyApi!, req, res, endpoint.requiresAccessKey)
                         else
                             res.status(405).send()
                     })
-                expressApp.use(`${envRootPath}/${ri.id}/channel/${channelData.id}/${endpoint.name}`, router)
+                mountChannelRouter(expressApp, `${envRootPath}/${ri.id}/channel/${channelData.id}/${endpoint.name}`, channelData.id, router)
                 // Its router is a catch-all ('*'): the endpoint is listed by its path and the methods it declares.
                 recordRoute(`${envRootPath}/${ri.id}/channel/${channelData.id}/${endpoint.name}`, ERouteOwnerKind.CHANNEL, channelData.id, undefined, endpoint.methods)
             }
@@ -2311,7 +2314,7 @@ const startChannelEndpoints = (ri:IRunningInstance, expressApp:Application) => {
         if (channelRouter) {
             const alias = mountedRouterAlias(channel)
             const mountPath = alias ? `${envRootPath}/channel/${alias}` : `${envRootPath}/${ri.id}/channel/${channelData.id}`
-            expressApp.use(mountPath, channelRouter)
+            mountChannelRouter(expressApp, mountPath, channelData.id, channelRouter)
             recordRoute(mountPath, ERouteOwnerKind.CHANNEL, channelData.id, channelRouter)
             logInfo(ELogComponent.CORE, `Channel '${channelData.id}' HTTP router mounted at '${mountPath}'`)
         }
@@ -2442,6 +2445,20 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                         // now that channels implement cleanup() to drop the OLD subscription first (no dupes).
                         newInstance.startChannel().catch(err => logError(ELogComponent.CORE, `[dev] Plugin '${id}' startChannel after reload failed: ${err}`))
                         logInfo(ELogComponent.CORE, `[dev] Plugin '${id}' channel instance replaced in running instance`)
+                        /*  Its HTTP router too: the one mounted at boot is the OLD instance's, and it went on
+                            answering —montag's agents posted their counts to the dead channel, and its views
+                            stopped counting with nothing in the log—. Its endpoints need nothing: they look the
+                            instance up in ri.channels on every request. */
+                        const newRouter = channelRouterOf(newInstance)
+                        if (newRouter) {
+                            const alias = mountedRouterAlias(newInstance)
+                            const mountPath = alias ? `${envRootPath}/channel/${alias}` : `${envRootPath}/${ri.id}/channel/${id}`
+                            if (swapChannelRouter(mountPath, id, newRouter)) {
+                                recordRoute(mountPath, ERouteOwnerKind.CHANNEL, id, newRouter)
+                                logInfo(ELogComponent.CORE, `[dev] Plugin '${id}' HTTP router replaced at '${mountPath}'`)
+                            }
+                            else logWarning(ELogComponent.CORE, `[dev] Plugin '${id}' HTTP router not mounted at '${mountPath}' (it had none at boot): restart the back to mount it`)
+                        }
                         /*  🔴 Y ahora los sockets huérfanos. El canal nuevo ya está en `ri.channels`, así
                             que el RECONNECT o el START que llegue a continuación lo atiende él.
 

@@ -6,7 +6,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { BackChannelData, CLUSTER_ROUTE_LOOPBACK_TICKET, EChannelMode, IRouterData } from '@kwirthmagnify/kwirth-common'
 import { ERemoteConnState, IChannel, IClusterEndpoint } from '@kwirthmagnify/kwirth-common-back'
-import { announcedLocalChannelData, announcedRemoteChannelData, channelRouterOf, mountedRouterAlias, resolveRemoteEndpoint, unresolvableRemoteChannel } from '../../src/tools/ClusterRouting'
+import type { NextFunction, Request, Response, Router } from 'express'
+import { announcedLocalChannelData, announcedRemoteChannelData, channelRouterOf, mountChannelRouter, mountedRouterAlias, resolveRemoteEndpoint, swapChannelRouter, unmountChannelRouters, unresolvableRemoteChannel } from '../../src/tools/ClusterRouting'
 
 const LOOPBACK = 'http://localhost:3883/kwirth'
 const ROUTER: IRouterData = { id: 'relay', pathTemplate: '/to/{clusterUid}', needsTicket: false }
@@ -80,4 +81,76 @@ test('an unresolvable remote channel reports DOWN once, after the handle is retu
     unresolvableRemoteChannel({ onMessage: () => {}, onState: (s) => silenced.push(s) }).close()
     await new Promise(r => setImmediate(r))
     assert.deepEqual(silenced, [])
+})
+
+/*
+    The channel router dispatcher: express cannot unmount a router, so a hot reload of a plugin left the OLD
+    instance answering its paths (montag's agents kept posting to the dead channel). Each path is mounted once
+    and dispatches to the router registered for it when the request arrives.
+*/
+type THandler = (req: Request, res: Response, next: NextFunction) => void
+
+// a router that answers with its name: what it writes in res.answer
+const fakeRouter = (name: string): Router => ((_req: Request, res: Response) => { Reflect.set(res, 'answer', name) }) as unknown as Router
+
+// express, as far as this goes: the handlers mounted on each path, and a request served by the FIRST of them
+const fakeHost = () => {
+    const mounted = new Map<string, THandler[]>()
+    return {
+        mounted,
+        use: (path: string, handler: THandler) => { mounted.set(path, [...(mounted.get(path) ?? []), handler]) },
+        // who answered, or 'next' when the request went on (towards a 404)
+        request: (path: string): string => {
+            const res = {} as Response
+            const first = mounted.get(path)?.[0]
+            // nothing mounted on the path: express goes on, towards a 404
+            if (!first) return 'next'
+            let wentOn = false
+            first({} as Request, res, () => { wentOn = true })
+            return wentOn ? 'next' : String(Reflect.get(res, 'answer'))
+        }
+    }
+}
+
+test('a channel path is mounted ONCE, and a reload makes the NEW router answer it', () => {
+    const host = fakeHost()
+    assert.equal(mountChannelRouter(host, '/kwirth/channel/a1', 'a', fakeRouter('old')), false)
+    assert.equal(host.request('/kwirth/channel/a1'), 'old')
+
+    assert.equal(mountChannelRouter(host, '/kwirth/channel/a1', 'a', fakeRouter('new')), true, 'a reload replaces')
+    assert.equal(host.mounted.get('/kwirth/channel/a1')?.length, 1, 'no second handler piled on the path')
+    assert.equal(host.request('/kwirth/channel/a1'), 'new')
+    unmountChannelRouters('a')
+})
+
+test('an uninstalled channel stops answering its paths; another channel keeps its own', () => {
+    const host = fakeHost()
+    mountChannelRouter(host, '/kwirth/channel/b1', 'b', fakeRouter('b'))
+    mountChannelRouter(host, '/kwirth/x/channel/b/ep', 'b', fakeRouter('b-endpoint'))
+    mountChannelRouter(host, '/kwirth/channel/c1', 'c', fakeRouter('c'))
+
+    unmountChannelRouters('b')
+    assert.equal(host.request('/kwirth/channel/b1'), 'next', 'goes on to the 404')
+    assert.equal(host.request('/kwirth/x/channel/b/ep'), 'next')
+    assert.equal(host.request('/kwirth/channel/c1'), 'c')
+
+    // installed again, the same path answers without mounting a second dispatcher
+    assert.equal(mountChannelRouter(host, '/kwirth/channel/b1', 'b', fakeRouter('b2')), false)
+    assert.equal(host.mounted.get('/kwirth/channel/b1')?.length, 1)
+    assert.equal(host.request('/kwirth/channel/b1'), 'b2')
+    unmountChannelRouters('b')
+    unmountChannelRouters('c')
+})
+
+test('the dev reload swaps the router of a path mounted at boot, and never mounts one by itself', () => {
+    const host = fakeHost()
+    mountChannelRouter(host, '/kwirth/channel/d1', 'd', fakeRouter('boot'))
+    assert.equal(swapChannelRouter('/kwirth/channel/d1', 'd', fakeRouter('reloaded')), true)
+    assert.equal(host.request('/kwirth/channel/d1'), 'reloaded')
+    assert.equal(host.mounted.get('/kwirth/channel/d1')?.length, 1)
+
+    // a path nobody mounted: nothing to swap, and nothing changes
+    assert.equal(swapChannelRouter('/kwirth/channel/never', 'e', fakeRouter('e')), false)
+    assert.equal(host.request('/kwirth/channel/never'), 'next')
+    unmountChannelRouters('d')
 })

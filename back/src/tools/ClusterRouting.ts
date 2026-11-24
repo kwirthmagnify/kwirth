@@ -1,6 +1,6 @@
 import { BackChannelData, CLUSTER_ROUTE_LOOPBACK_TICKET, EChannelMode, IRouterData, resolveClusterRouteUrl } from '@kwirthmagnify/kwirth-common'
 import { ERemoteConnState, IChannel, IClusterEndpoint, IRemoteChannelHandle, IRemoteChannelHandlers } from '@kwirthmagnify/kwirth-common-back'
-import { Router } from 'express'
+import type { NextFunction, Request, Response, Router } from 'express'
 
 /*
     Two unrelated jobs that used to share this file:
@@ -27,6 +27,64 @@ export const channelRouterOf = (channel: object): Router | undefined =>
 export const mountedRouterAlias = (channel: object): string | undefined => {
     const alias = Reflect.get(channel, 'routerAlias')
     return channelRouterOf(channel) && typeof alias === 'string' && alias !== '' ? alias : undefined
+}
+
+/*
+    The router that answers on each channel path NOW, and the channel it belongs to.
+
+    Express cannot unmount a router: mounting the new instance's one on the same path after a hot reload of a
+    plugin left the OLD one first in the stack, answering everything —montag's agents kept posting their counts
+    to the dead instance, and its views stopped counting with no error anywhere until the back restarted—. So
+    each path is mounted ONCE, with a dispatcher that hands the request to the router registered for it at the
+    moment it arrives: a reload swaps the entry, an uninstall drops it (and the path answers 404 again).
+*/
+interface IMountedChannelRouter {
+    channelId: string
+    router: Router
+}
+const mountedChannelRouters = new Map<string, IMountedChannelRouter>()
+// the paths that already have their dispatcher in express: it outlives an uninstall, so a reinstall reuses it
+const dispatchedPaths = new Set<string>()
+
+// The part of express' app this needs: mounting a handler on a path
+export interface IChannelRouterHost {
+    use: (path: string, handler: (req: Request, res: Response, next: NextFunction) => void) => unknown
+}
+
+/*
+    Makes `router` the one answering on `mountPath` for channel `channelId`. True when it REPLACED a router
+    already mounted there (a hot reload), false when the path is mounted for the first time.
+*/
+export const mountChannelRouter = (app: IChannelRouterHost, mountPath: string, channelId: string, router: Router): boolean => {
+    const replaced = mountedChannelRouters.has(mountPath)
+    mountedChannelRouters.set(mountPath, { channelId, router })
+    if (!dispatchedPaths.has(mountPath)) {
+        dispatchedPaths.add(mountPath)
+        app.use(mountPath, (req, res, next) => {
+            const current = mountedChannelRouters.get(mountPath)
+            if (current) current.router(req, res, next)
+            else next()
+        })
+    }
+    return replaced
+}
+
+/*
+    A reload that does not have express at hand (the dev watcher's): makes `router` the one answering on a path
+    ALREADY mounted. False when the path has no dispatcher yet, and then nothing changes: mounting it the first
+    time is mountChannelRouter's.
+*/
+export const swapChannelRouter = (mountPath: string, channelId: string, router: Router): boolean => {
+    if (!dispatchedPaths.has(mountPath)) return false
+    mountedChannelRouters.set(mountPath, { channelId, router })
+    return true
+}
+
+// An uninstalled channel stops answering on every path it had: the request goes on, to a 404
+export const unmountChannelRouters = (channelId: string): void => {
+    for (const [path, mounted] of mountedChannelRouters) {
+        if (mounted.channelId === channelId) mountedChannelRouters.delete(path)
+    }
 }
 
 // What the core announces for a channel hosted HERE
