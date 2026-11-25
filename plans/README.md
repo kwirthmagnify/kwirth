@@ -101,6 +101,7 @@ Documentados a propósito, para no volver a pensarlos desde cero el día que toq
 |---|---|
 | [provider-contract](provider-contract/PLAN.md) | decisión del usuario (2026-09-12): se deja escrito y no se toca |
 | shell [1](shell/prd-1-shell-extension.md) · [2](shell/prd-2-channel-variants.md) · [3](shell/prd-3-dashboard-shell.md) | tres PRD encadenados: el tipo `shell`, las variantes de presentación de un canal y el dashboard |
+| `KubernetesTools` de common-back (sin plan) | visto el 2026-11-25 al preparar el despliegue de un DaemonSet desde una extensión: `applyAllResources` / `deleteAllResources` **se tragan los errores** (solo los escriben en el log; quien llama no sabe qué falló) y el borrado **no conoce DaemonSet** ni Job ni Role (*not implemented*). Consumidor hoy: el provider trivy. Aquella extensión aplica y borra con `objectsApi` directamente; arreglarlas cuando otra las necesite |
 
 ## Lo que no es un plan
 
