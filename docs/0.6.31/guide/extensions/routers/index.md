@@ -28,11 +28,11 @@ Your Kwirth lets traffic into a router in three ways, and nothing else gets in:
 
 | How | Who uses it |
 |---|---|
-| A **route ticket** | Your browser. Kwirth gives your session a ticket and renews it on its own; it goes in the URL (a browser cannot put headers on a WebSocket) and Kwirth removes it before the router sees the path. It lasts 10 minutes and is not your credential: it only says which session is using the route. |
+| A **route ticket** | Your browser. Kwirth gives your session a ticket and renews it on its own; it goes in the URL (a browser cannot put headers on a WebSocket) and Kwirth removes it before the router sees the path. It lasts 10 minutes and is not your credential: it only says which session is using the route, encrypted so that nobody reading the URL (in a proxy's log, say) learns your key. A restart of Kwirth does not invalidate it: the tabs going through a router reconnect on their own, with no need to reload the page. |
 | **Loopback** | Your Kwirth's own back end, when a plugin connects to a routed cluster from the server. Accepted only from the same machine. |
 | An **access key** of your Kwirth | Another Kwirth or a script, in the `Authorization` header. What a key may do through a router is the router's decision, usually by a scope it declares. |
 
-Deleting an access key cuts at once the router connections made with it, and the route tickets it was given.
+Deleting an access key cuts at once the router connections made with it, and the route tickets it was given stop working on their next use.
 
 ## Managing routers
 
