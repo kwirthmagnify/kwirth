@@ -6,21 +6,19 @@ import { routersNeedTicket, setRouteTicket } from './ClusterRouting'
 /*
     The session's route ticket (plans/router-extension, S3/S4): issued by the user's own core
     (POST /core/routes/ticket) with the session's credential, and asked for again before it expires. The core
-    validates it before handing a request to a router; the router learns who is calling from it.
+    validates it before handing a request to a router; the router learns who is calling from it. It survives a
+    restart of the core (it is sealed with the core's masterKey, not kept in its memory), so a restart needs
+    nothing from here.
 
     One ticket for every router: it says who the SESSION is, not which route it may use — that is each
     router's to decide.
 */
 
-export const ROUTE_REFUSED_CLOSE_CODE = 4401   // how the core closes a route WebSocket it does not authenticate
 const RENEW_BEFORE_MS = 60_000      // asked for again this long before it expires
 const RETRY_MS = 15_000             // after a failure
 
 let timer: ReturnType<typeof setTimeout> | undefined
 let generation = 0                  // a stop or a restart makes the answers of the previous run worthless
-// what renewRouteTicketNow asks again with: the run in course, if any
-let runningHome: Cluster | undefined
-let runningOnTicket: (() => void) | undefined
 
 const ticketOf = (value: unknown): IClusterRouteTicket | undefined => {
     const t = value as IClusterRouteTicket | undefined
@@ -34,8 +32,6 @@ const ticketOf = (value: unknown): IClusterRouteTicket | undefined => {
 export const startRouteTickets = (home: Cluster, onTicket: () => void): void => {
     stopRouteTickets()
     if (!routersNeedTicket()) return
-    runningHome = home
-    runningOnTicket = onTicket
     const mine = generation
     const ask = async (): Promise<void> => {
         let next = RETRY_MS
@@ -60,20 +56,7 @@ export const startRouteTickets = (home: Cluster, onTicket: () => void): void => 
     void ask()
 }
 
-/*
-    The core refused the ticket (4401) although it has not expired here: the core restarted, and its tickets,
-    which live in its memory, went with it. Asked for again NOW instead of when it would have been renewed
-    (up to 9 minutes later), so the reconnection that comes next carries a ticket the core knows.
-*/
-export const renewRouteTicketNow = (): void => {
-    if (!runningHome || !runningOnTicket) return
-    setRouteTicket(undefined)
-    startRouteTickets(runningHome, runningOnTicket)
-}
-
 export const stopRouteTickets = (): void => {
-    runningHome = undefined
-    runningOnTicket = undefined
     generation++
     if (timer) clearTimeout(timer)
     timer = undefined
