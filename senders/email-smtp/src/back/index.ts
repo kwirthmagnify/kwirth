@@ -1,4 +1,6 @@
 import { ISender, ISenderAccess, ISenderConfig, ISenderFieldDef, ISenderMessage } from '@kwirthmagnify/kwirth-common-back'
+// A VALUE import (an enum) from the light library, not from common-back: from there it would bundle all of common-back.
+import { ESenderMime } from '@kwirthmagnify/kwirth-common'
 import nodemailer, { Transporter } from 'nodemailer'
 
 export interface ISmtpSenderConfig extends ISenderConfig {
@@ -52,9 +54,11 @@ export class SmtpSender implements ISender {
         const to = message.to ?? config.to
         const subject = message.subject ?? config.subject ?? '(no subject)'
         const level = message.level ?? 'info'
-        const html = `<pre style="font-family:monospace">[${level.toUpperCase()}] ${message.body}</pre>`
-
-        await transporter.sendMail({ from: config.from, to, subject, html })
+        // An HTML rendition of the message, if it brings one, is the mail itself, with the plain body as its text
+        // part (multipart/alternative). Without one, the body as it always went.
+        const rendered = message.alternatives?.find(a => a.mime === ESenderMime.HTML)?.content
+        if (rendered) await transporter.sendMail({ from: config.from, to, subject, html: rendered, text: message.body })
+        else await transporter.sendMail({ from: config.from, to, subject, html: `<pre style="font-family:monospace">[${level.toUpperCase()}] ${message.body}</pre>` })
     }
 
     getConfigSchema(): ISenderFieldDef[] {
