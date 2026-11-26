@@ -509,7 +509,10 @@ interface IAiConfigProviderProps {
     providersAvailable: string[]
     providers: ILlmProvider[]
     onClose: (providers: ILlmProvider[] | undefined) => void
-    onLoadModels?: (provider: ILlmProvider) => Promise<ILlmModel[]>
+    /* Required: the Load models button is always there, whoever opens the dialog. It was optional, and every
+       consumer that did not pass it showed the dialog without the button. The core does the call
+       (POST /core/aiconfig/loadmodels): the front has neither the providers' keys nor their network. */
+    onLoadModels: (provider: ILlmProvider) => Promise<ILlmModel[]>
     /* What each provider key has spent, by provider name. Optional: an older core does not send it. */
     usage?: Record<string, IUsageTotals>
     usageDurable?: boolean
@@ -587,7 +590,7 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
     }
 
     const onLoadModels = async () => {
-        if (!props.onLoadModels || !providerType || !providerKey) return
+        if (!providerType || !providerKey) return
         setLoadingModels(true)
         try {
             const endpoint = providerType === 'openai-compat' ? providerEndpoint : undefined
@@ -721,12 +724,10 @@ const AiConfigProvider: React.FC<IAiConfigProviderProps> = (props: IAiConfigProv
                             pt: 2
                         }}>
                         <Button variant='outlined' onClick={onNew}>New</Button>
-                        { props.onLoadModels && (
-                            <Button variant='outlined' onClick={onLoadModels} disabled={!providerType || !providerKey || loadingModels}
-                                startIcon={loadingModels ? <CircularProgress size={14} /> : undefined}>
-                                {loadingModels ? 'Loading...' : `Load models${pendingModels.length ? ` (${pendingModels.length})` : ''}`}
-                            </Button>
-                        )}
+                        <Button variant='outlined' onClick={onLoadModels} disabled={!providerType || !providerKey || loadingModels}
+                            startIcon={loadingModels ? <CircularProgress size={14} /> : undefined}>
+                            {loadingModels ? 'Loading...' : `Load models${pendingModels.length ? ` (${pendingModels.length})` : ''}`}
+                        </Button>
                         <Typography sx={{
                             flex: 1
                         }} />
