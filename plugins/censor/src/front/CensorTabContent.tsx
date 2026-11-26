@@ -3,7 +3,7 @@ import { Box, Button, Card, CardContent, CardHeader, Chip, Collapse, Divider, Fo
 import { Add as AddIcon, ArrowDownward, ArrowUpward, Delete as DeleteIcon, DeleteSweep, Download as DownloadIcon, ExpandLess, ExpandMore, Key, Memory, MoreVert as MoreVertIcon, Settings, SmartToy, ImportExport as SwapVert } from '@mui/icons-material'
 import { ChannelNotStarted, cleanANSI, IContentProps, MiniGauge } from '@kwirthmagnify/kwirth-common-front'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
-import { ILlm, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
+import { ILlm, ILlmModel, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { ICensorData, ICensorUiState, IRunnerData, ECensorTab } from './CensorData'
 import { ECensorAssetState, ECensorCommand, ERegexOrigin } from './CensorConfig'
@@ -215,6 +215,20 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
         setShowConfigLlm(false)
         // Persist the shared llm list; spread the active config so the backend does not blank instance.cfg
         if (llms) sendCommand(ECensorCommand.CONFIGSET, { ...data.instanceConfig, _llms: llms })
+    }
+
+    // Loading a provider's models: the CORE does it (it has each SDK's adapter and the network), as in Kwirth's own AI Providers dialog
+    const aiLoadModels = async (provider: ILlmProvider): Promise<ILlmModel[]> => {
+        const response = await fetch(`${props.channelObject.clusterUrl}/core/aiconfig/loadmodels`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${props.channelObject.accessString}`,
+                'X-Kwirth-App': 'true'
+            },
+            body: JSON.stringify(provider)
+        })
+        return response.ok ? await response.json() : []
     }
 
     const aiConfigProviderClose = (providers: ILlmProvider[] | undefined) => {
@@ -953,7 +967,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                 <AiConfigLlm llms={data.llms} providers={data.providers} onClose={aiConfigLlmClose} />
             )}
             {showConfigProvider && (
-                <AiConfigProvider providers={data.providers} providersAvailable={data.providersAvailable} onClose={aiConfigProviderClose} />
+                <AiConfigProvider providers={data.providers} providersAvailable={data.providersAvailable} onLoadModels={aiLoadModels} onClose={aiConfigProviderClose} />
             )}
         </>
     );
