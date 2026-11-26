@@ -407,11 +407,8 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                 <Divider />
 
                                 {/* Cluster data as label/value rows */}
+                                {/* No 'Name': every Kwirth calls its own entry inCluster / inDocker / inElectron, so it says nothing */}
                                 <Box>
-                                    <Stack direction='row' spacing={2}>
-                                        <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Name</Typography>
-                                        <Typography>{testResult.data!.clusterName}</Typography>
-                                    </Stack>
                                     <Stack direction='row' spacing={2}>
                                         <Typography sx={{ width: 140, color: 'text.secondary', fontWeight: 600 }}>Id</Typography>
                                         <Typography>{testResult.clusterId}</Typography>
