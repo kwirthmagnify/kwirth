@@ -13,6 +13,23 @@ refresca, directo / ruteado), el e2e del switch *Enabled* y el unitario intermit
 
 ## Backlog
 
+- ⬜ **Pendiente (no crítico, caso frontera) — la renovación del ticket de ruta depende del reloj del navegador**
+  (anotado 2026‑11‑26). El front decide cuándo pedir otro con `expiresAt` (reloj del servidor) menos su propio
+  `Date.now()`. Con el navegador **más de un minuto por detrás** del servidor, el core da por caducado un ticket que
+  el front todavía cree válido, y las rutas responden 401/4401 hasta la renovación. Arreglo: que `/core/routes/ticket`
+  diga la **duración** del ticket (`IClusterRouteTicket`, en `kwirth-common`, a publicar) y el front programe la
+  renovación con ella, sin comparar relojes. No pasa con relojes sincronizados por NTP.
+
+- ✅ **Hecho 2026‑11‑26 — un reinicio del core invalidaba todos los tickets de ruta**. Vivían en la memoria del
+  proceso: tras un reinicio, el front seguía mandando el suyo (válido para él) y las rutas respondían 401 en HTTP
+  (el *Test* de *Manage clusters*, los `fetch` de los plugins) y 4401 en WebSocket hasta que lo renovaba, hasta
+  9 minutos después. Ahora el ticket lleva la clave de la sesión, el usuario y la caducidad **cifrados y
+  autenticados** (AES‑256‑GCM, clave derivada de la `masterKey`, persistida): sobrevive a reinicios y vale en
+  cualquier réplica. Cifrado y no solo firmado porque el id de una access key es su secreto. En cada uso se
+  comprueba que la clave siga valiendo, así que borrarla sigue cortando sus tickets. Se quita la renovación por
+  4401 del front (`renewRouteTicketNow`, del 2026‑11‑18), que ya no hace falta. Tests en `routeGate` (+4),
+  e2e `routers-manager` 11/11, QA en k3d (reinicio del back sin recargar). Guía: `guide/extensions/routers`.
+
 - ✅ **Hecho 2026‑11‑16 — bridge: bucle de enlace duplicado** (`router/bridge@0.1.1`). No era que los dos lados se
   marcaran: el back de dev de k3d se reiniciaba, su enlace moría sin cierre y AKS, que no hace ping a los
   entrantes, lo daba por vivo. Al volver k3d, los dos enlaces los había abierto k3d, la regla del uid más bajo no
