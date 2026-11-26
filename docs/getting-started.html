@@ -331,10 +331,11 @@
   <h2>Connect your first cluster</h2>
   <p>Kwirth can monitor any number of Kubernetes clusters. The cluster where Kwirth runs is auto-connected. To add a remote cluster:</p>
   <ol style="margin-left:24px;color:var(--muted);">
-    <li style="margin-bottom:8px">In the Kwirth UI, go to <strong style="color:var(--text)">Settings → Manage clusters list</strong></li>
-    <li style="margin-bottom:8px">Click <strong style="color:var(--text)">NEW</strong> and provide the API server URL and a proper API Key</li>
+    <li style="margin-bottom:8px">The remote cluster runs its own Kwirth. In the Kwirth UI, open the menu <strong style="color:var(--text)">☰ → Manage cluster list</strong></li>
+    <li style="margin-bottom:8px">Click <strong style="color:var(--text)">NEW</strong> and give it a name and the URL of the remote Kwirth, plus an API Key created there — or set <strong style="color:var(--text)">Credentials</strong> to <strong style="color:var(--text)">Login</strong> to sign in to it with one of its users when you use it</li>
     <li style="margin-bottom:8px">Test the connection and save</li>
   </ol>
+  <p>See <a href="documentation/#/0.6.31/guide/admin/06-cluster-management">Cluster management</a> for the details.</p>
 
   <h2>Open your first channel</h2>
   <p>Use the <strong style="color:var(--text)">resource selector</strong> just below the top bar. You need to specify what is your cluster and your target 'view'

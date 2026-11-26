@@ -158,7 +158,7 @@
   </div>
 
   <h2>Three ways to federate</h2>
-  <p>Whichever way a cluster is reached, it shows up in your cluster list like any other, and the Kwirth at the other end still <strong>authenticates and authorizes you with its own access key</strong>. What changes is <strong>who has to reach whom</strong>.</p>
+  <p>Whichever way a cluster is reached, it shows up in your cluster list like any other, and the Kwirth at the other end still <strong>authenticates and authorizes you with its own access key</strong> — one you were given, or the one it hands you when you sign in to it with one of its users. What changes is <strong>who has to reach whom</strong>.</p>
 
   <div class="cards-grid">
     <div class="card">
@@ -208,11 +208,11 @@
 
   <h2 id="front-end">1 · From the front end</h2>
   <p><span class="badge badge-available" style="margin:0 0 12px;">built in · open source</span></p>
-  <p>The simplest way, and the one Kwirth has always had. Every Kwirth you log into lists its own cluster first; to that list you add <strong>other Kwirths</strong>, each with a name, the URL of its Kwirth and an <strong>access key of that Kwirth</strong>. The list lives in <strong>your profile</strong>, so it is yours: each user federates the clusters they work with.</p>
+  <p>The simplest way, and the one Kwirth has always had. Every Kwirth you log into lists its own cluster first; to that list you add <strong>other Kwirths</strong>, each with a name, the URL of its Kwirth and an <strong>access key of that Kwirth</strong> — or no key at all: set its credentials to <strong>Login</strong> and, when you use it, you <strong>sign in to that Kwirth</strong> with a user of its own (any of its users, not necessarily the one you are logged in with here), and Kwirth keeps the key it hands out. The list lives in <strong>your profile</strong>, so it is yours: each user federates the clusters they work with.</p>
   <p>When you pick one of those clusters, <strong>your browser</strong> talks to its Kwirth directly — API calls, live channels, Magnify — with the key you gave the entry, and that Kwirth decides what you may do. Nothing is installed and no Kwirth needs to know about the others. The price is that <strong>your browser must reach every Kwirth</strong>: it is the way for a flat network — a VPN, an office, clusters with an ingress.</p>
 
   <div class="diagram">
-    <svg viewBox="0 0 960 300" role="img" aria-label="Federation from the front end: your browser keeps a cluster list in your profile and talks directly to each Kwirth with that Kwirth's own access key">
+    <svg viewBox="0 0 960 300" role="img" aria-label="Federation from the front end: your browser keeps a cluster list in your profile and talks directly to each Kwirth with that Kwirth's own access key, given to the entry or obtained by signing in to that Kwirth with one of its users">
       <defs>
         <marker id="front-arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#58a6ff"/></marker>
       </defs>
@@ -226,7 +226,7 @@
         <rect x="45" y="154" width="250" height="34" rx="6" fill="#111827" stroke="#1e2d40"/>
         <text x="170" y="176" font-size="12" fill="#e6edf3">staging · <tspan fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">key of B</tspan></text>
         <rect x="45" y="196" width="250" height="34" rx="6" fill="#111827" stroke="#1e2d40"/>
-        <text x="170" y="218" font-size="12" fill="#e6edf3">lab · <tspan fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">key of C</tspan></text>
+        <text x="170" y="218" font-size="12" fill="#e6edf3">lab · <tspan fill="#2dd4bf" font-family="'JetBrains Mono', 'Fira Code', monospace">login: as ops</tspan></text>
 
         <!-- direct connections -->
         <line x1="297" y1="129" x2="636" y2="68" stroke="#58a6ff" stroke-width="2" marker-end="url(#front-arrow-blue)"/>
@@ -249,7 +249,7 @@
     </svg>
   </div>
 
-  <p style="margin-top:18px;"><strong>Setting it up.</strong> In the Kwirth you want to add, create an access key for you. Then, in yours, open <strong>Manage clusters</strong>, add the cluster with its name, URL and that key, and pick it from the cluster selector. See <a href="documentation/#/0.6.31/guide/admin/06-cluster-management?id=add-a-remote-cluster">Cluster management</a>.</p>
+  <p style="margin-top:18px;"><strong>Setting it up.</strong> In the Kwirth you want to add, create an access key for you. Then, in yours, open <strong>Manage clusters</strong>, add the cluster with its name, URL and that key, and pick it from the cluster selector. If you have a user there instead, choose <strong>Login</strong> as its credentials and sign in when you pick it. See <a href="documentation/#/0.6.31/guide/admin/06-cluster-management?id=add-a-remote-cluster">Cluster management</a> and <a href="documentation/#/0.6.31/guide/admin/06-cluster-management?id=signing-in-to-a-cluster">Signing in to a cluster</a>.</p>
 
   <h2 id="what-is-kwirth-mesh">Under the hood: routers</h2>
   <p>Federating from the front end needs nothing more: your browser reaches each Kwirth. The other two ways are for the clusters your browser <strong>cannot</strong> reach — a Kwirth behind NAT, behind a firewall, in a DMZ, on a laptop — and both work the same way underneath.</p>
@@ -316,7 +316,7 @@
   <div class="iface-grid">
     <div class="iface-row"><div class="iface-name">no restart</div><div class="iface-desc">Installing, updating and uninstalling a router is <strong>hot</strong>: one dispatcher serves every router, and a router is up the moment it is installed.</div></div>
     <div class="iface-row"><div class="iface-name">never the real URL</div><div class="iface-desc">A routed entry whose router is not installed <strong>does not connect at all</strong>. It never falls back to the real URL — which is precisely the one that cannot be reached.</div></div>
-    <div class="iface-row"><div class="iface-name">the other side decides</div><div class="iface-desc">The API key of a routed entry is <strong>the target cluster's</strong>. The router carries it untouched and that cluster authenticates and authorizes you with it: a router never gives you more than the target cluster would.</div></div>
+    <div class="iface-row"><div class="iface-name">the other side decides</div><div class="iface-desc">The API key of a routed entry is <strong>the target cluster's</strong>, pasted or obtained by signing in to it (the sign-in travels through the route too). The router carries it untouched and that cluster authenticates and authorizes you with it: a router never gives you more than the target cluster would.</div></div>
     <div class="iface-row"><div class="iface-name">its own configuration</div><div class="iface-desc">Kwirth's own dialog, drawn from the fields the router declares. Passwords and keys are kept in a Kubernetes <strong>Secret</strong>, shown masked with an eye to reveal them, and saving <strong>applies at once</strong>.</div></div>
     <div class="iface-row"><div class="iface-name">its own scopes</div><div class="iface-desc">A router may declare scopes, and they appear in the security editor next to everybody else's.</div></div>
     <div class="iface-row"><div class="iface-name">status and log</div><div class="iface-desc">Each router's card says how it is right now — <strong>Started</strong>, <strong>Error</strong> or <strong>Failed</strong>, with the reason — and everything it does goes to Kwirth's log under the <strong>Routers</strong> component.</div></div>
