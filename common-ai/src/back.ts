@@ -474,7 +474,8 @@ export const generateVision = async <T>(opts: IVisionOptions<T>): Promise<IVisio
         })
         const { output, text, usage } = await generateText({
             model: opts.model,
-            temperature: opts.temperature ?? 0,
+            // none given = none sent, the model's own (0.5.93): a reasoning model takes none, and 0 was a stated value
+            temperature: opts.temperature,
             system: opts.system,
             messages: [{
                 role: 'user',
