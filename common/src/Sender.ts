@@ -21,9 +21,28 @@ export interface ISenderMessageOrigin {
     timestamp?: number
 }
 
+/*
+    The formats a message can ALSO come in, besides its plain-text `body` — like a multipart/alternative email:
+    the same message, several renditions, each destination takes the one it understands. `text/plain` is not
+    here on purpose: it IS the body, and listing it twice would give two places to look.
+*/
+export enum ESenderMime {
+    HTML = 'text/html',
+    MARKDOWN = 'text/markdown'
+}
+
+export interface ISenderBodyAlternative {
+    mime: ESenderMime
+    content: string
+}
+
 export interface ISenderMessage {
     subject?: string
+    /** the message as plain text: every sender understands it, and it is the fallback of the alternatives */
     body: string
+    /** other renditions of the SAME message (an email sender sends the HTML one); a sender that knows none
+     *  of them ignores them and keeps using `body` */
+    alternatives?: ISenderBodyAlternative[]
     to?: string | string[]
     level?: 'debug' | 'info' | 'warning' | 'error'
     metadata?: Record<string, unknown>
