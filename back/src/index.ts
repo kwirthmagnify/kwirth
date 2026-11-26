@@ -3959,9 +3959,12 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
     buffer the settings govern, so whoever reads the logs where the rest of them are never sees them.
     Anything that reaches a model — the core itself, a plugin like llm-router — logs through here.
 */
-;(globalThis as { AI_SDK_LOG_WARNINGS?: unknown }).AI_SDK_LOG_WARNINGS = (options: { warnings: { message?: string, type?: string }[], provider?: string, model?: string }) => {
+;(globalThis as { AI_SDK_LOG_WARNINGS?: unknown }).AI_SDK_LOG_WARNINGS = (options: { warnings: { message?: string, type?: string, feature?: string, details?: string }[], provider?: string, model?: string }) => {
     for (const warning of options.warnings ?? []) {
-        logWarning(ELogComponent.CORE, `AI SDK (${options.provider ?? '?'}/${options.model ?? '?'}): ${warning.message ?? warning.type ?? JSON.stringify(warning)}`)
+        /* An 'unsupported' warning says WHICH setting in `feature` and why in `details`: without them the log read just
+           "unsupported", and nobody could tell what had been dropped (a temperature on a reasoning model, say). */
+        const what = warning.message ?? [warning.type, warning.feature].filter(Boolean).join(' ') + (warning.details ? `: ${warning.details}` : '')
+        logWarning(ELogComponent.CORE, `AI SDK (${options.provider ?? '?'}/${options.model ?? '?'}): ${what || JSON.stringify(warning)}`)
     }
 }
 
