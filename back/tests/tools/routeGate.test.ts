@@ -3,7 +3,7 @@
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { AccessKey, IRouterData } from '@kwirthmagnify/kwirth-common'
+import { AccessKey, accessKeySerialize, IRouterData } from '@kwirthmagnify/kwirth-common'
 import { ERouteCallerVia } from '@kwirthmagnify/kwirth-common-back'
 import { RouteKeySockets, RouteTickets, authenticateRoute, routerPathOf } from '../../src/tools/RouteGate'
 
@@ -14,28 +14,58 @@ const KEY_ONLY: IRouterData = { id: 'echo', pathTemplate: '/{clusterUid}', needs
 const noKey = async () => undefined
 const keyIs = (header: string, key: AccessKey) => async (authorization: string | undefined) => authorization === header ? key : undefined
 
-test('a ticket stands for its key until it expires; an unknown one for nobody', () => {
+const MASTER = 'the-masterkey-of-this-core'
+// The keys that are valid here now, as keyOf resolves an Authorization header
+const validKeys = (keys: AccessKey[]) => async (authorization: string | undefined) => keys.find(k => authorization === `Bearer ${accessKeySerialize(k)}`)
+const issued = (tickets: RouteTickets, key: AccessKey, user?: string): string => tickets.issue(key, user)!.routeTicket
+
+test('a ticket stands for its key until it expires; an unknown one for nobody', async () => {
     const clock = { t: 1_000 }
-    const tickets = new RouteTickets(() => clock.t, 60_000)
-    const { routeTicket, expiresAt } = tickets.issue(KEY, 'admin')
+    const tickets = new RouteTickets(() => MASTER, () => clock.t, 60_000)
+    const { routeTicket, expiresAt } = tickets.issue(KEY, 'admin')!
     assert.equal(expiresAt, 61_000)
     assert.ok(routeTicket.length >= 32, 'opaque and long')
-    assert.deepEqual(tickets.check(routeTicket), { via: ERouteCallerVia.TICKET, accessKey: KEY, user: 'admin' })
-    assert.equal(tickets.check('made-up'), undefined)
+    assert.deepEqual(await tickets.check(routeTicket, validKeys([KEY])), { via: ERouteCallerVia.TICKET, accessKey: KEY, user: 'admin' })
+    assert.equal(await tickets.check('made-up', validKeys([KEY])), undefined)
     clock.t = 61_001
-    assert.equal(tickets.check(routeTicket), undefined, 'expired')
+    assert.equal(await tickets.check(routeTicket, validKeys([KEY])), undefined, 'expired')
 })
 
-test('each ticket is different, and deleting a key takes its tickets with it', () => {
-    const tickets = new RouteTickets()
-    const a = tickets.issue(KEY).routeTicket
-    const b = tickets.issue(KEY).routeTicket
-    const c = tickets.issue(OTHER).routeTicket
-    assert.notEqual(a, b)
-    tickets.revokeKey('k1')
-    assert.equal(tickets.check(a), undefined)
-    assert.equal(tickets.check(b), undefined)
-    assert.ok(tickets.check(c))
+test('🔴 a ticket survives a restart of the core: another process with the same masterKey takes it (2026-11-26)', async () => {
+    const ticket = issued(new RouteTickets(() => MASTER), KEY, 'admin')
+    const afterRestart = new RouteTickets(() => MASTER)
+    assert.deepEqual(await afterRestart.check(ticket, validKeys([KEY])), { via: ERouteCallerVia.TICKET, accessKey: KEY, user: 'admin' })
+})
+
+test('🔴 an access key never travels readable in a ticket (its id IS its secret)', () => {
+    const ticket = issued(new RouteTickets(() => MASTER), KEY, 'admin')
+    const raw = Buffer.from(ticket, 'base64url').toString('latin1')
+    for (const secret of [KEY.id, accessKeySerialize(KEY), 'admin::::']) assert.equal(ticket.includes(secret) || raw.includes(secret), false, secret)
+})
+
+test('🔴 a ticket is refused when tampered with, made by another core, or its key is no longer valid', async () => {
+    const tickets = new RouteTickets(() => MASTER)
+    const ticket = issued(tickets, KEY)
+    // a byte changed anywhere: the authentication tag says no
+    const raw = Buffer.from(ticket, 'base64url')
+    for (const at of [0, 14, raw.length - 1]) {
+        const forged = Buffer.from(raw)
+        forged[at] ^= 0x01
+        assert.equal(await tickets.check(forged.toString('base64url'), validKeys([KEY])), undefined, `byte ${at}`)
+    }
+    assert.equal(await tickets.check(ticket.slice(0, 20), validKeys([KEY])), undefined, 'cut short')
+    // another core (another masterKey) cannot read it
+    assert.equal(await new RouteTickets(() => 'another-masterkey').check(ticket, validKeys([KEY])), undefined)
+    // the key deleted: its tickets stop at once
+    assert.equal(await tickets.check(ticket, validKeys([OTHER])), undefined)
+})
+
+test('each ticket is different; no masterKey yet (the core starting): no ticket is issued nor taken', async () => {
+    const tickets = new RouteTickets(() => MASTER)
+    assert.notEqual(issued(tickets, KEY), issued(tickets, KEY))
+    const starting = new RouteTickets(() => undefined)
+    assert.equal(starting.issue(KEY), undefined)
+    assert.equal(await starting.check(issued(tickets, KEY), validKeys([KEY])), undefined)
 })
 
 test('a router path: its id and the rest; anything else is not one', () => {
@@ -48,16 +78,16 @@ test('a router path: its id and the rest; anything else is not one', () => {
 })
 
 test('🔴 a ticket in the first segment: the caller is its session, and the router does not see the ticket', async () => {
-    const tickets = new RouteTickets()
-    const { routeTicket } = tickets.issue(KEY)
-    const auth = await authenticateRoute(TICKETED, `/${routeTicket}/u1/api?x=1`, '203.0.113.9', undefined, tickets, noKey)
+    const tickets = new RouteTickets(() => MASTER)
+    const routeTicket = issued(tickets, KEY)
+    const auth = await authenticateRoute(TICKETED, `/${routeTicket}/u1/api?x=1`, '203.0.113.9', undefined, tickets, validKeys([KEY]))
     assert.equal(auth?.caller.via, ERouteCallerVia.TICKET)
-    assert.equal(auth?.caller.accessKey, KEY)
+    assert.deepEqual(auth?.caller.accessKey, KEY)
     assert.equal(auth?.path, '/u1/api?x=1')
 })
 
 test('🔴 the loopback ticket counts ONLY from a loopback address', async () => {
-    const tickets = new RouteTickets()
+    const tickets = new RouteTickets(() => MASTER)
     for (const address of ['127.0.0.1', '::1', '::ffff:127.0.0.1']) {
         const auth = await authenticateRoute(TICKETED, '/loopback/u1', address, undefined, tickets, noKey)
         assert.deepEqual(auth, { caller: { via: ERouteCallerVia.LOOPBACK }, path: '/u1' }, address)
@@ -67,7 +97,7 @@ test('🔴 the loopback ticket counts ONLY from a loopback address', async () =>
 })
 
 test('an access key of this core in Authorization: the path goes untouched', async () => {
-    const tickets = new RouteTickets()
+    const tickets = new RouteTickets(() => MASTER)
     const auth = await authenticateRoute(TICKETED, '/link', '203.0.113.9', 'Bearer x', tickets, keyIs('Bearer x', OTHER))
     assert.equal(auth?.caller.via, ERouteCallerVia.ACCESS_KEY)
     assert.equal(auth?.caller.accessKey, OTHER)
@@ -77,14 +107,14 @@ test('an access key of this core in Authorization: the path goes untouched', asy
 })
 
 test('🔴 a ticketed request carrying the DESTINATION\'s key is still the ticket\'s session (the key passes through)', async () => {
-    const tickets = new RouteTickets()
-    const { routeTicket } = tickets.issue(KEY)
-    const auth = await authenticateRoute(TICKETED, `/${routeTicket}/u1`, '203.0.113.9', 'Bearer of-cluster-B', tickets, noKey)
+    const tickets = new RouteTickets(() => MASTER)
+    const routeTicket = issued(tickets, KEY)
+    const auth = await authenticateRoute(TICKETED, `/${routeTicket}/u1`, '203.0.113.9', 'Bearer of-cluster-B', tickets, validKeys([KEY]))
     assert.equal(auth?.caller.via, ERouteCallerVia.TICKET)
 })
 
 test('nothing valid is refused: no ticket, a bad ticket, a key of another core, a router without tickets and no key', async () => {
-    const tickets = new RouteTickets()
+    const tickets = new RouteTickets(() => MASTER)
     assert.equal(await authenticateRoute(TICKETED, '/u1', '203.0.113.9', undefined, tickets, noKey), undefined)
     assert.equal(await authenticateRoute(TICKETED, '/bad-ticket/u1', '203.0.113.9', 'Bearer of-B', tickets, noKey), undefined)
     assert.equal(await authenticateRoute(KEY_ONLY, '/u1', '127.0.0.1', undefined, tickets, noKey), undefined)
