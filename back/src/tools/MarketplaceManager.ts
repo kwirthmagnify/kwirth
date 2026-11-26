@@ -95,6 +95,22 @@ const CACHE_TTL_MS = 5 * 60 * 1000
 */
 const FAILURE_TTL_MS = 30 * 1000
 
+/*
+    Why a fetch failed, for the log. Node's fetch throws a bare 'TypeError: fetch failed' for EVERY network
+    failure and keeps the real reason in `cause` — a DNS miss (ENOTFOUND, EAI_AGAIN), a refused or reset
+    connection, a connect timeout (UND_ERR_CONNECT_TIMEOUT), a certificate problem. Logged without it, a
+    manifest that fails only at startup while the same URL opens fine in a browser or with curl gave nothing
+    to go on.
+*/
+const fetchCauseOf = (err: unknown): string => {
+    // read as a plain property: this project's TS lib predates Error.cause, Node sets it all the same
+    const cause: unknown = err && typeof err === 'object' ? (err as { cause?: unknown }).cause : undefined
+    if (!cause || typeof cause !== 'object') return ''
+    const { code, message } = cause as { code?: unknown, message?: unknown }
+    const parts = [typeof code === 'string' ? code : '', typeof message === 'string' ? message : ''].filter(p => p !== '')
+    return parts.length ? ` (cause: ${parts.join(' — ')})` : ''
+}
+
 // An already downloaded source, with its provenance. marketplaceId undefined = the public OSS one.
 export interface IMarketplaceSource {
     marketplaceId?: string
@@ -281,7 +297,7 @@ export class MarketplaceManager {
             return entries
         }
         catch (err) {
-            logError(ELogComponent.CORE, `Could not read marketplace manifest ${url}: ${err}`)
+            logError(ELogComponent.CORE, `Could not read marketplace manifest ${url}: ${err}${fetchCauseOf(err)}`)
             return this.rememberFailure(url)
         }
     }
