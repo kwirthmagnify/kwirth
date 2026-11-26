@@ -325,8 +325,13 @@
   <div class="callout"><strong>Info:</strong> the port is published on <code>127.0.0.1</code> only: nothing outside the machine reaches Kwirth until you pass <code>--bind 0.0.0.0</code>. "Restart Kwirth" restarts the container with the image it already has — to get a new one, use <code>update</code> or <code>--watchtower</code>. Everything else is in the <a href="https://github.com/kwirthmagnify/kwirth/tree/master/deploy/compose">deploy/compose/ folder</a>.</div>
 
   <h2>First Login</h2>
-  <p>On first boot, Kwirth creates a default <strong>admin</strong> user with password <strong>password</strong>. You will be prompted to change the password on first login.</p>
-  <div class="callout warning"><strong>Warning:</strong> Always change the default admin password before exposing Kwirth via an Ingress or public LoadBalancer.</div>
+  <p>On first boot, Kwirth creates an <strong>admin</strong> user. Its password depends on how you deployed it:</p>
+  <ul style="margin-left:24px;color:var(--muted);margin-bottom:16px;">
+    <li style="margin-bottom:6px"><strong style="color:var(--text)">Helm chart</strong> — the chart generates the password and prints it in the notes shown at install time, the only place it appears in the clear. Until somebody logs in, it can still be read out of the <code>kwirth-users</code> Secret (the notes print the command); after the first login it is a hash and cannot be read back.</li>
+    <li style="margin-bottom:6px"><strong style="color:var(--text)">Docker Compose, manifests, Docker, desktop or ECS</strong> — the password is <strong style="color:var(--text)">password</strong>, and Kwirth will not let you go any further until you change it.</li>
+  </ul>
+  <p>See <a href="documentation/#/0.6.31/commontasks?id=your-first-access">Your first access</a> for the details.</p>
+  <div class="callout warning"><strong>Warning:</strong> Always change the initial admin password before exposing Kwirth via an Ingress or public LoadBalancer.</div>
 
   <h2>Connect your first cluster</h2>
   <p>Kwirth can monitor any number of Kubernetes clusters. The cluster where Kwirth runs is auto-connected. To add a remote cluster:</p>
