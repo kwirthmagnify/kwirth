@@ -2,7 +2,7 @@ import { EClusterFlavour, ERancherRole, IClusterRoute, KwirthData } from '@kwirt
 import { MetricDefinition } from '@kwirthmagnify/kwirth-common-front'
 
 /*
-    How an entry of the cluster list authenticates against its Kwirth (plan: plans/cluster-login/PRD.md, D1). It is
+    How an entry of the cluster list authenticates against its Kwirth (plan: plans/completed/cluster-login/PRD.md, D1). It is
     independent of HOW it is reached (direct or through a router, `route`): a cluster behind a bridge can go with
     a login too.
 */

@@ -48,7 +48,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     const [routeResolver, setRouteResolver] = useState<string>(DIRECT_ROUTE)
     const [routeUid, setRouteUid] = useState<string>('')
     const [inUse, setInUse] = useState<boolean>(true)
-    // How it authenticates (plans/cluster-login): an access key pasted in, or a sign-in to the remote when used
+    // How it authenticates (plans/completed/cluster-login): an access key pasted in, or a sign-in to the remote when used
     const [credentials, setCredentials] = useState<EClusterCredentials>(EClusterCredentials.KEY)
     const isLogin = credentials === EClusterCredentials.LOGIN
     const [keyRevealed, setKeyRevealed] = useState<boolean>(false)     // the API key is a secret: masked, with the eye
@@ -309,7 +309,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                 <TextField value={selectedCluster?.id || ''} disabled variant='standard' label='Id'></TextField>
                                 <TextField value={url} onChange={(e) => setUrl(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='URL'></TextField>
                                 {/*
-                                    How it authenticates, apart from how it is reached (plans/cluster-login, D1): an API key, or
+                                    How it authenticates, apart from how it is reached (plans/completed/cluster-login, D1): an API key, or
                                     a sign-in to the remote with any of ITS users when the cluster is used. On its row, the session
                                     of a Login entry and its Sign out — always there (empty / disabled for an API key entry), so
                                     choosing one or the other moves nothing.

@@ -2618,7 +2618,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
  
     /*
         Saves the user's cluster list (everything but the home entry). Used by Manage clusters on close and by a
-        sign-in to a LOGIN cluster, which keeps the key it obtained in its entry (plans/cluster-login, D2).
+        sign-in to a LOGIN cluster, which keeps the key it obtained in its entry (plans/completed/cluster-login, D2).
         Returns whether it was sent: false when the list was never loaded.
     */
     const saveClusterList = (cc: Cluster[]): boolean => {

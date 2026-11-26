@@ -1,7 +1,10 @@
 # Clusters con conexión «login» — PLAN
 
-> **ESTADO — F1–F5 implementadas, pendiente de QA del usuario** (2026-11-26): 15 tests unitarios, e2e
-> `cluster-login.spec.ts` 4/4, regresión de Manage clusters en verde.
+> ✅ **ESTADO — CERRADO el 2026-11-26** (build 0.6.134). F1–F5 entregadas y **QA del usuario validado**: 15 tests
+> unitarios del front (`npm run test:unit`), e2e `cluster-login.spec.ts` 4/4 y la regresión de clusters y
+> selector en verde (24 ✅ · 3 ⏭). Guía (*Signing in to a cluster*, con captura del diálogo por
+> `capture-clusters.spec.ts`), website (*Kwirth Mesh*, *Getting started*) y changelog. Lo que queda fuera está
+> abajo, en *Fuera de esta versión*.
 >
 > Cuelga de [PRD.md](PRD.md) (D1–D6). Todo es **front**: el back del remoto ya da lo necesario (`POST /login`, CORS)
 > y la lista de clusters se guarda en el back propio tal cual, sin interpretarla.
@@ -51,6 +54,14 @@ La key obtenida va en el `accessString` de siempre (D2): el resto del front no c
   abría el login al volver a elegirlo. El diálogo se abre desde el `onClick` de la opción.
 - El formulario del diálogo lleva `autocomplete` `off`/`new-password`: es el mismo dominio que este Kwirth y el
   navegador ofrecería sus credenciales, que no son las del remoto.
+- **Del QA (disposición de Manage clusters):** el primer reparto metía textos de ayuda que cambiaban el tamaño
+  del diálogo según la opción, y dejaba el selector varias filas por debajo de *API Key*. Queda: *Credentials*,
+  el estado de la sesión y **SIGN OUT** en una fila, y *API Key* justo debajo. El selector se estrecha a 130 para
+  que el estado (*Signs in on use*, *login required*, *as &lt;user&gt;*…) quepa sin cortarse. El e2e lo fija: alto
+  del diálogo igual al cambiar a *Login*, SIGN OUT en la fila del selector, *API Key* debajo y el texto sin elipsis.
+- Tipos que no estaban en el PLAN: `EClusterLoginOutcome` / `IClusterLoginOutcome` (resultado del login remoto),
+  `EClusterLoginReason` (NO_SESSION / EXPIRED, por qué se abre el diálogo) y `loginExpired` en `Cluster` (solo en
+  memoria, no se persiste).
 
 ## Fuera de esta versión
 

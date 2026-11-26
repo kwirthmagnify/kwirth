@@ -10,7 +10,7 @@ import { useEscapeToClose } from '../../tools/useKeyboard'
 
 /*
     Sign in to a REMOTE Kwirth from an entry of the cluster list whose credentials are LOGIN
-    (plan: plans/cluster-login/PRD.md).
+    (plan: plans/completed/cluster-login/PRD.md).
 
     The user and password are the remote's, not this Kwirth's: logged in here as 'admin', the remote may be entered
     as any of its users. That is also why the browser must NOT fill the fields in: it is the same domain as this

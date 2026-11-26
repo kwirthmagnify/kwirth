@@ -248,7 +248,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
 
     /*
         A LOGIN entry with no session, or whose session expired, is not selected straight away: the sign-in dialog
-        opens first (plans/cluster-login), and only once signed in is the cluster selected. Cancelling leaves the
+        opens first (plans/completed/cluster-login), and only once signed in is the cluster selected. Cancelling leaves the
         selection as it was.
     */
     const onChangeCluster = (event: SelectChangeEvent) => {

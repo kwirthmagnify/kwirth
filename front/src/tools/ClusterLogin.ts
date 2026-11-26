@@ -7,7 +7,7 @@ import { clusterLoginOutcomeOf, clusterLoginUnreachable, EClusterLoginOutcome, I
 
 /*
     Signing in to a REMOTE Kwirth from an entry of the cluster list whose credentials are LOGIN
-    (plan: plans/cluster-login/PRD.md).
+    (plan: plans/completed/cluster-login/PRD.md).
 
     The remote's user has nothing to do with the user of THIS Kwirth: logged in here as 'admin', the remote may be
     entered as any of its own users, with its permissions. The password is sent the way Kwirth's own login sends it

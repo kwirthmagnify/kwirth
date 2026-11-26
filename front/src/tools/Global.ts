@@ -158,7 +158,7 @@ export const recheckCluster = async (cluster: Cluster): Promise<boolean> => {
                 try {
                     /*
                         A LOGIN entry is checked on /config/cluster, which asks for the key: /config/info is public and
-                        would answer 200 to a session that is gone. Refused = expired or revoked (plans/cluster-login, D5).
+                        would answer 200 to a session that is gone. Refused = expired or revoked (plans/completed/cluster-login, D5).
                     */
                     const path = isLoginCluster(cluster) ? 'config/cluster' : 'config/info'
                     const response = await fetch(`${base}/${path}`, { ...addGetAuthorization(cluster.accessString), signal: AbortSignal.timeout(RECHECK_TIMEOUT_MS) })

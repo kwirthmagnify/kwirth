@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { clusterLoginOutcomeOf, clusterLoginUnreachable, EClusterLoginOutcome } from '../src/tools/ClusterLoginOutcome.ts'
 
 /*
-    What a sign-in against a REMOTE Kwirth came to (plan: plans/cluster-login/PRD.md), from the answers its
+    What a sign-in against a REMOTE Kwirth came to (plan: plans/completed/cluster-login/PRD.md), from the answers its
     POST /login really gives (back/src/api/LoginApi.ts). Each outcome has to tell the user what to do: a bare
     'failed' is what this replaces.
 */

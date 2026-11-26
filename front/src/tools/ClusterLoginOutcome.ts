@@ -1,5 +1,5 @@
 /*
-    What a login against a REMOTE Kwirth came to, from its answer (plan: plans/cluster-login/PRD.md).
+    What a login against a REMOTE Kwirth came to, from its answer (plan: plans/completed/cluster-login/PRD.md).
 
     Kept apart from the request and with no imports on purpose: it is the part with rules — which status means
     what, and the message the user reads — and it is tested on its own (front/tests/clusterLogin.test.ts).
