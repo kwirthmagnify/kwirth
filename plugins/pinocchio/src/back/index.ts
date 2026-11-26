@@ -38,7 +38,7 @@ interface IModelInvocation {
     llmProviderId: string
     llmModelId: string
     model: any
-    temperature: number
+    temperature?: number        // undefined = the model's own (common-ai 0.5.91): none is sent
     providerOptions: any
     errorPath: string
     system: string
@@ -196,7 +196,7 @@ export class PinocchioChannel implements IChannel {
      */
     generateStructured = async <T>(params: {
         model: LanguageModel,
-        temperature: number,
+        temperature?: number,
         providerOptions: Record<string, unknown>,
         system: string,
         prompt: string,
@@ -288,9 +288,10 @@ export class PinocchioChannel implements IChannel {
         }
 
         let system = version.system
+        // an empty temperature (common-ai 0.5.91) is not sent: the model's own is used — only a stated one is clamped
         let temperature = llm.temperature
-        if (temperature<0) temperature=0
-        if (temperature>1) temperature=1
+        if (temperature !== undefined && temperature<0) temperature=0
+        if (temperature !== undefined && temperature>1) temperature=1
         const toolContext: IToolContext = {
             origin: 'Pinocchio',
             nodes: await this.clusterInfo.getNodes(),
