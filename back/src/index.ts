@@ -758,14 +758,14 @@ const cutDeletedKey = (ri: IRunningInstance, keyId: string): void => {
         sendChannelSignal(use.ws, ESignalMessageLevel.ERROR, 'Access key revoked: this instance has been stopped', instanceMessage, ri.channels)
     })
     if (cut > 0) logWarning(ELogComponent.AUTH, `Access key ${keyId.substring(0, 8)}... deleted: ${cut} live instance(s) started with it have been cut`)
-    // the routers' traffic too: its tickets, and the WebSockets a router took with that key
-    routeTickets.revokeKey(keyId)
+    // the routers' traffic too: the WebSockets a router took with that key (its route tickets check the key on every use)
     const routed = routeKeySockets.revoke(keyId)
     if (routed > 0) logWarning(ELogComponent.AUTH, `Access key ${keyId.substring(0, 8)}... deleted: ${routed} router connection(s) made with it have been cut`)
 }
 
 // ── Routers: the core's door (plans/router-extension, S3) ─────────────────────────────────────────────
-const routeTickets = new RouteTickets()
+// encrypted with the active instance's masterKey: a restart (or another replica) still knows them
+const routeTickets = new RouteTickets(() => activeApiKeyApi()?.masterKey)
 const routeKeySockets = new RouteKeySockets()
 
 const activeApiKeyApi = (): ApiKeyApi | undefined => runningInstances.find(r => r.active)?.apiKeyApi
@@ -1815,7 +1815,12 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
         riRouter.post(`/core/routes/ticket`, async (req: Request, res: Response) => {
             const accessKey = await AuthorizationManagement.getKey(req, res, apiKeyApi)
             if (!accessKey) return
-            res.json(routeTickets.issue(accessKey))
+            const ticket = routeTickets.issue(accessKey)
+            if (!ticket) {
+                res.status(503).json({ error: 'This Kwirth is still starting: no route ticket yet' })
+                return
+            }
+            res.json(ticket)
         })
         recordRoute(`${envRootPath}/core/routes/ticket`, ERouteOwnerKind.CORE, 'routes', undefined, ['POST'])
         riRouter.get(`/core/scopes`, (req: Request, res: Response) => {
