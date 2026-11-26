@@ -36,8 +36,8 @@ On the other side, API security is the way you can use to give access to your kw
 As you can see...:
 
   1. The user logs to kwirth at Kubernetes cluster "A".
-  2. Another administrator at cluster "B" gave him an API Key that he adds to his "API Security".
-  3. When the user wants to see a log stream from cluster "B" he doesn't need to logout cluster "A" nor login cluster "B". When the user selects cluster "B" in his "Resource Selector", kwirth will use the appropriate API Key.
+  2. Another administrator at cluster "B" gave them an API Key that they add to their **cluster list** (*Manage cluster list*) — or the entry's **Credentials** are **Login**, and they sign in to cluster "B"'s kwirth with one of its users the first time they use it ([Signing in to a cluster](guide/admin/06-cluster-management?id=signing-in-to-a-cluster)).
+  3. When the user wants to see a log stream from cluster "B" they don't need to log out of cluster "A". When they select cluster "B" in their "Resource Selector", kwirth will use the appropriate API Key.
 
 It's easy to work with. Enjoy!
 

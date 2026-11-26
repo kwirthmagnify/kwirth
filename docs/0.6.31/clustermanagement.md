@@ -13,7 +13,7 @@ To add a cluster to your profile you only need to enter three simple data:
 
 - **Name**. The name of the cluster, that must be unique. This is a name **for your convenience**, does not have to be the real name of the cluster.
 - **URL**. The URL where kwirth has been published in the cluster you are adding.
-- **API Key**. An API Key that you must create in the kwirth instance that is running on the cluster you want to add.
+- **API Key**. An API Key that you must create in the kwirth instance that is running on the cluster you want to add. Or set **Credentials** to **Login** instead, and kwirth asks for a user and password of that cluster's kwirth when you use it — see [Signing in to a cluster](guide/admin/06-cluster-management?id=signing-in-to-a-cluster).
 
 That is, something like this:
 

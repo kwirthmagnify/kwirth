@@ -64,7 +64,8 @@ link to this one.
 ## Adding a routed cluster
 
 *Menu → Manage cluster list → NEW*, and fill the entry as for any cluster — its **real URL** and an **API key of
-that cluster** — plus:
+that cluster**, or **Credentials** = *Login* to [sign in to it](../../admin/06-cluster-management?id=signing-in-to-a-cluster)
+with one of its users (the sign-in goes through the route too) — plus:
 
 | Field | What |
 |---|---|
@@ -76,7 +77,7 @@ that cluster** — plus:
 Both fields are always there; *Route* is disabled while there is no router installed, and *Cluster UID* while
 the route is *Direct*. *Test* tries the entry **through its route**.
 
-The API key is **the target cluster's**, as for any cluster: the router carries it untouched, and **that
+The API key — pasted or obtained by signing in — is **the target cluster's**, as for any cluster: the router carries it untouched, and **that
 cluster** authenticates and authorizes you with it. A router never gives you more than the target cluster would.
 
 If a routed entry's router is uninstalled, the entry stays — *Route* shows the router as *(not installed)* — and

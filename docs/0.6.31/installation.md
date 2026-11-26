@@ -535,6 +535,20 @@ So, finally, you should be able to access kwirth at: http://your.dns.name/quirz.
 http://localhost/quirz
 ```
 
+### Several kwirths on one domain
+Nothing stops you from publishing **several independent kwirths under the same host**, each in its own namespace
+with its own Ingress path and its own `ROOTPATH` (`/kwirth-a`, `/kwirth-b`…). Things to know:
+
+- **What each one keeps in your browser stays apart.** The browser has a single localStorage per domain, whatever
+  the path; a kwirth served under a path keeps everything it stores there —recent and favourite tabs, workspaces,
+  theme, homepage, and whatever its extensions keep— in **one entry named after its path**, so the same user in two
+  of them never overwrites the other. A kwirth served at the root (`/`) keeps using localStorage directly, as it
+  always did; it does not collide with the ones under paths either.
+- **The browser's password manager does not tell them apart.** It saves credentials per domain, not per path, so
+  it offers the user and password of one kwirth on the login page of the others. This is the browser's behaviour and
+  cannot be configured from the page: if the users differ between them, pick the right one from the list it offers —
+  or give each kwirth its own host name.
+
 ## Docker, ECS & External
 With Docker Compose the URL is the one `install` prints when it finishes — `http://127.0.0.1:3883` unless
 you passed `--port` or `--bind`.

@@ -41,7 +41,7 @@ It **takes precedence over every heuristic**, so it is also the way to fix a man
 
 ## Add a remote cluster
 
-To observe another cluster from here, that cluster must be running its **own** kwirth, and you need an **API key** from it.
+To observe another cluster from here, that cluster must be running its **own** kwirth, and you need an **API key** from it — or a user of that kwirth to [sign in with](#signing-in-to-a-cluster).
 
 1. On the **remote** kwirth, create an API key with the scopes you need (see [API management](05-api-management)) and copy it.
 2. Back on **this** kwirth: **☰ → Manage cluster list → NEW**.
@@ -53,7 +53,7 @@ To observe another cluster from here, that cluster must be running its **own** k
 
 The new cluster now appears in the **Cluster** dropdown of the [resource selector](../user/04-selecting-resources), and you can build tabs against it without logging out of this one.
 
-> Fields shown per cluster: **Name**, **Id**, **URL**, **API Key**, **Route**, **Credentials**. Buttons: **NEW**, **SAVE**, **TEST** (connectivity check), **DELETE**, **CLOSE**. You cannot edit or delete the source `inCluster` / `inDesktop` entry.
+> Fields shown per cluster: **Name**, **Id**, **URL**, **Credentials** (*API key* or *Login*, with the session state and **SIGN OUT** on the same row), **API Key**, **Route** and **Cluster UID** (see [Routers](../extensions/routers/index)), **Enabled**. Buttons: **NEW**, **SAVE**, **TEST** (connectivity check), **DELETE**, **CLOSE**. You cannot edit or delete the source `inCluster` / `inDesktop` entry.
 
 ## Signing in to a cluster
 
@@ -66,11 +66,15 @@ you would rather not leave a key stored in the list.
 Bridge or IRIA Ianus) and how you *sign in* are two different choices, so a cluster behind a router can use Login too.
 
 1. **☰ → Manage cluster list → NEW**, fill **Name** and **URL** (and **Route** if it is reached through a router).
-2. Set **Credentials** to **Login**. The **API Key** field stays there but disabled: there is nothing to paste.
+2. Set **Credentials** to **Login**. Next to it the dialog says *Signs in on use*; the **API Key** field below stays
+   there but disabled: there is nothing to paste.
 3. **TEST** checks that a kwirth answers at that address; **SAVE**.
 
 The entry now reads **login required**, here and in the **Cluster** dropdown of the resource selector. Choose it
 there and a **Sign in to &lt;cluster&gt;** dialog opens:
+
+![Sign in to a cluster](../../_media/guide/cluster-login-dialog.png)
+
 
 - The user is **the remote kwirth's**, not yours here. You may be logged in to this kwirth as `admin` and sign in to
   the remote one as any of its users — what you can do there is what *that* user may do.
@@ -109,11 +113,11 @@ This is what makes kwirth a **single pane of glass**: you don't switch context o
 
 ## How cross-cluster access works
 
-When you select a remote cluster in the resource selector, kwirth transparently uses the **API key you stored** for it — you don't log in again. So a single session can span clusters:
+When you select a remote cluster in the resource selector, kwirth transparently uses the **API key stored** for it — the one you pasted, or the one a *Login* entry got when you signed in — so you don't log in again while it lasts. A single session can span clusters:
 
 1. You log in to kwirth on cluster **A**.
-2. An admin on cluster **B** gave you an API key, which you added under **Manage cluster list**.
-3. Selecting cluster **B** in the resource selector makes kwirth use that key automatically to stream from **B**.
+2. An admin on cluster **B** gave you an API key, which you added under **Manage cluster list** — or a user of B's kwirth, and the entry's **Credentials** are **Login**.
+3. Selecting cluster **B** in the resource selector makes kwirth use that key automatically to stream from **B** (a *Login* entry asks for the user and password first, the first time and whenever the session has expired).
 
 ## Worked example — consolidate a second cluster
 
