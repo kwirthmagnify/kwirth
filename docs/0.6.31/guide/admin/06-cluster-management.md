@@ -53,7 +53,47 @@ To observe another cluster from here, that cluster must be running its **own** k
 
 The new cluster now appears in the **Cluster** dropdown of the [resource selector](../user/04-selecting-resources), and you can build tabs against it without logging out of this one.
 
-> Fields shown per cluster: **Name**, **Id**, **URL**, **API Key**. Buttons: **NEW**, **SAVE**, **TEST** (connectivity check), **DELETE**, **CLOSE**. You cannot edit or delete the source `inCluster` / `inDesktop` entry.
+> Fields shown per cluster: **Name**, **Id**, **URL**, **API Key**, **Route**, **Credentials**. Buttons: **NEW**, **SAVE**, **TEST** (connectivity check), **DELETE**, **CLOSE**. You cannot edit or delete the source `inCluster` / `inDesktop` entry.
+
+## Signing in to a cluster
+
+An entry does not have to carry an API key. Set its **Credentials** to **Login** instead and kwirth asks for a
+**user and password of that cluster's own kwirth** when you use it, signs in there, and keeps the key the remote
+hands out. Useful when you have your own user on the remote kwirth and should work with *its* permissions, or when
+you would rather not leave a key stored in the list.
+
+**Credentials** are separate from **Route**: how the cluster is *reached* (directly, or through a router such as
+Bridge or IRIA Ianus) and how you *sign in* are two different choices, so a cluster behind a router can use Login too.
+
+1. **☰ → Manage cluster list → NEW**, fill **Name** and **URL** (and **Route** if it is reached through a router).
+2. Set **Credentials** to **Login**. The **API Key** field stays there but disabled: there is nothing to paste.
+3. **TEST** checks that a kwirth answers at that address; **SAVE**.
+
+The entry now reads **login required**, here and in the **Cluster** dropdown of the resource selector. Choose it
+there and a **Sign in to &lt;cluster&gt;** dialog opens:
+
+- The user is **the remote kwirth's**, not yours here. You may be logged in to this kwirth as `admin` and sign in to
+  the remote one as any of its users — what you can do there is what *that* user may do.
+- Once signed in, the entry reads **as &lt;user&gt;** and is used like any other.
+- Your password is **never stored**: only the key the remote gives you, saved with your cluster list, so it also
+  works from another browser.
+
+**When the session ends.** The remote's key lasts **24 hours**, and the remote's admin can revoke it sooner. When
+the remote no longer accepts it, the entry reads **session expired**, and choosing it opens the same dialog *saying
+that your session in that cluster has expired*. Sign in again and carry on.
+
+**Signing out.** In **Manage cluster list**, select the entry and press **SIGN OUT**: the key is forgotten and the
+next use asks for credentials again — the way to switch to a different remote user.
+
+What the dialog tells you when a sign-in fails:
+
+| Message | What it means |
+|---|---|
+| *Invalid user or password* | Wrong credentials — or a user who signs in to that kwirth through an identity provider (SSO), who has no password there and cannot sign in from here |
+| *This user has to change its password* | First sign-in of that user: change the password by signing in to that kwirth directly, then come back |
+| *That Kwirth does not allow signing in from this address* | The remote's **Login access** filter leaves your address out |
+| *Too many sign-in attempts* | The remote's protection against password guessing: wait the time it says |
+| *That Kwirth could not be reached* | The address, the route or the network |
 
 ## Multi-cluster: one screen, many clusters
 

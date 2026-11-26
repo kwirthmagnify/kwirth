@@ -2,6 +2,7 @@ import { KwirthData, ENotifyLevel, EClusterType } from '@kwirthmagnify/kwirth-co
 import { Cluster, IClusterInfo } from '../model/Cluster'
 import { addGetAuthorization } from './AuthorizationManagement'
 import { clusterBaseUrl, resolvedClusterUrl, routeAwaitsTicket, unresolvedRouteMessage } from './ClusterRouting'
+import { isLoginCluster } from './ClusterLogin'
 import { MetricDefinition } from '@kwirthmagnify/kwirth-common-front'
 
 export { ENotifyLevel }
@@ -70,6 +71,8 @@ export const readClusterInfo = async (cluster: Cluster, notify: (channel:string|
             notify(undefined, ENotifyLevel.WARNING, unresolvedRouteMessage(cluster))
             return
         }
+        // A LOGIN entry with no session has no key to read with: it waits for the user to sign in when using it
+        if (isLoginCluster(cluster) && !cluster.accessString) return
         let responseInfo = await fetch(`${base}/config/info`, addGetAuthorization(cluster.accessString))
         if (responseInfo.status===200) {
             cluster.kwirthData = await responseInfo.json() as KwirthData
@@ -96,6 +99,15 @@ export const readClusterInfo = async (cluster: Cluster, notify: (channel:string|
             return
         }
         let responseCluster = await fetch(`${base}/config/cluster`, addGetAuthorization(cluster.accessString))
+        /*
+            🔴 Here, and not on /config/info, is where a LOGIN entry learns its session is gone: /config/info is
+            PUBLIC —it answers 200 with no key at all— so a revoked or expired key still passed it. /config/cluster
+            asks for the key and refuses it (403).
+        */
+        if (isLoginCluster(cluster) && (responseCluster.status === 401 || responseCluster.status === 403)) {
+            cluster.loginExpired = true
+            return
+        }
         if (responseCluster.status===200) {
             cluster.clusterInfo = await responseCluster.json() as IClusterInfo
             cluster.id = cluster.clusterInfo.id
@@ -132,7 +144,10 @@ export const recheckCluster = async (cluster: Cluster): Promise<boolean> => {
     if (rechecking.has(cluster)) return false
     rechecking.add(cluster)
     const before = cluster.enabled
+    const expiredBefore = cluster.loginExpired
     try {
+        // a LOGIN entry with no session has nothing to check with: it waits to be signed in to
+        if (isLoginCluster(cluster) && !cluster.accessString) return false
         if (!cluster.enabled) {
             await readClusterInfo(cluster, () => {})
         }
@@ -141,8 +156,14 @@ export const recheckCluster = async (cluster: Cluster): Promise<boolean> => {
             let answers = false
             if (base) {
                 try {
-                    const response = await fetch(`${base}/config/info`, { ...addGetAuthorization(cluster.accessString), signal: AbortSignal.timeout(RECHECK_TIMEOUT_MS) })
+                    /*
+                        A LOGIN entry is checked on /config/cluster, which asks for the key: /config/info is public and
+                        would answer 200 to a session that is gone. Refused = expired or revoked (plans/cluster-login, D5).
+                    */
+                    const path = isLoginCluster(cluster) ? 'config/cluster' : 'config/info'
+                    const response = await fetch(`${base}/${path}`, { ...addGetAuthorization(cluster.accessString), signal: AbortSignal.timeout(RECHECK_TIMEOUT_MS) })
                     answers = response.status === 200
+                    if (isLoginCluster(cluster) && (response.status === 401 || response.status === 403)) cluster.loginExpired = true
                 }
                 catch {
                     answers = false
@@ -154,6 +175,6 @@ export const recheckCluster = async (cluster: Cluster): Promise<boolean> => {
     finally {
         rechecking.delete(cluster)
     }
-    return cluster.enabled !== before
+    return cluster.enabled !== before || cluster.loginExpired !== expiredBefore
 }
 

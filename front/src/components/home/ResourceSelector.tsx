@@ -11,6 +11,8 @@ import { getIconFromKind, getChannelIconSafe, IResourceSelected } from '@kwirthm
 import { TChannelConstructor } from '../../channels/IChannel'
 import { resolveRemoteChannelHost } from '../../tools/ChannelResolution'
 import { clusterBaseUrl, clusterRouters } from '../../tools/ClusterRouting'
+import { loginStatusOf, needsLogin } from '../../tools/ClusterLogin'
+import { ClusterLoginDialog, EClusterLoginReason } from './ClusterLoginDialog'
 
 // Remote channel indicator in the dropdown: an 'R' in a circle. Green = operational (its in-cluster
 // Kwirth is connected and can be delegated to); grey = not operational (no host connected, the ADD will
@@ -92,6 +94,8 @@ interface IResourceSelectorProps {
     frontChannels?: Map<string, TChannelConstructor>
     enabledChannels?: string[]
     onOpenClusters?: () => void     // the cluster list was opened: its entries are checked again
+    /** A LOGIN cluster was just signed in to (its entry holds the new key): keep it and read the cluster. */
+    onClusterSignedIn?: (cluster: Cluster) => Promise<void>
 }
 
 /*
@@ -101,7 +105,10 @@ interface IResourceSelectorProps {
     pointer events. aria-hidden, so the option's accessible name stays the cluster's name.
 */
 const clusterReach = (cluster: Cluster): string => {
-    const answer = cluster.enabled ? '' : ' · not answering'
+    // a LOGIN entry says its session too ('as operador', 'login required'); one that needs signing in is not
+    // "not answering": nobody has asked it anything yet
+    const session = loginStatusOf(cluster)
+    const answer = session ? ` · ${session}` : cluster.enabled ? '' : ' · not answering'
     if (!cluster.route) return `direct${answer}`
     const router = cluster.route.resolver
     const installed = clusterRouters().some(r => r.id === router)
@@ -133,6 +140,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
     const [ctrlFilter, setCtrlFilter] = useState('')
     const [podFilter, setPodFilter] = useState('')
     const [containerFilter, setContainerFilter] = useState('')
+    // A LOGIN cluster chosen without a valid session: the sign-in dialog is open for it
+    const [pendingLogin, setPendingLogin] = useState<{ cluster: Cluster, reason: EClusterLoginReason } | undefined>()
 
     // Views that select no resources: with them the namespace/controller/pod/container dropdowns draw
     // nothing to choose from.
@@ -237,8 +246,37 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
         setAllContainers((prev) => [...new Set([...prev, ...(data as string[]).map(c => pod+'+'+c)])])
     }
 
+    /*
+        A LOGIN entry with no session, or whose session expired, is not selected straight away: the sign-in dialog
+        opens first (plans/cluster-login), and only once signed in is the cluster selected. Cancelling leaves the
+        selection as it was.
+    */
     const onChangeCluster = (event: SelectChangeEvent) => {
-        let value=event.target.value
+        const value = event.target.value
+        const target = props.clusters?.find(c => c.name === value)
+        // one that needs signing in is handled by its option's click (openLoginIfNeeded): not selected yet
+        if (target && needsLogin(target)) return
+        selectCluster(value)
+    }
+
+    /*
+        The sign-in opens from the option's CLICK, not from the Select's change: MUI does not report a change when
+        the option chosen is the one already selected, and that is exactly the case of the cluster in use whose
+        session has just expired — choosing it again did nothing.
+    */
+    const openLoginIfNeeded = (target: Cluster) => {
+        if (!needsLogin(target)) return
+        setPendingLogin({ cluster: target, reason: target.accessString ? EClusterLoginReason.EXPIRED : EClusterLoginReason.NO_SESSION })
+    }
+
+    const onSignedIn = async (signedIn: Cluster) => {
+        setPendingLogin(undefined)
+        // the owner keeps the key (it saves the cluster list) and reads the cluster with it
+        await props.onClusterSignedIn?.(signedIn)
+        selectCluster(signedIn.name)
+    }
+
+    const selectCluster = (value: string) => {
         let cluster = props.clusters?.find(c => c.name===value)!
         setCluster(cluster)
         setView('')
@@ -498,7 +536,8 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                         }}>
                     { props.clusters?.map( (cluster) => {
                         return (
-                            <MenuItem key={cluster.name} value={cluster.name} disabled={!cluster.enabled}>
+                            // one that needs signing in can be chosen: choosing it is what opens the sign-in
+                            <MenuItem key={cluster.name} value={cluster.name} disabled={!cluster.enabled && !needsLogin(cluster)} onClick={() => openLoginIfNeeded(cluster)}>
                                 <Stack direction='row' spacing={1} sx={{
                                     alignItems: 'center'
                                 }}>
@@ -653,6 +692,7 @@ const ResourceSelector: React.FC<IResourceSelectorProps> = (props:IResourceSelec
                 <Button onClick={onAdd} sx={{ width:'4%'}} disabled={!addable()}>ADD</Button>
             </Stack>
             { msgBox }
+            { pendingLogin && <ClusterLoginDialog cluster={pendingLogin.cluster} reason={pendingLogin.reason} onSignedIn={onSignedIn} onCancel={() => setPendingLogin(undefined)} /> }
         </>
     );
 }

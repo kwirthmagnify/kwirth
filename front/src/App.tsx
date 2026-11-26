@@ -2616,17 +2616,19 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         selectedTab.current.name = newname
     }
  
-    const onManageClustersClosed = (cc:Cluster[]) => {
-        setShowManageClusters(false)
+    /*
+        Saves the user's cluster list (everything but the home entry). Used by Manage clusters on close and by a
+        sign-in to a LOGIN cluster, which keeps the key it obtained in its entry (plans/cluster-login, D2).
+        Returns whether it was sent: false when the list was never loaded.
+    */
+    const saveClusterList = (cc: Cluster[]): boolean => {
         let otherClusters = cc.filter (c => !c.home)
         /*  🔴 Si la lista no se pudo LEER al arrancar, no se escribe. El POST manda la lista completa, y
             mandar la de una memoria que nunca se llenó borra los clusters del usuario con sus API keys —
             que no se pueden recuperar de un ConfigMap. Mejor negarse a guardar y decirlo. */
         if (!clustersLoadedRef.current) {
             notify(undefined, ENotifyLevel.ERROR, 'Your cluster list was never loaded, so it will NOT be saved (saving now would erase it). Reload the page and try again')
-            setClusters([...cc])
-            clustersRef.current = [...cc]
-            return
+            return false
         }
         let payload=JSON.stringify(otherClusters)
         /*  🔴 Se COMPRUEBA que se ha guardado. Esto se mandaba y nadie miraba la respuesta: el día que el
@@ -2637,6 +2639,28 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
         fetch (`${backendUrl}/store/${user?.id}/clusters/list`, addPostAuthorization(accessString, payload))
             .then (resp => { if (!resp.ok) notify(undefined, ENotifyLevel.ERROR, `Your cluster list could not be saved (HTTP ${resp.status}). It will be lost when you reload`) })
             .catch (err => notify(undefined, ENotifyLevel.ERROR, `Your cluster list could not be saved: ${err}. It will be lost when you reload`))
+        return true
+    }
+
+    /*
+        A LOGIN cluster was just signed in to from the resource selector: its entry already holds the key. It is
+        saved with the list —so the session survives a reload and works from another browser until it expires—
+        and the cluster is read with it, so its channels are known before it is used.
+    */
+    const onClusterSignedIn = async (signedIn: Cluster): Promise<void> => {
+        saveClusterList(clusters)
+        await readClusterInfo(signedIn, notify)
+        setClusters([...clusters])
+        setChannelMessageAction({ action: EChannelRefreshAction.REFRESH })
+    }
+
+    const onManageClustersClosed = (cc:Cluster[]) => {
+        setShowManageClusters(false)
+        if (!saveClusterList(cc)) {
+            setClusters([...cc])
+            clustersRef.current = [...cc]
+            return
+        }
         setClusters([...cc])
         // El ref se sincroniza en un efecto, o sea DESPUÉS de pintar: se adelanta aquí para que la
         // reevaluación de abajo compare contra la lista nueva y no contra la que acabamos de sustituir.
@@ -3011,7 +3035,7 @@ const App: React.FC<IAppProps> = (props:IAppProps) => {
                 }
 
                 { !fullscreenTab && 
-                    <ResourceSelector clusters={clusters.filter(c => c.inUse !== false)} backChannels={backChannels} onAdd={(res) => onResourceSelectorAdd(res, false, undefined)} onChangeCluster={onChangeCluster} sx={{ mt:1, ml:1 }} tabs={tabs.current} data-refresh={channelMessageAction} resourceSelected={resourceSelected} frontChannels={frontChannels} enabledChannels={user?.enabledChannels} onOpenClusters={recheckClusters}/>
+                    <ResourceSelector clusters={clusters.filter(c => c.inUse !== false)} backChannels={backChannels} onAdd={(res) => onResourceSelectorAdd(res, false, undefined)} onChangeCluster={onChangeCluster} sx={{ mt:1, ml:1 }} tabs={tabs.current} data-refresh={channelMessageAction} resourceSelected={resourceSelected} frontChannels={frontChannels} enabledChannels={user?.enabledChannels} onOpenClusters={recheckClusters} onClusterSignedIn={onClusterSignedIn}/>
                 }
                 
                 <Stack

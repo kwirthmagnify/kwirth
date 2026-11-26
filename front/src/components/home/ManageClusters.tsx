@@ -6,7 +6,8 @@ import CheckCircleOutline from '@mui/icons-material/CheckCircleOutlined'
 import ErrorOutline from '@mui/icons-material/ErrorOutlined'
 import { SessionContext, SessionContextType } from '../../model/SessionContext'
 import { DialogTitleHelp, docsUrl } from '@kwirthmagnify/kwirth-common-front'
-import { Cluster } from '../../model/Cluster'
+import { Cluster, EClusterCredentials } from '../../model/Cluster'
+import { isLoginCluster, loginStatusOf, signOutOfCluster } from '../../tools/ClusterLogin'
 import { MsgBoxButtons, MsgBoxWaitCancel, MsgBoxYesNo } from '../../tools/MsgBox'
 import { addGetAuthorization } from '../../tools/AuthorizationManagement'
 import { ENotifyLevel, readClusterInfo } from '../../tools/Global'
@@ -33,6 +34,8 @@ interface ITestResult {
     data?: KwirthData
     clusterId?: string
     error?: string
+    /** A success with no data to show: a LOGIN entry with no session, which can only be checked as reachable. */
+    message?: string
 }
 
 const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersProps) => {
@@ -45,6 +48,9 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     const [routeResolver, setRouteResolver] = useState<string>(DIRECT_ROUTE)
     const [routeUid, setRouteUid] = useState<string>('')
     const [inUse, setInUse] = useState<boolean>(true)
+    // How it authenticates (plans/cluster-login): an access key pasted in, or a sign-in to the remote when used
+    const [credentials, setCredentials] = useState<EClusterCredentials>(EClusterCredentials.KEY)
+    const isLogin = credentials === EClusterCredentials.LOGIN
     const [keyRevealed, setKeyRevealed] = useState<boolean>(false)     // the API key is a secret: masked, with the eye
     const [msgBox, setMsgBox] = useState(<></>)
     const [refresh, setRefresh] = useState(0)
@@ -60,6 +66,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         setRouteResolver(cluster.route?.resolver ?? DIRECT_ROUTE)
         setRouteUid(cluster.route?.clusterUid ?? '')
         setInUse(cluster.inUse !== false)
+        setCredentials(cluster.credentials ?? EClusterCredentials.KEY)
         setKeyRevealed(false)              // another entry: its key starts masked
     }
 
@@ -74,7 +81,41 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         setRouteResolver(DIRECT_ROUTE)
         setRouteUid('')
         setInUse(true)
+        setCredentials(EClusterCredentials.KEY)
         setKeyRevealed(false)
+    }
+
+    /*
+        The credentials of the form, applied to an entry. A LOGIN entry keeps the key it signed in with —it is the
+        session, not something typed here— unless it has just become a login entry: then the old key goes, and
+        so does any remote user. A KEY entry takes the key of the field and has no remote user.
+    */
+    const applyCredentials = (cluster: Cluster) => {
+        if (isLogin) {
+            if (!isLoginCluster(cluster)) signOutOfCluster(cluster)
+            cluster.credentials = EClusterCredentials.LOGIN
+        }
+        else {
+            cluster.credentials = undefined
+            cluster.accessString = accessKey
+            cluster.remoteUser = undefined
+            cluster.loginExpired = undefined
+        }
+    }
+
+    // The session of the selected entry, for the line beside Credentials. Blank (not missing) for a KEY entry.
+    const sessionText = (): string => {
+        if (!isLogin) return ''
+        if (!selectedCluster || !isLoginCluster(selectedCluster)) return 'Signs in when it is used'
+        return loginStatusOf(selectedCluster)
+    }
+
+    // Sign out of a LOGIN entry: the key goes, and the next use asks for credentials again (maybe as another user)
+    const onClickSignOut = () => {
+        if (!selectedCluster) return
+        signOutOfCluster(selectedCluster)
+        setClusters([...clusters])
+        setRefresh(Math.random())
     }
 
     /*
@@ -87,7 +128,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     */
     const onClickSave = async () => {
         if (selectedCluster) {
-            selectedCluster.accessString = accessKey
+            applyCredentials(selectedCluster)
             selectedCluster.name = name
             selectedCluster.url = url
             selectedCluster.route = editedRoute()
@@ -100,7 +141,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
         }
         else {
             var c = new Cluster()
-            c.accessString = accessKey
+            applyCredentials(c)
             c.name = name
             c.url = url
             c.route = editedRoute()
@@ -128,12 +169,33 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
             setTestResult({ success: false, error: unresolvedRouteMessage(probe) })
             return
         }
+        /*
+            A LOGIN entry is tested with its session's key when it has one. Without a session there is no key to
+            test, so what is checked is that a Kwirth answers there — through its route too — on the public route
+            its own login page reads first.
+        */
+        const testKey = isLogin ? (selectedCluster?.accessString ?? '') : accessKey
+        if (isLogin && !testKey) {
+            try {
+                setMsgBox(MsgBoxWaitCancel('Test cluster', 'Connecting to cluster and verifying Kwirth availability...', setMsgBox))
+                const r = await fetch(`${base}/core/auth/method`)
+                setMsgBox(<></>)
+                setTestResult(r.ok
+                    ? { success: true, message: 'Kwirth answers there. Sign in when you use this cluster.' }
+                    : { success: false, error: `Connection failed (HTTP ${r.status}). Check the ${probe.route ? 'route and cluster UID' : 'URL'}.` })
+            }
+            catch (error) {
+                setMsgBox(<></>)
+                setTestResult({ success: false, error: `The cluster could not be reached${probe.route ? ` through the route '${probe.route.resolver}'` : ''}: ${error}` })
+            }
+            return
+        }
         try {
             setMsgBox(MsgBoxWaitCancel('Test cluster', 'Connecting to cluster and verifying Kwirth availability...', setMsgBox))
 
             const [infoResponse, clusterResponse] = await Promise.all([
-                fetch(`${base}/config/info`, addGetAuthorization(accessKey)),
-                fetch(`${base}/config/cluster`, addGetAuthorization(accessKey))
+                fetch(`${base}/config/info`, addGetAuthorization(testKey)),
+                fetch(`${base}/config/cluster`, addGetAuthorization(testKey))
             ])
 
             if (infoResponse.status !== 200 || clusterResponse.status !== 200) {
@@ -230,6 +292,12 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                                   color: 'text.secondary',
                                                   fontSize: 12
                                               }}>{c.kwirthData?.version}<b> ({c.kwirthData?.clusterType})</b></Typography>}
+                                          {/* a LOGIN entry says its session: who it is signed in as, or that it needs signing in */}
+                                          {isLoginCluster(c) && <Typography data-testid='manage-clusters-row-session'
+                                              sx={{
+                                                  color: c.accessString && !c.loginExpired ? 'text.secondary' : 'warning.main',
+                                                  fontSize: 12
+                                              }}>{loginStatusOf(c)}</Typography>}
                                       </Stack>
                                     </ListItem>
                                 </ListItemButton>
@@ -240,7 +308,9 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                 <TextField value={name} onChange={(e) => setName(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='Name'></TextField>
                                 <TextField value={selectedCluster?.id || ''} disabled variant='standard' label='Id'></TextField>
                                 <TextField value={url} onChange={(e) => setUrl(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='URL'></TextField>
-                                <TextField value={accessKey} onChange={(e) => setAccessKey(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='API Key'
+                                {/* With Login credentials there is no key to type: it is visible and disabled, never hidden */}
+                                <TextField value={isLogin ? '' : accessKey} onChange={(e) => setAccessKey(e.target.value)} disabled={selectedCluster?.home || isLogin} variant='standard' label='API Key'
+                                    helperText={isLogin ? 'Not used: this cluster asks for a user and password of its own when it is used' : ' '}
                                     type={keyRevealed ? 'text' : 'password'}
                                     slotProps={{ input: { endAdornment: (
                                         <InputAdornment position='end'>
@@ -266,6 +336,25 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                     <TextField value={routeUid} onChange={(e) => setRouteUid(e.target.value)} disabled={selectedCluster?.home || routeResolver === DIRECT_ROUTE} variant='standard' label='Cluster UID' sx={{ flexGrow: 1 }}></TextField>
                                 </Stack>
                                 {/*
+                                    How it authenticates, apart from how it is reached (plans/cluster-login, D1): the API key
+                                    above, or a sign-in to the remote with any of ITS users when the cluster is used. Beside it,
+                                    the session of the saved entry and its Sign out — always there, disabled when they do not apply.
+                                */}
+                                <Stack direction='row' spacing={1} sx={{ alignItems: 'flex-end' }}>
+                                    <FormControl variant='standard' sx={{ width: 180 }} disabled={selectedCluster?.home}>
+                                        <InputLabel id='manage-clusters-credentials-label' shrink>Credentials</InputLabel>
+                                        <Select labelId='manage-clusters-credentials-label' value={credentials} onChange={(e) => setCredentials(e.target.value as EClusterCredentials)}>
+                                            <MenuItem value={EClusterCredentials.KEY}>API key</MenuItem>
+                                            <MenuItem value={EClusterCredentials.LOGIN}>Login</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                    <Typography variant='body2' data-testid='manage-clusters-session' sx={{ flexGrow: 1, color: 'text.secondary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', pb: 0.5 }}>
+                                        {sessionText()}
+                                    </Typography>
+                                    <Button size='small' variant='outlined' onClick={onClickSignOut}
+                                        disabled={!isLogin || !selectedCluster || !isLoginCluster(selectedCluster) || !selectedCluster.accessString}>SIGN OUT</Button>
+                                </Stack>
+                                {/*
                                     The user's switch: an entry not enabled stays in this list, to be edited, but it is not offered in the
                                     resource selector, not given to extensions (federation, bots) and not read. The home is always in use.
                                 */}
@@ -280,8 +369,8 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                 <DialogActions>
                   <Stack direction='row' spacing={1}>
                     <Button variant='outlined' onClick={onClickNew}>NEW</Button>
-                    <Button variant='outlined' onClick={onClickSave} disabled={selectedCluster?.home || name==='' || url==='' || accessKey==='' || (routeResolver !== DIRECT_ROUTE && routeUid.trim()==='') }>SAVE</Button>
-                    <Button variant='outlined' onClick={onClickTest} disabled={!url || !url.toLocaleLowerCase().startsWith('http') || !accessKey || (routeResolver !== DIRECT_ROUTE && routeUid.trim()==='')}>TEST</Button>
+                    <Button variant='outlined' onClick={onClickSave} disabled={selectedCluster?.home || name==='' || url==='' || (!isLogin && accessKey==='') || (routeResolver !== DIRECT_ROUTE && routeUid.trim()==='') }>SAVE</Button>
+                    <Button variant='outlined' onClick={onClickTest} disabled={!url || !url.toLocaleLowerCase().startsWith('http') || (!isLogin && !accessKey) || (routeResolver !== DIRECT_ROUTE && routeUid.trim()==='')}>TEST</Button>
                     <Button variant='outlined' onClick={onClickDelete} disabled={selectedCluster===undefined || selectedCluster?.home}>DELETE</Button>
                   </Stack>
                   <Typography sx={{flexGrow:1}}></Typography>
@@ -310,10 +399,11 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                             color: 'success.main',
                                             fontWeight: 600
                                         }}>
-                                        Connection and API key successfully tested
+                                        {testResult.message ?? 'Connection and API key successfully tested'}
                                     </Typography>
                                 </Stack>
 
+                                {testResult.data && <>
                                 <Divider />
 
                                 {/* Cluster data as label/value rows */}
@@ -372,6 +462,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                         );
                                     })}
                                 </Stack>
+                                </>}
                             </Stack>
                         ) : (
                             /* Error: icon and message on the same line */
