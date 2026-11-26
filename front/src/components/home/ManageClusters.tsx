@@ -106,7 +106,7 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
     // The session of the selected entry, for the line beside Credentials. Blank (not missing) for a KEY entry.
     const sessionText = (): string => {
         if (!isLogin) return ''
-        if (!selectedCluster || !isLoginCluster(selectedCluster)) return 'Signs in when it is used'
+        if (!selectedCluster || !isLoginCluster(selectedCluster)) return 'Signs in on use'
         return loginStatusOf(selectedCluster)
     }
 
@@ -308,9 +308,28 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                 <TextField value={name} onChange={(e) => setName(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='Name'></TextField>
                                 <TextField value={selectedCluster?.id || ''} disabled variant='standard' label='Id'></TextField>
                                 <TextField value={url} onChange={(e) => setUrl(e.target.value)} disabled={selectedCluster?.home} variant='standard' label='URL'></TextField>
-                                {/* With Login credentials there is no key to type: it is visible and disabled, never hidden */}
+                                {/*
+                                    How it authenticates, apart from how it is reached (plans/cluster-login, D1): an API key, or
+                                    a sign-in to the remote with any of ITS users when the cluster is used. On its row, the session
+                                    of a Login entry and its Sign out — always there (empty / disabled for an API key entry), so
+                                    choosing one or the other moves nothing.
+                                */}
+                                <Stack direction='row' spacing={1} sx={{ alignItems: 'flex-end' }}>
+                                    <FormControl variant='standard' sx={{ width: 130, flexShrink: 0 }} disabled={selectedCluster?.home}>
+                                        <InputLabel id='manage-clusters-credentials-label' shrink>Credentials</InputLabel>
+                                        <Select labelId='manage-clusters-credentials-label' value={credentials} onChange={(e) => setCredentials(e.target.value as EClusterCredentials)}>
+                                            <MenuItem value={EClusterCredentials.KEY}>API key</MenuItem>
+                                            <MenuItem value={EClusterCredentials.LOGIN}>Login</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                    <Typography variant='body2' data-testid='manage-clusters-session' sx={{ flexGrow: 1, minWidth: 0, color: 'text.secondary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', pb: 0.5 }}>
+                                        {sessionText()}
+                                    </Typography>
+                                    <Button size='small' variant='outlined' onClick={onClickSignOut} sx={{ flexShrink: 0 }}
+                                        disabled={!isLogin || !selectedCluster || !isLoginCluster(selectedCluster) || !selectedCluster.accessString}>SIGN OUT</Button>
+                                </Stack>
+                                {/* With Login there is no key to type: the field stays there, disabled and empty — never hidden */}
                                 <TextField value={isLogin ? '' : accessKey} onChange={(e) => setAccessKey(e.target.value)} disabled={selectedCluster?.home || isLogin} variant='standard' label='API Key'
-                                    helperText={isLogin ? 'Not used: this cluster asks for a user and password of its own when it is used' : ' '}
                                     type={keyRevealed ? 'text' : 'password'}
                                     slotProps={{ input: { endAdornment: (
                                         <InputAdornment position='end'>
@@ -334,25 +353,6 @@ const ManageClusters: React.FC<IManageClustersProps> = (props:IManageClustersPro
                                         </Select>
                                     </FormControl>
                                     <TextField value={routeUid} onChange={(e) => setRouteUid(e.target.value)} disabled={selectedCluster?.home || routeResolver === DIRECT_ROUTE} variant='standard' label='Cluster UID' sx={{ flexGrow: 1 }}></TextField>
-                                </Stack>
-                                {/*
-                                    How it authenticates, apart from how it is reached (plans/cluster-login, D1): the API key
-                                    above, or a sign-in to the remote with any of ITS users when the cluster is used. Beside it,
-                                    the session of the saved entry and its Sign out — always there, disabled when they do not apply.
-                                */}
-                                <Stack direction='row' spacing={1} sx={{ alignItems: 'flex-end' }}>
-                                    <FormControl variant='standard' sx={{ width: 180 }} disabled={selectedCluster?.home}>
-                                        <InputLabel id='manage-clusters-credentials-label' shrink>Credentials</InputLabel>
-                                        <Select labelId='manage-clusters-credentials-label' value={credentials} onChange={(e) => setCredentials(e.target.value as EClusterCredentials)}>
-                                            <MenuItem value={EClusterCredentials.KEY}>API key</MenuItem>
-                                            <MenuItem value={EClusterCredentials.LOGIN}>Login</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                    <Typography variant='body2' data-testid='manage-clusters-session' sx={{ flexGrow: 1, color: 'text.secondary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', pb: 0.5 }}>
-                                        {sessionText()}
-                                    </Typography>
-                                    <Button size='small' variant='outlined' onClick={onClickSignOut}
-                                        disabled={!isLogin || !selectedCluster || !isLoginCluster(selectedCluster) || !selectedCluster.accessString}>SIGN OUT</Button>
                                 </Stack>
                                 {/*
                                     The user's switch: an entry not enabled stays in this list, to be edited, but it is not offered in the

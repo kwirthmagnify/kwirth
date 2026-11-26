@@ -115,8 +115,24 @@ test.describe('Clusters with Login credentials', () => {
         await action('NEW').click()
         await dialog().getByLabel('Name', { exact: true }).fill(ENTRY)
         await dialog().getByLabel('URL', { exact: true }).fill(BACK)
+        // QA 2026-11-26: switching the credentials must not move or resize anything in the dialog
+        // MUI puts role=dialog on the Paper itself
+        const paper = dialog()
+        const before = await paper.boundingBox()
         await dialog().getByRole('combobox', { name: 'Credentials' }).click()
         await page.getByRole('option', { name: 'Login', exact: true }).click()
+        const after = await paper.boundingBox()
+        expect(after?.height, 'the dialog changed height when switching to Login').toBe(before?.height)
+        // the layout asked for in QA: Sign out on the Credentials row, and the API Key right below it
+        const credBox = await dialog().getByRole('combobox', { name: 'Credentials' }).boundingBox()
+        const signOutBox = await dialog().getByRole('button', { name: 'SIGN OUT', exact: true }).boundingBox()
+        const keyBox = await dialog().getByLabel('API Key', { exact: true }).boundingBox()
+        expect(Math.abs((signOutBox?.y ?? 0) + (signOutBox?.height ?? 0) / 2 - (credBox?.y ?? 0) - (credBox?.height ?? 0) / 2), 'SIGN OUT is not on the Credentials row').toBeLessThan(16)
+        expect(keyBox!.y, 'the API Key is not below Credentials').toBeGreaterThan(credBox!.y + credBox!.height - 1)
+        // the session text between the select and SIGN OUT fits: it is not cut with an ellipsis
+        const session = dialog().getByTestId('manage-clusters-session')
+        expect(await session.evaluate(e => e.scrollWidth <= e.clientWidth), 'the session text is cut').toBe(true)
+        await page.screenshot({ path: process.env.SHOT_OUT ?? 'test-results/cluster-login-manage.png' })
         // the key field is still there, disabled, and SAVE does not ask for it
         await expect(dialog().getByLabel('API Key', { exact: true })).toBeDisabled()
         await expect(action('SAVE')).toBeEnabled()
