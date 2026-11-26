@@ -1,5 +1,5 @@
-import { randomBytes } from 'crypto'
-import { AccessKey, CLUSTER_ROUTE_LOOPBACK_TICKET, CLUSTER_ROUTE_TICKET_PLACEHOLDER, IClusterRouteTicket, IRouterData, ROUTER_PATH_SEGMENT } from '@kwirthmagnify/kwirth-common'
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto'
+import { AccessKey, accessKeySerialize, CLUSTER_ROUTE_LOOPBACK_TICKET, CLUSTER_ROUTE_TICKET_PLACEHOLDER, IClusterRouteTicket, IRouterData, ROUTER_PATH_SEGMENT } from '@kwirthmagnify/kwirth-common'
 import { ERouteCallerVia, IRouteCaller } from '@kwirthmagnify/kwirth-common-back'
 
 /*
@@ -17,49 +17,65 @@ import { ERouteCallerVia, IRouteCaller } from '@kwirthmagnify/kwirth-common-back
     A request with none of them is refused. An Authorization header with a key that is NOT this core's is
     not an error by itself: a request through a route carries the destination's key, untouched.
 
-    Tickets are opaque and live in memory: a credential in a URL must not BE the credential (urls end up in
-    logs), and one replica is what serves a session.
+    A ticket CARRIES who it stands for and until when, ENCRYPTED and authenticated (AES-256-GCM) with a key
+    derived from the core's masterKey — persisted, the same after a restart and on every replica. They used
+    to live only in this process's memory: a restart of the core forgot every ticket while the fronts kept
+    sending theirs, still valid for them, and every route answered 401/4401 until each front renewed it, up
+    to 9 minutes later (2026-11-26). Encrypted, not only signed: an access key's id IS its secret, so it
+    cannot travel readable in a URL (urls end up in logs) — a ticket is never the credential itself, and it
+    expires in ROUTE_TICKET_TTL_MS.
+    Its key is checked on EVERY use ('keyOf', the same check as an Authorization header): a deleted key
+    stops its tickets at once, as when they were kept here and deleted with it.
 */
 
 export const ROUTE_TICKET_TTL_MS = 10 * 60_000
 
-interface ITicketEntry {
-    caller: IRouteCaller
-    expiresAt: number
-}
+const TICKET_IV_BYTES = 12
+const TICKET_TAG_BYTES = 16
+
+// The cipher key of the tickets: derived from the masterKey, never the masterKey itself
+const ticketKeyOf = (secret: string): Buffer => createHash('sha256').update(`kwirth-route-ticket\0${secret}`).digest()
 
 export class RouteTickets {
-    private tickets = new Map<string, ITicketEntry>()
+    // secret: the core's masterKey, undefined while there is none yet (no running instance); now, ttlMs: the tests'
+    constructor(private secret: () => string | undefined, private now: () => number = Date.now, private ttlMs = ROUTE_TICKET_TTL_MS) {}
 
-    constructor(private now: () => number = Date.now, private ttlMs = ROUTE_TICKET_TTL_MS) {}
-
-    issue(accessKey: AccessKey, user?: string): IClusterRouteTicket {
-        this.purge()
-        const routeTicket = randomBytes(24).toString('base64url')
+    // A ticket for this session, or undefined when the core has no masterKey yet
+    issue(accessKey: AccessKey, user?: string): IClusterRouteTicket | undefined {
+        const secret = this.secret()
+        if (!secret) return undefined
         const expiresAt = this.now() + this.ttlMs
-        this.tickets.set(routeTicket, { caller: { via: ERouteCallerVia.TICKET, accessKey, ...(user ? { user } : {}) }, expiresAt })
-        return { routeTicket, expiresAt }
+        const iv = randomBytes(TICKET_IV_BYTES)
+        const cipher = createCipheriv('aes-256-gcm', ticketKeyOf(secret), iv)
+        const sealed = Buffer.concat([cipher.update(JSON.stringify({ k: accessKeySerialize(accessKey), u: user, e: expiresAt }), 'utf8'), cipher.final()])
+        return { routeTicket: Buffer.concat([iv, cipher.getAuthTag(), sealed]).toString('base64url'), expiresAt }
     }
 
-    // The caller a ticket stands for, or undefined (unknown or expired)
-    check(routeTicket: string): IRouteCaller | undefined {
-        const entry = this.tickets.get(routeTicket)
-        if (!entry) return undefined
-        if (entry.expiresAt < this.now()) {
-            this.tickets.delete(routeTicket)
+    /*
+        The caller a ticket stands for, or undefined: not one of this core's (another masterKey, tampered,
+        made up), expired, or its key no longer valid here ('keyOf' resolves an Authorization header).
+    */
+    async check(routeTicket: string, keyOf: (authorization: string | undefined) => Promise<AccessKey | undefined>): Promise<IRouteCaller | undefined> {
+        const secret = this.secret()
+        if (!secret) return undefined
+        const raw = Buffer.from(routeTicket, 'base64url')
+        if (raw.length <= TICKET_IV_BYTES + TICKET_TAG_BYTES) return undefined
+        let content: Record<string, unknown>
+        try {
+            const decipher = createDecipheriv('aes-256-gcm', ticketKeyOf(secret), raw.subarray(0, TICKET_IV_BYTES))
+            decipher.setAuthTag(raw.subarray(TICKET_IV_BYTES, TICKET_IV_BYTES + TICKET_TAG_BYTES))
+            const opened = Buffer.concat([decipher.update(raw.subarray(TICKET_IV_BYTES + TICKET_TAG_BYTES)), decipher.final()]).toString('utf8')
+            const parsed: unknown = JSON.parse(opened)
+            if (!parsed || typeof parsed !== 'object') return undefined
+            content = parsed as Record<string, unknown>
+        }
+        catch {
             return undefined
         }
-        return entry.caller
-    }
-
-    // The tickets of a deleted key go with it
-    revokeKey(keyId: string): void {
-        for (const [ticket, entry] of this.tickets) if (entry.caller.accessKey?.id === keyId) this.tickets.delete(ticket)
-    }
-
-    private purge(): void {
-        const now = this.now()
-        for (const [ticket, entry] of this.tickets) if (entry.expiresAt < now) this.tickets.delete(ticket)
+        if (typeof content.k !== 'string' || typeof content.e !== 'number' || content.e < this.now()) return undefined
+        const accessKey = await keyOf(`Bearer ${content.k}`)
+        if (!accessKey) return undefined
+        return { via: ERouteCallerVia.TICKET, accessKey, ...(typeof content.u === 'string' && content.u ? { user: content.u } : {}) }
     }
 }
 
@@ -112,7 +128,7 @@ export const authenticateRoute = async (router: IRouterData, rest: string, remot
         if (segment === CLUSTER_ROUTE_LOOPBACK_TICKET) {
             return LOOPBACK.test(remoteAddress ?? '') ? { caller: { via: ERouteCallerVia.LOOPBACK }, path: after } : undefined
         }
-        const caller = segment ? tickets.check(segment) : undefined
+        const caller = segment ? await tickets.check(segment, keyOf) : undefined
         if (caller) return { caller, path: after }
     }
     const accessKey = await keyOf(authorization)
