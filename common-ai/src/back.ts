@@ -607,6 +607,10 @@ export const loadModels = async (providers: ILlmProvider[], log: ILogChannel) =>
                 default:
                     log.logWarning?.(`Provider '${provider.name}' has unknown type '${type}', will not be available.`)
             }
+            /* ONE entry per model id (0.5.92): a provider may list the same id twice — Azure's /models carries 15 of them —
+               and a list with repeated ids is a list whose entries cannot be told apart (the models dialog showed it). */
+            const ids = new Set<string>()
+            provider.models = (provider.models ?? []).filter(m => !ids.has(m.id) && Boolean(ids.add(m.id)))
             log.logInfo?.(`Provider '${provider.name}' loaded ${provider.models.length} models`)
         }
         catch (err) {
@@ -684,7 +688,11 @@ export const testLlm = async (llm: ILlm, providers: ILlmProvider[]): Promise<ILl
     }
 }
 
-export { Output, stepCountIs, tool } from 'ai'
+/*
+    `jsonSchema` (0.5.90): a tool whose parameters arrive as plain JSON Schema — from an OpenAI-compatible client, say — is
+    declared with it. Re-exported for the same reason as `tool`: a plugin never bundles its own copy of the SDK.
+*/
+export { Output, stepCountIs, tool, jsonSchema } from 'ai'
 export type { LanguageModel, ToolSet } from 'ai'
 export { z } from 'zod'
 

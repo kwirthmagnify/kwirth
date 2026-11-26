@@ -98,7 +98,12 @@ export interface ILlm {
     id: string
     provider: string
     model: string
-    temperature: number
+    /*
+        UNDEFINED (0.5.91) means "do not send one: the model's own". A reasoning model (GPT-5, o-series…) does not take a
+        temperature, and with a number always there every call to one was logged as an unsupported setting. Like the
+        prices: empty is "not stated", and 0 is a stated value.
+    */
+    temperature?: number
     useProviderKey: boolean
     key: string
     /*

@@ -226,7 +226,8 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
     const [id, setId] = useState('')
     const [provider, setProvider] = useState('')
     const [model, setModel] = useState('')
-    const [temperature, setTemperature] = useState(0)
+    // empty = do not send one (the model's own): what a reasoning model needs (0.5.91)
+    const [temperature, setTemperature] = useState<number | ''>('')
     const [useProviderKey, setUseProviderKey] = useState(true)
     const [key, setKey] = useState('')
     const [limits, setLimits] = useState<IUsageLimits>({})
@@ -259,7 +260,7 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
         const l = llms[index]
         if (l) {
             setId(l.id); setProvider(l.provider); setModel(l.model)
-            setTemperature(l.temperature); setUseProviderKey(l.useProviderKey); setKey(l.key)
+            setTemperature(l.temperature ?? ''); setUseProviderKey(l.useProviderKey); setKey(l.key)
             setInputCostPerMillion(l.inputCostPerMillion ?? '')
             setOutputCostPerMillion(l.outputCostPerMillion ?? '')
             setLimits(l.limits ?? {})
@@ -270,13 +271,15 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
 
     const onNew = () => {
         setSelectedIndex(null); setId(''); setProvider(''); setModel('')
-        setTemperature(0); setUseProviderKey(false); setKey(''); setInputCostPerMillion(''); setOutputCostPerMillion('')
+        setTemperature(''); setUseProviderKey(false); setKey(''); setInputCostPerMillion(''); setOutputCostPerMillion('')
         setLimits({})
         setTestResult(undefined)
     }
 
     // the model as the form has it now: what Add/Update stores, and what Test tries
-    const formLlm = (): ILlm => ({ id, provider, model, temperature, useProviderKey, key,
+    const formLlm = (): ILlm => ({ id, provider, model, useProviderKey, key,
+        // an empty temperature is LEFT OUT: the model's own is used, and none is sent (0.5.91)
+        ...(temperature === '' ? {} : { temperature }),
         // Prices and limits travel ALWAYS, borrowed key or not, and a field left empty is left out so the
         // back end falls back to the provider's. Writing a 0 for an empty price would persist 'free', and
         // dropping the limits on a borrowed key cost the admin the only way of cutting one model short
@@ -386,7 +389,9 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                                     <TextField value={model} onChange={e => setModel(e.target.value)} label='Model ID' placeholder='e.g. claude-sonnet-4-5, glm-5.2' variant='standard' fullWidth />
                                 )
                             }
-                            <TextField value={temperature} onChange={e => setTemperature(+e.target.value)} label='Temperature' variant='standard' type='number' fullWidth />
+                            {/* Empty = the model's own, and none is sent: a reasoning model (GPT-5, o-series) takes none */}
+                            <TextField value={temperature} onChange={e => setTemperature(e.target.value === '' ? '' : +e.target.value)} label='Temperature' variant='standard' type='number' fullWidth
+                                placeholder='model default' slotProps={{ inputLabel: { shrink: true } }} />
                             {/* The two costs on ONE row, always: they are read together —what a thousand
                                 tokens in and out cost— and wrapping split them across rows as soon as the
                                 column got narrow. No wrap, half the column each.

@@ -30,6 +30,12 @@ An **Azure OpenAI / AI Foundry** resource is an `openai-compat` provider:
 
 Azure lists only its base models, so the *Model* field of the models dialog takes whatever is typed in its filter (`Use "<text>"`).
 
+## Temperature
+
+A model's **Temperature** may be left **empty**, and then none is sent: the model uses its own. That is what a
+reasoning model (GPT-5, the o-series…) needs, since it takes none. With a number there, every call to such a model
+is logged as an unsupported setting that the SDK dropped. Empty is "not stated", as with the prices.
+
 ## Testing a model
 
 The models dialog has a **Test** button. It makes one short call to the model as it is typed in the form, whether saved or not. It then shows the answer, how long the call took and the tokens spent, or the provider's error. The call goes through the counted `generateText`, so it is spent like any other.
