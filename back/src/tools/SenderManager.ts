@@ -295,6 +295,15 @@ export class SenderManager implements ISenderAccess {
             const SenderClass = mod.default ?? Object.values(mod).find(v => typeof v === 'function')
             if (SenderClass) {
                 this.registeredSenders.set(id, SenderClass as TSenderConstructor)
+                /*  An UPDATE must also drop the running instance: `getSender()` returns the cached one, so without
+                    this the new class was registered and the old code went on sending until the core restarted
+                    (2026-11-26: email-smtp updated to 0.1.15 kept sending the 0.1.14 mail). The next getSender()
+                    builds a new instance and hands it its configurations — what the dev reload already does. */
+                const old = this.instances.get(id)
+                if (old) {
+                    this.instances.delete(id)
+                    try { await old.stopSender() } catch (err) { logError(ELogComponent.CORE, `Sender '${id}' stopSender error: ${err}`) }
+                }
                 logInfo(ELogComponent.CORE, `Sender '${id}' backend registered`)
             } else {
                 logError(ELogComponent.CORE, `Sender '${id}' back.js exports no sender class`)
