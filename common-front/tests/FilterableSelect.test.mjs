@@ -41,6 +41,16 @@ test('filterSelectOptions: with allowCustom, the typed text (trimmed) unless an 
     assert.equal(filterSelectOptions(options, 'GPT-5.5', true).custom, 'GPT-5.5')
 })
 
+test('filterSelectOptions: a value repeated in the list is shown ONCE, filtered or not — the first one wins', () => {
+    const repeated = [
+        { value: 'jais-30b-chat', label: 'jais (first)' },
+        { value: 'DeepSeek-R1', label: 'DeepSeek-R1' },
+        { value: 'jais-30b-chat', label: 'jais (second)' }
+    ]
+    assert.deepEqual(filterSelectOptions(repeated, '', false).options.map(o => o.label), ['jais (first)', 'DeepSeek-R1'])
+    assert.deepEqual(filterSelectOptions(repeated, 'dee', false).options.map(o => o.value), ['DeepSeek-R1'])
+})
+
 test('FilterableSelect is exported as a component', () => {
     assert.equal(typeof FilterableSelect, 'function')
 })

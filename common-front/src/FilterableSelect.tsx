@@ -44,7 +44,11 @@ export interface IFilterableSelectProps {
 export const filterSelectOptions = (options: IFilterableSelectOption[], filter: string, allowCustom: boolean): { options: IFilterableSelectOption[], custom?: string } => {
     const typed = filter.trim()
     const needle = typed.toLowerCase()
-    const shown = needle === '' ? options : options.filter(o => o.label.toLowerCase().includes(needle) || o.value.toLowerCase().includes(needle))
+    /* 🔴 A value shown ONCE (0.5.85): a value is the item's key, and two items with the same key are two the list
+       cannot tell apart — filtering left the copies painted (Azure's model list carries 15 ids twice). The first wins. */
+    const seen = new Set<string>()
+    const unique = options.filter(o => !seen.has(o.value) && Boolean(seen.add(o.value)))
+    const shown = needle === '' ? unique : unique.filter(o => o.label.toLowerCase().includes(needle) || o.value.toLowerCase().includes(needle))
     const custom = allowCustom && typed !== '' && !options.some(o => o.value === typed) ? typed : undefined
     return { options: shown, custom }
 }
