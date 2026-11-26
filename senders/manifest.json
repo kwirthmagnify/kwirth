@@ -80,6 +80,19 @@
   {
     "extensionType": "sender",
     "id": "email-resend",
+    "version": "0.1.16",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
+    "name": "Email Sender (Resend)",
+    "displayName": "Email Sender (Resend)",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-resend/-/kwirth-sender-email-resend-0.1.16.tgz",
+    "description": "Email sender for Kwirth — sends messages via Resend (resend.dev)"
+  },
+  {
+    "extensionType": "sender",
+    "id": "email-resend",
     "version": "0.1.15",
     "tags": [
       "alert",
@@ -115,6 +128,19 @@
     "displayName": "Email Sender (Resend)",
     "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-resend/-/kwirth-sender-email-resend-0.1.12.tgz",
     "description": "Email sender for Kwirth — sends messages via Resend (resend.dev)"
+  },
+  {
+    "extensionType": "sender",
+    "id": "email-smtp",
+    "version": "0.1.15",
+    "tags": [
+      "alert",
+      "notifications"
+    ],
+    "name": "Email Sender (SMTP)",
+    "displayName": "Email Sender (SMTP)",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-sender-email-smtp/-/kwirth-sender-email-smtp-0.1.15.tgz",
+    "description": "Email sender for Kwirth — sends messages via SMTP with support for auth, no-auth, TLS and plaintext"
   },
   {
     "extensionType": "sender",
