@@ -206,9 +206,10 @@ interface IAiConfigLlmProps {
     usageDurable?: boolean
     /*
         Tests the model as it is typed in the form: one short call, made by the back (the front has neither
-        the keys nor the network). Without it, the Test button is there but disabled, saying so.
+        the keys nor the network) — the core's POST /core/aiconfig/testllm. Required: it was optional, and every
+        consumer that did not pass it showed a Test button that never enabled.
     */
-    onTest?: (llm: ILlm) => Promise<ILlmTestResult>
+    onTest: (llm: ILlm) => Promise<ILlmTestResult>
 }
 
 // what the test line says: the answer, how long it took and what it spent — or what the provider said
@@ -289,7 +290,6 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
         limits })
 
     const onTest = async () => {
-        if (!props.onTest) return
         setTesting(true)
         setTestResult(undefined)
         try {
@@ -476,10 +476,9 @@ const AiConfigLlm: React.FC<IAiConfigLlmProps> = (props: IAiConfigLlmProps) => {
                         colour). The test's result lives in the row itself, in the gap between Test and Remove. */}
                     <Stack direction='row' spacing={1} sx={{ pt: 2, alignItems: 'center' }}>
                         <Button variant='outlined' onClick={onNew}>New</Button>
-                        {/* Always there: disabled, with the reason, where the dialog's owner cannot test */}
-                        <Tooltip title={props.onTest ? 'One short call to this model, as typed here — it is counted like any other' : 'Testing a model is not available here: use Settings → AI'}>
+                        <Tooltip title='One short call to this model, as typed here — it is counted like any other'>
                             <span>
-                                <Button variant='outlined' onClick={onTest} disabled={!props.onTest || !provider || !model || testing}
+                                <Button variant='outlined' onClick={onTest} disabled={!provider || !model || testing}
                                     startIcon={testing ? <CircularProgress size={14} /> : undefined} data-testid='ai-llm-test'>
                                     {testing ? 'Testing…' : 'Test'}
                                 </Button>
