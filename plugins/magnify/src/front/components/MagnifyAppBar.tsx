@@ -52,7 +52,8 @@ const MagnifyAppBar: React.FC<IMagnifyAppBarProps> = (props: IMagnifyAppBarProps
                 <IconButton size='small' onClick={() => setDrawerOpen(true)}><MenuIcon fontSize='small' /></IconButton>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Search />
-                    <Typography variant='h6' sx={{ fontWeight: 700, color: '#f5820a' }}>Kwirth</Typography>
+                    {/* the brand as the website writes it: '[k]' in grey, 'wirth' in orange */}
+                    <Typography variant='h6' sx={{ fontWeight: 700, color: '#f5820a' }}><Box component='span' sx={{ color: '#8b949e' }}>[k]</Box>wirth</Typography>
                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
                         <Typography variant='h6' sx={{ fontWeight: 700 }}>Magnify</Typography>
                         {props.channelObject.clusterName && <Typography variant='subtitle1' sx={{ fontWeight: 600, color: 'text.secondary' }}>· {props.channelObject.clusterName}</Typography>}
