@@ -120,6 +120,8 @@ export interface IChannelObject {
     frontChannels?: Map<string, TChannelConstructor>
     /** The channels the back end offers on this cluster, with what each one supports (to embed another channel). */
     backChannels?: BackChannelData[]
+    /** Enters full-screen mode for this tab, for a channel that draws its own control for it. */
+    enterFullscreen?: () => void
     /** Leaves full-screen mode, for a channel that draws its own control for it. */
     exitFullscreen?: () => void
     notifications?: any[]
