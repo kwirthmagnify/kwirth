@@ -919,6 +919,18 @@ const socketsOfChannel = (channel: IChannel): WebSocket[] =>
         .filter(client => { try { return client.readyState === 1 && channel.containsConnection(client as unknown as WebSocket) } catch { return false } })
         .map(client => client as unknown as WebSocket)
 
+/*
+    Stops a channel instance that is going away (uninstalled, reloaded in dev, or UPDATED from the marketplace):
+    its cleanup() drops what it holds — timers, provider subscriptions, its own outgoing connections. Optional in
+    the channel contract, hence the probe. A channel that throws on its way out must not stop what replaces it.
+*/
+const stopChannelInstance = (channelId: string, channel: IChannel, why: string): void => {
+    const cleanup = (channel as unknown as Record<string, unknown>).cleanup
+    if (typeof cleanup !== 'function') return
+    try { cleanup.call(channel) }
+    catch (err) { logError(ELogComponent.CORE, `Plugin '${channelId}' cleanup on ${why} failed: ${err}`) }
+}
+
 const closeOrphanSockets = (channelId: string, sockets: WebSocket[], stillServed: (ws: WebSocket) => boolean): void => {
     // La DECISIÓN (cuáles, y sobre todo cuáles no) vive en `tools/ChannelReload`, con sus tests: aquí solo
     // se cierra. Lo que no puede romperse es la segunda regla —no tocar un socket que sirve a otro canal—,
@@ -1944,6 +1956,18 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                         for (const m of hotConsumed.missing) {
                             logWarning(ELogComponent.CORE, `Provider '${m.consumerId}' consumes '${m.providerId}', which is not installed`)
                         }
+                        /*
+                            🔴 An UPDATE installs over a channel that is RUNNING: the old instance has to stop here,
+                            as on a dev reload. It used to be replaced in the map and left alive, with its timers,
+                            its subscriptions and its connections — two of the same channel in one process. With
+                            Ianus that meant two spokes with the same uid and key replacing each other at the hub
+                            every few seconds, and every replacement cut the sessions in flight (EKS, 2026-11-27:
+                            ~2000 federation drops in 40 min, until the pod was restarted). Its sockets are kept
+                            to close once the new instance is in place, so they re-handshake with it.
+                        */
+                        const previous = activeRI.channels.get(id)
+                        const orphans = previous ? socketsOfChannel(previous) : []
+                        if (previous) stopChannelInstance(id, previous, 'update')
                         activeRI.channels.set(id, channelInstance)
                         syncPluter(id, channelInstance)
                         // Hot installation: if the freshly installed plugin also produces, it is
@@ -2030,7 +2054,8 @@ const setUpRoutes = async (ri:IRunningInstance, expressApp:Application) : Promis
                             recordRoute(`${envRootPath}/${activeRI.id}/channel/${channelData.id}/${endpoint.name}`, ERouteOwnerKind.CHANNEL, id, undefined, endpoint.methods)
                             logInfo(ELogComponent.CORE, `Plugin '${id}' HTTP endpoint registered: ${channelData.id}/${endpoint.name}`)
                         }
-                        logInfo(ELogComponent.CORE, `Plugin channel '${id}' instantiated and started`)
+                        if (previous) closeOrphanSockets(id, orphans, ws => [...activeRI.channels.values()].some(c => c !== channelInstance && c.containsConnection(ws)))
+                        logInfo(ELogComponent.CORE, `Plugin channel '${id}' instantiated and started${previous ? ' (the previous instance stopped)' : ''}`)
                     }
                 } catch (err) {
                     logError(ELogComponent.CORE, `Failed to instantiate plugin channel '${id}': ${err}`)
@@ -2416,10 +2441,9 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                     // Avisar ANTES del cleanup: después, el canal ya ha soltado sus conexiones y no hay
                     // forma de saber cuáles eran suyas.
                     announceChannelGone(id, instance)
-                    try { if (typeof (instance as any).cleanup === 'function') (instance as any).cleanup() }
                     // A channel that throws on the way out must not stop the uninstall: it is already being
                     // removed, and leaving it half-registered would be worse than the failed cleanup.
-                    catch (err) { logError(ELogComponent.CORE, `Plugin '${id}' cleanup on uninstall failed: ${err}`) }
+                    stopChannelInstance(id, instance, 'uninstall')
                     ri.channels.delete(id)
                     syncPluter(id, undefined)
                     logInfo(ELogComponent.CORE, `Plugin '${id}' channel instance stopped and removed on uninstall`)
@@ -2434,7 +2458,7 @@ const setKubernetesClusterKwirthRequirements = async (runningInstance:IRunningIn
                         uninstall avisa antes del cleanup). Se cierran al final, cuando el canal nuevo ya
                         está en su sitio y puede atender el handshake que vendrá a continuación. */
                     const orphans = oldInstance ? socketsOfChannel(oldInstance) : []
-                    if (typeof (oldInstance as any).cleanup === 'function') (oldInstance as any).cleanup()
+                    if (oldInstance) stopChannelInstance(id, oldInstance, 'dev reload')
                     const newInstance = createChannelInstance(ChannelClass, ri.clusterInfo, ri.backChannelObject, id)
                     if (newInstance) {
                         ri.channels.set(id, newInstance)
