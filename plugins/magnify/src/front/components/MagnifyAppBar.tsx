@@ -1,4 +1,4 @@
-import { AppBar, Box, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Stack, Toolbar, Tooltip, Typography } from '@mui/material'
+import { AppBar, Box, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Stack, Theme, Toolbar, Tooltip, Typography } from '@mui/material'
 import { Area, AreaChart } from 'recharts'
 import { FullscreenExit, Menu as MenuIcon, Search } from '@kwirthmagnify/kwirth-common-front/icons'
 import { useState } from 'react'
@@ -46,6 +46,9 @@ const MagnifyAppBar: React.FC<IMagnifyAppBarProps> = (props: IMagnifyAppBarProps
 
     const clusters = (props.channelObject.clusters ?? []) as IClusterSummaryRuntime[]
 
+    // In light mode the bar is the theme's blue: the metric labels and the URL go white on it
+    const onBar = (dark: 'primary' | 'secondary') => (theme: Theme) => theme.palette.mode === 'light' ? '#fff' : theme.palette.text[dark]
+
     return (
         <AppBar position='sticky' color='default' elevation={1} sx={{ zIndex: 1300 }}>
             <Toolbar sx={{ gap: 1.5 }}>
@@ -70,7 +73,8 @@ const MagnifyAppBar: React.FC<IMagnifyAppBarProps> = (props: IMagnifyAppBarProps
                         <Typography
                             sx={{
                                 fontSize: 8,
-                                mb: -1
+                                mb: -1,
+                                color: onBar('primary')
                             }}>CPU</Typography>
                         <AreaChart width={120} height={20} data={dataCpu} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                             <Area type='monotone' dataKey='value' stroke='#8884d8' strokeWidth={2} dot={false} fill='#bbbbdd' />
@@ -87,7 +91,8 @@ const MagnifyAppBar: React.FC<IMagnifyAppBarProps> = (props: IMagnifyAppBarProps
                         <Typography
                             sx={{
                                 fontSize: 8,
-                                mb: -1
+                                mb: -1,
+                                color: onBar('primary')
                             }}>Mem</Typography>
                         <AreaChart width={120} height={20} data={dataMemory} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                             <Area type='monotone' dataKey='value' stroke='#d88488' strokeWidth={2} dot={false} fill='#ddbbbb' />
@@ -101,7 +106,8 @@ const MagnifyAppBar: React.FC<IMagnifyAppBarProps> = (props: IMagnifyAppBarProps
                         <Typography
                             sx={{
                                 fontSize: 8,
-                                mb: -1
+                                mb: -1,
+                                color: onBar('primary')
                             }}>Net</Typography>
                         <AreaChart width={120} height={20} data={dataNetwork} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                             <Area type='monotone' dataKey='value' stroke='#88d884' strokeWidth={2} dot={false} fill='#bbddbb' />
@@ -111,7 +117,7 @@ const MagnifyAppBar: React.FC<IMagnifyAppBarProps> = (props: IMagnifyAppBarProps
                 {props.channelObject.clusterUrl && <Typography
                     variant='caption'
                     sx={{
-                        color: 'text.secondary',
+                        color: onBar('secondary'),
                         ml: 1
                     }}>{props.channelObject.clusterUrl}</Typography>}
                 <Tooltip title='Exit fullscreen'>

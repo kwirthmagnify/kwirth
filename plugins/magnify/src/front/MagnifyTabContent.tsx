@@ -12,7 +12,7 @@ import { v4 as uuid } from 'uuid'
 import { ENotifyLevel } from '@kwirthmagnify/kwirth-common-front'
 import { actions, icons, menu, spaces } from './components/RFMConfig'
 import { objectSections } from './components/DetailsSections'
-import { CloudQueue, Edit, ExitToApp, Notifications, NotificationsActive, Search } from '@kwirthmagnify/kwirth-common-front/icons'
+import { CloudQueue, Edit, ExitToApp, Fullscreen, Notifications, NotificationsActive, Search } from '@kwirthmagnify/kwirth-common-front/icons'
 import { CloudOff, EditOff, List } from './icons'
 import { MsgBoxButtons, MsgBoxOkError, MsgBoxWaitCancel, MsgBoxYesNo } from '@kwirthmagnify/kwirth-common-front'
 import { ContentExternal, IContentExternalData, closeContentExternal } from './components/ContentExternal'
@@ -217,6 +217,9 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
         switch(name) {
             case 'exit':
                 return <ExitToApp sx={{color: 'gray'}}/>
+            case 'fullscreen':
+                // greyed out when the core cannot do it (an older core without enterFullscreen)
+                return <Tooltip title='Full screen'><Fullscreen sx={{color: props.channelObject.enterFullscreen ? 'gray' : 'text.disabled'}}/></Tooltip>
             case 'notifications':
                 return props.channelObject.notifications!.length>0? <NotificationsActive sx={{color: 'success.main'}}/> : <Notifications sx={{color: 'text.disabled'}}/>
             case 'cloud':
@@ -240,6 +243,9 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 break
             case 'notifications':
                 setNotificationMenuAnchorParent(target)
+                break
+            case 'fullscreen':
+                props.channelObject.enterFullscreen?.()
                 break
             case 'cloud':
                 if (props.channelObject.webSocket?.readyState!==1) {
@@ -267,6 +273,12 @@ const MagnifyTabContent: React.FC<IContentProps> = (props:IContentProps) => {
             onClick: (name:string, target:HTMLElement) => clickRightItem(name, target),
             onDraw: (name:string) => drawRightItem(name)
         },
+        // To full screen: only out of it (in it, its own bar has the way back) and never on desktop, which has its own chrome
+        ...(!props.channelObject.isFullscreen && !props.channelObject.isDesktop ? [{
+            name: 'fullscreen',
+            onClick: (name:string, target:HTMLElement) => clickRightItem(name, target),
+            onDraw: (name:string) => drawRightItem(name)
+        }] : []),
     ]
 
     useLayoutEffect(() => {
