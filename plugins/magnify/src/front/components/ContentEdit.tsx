@@ -177,9 +177,15 @@ const editorChanged = useRef<boolean>(false)
                     </Stack>
                 </DialogTitle>
 
-                <DialogContent>
+                {/*
+                    The editor has a height of its own and scrolls inside, and nothing around it scrolls. When the
+                    DialogContent scrolled (the editor grew to the whole document), the search did not bring a match
+                    into view (CodeMirror scrolls its own scroller, which had nothing to scroll) and its panel, sticky
+                    to that scroller, rode down with the text, which showed above it.
+                */}
+                <DialogContent sx={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     <div ref={containerRef}
-                        style={{ height: '100%', width: '100%', paddingTop: '2px' }}
+                        style={{ flex: '1 1 0', minHeight: 0, width: '100%', paddingTop: '2px', boxSizing: 'border-box' }}
                         onMouseDownCapture={(e) => {
                             const target = e.target as HTMLElement;
                             if (target.closest('.cm-foldGutter')) {
@@ -194,6 +200,7 @@ const editorChanged = useRef<boolean>(false)
                         className="no-drag"
                     >
                         <CodeMirror value={code}
+                            height='100%' style={{ height: '100%' }}
                             onChange={updateEditorValue}
                             theme={editorTheme}
                             onUpdate={(viewUpdate) => { if (viewUpdate.view) editorViewRef.current = viewUpdate.view }}
