@@ -3,7 +3,7 @@ import { Box, Button, Card, CardContent, CardHeader, Chip, Collapse, Divider, Fo
 import { Add as AddIcon, ArrowDownward, ArrowUpward, Delete as DeleteIcon, DeleteSweep, Download as DownloadIcon, ExpandLess, ExpandMore, Key, Memory, MoreVert as MoreVertIcon, Settings, SmartToy, ImportExport as SwapVert } from '@mui/icons-material'
 import { ChannelNotStarted, cleanANSI, IContentProps, MiniGauge } from '@kwirthmagnify/kwirth-common-front'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
-import { ILlm, ILlmModel, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
+import { ILlm, ILlmModel, ILlmProvider, ILlmTestResult } from '@kwirthmagnify/kwirth-common-ai'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { ICensorData, ICensorUiState, IRunnerData, ECensorTab } from './CensorData'
 import { ECensorAssetState, ECensorCommand, ERegexOrigin } from './CensorConfig'
@@ -229,6 +229,21 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
             body: JSON.stringify(provider)
         })
         return response.ok ? await response.json() : []
+    }
+
+    // Testing a model: the CORE makes the call (it has the keys and the network), as in Kwirth's own AI Models dialog
+    const aiTestLlm = async (llm: ILlm): Promise<ILlmTestResult> => {
+        const response = await fetch(`${props.channelObject.clusterUrl}/core/aiconfig/testllm`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${props.channelObject.accessString}`,
+                'X-Kwirth-App': 'true'
+            },
+            body: JSON.stringify(llm)
+        })
+        if (!response.ok) return { ok: false, ms: 0, error: `Kwirth answered ${response.status}` }
+        return await response.json()
     }
 
     const aiConfigProviderClose = (providers: ILlmProvider[] | undefined) => {
@@ -964,7 +979,7 @@ const CensorTabContent: React.FC<IContentProps> = (props: IContentProps) => {
                 <CensorConfigDialog data={data} channelObject={props.channelObject} sendCommand={sendCommand} onClose={() => { setShowConfig(false); forceUpdate(n => n + 1) }} />
             )}
             {showConfigLlm && (
-                <AiConfigLlm llms={data.llms} providers={data.providers} onClose={aiConfigLlmClose} />
+                <AiConfigLlm llms={data.llms} providers={data.providers} onTest={aiTestLlm} onClose={aiConfigLlmClose} />
             )}
             {showConfigProvider && (
                 <AiConfigProvider providers={data.providers} providersAvailable={data.providersAvailable} onLoadModels={aiLoadModels} onClose={aiConfigProviderClose} />

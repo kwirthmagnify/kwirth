@@ -6,7 +6,7 @@ import { EPinocchioCommand, IAnalysis, IConfigTrigger, IFinding, IMessage, IPino
 import { PinocchioConfigTrigger } from './PinocchioConfigTrigger'
 import { EInstanceMessageAction, EInstanceMessageFlow, EInstanceMessageType } from '@kwirthmagnify/kwirth-common'
 import { AiConfigLlm, AiConfigProvider } from '@kwirthmagnify/kwirth-common-ai/front'
-import { ILlm, ILlmModel, ILlmProvider } from '@kwirthmagnify/kwirth-common-ai'
+import { ILlm, ILlmModel, ILlmProvider, ILlmTestResult } from '@kwirthmagnify/kwirth-common-ai'
 import React from 'react'
 import { MenuConfig } from './MenuConfig'
 import { PinocchioImportExport } from './PinocchioImportExport'
@@ -262,6 +262,21 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
 
     // Loading the provider's models: the CORE does it (it has each SDK's adapter), just like Kwirth's AI
     // Providers dialog. Without this the dialog does not offer the 'Load models' button.
+    // Testing a model: the CORE makes the call (it has the keys and the network), as in Kwirth's own AI Models dialog
+    const aiTestLlm = async (llm: ILlm): Promise<ILlmTestResult> => {
+        const response = await fetch(`${props.channelObject.clusterUrl}/core/aiconfig/testllm`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${props.channelObject.accessString}`,
+                'X-Kwirth-App': 'true'
+            },
+            body: JSON.stringify(llm)
+        })
+        if (!response.ok) return { ok: false, ms: 0, error: `Kwirth answered ${response.status}` }
+        return await response.json()
+    }
+
     const aiLoadModels = async (provider: ILlmProvider): Promise<ILlmModel[]> => {
         const response = await fetch(`${props.channelObject.clusterUrl}/core/aiconfig/loadmodels`, {
             method: 'POST',
@@ -442,7 +457,7 @@ const PinocchioTabContent: React.FC<IContentProps> = (props:IContentProps) => {
                 </CardContent>
             </Card>
             { showConfigTrigger && <PinocchioConfigTrigger pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} docsUrl={docsUrl(props.channelObject.clusterUrl)} onClose={pinocchioConfigClose} />}
-            { showConfigLlm && <AiConfigLlm llms={pinocchioData.config.llms} providers={pinocchioData.providers} onClose={aiConfigLlmClose} />}
+            { showConfigLlm && <AiConfigLlm llms={pinocchioData.config.llms} providers={pinocchioData.providers} onTest={aiTestLlm} onClose={aiConfigLlmClose} />}
             { showConfigProvider && <AiConfigProvider providers={pinocchioData.providers} providersAvailable={pinocchioData.providersAvailable} onLoadModels={aiLoadModels} onClose={pinocchioConfigProviderClose} />}
             { showPlayground && <PinocchioPlayground pinocchioConfig={pinocchioData.config} toolsAvailable={pinocchioData.toolsAvailable} accessString={props.channelObject.accessString!} instanceId={props.channelObject.instanceId} webSocket={props.channelObject.webSocket!} clusterUrl={props.channelObject.clusterUrl!} content={pinocchioData.content} onClose={pinocchioPlaygroundClose} onStateChange={pinocchioPlaygroundStateChange} />}
             { showImportExport && <PinocchioImportExport config={pinocchioData.config} docsUrl={docsUrl(props.channelObject.clusterUrl)} onClose={pinocchioImportExportClose} />}

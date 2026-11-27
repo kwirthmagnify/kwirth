@@ -3,7 +3,7 @@
   "name": "Pinocchio",
   "displayName": "Pinocchio",
   "publisher": "@kwirthmagnify",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "tags": [
     "sre",
     "incidents",
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@kwirthmagnify/kwirth-common": "^0.5.76",
-    "@kwirthmagnify/kwirth-common-ai": "^0.5.92",
+    "@kwirthmagnify/kwirth-common-ai": "^0.5.94",
     "@kwirthmagnify/kwirth-common-back": "^0.6.19",
     "@kwirthmagnify/kwirth-common-front": "^0.5.75",
     "nunjucks": "^3.2.4"

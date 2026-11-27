@@ -312,6 +312,34 @@
   {
     "extensionType": "plugin",
     "id": "censor",
+    "version": "0.2.61",
+    "tags": [
+      "sre",
+      "log",
+      "ai",
+      "kubernetes"
+    ],
+    "name": "Censor",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-censor/-/kwirth-plugin-censor-0.2.61.tgz",
+    "description": "Censor channel plugin for Kwirth - LLM-based log noise filtering",
+    "icon": "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-linecap='round'><path d='M9.1 5h5.8M3 9.5h3.6M3 14h4M17 14h4M9.5 18.5h4.5' stroke-width='1.5'/><path d='M5 4l14 16M19 4L5 20' stroke-width='2.4'/></svg>",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      },
+      {
+        "extensionType": "provider",
+        "id": "events",
+        "minVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "censor",
     "version": "0.2.60",
     "tags": [
       "sre",
@@ -676,6 +704,65 @@
         "extensionType": "dce",
         "id": "nettools",
         "minVersion": "0.2.0"
+      }
+    ]
+  },
+  {
+    "extensionType": "plugin",
+    "id": "pinocchio",
+    "version": "0.3.5",
+    "tags": [
+      "sre",
+      "incidents",
+      "ai",
+      "kubernetes"
+    ],
+    "name": "Pinocchio",
+    "displayName": "Pinocchio",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-plugin-pinocchio/-/kwirth-plugin-pinocchio-0.3.5.tgz",
+    "description": "Pinocchio AI channel plugin for Kwirth - LLM-based Kubernetes event analysis",
+    "icon": "AutoFixHigh",
+    "website": "https://kwirthmagnify.dev",
+    "requires": [
+      {
+        "extensionType": "provider",
+        "id": "business",
+        "minVersion": "0.1.6"
+      },
+      {
+        "extensionType": "provider",
+        "id": "metrics",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "provider",
+        "id": "events",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-inventory",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-describe",
+        "minVersion": "0.2.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-observability",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-metrics",
+        "minVersion": "0.1.0"
+      },
+      {
+        "extensionType": "aitoolset",
+        "id": "k8s-secrets",
+        "minVersion": "0.1.0"
       }
     ]
   },
