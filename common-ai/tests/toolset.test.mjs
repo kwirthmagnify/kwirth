@@ -155,6 +155,14 @@ test('solo se provisiona lo declarado en requires', () => {
     assert.deepEqual(Object.keys(todo).sort(), ['config', 'events', 'k8s', 'metrics', 'repos', 'trace'])
 })
 
+test('0.5.95 · quien pidio la ejecucion llega al host cuando el producto lo dice, y solo entonces', () => {
+    const asked = buildToolHost([], { ...fakeContext(), requester: 'julia' })
+    assert.equal(asked.requester, 'julia')
+    assert.deepEqual(Object.keys(asked), ['trace', 'config', 'requester'])
+    // una alerta, o un producto que no lo dice: ni la clave aparece
+    assert.equal('requester' in buildToolHost([], fakeContext()), false)
+})
+
 test('la fachada de cluster NO deja pasar las credenciales del core', () => {
     // clusterInfo carries saToken, token, senders and webhooks. A third-party toolset has no business
     // seeing them, and handing over the whole object is exactly the catch-all this contract came to close.

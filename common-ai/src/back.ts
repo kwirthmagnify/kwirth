@@ -731,6 +731,8 @@ export interface IToolContext {
         reads "'agora' ran 'ecs-scale'". Without it no provider is lent.
     */
     consumer?: object
+    // 0.5.95 · the Kwirth user who asked for this run (Agora: who mentioned the bot); lent to the tools as host.requester
+    requester?: string
 }
 
 // Parse a repo reference (full URL or 'owner/name'; bare form assumes github.com). Owner keeps GitLab subgroups.
@@ -1013,6 +1015,12 @@ export interface IToolHost {
         ⚠️ It is the TOOL that applies it: a setting is not a security control of the core, the grant is.
     */
     config: TAiToolsetConfig
+    /*
+        0.5.95 · the Kwirth user who asked for this run, when the product knows it (Agora: who mentioned the bot).
+        Absent for a run nobody asked for (an alert's diagnosis) and from a product that does not say it. For a
+        tool to RECORD who asked — never to decide what is allowed: that is the grant and the product's permission.
+    */
+    requester?: string
     k8s?: IK8sCapability
     metrics?: IMetricsCapability
     events?: IEventsCapability
@@ -1277,7 +1285,7 @@ const execFacade = (execApi: Exec, context: IToolContext): IExecCapability => ({
  * declaration to stop meaning anything.
  */
 export const buildToolHost = (requires: ECapability[], context: IToolContext, providers?: string[], config: TAiToolsetConfig = {}): IToolHost => {
-    const host: IToolHost = { trace: context.trace, config }
+    const host: IToolHost = { trace: context.trace, config, ...(context.requester ? { requester: context.requester } : {}) }
     const ci = context.clusterInfo
     // No cluster means no cluster capability, even when declared: better that the tool receives
     // 'undefined' and says so, than handing it a half-built facade that fails from the inside.
