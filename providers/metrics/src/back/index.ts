@@ -62,6 +62,47 @@ const describeFetchError = (err: unknown): string => {
 export const counterDelta = (now: number, prev: number | undefined): number =>
     prev === undefined || now < prev ? 0 : now - prev
 
+/*
+    0.1.4 · a node's network counter: 0 is not a reading but "the kubelet did not give it" (defaultInterfaceCounters),
+    so a 0 on either side says nothing about the interval. Only for the NODE: a pod's counter does start at 0.
+*/
+export const nodeCounterDelta = (now: number, prev: number | undefined): number =>
+    now > 0 && prev !== undefined && prev > 0 ? counterDelta(now, prev) : 0
+
+/*
+    0.1.4 · the seconds a counter's growth is divided by: the time that really passed since the previous read of THAT
+    node, when it is longer than the interval. A node read that failed, or ticks skipped because a read lasted more
+    than the interval, leave several intervals between two reads: divided by one, the rate came out two or three
+    times what it was. Shorter is the timer's jitter and is ignored: the nominal interval stays.
+*/
+export const rateSeconds = (nominalSeconds: number, nowMs: number, prevMs: number | undefined): number =>
+    prevMs !== undefined && prevMs > 0 && nowMs > prevMs ? Math.max(nominalSeconds, (nowMs - prevMs) / 1000) : nominalSeconds
+
+/*
+    0.1.4 · the counters of a node's DEFAULT interface — the one the kubelet names in `network.name` (eth0) — and
+    only those. The kubelet gives them as the top-level fields; when one read comes without them, they are looked
+    up by that name in `interfaces`, and with a single interface that one is it. Anything else is unknown
+    (undefined → 0, which counterDelta takes as "nothing is known").
+
+    It used to fall back to the SUM OF EVERY interface: with Cilium that is eth0 + cilium_host + cilium_net + one
+    lxc… per pod, a counter several times eth0's. A single read without the top-level fields gave the cluster a
+    jump of that whole difference in one interval (a "rate" of ~1 Tbps on an AKS, 2026-11-26), and the next read
+    went "backwards" to 0: one absurd sample that set the z the history wizard proposed.
+*/
+type TNodeNetwork = IMetricsNodeSummary['network']
+type TNodeInterface = TNodeNetwork['interfaces'][number]
+
+export const defaultInterfaceCounters = (network: Partial<TNodeNetwork> | undefined): TNodeInterface | undefined => {
+    if (!network) return undefined
+    if (typeof network.rxBytes === 'number' && network.rxBytes > 0 && typeof network.txBytes === 'number' && network.txBytes > 0) {
+        return { name: network.name ?? '', rxBytes: network.rxBytes, txBytes: network.txBytes, rxErrors: network.rxErrors ?? 0, txErrors: network.txErrors ?? 0 }
+    }
+    const interfaces = Array.isArray(network.interfaces) ? network.interfaces : []
+    // named: that one or nothing — the only one in the list is another interface when the default is missing
+    if (network.name) return interfaces.find(i => i.name === network.name)
+    return interfaces.length === 1 ? interfaces[0] : undefined
+}
+
 type TMetricValues = Map<string, { value: number, timestamp: number }>
 // The labels of a cAdvisor line, by name
 type TLabels = Record<string, string>
@@ -176,9 +217,16 @@ export class MetricsProvider implements IProvider {
     }
 
     public getClusterUsage = (): IMetricsClusterUsage => {
-        let cpuUsed = 0, cpuNumber = this.vcpus
+        /*
+            0.1.4 · the CPU used is divided by the cores of the SAME nodes it was read from (machine_cpu_cores, in every
+            read). It was divided by the vCPUs counted once when the provider started: a node read that failed took its
+            usage out but left its cores in (the cluster's CPU fell by half for one sample), and a node the autoscaler
+            added later counted its usage against cores that were never added. The memory already did it this way.
+        */
+        let cpuUsed = 0, cpuNumber = 0
         let memUsed = 0, memTotal = 0
-        // bytes sent / received in the interval, node by node against ITS previous read (see counterDelta)
+        // bytes per second sent / received, node by node against ITS previous read and the time between them (see
+        // nodeCounterDelta, rateSeconds)
         let tx = 0, rx = 0
         if (this.metricsList && this.lastRead) {
             try {
@@ -187,15 +235,18 @@ export class MetricsProvider implements IProvider {
                         memUsed += lastNodeRead.summary.memory.usageBytes
                         memTotal += lastNodeRead.summary.memory.usageBytes + lastNodeRead.summary.memory.availableBytes
                         cpuUsed += lastNodeRead.summary.cpu.usageNanoCores
-                        const prevSummary = this.prevRead?.nodes.find(n => n.name === lastNodeRead.name)?.summary
-                        tx += counterDelta(lastNodeRead.summary.network.txBytes, prevSummary?.network.txBytes)
-                        rx += counterDelta(lastNodeRead.summary.network.rxBytes, prevSummary?.network.rxBytes)
+                        cpuNumber += lastNodeRead.machineMetricValues.get('machine_cpu_cores')?.value ?? 0
+                        const prevNodeRead = this.prevRead?.nodes.find(n => n.name === lastNodeRead.name)
+                        const prevSummary = prevNodeRead?.summary
+                        const seconds = rateSeconds(this.metricsInterval, lastNodeRead.timestamp, prevNodeRead?.timestamp)
+                        tx += nodeCounterDelta(lastNodeRead.summary.network.txBytes, prevSummary?.network.txBytes) / seconds
+                        rx += nodeCounterDelta(lastNodeRead.summary.network.rxBytes, prevSummary?.network.rxBytes) / seconds
                     }
                 }
                 if (memTotal === 0) memTotal = 1
-                if (cpuNumber === 0) cpuNumber = 1
-                const tottx = (tx / 1024 / 1024) / this.metricsInterval
-                const totrx = (rx / 1024 / 1024) / this.metricsInterval
+                if (cpuNumber === 0) cpuNumber = this.vcpus || 1   // a kubelet without machine_cpu_cores: the start-up count
+                const tottx = tx / 1024 / 1024
+                const totrx = rx / 1024 / 1024
                 const pods = this.lastRead.nodes.reduce((sum, n) => sum + (n.summary?.pods?.length ?? 0), 0)
                 const maxPods = Array.from(this.clusterInfo.nodes.values()).reduce((sum, n) => sum + n.maxPods, 0)
                 return {
@@ -408,6 +459,13 @@ export class MetricsProvider implements IProvider {
     async readNodeMetrics(srcNode: INodeInfo): Promise<{ node: IMetricsNode, prevNode: IMetricsNode | undefined }> {
         const regex = /(?:\s*([^=^{]*)=\"([^"]*)",*)/gm
         const rawSampledNodeMetrics = await this.readCAdvisorMetrics(srcNode)
+        /*
+            0.1.4 · BOTH answers of the kubelet before the slot is taken: the slot is then filled whole, with no await
+            in between. The summary used to be read after the slot had been taken and filled with the new cAdvisor
+            values: when that read failed, the slot kept new values under its OLD timestamp and summary, and the
+            next read measured against them.
+        */
+        const rawSummary = await this.readCAdvisorSummary(srcNode)
         const lines = rawSampledNodeMetrics.split('\n')
         const { current, prevNode } = this.getOrAllocNodeSlots(srcNode.name)
         current.containerMetricValues.clear()
@@ -500,14 +558,15 @@ export class MetricsProvider implements IProvider {
             }
         }
 
-        const rawSummary = await this.readCAdvisorSummary(srcNode)
         const newSummary = rawSummary.node as IMetricsNodeSummary
         if (newSummary && rawSummary.pods) newSummary.pods = rawSummary.pods as IMetricsNodeSummary['pods']
         if (newSummary && newSummary.network) {
-            if (!newSummary.network.txBytes) newSummary.network.txBytes = newSummary.network.interfaces.reduce((tot, iface) => tot + iface.txBytes, 0)
-            if (!newSummary.network.rxBytes) newSummary.network.rxBytes = newSummary.network.interfaces.reduce((tot, iface) => tot + iface.rxBytes, 0)
-            if (!newSummary.network.txErrors) newSummary.network.txErrors = newSummary.network.interfaces.reduce((tot, iface) => tot + iface.txErrors, 0)
-            if (!newSummary.network.rxErrors) newSummary.network.rxErrors = newSummary.network.interfaces.reduce((tot, iface) => tot + iface.rxErrors, 0)
+            // the default interface's counters, never a sum of all of them (see defaultInterfaceCounters)
+            const eth = defaultInterfaceCounters(newSummary.network)
+            newSummary.network.txBytes = eth?.txBytes ?? 0
+            newSummary.network.rxBytes = eth?.rxBytes ?? 0
+            newSummary.network.txErrors = eth?.txErrors ?? 0
+            newSummary.network.rxErrors = eth?.rxErrors ?? 0
         }
         current.name = srcNode.name
         current.timestamp = Date.now()
@@ -689,9 +748,9 @@ export class MetricsProvider implements IProvider {
     private enrichWithSyntheticMetrics(nodeData: Array<{ node: IMetricsNode, prevNode: IMetricsNode | undefined }>): TMetricValues {
         const totalMemory = this.memory
         const totalVcpus = this.vcpus
-        const interval = this.metricsInterval
-
         for (const { node, prevNode } of nodeData) {
+            // the seconds since THIS node's previous read, at least the interval (see rateSeconds)
+            const interval = rateSeconds(this.metricsInterval, node.timestamp, prevNode?.timestamp)
             const containerSynthetics: Array<[string, { value: number, timestamp: number }]> = []
             for (const [key, entry] of node.containerMetricValues) {
                 const lastSlash = key.lastIndexOf('/')

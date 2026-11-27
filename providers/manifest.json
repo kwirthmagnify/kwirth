@@ -2,6 +2,19 @@
   {
     "extensionType": "provider",
     "id": "metrics",
+    "version": "0.1.4",
+    "tags": [
+      "observability",
+      "metrics",
+      "kubernetes"
+    ],
+    "name": "Metrics Provider",
+    "url": "https://registry.npmjs.org/@kwirthmagnify/kwirth-provider-metrics/-/kwirth-provider-metrics-0.1.4.tgz",
+    "description": "Metrics provider for Kwirth - reads kubelet/cAdvisor metrics from every node, no Prometheus needed"
+  },
+  {
+    "extensionType": "provider",
+    "id": "metrics",
     "version": "0.1.2",
     "tags": [
       "observability",

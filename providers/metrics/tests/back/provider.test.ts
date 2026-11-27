@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import express from 'express'
 import { AddressInfo } from 'net'
 import { KwirthData, IProviderSubscriber } from '@kwirthmagnify/kwirth-common-back'
-import { MetricsProvider, IMetricsCluster, counterDelta } from '../../src/back/index'
+import { MetricsProvider, IMetricsCluster, counterDelta, nodeCounterDelta, defaultInterfaceCounters, rateSeconds } from '../../src/back/index'
 
 /*
     The metrics provider along the real route: a fake kubelet answers fetch() (cAdvisor text and
@@ -26,6 +26,7 @@ interface IKubelet {
     usageNanoCores: number
     failNodes: string[]      // IPs whose kubelet does not answer (in cluster the kubelet is reached by IP)
     nodeNet: Record<string, number>   // by IP: the node's cumulative network bytes in /stats/summary (rx = tx); 0 if absent
+    noTopLevel?: boolean     // a read whose summary comes WITHOUT the default interface's top-level fields
     lastOptions?: RequestInit
 }
 
@@ -46,15 +47,29 @@ const cadvisor = (k: IKubelet): string => [
 const netOf = (k: IKubelet, url: string): number =>
     Object.entries(k.nodeNet).find(([ip]) => url.includes(`//${ip}:`))?.[1] ?? 0
 
-const summary = (k: IKubelet, url = '') => ({
-    node: {
-        nodeName: NODE,
-        memory: { usageBytes: 300, availableBytes: 700 },
-        cpu: { usageNanoCores: k.usageNanoCores },
-        network: { interfaces: [{ txBytes: netOf(k, url), rxBytes: netOf(k, url), txErrors: 0, rxErrors: 0 }] }
-    },
-    pods: [{}, {}]
-})
+// As the kubelet answers on a Cilium node: the default interface (eth0) as the top-level fields AND in the list, next
+// to Cilium's own, whose counters are much larger (they carry the pods' traffic too). Only eth0 is the node's.
+const CILIUM = 9_000_000 * 1024 * 1024
+const summary = (k: IKubelet, url = '') => {
+    const eth0 = netOf(k, url)
+    return {
+        node: {
+            nodeName: NODE,
+            memory: { usageBytes: 300, availableBytes: 700 },
+            cpu: { usageNanoCores: k.usageNanoCores },
+            network: {
+                name: 'eth0',
+                ...(k.noTopLevel ? {} : { txBytes: eth0, rxBytes: eth0, txErrors: 0, rxErrors: 0 }),
+                interfaces: [
+                    { name: 'eth0', txBytes: eth0, rxBytes: eth0, txErrors: 0, rxErrors: 0 },
+                    { name: 'cilium_host', txBytes: CILIUM, rxBytes: CILIUM, txErrors: 0, rxErrors: 0 },
+                    { name: 'lxc4f1c2a', txBytes: CILIUM, rxBytes: CILIUM, txErrors: 0, rxErrors: 0 }
+                ]
+            }
+        },
+        pods: [{}, {}]
+    }
+}
 
 const realFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = realFetch })
@@ -367,6 +382,101 @@ test('counterDelta: no previous reading or a counter that went backwards say not
     assert.equal(counterDelta(100, 900), 0)
     assert.equal(counterDelta(900, 900), 0)
     assert.equal(counterDelta(900, 100), 800)
+    assert.equal(counterDelta(900, 0), 900, 'a pod\'s counter does start at 0')
+})
+
+test('rateSeconds: the time since that node\'s previous read when longer than the interval; the interval otherwise', () => {
+    assert.equal(rateSeconds(15, 100_000, 70_000), 30, 'a read missed in between: 30 s, not 15')
+    assert.equal(rateSeconds(15, 100_000, 90_000), 15, 'shorter is jitter: the interval')
+    assert.equal(rateSeconds(15, 100_000, undefined), 15)
+    assert.equal(rateSeconds(15, 100_000, 0), 15)
+    assert.equal(rateSeconds(15, 100_000, 120_000), 15, 'a clock that went back: the interval')
+})
+
+test('🔴 a node read that fails in between does not double the next rate: it is divided by the 30 s that passed', async () => {
+    const realNow = Date.now
+    let clock = 1_800_000_000_000
+    Date.now = () => clock
+    try {
+        const kubelet = newKubelet()
+        fakeKubelet(kubelet)
+        const provider = newProvider()
+        await provider.startProvider()
+        provider.stopMetricsInterval()
+        const { readings, subscriber } = recorder()
+        await provider.addSubscriber(subscriber, { pod: true })
+
+        kubelet.txEth0 = 1_000_000
+        await provider.tick()
+        clock += 15_000
+        kubelet.failNodes = [nodeInfo(NODE).ip]      // this read of the node fails
+        await provider.tick()
+        clock += 15_000
+        kubelet.failNodes = []
+        kubelet.txEth0 = 4_000_000                   // 3 MB more, over the 30 s since its last good read
+        await provider.tick()
+        const node = readings[readings.length - 1].nodes[0]
+        assert.equal(node.podMetricValues.get('shop/web-1/kwirth_container_transmit_mbps')?.value, 0.1)   // 3 MB / 30 s, not / 15 s
+    }
+    finally {
+        Date.now = realNow
+    }
+})
+
+test('🔴 the cluster\'s CPU is measured against the cores of the nodes that answered, not of every node', async () => {
+    const kubelet = newKubelet()
+    fakeKubelet(kubelet)
+    const provider = newProvider(clusterInfoWith([NODE, N2]))
+    await provider.startProvider()
+    provider.stopMetricsInterval()
+    const { readings, subscriber } = recorder()
+    await provider.addSubscriber(subscriber)
+
+    await provider.tick()
+    const both = readings[0].cluster.cpuUsage      // 2 + 2 cores used of 4 + 4
+    kubelet.failNodes = [nodeInfo(N2).ip]          // one node does not answer this time
+    await provider.tick()
+    assert.equal(readings[1].cluster.cpuUsage, both, 'the same load per node: the same percentage, not half of it')
+})
+
+test('nodeCounterDelta: a 0 on either side is "the kubelet did not give it", never a reading', () => {
+    assert.equal(nodeCounterDelta(900, 0), 0)
+    assert.equal(nodeCounterDelta(0, 900), 0)
+    assert.equal(nodeCounterDelta(900, undefined), 0)
+    assert.equal(nodeCounterDelta(100, 900), 0)
+    assert.equal(nodeCounterDelta(900, 100), 800)
+})
+
+test('defaultInterfaceCounters: the default interface only — top-level, else by its name, else the only one; never a sum', () => {
+    const eth0 = { name: 'eth0', rxBytes: 100, txBytes: 200, rxErrors: 1, txErrors: 2 }
+    const cilium = { name: 'cilium_host', rxBytes: 9000, txBytes: 9000, rxErrors: 0, txErrors: 0 }
+    assert.deepEqual(defaultInterfaceCounters({ name: 'eth0', rxBytes: 100, txBytes: 200, rxErrors: 1, txErrors: 2, interfaces: [eth0, cilium] }), eth0)
+    assert.deepEqual(defaultInterfaceCounters({ name: 'eth0', interfaces: [cilium, eth0] }), eth0, 'no top-level: found by name')
+    assert.deepEqual(defaultInterfaceCounters({ interfaces: [eth0] }), eth0, 'a single interface is it')
+    assert.equal(defaultInterfaceCounters({ interfaces: [eth0, cilium] }), undefined, 'several and no name: unknown, not their sum')
+    assert.equal(defaultInterfaceCounters({ name: 'eth0', interfaces: [cilium] }), undefined)
+    assert.equal(defaultInterfaceCounters(undefined), undefined)
+})
+
+test('🔴 a read without the top-level network fields keeps the node on eth0: no jump of all the interfaces (AKS, 2026-11-26)', async () => {
+    const kubelet = newKubelet()
+    kubelet.nodeNet = { [nodeInfo(NODE).ip]: 500_000 * MIB }
+    fakeKubelet(kubelet)
+    const provider = newProvider()
+    const { readings, subscriber } = recorder()
+    await provider.addSubscriber(subscriber)
+
+    await provider.tick()
+    kubelet.nodeNet[nodeInfo(NODE).ip] += 15 * MIB
+    kubelet.noTopLevel = true                       // the kubelet's summary comes without the top-level fields
+    await provider.tick()
+    assert.equal(readings[1].cluster.txmbps, 1)     // 15 MiB in 15 s, read from eth0 by its name — not Cilium's counters
+    assert.equal(readings[1].cluster.rxmbps, 1)
+
+    kubelet.nodeNet[nodeInfo(NODE).ip] += 15 * MIB
+    kubelet.noTopLevel = false
+    await provider.tick()
+    assert.equal(readings[2].cluster.txmbps, 1)     // and back to the top-level fields: still 1, no fall to 0 nor jump
 })
 
 test('🔴 the first read after starting gives a network rate of 0, not every node\'s counter since boot', async () => {
@@ -390,7 +500,7 @@ test('🔴 the first read after starting gives a network rate of 0, not every no
 
 test('🔴 a node that appears adds nothing on its first read; the nodes already there keep their rate', async () => {
     const kubelet = newKubelet()
-    kubelet.nodeNet = { [nodeInfo(NODE).ip]: 0, [nodeInfo(N2).ip]: 800_000 * MIB }
+    kubelet.nodeNet = { [nodeInfo(NODE).ip]: 100 * MIB, [nodeInfo(N2).ip]: 800_000 * MIB }
     kubelet.failNodes = [nodeInfo(N2).ip]   // not there yet
     fakeKubelet(kubelet)
     const provider = newProvider(clusterInfoWith([NODE, N2]))
@@ -412,7 +522,7 @@ test('🔴 a node that appears adds nothing on its first read; the nodes already
 
 test('🔴 a node whose counter went backwards (it rebooted) adds 0, never a negative rate', async () => {
     const kubelet = newKubelet()
-    kubelet.nodeNet = { [nodeInfo(NODE).ip]: 0, [nodeInfo(N2).ip]: 900 * MIB }
+    kubelet.nodeNet = { [nodeInfo(NODE).ip]: 100 * MIB, [nodeInfo(N2).ip]: 900 * MIB }
     fakeKubelet(kubelet)
     const provider = newProvider(clusterInfoWith([NODE, N2]))
     const { readings, subscriber } = recorder()
